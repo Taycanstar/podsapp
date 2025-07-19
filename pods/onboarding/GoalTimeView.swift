@@ -13,6 +13,39 @@ struct GoalTimeView: View {
     @State private var navigateToNextStep = false
     @State private var selectedSpeed: Double = 1.5  // Default to medium speed
     
+    // Check if user selected imperial or metric
+    private var isImperial: Bool {
+        return UserDefaults.standard.bool(forKey: "isImperial")
+    }
+    
+    // Unit display based on user selection
+    private var weightUnit: String {
+        return isImperial ? "lbs" : "kg"
+    }
+    
+    // Speed ranges based on unit system
+    private var speedRange: ClosedRange<Double> {
+        return isImperial ? 0.2...3.0 : 0.1...1.4
+    }
+    
+    // Default speed based on unit system
+    private var defaultSpeed: Double {
+        return isImperial ? 1.5 : 0.7
+    }
+    
+    // Speed values for display
+    private var slowSpeed: Double {
+        return isImperial ? 0.5 : 0.2
+    }
+    
+    private var mediumSpeed: Double {
+        return isImperial ? 1.5 : 0.7
+    }
+    
+    private var fastSpeed: Double {
+        return isImperial ? 2.5 : 1.2
+    }
+    
     // Goal-related computed properties that take into account the automatically determined goal
     private var fitnessGoal: String {
         return UserDefaults.standard.string(forKey: "dietGoal") ?? "maintain"
@@ -85,7 +118,7 @@ struct GoalTimeView: View {
                     .foregroundColor(.secondary)
                 
                 // Selected speed value
-                Text("\(String(format: "%.1f", selectedSpeed)) lbs")
+                Text("\(String(format: "%.1f", selectedSpeed)) \(weightUnit)")
                     .font(.system(size: 44, weight: .bold))
                     .foregroundColor(.primary)
                 
@@ -95,7 +128,7 @@ struct GoalTimeView: View {
                     VStack(alignment: .center) {
                         Image(systemName: "tortoise.fill")
                             .font(.system(size: 32))
-                            .foregroundColor(selectedSpeed <= 0.5 ? .primary : .secondary.opacity(0.5))
+                            .foregroundColor(selectedSpeed <= slowSpeed ? .primary : .secondary.opacity(0.5))
                             .frame(height: 40)
                     }
                     .frame(width: 80)
@@ -107,7 +140,7 @@ struct GoalTimeView: View {
                     VStack(alignment: .center) {
                         Image(systemName: "hare.fill")
                             .font(.system(size: 32))
-                            .foregroundColor(selectedSpeed > 0.5 && selectedSpeed < 2.5 ? .primary : .secondary.opacity(0.5))
+                            .foregroundColor(selectedSpeed > slowSpeed && selectedSpeed < fastSpeed ? .primary : .secondary.opacity(0.5))
                             .frame(height: 40)
                     }
                     .frame(width: 80)
@@ -118,7 +151,7 @@ struct GoalTimeView: View {
                     VStack(alignment: .center) {
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 32))
-                            .foregroundColor(selectedSpeed >= 2.5 ? .primary : .secondary.opacity(0.5))
+                            .foregroundColor(selectedSpeed >= fastSpeed ? .primary : .secondary.opacity(0.5))
                             .frame(height: 40)
                     }
                     .frame(width: 80)
@@ -138,20 +171,20 @@ struct GoalTimeView: View {
                     // Mark key positions
                     HStack {
                         Circle()
-                            .fill(selectedSpeed == 0.0 ? Color.primary : Color.clear)
+                            .fill(selectedSpeed == speedRange.lowerBound ? Color.primary : Color.clear)
                             .frame(width: 6, height: 6)
                             .offset(x: -10)
                         
                         Spacer()
                         
                         Circle()
-                            .fill(selectedSpeed == 1.5 ? Color.primary : Color.clear)
+                            .fill(selectedSpeed == mediumSpeed ? Color.primary : Color.clear)
                             .frame(width: 6, height: 6)
                         
                         Spacer()
                         
                         Circle()
-                            .fill(selectedSpeed == 3.0 ? Color.primary : Color.clear)
+                            .fill(selectedSpeed == speedRange.upperBound ? Color.primary : Color.clear)
                             .frame(width: 6, height: 6)
                             .offset(x: 10)
                     }
@@ -174,7 +207,7 @@ struct GoalTimeView: View {
                 
                 // Speed values
                 HStack {
-                    Text("0.2 lbs")
+                    Text("\(String(format: "%.1f", speedRange.lowerBound)) \(weightUnit)")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                         .frame(width: 80)
@@ -182,14 +215,14 @@ struct GoalTimeView: View {
                     
                     Spacer()
                     
-                    Text("1.5 lbs")
+                    Text("\(String(format: "%.1f", mediumSpeed)) \(weightUnit)")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                         .frame(width: 80)
                     
                     Spacer()
                     
-                    Text("3.0 lbs")
+                    Text("\(String(format: "%.1f", speedRange.upperBound)) \(weightUnit)")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                         .frame(width: 80)
@@ -203,10 +236,10 @@ struct GoalTimeView: View {
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
-                    .background(Color(UIColor.systemGray6).opacity(abs(selectedSpeed - 1.5) < 0.3 ? 1.0 : 0.0))
+                    .background(Color(UIColor.systemGray6).opacity(abs(selectedSpeed - mediumSpeed) < 0.3 ? 1.0 : 0.0))
                     .cornerRadius(20)
                     .padding(.top, 20)
-                    .opacity(abs(selectedSpeed - 1.5) < 0.3 ? 1.0 : 0.0)
+                    .opacity(abs(selectedSpeed - mediumSpeed) < 0.3 ? 1.0 : 0.0)
             }
             .padding(.horizontal)
             
@@ -245,6 +278,9 @@ struct GoalTimeView: View {
             }
         )
         .onAppear {
+            // Initialize selectedSpeed based on unit system
+            selectedSpeed = defaultSpeed
+            
             // Save current step to UserDefaults when this view appears
             UserDefaults.standard.set("GoalTimeView", forKey: "currentOnboardingStep")
             UserDefaults.standard.set(7, forKey: "onboardingFlowStep") // Raw value for this step
@@ -257,10 +293,10 @@ struct GoalTimeView: View {
     // Calculate the horizontal offset for the thumb based on selected speed
     private func getThumbOffset() -> CGFloat {
         let width: CGFloat = UIScreen.main.bounds.width - 80 // Account for horizontal padding
-        let totalRange: CGFloat = 3.0 // 3.0 - 0.0
+        let totalRange = speedRange.upperBound - speedRange.lowerBound
         
         // Calculate the percentage of the way through the range (0.0 to 1.0)
-        let percentage = selectedSpeed / totalRange
+        let percentage = (selectedSpeed - speedRange.lowerBound) / totalRange
         
         // Map to screen width
         return (percentage * width) - (width / 2)
@@ -276,11 +312,11 @@ struct GoalTimeView: View {
         let clampedPosition = min(max(normalizedPosition, 0), 1)
         
         // Map to value range
-        let range: Double = 3.0 // 3.0 - 0.0
-        var newValue = range * Double(clampedPosition)
+        let range = speedRange.upperBound - speedRange.lowerBound
+        var newValue = speedRange.lowerBound + (range * Double(clampedPosition))
         
-        // Enforce minimum value of 0.2
-        newValue = max(newValue, 0.2)
+        // Enforce minimum value
+        newValue = max(newValue, speedRange.lowerBound)
         
         // Round to 1 decimal place for better UX
         selectedSpeed = round(newValue * 10) / 10
@@ -296,11 +332,18 @@ struct GoalTimeView: View {
         let desiredWeight = UserDefaults.standard.double(forKey: "desiredWeightKilograms")
         let weightDifference = abs(desiredWeight - currentWeight)
         
-        // Convert weight difference to pounds for weekly calculation
-        let weightDifferenceLbs = weightDifference * 2.20462
+        // Convert weight difference to the appropriate unit for weekly calculation
+        let weightDifferenceInUnit: Double
+        if isImperial {
+            // Convert kg to lbs for calculation
+            weightDifferenceInUnit = weightDifference * 2.20462
+        } else {
+            // Already in kg
+            weightDifferenceInUnit = weightDifference
+        }
         
         // Calculate weeks needed (round up to nearest week)
-        let weeksNeeded = Int(ceil(weightDifferenceLbs / selectedSpeed))
+        let weeksNeeded = Int(ceil(weightDifferenceInUnit / selectedSpeed))
         
         // Save both the speed and timeframe
         UserDefaults.standard.set(selectedSpeed, forKey: "weeklyWeightChange")
