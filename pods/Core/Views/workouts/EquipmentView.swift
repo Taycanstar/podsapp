@@ -204,9 +204,15 @@ struct EquipmentView: View {
                 selectedEquipmentType = EquipmentType.getDefaultFromWorkoutLocation()
             }
             
-            // Set equipment based on type - initialize with appropriate equipment
-            if selectedEquipment.isEmpty {
+            // Load saved custom equipment selection if it exists
+            if let savedEquipmentStrings = UserDefaults.standard.array(forKey: "currentWorkoutCustomEquipment") as? [String] {
+                let savedEquipment = savedEquipmentStrings.compactMap { Equipment(rawValue: $0) }
+                selectedEquipment = Set(savedEquipment)
+                print("🔄 Loaded saved equipment: \(savedEquipment.map { $0.rawValue })")
+            } else {
+                // Set equipment based on type - initialize with appropriate equipment
                 selectedEquipment = Set(selectedEquipmentType.equipmentList)
+                print("🔄 Using default equipment for \(selectedEquipmentType.rawValue): \(selectedEquipmentType.equipmentList.map { $0.rawValue })")
             }
         }
     }

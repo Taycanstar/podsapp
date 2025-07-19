@@ -78,9 +78,133 @@ class WorkoutRecommendationService {
         }
         
         // Prioritize exercises based on user preferences, experience, and recovery
-        let prioritizedExercises = prioritizeExercises(filteredExercises)
+        return prioritizeExercises(filteredExercises, recoveryPercentage: recoveryPercentage, maxCount: count)
+    }
+    
+    // Method with custom equipment filtering
+    func getRecommendedExercises(for muscleGroup: String, count: Int = 5, customEquipment: [Equipment]?) -> [ExerciseData] {
+        let userProfile = UserProfileService.shared
+        let recoveryService = MuscleRecoveryService.shared
+        let allExercises = ExerciseDatabase.getAllExercises()
         
-        return Array(prioritizedExercises.prefix(count))
+        // Check recovery status for this muscle group
+        let recoveryPercentage = recoveryService.getMuscleRecoveryPercentage(for: muscleGroup)
+        
+        // Filter by muscle group
+        let muscleExercises = allExercises.filter { exercise in
+            exercise.bodyPart.lowercased().contains(muscleGroup.lowercased()) ||
+            exercise.target.lowercased().contains(muscleGroup.lowercased())
+        }
+        
+        // Filter by available equipment (use custom equipment if provided)
+        let availableExercises: [ExerciseData]
+        if let customEquipment = customEquipment, !customEquipment.isEmpty {
+            availableExercises = muscleExercises.filter { exercise in
+                canPerformExerciseWithCustomEquipment(exercise, equipment: customEquipment)
+            }
+            print("🎯 Filtered exercises for \(muscleGroup) with custom equipment: \(customEquipment.map { $0.rawValue }), found \(availableExercises.count) exercises")
+        } else {
+            availableExercises = muscleExercises.filter { exercise in
+                userProfile.canPerformExercise(exercise)
+            }
+        }
+        
+        // Filter out avoided exercises
+        let filteredExercises = availableExercises.filter { exercise in
+            !userProfile.avoidedExercises.contains(exercise.id)
+        }
+        
+        // Prioritize exercises based on user preferences, experience, and recovery
+        return prioritizeExercises(filteredExercises, recoveryPercentage: recoveryPercentage, maxCount: count)
+    }
+    
+    // Helper method to check if exercise can be performed with custom equipment
+    private func canPerformExerciseWithCustomEquipment(_ exercise: ExerciseData, equipment: [Equipment]) -> Bool {
+        let exerciseEquipment = exercise.equipment.lowercased()
+        
+        // Check if any of the user's equipment matches the exercise equipment
+        for userEquipment in equipment {
+            let equipmentString = userEquipment.rawValue.lowercased()
+            
+            // Direct match
+            if exerciseEquipment.contains(equipmentString.lowercased()) {
+                return true
+            }
+            
+            // Special mappings for equipment names
+            switch userEquipment {
+            case .bodyWeight:
+                if exerciseEquipment == "body weight" || exerciseEquipment.isEmpty {
+                    return true
+                }
+            case .dumbbells:
+                if exerciseEquipment.contains("dumbbell") {
+                    return true
+                }
+            case .barbells:
+                if exerciseEquipment.contains("barbell") && !exerciseEquipment.contains("ez") {
+                    return true
+                }
+            case .ezBar:
+                if exerciseEquipment.contains("ez barbell") || exerciseEquipment.contains("ez bar") {
+                    return true
+                }
+            case .cable:
+                if exerciseEquipment.contains("cable") {
+                    return true
+                }
+            case .kettlebells:
+                if exerciseEquipment.contains("kettlebell") {
+                    return true
+                }
+            case .smithMachine:
+                if exerciseEquipment.contains("smith") {
+                    return true
+                }
+            case .resistanceBands:
+                if exerciseEquipment.contains("band") {
+                    return true
+                }
+            case .stabilityBall:
+                if exerciseEquipment.contains("stability") || exerciseEquipment.contains("swiss") || exerciseEquipment.contains("exercise ball") {
+                    return true
+                }
+            case .bosuBalanceTrainer:
+                if exerciseEquipment.contains("bosu") {
+                    return true
+                }
+            case .medicineBalls:
+                if exerciseEquipment.contains("medicine ball") {
+                    return true
+                }
+            case .battleRopes:
+                if exerciseEquipment.contains("rope") && !exerciseEquipment.contains("jump") {
+                    return true
+                }
+            case .pullupBar:
+                if exerciseEquipment.contains("pull") && (exerciseEquipment.contains("bar") || exerciseEquipment.contains("up")) {
+                    return true
+                }
+            case .dipBar:
+                if exerciseEquipment.contains("dip") || (exerciseEquipment.contains("parallel") && exerciseEquipment.contains("bar")) {
+                    return true
+                }
+            case .pvc:
+                if exerciseEquipment.contains("pvc") || exerciseEquipment.contains("pipe") {
+                    return true
+                }
+            default:
+                // For other equipment, try partial matching
+                let equipmentWords = equipmentString.components(separatedBy: " ")
+                for word in equipmentWords {
+                    if word.count > 3 && exerciseEquipment.contains(word.lowercased()) {
+                        return true
+                    }
+                }
+            }
+        }
+        
+        return false
     }
     
     // New method to get recovery-optimized workout recommendations
@@ -98,6 +222,22 @@ class WorkoutRecommendationService {
             let score2 = getExerciseScore(exercise2, userProfile: userProfile)
             return score1 > score2
         }
+    }
+    
+    private func prioritizeExercises(_ exercises: [ExerciseData], recoveryPercentage: Double, maxCount: Int) -> [ExerciseData] {
+        let userProfile = UserProfileService.shared
+        
+        return exercises.sorted { exercise1, exercise2 in
+            let score1 = getExerciseScore(exercise1, userProfile: userProfile)
+            let score2 = getExerciseScore(exercise2, userProfile: userProfile)
+            
+            // Prioritize based on recovery status
+            if recoveryPercentage > 0.7 { // High recovery, prioritize recovery-specific exercises
+                return score1 > score2
+            } else { // Low recovery, prioritize general fitness/hypertrophy
+                return score1 > score2
+            }
+        }.prefix(maxCount).map { $0 }
     }
     
     private func getExerciseScore(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {

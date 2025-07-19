@@ -496,7 +496,8 @@ struct LogWorkoutView: View {
                     userEmail: userEmail,
                     selectedDuration: effectiveDuration,
                     shouldRegenerate: shouldRegenerateWorkout,
-                    customTargetMuscles: customTargetMuscles
+                    customTargetMuscles: customTargetMuscles,
+                    customEquipment: customEquipment
                 )
             case .workouts:
                 RoutinesWorkoutView(
@@ -562,6 +563,7 @@ private struct TodayWorkoutView: View {
     let selectedDuration: WorkoutDuration
     let shouldRegenerate: Bool
     let customTargetMuscles: [String]? // Added this parameter
+    let customEquipment: [Equipment]? // Added this parameter
     
     @State private var todayWorkout: TodayWorkout?
     @State private var isGeneratingWorkout = false
@@ -708,7 +710,8 @@ private struct TodayWorkoutView: View {
             targetDurationMinutes: targetDuration,
             muscleGroups: muscleGroups,
             parameters: workoutParams,
-            recommendationService: recommendationService
+            recommendationService: recommendationService,
+            customEquipment: customEquipment
         )
         
         // Create dynamic title based on selected muscles
@@ -808,7 +811,8 @@ private struct TodayWorkoutView: View {
         targetDurationMinutes: Int,
         muscleGroups: [String],
         parameters: WorkoutParameters,
-        recommendationService: WorkoutRecommendationService
+        recommendationService: WorkoutRecommendationService,
+        customEquipment: [Equipment]?
     ) -> WorkoutPlan {
         
         let targetDurationSeconds = targetDurationMinutes * 60
@@ -832,7 +836,8 @@ private struct TodayWorkoutView: View {
                 muscleGroups: muscleGroups,
                 exercisesPerMuscle: exercisesPerMuscle,
                 parameters: parameters,
-                recommendationService: recommendationService
+                recommendationService: recommendationService,
+                customEquipment: customEquipment
             )
             
             let testTime = calculateTotalExerciseTime(exercises: testExercises, parameters: parameters)
@@ -854,7 +859,8 @@ private struct TodayWorkoutView: View {
             exercises = generateMinimalExercises(
                 muscleGroups: muscleGroups,
                 parameters: parameters,
-                recommendationService: recommendationService
+                recommendationService: recommendationService,
+                customEquipment: customEquipment
             )
             totalExerciseTime = calculateTotalExerciseTime(exercises: exercises, parameters: parameters)
         }
@@ -895,7 +901,8 @@ private struct TodayWorkoutView: View {
         muscleGroups: [String],
         exercisesPerMuscle: Int,
         parameters: WorkoutParameters,
-        recommendationService: WorkoutRecommendationService
+        recommendationService: WorkoutRecommendationService,
+        customEquipment: [Equipment]?
     ) -> [TodayWorkoutExercise] {
         
         var exercises: [TodayWorkoutExercise] = []
@@ -903,7 +910,8 @@ private struct TodayWorkoutView: View {
         for muscleGroup in muscleGroups.prefix(4) { // Limit to 4 muscle groups
             let recommendedExercises = recommendationService.getRecommendedExercises(
                 for: muscleGroup, 
-                count: exercisesPerMuscle
+                count: exercisesPerMuscle,
+                customEquipment: customEquipment
             )
             
             for exercise in recommendedExercises {
@@ -927,7 +935,8 @@ private struct TodayWorkoutView: View {
     private func generateMinimalExercises(
         muscleGroups: [String],
         parameters: WorkoutParameters,
-        recommendationService: WorkoutRecommendationService
+        recommendationService: WorkoutRecommendationService,
+        customEquipment: [Equipment]?
     ) -> [TodayWorkoutExercise] {
         
         var exercises: [TodayWorkoutExercise] = []
@@ -936,7 +945,8 @@ private struct TodayWorkoutView: View {
         for muscleGroup in muscleGroups.prefix(3) { // Limit to 3 muscle groups for time
             let recommendedExercises = recommendationService.getRecommendedExercises(
                 for: muscleGroup, 
-                count: 1
+                count: 1,
+                customEquipment: customEquipment
             )
             
             if let exercise = recommendedExercises.first {

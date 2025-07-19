@@ -68,7 +68,7 @@ struct GoalTimeView: View {
             
             // Title and instructions - Now uses the automatically determined goal
             VStack(alignment: .leading, spacing: 12) {
-                Text("How fast do you want to \(goalText) your goal?")
+                Text("How fast do you want to achieve your goal?")
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(.primary)
             }
