@@ -32,13 +32,15 @@ struct EquipmentView: View {
                     .calfRaiseMachine, .rowMachine, .pullupBar, .dipBar, .squatRack,
                     .hackSquatMachine, .shoulderPressMachine, .tricepsExtensionMachine,
                     .bicepsCurlMachine, .abCrunchMachine, .preacherCurlBench, .resistanceBands,
-                    .stabilityBall, .medicineBalls, .battleRopes, .box, .platforms, .pvc
+                    .stabilityBall, .medicineBalls, .battleRopes, .box, .platforms, .pvc,
+                    .bosuBalanceTrainer, .sled, .preacherCurlMachine
                 ]
             case .smallGym:
                 return [
                     .dumbbells, .barbells, .flatBench, .inclineBench, .pullupBar,
                     .dipBar, .cable, .legPress, .squatRack, .resistanceBands,
-                    .stabilityBall, .medicineBalls, .kettlebells, .ezBar, .pvc
+                    .stabilityBall, .medicineBalls, .kettlebells, .ezBar, .pvc,
+                    .bosuBalanceTrainer
                 ]
             case .garageGym:
                 return [
@@ -251,18 +253,42 @@ struct EquipmentView: View {
         VStack(spacing: 0) {
             // Divider
             Divider()
-                .padding(.horizontal)
             
             // Buttons with proper spacing
             HStack(spacing: 0) {
                 Button("Set as default") {
                     HapticFeedback.generate()
-                    // Update user's default equipment
+                    
+                    // Update user's default equipment and workout location
                     UserProfileService.shared.availableEquipment = Array(selectedEquipment)
                     
-                    // Update server if needed
+                    // Map equipment type to workout location format for server
+                    let workoutLocation: String
+                    switch selectedEquipmentType {
+                    case .largeGym:
+                        workoutLocation = "large_gym"
+                    case .smallGym:
+                        workoutLocation = "small_gym"
+                    case .garageGym:
+                        workoutLocation = "garage_gym"
+                    case .atHome:
+                        workoutLocation = "home"
+                    case .bodyweightOnly:
+                        workoutLocation = "bodyweight"
+                    case .custom:
+                        workoutLocation = "custom"
+                    }
+                    
+                    // Update local workout location in UserDefaults (bypassing enum restriction)
+                    UserDefaults.standard.set(workoutLocation, forKey: "workoutLocation")
+                    
+                    // Update server
                     if let email = UserDefaults.standard.string(forKey: "userEmail") {
-                        updateServerEquipment(email: email, equipment: Array(selectedEquipment))
+                        updateServerWorkoutPreferences(
+                            email: email, 
+                            equipment: Array(selectedEquipment),
+                            workoutLocation: workoutLocation
+                        )
                     }
                     
                     onSelectionChanged(Array(selectedEquipment), selectedEquipmentType.rawValue)
@@ -309,6 +335,29 @@ struct EquipmentView: View {
                     print("✅ Successfully updated equipment on server")
                 case .failure(let error):
                     print("❌ Failed to update equipment on server: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func updateServerWorkoutPreferences(email: String, equipment: [Equipment], workoutLocation: String) {
+        print("🔄 Updating server workout preferences for \(email) with equipment: \(equipment.map { $0.rawValue }), location: \(workoutLocation)")
+        
+        let updateData: [String: Any] = [
+            "available_equipment": equipment.map { $0.rawValue },
+            "workout_location": workoutLocation
+        ]
+        
+        NetworkManagerTwo.shared.updateWorkoutPreferences(
+            email: email,
+            workoutData: updateData
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("✅ Successfully updated workout preferences on server")
+                case .failure(let error):
+                    print("❌ Failed to update workout preferences on server: \(error.localizedDescription)")
                 }
             }
         }

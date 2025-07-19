@@ -362,7 +362,8 @@ struct LogWorkoutView: View {
                         // Reset to default equipment
                         customEquipment = nil
                         UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomEquipment")
-                        selectedEquipmentType = "Auto"
+                        let userProfile = UserProfileService.shared
+                        selectedEquipmentType = userProfile.workoutLocationDisplay
                         UserDefaults.standard.removeObject(forKey: "currentWorkoutEquipmentType")
                         
                         regenerateWorkoutWithNewDuration()
@@ -371,7 +372,7 @@ struct LogWorkoutView: View {
                         Image(systemName: "xmark")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.primary)
-                            .frame(width: 35, height: 35)
+                            .frame(width: 30, height: 30)
                             .background(Color(.systemBackground))
                             .cornerRadius(17.5)
                             .overlay(
