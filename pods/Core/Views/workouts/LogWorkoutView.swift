@@ -98,13 +98,18 @@ struct LogWorkoutView: View {
                 Spacer()
             }
         }
-        .modifier(SearchableModifier(
-            searchText: $searchText,
-            selectedTab: selectedWorkoutTab
-        ))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
         .navigationBarBackButtonHidden(true)
+        .navigationTitle(selectedWorkoutTab == .workouts ? "Workouts" : "Log Workout")
+        .navigationBarTitleDisplayMode(selectedWorkoutTab == .workouts ? .large : .inline)
+        .if(selectedWorkoutTab == .workouts) { view in
+            view.searchable(
+                text: $searchText,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: selectedWorkoutTab.searchPrompt
+            )
+        }
         .onAppear {
             // Initialize WorkoutManager when view appears
             if !userEmail.isEmpty {
@@ -373,11 +378,6 @@ struct LogWorkoutView: View {
                     dismiss()
                 }
                 .foregroundColor(.accentColor)
-            }
-            
-            ToolbarItem(placement: .principal) {
-                Text("Log Workout")
-                    .font(.headline)
             }
         }
     }
@@ -1459,26 +1459,13 @@ struct WorkoutDurationPickerView: View {
     }
 }
 
-// MARK: - Searchable Modifier
-
-struct SearchableModifier: ViewModifier {
-    @Binding var searchText: String
-    let selectedTab: LogWorkoutView.WorkoutTab
-    @FocusState private var isSearchFieldFocused: Bool
-    
-    func body(content: Content) -> some View {
-        if selectedTab == .today {
-            // Don't show search bar for Today tab
-            content
+// MARK: - Conditional Modifier Helper
+extension View {
+    @ViewBuilder func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
         } else {
-            // Show search bar for other tabs
-            content
-                .searchable(
-                    text: $searchText,
-                    placement: .automatic,
-                    prompt: selectedTab.searchPrompt
-                )
-                .focused($isSearchFieldFocused)
+            self
         }
     }
 }
