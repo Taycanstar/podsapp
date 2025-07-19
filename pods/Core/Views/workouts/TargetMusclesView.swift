@@ -47,29 +47,29 @@ struct TargetMusclesView: View {
             VStack(spacing: 0) {
                 if showingMuscleGroups {
                     // Show MuscleGroupsView
-                    HStack {
-                        Spacer()
+                    // HStack {
+                    //     Spacer()
                         
-                        Button(action: {
-                            HapticFeedback.generate()
-                            dismiss()
-                        }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.primary)
-                                .frame(width: 30, height: 30)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 16)
-                    .padding(.bottom, 16)
+                    //     Button(action: {
+                    //         HapticFeedback.generate()
+                    //         dismiss()
+                    //     }) {
+                    //         Image(systemName: "xmark")
+                    //             .font(.system(size: 16, weight: .medium))
+                    //             .foregroundColor(.primary)
+                    //             .frame(width: 30, height: 30)
+                    //     }
+                    // }
+                    // .padding(.horizontal)
+                    // // .padding(.top, 16)
+                    // // .padding(.bottom, 16)
                     
-                    Text("Muscle Groups")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                        .padding(.bottom, 30)
+                    // Text("Muscle Groups")
+                    //     .font(.title2)
+                    //     .fontWeight(.semibold)
+                    //     .frame(maxWidth: .infinity, alignment: .leading)
+                    //     .padding(.horizontal)
+                    //     .padding(.bottom, 22)
                     
                     MuscleGroupsView(
                         selectedMuscles: $selectedMuscles,
@@ -88,7 +88,7 @@ struct TargetMusclesView: View {
             }
             .navigationBarHidden(true)
         }
-        .presentationDetents([.fraction(0.5)])
+        // .presentationDetents([.fraction(0.5)])
         .presentationDragIndicator(.visible)
         .onAppear {
             // Set default selection based on recovered muscles
