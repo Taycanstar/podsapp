@@ -1,0 +1,460 @@
+//
+//  EquipmentView.swift
+//  pods
+//
+//  Created by Dimi Nunez on 7/19/25.
+//
+
+import SwiftUI
+
+struct EquipmentView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedEquipmentType: EquipmentType = .auto
+    @State private var selectedEquipment: Set<Equipment> = []
+    
+    let onSelectionChanged: ([Equipment], String) -> Void
+    
+    enum EquipmentType: String, CaseIterable {
+        case auto = "Auto"
+        case largeGym = "Large Gym"
+        case smallGym = "Small Gym"
+        case garageGym = "Garage Gym"
+        case atHome = "At Home"
+        case bodyweightOnly = "Bodyweight Only"
+        case custom = "Custom"
+        
+        var equipmentList: [Equipment] {
+            switch self {
+            case .auto:
+                // Get from user's workout location
+                return getEquipmentForWorkoutLocation()
+            case .largeGym:
+                return [
+                    .dumbbells, .barbells, .cable, .smithMachine, .hammerstrengthMachine,
+                    .kettlebells, .ezBar, .flatBench, .inclineBench, .declineBench,
+                    .latPulldownCable, .legPress, .legExtensionMachine, .legCurlMachine,
+                    .calfRaiseMachine, .rowMachine, .pullupBar, .dipBar, .squatRack,
+                    .hackSquatMachine, .shoulderPressMachine, .tricepsExtensionMachine,
+                    .bicepsCurlMachine, .abCrunchMachine, .preacherCurlBench, .resistanceBands,
+                    .stabilityBall, .medicineBalls, .battleRopes, .box, .platforms, .pvc
+                ]
+            case .smallGym:
+                return [
+                    .dumbbells, .barbells, .flatBench, .inclineBench, .pullupBar,
+                    .dipBar, .cable, .legPress, .squatRack, .resistanceBands,
+                    .stabilityBall, .medicineBalls, .kettlebells, .ezBar, .pvc
+                ]
+            case .garageGym:
+                return [
+                    .dumbbells, .barbells, .squatRack, .flatBench, .inclineBench,
+                    .pullupBar, .dipBar, .kettlebells, .resistanceBands, .box,
+                    .medicineBalls, .ezBar, .pvc
+                ]
+            case .atHome:
+                return [
+                    .dumbbells, .resistanceBands, .stabilityBall, .medicineBalls,
+                    .pullupBar, .flatBench, .kettlebells, .box, .pvc
+                ]
+            case .bodyweightOnly:
+                return [
+                    .bodyWeight, .pullupBar, .dipBar, .box, .resistanceBands, .pvc
+                ]
+            case .custom:
+                return []
+            }
+        }
+        
+        private func getEquipmentForWorkoutLocation() -> [Equipment] {
+            let userProfile = UserProfileService.shared
+            let workoutLocation = userProfile.workoutLocationDisplay
+            
+            switch workoutLocation {
+            case "Large Gym":
+                return EquipmentType.largeGym.equipmentList
+            case "Small Gym":
+                return EquipmentType.smallGym.equipmentList
+            case "Garage Gym":
+                return EquipmentType.garageGym.equipmentList
+            case "At Home":
+                return EquipmentType.atHome.equipmentList
+            case "Bodyweight Only":
+                return EquipmentType.bodyweightOnly.equipmentList
+            default:
+                return EquipmentType.largeGym.equipmentList
+            }
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Spacer()
+                
+                Button(action: {
+                    HapticFeedback.generate()
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(width: 30, height: 30)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 16)
+            .padding(.bottom, 16)
+            
+            Text("Equipment")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                .padding(.bottom, 16)
+            
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Equipment type options - First Row
+                    HStack(spacing: 12) {
+                        EquipmentTypeButton(
+                            type: .auto,
+                            isSelected: selectedEquipmentType == .auto,
+                            onTap: {
+                                HapticFeedback.generate()
+                                selectedEquipmentType = .auto
+                                selectedEquipment = Set(selectedEquipmentType.equipmentList)
+                            }
+                        )
+                        
+                        EquipmentTypeButton(
+                            type: .largeGym,
+                            isSelected: selectedEquipmentType == .largeGym,
+                            onTap: {
+                                HapticFeedback.generate()
+                                selectedEquipmentType = .largeGym
+                                selectedEquipment = Set(selectedEquipmentType.equipmentList)
+                            }
+                        )
+                        
+                        EquipmentTypeButton(
+                            type: .smallGym,
+                            isSelected: selectedEquipmentType == .smallGym,
+                            onTap: {
+                                HapticFeedback.generate()
+                                selectedEquipmentType = .smallGym
+                                selectedEquipment = Set(selectedEquipmentType.equipmentList)
+                            }
+                        )
+                    }
+                    .padding(.horizontal)
+                    
+                    // Second Row
+                    HStack(spacing: 12) {
+                        EquipmentTypeButton(
+                            type: .garageGym,
+                            isSelected: selectedEquipmentType == .garageGym,
+                            onTap: {
+                                HapticFeedback.generate()
+                                selectedEquipmentType = .garageGym
+                                selectedEquipment = Set(selectedEquipmentType.equipmentList)
+                            }
+                        )
+                        
+                        EquipmentTypeButton(
+                            type: .atHome,
+                            isSelected: selectedEquipmentType == .atHome,
+                            onTap: {
+                                HapticFeedback.generate()
+                                selectedEquipmentType = .atHome
+                                selectedEquipment = Set(selectedEquipmentType.equipmentList)
+                            }
+                        )
+                        
+                        EquipmentTypeButton(
+                            type: .bodyweightOnly,
+                            isSelected: selectedEquipmentType == .bodyweightOnly,
+                            onTap: {
+                                HapticFeedback.generate()
+                                selectedEquipmentType = .bodyweightOnly
+                                selectedEquipment = Set(selectedEquipmentType.equipmentList)
+                            }
+                        )
+                    }
+                    .padding(.horizontal)
+                    
+                    // Custom Button (full width)
+                    EquipmentTypeButton(
+                        type: .custom,
+                        isSelected: selectedEquipmentType == .custom,
+                        onTap: {
+                            HapticFeedback.generate()
+                            selectedEquipmentType = .custom
+                            selectedEquipment = [] // Start with empty selection for custom
+                        }
+                    )
+                    .padding(.horizontal)
+                    
+                    // Custom equipment selection (only show when custom is selected)
+                    if selectedEquipmentType == .custom {
+                        customEquipmentSelection
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.top, 20)
+            }
+            
+            // Action buttons
+            actionButtons
+        }
+        .presentationDetents([.fraction(0.6)])
+        .onAppear {
+            // Initialize selection based on current equipment type
+            if let savedEquipmentType = UserDefaults.standard.string(forKey: "currentWorkoutEquipmentType"),
+               let equipmentType = EquipmentType(rawValue: savedEquipmentType) {
+                selectedEquipmentType = equipmentType
+            } else {
+                selectedEquipmentType = .auto
+            }
+            
+            // Set equipment based on type
+            selectedEquipment = Set(selectedEquipmentType.equipmentList)
+        }
+    }
+    
+    private var customEquipmentSelection: some View {
+        VStack(spacing: 16) {
+            Text("Select Equipment")
+                .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+            
+            // Equipment grid - 3 per row
+            let allEquipment = Equipment.allCases.filter { $0 != .bodyWeight } // Exclude bodyweight from selection
+            let rows = allEquipment.chunked(into: 3)
+            
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                HStack(spacing: 8) {
+                    ForEach(row, id: \.self) { equipment in
+                        EquipmentSelectionButton(
+                            equipment: equipment,
+                            isSelected: selectedEquipment.contains(equipment),
+                            onTap: {
+                                HapticFeedback.generate()
+                                if selectedEquipment.contains(equipment) {
+                                    selectedEquipment.remove(equipment)
+                                } else {
+                                    selectedEquipment.insert(equipment)
+                                }
+                            }
+                        )
+                    }
+                    
+                    // Add empty spacers if row has fewer than 3 items
+                    ForEach(0..<(3 - row.count), id: \.self) { _ in
+                        Spacer()
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+    
+    private var actionButtons: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 0) {
+                Button("Set as default") {
+                    HapticFeedback.generate()
+                    // Update user's default equipment
+                    UserProfileService.shared.availableEquipment = Array(selectedEquipment)
+                    
+                    // Update server if needed
+                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
+                        updateServerEquipment(email: email, equipment: Array(selectedEquipment))
+                    }
+                    
+                    onSelectionChanged(Array(selectedEquipment), selectedEquipmentType.rawValue)
+                    dismiss()
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Button("Set for this workout") {
+                    HapticFeedback.generate()
+                    onSelectionChanged(Array(selectedEquipment), selectedEquipmentType.rawValue)
+                    dismiss()
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color(.systemBackground))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.primary)
+                .cornerRadius(8)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 30)
+        }
+    }
+    
+    private func updateServerEquipment(email: String, equipment: [Equipment]) {
+        print("🔄 Updating server equipment for \(email)")
+        
+        let equipmentStrings = equipment.map { $0.rawValue }
+        let updateData: [String: Any] = [
+            "available_equipment": equipmentStrings
+        ]
+        
+        NetworkManagerTwo.shared.updateWorkoutPreferences(
+            email: email,
+            workoutData: updateData
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("✅ Successfully updated equipment on server")
+                case .failure(let error):
+                    print("❌ Failed to update equipment on server: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+}
+
+struct EquipmentTypeButton: View {
+    let type: EquipmentView.EquipmentType
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            Text(type.rawValue)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isSelected ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                )
+                .overlay(
+                    isSelected ? 
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.primary.opacity(0.05)) : nil
+                )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct EquipmentSelectionButton: View {
+    let equipment: Equipment
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    private var equipmentImageName: String {
+        switch equipment {
+        case .barbells: return "barbells"
+        case .dumbbells: return "dumbbells"
+        case .cable: return "crossovercable"
+        case .smithMachine: return "smith"
+        case .hammerstrengthMachine: return "hammerstrength"
+        case .kettlebells: return "kbells"
+        case .resistanceBands: return "handlebands"
+        case .stabilityBall: return "swissball"
+        case .battleRopes: return "battleropes"
+        case .ezBar: return "ezbar"
+        case .bosuBalanceTrainer: return "bosu"
+        case .sled: return "sled"
+        case .medicineBalls: return "medballs"
+        case .flatBench: return "flatbench"
+        case .declineBench: return "declinebench"
+        case .inclineBench: return "inclinebench"
+        case .latPulldownCable: return "latpulldown"
+        case .legExtensionMachine: return "legextmachine"
+        case .legCurlMachine: return "legcurlmachine"
+        case .calfRaiseMachine: return "calfraisesmachine"
+        case .rowMachine: return "seatedrow"
+        case .legPress: return "legpress"
+        case .pullupBar: return "pullupbar"
+        case .dipBar: return "dipbar"
+        case .squatRack: return "squatrack"
+        case .box: return "box"
+        case .platforms: return "platforms"
+        case .hackSquatMachine: return "hacksquat"
+        case .shoulderPressMachine: return "shoulderpress"
+        case .tricepsExtensionMachine: return "tricepext"
+        case .bicepsCurlMachine: return "bicepscurlmachine"
+        case .abCrunchMachine: return "abcrunch"
+        case .preacherCurlBench, .preacherCurlMachine: return "preachercurlmachine"
+        case .pvc: return "pvc"
+        default: return "dumbbell" // fallback
+        }
+    }
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 8) {
+                // Equipment image
+                Group {
+                    if let image = UIImage(named: equipmentImageName) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                    } else {
+                        // Fallback SF Symbol
+                        Image(systemName: "dumbbell")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+                }
+                .frame(width: 30, height: 30)
+                
+                // Equipment name
+                Text(equipment.rawValue)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 12)
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+            )
+            .overlay(
+                isSelected ? 
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.primary.opacity(0.05)) : nil
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// Extension to chunk arrays (if not already available)
+extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0..<Swift.min($0 + size, count)])
+        }
+    }
+}
+
+#Preview {
+    EquipmentView { equipment, type in
+        print("Selected equipment: \(equipment.map { $0.rawValue }), type: \(type)")
+    }
+}
+

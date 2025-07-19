@@ -50,6 +50,9 @@ struct LogWorkoutView: View {
     @State private var showingTargetMusclesPicker = false
     @State private var customTargetMuscles: [String]? = nil // Custom muscle selection for session
     @State private var selectedMuscleType: String = "Recovered Muscles" // Track the muscle type selection
+    @State private var showingEquipmentPicker = false
+    @State private var customEquipment: [Equipment]? = nil // Custom equipment selection for session
+    @State private var selectedEquipmentType: String = "Auto" // Track equipment type selection
     
     // Computed property for the actual duration to use
     private var effectiveDuration: WorkoutDuration {
@@ -157,6 +160,18 @@ struct LogWorkoutView: View {
                 selectedMuscleType = savedMuscleType
                 print("📱 Restored muscle type: \(savedMuscleType)")
             }
+            
+            // Load custom equipment selection if it exists
+            if let savedEquipmentStrings = UserDefaults.standard.array(forKey: "currentWorkoutCustomEquipment") as? [String] {
+                customEquipment = savedEquipmentStrings.compactMap { Equipment(rawValue: $0) }
+                print("📱 Restored custom equipment: \(customEquipment!.map { $0.rawValue })")
+            }
+            
+            // Load equipment type if it exists
+            if let savedEquipmentType = UserDefaults.standard.string(forKey: "currentWorkoutEquipmentType") {
+                selectedEquipmentType = savedEquipmentType
+                print("📱 Restored equipment type: \(savedEquipmentType)")
+            }
         }
         .sheet(isPresented: $showingDurationPicker) {
             WorkoutDurationPickerView(
@@ -217,6 +232,22 @@ struct LogWorkoutView: View {
                 
                 print("🎯 Selected target muscles: \(newMuscles), type: \(muscleType)")
                 showingTargetMusclesPicker = false
+                regenerateWorkoutWithNewDuration()
+            })
+        }
+        .sheet(isPresented: $showingEquipmentPicker) {
+            EquipmentView(onSelectionChanged: { newEquipment, equipmentType in
+                // Save custom equipment selection and type, regenerate workout
+                customEquipment = newEquipment
+                selectedEquipmentType = equipmentType
+                
+                // Persist custom equipment selection to UserDefaults
+                let equipmentStrings = newEquipment.map { $0.rawValue }
+                UserDefaults.standard.set(equipmentStrings, forKey: "currentWorkoutCustomEquipment")
+                UserDefaults.standard.set(equipmentType, forKey: "currentWorkoutEquipmentType")
+                
+                print("⚙️ Selected equipment: \(newEquipment.map { $0.rawValue }), type: \(equipmentType)")
+                showingEquipmentPicker = false
                 regenerateWorkoutWithNewDuration()
             })
         }
@@ -310,7 +341,7 @@ struct LogWorkoutView: View {
     private var workoutControlsInHeader: some View {
         HStack(spacing: 12) {
             // X button to reset all session options (only show when any session option is set) - positioned first
-            if sessionDuration != nil || customTargetMuscles != nil {
+            if sessionDuration != nil || customTargetMuscles != nil || customEquipment != nil {
                 Button(action: {
                     // Reset to default duration
                     sessionDuration = nil
@@ -323,8 +354,14 @@ struct LogWorkoutView: View {
                     selectedMuscleType = "Recovered Muscles"
                     UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
                     
+                    // Reset to default equipment
+                    customEquipment = nil
+                    UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomEquipment")
+                    selectedEquipmentType = "Auto"
+                    UserDefaults.standard.removeObject(forKey: "currentWorkoutEquipmentType")
+                    
                     regenerateWorkoutWithNewDuration()
-                    print("🔄 Reset to default duration and muscle type")
+                    print("🔄 Reset to default duration, muscle type, and equipment")
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
@@ -400,6 +437,37 @@ struct LogWorkoutView: View {
                 .overlay(
                     // Add primary color overlay when custom muscles are set
                     customTargetMuscles != nil ? 
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.primary.opacity(0.05)) : nil
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Equipment Control with custom equipment selection styling
+            Button(action: {
+                showingEquipmentPicker = true
+            }) {
+                HStack(spacing: 4) {
+                    Text(selectedEquipmentType)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.primary)
+                    
+                    // Always show chevron
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(.systemBackground))
+                .cornerRadius(20)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(customEquipment != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                )
+                .overlay(
+                    // Add primary color overlay when custom equipment is set
+                    customEquipment != nil ? 
                     RoundedRectangle(cornerRadius: 20)
                         .fill(Color.primary.opacity(0.05)) : nil
                 )

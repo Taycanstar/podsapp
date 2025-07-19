@@ -45,6 +45,7 @@
 		361FF3472E2A012700B7F68E /* TextLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3462E2A011700B7F68E /* TextLogView.swift */; };
 		361FF3492E2B279400B7F68E /* TargetMusclesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3482E2B277D00B7F68E /* TargetMusclesView.swift */; };
 		361FF34B2E2B291500B7F68E /* MuscleGroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF34A2E2B290F00B7F68E /* MuscleGroupsView.swift */; };
+		361FF34D2E2C244F00B7F68E /* EquipmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF34C2E2C244500B7F68E /* EquipmentView.swift */; };
 		362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362125EE2C6041F3009D3E7C /* PodOptionsView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
@@ -331,6 +332,7 @@
 		361FF3462E2A011700B7F68E /* TextLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLogView.swift; sourceTree = "<group>"; };
 		361FF3482E2B277D00B7F68E /* TargetMusclesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetMusclesView.swift; sourceTree = "<group>"; };
 		361FF34A2E2B290F00B7F68E /* MuscleGroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleGroupsView.swift; sourceTree = "<group>"; };
+		361FF34C2E2C244500B7F68E /* EquipmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentView.swift; sourceTree = "<group>"; };
 		362125EE2C6041F3009D3E7C /* PodOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodOptionsView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
@@ -713,6 +715,7 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				361FF34C2E2C244500B7F68E /* EquipmentView.swift */,
 				361FF34A2E2B290F00B7F68E /* MuscleGroupsView.swift */,
 				361FF3482E2B277D00B7F68E /* TargetMusclesView.swift */,
 				361FF3442E28920300B7F68E /* MuscleRecoveryCompactView.swift */,
@@ -1543,6 +1546,7 @@
 				36CB03352D5BA5AC006A74E9 /* UserGoals.swift in Sources */,
 				363AFA112D3C258200C91A14 /* EditActivityItemView.swift in Sources */,
 				369474632CD0031000CD197F /* DropdownButton.swift in Sources */,
+				361FF34D2E2C244F00B7F68E /* EquipmentView.swift in Sources */,
 				36A85CD72DB182BA00DD4266 /* GenderView.swift in Sources */,
 				36ED35E12DDE52CB00D174FB /* TapQuickLogView.swift in Sources */,
 				36ED35DB2DDE528700D174FB /* NewMenuView.swift in Sources */,
