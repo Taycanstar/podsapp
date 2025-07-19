@@ -456,11 +456,11 @@ struct EquipmentSelectionButton: View {
                             .foregroundColor(.primary)
                     }
                 }
-                .frame(width: 30, height: 30)
+                .frame(width: 50, height: 50)
                 
                 // Equipment name
                 Text(equipment.rawValue)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
