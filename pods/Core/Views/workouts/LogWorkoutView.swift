@@ -47,6 +47,9 @@ struct LogWorkoutView: View {
     @State private var sessionDuration: WorkoutDuration? = nil // Session-specific duration (doesn't affect defaults)
     @State private var showingDurationPicker = false
     @State private var shouldRegenerateWorkout = false
+    @State private var showingTargetMusclesPicker = false
+    @State private var customTargetMuscles: [String]? = nil // Custom muscle selection for session
+    @State private var selectedMuscleType: String = "Recovered Muscles" // Track the muscle type selection
     
     // Computed property for the actual duration to use
     private var effectiveDuration: WorkoutDuration {
@@ -56,6 +59,7 @@ struct LogWorkoutView: View {
     // Keys for UserDefaults
     private let sessionDurationKey = "currentWorkoutSessionDuration"
     private let sessionDateKey = "currentWorkoutSessionDate"
+    private let customMusclesKey = "currentWorkoutCustomMuscles"
     
     enum WorkoutTab: Hashable {
         case today, workouts
@@ -141,6 +145,18 @@ struct LogWorkoutView: View {
                     print("🗑️ Cleared expired session duration from previous day")
                 }
             }
+
+            // Load custom muscle selection if it exists
+            if let savedCustomMuscles = UserDefaults.standard.array(forKey: customMusclesKey) as? [String] {
+                customTargetMuscles = savedCustomMuscles
+                print("📱 Restored custom muscle selection: \(customTargetMuscles!)")
+            }
+            
+            // Load muscle type if it exists
+            if let savedMuscleType = UserDefaults.standard.string(forKey: "currentWorkoutMuscleType") {
+                selectedMuscleType = savedMuscleType
+                print("📱 Restored muscle type: \(savedMuscleType)")
+            }
         }
         .sheet(isPresented: $showingDurationPicker) {
             WorkoutDurationPickerView(
@@ -189,6 +205,21 @@ struct LogWorkoutView: View {
                 }
             )
         }
+        .sheet(isPresented: $showingTargetMusclesPicker) {
+            TargetMusclesView(onSelectionChanged: { newMuscles, muscleType in
+                // Save custom muscle selection and type, regenerate workout
+                customTargetMuscles = newMuscles
+                selectedMuscleType = muscleType
+                
+                // Persist custom muscle selection to UserDefaults
+                UserDefaults.standard.set(newMuscles, forKey: customMusclesKey)
+                UserDefaults.standard.set(muscleType, forKey: "currentWorkoutMuscleType")
+                
+                print("🎯 Selected target muscles: \(newMuscles), type: \(muscleType)")
+                showingTargetMusclesPicker = false
+                regenerateWorkoutWithNewDuration()
+            })
+        }
     }
     
     private func regenerateWorkoutWithNewDuration() {
@@ -205,14 +236,20 @@ struct LogWorkoutView: View {
         sessionDuration = nil
         UserDefaults.standard.removeObject(forKey: sessionDurationKey)
         UserDefaults.standard.removeObject(forKey: sessionDateKey)
-        print("🗑️ Cleared session duration")
+        customTargetMuscles = nil
+        UserDefaults.standard.removeObject(forKey: customMusclesKey)
+        selectedMuscleType = "Recovered Muscles"
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
+        print("🗑️ Cleared session duration, custom muscles, and muscle type")
     }
     
     // Static method to clear session duration from anywhere in the app
     static func clearWorkoutSessionDuration() {
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionDuration")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionDate")
-        print("🗑️ Cleared workout session duration (static)")
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomMuscles")
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
+        print("🗑️ Cleared workout session duration, custom muscles, and muscle type (static)")
     }
     
     private func updateServerWorkoutDuration(email: String, durationMinutes: Int) {
@@ -309,12 +346,10 @@ struct LogWorkoutView: View {
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.primary)
                     
-                    // Show chevron only when no session duration is set
-                    if sessionDuration == nil {
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
+                    // Always show chevron
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
@@ -333,14 +368,65 @@ struct LogWorkoutView: View {
             }
             .buttonStyle(PlainButtonStyle())
             
-            // Type Control  
-            WorkoutControlButton(
-                title: "Recovered Muscles",
-                value: "",
-                onTap: {
-                    print("Type picker tapped")
+            // Type Control with custom muscle selection styling
+            Button(action: {
+                showingTargetMusclesPicker = true
+            }) {
+                HStack(spacing: 4) {
+                    Text(selectedMuscleType)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.primary)
+                    
+                    // Always show chevron
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
                 }
-            )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(.systemBackground))
+                .cornerRadius(20)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(customTargetMuscles != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                )
+                .overlay(
+                    // Add primary color overlay when custom muscles are set
+                    customTargetMuscles != nil ? 
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.primary.opacity(0.05)) : nil
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // X button to reset custom muscle selection (only show when custom muscles are set)
+            if customTargetMuscles != nil {
+                Button(action: {
+                    // Reset to default recovered muscles
+                    customTargetMuscles = nil
+                    UserDefaults.standard.removeObject(forKey: customMusclesKey)
+                    selectedMuscleType = "Recovered Muscles" // Reset muscle type
+                    UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
+                    regenerateWorkoutWithNewDuration()
+                    print("🔄 Reset to default recovered muscles")
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(width: 35, height: 35)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(17.5)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 17.5)
+                                .stroke(Color.primary, lineWidth: 1)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 17.5)
+                                .fill(Color.primary.opacity(0.05))
+                        )
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
             
             Spacer()
         }
@@ -357,7 +443,8 @@ struct LogWorkoutView: View {
                     workoutManager: workoutManager,
                     userEmail: userEmail,
                     selectedDuration: effectiveDuration,
-                    shouldRegenerate: shouldRegenerateWorkout
+                    shouldRegenerate: shouldRegenerateWorkout,
+                    customTargetMuscles: customTargetMuscles
                 )
             case .workouts:
                 RoutinesWorkoutView(
@@ -422,6 +509,7 @@ private struct TodayWorkoutView: View {
     let userEmail: String
     let selectedDuration: WorkoutDuration
     let shouldRegenerate: Bool
+    let customTargetMuscles: [String]? // Added this parameter
     
     @State private var todayWorkout: TodayWorkout?
     @State private var isGeneratingWorkout = false
@@ -530,28 +618,34 @@ private struct TodayWorkoutView: View {
         // Use selected duration instead of user's available time
         let targetDuration = selectedDuration.minutes
         
-        // Get recovery-optimized muscle groups
-        let recoveryOptimizedMuscles = recommendationService.getRecoveryOptimizedWorkout(targetMuscleCount: 4)
-        
-        // Define muscle groups based on recovery and goal
+        // Define muscle groups based on custom selection or recovery
         let muscleGroups: [String]
-        if recoveryOptimizedMuscles.count >= 3 {
-            // Use recovery-optimized selection
-            muscleGroups = recoveryOptimizedMuscles
-            print("🧠 Using recovery-optimized muscles: \(muscleGroups)")
+        if let customMuscles = customTargetMuscles, !customMuscles.isEmpty {
+            // Use custom muscle selection
+            muscleGroups = customMuscles
+            print("🎯 Using custom muscle selection: \(muscleGroups)")
         } else {
-            // Fallback to goal-based selection
-            switch fitnessGoal {
-            case .strength, .powerlifting:
-                muscleGroups = ["Chest", "Back", "Shoulders", "Quadriceps", "Glutes"]
-            case .hypertrophy:
-                muscleGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps"]
-            case .endurance:
-                muscleGroups = ["Chest", "Back", "Quadriceps", "Abs"]
-            default:
-                muscleGroups = ["Chest", "Back", "Shoulders", "Quadriceps"]
+            // Get recovery-optimized muscle groups
+            let recoveryOptimizedMuscles = recommendationService.getRecoveryOptimizedWorkout(targetMuscleCount: 4)
+            
+            if recoveryOptimizedMuscles.count >= 3 {
+                // Use recovery-optimized selection
+                muscleGroups = recoveryOptimizedMuscles
+                print("🧠 Using recovery-optimized muscles: \(muscleGroups)")
+            } else {
+                // Fallback to goal-based selection
+                switch fitnessGoal {
+                case .strength, .powerlifting:
+                    muscleGroups = ["Chest", "Back", "Shoulders", "Quadriceps", "Glutes"]
+                case .hypertrophy:
+                    muscleGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps"]
+                case .endurance:
+                    muscleGroups = ["Chest", "Back", "Quadriceps", "Abs"]
+                default:
+                    muscleGroups = ["Chest", "Back", "Shoulders", "Quadriceps"]
+                }
+                print("⚠️ Using fallback muscle groups: \(muscleGroups)")
             }
-            print("⚠️ Using fallback muscle groups: \(muscleGroups)")
         }
         
         // Calculate workout parameters based on goal
@@ -1332,7 +1426,7 @@ struct WorkoutDurationPickerView: View {
             }
             .padding(.horizontal)
             .padding(.top, 16)
-            .padding(.bottom, 20)
+            .padding(.bottom, 16)
             
             Text("Duration")
                 .font(.title2)

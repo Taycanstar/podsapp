@@ -43,6 +43,8 @@
 		361FF3432E288DCF00B7F68E /* MuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3422E288DC800B7F68E /* MuscleRecoveryView.swift */; };
 		361FF3452E28920B00B7F68E /* MuscleRecoveryCompactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3442E28920300B7F68E /* MuscleRecoveryCompactView.swift */; };
 		361FF3472E2A012700B7F68E /* TextLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3462E2A011700B7F68E /* TextLogView.swift */; };
+		361FF3492E2B279400B7F68E /* TargetMusclesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3482E2B277D00B7F68E /* TargetMusclesView.swift */; };
+		361FF34B2E2B291500B7F68E /* MuscleGroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF34A2E2B290F00B7F68E /* MuscleGroupsView.swift */; };
 		362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362125EE2C6041F3009D3E7C /* PodOptionsView.swift */; };
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
@@ -327,6 +329,8 @@
 		361FF3422E288DC800B7F68E /* MuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleRecoveryView.swift; sourceTree = "<group>"; };
 		361FF3442E28920300B7F68E /* MuscleRecoveryCompactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleRecoveryCompactView.swift; sourceTree = "<group>"; };
 		361FF3462E2A011700B7F68E /* TextLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLogView.swift; sourceTree = "<group>"; };
+		361FF3482E2B277D00B7F68E /* TargetMusclesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetMusclesView.swift; sourceTree = "<group>"; };
+		361FF34A2E2B290F00B7F68E /* MuscleGroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleGroupsView.swift; sourceTree = "<group>"; };
 		362125EE2C6041F3009D3E7C /* PodOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodOptionsView.swift; sourceTree = "<group>"; };
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
@@ -709,6 +713,8 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				361FF34A2E2B290F00B7F68E /* MuscleGroupsView.swift */,
+				361FF3482E2B277D00B7F68E /* TargetMusclesView.swift */,
 				361FF3442E28920300B7F68E /* MuscleRecoveryCompactView.swift */,
 				361FF3422E288DC800B7F68E /* MuscleRecoveryView.swift */,
 				361FF3382E2308F900B7F68E /* StartWorkoutView.swift */,
@@ -1356,6 +1362,7 @@
 				36ED35E72DDE531A00D174FB /* DescribeMealView.swift in Sources */,
 				36B851692D4EBAB200A876C3 /* NewSheetView.swift in Sources */,
 				36EAFD402B79BEAC0001013F /* VideoPreviewView.swift in Sources */,
+				361FF34B2E2B291500B7F68E /* MuscleGroupsView.swift in Sources */,
 				36ED35B22DD675C900D174FB /* HeightProgressView.swift in Sources */,
 				3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */,
 				36ED35F72DDE538E00D174FB /* NameFoodView.swift in Sources */,
@@ -1568,6 +1575,7 @@
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,
 				36ED359D2DD0DE1600D174FB /* LogRepository.swift in Sources */,
 				36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */,
+				361FF3492E2B279400B7F68E /* TargetMusclesView.swift in Sources */,
 				362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */,
 				362969B62D0D3E4700DF0B26 /* FullActivityLogView.swift in Sources */,
 				363068D12E0CEBDB00F2D4EC /* UpdateEditWeightView.swift in Sources */,
