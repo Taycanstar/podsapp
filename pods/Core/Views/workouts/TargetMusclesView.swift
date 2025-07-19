@@ -51,6 +51,7 @@ struct TargetMusclesView: View {
                         Spacer()
                         
                         Button(action: {
+                            HapticFeedback.generate()
                             dismiss()
                         }) {
                             Image(systemName: "xmark")
@@ -106,6 +107,7 @@ struct TargetMusclesView: View {
                 Spacer()
                 
                 Button(action: {
+                    HapticFeedback.generate()
                     dismiss()
                 }) {
                     Image(systemName: "xmark")
@@ -129,6 +131,7 @@ struct TargetMusclesView: View {
                             split: .recoveredMuscles,
                             isSelected: selectedSplit == .recoveredMuscles,
                             onTap: {
+                                HapticFeedback.generate()
                                 selectedSplit = .recoveredMuscles
                                 selectedMuscles = Set(selectedSplit.muscleGroups)
                             }
@@ -138,6 +141,7 @@ struct TargetMusclesView: View {
                             split: .pushMuscles,
                             isSelected: selectedSplit == .pushMuscles,
                             onTap: {
+                                HapticFeedback.generate()
                                 selectedSplit = .pushMuscles
                                 selectedMuscles = Set(selectedSplit.muscleGroups)
                             }
@@ -147,6 +151,7 @@ struct TargetMusclesView: View {
                             split: .pullMuscles,
                             isSelected: selectedSplit == .pullMuscles,
                             onTap: {
+                                HapticFeedback.generate()
                                 selectedSplit = .pullMuscles
                                 selectedMuscles = Set(selectedSplit.muscleGroups)
                             }
@@ -160,6 +165,7 @@ struct TargetMusclesView: View {
                             split: .upperBody,
                             isSelected: selectedSplit == .upperBody,
                             onTap: {
+                                HapticFeedback.generate()
                                 selectedSplit = .upperBody
                                 selectedMuscles = Set(selectedSplit.muscleGroups)
                             }
@@ -169,6 +175,7 @@ struct TargetMusclesView: View {
                             split: .lowerBody,
                             isSelected: selectedSplit == .lowerBody,
                             onTap: {
+                                HapticFeedback.generate()
                                 selectedSplit = .lowerBody
                                 selectedMuscles = Set(selectedSplit.muscleGroups)
                             }
@@ -178,6 +185,7 @@ struct TargetMusclesView: View {
                             split: .fullBody,
                             isSelected: selectedSplit == .fullBody,
                             onTap: {
+                                HapticFeedback.generate()
                                 selectedSplit = .fullBody
                                 selectedMuscles = Set(selectedSplit.muscleGroups)
                             }
@@ -187,6 +195,7 @@ struct TargetMusclesView: View {
                     
                     // Select Muscle Groups Navigation
                     Button(action: {
+                        HapticFeedback.generate()
                         showingMuscleGroups = true
                     }) {
                         HStack {
@@ -221,6 +230,7 @@ struct TargetMusclesView: View {
             // Set for Workout Button
             VStack(spacing: 16) {
                 Button(action: {
+                    HapticFeedback.generate()
                     onSelectionChanged(Array(selectedMuscles), selectedSplit.rawValue)
                     dismiss()
                 }) {

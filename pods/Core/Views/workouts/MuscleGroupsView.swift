@@ -26,7 +26,10 @@ struct MuscleGroupsView: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Button(action: onBack) {
+                Button(action: {
+                    HapticFeedback.generate()
+                    onBack()
+                }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 17, weight: .medium))
                         .foregroundColor(.primary)
@@ -65,6 +68,7 @@ struct MuscleGroupsView: View {
                                     recoveryPercentage: getRecoveryPercentage(for: muscle),
                                     isSelected: selectedMuscles.contains(muscle),
                                     onTap: {
+                                        HapticFeedback.generate()
                                         if selectedMuscles.contains(muscle) {
                                             selectedMuscles.remove(muscle)
                                         } else {
@@ -90,7 +94,10 @@ struct MuscleGroupsView: View {
             
             // Set for Workout Button
             VStack(spacing: 16) {
-                Button(action: onSetForWorkout) {
+                Button(action: {
+                    HapticFeedback.generate()
+                    onSetForWorkout()
+                }) {
                     Text("Set for workout")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(Color(.systemBackground))
