@@ -64,7 +64,7 @@ struct MyProfileView: View {
     @StateObject private var streakManager = StreakManager.shared
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color("iosbg2").edgesIgnoringSafeArea(.all)
                 
@@ -110,6 +110,7 @@ struct MyProfileView: View {
                 }
             }
         }
+        .navigationViewStyle(StackNavigationViewStyle()) // Force stack style for older iOS versions
         .sheet(isPresented: $showEditWeightSheet) {
             EditWeightView(onWeightSaved: {
                 // Refresh weight data after saving with a small delay
