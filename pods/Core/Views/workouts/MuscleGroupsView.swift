@@ -145,18 +145,15 @@ struct MuscleGroupButton: View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 8) {
                 // Muscle name at top
-                Text(muscleName)
+           
+                
+                // HStack with label and progress circle
+                HStack {
+                      Text(muscleName)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .lineLimit(1)
-                
-                // HStack with label and progress circle
-                HStack {
-                    Text(muscleName)
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
                     
                     Spacer()
                     

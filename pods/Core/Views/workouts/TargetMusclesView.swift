@@ -87,7 +87,7 @@ struct TargetMusclesView: View {
             }
             .navigationBarHidden(true)
         }
-        .presentationDetents([.fraction(0.4)])
+        .presentationDetents([.fraction(0.5)])
         .presentationDragIndicator(.visible)
         .onAppear {
             // Set default selection based on recovered muscles
@@ -98,7 +98,11 @@ struct TargetMusclesView: View {
     private var muscleSplitsView: some View {
         VStack(spacing: 0) {
             // Header
-            HStack {
+            
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Muscle split options - First Row
+                          HStack {
                 Spacer()
                 
                 Button(action: {
@@ -120,10 +124,6 @@ struct TargetMusclesView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
                 .padding(.bottom, 30)
-            
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Muscle split options - First Row
                     HStack(spacing: 12) {
                         MuscleSplitButton(
                             split: .recoveredMuscles,
