@@ -309,15 +309,22 @@ struct LogWorkoutView: View {
     
     private var workoutControlsInHeader: some View {
         HStack(spacing: 12) {
-            // X button to reset session duration (only show when session duration is set) - positioned first
-            if sessionDuration != nil {
+            // X button to reset all session options (only show when any session option is set) - positioned first
+            if sessionDuration != nil || customTargetMuscles != nil {
                 Button(action: {
                     // Reset to default duration
                     sessionDuration = nil
                     UserDefaults.standard.removeObject(forKey: sessionDurationKey)
                     UserDefaults.standard.removeObject(forKey: sessionDateKey)
+                    
+                    // Reset to default muscle type
+                    customTargetMuscles = nil
+                    UserDefaults.standard.removeObject(forKey: customMusclesKey)
+                    selectedMuscleType = "Recovered Muscles"
+                    UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
+                    
                     regenerateWorkoutWithNewDuration()
-                    print("🔄 Reset to default duration: \(selectedDuration.minutes) minutes")
+                    print("🔄 Reset to default duration and muscle type")
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .medium))
@@ -398,35 +405,6 @@ struct LogWorkoutView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
-            
-            // X button to reset custom muscle selection (only show when custom muscles are set)
-            if customTargetMuscles != nil {
-                Button(action: {
-                    // Reset to default recovered muscles
-                    customTargetMuscles = nil
-                    UserDefaults.standard.removeObject(forKey: customMusclesKey)
-                    selectedMuscleType = "Recovered Muscles" // Reset muscle type
-                    UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
-                    regenerateWorkoutWithNewDuration()
-                    print("🔄 Reset to default recovered muscles")
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.primary)
-                        .frame(width: 35, height: 35)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(17.5)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 17.5)
-                                .stroke(Color.primary, lineWidth: 1)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 17.5)
-                                .fill(Color.primary.opacity(0.05))
-                        )
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
             
             Spacer()
         }
