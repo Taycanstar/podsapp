@@ -481,6 +481,7 @@ struct LogWorkoutView: View {
                 .buttonStyle(PlainButtonStyle())
             }
             .padding(.horizontal)
+            .padding(.vertical, 2) // Add vertical padding to prevent border cutoff
         }
     }
     

@@ -30,7 +30,7 @@ enum Equipment: String, CaseIterable {
     case dumbbells = "Dumbbells"
     case cable = "Cable"
     case smithMachine = "Smith Machine"
-    case hammerstrengthMachine = "Hammerstrength (Leverage) Machine"
+    case hammerstrengthMachine = "Hammerstrength Machine"
     case kettlebells = "Kettlebells"
     case resistanceBands = "Resistance Bands"
     case stabilityBall = "Stability (Swiss) Ball"

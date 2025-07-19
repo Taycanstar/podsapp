@@ -38,9 +38,10 @@ struct EquipmentView: View {
             case .smallGym:
                 return [
                     .dumbbells, .barbells, .flatBench, .inclineBench, .pullupBar,
-                    .dipBar, .cable, .legPress, .squatRack, .resistanceBands,
+                    .cable, .legPress, .squatRack, .resistanceBands,
                     .stabilityBall, .medicineBalls, .kettlebells, .ezBar, .pvc,
-                    .bosuBalanceTrainer
+                    .bosuBalanceTrainer, .smithMachine, .latPulldownCable, 
+                    .legExtensionMachine, .legCurlMachine
                 ]
             case .garageGym:
                 return [
@@ -456,7 +457,7 @@ struct EquipmentSelectionButton: View {
                             .foregroundColor(.primary)
                     }
                 }
-                .frame(width: 50, height: 50)
+                .frame(width: 45, height: 45)
                 
                 // Equipment name
                 Text(equipment.rawValue)
