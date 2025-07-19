@@ -89,9 +89,16 @@ struct TargetMusclesView: View {
             .navigationBarHidden(true)
         }
         // .presentationDetents([.fraction(0.5)])
-        .presentationDragIndicator(.visible)
         .onAppear {
-            // Set default selection based on recovered muscles
+            // Determine current selection based on saved muscle type
+            if let savedMuscleType = UserDefaults.standard.string(forKey: "currentWorkoutMuscleType"),
+               let splitType = MuscleSplitType(rawValue: savedMuscleType) {
+                selectedSplit = splitType
+            } else {
+                selectedSplit = .recoveredMuscles
+            }
+            
+            // Set muscles based on the selected split
             selectedMuscles = Set(selectedSplit.muscleGroups)
         }
     }
@@ -117,7 +124,7 @@ struct TargetMusclesView: View {
                 }
             }
             .padding(.horizontal)
-            .padding(.top, 16)
+            // .padding(.top, 16)
             .padding(.bottom, 16)
             
             Text("Muscle Splits")
@@ -125,7 +132,7 @@ struct TargetMusclesView: View {
                 .fontWeight(.semibold)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
-                .padding(.bottom, 30)
+                .padding(.bottom, 8)
                     HStack(spacing: 12) {
                         MuscleSplitButton(
                             split: .recoveredMuscles,

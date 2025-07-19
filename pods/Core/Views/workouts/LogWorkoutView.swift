@@ -161,21 +161,21 @@ struct LogWorkoutView: View {
         .sheet(isPresented: $showingDurationPicker) {
             WorkoutDurationPickerView(
                 selectedDuration: .constant(sessionDuration ?? selectedDuration),
-                onSetDefault: {
+                onSetDefault: { newDuration in
                     // Save as default duration - update both local and server
-                    let durationMinutes = (sessionDuration ?? selectedDuration).minutes
+                    let durationMinutes = newDuration.minutes
                     
                     print("🔧 Setting as default duration: \(durationMinutes) minutes")
                     
                     // 1. Update UserDefaults (for immediate use)
                     UserDefaults.standard.set(durationMinutes, forKey: "availableTime")
-                    UserDefaults.standard.set((sessionDuration ?? selectedDuration).rawValue, forKey: "defaultWorkoutDuration")
+                    UserDefaults.standard.set(newDuration.rawValue, forKey: "defaultWorkoutDuration")
                     
                     // 2. Update UserProfileService 
                     UserProfileService.shared.availableTime = durationMinutes
                     
                     // 3. Update the main selectedDuration to reflect the new default
-                    selectedDuration = sessionDuration ?? selectedDuration
+                    selectedDuration = newDuration
                     
                     // 4. Clear session duration since it's now the default
                     sessionDuration = nil
@@ -1374,12 +1374,12 @@ enum WorkoutDuration: String, CaseIterable {
 struct WorkoutDurationPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedDuration: WorkoutDuration
-    let onSetDefault: () -> Void
+    let onSetDefault: (WorkoutDuration) -> Void
     let onSetForWorkout: (WorkoutDuration) -> Void // Updated to pass the selected duration
     
     @State private var tempSelectedDuration: WorkoutDuration
     
-    init(selectedDuration: Binding<WorkoutDuration>, onSetDefault: @escaping () -> Void, onSetForWorkout: @escaping (WorkoutDuration) -> Void) {
+    init(selectedDuration: Binding<WorkoutDuration>, onSetDefault: @escaping (WorkoutDuration) -> Void, onSetForWorkout: @escaping (WorkoutDuration) -> Void) {
         self._selectedDuration = selectedDuration
         self.onSetDefault = onSetDefault
         self.onSetForWorkout = onSetForWorkout
@@ -1452,7 +1452,7 @@ struct WorkoutDurationPickerView: View {
                     
                     // Slider circle positioned to align with label centers
                     Circle()
-                        .fill(Color(.systemBackground))
+                        .fill(Color(.white))
                         .frame(width: 20, height: 20)
                         .overlay(
                             Circle()
@@ -1496,7 +1496,7 @@ struct WorkoutDurationPickerView: View {
         HStack(spacing: 0) {
             Button("Set as default") {
                 selectedDuration = tempSelectedDuration
-                onSetDefault()
+                onSetDefault(tempSelectedDuration)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(.primary)

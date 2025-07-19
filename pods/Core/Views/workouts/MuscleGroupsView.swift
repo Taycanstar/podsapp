@@ -57,8 +57,8 @@ struct MuscleGroupsView: View {
             
             ScrollView {
                 VStack(spacing: 16) {
-                    // Muscle groups grid - 4 per row
-                    let rows = allMuscleGroups.chunked(into: 4)
+                    // Muscle groups grid - 3 per row
+                    let rows = allMuscleGroups.chunked(into: 3)
                     
                     ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
                         HStack(spacing: 12) {
@@ -78,13 +78,13 @@ struct MuscleGroupsView: View {
                                 )
                             }
                             
-                            // Add empty spacers if row has fewer than 4 items
-                            ForEach(0..<(4 - row.count), id: \.self) { _ in
+                            // Add empty spacers if row has fewer than 3 items
+                            ForEach(0..<(3 - row.count), id: \.self) { _ in
                                 Spacer()
                                     .frame(maxWidth: .infinity)
                             }
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 16)
                     }
                     
                     Spacer()
@@ -150,17 +150,17 @@ struct MuscleGroupButton: View {
     
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 // Muscle name at top
-           
+                
                 
                 // HStack with label and progress circle
                 HStack {
-                      Text(muscleName)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .lineLimit(1)
+                    Text(muscleName)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .lineLimit(1)
                     
                     Spacer()
                     
@@ -168,12 +168,12 @@ struct MuscleGroupButton: View {
                     ZStack {
                         Circle()
                             .stroke(Color.gray.opacity(0.2), lineWidth: 2)
-                            .frame(width: 16, height: 16)
+                            .frame(width: 20, height: 20)
                         
                         Circle()
                             .trim(from: 0, to: recoveryPercentage / 100.0)
                             .stroke(recoveryColor, lineWidth: 2)
-                            .frame(width: 16, height: 16)
+                            .frame(width: 20, height: 20)
                             .rotationEffect(.degrees(-90))
                             .animation(.easeInOut(duration: 0.3), value: recoveryPercentage)
                     }
@@ -181,12 +181,12 @@ struct MuscleGroupButton: View {
                 
                 // Percentage below, left-aligned
                 Text("\(Int(recoveryPercentage))%")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(recoveryColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 16)
             .background(Color(.systemBackground))
             .cornerRadius(12)
             .overlay(
@@ -219,4 +219,3 @@ extension Array {
         onSetForWorkout: { print("Set for workout tapped") }
     )
 }
-
