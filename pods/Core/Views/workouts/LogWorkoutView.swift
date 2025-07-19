@@ -171,6 +171,10 @@ struct LogWorkoutView: View {
             if let savedEquipmentType = UserDefaults.standard.string(forKey: "currentWorkoutEquipmentType") {
                 selectedEquipmentType = savedEquipmentType
                 print("📱 Restored equipment type: \(savedEquipmentType)")
+            } else {
+                // Default to showing user's workout location
+                let userProfile = UserProfileService.shared
+                selectedEquipmentType = userProfile.workoutLocationDisplay
             }
         }
         .sheet(isPresented: $showingDurationPicker) {
@@ -339,144 +343,144 @@ struct LogWorkoutView: View {
     }
     
     private var workoutControlsInHeader: some View {
-        HStack(spacing: 12) {
-            // X button to reset all session options (only show when any session option is set) - positioned first
-            if sessionDuration != nil || customTargetMuscles != nil || customEquipment != nil {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                // X button to reset all session options (only show when any session option is set) - positioned first
+                if sessionDuration != nil || customTargetMuscles != nil || customEquipment != nil {
+                    Button(action: {
+                        // Reset to default duration
+                        sessionDuration = nil
+                        UserDefaults.standard.removeObject(forKey: sessionDurationKey)
+                        UserDefaults.standard.removeObject(forKey: sessionDateKey)
+                        
+                        // Reset to default muscle type
+                        customTargetMuscles = nil
+                        UserDefaults.standard.removeObject(forKey: customMusclesKey)
+                        selectedMuscleType = "Recovered Muscles"
+                        UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
+                        
+                        // Reset to default equipment
+                        customEquipment = nil
+                        UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomEquipment")
+                        selectedEquipmentType = "Auto"
+                        UserDefaults.standard.removeObject(forKey: "currentWorkoutEquipmentType")
+                        
+                        regenerateWorkoutWithNewDuration()
+                        print("🔄 Reset to default duration, muscle type, and equipment")
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.primary)
+                            .frame(width: 35, height: 35)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(17.5)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 17.5)
+                                    .stroke(Color.primary, lineWidth: 1)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 17.5)
+                                    .fill(Color.primary.opacity(0.05))
+                            )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                
+                // Duration Control with session modification styling
                 Button(action: {
-                    // Reset to default duration
-                    sessionDuration = nil
-                    UserDefaults.standard.removeObject(forKey: sessionDurationKey)
-                    UserDefaults.standard.removeObject(forKey: sessionDateKey)
-                    
-                    // Reset to default muscle type
-                    customTargetMuscles = nil
-                    UserDefaults.standard.removeObject(forKey: customMusclesKey)
-                    selectedMuscleType = "Recovered Muscles"
-                    UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
-                    
-                    // Reset to default equipment
-                    customEquipment = nil
-                    UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomEquipment")
-                    selectedEquipmentType = "Auto"
-                    UserDefaults.standard.removeObject(forKey: "currentWorkoutEquipmentType")
-                    
-                    regenerateWorkoutWithNewDuration()
-                    print("🔄 Reset to default duration, muscle type, and equipment")
+                    showingDurationPicker = true
                 }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.primary)
-                        .frame(width: 35, height: 35)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(17.5)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 17.5)
-                                .stroke(Color.primary, lineWidth: 1)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 17.5)
-                                .fill(Color.primary.opacity(0.05))
-                        )
+                    HStack(spacing: 4) {
+                        Text(effectiveDuration.displayValue)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        // Always show chevron
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(sessionDuration != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                    .overlay(
+                        // Add primary color overlay when session duration is set
+                        sessionDuration != nil ? 
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.primary.opacity(0.05)) : nil
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                // Type Control with custom muscle selection styling
+                Button(action: {
+                    showingTargetMusclesPicker = true
+                }) {
+                    HStack(spacing: 4) {
+                        Text(selectedMuscleType)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        // Always show chevron
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(customTargetMuscles != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                    .overlay(
+                        // Add primary color overlay when custom muscles are set
+                        customTargetMuscles != nil ? 
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.primary.opacity(0.05)) : nil
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                // Equipment Control with custom equipment selection styling
+                Button(action: {
+                    showingEquipmentPicker = true
+                }) {
+                    HStack(spacing: 4) {
+                        Text("Equipment")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        // Always show chevron
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(customEquipment != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                    .overlay(
+                        // Add primary color overlay when custom equipment is set
+                        customEquipment != nil ? 
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.primary.opacity(0.05)) : nil
+                    )
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-            
-            // Duration Control with session modification styling
-            Button(action: {
-                showingDurationPicker = true
-            }) {
-                HStack(spacing: 4) {
-                    Text(effectiveDuration.displayValue)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.primary)
-                    
-                    // Always show chevron
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color(.systemBackground))
-                .cornerRadius(20)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(sessionDuration != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
-                )
-                .overlay(
-                    // Add primary color overlay when session duration is set
-                    sessionDuration != nil ? 
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.primary.opacity(0.05)) : nil
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            
-            // Type Control with custom muscle selection styling
-            Button(action: {
-                showingTargetMusclesPicker = true
-            }) {
-                HStack(spacing: 4) {
-                    Text(selectedMuscleType)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.primary)
-                    
-                    // Always show chevron
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color(.systemBackground))
-                .cornerRadius(20)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(customTargetMuscles != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
-                )
-                .overlay(
-                    // Add primary color overlay when custom muscles are set
-                    customTargetMuscles != nil ? 
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.primary.opacity(0.05)) : nil
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            
-            // Equipment Control with custom equipment selection styling
-            Button(action: {
-                showingEquipmentPicker = true
-            }) {
-                HStack(spacing: 4) {
-                    Text(selectedEquipmentType)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.primary)
-                    
-                    // Always show chevron
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color(.systemBackground))
-                .cornerRadius(20)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(customEquipment != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
-                )
-                .overlay(
-                    // Add primary color overlay when custom equipment is set
-                    customEquipment != nil ? 
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.primary.opacity(0.05)) : nil
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            
-            Spacer()
+            .padding(.horizontal)
         }
-        .padding(.horizontal)
     }
     
     private var mainContentView: some View {

@@ -9,13 +9,12 @@ import SwiftUI
 
 struct EquipmentView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedEquipmentType: EquipmentType = .auto
+    @State private var selectedEquipmentType: EquipmentType = EquipmentType.getDefaultFromWorkoutLocation()
     @State private var selectedEquipment: Set<Equipment> = []
     
     let onSelectionChanged: ([Equipment], String) -> Void
     
     enum EquipmentType: String, CaseIterable {
-        case auto = "Auto"
         case largeGym = "Large Gym"
         case smallGym = "Small Gym"
         case garageGym = "Garage Gym"
@@ -25,9 +24,6 @@ struct EquipmentView: View {
         
         var equipmentList: [Equipment] {
             switch self {
-            case .auto:
-                // Get from user's workout location
-                return getEquipmentForWorkoutLocation()
             case .largeGym:
                 return [
                     .dumbbells, .barbells, .cable, .smithMachine, .hammerstrengthMachine,
@@ -64,23 +60,23 @@ struct EquipmentView: View {
             }
         }
         
-        private func getEquipmentForWorkoutLocation() -> [Equipment] {
+        static func getDefaultFromWorkoutLocation() -> EquipmentType {
             let userProfile = UserProfileService.shared
             let workoutLocation = userProfile.workoutLocationDisplay
             
             switch workoutLocation {
             case "Large Gym":
-                return EquipmentType.largeGym.equipmentList
+                return .largeGym
             case "Small Gym":
-                return EquipmentType.smallGym.equipmentList
+                return .smallGym
             case "Garage Gym":
-                return EquipmentType.garageGym.equipmentList
+                return .garageGym
             case "At Home":
-                return EquipmentType.atHome.equipmentList
+                return .atHome
             case "Bodyweight Only":
-                return EquipmentType.bodyweightOnly.equipmentList
+                return .bodyweightOnly
             default:
-                return EquipmentType.largeGym.equipmentList
+                return .largeGym
             }
         }
     }
@@ -117,16 +113,6 @@ struct EquipmentView: View {
                     // Equipment type options - First Row
                     HStack(spacing: 12) {
                         EquipmentTypeButton(
-                            type: .auto,
-                            isSelected: selectedEquipmentType == .auto,
-                            onTap: {
-                                HapticFeedback.generate()
-                                selectedEquipmentType = .auto
-                                selectedEquipment = Set(selectedEquipmentType.equipmentList)
-                            }
-                        )
-                        
-                        EquipmentTypeButton(
                             type: .largeGym,
                             isSelected: selectedEquipmentType == .largeGym,
                             onTap: {
@@ -145,11 +131,7 @@ struct EquipmentView: View {
                                 selectedEquipment = Set(selectedEquipmentType.equipmentList)
                             }
                         )
-                    }
-                    .padding(.horizontal)
-                    
-                    // Second Row
-                    HStack(spacing: 12) {
+                        
                         EquipmentTypeButton(
                             type: .garageGym,
                             isSelected: selectedEquipmentType == .garageGym,
@@ -159,7 +141,11 @@ struct EquipmentView: View {
                                 selectedEquipment = Set(selectedEquipmentType.equipmentList)
                             }
                         )
-                        
+                    }
+                    .padding(.horizontal)
+                    
+                    // Second Row
+                    HStack(spacing: 12) {
                         EquipmentTypeButton(
                             type: .atHome,
                             isSelected: selectedEquipmentType == .atHome,
@@ -179,24 +165,22 @@ struct EquipmentView: View {
                                 selectedEquipment = Set(selectedEquipmentType.equipmentList)
                             }
                         )
+                        
+                        EquipmentTypeButton(
+                            type: .custom,
+                            isSelected: selectedEquipmentType == .custom,
+                            onTap: {
+                                HapticFeedback.generate()
+                                selectedEquipmentType = .custom
+                                selectedEquipment = [] // Start with empty selection for custom
+                            }
+                        )
                     }
                     .padding(.horizontal)
                     
-                    // Custom Button (full width)
-                    EquipmentTypeButton(
-                        type: .custom,
-                        isSelected: selectedEquipmentType == .custom,
-                        onTap: {
-                            HapticFeedback.generate()
-                            selectedEquipmentType = .custom
-                            selectedEquipment = [] // Start with empty selection for custom
-                        }
-                    )
-                    .padding(.horizontal)
-                    
-                    // Custom equipment selection (only show when custom is selected)
-                    if selectedEquipmentType == .custom {
-                        customEquipmentSelection
+                    // Equipment selection (show for all except bodyweight only, unless custom)
+                    if selectedEquipmentType != .bodyweightOnly || selectedEquipmentType == .custom {
+                        equipmentSelectionGrid
                     }
                     
                     Spacer()
@@ -207,24 +191,26 @@ struct EquipmentView: View {
             // Action buttons
             actionButtons
         }
-        .presentationDetents([.fraction(0.6)])
         .onAppear {
-            // Initialize selection based on current equipment type
+            // Initialize selection based on current equipment type or workout location
             if let savedEquipmentType = UserDefaults.standard.string(forKey: "currentWorkoutEquipmentType"),
                let equipmentType = EquipmentType(rawValue: savedEquipmentType) {
                 selectedEquipmentType = equipmentType
             } else {
-                selectedEquipmentType = .auto
+                // Default to user's workout location
+                selectedEquipmentType = EquipmentType.getDefaultFromWorkoutLocation()
             }
             
-            // Set equipment based on type
-            selectedEquipment = Set(selectedEquipmentType.equipmentList)
+            // Set equipment based on type - initialize with appropriate equipment
+            if selectedEquipment.isEmpty {
+                selectedEquipment = Set(selectedEquipmentType.equipmentList)
+            }
         }
     }
     
-    private var customEquipmentSelection: some View {
+    private var equipmentSelectionGrid: some View {
         VStack(spacing: 16) {
-            Text("Select Equipment")
+            Text("Available Equipment")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
@@ -262,7 +248,12 @@ struct EquipmentView: View {
     }
     
     private var actionButtons: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
+            // Divider
+            Divider()
+                .padding(.horizontal)
+            
+            // Buttons with proper spacing
             HStack(spacing: 0) {
                 Button("Set as default") {
                     HapticFeedback.generate()
@@ -295,6 +286,7 @@ struct EquipmentView: View {
                 .cornerRadius(8)
             }
             .padding(.horizontal)
+            .padding(.top, 20)
             .padding(.bottom, 30)
         }
     }
