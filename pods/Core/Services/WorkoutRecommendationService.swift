@@ -122,6 +122,11 @@ class WorkoutRecommendationService {
     private func canPerformExerciseWithCustomEquipment(_ exercise: ExerciseData, equipment: [Equipment]) -> Bool {
         let exerciseEquipment = exercise.equipment.lowercased()
         
+        // Always allow bodyweight exercises (no equipment needed)
+        if exerciseEquipment == "body weight" || exerciseEquipment.isEmpty {
+            return true
+        }
+        
         // Check if any of the user's equipment matches the exercise equipment
         for userEquipment in equipment {
             let equipmentString = userEquipment.rawValue.lowercased()
