@@ -7,6 +7,18 @@
 
 import SwiftUI
 
+struct RingSegment: View {
+    let start, percent: Double
+    let color: Color
+    
+    var body: some View {
+        Circle()
+            .trim(from: start, to: start + percent)
+            .stroke(color, style: .init(lineWidth: 18, lineCap: .round))
+            .rotationEffect(.degrees(-90))
+    }
+}
+
 struct GoalProgress: View {
     @EnvironmentObject var vm: DayLogsViewModel
     @Environment(\.dismiss) private var dismiss
@@ -22,6 +34,40 @@ struct GoalProgress: View {
     @State private var showError = false
     @State private var errorMessage = ""
     
+    // Computed properties for goal macro calories
+    private var proteinCals: Double {
+        vm.proteinGoal * 4
+    }
+    
+    private var carbCals: Double {
+        vm.carbsGoal * 4
+    }
+    
+    private var fatCals: Double {
+        vm.fatGoal * 9
+    }
+    
+    private var macroCals: Double {
+        proteinCals + carbCals + fatCals
+    }
+    
+    // Calculate percentages for ring segments based on goal calories
+    private var totalGoalCalories: Double {
+        max(vm.calorieGoal, 1)
+    }
+    
+    private var proteinPercent: Double {
+        proteinCals / totalGoalCalories
+    }
+    
+    private var carbPercent: Double {
+        carbCals / totalGoalCalories
+    }
+    
+    private var fatPercent: Double {
+        fatCals / totalGoalCalories
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -42,6 +88,97 @@ struct GoalProgress: View {
                         }
                     }
                     .frame(height: 56)
+                    
+                    // Goal breakdown donut ring
+                    VStack(spacing: 20) {
+                        ZStack {
+                            // Background track (light gray for unfilled portion)
+                            Circle()
+                                .stroke(Color.gray.opacity(0.2), lineWidth: 18)
+                            
+                            // Protein segment (starts at 0)
+                            RingSegment(
+                                start: 0,
+                                percent: proteinPercent,
+                                color: .blue
+                            )
+                            
+                            // Carbs segment (starts after protein)
+                            RingSegment(
+                                start: proteinPercent,
+                                percent: carbPercent,
+                                color: Color("darkYellow")
+                            )
+                            
+                            // Fat segment (starts after protein + carbs)
+                            RingSegment(
+                                start: proteinPercent + carbPercent,
+                                percent: fatPercent,
+                                color: .pink
+                            )
+                            
+                            // Center label
+                            VStack(spacing: 4) {
+                                Text("\(Int(macroCals))/\(Int(vm.calorieGoal))")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                
+                                Text("cals")
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .frame(width: 160, height: 160)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        
+                        // Macro legend
+                        HStack(spacing: 30) {
+                            // Protein
+                            VStack(spacing: 8) {
+                                HStack(spacing: 8) {
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(.blue)
+                                        .frame(width: 14, height: 14)
+                                    Text("Protein")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.primary)
+                                }
+                                Text("\(Int(proteinCals)) kcal")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            // Carbs
+                            VStack(spacing: 8) {
+                                HStack(spacing: 8) {
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Color("darkYellow"))
+                                        .frame(width: 14, height: 14)
+                                    Text("Carbs")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.primary)
+                                }
+                                Text("\(Int(carbCals)) kcal")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            // Fat
+                            VStack(spacing: 8) {
+                                HStack(spacing: 8) {
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(.pink)
+                                        .frame(width: 14, height: 14)
+                                    Text("Fat")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.primary)
+                                }
+                                Text("\(Int(fatCals)) kcal")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
                 }
                 .padding(.horizontal)
                 
