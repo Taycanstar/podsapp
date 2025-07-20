@@ -243,11 +243,6 @@ struct FoodLogDetails: View {
             ToolbarItem(placement: .principal) {
                 Text("Log Details").font(.headline)
             }
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.left")
-                }
-            }
             
             // Show Done button when there are changes
             if hasChanges {
@@ -265,7 +260,6 @@ struct FoodLogDetails: View {
                 }
             }
         }
-        .navigationBarBackButtonHidden(true)
         .onChange(of: editedServings) { _ in checkForChanges() }
         .onChange(of: editedDate) { _ in checkForChanges() }
         .onChange(of: editedMealType) { _ in checkForChanges() }
