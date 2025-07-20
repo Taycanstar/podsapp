@@ -124,11 +124,11 @@ struct GoalProgress: View {
                                     .foregroundColor(.primary)
                                 
                                 Text("cals")
-                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        .font(.system(size: 18, weight: .medium, design: .rounded))
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .frame(width: 160, height: 160)
+                        .frame(width: 120, height: 120)
                         .frame(maxWidth: .infinity, alignment: .center)
                         
                         // Macro legend
@@ -200,6 +200,15 @@ struct GoalProgress: View {
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
                                     .frame(width: 80)
+                                    .toolbar {
+                                        ToolbarItemGroup(placement: .keyboard) {
+                                            Spacer()
+                                            Button("Done") {
+                                                updateGoalsFromInputs()
+                                                hideKeyboard()
+                                            }
+                                        }
+                                    }
                             }
                             .padding()
                             
@@ -213,6 +222,15 @@ struct GoalProgress: View {
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
                                     .frame(width: 80)
+                                    .toolbar {
+                                        ToolbarItemGroup(placement: .keyboard) {
+                                            Spacer()
+                                            Button("Done") {
+                                                updateGoalsFromInputs()
+                                                hideKeyboard()
+                                            }
+                                        }
+                                    }
                             }
                             .padding()
                             
@@ -226,6 +244,15 @@ struct GoalProgress: View {
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
                                     .frame(width: 80)
+                                    .toolbar {
+                                        ToolbarItemGroup(placement: .keyboard) {
+                                            Spacer()
+                                            Button("Done") {
+                                                updateGoalsFromInputs()
+                                                hideKeyboard()
+                                            }
+                                        }
+                                    }
                             }
                             .padding()
                         }
@@ -298,6 +325,28 @@ struct GoalProgress: View {
             // This prevents showing default values after app restart
             loadGoalsFromUserDefaults()
         }
+    }
+    
+    // Update goals from input fields and refresh the ring
+    private func updateGoalsFromInputs() {
+        if let protein = Double(proteinGoal) {
+            vm.proteinGoal = protein
+        }
+        if let carbs = Double(carbsGoal) {
+            vm.carbsGoal = carbs
+        }
+        if let fat = Double(fatGoal) {
+            vm.fatGoal = fat
+        }
+        
+        // Force UI refresh by triggering a state update
+        // The computed properties will automatically recalculate
+        print("🔄 Updated goals from inputs - Protein: \(vm.proteinGoal)g, Carbs: \(vm.carbsGoal)g, Fat: \(vm.fatGoal)g")
+    }
+    
+    // Hide keyboard helper
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
     // Load goals directly from UserDefaults instead of relying on ViewModel
