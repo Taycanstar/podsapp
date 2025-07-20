@@ -1764,7 +1764,7 @@ struct MacroGenerationCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Image(systemName: "brain.head.profile")
+                Image(systemName: "sparkle")
                     .font(.system(size: 24))
                     .foregroundColor(.blue)
                 
