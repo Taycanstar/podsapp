@@ -22,6 +22,7 @@ struct RingSegment: View {
 struct GoalProgress: View {
     @EnvironmentObject var vm: DayLogsViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isTabBarVisible) private var isTabBarVisible
     
     // State to hold temporary values while editing
     @State private var calorieGoal: String = ""
@@ -33,6 +34,7 @@ struct GoalProgress: View {
     @State private var isGenerating = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var focusedField: String? = nil
     
     // Computed properties for goal macro calories
     private var proteinCals: Double {
@@ -109,6 +111,9 @@ struct GoalProgress: View {
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
                                     .frame(width: 80)
+                                    .onTapGesture {
+                                        focusedField = "protein"
+                                    }
                             }
                             .padding()
                             
@@ -122,6 +127,9 @@ struct GoalProgress: View {
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
                                     .frame(width: 80)
+                                    .onTapGesture {
+                                        focusedField = "carbs"
+                                    }
                             }
                             .padding()
                             
@@ -135,10 +143,13 @@ struct GoalProgress: View {
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
                                     .frame(width: 80)
+                                    .onTapGesture {
+                                        focusedField = "fat"
+                                    }
                                     .toolbar {
                                         ToolbarItemGroup(placement: .keyboard) {
                                             Button("Clear") {
-                                                fatGoal = ""
+                                                clearFocusedInput()
                                             }
                                             Spacer()
                                             Button("Done") {
@@ -313,9 +324,16 @@ struct GoalProgress: View {
             }
         }
         .onAppear {
+            // Hide tab bar when this view appears
+            isTabBarVisible.wrappedValue = false
+            
             // Load values directly from UserDefaults to ensure we get the most up-to-date saved values
             // This prevents showing default values after app restart
             loadGoalsFromUserDefaults()
+        }
+        .onDisappear {
+            // Show tab bar when this view disappears
+            isTabBarVisible.wrappedValue = true
         }
     }
     
@@ -334,6 +352,20 @@ struct GoalProgress: View {
         // Force UI refresh by triggering a state update
         // The computed properties will automatically recalculate
         print("🔄 Updated goals from inputs - Protein: \(vm.proteinGoal)g, Carbs: \(vm.carbsGoal)g, Fat: \(vm.fatGoal)g")
+    }
+    
+    // Clear the currently focused input field
+    private func clearFocusedInput() {
+        switch focusedField {
+        case "protein":
+            proteinGoal = ""
+        case "carbs":
+            carbsGoal = ""
+        case "fat":
+            fatGoal = ""
+        default:
+            fatGoal = "" // fallback
+        }
     }
     
     // Hide keyboard helper
