@@ -34,7 +34,6 @@ struct GoalProgress: View {
     @State private var isGenerating = false
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var focusedField: String? = nil
     
     // Computed properties for goal macro calories
     private var proteinCals: Double {
@@ -111,9 +110,6 @@ struct GoalProgress: View {
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
                                     .frame(width: 80)
-                                    .onTapGesture {
-                                        focusedField = "protein"
-                                    }
                             }
                             .padding()
                             
@@ -127,9 +123,6 @@ struct GoalProgress: View {
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
                                     .frame(width: 80)
-                                    .onTapGesture {
-                                        focusedField = "carbs"
-                                    }
                             }
                             .padding()
                             
@@ -143,14 +136,8 @@ struct GoalProgress: View {
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
                                     .frame(width: 80)
-                                    .onTapGesture {
-                                        focusedField = "fat"
-                                    }
                                     .toolbar {
                                         ToolbarItemGroup(placement: .keyboard) {
-                                            Button("Clear") {
-                                                clearFocusedInput()
-                                            }
                                             Spacer()
                                             Button("Done") {
                                                 updateGoalsFromInputs()
@@ -352,20 +339,6 @@ struct GoalProgress: View {
         // Force UI refresh by triggering a state update
         // The computed properties will automatically recalculate
         print("🔄 Updated goals from inputs - Protein: \(vm.proteinGoal)g, Carbs: \(vm.carbsGoal)g, Fat: \(vm.fatGoal)g")
-    }
-    
-    // Clear the currently focused input field
-    private func clearFocusedInput() {
-        switch focusedField {
-        case "protein":
-            proteinGoal = ""
-        case "carbs":
-            carbsGoal = ""
-        case "fat":
-            fatGoal = ""
-        default:
-            fatGoal = "" // fallback
-        }
     }
     
     // Hide keyboard helper
