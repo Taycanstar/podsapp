@@ -14,7 +14,7 @@ struct RingSegment: View {
     var body: some View {
         Circle()
             .trim(from: start, to: start + percent)
-            .stroke(color, style: .init(lineWidth: 18, lineCap: .round))
+            .stroke(color, style: .init(lineWidth: 12, lineCap: .round))
             .rotationEffect(.degrees(-90))
     }
 }
@@ -71,7 +71,7 @@ struct GoalProgress: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Calories section
+                                // Calories section
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Calories")
                         .font(.title2)
@@ -88,13 +88,83 @@ struct GoalProgress: View {
                         }
                     }
                     .frame(height: 56)
+                }
+                .padding(.horizontal)
+                
+                // Macronutrients section
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Macronutrients")
+                        .font(.title2)
+                        .fontWeight(.bold)
                     
-                    // Goal breakdown donut ring
+                    ZStack(alignment: .top) {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color("iosnp"))
+                        
+                        VStack(spacing: 0) {
+                            HStack {
+                                Text("Protein (g)")
+                                Spacer()
+                                TextField("0", text: $proteinGoal)
+                                    .keyboardType(.numberPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 80)
+                            }
+                            .padding()
+                            
+                            Divider()
+                                .padding(.leading)
+                            
+                            HStack {
+                                Text("Carbs (g)")
+                                Spacer()
+                                TextField("0", text: $carbsGoal)
+                                    .keyboardType(.numberPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 80)
+                            }
+                            .padding()
+                            
+                            Divider()
+                                .padding(.leading)
+                            
+                            HStack {
+                                Text("Fat (g)")
+                                Spacer()
+                                TextField("0", text: $fatGoal)
+                                    .keyboardType(.numberPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 80)
+                                    .toolbar {
+                                        ToolbarItemGroup(placement: .keyboard) {
+                                            Button("Clear") {
+                                                fatGoal = ""
+                                            }
+                                            Spacer()
+                                            Button("Done") {
+                                                updateGoalsFromInputs()
+                                                hideKeyboard()
+                                            }
+                                        }
+                                    }
+                            }
+                            .padding()
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                
+                // Goal breakdown donut ring
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Goal Breakdown")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
                     VStack(spacing: 20) {
                         ZStack {
                             // Background track (light gray for unfilled portion)
                             Circle()
-                                .stroke(Color.gray.opacity(0.2), lineWidth: 18)
+                                .stroke(Color.gray.opacity(0.2), lineWidth: 12)
                             
                             // Protein segment (starts at 0)
                             RingSegment(
@@ -118,13 +188,13 @@ struct GoalProgress: View {
                             )
                             
                             // Center label
-                            VStack(spacing: 4) {
+                            VStack(spacing: 0) {
                                 Text("\(Int(macroCals))/\(Int(vm.calorieGoal))")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 14, weight: .regular))
                                     .foregroundColor(.primary)
                                 
                                 Text("cals")
-                                        .font(.system(size: 18, weight: .medium, design: .rounded))
+                                    .font(.system(size: 16, weight: .regular, design: .rounded))
                                     .foregroundColor(.secondary)
                             }
                         }
@@ -144,7 +214,7 @@ struct GoalProgress: View {
                                         .foregroundColor(.primary)
                                 }
                                 Text("\(Int(proteinCals)) cals")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                             }
                             
@@ -159,7 +229,7 @@ struct GoalProgress: View {
                                         .foregroundColor(.primary)
                                 }
                                 Text("\(Int(carbCals)) cals")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                             }
                             
@@ -174,87 +244,9 @@ struct GoalProgress: View {
                                         .foregroundColor(.primary)
                                 }
                                 Text("\(Int(fatCals)) cals")
-                                    .font(.system(size: 14))
+                                    .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                             }
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                
-                // Macronutrients section
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Macronutrients")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
-                    ZStack(alignment: .top) {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color("iosnp"))
-                        
-                        VStack(spacing: 0) {
-                            HStack {
-                                Text("Protein (g)")
-                                Spacer()
-                                TextField("0", text: $proteinGoal)
-                                    .keyboardType(.numberPad)
-                                    .multilineTextAlignment(.trailing)
-                                    .frame(width: 80)
-                                    .toolbar {
-                                        ToolbarItemGroup(placement: .keyboard) {
-                                            Spacer()
-                                            Button("Done") {
-                                                updateGoalsFromInputs()
-                                                hideKeyboard()
-                                            }
-                                        }
-                                    }
-                            }
-                            .padding()
-                            
-                            Divider()
-                                .padding(.leading)
-                            
-                            HStack {
-                                Text("Carbs (g)")
-                                Spacer()
-                                TextField("0", text: $carbsGoal)
-                                    .keyboardType(.numberPad)
-                                    .multilineTextAlignment(.trailing)
-                                    .frame(width: 80)
-                                    .toolbar {
-                                        ToolbarItemGroup(placement: .keyboard) {
-                                            Spacer()
-                                            Button("Done") {
-                                                updateGoalsFromInputs()
-                                                hideKeyboard()
-                                            }
-                                        }
-                                    }
-                            }
-                            .padding()
-                            
-                            Divider()
-                                .padding(.leading)
-                            
-                            HStack {
-                                Text("Fat (g)")
-                                Spacer()
-                                TextField("0", text: $fatGoal)
-                                    .keyboardType(.numberPad)
-                                    .multilineTextAlignment(.trailing)
-                                    .frame(width: 80)
-                                    .toolbar {
-                                        ToolbarItemGroup(placement: .keyboard) {
-                                            Spacer()
-                                            Button("Done") {
-                                                updateGoalsFromInputs()
-                                                hideKeyboard()
-                                            }
-                                        }
-                                    }
-                            }
-                            .padding()
                         }
                     }
                 }
