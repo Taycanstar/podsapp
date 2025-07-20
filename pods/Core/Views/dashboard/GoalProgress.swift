@@ -143,7 +143,7 @@ struct GoalProgress: View {
                                         .font(.system(size: 14))
                                         .foregroundColor(.primary)
                                 }
-                                Text("\(Int(proteinCals)) kcal")
+                                Text("\(Int(proteinCals)) cals")
                                     .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                             }
@@ -158,7 +158,7 @@ struct GoalProgress: View {
                                         .font(.system(size: 14))
                                         .foregroundColor(.primary)
                                 }
-                                Text("\(Int(carbCals)) kcal")
+                                Text("\(Int(carbCals)) cals")
                                     .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                             }
@@ -173,8 +173,8 @@ struct GoalProgress: View {
                                         .font(.system(size: 14))
                                         .foregroundColor(.primary)
                                 }
-                                Text("\(Int(fatCals)) kcal")
-                                    .font(.system(size: 12))
+                                Text("\(Int(fatCals)) cals")
+                                    .font(.system(size: 14))
                                     .foregroundColor(.secondary)
                             }
                         }
