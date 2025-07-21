@@ -45,7 +45,7 @@ struct FoodScannerView: View {
     @State private var navigationPath = NavigationPath()
     
     enum ScanMode {
-        case food, barcode, gallery
+        case food, nutritionLabel, barcode, gallery
     }
     
     var body: some View {
@@ -91,9 +91,12 @@ struct FoodScannerView: View {
                         flashEnabled: flashEnabled, 
                         onCapture: { image in
                             guard let image = image else { return }
-                            print("Food scanned with captured image")
                             if selectedMode == .food {
+                                print("Food scanned with captured image")
                                 analyzeImage(image)
+                            } else if selectedMode == .nutritionLabel {
+                                print("Nutrition label scanned with captured image")
+                                analyzeNutritionLabel(image)
                             }
                         },
                         onBarcodeDetected: { barcode in
@@ -167,7 +170,7 @@ struct FoodScannerView: View {
                     
                     Spacer()
                     
-                    // Barcode indicator (when in barcode mode)
+                    // Mode indicators
                     if selectedMode == .barcode {
                         VStack {
                             Text("Barcode Scanner")
@@ -183,6 +186,21 @@ struct FoodScannerView: View {
                                 .background(Color.clear)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    } else if selectedMode == .nutritionLabel {
+                        VStack {
+                            Text("Nutrition Label Scanner")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .padding(.bottom, 20)
+                            
+                            // Show a scanning area optimized for nutrition labels
+                            RoundedRectangle(cornerRadius: 16)
+                                .strokeBorder(Color.white, lineWidth: 3)
+                                .frame(width: 260, height: 320)
+                                .background(Color.clear)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                     }
                     
                     Spacer()
@@ -190,13 +208,21 @@ struct FoodScannerView: View {
                     // Bottom controls
                     VStack(spacing: 30) {
                         // Mode selection buttons
-                        HStack(spacing: 20) {
+                        HStack(spacing: 15) {
                             // Food Scan Button
                             ScanOptionButton(
                                 icon: "text.viewfinder",
                                 title: "Food",
                                 isSelected: selectedMode == .food,
                                 action: { selectedMode = .food }
+                            )
+                            
+                            // Nutrition Label Button
+                            ScanOptionButton(
+                                icon: "tag",
+                                title: "Label",
+                                isSelected: selectedMode == .nutritionLabel,
+                                action: { selectedMode = .nutritionLabel }
                             )
                             
                             // Barcode Button
@@ -334,10 +360,58 @@ private func analyzeImage(_ image: UIImage) {
   }
 }
 
+private func analyzeNutritionLabel(_ image: UIImage) {
+    guard !isAnalyzing,
+          let userEmail = UserDefaults.standard.string(forKey: "userEmail")
+    else { return }
+
+    isPresented                  = false
+    foodManager.scannedImage     = image
+    foodManager.isScanningFood   = true
+    foodManager.loadingMessage   = "Reading nutrition label..."
+    foodManager.uploadProgress   = 0.1
+
+    print("🏷️ Starting nutrition label analysis via server with meal: \(selectedMeal)")
+
+    foodManager.analyzeNutritionLabel(image: image,
+                                     userEmail: userEmail,
+                                     mealType: selectedMeal) { result in
+        switch result {
+        case .success(let combinedLog):
+            // Instant optimistic insert
+            dayLogsVM.addPending(combinedLog)
+
+            DispatchQueue.main.async {
+                // 1) see if there's an existing entry with that foodLogId
+                if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                    foodManager.combinedLogs.remove(at: idx)
+                }
+                // 2) prepend the fresh log
+                foodManager.combinedLogs.insert(combinedLog, at: 0)
+            }
+
+        case .failure(let error):
+            // Check if this is the special "name required" error
+            if let nsError = error as? NSError, nsError.code == 1001 {
+                // Product name not found - let FoodManager handle this for DashboardView
+                print("🏷️ Product name not found, storing data for dashboard popup")
+                if let nutritionData = nsError.userInfo["nutrition_data"] as? [String: Any],
+                   let mealType = nsError.userInfo["meal_type"] as? String {
+                    
+                    // Store in FoodManager for DashboardView to access
+                    foodManager.pendingNutritionData = nutritionData
+                    foodManager.pendingMealType = mealType
+                    foodManager.showNutritionNameInput = true
+                }
+            } else {
+                print("❌ nutrition label scan failed:", error.localizedDescription)
+            }
+        }
+    }
+}
 
 
 
-    
     private func processBarcodeDirectly(_ barcode: String) {
         guard !isAnalyzing, let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
             return

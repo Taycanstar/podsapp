@@ -23,6 +23,9 @@ struct DashboardView: View {
     @State private var showLogFlowSheet = false
     @State private var selectedFoodLogId: String? = nil
     
+    // ─── Nutrition label name input ────────────────────────────────────────
+    @State private var nutritionProductName = ""
+    
     // ─── Sort state ─────────────────────────────────────────────────────────
     @State private var sortOption: LogSortOption = .date
     
@@ -364,6 +367,31 @@ private var remainingCal: Double { vm.remainingCalories }
             .sheet(isPresented: $showDatePicker) {
                 DatePickerSheet(date: $vm.selectedDate,
                                 isPresented: $showDatePicker)
+            }
+            .alert("Product Name Required", isPresented: $foodMgr.showNutritionNameInput) {
+                TextField("Enter product name", text: $nutritionProductName)
+                    .textInputAutocapitalization(.words)
+                Button("Cancel", role: .cancel) {
+                    foodMgr.cancelNutritionNameInput()
+                }
+                Button("Save") {
+                    if !nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        foodMgr.createNutritionLabelFoodWithName(nutritionProductName) { result in
+                            DispatchQueue.main.async {
+                                nutritionProductName = "" // Reset for next time
+                                switch result {
+                                case .success:
+                                    print("✅ Successfully created nutrition label food")
+                                case .failure(let error):
+                                    print("❌ Failed to create nutrition label food: \(error)")
+                                }
+                            }
+                        }
+                    }
+                }
+                .disabled(nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            } message: {
+                Text("We couldn't find the product name on the nutrition label. Please enter it manually.")
             }
             .onAppear {
                 configureOnAppear() 

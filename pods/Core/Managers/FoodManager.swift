@@ -126,6 +126,11 @@ class FoodManager: ObservableObject {
 
     // Reference to DayLogsViewModel for updating UI after voice logging
     weak var dayLogsViewModel: DayLogsViewModel?
+    
+    // Nutrition label name input state
+    @Published var showNutritionNameInput = false
+    @Published var pendingNutritionData: [String: Any] = [:]
+    @Published var pendingMealType = "Lunch"
 
     
     init() {
@@ -2360,12 +2365,167 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
   }
 }
 
+// MARK: - Scan nutrition label → CombinedLog
+@MainActor
+func analyzeNutritionLabel(
+  image: UIImage,
+  userEmail: String,
+  mealType: String = "Lunch",
+  completion: @escaping (Result<CombinedLog, Error>) -> Void
+) {
+  // ─── 1) UI state ─────────────────────────────
+  isAnalyzingImage = true
+  isLoading        = true
+  imageAnalysisMessage = "Reading nutrition label…"
+  uploadProgress   = 0
 
+  // ─── 2) Fake progress ticker ─────────────────
+  uploadProgress = 0
+  var progressTimer: Timer?
+  progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+    guard let self = self else { 
+      progressTimer?.invalidate()
+      return 
+    }
+    // bump progress up to, say, 90%
+    self.uploadProgress = min(0.9, self.uploadProgress + 0.1)
+  }
 
+  // ─── 3) Call backend ─────────────────────────
+  networkManager.analyzeNutritionLabel(image: image, userEmail: userEmail, mealType: mealType) { [weak self] success, payload, errMsg in
+    guard let self = self else { return }
+    
+    DispatchQueue.main.async {
+      // stop ticker + UI
+      progressTimer?.invalidate()
 
+      withAnimation {
+        self.uploadProgress = 1.0
+      }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        self.isAnalyzingImage = false
+        self.isLoading        = false
+        self.imageAnalysisMessage = ""
 
+        // reset for next time
+        self.uploadProgress = 0
+      }
+    }
 
+    // failure path
+    guard success, let payload = payload else {
+      let msg = errMsg ?? "Unknown error"
+      print("🔴 [analyzeNutritionLabel] error: \(msg)")
+      completion(.failure(NSError(
+        domain: "FoodManager",
+        code: -1,
+        userInfo: [NSLocalizedDescriptionKey: msg]
+      )))
+      return
+    }
 
+    // ─── 4) Check if name input is required ─────────────────
+    if let status = payload["status"] as? String, status == "name_required" {
+      // Product name not found - we need user input
+      print("🏷️ [analyzeNutritionLabel] Product name not found, user input required")
+      
+      // Store nutrition data for later use with user-provided name
+      if let nutritionData = payload["nutrition_data"] as? [String: Any] {
+        // TODO: Show name input dialog and create food with user-provided name
+        // For now, return an error to indicate name is needed
+        completion(.failure(NSError(
+          domain: "FoodManager",
+          code: 1001, // Custom code for name required
+          userInfo: [
+            NSLocalizedDescriptionKey: "Product name not found on label",
+            "nutrition_data": nutritionData,
+            "meal_type": payload["meal_type"] as? String ?? "Lunch"
+          ]
+        )))
+      } else {
+        completion(.failure(NSError(
+          domain: "FoodManager",
+          code: -1,
+          userInfo: [NSLocalizedDescriptionKey: "Invalid nutrition data format"]
+        )))
+      }
+      return
+    }
+
+    // ─── 5) Use the SAME parsing as analyzeFoodImage ───────────
+    do {
+      if let rawJSON = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+         let str     = String(data: rawJSON, encoding: .utf8) {
+        print("🔍 [analyzeNutritionLabel] raw payload:\n\(str)")
+      }
+
+      // Decode directly into LoggedFood (same as analyzeFoodImage)
+      let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
+      let decoder  = JSONDecoder()
+      decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+      let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
+
+             // Wrap it in a CombinedLog (same as analyzeFoodImage)
+       let combinedLog = CombinedLog(
+         type:        .food,
+         status:      loggedFood.status,
+         calories:    loggedFood.calories,
+         message:     loggedFood.message,
+         foodLogId:   loggedFood.foodLogId,
+         food:        loggedFood.food,
+         mealType:    loggedFood.mealType,
+         mealLogId:   nil,
+         meal:        nil,
+         mealTime:    nil,
+         scheduledAt: Date(),
+         recipeLogId: nil,
+         recipe:      nil,
+         servingsConsumed: nil
+       )
+
+       completion(.success(combinedLog))
+       
+       // Set success data and show toast (same as analyzeFoodImage)
+       self.lastLoggedItem = (
+         name:     loggedFood.food.displayName,
+         calories: loggedFood.calories
+       )
+       self.showLogSuccess = true
+       
+       // Track nutrition label scanning in Mixpanel
+       Mixpanel.mainInstance().track(event: "Nutrition Label Scan", properties: [
+           "food_name": loggedFood.food.displayName,
+           "meal_type": loggedFood.mealType,
+           "calories": loggedFood.calories,
+           "user_email": userEmail
+       ])
+       
+       // Track universal food logging
+       Mixpanel.mainInstance().track(event: "Log Food", properties: [
+           "food_name": loggedFood.food.displayName,
+           "meal_type": loggedFood.mealType,
+           "calories": loggedFood.calories,
+           "servings": 1,
+           "log_method": "nutrition_label_scan",
+           "user_email": userEmail
+       ])
+       
+       DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+         self.showLogSuccess = false
+       }
+
+    } catch {
+      //── 7) On decode error, print the bad JSON + error
+      print("❌ [analyzeNutritionLabel] decoding error:", error)
+      if let rawJSON = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
+         let str     = String(data: rawJSON, encoding: .utf8) {
+        print("❌ [analyzeNutritionLabel] payload was:\n\(str)")
+      }
+      completion(.failure(error))
+    }
+  }
+}
 
     // Add this function to handle the barcode scanning logic
     func lookupFoodByBarcode(barcode: String, image: UIImage? = nil, userEmail: String, navigationPath: Binding<NavigationPath>, completion: @escaping (Bool, String?) -> Void) {
@@ -3213,7 +3373,111 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
             completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: "Saved meal not found")))
             return
         }
+    }
+    
+    // MARK: - Nutrition Label Name Input
+    func createNutritionLabelFoodWithName(_ productName: String, completion: @escaping (Result<CombinedLog, Error>) -> Void) {
+        guard !productName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let userEmail = userEmail else {
+            completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid product name or user email"])))
+            return
+        }
         
-        unsaveMeal(savedMealId: savedMeal.id, completion: completion)
+        print("🏷️ Creating nutrition label food with user-provided name: \(productName)")
+        
+        // Call the backend API to create food with the user-provided name and stored nutrition data
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "name": productName.trimmingCharacters(in: .whitespacesAndNewlines),
+            "nutrition_data": pendingNutritionData,
+            "meal_type": pendingMealType
+        ]
+        
+        // Create the food using NetworkManager
+        guard let url = URL(string: "\(networkManager.baseUrl)/create_nutrition_label_food/") else {
+            completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("❌ Network error creating nutrition label food: \(error)")
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let data = data else {
+                    completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                    return
+                }
+                
+                do {
+                    if let payload = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        // Parse as LoggedFood and create CombinedLog (same as successful nutrition label scan)
+                        let jsonData = try JSONSerialization.data(withJSONObject: payload)
+                        let decoder = JSONDecoder()
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        
+                        let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
+                        
+                        let combinedLog = CombinedLog(
+                            type: .food,
+                            status: loggedFood.status,
+                            calories: loggedFood.calories,
+                            message: loggedFood.message,
+                            foodLogId: loggedFood.foodLogId,
+                            food: loggedFood.food,
+                            mealType: loggedFood.mealType,
+                            mealLogId: nil,
+                            meal: nil,
+                            mealTime: nil,
+                            scheduledAt: Date(),
+                            recipeLogId: nil,
+                            recipe: nil,
+                            servingsConsumed: nil
+                        )
+                        
+                        // Add to logs (same as successful scan)
+                        self.dayLogsViewModel?.addPending(combinedLog)
+                        
+                        if let idx = self.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                            self.combinedLogs.remove(at: idx)
+                        }
+                        self.combinedLogs.insert(combinedLog, at: 0)
+                        
+                        // Clear the pending state
+                        self.showNutritionNameInput = false
+                        self.pendingNutritionData = [:]
+                        self.pendingMealType = "Lunch"
+                        
+                        completion(.success(combinedLog))
+                        print("✅ Successfully created nutrition label food with user-provided name")
+                    }
+                } catch {
+                    print("❌ Failed to parse response: \(error)")
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+    
+    func cancelNutritionNameInput() {
+        showNutritionNameInput = false
+        pendingNutritionData = [:]
+        pendingMealType = "Lunch"
     }
 }
