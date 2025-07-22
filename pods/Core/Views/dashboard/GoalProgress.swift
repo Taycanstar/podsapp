@@ -440,7 +440,8 @@ struct GoalProgress: View {
                         carbsGoal: $carbsGoal,
                         fatGoal: $fatGoal,
                         calorieGoal: $calorieGoal,
-                        isPresented: $showMacroPickerSheet
+                        isPresented: $showMacroPickerSheet,
+                        vmCalorieGoal: vm.calorieGoal
                     )
                     .presentationDetents([.fraction(0.45)])
                     .presentationDragIndicator(.visible)
@@ -835,6 +836,7 @@ struct MacroPickerSheet: View {
     @Binding var fatGoal: String
     @Binding var calorieGoal: String
     @Binding var isPresented: Bool
+    let vmCalorieGoal: Double
     
     @State private var inputMode: MacroInputMode = .grams
     @State private var proteinValue: Double = 0
@@ -842,7 +844,11 @@ struct MacroPickerSheet: View {
     @State private var fatValue: Double = 0
     
     private var totalCalories: Double {
-        max(Double(calorieGoal) ?? 2000, 1)
+        let parsedCalories = Double(calorieGoal) ?? 0
+        let actualCalories = parsedCalories > 0 ? parsedCalories : vmCalorieGoal
+        let fallbackCalories = max(actualCalories, 1)
+        print("🔍 MacroPickerSheet totalCalories: parsed=\(parsedCalories), vm=\(vmCalorieGoal), actual=\(actualCalories), fallback=\(fallbackCalories), calorieGoal string='\(calorieGoal)'")
+        return fallbackCalories
     }
     
     // Helper function to ensure percentages add up to exactly 100% in picker
@@ -1079,7 +1085,7 @@ struct MacroPickerSheet: View {
                         ForEach(0...(inputMode == .grams ? 500 : 100), id: \.self) { value in
                             Text(percentLabel(value, selected: inputMode == .grams ? Int(carbsValue) : Int(carbsPercent)))
                                 .font(.title3)
-                                .monospacedDigit()
+                       
                                 .frame(width: 60, alignment: .center)
                                 .tag(value)
                         }
@@ -1120,7 +1126,7 @@ struct MacroPickerSheet: View {
                         ForEach(0...(inputMode == .grams ? 500 : 100), id: \.self) { value in
                             Text(percentLabel(value, selected: inputMode == .grams ? Int(proteinValue) : Int(proteinPercent)))
                                 .font(.title3)
-                                .monospacedDigit()
+                             
                                 .frame(width: 60, alignment: .center)
                                 .tag(value)
                         }
@@ -1161,7 +1167,7 @@ struct MacroPickerSheet: View {
                         ForEach(0...(inputMode == .grams ? 300 : 100), id: \.self) { value in
                             Text(percentLabel(value, selected: inputMode == .grams ? Int(fatValue) : Int(fatPercent)))
                                 .font(.title3)
-                                .monospacedDigit()
+                           
                                 .frame(width: 60, alignment: .center)
                                 .tag(value)
                         }
