@@ -443,6 +443,8 @@ struct GoalProgress: View {
                         calorieGoal: $calorieGoal,
                         isPresented: $showMacroPickerSheet
                     )
+                    .presentationDetents([.fraction(0.4)])
+                    .presentationDragIndicator(.visible)
                 }
                 
                 // Goal breakdown donut ring
@@ -921,224 +923,242 @@ struct MacroPickerSheet: View {
         totalMacroCalories - totalCalories
     }
     
+    // Validation for % mode
+    private var percentagesValid: Bool {
+        if inputMode == .percent {
+            let total = proteinPercent + carbsPercent + fatPercent
+            return abs(total - 100) < 1.0 // Allow 1% tolerance for rounding
+        }
+        return true // Grams mode is always valid
+    }
+    
+    // Helper function for percent row labels
+    private func percentLabel(_ value: Int, selected: Int) -> String {
+        selected == value ? "\(value) %" : "\(value)"
+    }
+    
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Header with % Total and calorie validation
-                VStack(spacing: 8) {
-                    HStack {
-                        Spacer()
-                        VStack {
-                            Text("% Total")
-                                .font(.headline)
-                            Text(String(format: "%.1f%%", proteinPercent + carbsPercent + fatPercent))
-                                .font(.title)
-                                .fontWeight(.bold)
-                        }
-                        Spacer()
-                    }
-                    
-                    // Show calorie discrepancy if any
-                    if abs(calorieDiscrepancy) > 1 {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
-                            Text(String(format: "Macro calories (%.0f) don't match goal (%.0f)", totalMacroCalories, totalCalories))
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                        }
-                        .padding(.horizontal)
-                    }
+        VStack(spacing: 0) {
+            // Custom header bar (no NavigationView)
+            HStack {
+                // Left: X button
+                Button(action: {
+                    isPresented = false
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.title2)
+                        .foregroundColor(.primary)
                 }
-                .padding()
-                .background(Color(UIColor.systemGray6))
-                
-                // Mode selector
-                Picker("Input Mode", selection: $inputMode) {
-                    Text("Grams").tag(MacroInputMode.grams)
-                    Text("%").tag(MacroInputMode.percent)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding()
-                
-                // Three column layout like MyFitnessPal
-                HStack(spacing: 0) {
-                    // Carbs Column
-                    VStack {
-                        Text("Carbs")
-                            .font(.headline)
-                            .foregroundColor(Color("darkYellow"))
-                        
-                        if inputMode == .grams {
-                            Text(String(format: "%.0f g", carbsValue))
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                        } else {
-                            Text(String(format: "%.0f %%", carbsPercent))
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                        }
-                        
-                        Picker("Carbs", selection: Binding(
-                            get: { inputMode == .grams ? Int(carbsValue) : Int(carbsPercent) },
-                            set: { newValue in
-                                if inputMode == .grams {
-                                    carbsValue = Double(newValue)
-                                } else {
-                                    let percent = Double(newValue)
-                                    carbsValue = (percent * totalCalories) / 4.0 / 100
-                                }
-                            }
-                        )) {
-                            ForEach(0...500, id: \.self) { value in
-                                Text(inputMode == .grams ? "\(value)" : "\(value)%").tag(value)
-                            }
-                        }
-                        .pickerStyle(WheelPickerStyle())
-                        .frame(height: 200)
-                    }
-                    .frame(maxWidth: .infinity)
-                    
-                    // Protein Column  
-                    VStack {
-                        Text("Protein")
-                            .font(.headline)
-                            .foregroundColor(.blue)
-                        
-                        if inputMode == .grams {
-                            Text(String(format: "%.0f g", proteinValue))
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                        } else {
-                            Text(String(format: "%.0f %%", proteinPercent))
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                        }
-                        
-                        Picker("Protein", selection: Binding(
-                            get: { inputMode == .grams ? Int(proteinValue) : Int(proteinPercent) },
-                            set: { newValue in
-                                if inputMode == .grams {
-                                    proteinValue = Double(newValue)
-                                } else {
-                                    let percent = Double(newValue)
-                                    proteinValue = (percent * totalCalories) / 4.0 / 100
-                                }
-                            }
-                        )) {
-                            ForEach(0...500, id: \.self) { value in
-                                Text(inputMode == .grams ? "\(value)" : "\(value)%").tag(value)
-                            }
-                        }
-                        .pickerStyle(WheelPickerStyle())
-                        .frame(height: 200)
-                    }
-                    .frame(maxWidth: .infinity)
-                    
-                    // Fat Column
-                    VStack {
-                        Text("Fat")
-                            .font(.headline)
-                            .foregroundColor(.pink)
-                        
-                        if inputMode == .grams {
-                            Text(String(format: "%.0f g", fatValue))
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                        } else {
-                            Text(String(format: "%.0f %%", fatPercent))
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                        }
-                        
-                        Picker("Fat", selection: Binding(
-                            get: { inputMode == .grams ? Int(fatValue) : Int(fatPercent) },
-                            set: { newValue in
-                                if inputMode == .grams {
-                                    fatValue = Double(newValue)
-                                } else {
-                                    let percent = Double(newValue)
-                                    fatValue = (percent * totalCalories) / 9.0 / 100
-                                }
-                            }
-                        )) {
-                            ForEach(0...300, id: \.self) { value in
-                                Text(inputMode == .grams ? "\(value)" : "\(value)%").tag(value)
-                            }
-                        }
-                        .pickerStyle(WheelPickerStyle())
-                        .frame(height: 200)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .padding()
-                
-                // Updated Calorie Goal display with exact calculation
-                VStack(spacing: 4) {
-                    Text("Calculated Calories from Macros")
-                        .font(.headline)
-                    Text(String(format: "%.0f cal", totalMacroCalories))
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(abs(calorieDiscrepancy) <= 1 ? .green : .orange)
-                    
-                    // Show breakdown
-                    HStack(spacing: 20) {
-                        VStack {
-                            Text("Protein")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                            Text(String(format: "%.0f cal", proteinValue * 4))
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                        }
-                        VStack {
-                            Text("Carbs")
-                                .font(.caption)
-                                .foregroundColor(Color("darkYellow"))
-                            Text(String(format: "%.0f cal", carbsValue * 4))
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                        }
-                        VStack {
-                            Text("Fat")
-                                .font(.caption)
-                                .foregroundColor(.pink)
-                            Text(String(format: "%.0f cal", fatValue * 9))
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                        }
-                    }
-                    .padding(.top, 4)
-                }
-                .padding()
                 
                 Spacer()
+                
+                // Center: Segmented control
+                Picker("Input Mode", selection: $inputMode) {
+                    Text("%").tag(MacroInputMode.percent)
+                    Text("Grams").tag(MacroInputMode.grams)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .frame(width: 150)
+                
+                Spacer()
+                
+                // Right: Checkmark button
+                Button(action: {
+                    // Update the main view values
+                    proteinGoal = String(Int(proteinValue))
+                    carbsGoal = String(Int(carbsValue))
+                    fatGoal = String(Int(fatValue))
+                    isPresented = false
+                }) {
+                    Image(systemName: "checkmark")
+                        .font(.title2)
+                        .foregroundColor(percentagesValid ? .primary : .gray)
+                }
+                .disabled(!percentagesValid)
             }
-            .navigationTitle("Macronutrients")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        isPresented = false
+            .padding()
+            
+            // Macro labels (showing opposite of current mode)
+            HStack(spacing: 0) {
+                // Carbs
+                VStack(spacing: 4) {
+                    Text("Carbs")
+                        .font(.caption)
+                        .foregroundColor(Color("darkYellow"))
+                    
+                    if inputMode == .percent {
+                        Text("\(Int(carbsValue)) g")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                    } else {
+                        Text("\(Int(carbsPercent)) %")
+                            .font(.headline)
+                            .fontWeight(.semibold)
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        // Update the main view values
-                        proteinGoal = String(Int(proteinValue))
-                        carbsGoal = String(Int(carbsValue))
-                        fatGoal = String(Int(fatValue))
-                        isPresented = false
+                .frame(maxWidth: .infinity)
+                
+                // Protein
+                VStack(spacing: 4) {
+                    Text("Protein")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                    
+                    if inputMode == .percent {
+                        Text("\(Int(proteinValue)) g")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                    } else {
+                        Text("\(Int(proteinPercent)) %")
+                            .font(.headline)
+                            .fontWeight(.semibold)
                     }
                 }
+                .frame(maxWidth: .infinity)
+                
+                // Fat
+                VStack(spacing: 4) {
+                    Text("Fat")
+                        .font(.caption)
+                        .foregroundColor(.pink)
+                    
+                    if inputMode == .percent {
+                        Text("\(Int(fatValue)) g")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                    } else {
+                        Text("\(Int(fatPercent)) %")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
+            .padding(.horizontal)
+            .padding(.bottom)
+            
+            // Three column wheel layout
+            HStack(spacing: 0) {
+                // Carbs Column
+                VStack {
+                    Picker("Carbs", selection: Binding(
+                        get: { inputMode == .grams ? Int(carbsValue) : Int(carbsPercent) },
+                        set: { newValue in
+                            if inputMode == .grams {
+                                carbsValue = Double(newValue)
+                            } else {
+                                let percent = Double(newValue)
+                                carbsValue = (percent * totalCalories) / 4.0 / 100
+                            }
+                        }
+                    )) {
+                        ForEach(0...500, id: \.self) { value in
+                            if inputMode == .percent {
+                                Text(percentLabel(value, selected: Int(carbsPercent)))
+                                    .font(.title3)
+                                    .tag(value)
+                            } else {
+                                Text("\(value)")
+                                    .font(.title3)
+                                    .tag(value)
+                            }
+                        }
+                    }
+                    .pickerStyle(WheelPickerStyle())
+                    .frame(height: 120)
+                }
+                .frame(maxWidth: .infinity)
+                
+                // Protein Column  
+                VStack {
+                    Picker("Protein", selection: Binding(
+                        get: { inputMode == .grams ? Int(proteinValue) : Int(proteinPercent) },
+                        set: { newValue in
+                            if inputMode == .grams {
+                                proteinValue = Double(newValue)
+                            } else {
+                                let percent = Double(newValue)
+                                proteinValue = (percent * totalCalories) / 4.0 / 100
+                            }
+                        }
+                    )) {
+                        ForEach(0...500, id: \.self) { value in
+                            if inputMode == .percent {
+                                Text(percentLabel(value, selected: Int(proteinPercent)))
+                                    .font(.title3)
+                                    .tag(value)
+                            } else {
+                                Text("\(value)")
+                                    .font(.title3)
+                                    .tag(value)
+                            }
+                        }
+                    }
+                    .pickerStyle(WheelPickerStyle())
+                    .frame(height: 120)
+                }
+                .frame(maxWidth: .infinity)
+                
+                // Fat Column
+                VStack {
+                    Picker("Fat", selection: Binding(
+                        get: { inputMode == .grams ? Int(fatValue) : Int(fatPercent) },
+                        set: { newValue in
+                            if inputMode == .grams {
+                                fatValue = Double(newValue)
+                            } else {
+                                let percent = Double(newValue)
+                                fatValue = (percent * totalCalories) / 9.0 / 100
+                            }
+                        }
+                    )) {
+                        ForEach(0...300, id: \.self) { value in
+                            if inputMode == .percent {
+                                Text(percentLabel(value, selected: Int(fatPercent)))
+                                    .font(.title3)
+                                    .tag(value)
+                            } else {
+                                Text("\(value)")
+                                    .font(.title3)
+                                    .tag(value)
+                            }
+                        }
+                    }
+                    .pickerStyle(WheelPickerStyle())
+                    .frame(height: 120)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal)
+            
+            // Validation message for % mode
+            if inputMode == .percent && !percentagesValid {
+                Text("Macronutrients must equal 100 %")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .padding(.top, 8)
+            }
+            
+            // Small calorie discrepancy info at bottom
+            if abs(calorieDiscrepancy) > 1 {
+                VStack(spacing: 2) {
+                    Text("Calculated: \(Int(totalMacroCalories)) cal")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Text("Target: \(Int(totalCalories)) cal")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.top, 8)
+            }
+            
+            Spacer()
         }
         .onAppear {
-            // Initialize values from current goals
-            proteinValue = Double(proteinGoal) ?? 0
-            carbsValue = Double(carbsGoal) ?? 0
-            fatValue = Double(fatGoal) ?? 0
+            // Initialize values from current goals (fix fat defaulting to 0)
+            proteinValue = max(Double(proteinGoal) ?? 0, 0)
+            carbsValue = max(Double(carbsGoal) ?? 0, 0) 
+            fatValue = max(Double(fatGoal) ?? 0, 0)
         }
     }
 }
