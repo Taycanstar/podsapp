@@ -347,7 +347,7 @@ struct GoalProgress: View {
                                 .keyboardType(.numberPad)
                         }
                         .padding(.horizontal)
-                        .padding(.vertical, 14)
+                        .padding(.vertical)
                  
                     }
                     .frame(height: 56)
@@ -978,6 +978,14 @@ struct MacroPickerSheet: View {
                     proteinGoal = String(Int(proteinValue))
                     carbsGoal = String(Int(carbsValue))
                     fatGoal = String(Int(fatValue))
+                    
+                    // Also update calorie goal if we're in grams mode
+                    if inputMode == .grams {
+                        let newCalories = Int(totalMacroCalories)
+                        calorieGoal = String(newCalories)
+                        print("🔄 Updated calorie goal to: \(newCalories) cal")
+                    }
+                    
                     isPresented = false
                 }) {
                     Image(systemName: "checkmark")
@@ -1189,13 +1197,19 @@ struct MacroPickerSheet: View {
             
             // Show actual calorie goal instead of calculated macro calories
             VStack(spacing: 2) {
-                Text("\(Int(totalCalories)) cal")
-                    .font(.system(size: 22))
-                    .fontWeight(.semibold)
                 if inputMode == .grams {
+                    // In grams mode, show calculated calories from macro changes
+                    Text("\(Int(totalMacroCalories)) cal")
+                        .font(.system(size: 22))
+                        .fontWeight(.semibold)
                     Text("Changing grams will update your calorie goal")
                         .font(.caption2)
                         .foregroundColor(.secondary)
+                } else {
+                    // In percent mode, show the fixed calorie goal
+                    Text("\(Int(totalCalories)) cal")
+                        .font(.system(size: 22))
+                        .fontWeight(.semibold)
                 }
             }
             .padding(.top, 8)
