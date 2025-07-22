@@ -345,8 +345,8 @@ struct GoalProgress: View {
                         HStack {
                             TextField("Daily target", text: $calorieGoal)
                                 .keyboardType(.numberPad)
-                                .padding()
                         }
+                 
                     }
                     .frame(height: 56)
                 }
@@ -364,22 +364,21 @@ struct GoalProgress: View {
                         
                         VStack(spacing: 0) {
                             HStack {
-                                Text("Protein (g)")
+                                Text("Protein")
                                 Text(String(format: "%d%%", Int(proteinPercent * 100)))
                                     .foregroundColor(.blue)
                                     .font(.system(size: 15, weight: .semibold))
                                 Spacer()
-                                Text(proteinGoal)
+                                Text("\(proteinGoal)g")
                                     .foregroundColor(.primary)
                                     .multilineTextAlignment(.trailing)
-                                    .frame(width: 80)
-                                    .padding(.vertical, 8)
                                     .background(Color.clear)
                                     .onTapGesture {
                                         showMacroPickerSheet = true
                                     }
                             }
-                            .padding()
+                            .padding(.horizontal)
+                            .padding(.vertical, 14)
                             .onTapGesture {
                                 showMacroPickerSheet = true
                             }
@@ -388,22 +387,21 @@ struct GoalProgress: View {
                                 .padding(.leading)
                             
                             HStack {
-                                Text("Carbs (g)")
+                                Text("Carbs")
                                 Text(String(format: "%d%%", Int(carbPercent * 100)))
                                     .foregroundColor(Color("darkYellow"))
                                     .font(.system(size: 15, weight: .semibold))
                                 Spacer()
-                                Text(carbsGoal)
+                                Text("\(carbsGoal)g")
                                     .foregroundColor(.primary)
                                     .multilineTextAlignment(.trailing)
-                                    .frame(width: 80)
-                                    .padding(.vertical, 8)
                                     .background(Color.clear)
                                     .onTapGesture {
                                         showMacroPickerSheet = true
                                     }
                             }
-                            .padding()
+                            .padding(.horizontal)
+                            .padding(.vertical, 14)
                             .onTapGesture {
                                 showMacroPickerSheet = true
                             }
@@ -412,22 +410,21 @@ struct GoalProgress: View {
                                 .padding(.leading)
                             
                             HStack {
-                                Text("Fat (g)")
+                                Text("Fat")
                                 Text(String(format: "%d%%", Int(fatPercent * 100)))
                                     .foregroundColor(.pink)
                                     .font(.system(size: 15, weight: .semibold))
                                 Spacer()
-                                Text(fatGoal)
+                                Text("\(fatGoal)g")
                                     .foregroundColor(.primary)
                                     .multilineTextAlignment(.trailing)
-                                    .frame(width: 80)
-                                    .padding(.vertical, 8)
                                     .background(Color.clear)
                                     .onTapGesture {
                                         showMacroPickerSheet = true
                                     }
                             }
-                            .padding()
+                            .padding(.horizontal)
+                            .padding(.vertical, 14)
                             .onTapGesture {
                                 showMacroPickerSheet = true
                             }
@@ -1081,7 +1078,7 @@ struct MacroPickerSheet: View {
                             Text(percentLabel(value, selected: inputMode == .grams ? Int(carbsValue) : Int(carbsPercent)))
                                 .font(.title3)
                                 .monospacedDigit()
-                                .frame(width: 60, alignment: .trailing)
+                                .frame(width: 60, alignment: .center)
                                 .tag(value)
                         }
                     }
@@ -1122,7 +1119,7 @@ struct MacroPickerSheet: View {
                             Text(percentLabel(value, selected: inputMode == .grams ? Int(proteinValue) : Int(proteinPercent)))
                                 .font(.title3)
                                 .monospacedDigit()
-                                .frame(width: 60, alignment: .trailing)
+                                .frame(width: 60, alignment: .center)
                                 .tag(value)
                         }
                     }
@@ -1163,7 +1160,7 @@ struct MacroPickerSheet: View {
                             Text(percentLabel(value, selected: inputMode == .grams ? Int(fatValue) : Int(fatPercent)))
                                 .font(.title3)
                                 .monospacedDigit()
-                                .frame(width: 60, alignment: .trailing)
+                                .frame(width: 60, alignment: .center)
                                 .tag(value)
                         }
                     }
@@ -1173,6 +1170,8 @@ struct MacroPickerSheet: View {
                 .frame(maxWidth: .infinity)
             }
             .padding(.horizontal)
+
+            Spacer().frame(height: 12)
             
             // Validation message for % mode
             if inputMode == .percent && !percentagesValid {
@@ -1184,8 +1183,8 @@ struct MacroPickerSheet: View {
 
             // Total calories summary
             VStack(spacing: 2) {
-                Text("Total Calories \(Int(totalMacroCalories))")
-                    .font(.title3)
+                Text("\(Int(totalMacroCalories)) cal")
+                    .font(.system(size: 22))
                     .fontWeight(.semibold)
                 if inputMode == .grams {
                     Text("Changing grams will update your calorie goal")
