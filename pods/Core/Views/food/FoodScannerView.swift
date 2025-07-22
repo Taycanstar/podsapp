@@ -197,7 +197,7 @@ struct FoodScannerView: View {
                             // Show a scanning area optimized for nutrition labels
                             RoundedRectangle(cornerRadius: 16)
                                 .strokeBorder(Color.white, lineWidth: 3)
-                                .frame(width: 260, height: 320)
+                                .frame(width: 320, height: 400)
                                 .background(Color.clear)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
