@@ -441,7 +441,8 @@ struct GoalProgress: View {
                         fatGoal: $fatGoal,
                         calorieGoal: $calorieGoal,
                         isPresented: $showMacroPickerSheet,
-                        vmCalorieGoal: vm.calorieGoal
+                        vmCalorieGoal: vm.calorieGoal,
+                        vm: vm
                     )
                     .presentationDetents([.fraction(0.45)])
                     .presentationDragIndicator(.visible)
@@ -653,10 +654,10 @@ struct GoalProgress: View {
            let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data) {
             
             print("✅ GoalProgress: Loaded goals from UserDefaults nutritionGoalsData")
-            calorieGoal = String(Int(goals.calories))
-            proteinGoal = String(Int(goals.protein))
-            carbsGoal = String(Int(goals.carbs))
-            fatGoal = String(Int(goals.fat))
+            calorieGoal = String(Int(round(goals.calories)))
+            proteinGoal = String(Int(round(goals.protein)))
+            carbsGoal = String(Int(round(goals.carbs)))
+            fatGoal = String(Int(round(goals.fat)))
             
             // Also update the ViewModel to ensure consistency
             vm.calorieGoal = goals.calories
@@ -685,6 +686,7 @@ struct GoalProgress: View {
         vm.remainingCalories = max(0, vm.calorieGoal - vm.totalCalories)
         
         print("📊 GoalProgress: Loaded values - Calories: \(calorieGoal), Protein: \(proteinGoal)g, Carbs: \(carbsGoal)g, Fat: \(fatGoal)g")
+        print("📊 GoalProgress: VM values - Calories: \(vm.calorieGoal), Protein: \(vm.proteinGoal)g, Carbs: \(vm.carbsGoal)g, Fat: \(vm.fatGoal)g")
     }
     
     // Save goals to backend
@@ -837,6 +839,7 @@ struct MacroPickerSheet: View {
     @Binding var calorieGoal: String
     @Binding var isPresented: Bool
     let vmCalorieGoal: Double
+    @ObservedObject var vm: DayLogsViewModel
     
     @State private var inputMode: MacroInputMode = .grams
     @State private var proteinValue: Double = 0
@@ -847,7 +850,6 @@ struct MacroPickerSheet: View {
         let parsedCalories = Double(calorieGoal) ?? 0
         let actualCalories = parsedCalories > 0 ? parsedCalories : vmCalorieGoal
         let fallbackCalories = max(actualCalories, 1)
-        print("🔍 MacroPickerSheet totalCalories: parsed=\(parsedCalories), vm=\(vmCalorieGoal), actual=\(actualCalories), fallback=\(fallbackCalories), calorieGoal string='\(calorieGoal)'")
         return fallbackCalories
     }
     
@@ -921,11 +923,51 @@ struct MacroPickerSheet: View {
     }
     
     private var totalMacroCalories: Double {
-        (proteinValue * 4) + (carbsValue * 4) + (fatValue * 9)
+        let calculated = (proteinValue * 4) + (carbsValue * 4) + (fatValue * 9)
+        return calculated
     }
     
     private var calorieDiscrepancy: Double {
         totalMacroCalories - totalCalories
+    }
+    
+    /// Nudge gram values until (P·4 + C·4 + F·9) matches the calorie goal.
+    /// Runs only while we're in `.grams` mode.
+    private func balanceCalories() {
+        guard inputMode == .grams else { return }
+
+        let target = Int(totalCalories.rounded())
+        var diff   = target - Int(totalMacroCalories.rounded())
+        var guardRail = 32               // safety so we don't loop forever
+
+        while diff != 0 && guardRail > 0 {
+            guardRail -= 1
+
+            if diff > 0 {                // need more calories
+                if diff >= 9 {
+                    fatValue    += 1     // +1 g fat = +9 kcal
+                    diff        -= 9
+                } else if diff >= 4 {    // diff is exactly 4-8 kcal
+                    carbsValue  += 1     // +1 g carbs/pro = +4 kcal
+                    diff        -= 4
+                } else {                 // diff is 1-3 kcal, can't fix exactly
+                    break
+                }
+            } else {                     // need fewer calories
+                if diff <= -9 && fatValue >= 1 {
+                    fatValue    -= 1
+                    diff        += 9
+                } else if diff <= -4 && carbsValue >= 1 {
+                    carbsValue  -= 1
+                    diff        += 4
+                } else if diff <= -4 && proteinValue >= 1 {
+                    proteinValue -= 1
+                    diff         += 4
+                } else {
+                    break               // nothing left to trim or diff too small
+                }
+            }
+        }
     }
     
     // Validation for % mode
@@ -983,7 +1025,6 @@ struct MacroPickerSheet: View {
                     if inputMode == .grams {
                         let newCalories = Int(totalMacroCalories)
                         calorieGoal = String(newCalories)
-                        print("🔄 Updated calorie goal to: \(newCalories) cal")
                     }
                     
                     isPresented = false
@@ -1218,10 +1259,26 @@ struct MacroPickerSheet: View {
         }
         .onAppear {
             // Initialize values from current goals (fix initialization issue)
-            proteinValue = max(Double(proteinGoal) ?? 0, 0)
-            carbsValue = max(Double(carbsGoal) ?? 0, 0) 
-            fatValue = max(Double(fatGoal) ?? 0, 0)
-            print("🔄 MacroPickerSheet initialized with: P=\(proteinValue)g, C=\(carbsValue)g, F=\(fatValue)g")
+            let vmProtein = vm.proteinGoal
+            let vmCarbs = vm.carbsGoal  
+            let vmFat = vm.fatGoal
+            
+            proteinValue = max(Double(proteinGoal) ?? vmProtein, 0)
+            carbsValue = max(Double(carbsGoal) ?? vmCarbs, 0) 
+            fatValue = max(Double(fatGoal) ?? vmFat, 0)
+            
+            // If we're in grams mode, ensure the initial calorie calculation is correct
+            if inputMode == .grams {
+                let initialCalories = (proteinValue * 4) + (carbsValue * 4) + (fatValue * 9)
+                let targetCalories = vmCalorieGoal
+                let difference = targetCalories - initialCalories
+                
+                // Make sure our grams sum to the exact calorie goal
+                balanceCalories()
+                
+                let finalCalories = (proteinValue * 4) + (carbsValue * 4) + (fatValue * 9)
+            } else {
+            }
         }
     }
 }
