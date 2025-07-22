@@ -443,7 +443,7 @@ struct GoalProgress: View {
                         calorieGoal: $calorieGoal,
                         isPresented: $showMacroPickerSheet
                     )
-                    .presentationDetents([.fraction(0.4)])
+                    .presentationDetents([.fraction(0.45)])
                     .presentationDragIndicator(.visible)
                 }
                 
@@ -932,9 +932,13 @@ struct MacroPickerSheet: View {
         return true // Grams mode is always valid
     }
     
-    // Helper function for percent row labels
+    // Helper function for percent row labels - only selected row shows %
     private func percentLabel(_ value: Int, selected: Int) -> String {
-        selected == value ? "\(value) %" : "\(value)"
+        if inputMode == .percent {
+            return selected == value ? "\(value) %" : "\(value)"
+        } else {
+            return "\(value)"
+        }
     }
     
     var body: some View {
@@ -990,10 +994,12 @@ struct MacroPickerSheet: View {
                         Text("\(Int(carbsValue)) g")
                             .font(.headline)
                             .fontWeight(.semibold)
+                            .monospacedDigit()
                     } else {
                         Text("\(Int(carbsPercent)) %")
                             .font(.headline)
                             .fontWeight(.semibold)
+                            .monospacedDigit()
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -1008,10 +1014,12 @@ struct MacroPickerSheet: View {
                         Text("\(Int(proteinValue)) g")
                             .font(.headline)
                             .fontWeight(.semibold)
+                            .monospacedDigit()
                     } else {
                         Text("\(Int(proteinPercent)) %")
                             .font(.headline)
                             .fontWeight(.semibold)
+                            .monospacedDigit()
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -1026,10 +1034,12 @@ struct MacroPickerSheet: View {
                         Text("\(Int(fatValue)) g")
                             .font(.headline)
                             .fontWeight(.semibold)
+                            .monospacedDigit()
                     } else {
                         Text("\(Int(fatPercent)) %")
                             .font(.headline)
                             .fontWeight(.semibold)
+                            .monospacedDigit()
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -1049,10 +1059,6 @@ struct MacroPickerSheet: View {
                             } else {
                                 // % mode: keep total calories constant, redistribute percentages
                                 let newCarbsPercent = Double(newValue)
-                                let currentTotal = proteinPercent + carbsPercent + fatPercent
-                                let difference = newCarbsPercent - carbsPercent
-                                
-                                // Distribute the difference proportionally between protein and fat
                                 let remainingPercent = 100 - newCarbsPercent
                                 let currentProteinAndFat = proteinPercent + fatPercent
                                 
@@ -1071,9 +1077,11 @@ struct MacroPickerSheet: View {
                             }
                         }
                     )) {
-                        ForEach(0...100, id: \.self) { value in
-                            Text(inputMode == .percent ? "\(value) %" : "\(value)")
+                        ForEach(0...(inputMode == .grams ? 500 : 100), id: \.self) { value in
+                            Text(percentLabel(value, selected: inputMode == .grams ? Int(carbsValue) : Int(carbsPercent)))
                                 .font(.title3)
+                                .monospacedDigit()
+                                .frame(width: 60, alignment: .trailing)
                                 .tag(value)
                         }
                     }
@@ -1110,9 +1118,11 @@ struct MacroPickerSheet: View {
                             }
                         }
                     )) {
-                        ForEach(0...100, id: \.self) { value in
-                            Text(inputMode == .percent ? "\(value) %" : "\(value)")
+                        ForEach(0...(inputMode == .grams ? 500 : 100), id: \.self) { value in
+                            Text(percentLabel(value, selected: inputMode == .grams ? Int(proteinValue) : Int(proteinPercent)))
                                 .font(.title3)
+                                .monospacedDigit()
+                                .frame(width: 60, alignment: .trailing)
                                 .tag(value)
                         }
                     }
@@ -1149,9 +1159,11 @@ struct MacroPickerSheet: View {
                             }
                         }
                     )) {
-                        ForEach(0...100, id: \.self) { value in
-                            Text(inputMode == .percent ? "\(value) %" : "\(value)")
+                        ForEach(0...(inputMode == .grams ? 300 : 100), id: \.self) { value in
+                            Text(percentLabel(value, selected: inputMode == .grams ? Int(fatValue) : Int(fatPercent)))
                                 .font(.title3)
+                                .monospacedDigit()
+                                .frame(width: 60, alignment: .trailing)
                                 .tag(value)
                         }
                     }
@@ -1169,27 +1181,28 @@ struct MacroPickerSheet: View {
                     .foregroundColor(.orange)
                     .padding(.top, 8)
             }
-            
-            // Small calorie discrepancy info at bottom
-            if abs(calorieDiscrepancy) > 1 {
-                VStack(spacing: 2) {
-                    Text("Calculated: \(Int(totalMacroCalories)) cal")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Text("Target: \(Int(totalCalories)) cal")
+
+            // Total calories summary
+            VStack(spacing: 2) {
+                Text("Total Calories \(Int(totalMacroCalories))")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                if inputMode == .grams {
+                    Text("Changing grams will update your calorie goal")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-                .padding(.top, 8)
             }
-            
+            .padding(.top, 8)
+
             Spacer()
         }
         .onAppear {
-            // Initialize values from current goals (fix fat defaulting to 0)
+            // Initialize values from current goals (fix initialization issue)
             proteinValue = max(Double(proteinGoal) ?? 0, 0)
             carbsValue = max(Double(carbsGoal) ?? 0, 0) 
             fatValue = max(Double(fatGoal) ?? 0, 0)
+            print("🔄 MacroPickerSheet initialized with: P=\(proteinValue)g, C=\(carbsValue)g, F=\(fatValue)g")
         }
     }
 }
