@@ -940,7 +940,8 @@ struct MacroPickerSheet: View {
     // Helper function for percent row labels - only selected row shows %
     private func percentLabel(_ value: Int, selected: Int) -> String {
         if inputMode == .percent {
-            return selected == value ? "\(value) %" : "\(value)"
+            // Always reserve space for "%" but only show it on selected row
+            return value == selected ? "\(value) %" : "\(value)  " // Extra space to match "%" width
         } else {
             return "\(value)"
         }
@@ -1085,7 +1086,6 @@ struct MacroPickerSheet: View {
                         ForEach(0...(inputMode == .grams ? 500 : 100), id: \.self) { value in
                             Text(percentLabel(value, selected: inputMode == .grams ? Int(carbsValue) : Int(carbsPercent)))
                                 .font(.title3)
-                       
                                 .frame(width: 60, alignment: .center)
                                 .tag(value)
                         }
@@ -1126,7 +1126,6 @@ struct MacroPickerSheet: View {
                         ForEach(0...(inputMode == .grams ? 500 : 100), id: \.self) { value in
                             Text(percentLabel(value, selected: inputMode == .grams ? Int(proteinValue) : Int(proteinPercent)))
                                 .font(.title3)
-                             
                                 .frame(width: 60, alignment: .center)
                                 .tag(value)
                         }
@@ -1167,7 +1166,6 @@ struct MacroPickerSheet: View {
                         ForEach(0...(inputMode == .grams ? 300 : 100), id: \.self) { value in
                             Text(percentLabel(value, selected: inputMode == .grams ? Int(fatValue) : Int(fatPercent)))
                                 .font(.title3)
-                           
                                 .frame(width: 60, alignment: .center)
                                 .tag(value)
                         }
@@ -1178,7 +1176,7 @@ struct MacroPickerSheet: View {
                 .frame(maxWidth: .infinity)
             }
             .padding(.horizontal)
-
+            
             Spacer().frame(height: 12)
             
             // Validation message for % mode
@@ -1188,10 +1186,10 @@ struct MacroPickerSheet: View {
                     .foregroundColor(.orange)
                     .padding(.top, 8)
             }
-
-            // Total calories summary
+            
+            // Show actual calorie goal instead of calculated macro calories
             VStack(spacing: 2) {
-                Text("\(Int(totalMacroCalories)) cal")
+                Text("\(Int(totalCalories)) cal")
                     .font(.system(size: 22))
                     .fontWeight(.semibold)
                 if inputMode == .grams {
@@ -1201,7 +1199,7 @@ struct MacroPickerSheet: View {
                 }
             }
             .padding(.top, 8)
-
+            
             Spacer()
         }
         .onAppear {
