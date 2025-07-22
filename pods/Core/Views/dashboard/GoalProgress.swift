@@ -235,15 +235,15 @@ struct GoalProgress: View {
 
     // Computed properties for goal macro calories
     private var proteinCals: Double {
-        vm.proteinGoal * 4
+        (Double(proteinGoal) ?? vm.proteinGoal) * 4
     }
     
     private var carbCals: Double {
-        vm.carbsGoal * 4
+        (Double(carbsGoal) ?? vm.carbsGoal) * 4
     }
     
     private var fatCals: Double {
-        vm.fatGoal * 9
+        (Double(fatGoal) ?? vm.fatGoal) * 9
     }
     
     private var macroCals: Double {
@@ -252,7 +252,7 @@ struct GoalProgress: View {
     
     // Calculate percentages for ring segments based on goal calories
     private var totalGoalCalories: Double {
-        max(vm.calorieGoal, 1)
+        max(Double(calorieGoal) ?? vm.calorieGoal, 1)
     }
     
     // Helper function to ensure percentages add up to exactly 100%
@@ -1047,25 +1047,38 @@ struct MacroPickerSheet: View {
                             if inputMode == .grams {
                                 carbsValue = Double(newValue)
                             } else {
-                                let percent = Double(newValue)
-                                carbsValue = (percent * totalCalories) / 4.0 / 100
+                                // % mode: keep total calories constant, redistribute percentages
+                                let newCarbsPercent = Double(newValue)
+                                let currentTotal = proteinPercent + carbsPercent + fatPercent
+                                let difference = newCarbsPercent - carbsPercent
+                                
+                                // Distribute the difference proportionally between protein and fat
+                                let remainingPercent = 100 - newCarbsPercent
+                                let currentProteinAndFat = proteinPercent + fatPercent
+                                
+                                if currentProteinAndFat > 0 && remainingPercent > 0 {
+                                    let proteinRatio = proteinPercent / currentProteinAndFat
+                                    let fatRatio = fatPercent / currentProteinAndFat
+                                    
+                                    let newProteinPercent = remainingPercent * proteinRatio
+                                    let newFatPercent = remainingPercent * fatRatio
+                                    
+                                    // Update gram values based on new percentages (keeping total calories same)
+                                    proteinValue = (newProteinPercent * totalCalories) / 4.0 / 100
+                                    fatValue = (newFatPercent * totalCalories) / 9.0 / 100
+                                }
+                                carbsValue = (newCarbsPercent * totalCalories) / 4.0 / 100
                             }
                         }
                     )) {
-                        ForEach(0...500, id: \.self) { value in
-                            if inputMode == .percent {
-                                Text(percentLabel(value, selected: Int(carbsPercent)))
-                                    .font(.title3)
-                                    .tag(value)
-                            } else {
-                                Text("\(value)")
-                                    .font(.title3)
-                                    .tag(value)
-                            }
+                        ForEach(0...100, id: \.self) { value in
+                            Text(inputMode == .percent ? "\(value) %" : "\(value)")
+                                .font(.title3)
+                                .tag(value)
                         }
                     }
                     .pickerStyle(WheelPickerStyle())
-                    .frame(height: 120)
+                    .frame(height: 150)
                 }
                 .frame(maxWidth: .infinity)
                 
@@ -1077,25 +1090,34 @@ struct MacroPickerSheet: View {
                             if inputMode == .grams {
                                 proteinValue = Double(newValue)
                             } else {
-                                let percent = Double(newValue)
-                                proteinValue = (percent * totalCalories) / 4.0 / 100
+                                // % mode: keep total calories constant, redistribute percentages
+                                let newProteinPercent = Double(newValue)
+                                let remainingPercent = 100 - newProteinPercent
+                                let currentCarbsAndFat = carbsPercent + fatPercent
+                                
+                                if currentCarbsAndFat > 0 && remainingPercent > 0 {
+                                    let carbsRatio = carbsPercent / currentCarbsAndFat
+                                    let fatRatio = fatPercent / currentCarbsAndFat
+                                    
+                                    let newCarbsPercent = remainingPercent * carbsRatio
+                                    let newFatPercent = remainingPercent * fatRatio
+                                    
+                                    // Update gram values based on new percentages (keeping total calories same)
+                                    carbsValue = (newCarbsPercent * totalCalories) / 4.0 / 100
+                                    fatValue = (newFatPercent * totalCalories) / 9.0 / 100
+                                }
+                                proteinValue = (newProteinPercent * totalCalories) / 4.0 / 100
                             }
                         }
                     )) {
-                        ForEach(0...500, id: \.self) { value in
-                            if inputMode == .percent {
-                                Text(percentLabel(value, selected: Int(proteinPercent)))
-                                    .font(.title3)
-                                    .tag(value)
-                            } else {
-                                Text("\(value)")
-                                    .font(.title3)
-                                    .tag(value)
-                            }
+                        ForEach(0...100, id: \.self) { value in
+                            Text(inputMode == .percent ? "\(value) %" : "\(value)")
+                                .font(.title3)
+                                .tag(value)
                         }
                     }
                     .pickerStyle(WheelPickerStyle())
-                    .frame(height: 120)
+                    .frame(height: 150)
                 }
                 .frame(maxWidth: .infinity)
                 
@@ -1107,25 +1129,34 @@ struct MacroPickerSheet: View {
                             if inputMode == .grams {
                                 fatValue = Double(newValue)
                             } else {
-                                let percent = Double(newValue)
-                                fatValue = (percent * totalCalories) / 9.0 / 100
+                                // % mode: keep total calories constant, redistribute percentages
+                                let newFatPercent = Double(newValue)
+                                let remainingPercent = 100 - newFatPercent
+                                let currentProteinAndCarbs = proteinPercent + carbsPercent
+                                
+                                if currentProteinAndCarbs > 0 && remainingPercent > 0 {
+                                    let proteinRatio = proteinPercent / currentProteinAndCarbs
+                                    let carbsRatio = carbsPercent / currentProteinAndCarbs
+                                    
+                                    let newProteinPercent = remainingPercent * proteinRatio
+                                    let newCarbsPercent = remainingPercent * carbsRatio
+                                    
+                                    // Update gram values based on new percentages (keeping total calories same)
+                                    proteinValue = (newProteinPercent * totalCalories) / 4.0 / 100
+                                    carbsValue = (newCarbsPercent * totalCalories) / 4.0 / 100
+                                }
+                                fatValue = (newFatPercent * totalCalories) / 9.0 / 100
                             }
                         }
                     )) {
-                        ForEach(0...300, id: \.self) { value in
-                            if inputMode == .percent {
-                                Text(percentLabel(value, selected: Int(fatPercent)))
-                                    .font(.title3)
-                                    .tag(value)
-                            } else {
-                                Text("\(value)")
-                                    .font(.title3)
-                                    .tag(value)
-                            }
+                        ForEach(0...100, id: \.self) { value in
+                            Text(inputMode == .percent ? "\(value) %" : "\(value)")
+                                .font(.title3)
+                                .tag(value)
                         }
                     }
                     .pickerStyle(WheelPickerStyle())
-                    .frame(height: 120)
+                    .frame(height: 150)
                 }
                 .frame(maxWidth: .infinity)
             }
