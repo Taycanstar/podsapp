@@ -346,6 +346,8 @@ struct GoalProgress: View {
                             TextField("Daily target", text: $calorieGoal)
                                 .keyboardType(.numberPad)
                         }
+                        .padding(.horizontal)
+                        .padding(.vertical, 14)
                  
                     }
                     .frame(height: 56)
@@ -984,11 +986,11 @@ struct MacroPickerSheet: View {
                 // Carbs
                 VStack(spacing: 4) {
                     Text("Carbs")
-                        .font(.caption)
+                        .font(.system(size: 14))
                         .foregroundColor(Color("darkYellow"))
                     
                     if inputMode == .percent {
-                        Text("\(Int(carbsValue)) g")
+                        Text("\(Int(carbsValue))g")
                             .font(.headline)
                             .fontWeight(.semibold)
                             .monospacedDigit()
@@ -1004,11 +1006,11 @@ struct MacroPickerSheet: View {
                 // Protein
                 VStack(spacing: 4) {
                     Text("Protein")
-                        .font(.caption)
+                        .font(.system(size: 14))
                         .foregroundColor(.blue)
                     
                     if inputMode == .percent {
-                        Text("\(Int(proteinValue)) g")
+                        Text("\(Int(proteinValue))g")
                             .font(.headline)
                             .fontWeight(.semibold)
                             .monospacedDigit()
@@ -1024,11 +1026,11 @@ struct MacroPickerSheet: View {
                 // Fat
                 VStack(spacing: 4) {
                     Text("Fat")
-                        .font(.caption)
+                        .font(.system(size: 14))
                         .foregroundColor(.pink)
                     
                     if inputMode == .percent {
-                        Text("\(Int(fatValue)) g")
+                        Text("\(Int(fatValue))g")
                             .font(.headline)
                             .fontWeight(.semibold)
                             .monospacedDigit()
