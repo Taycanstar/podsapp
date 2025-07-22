@@ -1267,17 +1267,9 @@ struct MacroPickerSheet: View {
             carbsValue = max(Double(carbsGoal) ?? vmCarbs, 0) 
             fatValue = max(Double(fatGoal) ?? vmFat, 0)
             
-            // If we're in grams mode, ensure the initial calorie calculation is correct
+            // If we're in grams mode, just initialize with the text field values
             if inputMode == .grams {
-                let initialCalories = (proteinValue * 4) + (carbsValue * 4) + (fatValue * 9)
-                let targetCalories = vmCalorieGoal
-                let difference = targetCalories - initialCalories
-                
-                // Make sure our grams sum to the exact calorie goal
-                balanceCalories()
-                
-                let finalCalories = (proteinValue * 4) + (carbsValue * 4) + (fatValue * 9)
-            } else {
+                print("🔄 MacroPickerSheet showing exact text field values: P=\(proteinValue)g, C=\(carbsValue)g, F=\(fatValue)g")
             }
         }
     }
