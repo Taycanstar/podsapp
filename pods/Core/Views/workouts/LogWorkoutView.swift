@@ -59,6 +59,11 @@ struct LogWorkoutView: View {
     @State private var sessionFitnessGoal: FitnessGoal? = nil // Session-specific goal (doesn't affect defaults)
     @State private var showingFitnessGoalPicker = false
     
+    // Add fitness level state variables
+    @State private var selectedFitnessLevel: ExperienceLevel = .beginner
+    @State private var sessionFitnessLevel: ExperienceLevel? = nil // Session-specific level (doesn't affect defaults)
+    @State private var showingFitnessLevelPicker = false
+    
     // Computed property for the actual duration to use
     private var effectiveDuration: WorkoutDuration {
         return sessionDuration ?? selectedDuration
@@ -149,10 +154,19 @@ struct LogWorkoutView: View {
             // Load user's default fitness goal preference
             selectedFitnessGoal = UserProfileService.shared.fitnessGoal
             
+            // Load user's default fitness level preference
+            selectedFitnessLevel = UserProfileService.shared.experienceLevel
+            
             // Load session fitness goal if it exists
             if let savedGoalString = UserDefaults.standard.string(forKey: sessionFitnessGoalKey) {
                 sessionFitnessGoal = FitnessGoal(rawValue: savedGoalString)
                 print("📱 Restored session fitness goal: \(sessionFitnessGoal?.displayName ?? "nil")")
+            }
+            
+            // Load session fitness level if it exists
+            if let savedLevelString = UserDefaults.standard.string(forKey: "currentWorkoutSessionFitnessLevel") {
+                sessionFitnessLevel = ExperienceLevel(rawValue: savedLevelString)
+                print("📱 Restored session fitness level: \(sessionFitnessLevel?.displayName ?? "nil")")
             }
             
             // Load session duration if it exists
@@ -317,6 +331,46 @@ struct LogWorkoutView: View {
                 }
             )
         }
+        .sheet(isPresented: $showingFitnessLevelPicker) {
+            FitnessLevelPickerView(
+                selectedFitnessLevel: .constant(sessionFitnessLevel ?? selectedFitnessLevel),
+                onSetDefault: { newLevel in
+                    // Save as default fitness level - update both local and server
+                    print("🔧 Setting as default fitness level: \(newLevel.displayName)")
+                    
+                    // 1. Update UserProfileService
+                    UserProfileService.shared.experienceLevel = newLevel
+                    
+                    // 2. Update the main selectedFitnessLevel to reflect the new default
+                    selectedFitnessLevel = newLevel
+                    
+                    // 3. Clear session fitness level since it's now the default
+                    sessionFitnessLevel = nil
+                    
+                    // 4. Clear session fitness level from UserDefaults
+                    UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
+                    
+                    // 5. Update server data (if user email exists)
+                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
+                        updateServerFitnessLevel(email: email, fitnessLevel: newLevel)
+                    }
+                    
+                    showingFitnessLevelPicker = false
+                    regenerateWorkoutWithNewDuration()
+                },
+                onSetForWorkout: { newLevel in
+                    // Apply to current workout session only (no server or default updates)
+                    print("⚡ Setting session-only fitness level: \(newLevel.displayName) (won't save to server)")
+                    sessionFitnessLevel = newLevel
+                    
+                    // Save session fitness level to UserDefaults for persistence across app restarts
+                    UserDefaults.standard.set(newLevel.rawValue, forKey: "currentWorkoutSessionFitnessLevel")
+                    
+                    showingFitnessLevelPicker = false
+                    regenerateWorkoutWithNewDuration()
+                }
+            )
+        }
     }
     
     private func regenerateWorkoutWithNewDuration() {
@@ -339,6 +393,8 @@ struct LogWorkoutView: View {
         UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
         sessionFitnessGoal = nil
         UserDefaults.standard.removeObject(forKey: sessionFitnessGoalKey)
+        sessionFitnessLevel = nil
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
         print("🗑️ Cleared session duration, custom muscles, and muscle type")
     }
     
@@ -349,6 +405,7 @@ struct LogWorkoutView: View {
         UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomMuscles")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessGoal")
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
         print("🗑️ Cleared workout session duration, custom muscles, muscle type, and fitness goal (static)")
     }
     
@@ -416,6 +473,38 @@ struct LogWorkoutView: View {
         }
     }
     
+    private func updateServerFitnessLevel(email: String, fitnessLevel: ExperienceLevel) {
+        print("🔄 Updating server fitness level: \(fitnessLevel.displayName) for \(email)")
+        
+        // Create update payload
+        let updateData: [String: Any] = [
+            "experience_level": fitnessLevel.rawValue
+        ]
+        
+        // Use NetworkManagerTwo to update workout preferences  
+        NetworkManagerTwo.shared.updateWorkoutPreferences(
+            email: email,
+            workoutData: updateData
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("✅ Successfully updated fitness level on server")
+                    
+                    // Update DataLayer cache
+                    Task {
+                        let profileUpdate = ["experience_level": fitnessLevel.rawValue]
+                        await DataLayer.shared.updateProfileData(profileUpdate)
+                    }
+                    
+                case .failure(let error):
+                    print("❌ Failed to update fitness level on server: \(error.localizedDescription)")
+                    // Note: We still keep the local change since UserDefaults was already updated
+                }
+            }
+        }
+    }
+    
     // MARK: - Subviews
     
     private var tabHeaderView: some View {
@@ -443,7 +532,7 @@ struct LogWorkoutView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 // X button to reset all session options (only show when any session option is set) - positioned first
-                if sessionDuration != nil || customTargetMuscles != nil || customEquipment != nil || sessionFitnessGoal != nil {
+                if sessionDuration != nil || customTargetMuscles != nil || customEquipment != nil || sessionFitnessGoal != nil || sessionFitnessLevel != nil {
                     Button(action: {
                         // Reset to default duration
                         sessionDuration = nil
@@ -466,6 +555,10 @@ struct LogWorkoutView: View {
                         // Reset to default fitness goal
                         sessionFitnessGoal = nil
                         UserDefaults.standard.removeObject(forKey: sessionFitnessGoalKey)
+                        
+                        // Reset to default fitness level
+                        sessionFitnessLevel = nil
+                        UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
                         
                         regenerateWorkoutWithNewDuration()
                         print("🔄 Reset to default duration, muscle type, equipment, and fitness goal")
@@ -611,6 +704,37 @@ struct LogWorkoutView: View {
                     )
                 }
                 .buttonStyle(PlainButtonStyle())
+                
+                // Fitness Level Control with session modification styling
+                Button(action: {
+                    showingFitnessLevelPicker = true
+                }) {
+                    HStack(spacing: 4) {
+                        Text(selectedFitnessLevel.displayName)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        // Always show chevron
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(sessionFitnessLevel != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                    .overlay(
+                        // Add primary color overlay when session fitness level is set
+                        sessionFitnessLevel != nil ? 
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.primary.opacity(0.05)) : nil
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
             .padding(.horizontal)
             .padding(.vertical, 2) // Add vertical padding to prevent border cutoff
@@ -630,7 +754,8 @@ struct LogWorkoutView: View {
                     shouldRegenerate: shouldRegenerateWorkout,
                     customTargetMuscles: customTargetMuscles,
                     customEquipment: customEquipment,
-                    effectiveFitnessGoal: effectiveFitnessGoal
+                    effectiveFitnessGoal: effectiveFitnessGoal,
+                    effectiveFitnessLevel: selectedFitnessLevel
                 )
             case .workouts:
                 RoutinesWorkoutView(
@@ -698,6 +823,7 @@ private struct TodayWorkoutView: View {
     let customTargetMuscles: [String]? // Added this parameter
     let customEquipment: [Equipment]? // Added this parameter
     let effectiveFitnessGoal: FitnessGoal // Added this parameter
+    let effectiveFitnessLevel: ExperienceLevel // Added this parameter
     
     @State private var todayWorkout: TodayWorkout?
     @State private var isGeneratingWorkout = false
@@ -801,7 +927,7 @@ private struct TodayWorkoutView: View {
         
         // Get user's fitness goal and preferences - use effective fitness goal
         let fitnessGoal = effectiveFitnessGoal
-        let experienceLevel = userProfile.experienceLevel
+        let experienceLevel = effectiveFitnessLevel
         
         // Use selected duration instead of user's available time
         let targetDuration = selectedDuration.minutes
@@ -1869,6 +1995,126 @@ struct FitnessGoalPickerView: View {
             
             Button("Set for this workout") {
                 onSetForWorkout(tempSelectedGoal)
+            }
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(Color(.systemBackground))
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.primary)
+            .cornerRadius(8)
+        }
+    }
+}
+
+// MARK: - Fitness Level Picker View
+
+struct FitnessLevelPickerView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedFitnessLevel: ExperienceLevel
+    let onSetDefault: (ExperienceLevel) -> Void
+    let onSetForWorkout: (ExperienceLevel) -> Void
+    
+    @State private var tempSelectedLevel: ExperienceLevel
+    
+    init(selectedFitnessLevel: Binding<ExperienceLevel>, onSetDefault: @escaping (ExperienceLevel) -> Void, onSetForWorkout: @escaping (ExperienceLevel) -> Void) {
+        self._selectedFitnessLevel = selectedFitnessLevel
+        self.onSetDefault = onSetDefault
+        self.onSetForWorkout = onSetForWorkout
+                 // Use the current selected level as initial value
+         let initialLevel = selectedFitnessLevel.wrappedValue
+        self._tempSelectedLevel = State(initialValue: initialLevel)
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header with close button
+            HStack {
+                Spacer()
+                
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(width: 30, height: 30)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 16)
+            .padding(.bottom, 16)
+            
+            Text("Fitness Level")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                .padding(.bottom, 30)
+            
+            // Fitness Level List
+            VStack(spacing: 16) {
+                VStack(spacing: 0) {
+                                         ForEach(ExperienceLevel.allCases, id: \.self) { level in
+                        Button(action: {
+                            tempSelectedLevel = level
+                        }) {
+                            HStack(spacing: 16) {
+                                // Radio button
+                                Image(systemName: tempSelectedLevel == level ? "largecircle.fill.circle" : "circle")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(tempSelectedLevel == level ? .accentColor : .secondary)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(level.displayName)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.primary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                
+                                Spacer()
+                            }
+                                                            .padding(.horizontal, 12)
+                                .padding(.vertical, 12)
+                            .background(Color(.systemBackground))
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                                                 if level != ExperienceLevel.allCases.last {
+                                                            Divider()
+                                    .padding(.leading)
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                // Action buttons
+                actionButtons
+            }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 30)
+        }
+        .padding(.horizontal, 10)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .presentationDetents([.fraction(0.4)])
+        .presentationDragIndicator(.visible)
+    }
+    
+    private var actionButtons: some View {
+        HStack(spacing: 0) {
+            Button("Set as default") {
+                selectedFitnessLevel = tempSelectedLevel
+                onSetDefault(tempSelectedLevel)
+            }
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(.primary)
+            
+            Spacer()
+            
+            Button("Set for this workout") {
+                onSetForWorkout(tempSelectedLevel)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(Color(.systemBackground))
