@@ -22,6 +22,7 @@ struct FitnessGoalView: View {
         case endurance
         case powerlifting
         case sportsPerformance = "sport"
+        case general
         
         var id: Self { self }
         
@@ -33,6 +34,7 @@ struct FitnessGoalView: View {
             case .endurance: return "Endurance"
             case .powerlifting: return "Powerlifting"
             case .sportsPerformance: return "Sports Performance"
+            case .general: return "Genera Fitness"
             }
         }
         
@@ -44,6 +46,7 @@ struct FitnessGoalView: View {
             case .endurance: return "Improve stamina and cardiovascular fitness"
             case .powerlifting: return "Focus on maximal strength in major lifts"
             case .sportsPerformance: return "Optimize performance for specific sports"
+            case .general: return "General fitness and health"
             }
         }
         
@@ -55,6 +58,7 @@ struct FitnessGoalView: View {
             case .endurance: return "figure.run"
             case .powerlifting: return "dumbbell"
             case .sportsPerformance: return "figure.handball"
+            case .general: return "figure.run"
             }
         }
     }

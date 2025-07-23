@@ -34,11 +34,11 @@ enum FitnessGoal: String, CaseIterable, Codable {
     var displayName: String {
         switch self {
         case .strength: return "Strength"
-        case .hypertrophy: return "Muscle Building"
+        case .hypertrophy: return "Hypertrophy"
         case .endurance: return "Endurance"
         case .power: return "Power"
         case .general: return "General Fitness"
-        case .tone: return "Muscle Tone"
+        case .tone: return "Tone"
         case .powerlifting: return "Powerlifting"
         case .sport: return "Sports Performance"
         }

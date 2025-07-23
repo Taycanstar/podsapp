@@ -54,15 +54,28 @@ struct LogWorkoutView: View {
     @State private var customEquipment: [Equipment]? = nil // Custom equipment selection for session
     @State private var selectedEquipmentType: String = "Auto" // Track equipment type selection
     
+    // Add fitness goal state variables
+    @State private var selectedFitnessGoal: FitnessGoal = .strength
+    @State private var sessionFitnessGoal: FitnessGoal? = nil // Session-specific goal (doesn't affect defaults)
+    @State private var showingFitnessGoalPicker = false
+    
     // Computed property for the actual duration to use
     private var effectiveDuration: WorkoutDuration {
         return sessionDuration ?? selectedDuration
+    }
+    
+    // Computed property for the actual fitness goal to use
+    private var effectiveFitnessGoal: FitnessGoal {
+        return sessionFitnessGoal ?? selectedFitnessGoal
     }
     
     // Keys for UserDefaults
     private let sessionDurationKey = "currentWorkoutSessionDuration"
     private let sessionDateKey = "currentWorkoutSessionDate"
     private let customMusclesKey = "currentWorkoutCustomMuscles"
+    
+    // Add fitness goal session keys
+    private let sessionFitnessGoalKey = "currentWorkoutSessionFitnessGoal"
     
     enum WorkoutTab: Hashable {
         case today, workouts
@@ -131,6 +144,15 @@ struct LogWorkoutView: View {
                 // Fallback to UserProfileService preference
                 let availableTime = UserProfileService.shared.availableTime
                 selectedDuration = WorkoutDuration.fromMinutes(availableTime)
+            }
+            
+            // Load user's default fitness goal preference
+            selectedFitnessGoal = UserProfileService.shared.fitnessGoal
+            
+            // Load session fitness goal if it exists
+            if let savedGoalString = UserDefaults.standard.string(forKey: sessionFitnessGoalKey) {
+                sessionFitnessGoal = FitnessGoal(rawValue: savedGoalString)
+                print("📱 Restored session fitness goal: \(sessionFitnessGoal?.displayName ?? "nil")")
             }
             
             // Load session duration if it exists
@@ -255,6 +277,46 @@ struct LogWorkoutView: View {
                 regenerateWorkoutWithNewDuration()
             })
         }
+        .sheet(isPresented: $showingFitnessGoalPicker) {
+            FitnessGoalPickerView(
+                selectedFitnessGoal: .constant(sessionFitnessGoal ?? selectedFitnessGoal),
+                onSetDefault: { newGoal in
+                    // Save as default fitness goal - update both local and server
+                    print("🔧 Setting as default fitness goal: \(newGoal.displayName)")
+                    
+                    // 1. Update UserProfileService
+                    UserProfileService.shared.fitnessGoal = newGoal
+                    
+                    // 2. Update the main selectedFitnessGoal to reflect the new default
+                    selectedFitnessGoal = newGoal
+                    
+                    // 3. Clear session fitness goal since it's now the default
+                    sessionFitnessGoal = nil
+                    
+                    // 4. Clear session fitness goal from UserDefaults
+                    UserDefaults.standard.removeObject(forKey: sessionFitnessGoalKey)
+                    
+                    // 5. Update server data (if user email exists)
+                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
+                        updateServerFitnessGoal(email: email, fitnessGoal: newGoal)
+                    }
+                    
+                    showingFitnessGoalPicker = false
+                    regenerateWorkoutWithNewDuration()
+                },
+                onSetForWorkout: { newGoal in
+                    // Apply to current workout session only (no server or default updates)
+                    print("⚡ Setting session-only fitness goal: \(newGoal.displayName) (won't save to server)")
+                    sessionFitnessGoal = newGoal
+                    
+                    // Save session fitness goal to UserDefaults for persistence across app restarts
+                    UserDefaults.standard.set(newGoal.rawValue, forKey: sessionFitnessGoalKey)
+                    
+                    showingFitnessGoalPicker = false
+                    regenerateWorkoutWithNewDuration()
+                }
+            )
+        }
     }
     
     private func regenerateWorkoutWithNewDuration() {
@@ -275,6 +337,8 @@ struct LogWorkoutView: View {
         UserDefaults.standard.removeObject(forKey: customMusclesKey)
         selectedMuscleType = "Recovered Muscles"
         UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
+        sessionFitnessGoal = nil
+        UserDefaults.standard.removeObject(forKey: sessionFitnessGoalKey)
         print("🗑️ Cleared session duration, custom muscles, and muscle type")
     }
     
@@ -284,7 +348,8 @@ struct LogWorkoutView: View {
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionDate")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomMuscles")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
-        print("🗑️ Cleared workout session duration, custom muscles, and muscle type (static)")
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessGoal")
+        print("🗑️ Cleared workout session duration, custom muscles, muscle type, and fitness goal (static)")
     }
     
     private func updateServerWorkoutDuration(email: String, durationMinutes: Int) {
@@ -319,6 +384,38 @@ struct LogWorkoutView: View {
         }
     }
     
+    private func updateServerFitnessGoal(email: String, fitnessGoal: FitnessGoal) {
+        print("🔄 Updating server fitness goal: \(fitnessGoal.displayName) for \(email)")
+        
+        // Create update payload
+        let updateData: [String: Any] = [
+            "preferred_fitness_goal": fitnessGoal.rawValue
+        ]
+        
+        // Use NetworkManagerTwo to update workout preferences  
+        NetworkManagerTwo.shared.updateWorkoutPreferences(
+            email: email,
+            workoutData: updateData
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("✅ Successfully updated fitness goal on server")
+                    
+                    // Update DataLayer cache
+                    Task {
+                        let profileUpdate = ["preferred_fitness_goal": fitnessGoal.rawValue]
+                        await DataLayer.shared.updateProfileData(profileUpdate)
+                    }
+                    
+                case .failure(let error):
+                    print("❌ Failed to update fitness goal on server: \(error.localizedDescription)")
+                    // Note: We still keep the local change since UserDefaults was already updated
+                }
+            }
+        }
+    }
+    
     // MARK: - Subviews
     
     private var tabHeaderView: some View {
@@ -346,7 +443,7 @@ struct LogWorkoutView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 // X button to reset all session options (only show when any session option is set) - positioned first
-                if sessionDuration != nil || customTargetMuscles != nil || customEquipment != nil {
+                if sessionDuration != nil || customTargetMuscles != nil || customEquipment != nil || sessionFitnessGoal != nil {
                     Button(action: {
                         // Reset to default duration
                         sessionDuration = nil
@@ -366,8 +463,12 @@ struct LogWorkoutView: View {
                         selectedEquipmentType = userProfile.workoutLocationDisplay
                         UserDefaults.standard.removeObject(forKey: "currentWorkoutEquipmentType")
                         
+                        // Reset to default fitness goal
+                        sessionFitnessGoal = nil
+                        UserDefaults.standard.removeObject(forKey: sessionFitnessGoalKey)
+                        
                         regenerateWorkoutWithNewDuration()
-                        print("🔄 Reset to default duration, muscle type, and equipment")
+                        print("🔄 Reset to default duration, muscle type, equipment, and fitness goal")
                     }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 12, weight: .medium))
@@ -479,6 +580,37 @@ struct LogWorkoutView: View {
                     )
                 }
                 .buttonStyle(PlainButtonStyle())
+                
+                // Fitness Goal Control with session modification styling
+                Button(action: {
+                    showingFitnessGoalPicker = true
+                }) {
+                    HStack(spacing: 4) {
+                        Text(effectiveFitnessGoal.displayName)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        // Always show chevron
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(sessionFitnessGoal != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                    .overlay(
+                        // Add primary color overlay when session fitness goal is set
+                        sessionFitnessGoal != nil ? 
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.primary.opacity(0.05)) : nil
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
             .padding(.horizontal)
             .padding(.vertical, 2) // Add vertical padding to prevent border cutoff
@@ -497,7 +629,8 @@ struct LogWorkoutView: View {
                     selectedDuration: effectiveDuration,
                     shouldRegenerate: shouldRegenerateWorkout,
                     customTargetMuscles: customTargetMuscles,
-                    customEquipment: customEquipment
+                    customEquipment: customEquipment,
+                    effectiveFitnessGoal: effectiveFitnessGoal
                 )
             case .workouts:
                 RoutinesWorkoutView(
@@ -564,6 +697,7 @@ private struct TodayWorkoutView: View {
     let shouldRegenerate: Bool
     let customTargetMuscles: [String]? // Added this parameter
     let customEquipment: [Equipment]? // Added this parameter
+    let effectiveFitnessGoal: FitnessGoal // Added this parameter
     
     @State private var todayWorkout: TodayWorkout?
     @State private var isGeneratingWorkout = false
@@ -665,8 +799,8 @@ private struct TodayWorkoutView: View {
     private func createIntelligentWorkout() -> TodayWorkout {
         let recommendationService = WorkoutRecommendationService.shared
         
-        // Get user's fitness goal and preferences
-        let fitnessGoal = userProfile.fitnessGoal
+        // Get user's fitness goal and preferences - use effective fitness goal
+        let fitnessGoal = effectiveFitnessGoal
         let experienceLevel = userProfile.experienceLevel
         
         // Use selected duration instead of user's available time
@@ -1622,6 +1756,126 @@ extension View {
             transform(self)
         } else {
             self
+        }
+    }
+}
+
+// MARK: - Fitness Goal Picker View
+
+struct FitnessGoalPickerView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedFitnessGoal: FitnessGoal
+    let onSetDefault: (FitnessGoal) -> Void
+    let onSetForWorkout: (FitnessGoal) -> Void
+    
+    @State private var tempSelectedGoal: FitnessGoal
+    
+    init(selectedFitnessGoal: Binding<FitnessGoal>, onSetDefault: @escaping (FitnessGoal) -> Void, onSetForWorkout: @escaping (FitnessGoal) -> Void) {
+        self._selectedFitnessGoal = selectedFitnessGoal
+        self.onSetDefault = onSetDefault
+        self.onSetForWorkout = onSetForWorkout
+        // If the current goal is .sport or .power, default to .strength since they're not shown
+        let initialGoal = (selectedFitnessGoal.wrappedValue == .sport || selectedFitnessGoal.wrappedValue == .power) ? .strength : selectedFitnessGoal.wrappedValue
+        self._tempSelectedGoal = State(initialValue: initialGoal)
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header with close button
+            HStack {
+                Spacer()
+                
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(width: 30, height: 30)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 16)
+            .padding(.bottom, 16)
+            
+            Text("Fitness Goal")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                .padding(.bottom, 30)
+            
+            // Fitness Goal List
+            VStack(spacing: 16) {
+                VStack(spacing: 0) {
+                    ForEach(FitnessGoal.allCases.filter { $0 != .sport && $0 != .power }, id: \.self) { goal in
+                        Button(action: {
+                            tempSelectedGoal = goal
+                        }) {
+                            HStack(spacing: 16) {
+                                // Radio button
+                                Image(systemName: tempSelectedGoal == goal ? "largecircle.fill.circle" : "circle")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(tempSelectedGoal == goal ? .accentColor : .secondary)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(goal.displayName)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.primary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                
+                                Spacer()
+                            }
+                                                            .padding(.horizontal, 12)
+                                .padding(.vertical, 12)
+                            .background(Color(.systemBackground))
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        if goal != FitnessGoal.allCases.filter({ $0 != .sport && $0 != .power }).last {
+                                                            Divider()
+                                    .padding(.leading)
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                // Action buttons
+                actionButtons
+            }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 30)
+        }
+        .padding(.horizontal, 10)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .presentationDetents([.fraction(0.6)])
+        .presentationDragIndicator(.visible)
+    }
+    
+    private var actionButtons: some View {
+        HStack(spacing: 0) {
+            Button("Set as default") {
+                selectedFitnessGoal = tempSelectedGoal
+                onSetDefault(tempSelectedGoal)
+            }
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(.primary)
+            
+            Spacer()
+            
+            Button("Set for this workout") {
+                onSetForWorkout(tempSelectedGoal)
+            }
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(Color(.systemBackground))
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.primary)
+            .cornerRadius(8)
         }
     }
 }
