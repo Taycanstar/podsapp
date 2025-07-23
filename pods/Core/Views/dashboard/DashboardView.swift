@@ -807,7 +807,44 @@ private var remainingCal: Double { vm.remainingCalories }
             HapticFeedback.generate()
             print("📝 Recipe log deletion not yet implemented for ID: \(recipeLogId)")
         case .activity:
-            print("🏃 Activity logs cannot be deleted (they come from Apple Health)")
+            // Check if this is an AI-generated activity (integer ID) vs HealthKit activity (UUID format)
+            guard let activityId = log.activityId else {
+                print("❌ No activity ID available")
+                return
+            }
+            
+            // HealthKit activities have UUID format (36 chars with dashes), AI activities have simple integer strings
+            let isHealthKitActivity = activityId.count > 10 && activityId.contains("-")
+            
+            if isHealthKitActivity {
+                print("🏃 HealthKit activity logs cannot be deleted (they come from Apple Health)")
+                return
+            }
+            
+            // This is an AI-generated activity, we can delete it
+            print("🗑️ Deleting AI-generated activity: \(activityId)")
+            
+            // Convert string ID back to integer for deletion
+            guard let activityLogId = Int(activityId) else {
+                print("❌ Cannot convert activity ID to integer: \(activityId)")
+                return
+            }
+            
+            HapticFeedback.generate()
+            
+            // Call deletion endpoint
+            NetworkManagerTwo.shared.deleteActivityLog(activityLogId: activityLogId) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        print("✅ Successfully deleted AI activity log: \(activityLogId)")
+                        // Remove from dayLogsVM
+                        self.vm.removeLog(log)
+                    case .failure(let error):
+                        print("❌ Failed to delete AI activity log: \(error)")
+                    }
+                }
+            }
         }
     }
 }

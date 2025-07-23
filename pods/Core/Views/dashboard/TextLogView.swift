@@ -239,8 +239,24 @@ struct TextLogView: View {
             self.isPresented = false
         }
         
-        // Show loading card while processing
+        // Show loading card while processing - use the macro generation states for consistency
+        foodManager.isGeneratingMacros = true
         foodManager.isLoading = true
+        foodManager.macroGenerationStage = 0
+        foodManager.macroLoadingMessage = "Analyzing description..."
+        
+        // Create a timer to cycle through loading messages for better UX
+        let loadingTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { timer in
+            DispatchQueue.main.async {
+                foodManager.macroGenerationStage = (foodManager.macroGenerationStage + 1) % 4
+                foodManager.macroLoadingMessage = [
+                    "Analyzing description...",
+                    "Determining content type...",
+                    "Generating nutritional data...",
+                    "Creating log entry..."
+                ][foodManager.macroGenerationStage]
+            }
+        }
         
         // Use the new unified endpoint to analyze meal or activity
         NetworkManagerTwo.shared.analyzeMealOrActivity(
@@ -264,17 +280,23 @@ struct TextLogView: View {
                     }
                 }
                 
-                // Hide loading card after success
+                // Stop loading timer and hide loading card after success
+                loadingTimer.invalidate()
                 DispatchQueue.main.async {
+                    self.foodManager.isGeneratingMacros = false
                     self.foodManager.isLoading = false
+                    self.foodManager.macroLoadingMessage = ""
                 }
                 
             case .failure(let error):
                 print("❌ Failed to analyze meal or activity: \(error)")
                 
-                // Hide loading card after failure
+                // Stop loading timer and hide loading card after failure
+                loadingTimer.invalidate()
                 DispatchQueue.main.async {
+                    self.foodManager.isGeneratingMacros = false
                     self.foodManager.isLoading = false
+                    self.foodManager.macroLoadingMessage = ""
                 }
             }
         }
