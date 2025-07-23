@@ -39,7 +39,7 @@ struct TextLogView: View {
                 VStack(spacing: 16) {
                     // Input field with bottom border only
                     VStack(spacing: 8) {
-                        TextField("Describe your meal", text: $mealDescription)
+                        TextField("Describe your meal or activity", text: $mealDescription)
                             .font(.system(size: 17))
                             .padding(.vertical, 12)
                             .focused($isInputFocused)
@@ -230,47 +230,179 @@ struct TextLogView: View {
     private func submitMealDescription() {
         guard !mealDescription.isEmpty else { return }
         
-        // Use FoodManager to process the text description with completion handler (same pattern as LogFood.swift)
-        foodManager.generateMacrosWithAI(
-            foodDescription: mealDescription,
-            mealType: selectedMeal
+        // Clear the input and dismiss IMMEDIATELY (don't wait for network)
+        let description = mealDescription
+        let selectedMealType = selectedMeal
+        
+        DispatchQueue.main.async {
+            self.mealDescription = ""
+            self.isPresented = false
+        }
+        
+        // Show loading card while processing
+        foodManager.isLoading = true
+        
+        // Use the new unified endpoint to analyze meal or activity
+        NetworkManagerTwo.shared.analyzeMealOrActivity(
+            description: description,
+            mealType: selectedMealType
         ) { result in
             switch result {
-            case .success(let loggedFood):
-                // Success is handled by FoodManager (shows toast, updates lists)
-                print("Successfully generated macros with AI")
+            case .success(let responseData):
+                print("✅ Successfully analyzed meal or activity")
                 
-                let combinedLog = CombinedLog(
-                    type: .food,
-                    status: loggedFood.status,
-                    calories: loggedFood.calories,
-                    message: loggedFood.message,
-                    foodLogId: loggedFood.foodLogId,
-                    food: loggedFood.food,
-                    mealType: loggedFood.mealType,
-                    mealLogId: nil, meal: nil, mealTime: nil,
-                    scheduledAt: dayLogsVM.selectedDate,
-                    recipeLogId: nil, recipe: nil, servingsConsumed: nil
-                )
-                
-                DispatchQueue.main.async {
-                    dayLogsVM.addPending(combinedLog)
+                // Check what type of entry this is
+                if let entryType = responseData["entry_type"] as? String {
                     
-                    // Update foodManager's combinedLogs
-                    if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
-                        foodManager.combinedLogs.remove(at: idx)
+                    if entryType == "food" {
+                        // Handle food response - extract LoggedFood data
+                        self.handleFoodResponse(responseData)
+                        
+                    } else if entryType == "activity" {
+                        // Handle activity response
+                        self.handleActivityResponse(responseData)
                     }
-                    foodManager.combinedLogs.insert(combinedLog, at: 0)
+                }
+                
+                // Hide loading card after success
+                DispatchQueue.main.async {
+                    self.foodManager.isLoading = false
                 }
                 
             case .failure(let error):
-                // Handle error
-                print("Failed to generate macros with AI: \(error.localizedDescription)")
+                print("❌ Failed to analyze meal or activity: \(error)")
+                
+                // Hide loading card after failure
+                DispatchQueue.main.async {
+                    self.foodManager.isLoading = false
+                }
             }
         }
+    }
+    
+    private func handleFoodResponse(_ responseData: [String: Any]) {
+        // Convert response back to LoggedFood format for compatibility
+        guard let foodLogId = responseData["food_log_id"] as? Int,
+              let foodData = responseData["food"] as? [String: Any],
+              let displayName = foodData["displayName"] as? String,
+              let calories = responseData["calories"] as? Int,
+              let message = responseData["message"] as? String,
+              let mealType = responseData["meal_type"] as? String else {
+            print("❌ Failed to parse food response data")
+            return
+        }
         
-        // Dismiss the view
-        isPresented = false
+        // Create LoggedFoodItem from response
+        let loggedFoodItem = LoggedFoodItem(
+            fdcId: foodData["fdcId"] as? Int ?? 0,
+            displayName: displayName,
+            calories: foodData["calories"] as? Double ?? Double(calories),
+            servingSizeText: foodData["servingSizeText"] as? String ?? "1 serving",
+            numberOfServings: foodData["numberOfServings"] as? Double ?? 1.0,
+            brandText: foodData["brandText"] as? String ?? "",
+            protein: foodData["protein"] as? Double ?? 0.0,
+            carbs: foodData["carbs"] as? Double ?? 0.0,
+            fat: foodData["fat"] as? Double ?? 0.0
+        )
+        
+        // Create CombinedLog for dashboard display
+        let combinedLog = CombinedLog(
+            type: .food,
+            status: responseData["status"] as? String ?? "success",
+            calories: Double(calories),
+            message: message,
+            foodLogId: foodLogId,
+            food: loggedFoodItem,
+            mealType: mealType,
+            mealLogId: nil, meal: nil, mealTime: nil,
+            scheduledAt: dayLogsVM.selectedDate,
+            recipeLogId: nil, recipe: nil, servingsConsumed: nil
+        )
+        
+        DispatchQueue.main.async {
+            // Add to dashboard
+            self.dayLogsVM.addPending(combinedLog)
+            
+            // Update foodManager's combinedLogs
+            if let idx = self.foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                self.foodManager.combinedLogs[idx] = combinedLog
+            } else {
+                self.foodManager.combinedLogs.insert(combinedLog, at: 0)
+            }
+            
+            // Show success feedback
+            self.foodManager.lastLoggedItem = (name: displayName, calories: Double(calories))
+            self.foodManager.showLogSuccess = true
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                self.foodManager.showLogSuccess = false
+            }
+        }
+    }
+    
+    private func handleActivityResponse(_ responseData: [String: Any]) {
+        // Extract activity data
+        guard let activityLogId = responseData["activity_log_id"] as? Int,
+              let activityName = responseData["activity_name"] as? String,
+              let caloriesBurned = responseData["calories_burned"] as? Int,
+              let durationMinutes = responseData["duration_minutes"] as? Int,
+              let message = responseData["message"] as? String else {
+            print("❌ Failed to parse activity response data")
+            return
+        }
+        
+        print("🏃‍♂️ Activity logged: \(activityName) - \(caloriesBurned) calories burned")
+        
+        // Create ActivitySummary to match HealthKit structure
+        let activitySummary = ActivitySummary(
+            id: String(activityLogId),
+            workoutActivityType: responseData["activity_type"] as? String ?? "Other",
+            displayName: activityName,
+            duration: Double(durationMinutes * 60), // Convert to seconds
+            totalEnergyBurned: Double(caloriesBurned),
+            totalDistance: nil,
+            startDate: Date(),
+            endDate: Date()
+        )
+        
+        // Create CombinedLog for dashboard display (matching HealthKit activities format)
+        let combinedLog = CombinedLog(
+            type: .activity,
+            status: "success",
+            calories: Double(caloriesBurned), // Positive calories like HealthKit activities
+            message: message,
+            scheduledAt: Date(),
+            activityId: String(activityLogId),
+            activity: activitySummary,
+            logDate: formatDateForLog(Date()),
+            dayOfWeek: formatDayOfWeek(Date())
+        )
+        
+        DispatchQueue.main.async {
+            // Add to dashboard immediately (same as food logs)
+            self.dayLogsVM.addPending(combinedLog)
+            
+            // Show success feedback for activity
+            self.foodManager.lastLoggedItem = (name: activityName, calories: Double(caloriesBurned))
+            self.foodManager.showLogSuccess = true
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                self.foodManager.showLogSuccess = false
+            }
+        }
+    }
+    
+    // Helper methods to match DayLogsViewModel format
+    private func formatDateForLog(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+    
+    private func formatDayOfWeek(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: date)
     }
 }
 

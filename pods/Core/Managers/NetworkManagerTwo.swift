@@ -2774,6 +2774,94 @@ class NetworkManagerTwo {
         }.resume()
     }
 
+    // MARK: - Unified Meal and Activity Analysis
+    
+    /// Analyze a text description to determine if it's food or physical activity
+    /// - Parameters:
+    ///   - description: The user's text description
+    ///   - mealType: The meal type (for food logs)
+    ///   - completion: Result callback with response data or error
+    func analyzeMealOrActivity(description: String, mealType: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+        let parameters: [String: Any] = [
+            "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
+            "description": description,
+            "meal_type": mealType
+        ]
+        
+        let urlString = "\(baseUrl)/analyze-meal-or-activity/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        // Create and configure request
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        // DEBUG - Print what we're sending to the server
+        print("⬆️ SENDING TO SERVER - analyzeMealOrActivity:")
+        print("- description: \(description)")
+        print("- meal type: \(mealType)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            // Check if there's an error response first
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+            
+            // Parse response as generic dictionary
+            do {
+                if let jsonResponse = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                    
+                    // DEBUG - Print what we received from the server
+                    if let responseData = try? JSONSerialization.data(withJSONObject: jsonResponse, options: .prettyPrinted),
+                       let responseString = String(data: responseData, encoding: .utf8) {
+                        print("⬇️ SERVER RESPONSE - analyzeMealOrActivity: \(responseString)")
+                    }
+                    
+                    DispatchQueue.main.async {
+                        completion(.success(jsonResponse))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.invalidResponse))
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+
 }
 
 

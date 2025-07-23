@@ -63,7 +63,7 @@ struct CustomTabBar: View {
                                 HapticFeedback.generate()
                                 showTextLog = true
                             }) {
-                                Text("Describe meal")
+                                Text("Describe meal or activity")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.primary)
                             }
