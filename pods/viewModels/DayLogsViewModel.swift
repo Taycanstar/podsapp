@@ -246,13 +246,13 @@ func loadLogs(for date: Date) {
             return date1 > date2  // Most recent first
         }
         
-        // Update water logs from server response
-        print("🚰 DayLogsViewModel: Updating water logs. Old count: \(self.waterLogs.count), New count: \(serverResponse.waterLogs.count)")
+  
+    
         for (index, log) in serverResponse.waterLogs.enumerated() {
             print("🚰 Water log \(index): \(log.waterOz)oz at \(log.dateLogged)")
         }
         self.waterLogs = serverResponse.waterLogs
-        print("🚰 DayLogsViewModel: Water logs updated successfully")
+       
         
         // Update height and weight from onboarding data if available
         if let userData = serverResponse.userData {

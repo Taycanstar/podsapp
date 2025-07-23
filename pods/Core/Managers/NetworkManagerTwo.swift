@@ -14,8 +14,8 @@ class NetworkManagerTwo {
     
     
 
-// let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
+let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+//   let baseUrl = "http://192.168.1.92:8000"
 // let baseUrl = "http://172.20.10.4:8000"
 
     // Network errors - scoped to NetworkManagerTwo
@@ -1881,7 +1881,7 @@ class NetworkManagerTwo {
             
             // Debug: Print raw data
             if let rawString = String(data: data, encoding: .utf8) {
-                print("🔍 FRONTEND DEBUG - Raw response string:")
+              
                 print(rawString)
             }
             
@@ -2866,17 +2866,24 @@ class NetworkManagerTwo {
     
     /// Delete an AI-generated activity log by ID
     func deleteActivityLog(activityLogId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
-        let urlString = "\(baseUrl)/delete-activity-log/\(activityLogId)/"
+        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
+            completion(.failure(NetworkError.serverError(message: "No user email found")))
+            return
+        }
         
-        guard let url = URL(string: urlString) else {
+        var urlComponents = URLComponents(string: "\(baseUrl)/delete-activity-log/\(activityLogId)/")
+        urlComponents?.queryItems = [URLQueryItem(name: "user_email", value: userEmail)]
+        
+        guard let url = urlComponents?.url else {
             completion(.failure(NetworkError.invalidURL))
             return
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        print("🗑️ Deleting activity log ID: \(activityLogId)")
+        print("🗑️ Deleting activity log ID: \(activityLogId) for user: \(userEmail)")
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
@@ -2895,10 +2902,12 @@ class NetworkManagerTwo {
             
             if (200...299).contains(httpResponse.statusCode) {
                 DispatchQueue.main.async {
+                    print("✅ Successfully deleted activity log ID: \(activityLogId)")
                     completion(.success(()))
                 }
             } else {
                 DispatchQueue.main.async {
+                    print("❌ Failed to delete activity log. Status code: \(httpResponse.statusCode)")
                     completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
                 }
             }
