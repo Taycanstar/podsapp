@@ -2267,8 +2267,8 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
       progressTimer.invalidate()
 
      withAnimation {
-      self.uploadProgress = 1.0
-    }
+        self.uploadProgress = 1.0
+      }
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
         self.isAnalyzingImage = false
         self.isLoading        = false
@@ -2321,38 +2321,39 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
         )
 
         completion(.success(combined))
-           self.lastLoggedItem = (
-     name:     loggedFood.food.displayName,
-     calories: loggedFood.calories
-   )
-   self.showLogSuccess = true
-   
-   // Track image scanning in Mixpanel
-   Mixpanel.mainInstance().track(event: "Image Scan", properties: [
-       "food_name": loggedFood.food.displayName,
-       "meal_type": loggedFood.mealType,
-       "calories": loggedFood.calories,
-       "user_email": userEmail
-   ])
-   
-   // Track universal food logging
-   Mixpanel.mainInstance().track(event: "Log Food", properties: [
-       "food_name": loggedFood.food.displayName,
-       "meal_type": loggedFood.mealType,
-       "calories": loggedFood.calories,
-       "servings": 1,
-       "log_method": "image_scan",
-       "user_email": userEmail
-   ])
-   
-   DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-     self.showLogSuccess = false
- 
         
-
-   }
-      }
-      catch {
+        // Set success data and show toast - MUST be on main thread
+        DispatchQueue.main.async {
+           self.lastLoggedItem = (
+             name:     loggedFood.food.displayName,
+             calories: loggedFood.calories
+           )
+           self.showLogSuccess = true
+           
+           DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+             self.showLogSuccess = false
+           }
+        }
+   
+        // Track image scanning in Mixpanel
+        Mixpanel.mainInstance().track(event: "Image Scan", properties: [
+            "food_name": loggedFood.food.displayName,
+            "meal_type": loggedFood.mealType,
+            "calories": loggedFood.calories,
+            "user_email": userEmail
+        ])
+        
+        // Track universal food logging
+        Mixpanel.mainInstance().track(event: "Log Food", properties: [
+            "food_name": loggedFood.food.displayName,
+            "meal_type": loggedFood.mealType,
+            "calories": loggedFood.calories,
+            "servings": 1,
+            "log_method": "image_scan",
+            "user_email": userEmail
+        ])
+        
+      } catch {
         //── 7) On decode error, print the bad JSON + error
         print("❌ [analyzeFoodImage] decoding LoggedFood failed:", error)
         if let rawJSON = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
@@ -2486,12 +2487,18 @@ func analyzeNutritionLabel(
 
        completion(.success(combinedLog))
        
-       // Set success data and show toast (same as analyzeFoodImage)
-       self.lastLoggedItem = (
-         name:     loggedFood.food.displayName,
-         calories: loggedFood.calories
-       )
-       self.showLogSuccess = true
+       // Set success data and show toast (same as analyzeFoodImage) - MUST be on main thread
+       DispatchQueue.main.async {
+         self.lastLoggedItem = (
+           name:     loggedFood.food.displayName,
+           calories: loggedFood.calories
+         )
+         self.showLogSuccess = true
+         
+         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+           self.showLogSuccess = false
+         }
+       }
        
        // Track nutrition label scanning in Mixpanel
        Mixpanel.mainInstance().track(event: "Nutrition Label Scan", properties: [
@@ -2510,10 +2517,6 @@ func analyzeNutritionLabel(
            "log_method": "nutrition_label_scan",
            "user_email": userEmail
        ])
-       
-       DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-         self.showLogSuccess = false
-       }
 
     } catch {
       //── 7) On decode error, print the bad JSON + error

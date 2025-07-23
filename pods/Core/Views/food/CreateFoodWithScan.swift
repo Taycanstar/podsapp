@@ -68,11 +68,16 @@ struct CreateFoodWithScan: View {
                     flashEnabled: flashEnabled, 
                     onCapture: { image in
                         guard let image = image else { return }
-                        print("Food scanned with captured image for creation")
                         if selectedMode == .food {
+                            print("Food scanned with captured image for creation")
                             // Dismiss immediately and start analysis
                             dismiss()
                             analyzeImageForCreation(image)
+                        } else if selectedMode == .nutritionLabel {
+                            print("Nutrition label scanned with captured image for creation")
+                            // Dismiss immediately and start analysis
+                            dismiss()
+                            analyzeNutritionLabelForCreation(image)
                         }
                     },
                     onBarcodeDetected: { barcode in
@@ -163,6 +168,21 @@ struct CreateFoodWithScan: View {
                             .background(Color.clear)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                } else if selectedMode == .nutritionLabel {
+                    VStack {
+                        Text("Nutrition Label Scanner")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.bottom, 20)
+                        
+                        // Show a scanning area optimized for nutrition labels
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(Color.white, lineWidth: 3)
+                            .frame(width: 320, height: 400)
+                            .background(Color.clear)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 }
                 
                 Spacer()
@@ -177,6 +197,14 @@ struct CreateFoodWithScan: View {
                             title: "Food",
                             isSelected: selectedMode == .food,
                             action: { selectedMode = .food }
+                        )
+                        
+                        // Nutrition Label Button
+                        ScanOptionButton(
+                            icon: "tag",
+                            title: "Label",
+                            isSelected: selectedMode == .nutritionLabel,
+                            action: { selectedMode = .nutritionLabel }
                         )
                         
                         // Barcode Button
@@ -295,6 +323,55 @@ struct CreateFoodWithScan: View {
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from image: \(error)")
+                }
+                
+                // Reset scanning states
+                self.foodManager.isScanningFood = false
+                self.foodManager.isGeneratingFood = false
+                self.foodManager.scannedImage = nil
+            }
+        }
+    }
+    
+    func analyzeNutritionLabelForCreation(_ image: UIImage) {
+        // Set scanning state to show loader card in LogFood
+        foodManager.isScanningFood = true
+        foodManager.isGeneratingFood = true
+        foodManager.scannedImage = image
+        foodManager.loadingMessage = "Reading nutrition label..."
+        foodManager.uploadProgress = 0.1
+        
+        // Use FoodManager to analyze the nutrition label
+        foodManager.analyzeNutritionLabel(
+            image: image,
+            userEmail: viewModel.email,
+            mealType: "Lunch"
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let combinedLog):
+                    print("✅ Successfully analyzed nutrition label for creation")
+                    
+                    // Extract the food from the combined log and store in lastGeneratedFood
+                    if let food = combinedLog.food {
+                        self.foodManager.lastGeneratedFood = food.asFood
+                    }
+                    
+                case .failure(let error):
+                    // Check if this is the special "name required" error
+                    if let nsError = error as? NSError, nsError.code == 1001 {
+                        print("🏷️ Product name not found for creation, storing data for dashboard popup")
+                        if let nutritionData = nsError.userInfo["nutrition_data"] as? [String: Any],
+                           let mealType = nsError.userInfo["meal_type"] as? String {
+                            
+                            // Store in FoodManager for DashboardView to access
+                            self.foodManager.pendingNutritionData = nutritionData
+                            self.foodManager.pendingMealType = mealType
+                            self.foodManager.showNutritionNameInput = true
+                        }
+                    } else {
+                        print("❌ Failed to analyze nutrition label: \(error)")
+                    }
                 }
                 
                 // Reset scanning states
