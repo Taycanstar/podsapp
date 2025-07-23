@@ -356,8 +356,8 @@ struct TextLogView: View {
         // Create ActivitySummary to match HealthKit structure
         let activitySummary = ActivitySummary(
             id: String(activityLogId),
-            workoutActivityType: responseData["activity_type"] as? String ?? "Other",
-            displayName: activityName,
+            workoutActivityType: formatActivityType(responseData["activity_type"] as? String ?? "Other"),
+            displayName: formatActivityName(activityName),
             duration: Double(durationMinutes * 60), // Convert to seconds
             totalEnergyBurned: Double(caloriesBurned),
             totalDistance: nil,
@@ -403,6 +403,58 @@ struct TextLogView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE"
         return formatter.string(from: date)
+    }
+    
+    // Helper methods for activity formatting
+    private func formatActivityName(_ name: String) -> String {
+        // Convert lowercase activity names to proper display names
+        switch name.lowercased() {
+        case "running":
+            return "Running"
+        case "walking":
+            return "Walking"
+        case "cycling", "biking":
+            return "Cycling"
+        case "swimming":
+            return "Swimming"
+        case "hiking":
+            return "Hiking"
+        case "yoga":
+            return "Yoga"
+        case "weightlifting", "weight lifting", "strength training":
+            return "Strength Training"
+        case "cardio":
+            return "Cardio Workout"
+        case "tennis":
+            return "Tennis"
+        case "basketball":
+            return "Basketball"
+        case "soccer", "football":
+            return "Soccer"
+        case "rowing":
+            return "Rowing"
+        case "elliptical":
+            return "Elliptical"
+        case "stairs", "stair climbing":
+            return "Stair Climbing"
+        default:
+            // Capitalize first letter for unknown activities
+            return name.prefix(1).uppercased() + name.dropFirst().lowercased()
+        }
+    }
+    
+    private func formatActivityType(_ type: String) -> String {
+        // Map AI activity types to HealthKit-compatible types for consistent icons
+        switch type.lowercased() {
+        case "cardio":
+            return "Running"  // Default cardio to running icon
+        case "strength":
+            return "StrengthTraining"
+        case "sports":
+            return "Other"
+        default:
+            return formatActivityName(type)  // Use the same formatting
+        }
     }
 }
 

@@ -31,6 +31,25 @@ final class DayLogsViewModel: ObservableObject {
   @Published var totalCarbs   : Double = 0
   @Published var totalFat     : Double = 0
   
+  // Computed property for total calories burned (HealthKit + AI activities)
+  var totalCaloriesBurned: Double {
+      // Get HealthKit active energy
+      let healthKitCalories = healthViewModel?.activeEnergy ?? 0
+      
+      // Add AI activity calories from today's logs
+      let aiActivityCalories = logs.reduce(0.0) { sum, log in
+          guard log.type == .activity else { return sum }
+          // Only count AI activities (not HealthKit activities)
+          if let activityId = log.activityId, !activityId.contains("-") {
+              // This is an AI activity (integer ID format)
+              return sum + log.calories
+          }
+          return sum
+      }
+      
+      return healthKitCalories + aiActivityCalories
+  }
+  
   // User measurements from onboarding
   @Published var height: Double = 0 // Height in cm
   @Published var weight: Double = 0 // Weight in kg
@@ -160,6 +179,26 @@ func addPending(_ log: CombinedLog) {
   StreakManager.shared.updateStreak(activityDate: log.scheduledAt ?? Date())
 }
 
+func removeLog(_ log: CombinedLog) {
+    print("[DayLogsVM] removeLog( id:\(log.id) )")
+    
+    // Remove from logs array
+    logs.removeAll { $0.id == log.id }
+    
+    // Remove from pending cache if it exists there
+    if let scheduledAt = log.scheduledAt {
+        let key = Calendar.current.startOfDay(for: scheduledAt)
+        if var pendingLogs = pendingByDate[key] {
+            pendingLogs.removeAll { $0.id == log.id }
+            pendingByDate[key] = pendingLogs
+        }
+    }
+    
+    print("[DayLogsVM] Removed log \(log.id), logs now = \(logs.map { $0.id })")
+    
+    // Trigger profile data refresh since logs changed
+    triggerProfileDataRefresh()
+}
 
 func loadLogs(for date: Date) {
   selectedDate = date
@@ -289,29 +328,6 @@ func loadLogs(for date: Date) {
     /// Trigger refresh of preloaded profile data whenever logs change
     private func triggerProfileDataRefresh() {
         NotificationCenter.default.post(name: NSNotification.Name("LogsChangedNotification"), object: nil)
-    }
-
-    func removeLog(_ logToRemove: CombinedLog) {
-        // Remove from the main logs array
-        logs.removeAll { $0.id == logToRemove.id }
-
-        // Remove from pendingByDate cache
-        if let scheduledDate = logToRemove.scheduledAt {
-            let key = Calendar.current.startOfDay(for: scheduledDate)
-            if var pendingLogsForDate = pendingByDate[key] {
-                pendingLogsForDate.removeAll { $0.id == logToRemove.id }
-                if pendingLogsForDate.isEmpty {
-                    pendingByDate.removeValue(forKey: key)
-                } else {
-                    pendingByDate[key] = pendingLogsForDate
-                }
-            }
-        }
-        // Recalculate totals after removal
-        recalculateTotals()
-        
-        // Trigger profile data refresh since logs changed
-        triggerProfileDataRefresh()
     }
 
     func updateLog(log: CombinedLog, servings: Double, date: Date, mealType: String, completion: @escaping (Result<Void, Error>) -> Void) {

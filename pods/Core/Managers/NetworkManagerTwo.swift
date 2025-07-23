@@ -2862,6 +2862,49 @@ class NetworkManagerTwo {
         }.resume()
     }
 
+    // MARK: - Activity Log Management
+    
+    /// Delete an AI-generated activity log by ID
+    func deleteActivityLog(activityLogId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        let urlString = "\(baseUrl)/delete-activity-log/\(activityLogId)/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        
+        print("🗑️ Deleting activity log ID: \(activityLogId)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            if (200...299).contains(httpResponse.statusCode) {
+                DispatchQueue.main.async {
+                    completion(.success(()))
+                }
+            } else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+            }
+        }.resume()
+    }
+
 }
 
 
