@@ -21,7 +21,6 @@ struct FitnessGoalView: View {
         case tone
         case endurance
         case powerlifting
-        case sportsPerformance = "sport"
         case general
         
         var id: Self { self }
@@ -33,7 +32,6 @@ struct FitnessGoalView: View {
             case .tone: return "Tone"
             case .endurance: return "Endurance"
             case .powerlifting: return "Powerlifting"
-            case .sportsPerformance: return "Sports Performance"
             case .general: return "General Fitness"
             }
         }
@@ -45,7 +43,6 @@ struct FitnessGoalView: View {
             case .tone: return "Achieve lean, defined muscles without bulk"
             case .endurance: return "Improve stamina and cardiovascular fitness"
             case .powerlifting: return "Focus on maximal strength in major lifts"
-            case .sportsPerformance: return "Optimize performance for specific sports"
             case .general: return "General fitness and health"
             }
         }
@@ -57,7 +54,6 @@ struct FitnessGoalView: View {
             case .tone: return "figure.mixed.cardio"
             case .endurance: return "figure.run"
             case .powerlifting: return "dumbbell"
-            case .sportsPerformance: return "figure.handball"
             case .general: return "figure.run"
             }
         }
@@ -164,11 +160,7 @@ struct FitnessGoalView: View {
                     
                     // If Sports Performance is selected, navigate to sport selection
                     // Otherwise, navigate to Apple Health
-                    if selectedGoal == .sportsPerformance {
-                        navigateToSportSelection = true
-                    } else {
-                        navigateToNextStep = true
-                    }
+                    navigateToNextStep = true
                 }) {
                     Text("Continue")
                         .font(.system(size: 18, weight: .semibold))
@@ -196,13 +188,7 @@ struct FitnessGoalView: View {
                 ) {
                     EmptyView()
                 }
-                
-                NavigationLink(
-                    destination: SportSelectionView(),
-                    isActive: $navigateToSportSelection
-                ) {
-                    EmptyView()
-                }
+                // NavigationLink for SportSelectionView removed
             }
         )
         .onAppear {
