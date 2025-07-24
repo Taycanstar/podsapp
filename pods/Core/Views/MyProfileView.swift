@@ -302,6 +302,7 @@ struct MyProfileView: View {
                     .foregroundColor(.primary)
                 Spacer()
             }
+            .padding(.horizontal, 16)
 
             if let bmi = calculateBMI(weightKg: vm.weight > 0 ? vm.weight : nil, heightCm: vm.height > 0 ? vm.height : nil) {
                 ArcOne(bmiValue: bmi)
