@@ -313,7 +313,6 @@ struct MyProfileView: View {
                     .padding()
             }
         }
-        .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .background(Color("iosfit"))
         .cornerRadius(12)
@@ -363,7 +362,8 @@ struct MyProfileView: View {
                             right: ("Fat",       profileData.fatGoal,      "drop.fill",     .pink))
                 }
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
             .background(Color("iosfit"))
             .cornerRadius(12)
         }
@@ -431,7 +431,7 @@ struct MyProfileView: View {
                 
                 Spacer(minLength: 100)
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 24)
         }
         .refreshable {
             await refreshProfileData()
@@ -522,8 +522,8 @@ struct MyProfileView: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
         .background(Color("iosfit"))
         .cornerRadius(12)
         .onAppear {
@@ -585,8 +585,8 @@ struct MyProfileView: View {
                 .buttonStyle(PlainButtonStyle())
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
         .background(Color("iosfit"))
         .cornerRadius(12)
     }
@@ -1533,7 +1533,8 @@ struct MacroSplitCardView: View {
                 Spacer()
             }
         }
-        .padding()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
         .background(Color("iosfit"))
         .cornerRadius(16)
     }
