@@ -20,7 +20,6 @@ struct DashboardView: View {
     @StateObject private var streakManager = StreakManager.shared
 
 
-    @State private var showLogFlowSheet = false
     @State private var selectedFoodLogId: String? = nil
     
     // ─── Nutrition label name input ────────────────────────────────────────
@@ -406,18 +405,7 @@ private var remainingCal: Double { vm.remainingCalories }
                 // Load health data for the selected date
                 healthViewModel.reloadHealthData(for: vm.selectedDate)
                 
-                // CRITICAL FIX: Only show log flow if onboarding is completed
-                // This prevents modal conflicts when both onboarding and log flow try to present
-                if !UserDefaults.standard.hasSeenLogFlow && onboarding.onboardingCompleted && !onboarding.isShowingOnboarding {
-                    print("🔍 DashboardView onAppear - showing log flow (user hasn't completed it and onboarding is done)")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showLogFlowSheet = true
-                    }
-                } else if !UserDefaults.standard.hasSeenLogFlow {
-                    print("🔍 DashboardView onAppear - log flow needed but onboarding in progress, deferring log flow")
-                } else {
-                    print("🔍 DashboardView onAppear - user has completed log flow, not showing")
-                }
+
             }
             .onChange(of: onboarding.email) { newEmail in
                 print("🔄 DashboardView - User email changed to: \(newEmail)")
@@ -479,18 +467,7 @@ private var remainingCal: Double { vm.remainingCalories }
                 refreshPreloadedProfileData()
             }
 
-            .onChange(of: onboarding.onboardingCompleted) { _, isCompleted in
-                // CRITICAL: Show log flow after onboarding is completed (if user hasn't seen it yet)
-                if isCompleted && !UserDefaults.standard.hasSeenLogFlow && !showLogFlowSheet {
-                    print("🔍 DashboardView - Onboarding completed, now showing log flow")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { // Longer delay to ensure onboarding UI is dismissed
-                        showLogFlowSheet = true
-                    }
-                }
-            }
-            .sheet(isPresented: $showLogFlowSheet) {
-                LogFlowContainerView()
-            }
+
             .background(
                 NavigationLink(
                     destination: WeightDataView(),

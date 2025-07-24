@@ -34,7 +34,7 @@ struct FitnessGoalView: View {
             case .endurance: return "Endurance"
             case .powerlifting: return "Powerlifting"
             case .sportsPerformance: return "Sports Performance"
-            case .general: return "Genera Fitness"
+            case .general: return "General Fitness"
             }
         }
         
