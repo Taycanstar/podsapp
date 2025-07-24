@@ -66,7 +66,8 @@ struct MyProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("iosbg2").edgesIgnoringSafeArea(.all)
+                Color("iosbg2")
+                    .ignoresSafeArea()
                 
                 if onboarding.isLoadingProfile && !hasInitiallyLoaded {
                     ProgressView("Loading profile...")
@@ -96,6 +97,7 @@ struct MyProfileView: View {
                 } else {
                     // Use our new unified content view
                     profileContentView
+                        .padding(.horizontal, 20)
                 }
             }
             .navigationTitle("")
@@ -432,7 +434,6 @@ struct MyProfileView: View {
                 
                 Spacer(minLength: 100)
             }
-            .padding(.horizontal, 24)
         }
         .refreshable {
             await refreshProfileData()
