@@ -1167,6 +1167,10 @@ private extension DashboardView {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
+        .onTapGesture {
+            // Send notification to show NewSheetView
+            NotificationCenter.default.post(name: NSNotification.Name("ShowNewSheetFromDashboard"), object: nil)
+        }
     }
     
     // Helper function to get time-based greeting
