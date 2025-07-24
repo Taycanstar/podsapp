@@ -405,38 +405,41 @@ struct MyProfileView: View {
     }
     
     private var profileContentView: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 24) {
-                // Profile header
-                profileHeaderView()
-                
-                // Weight card (matching the user's example design)
-                weightCardView
-                
-                // Run Streak card
-                runStreakCardView
-                
-                // BMI gauge
-                if let profileData = onboarding.profileData {
-                    bmiGaugeView(profileData: profileData)
+        GeometryReader { geometry in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // Profile header
+                    profileHeaderView()
+                    
+                    // Weight card (matching the user's example design)
+                    weightCardView
+                    
+                    // Run Streak card
+                    runStreakCardView
+                    
+                    // BMI gauge
+                    if let profileData = onboarding.profileData {
+                        bmiGaugeView(profileData: profileData)
+                    }
+                    
+                    // Weekly Macronutrient Split
+                    MacroSplitCardView(
+                        selectedWeek: $selectedWeek,
+                        data: macroSplitData[selectedWeek] ?? [],
+                        weeklyTotal: calculateWeeklyTotal(for: selectedWeek)
+                    )
+                    // Nutrition goals
+                    if let profileData = onboarding.profileData {
+                        nutritionGoalsView(profileData: profileData)
+                    }
+                    
+                    Spacer(minLength: 100)
                 }
-                
-                // Weekly Macronutrient Split
-                MacroSplitCardView(
-                    selectedWeek: $selectedWeek,
-                    data: macroSplitData[selectedWeek] ?? [],
-                    weeklyTotal: calculateWeeklyTotal(for: selectedWeek)
-                )
-                // Nutrition goals
-                if let profileData = onboarding.profileData {
-                    nutritionGoalsView(profileData: profileData)
-                }
-                
-                Spacer(minLength: 100)
+                .frame(width: geometry.size.width)
             }
-        }
-        .refreshable {
-            await refreshProfileData()
+            .refreshable {
+                await refreshProfileData()
+            }
         }
     }
     
