@@ -29,6 +29,8 @@ struct WorkoutContainerView: View {
                         RecentlyAddedView()
                     case .startWorkout(let todayWorkout):
                         StartWorkoutView(todayWorkout: todayWorkout)
+                    case .logExercise(let exercise):
+                        ExerciseLoggingView(exercise: exercise)
                     }
                 }
         }
@@ -42,6 +44,7 @@ enum WorkoutNavigationDestination: Hashable {
     case exerciseSelection
     case recentlyAdded
     case startWorkout(TodayWorkout)
+    case logExercise(TodayWorkoutExercise)
     
     // Implement Hashable conformance
     func hash(into hasher: inout Hasher) {
@@ -58,6 +61,9 @@ enum WorkoutNavigationDestination: Hashable {
         case .startWorkout(let todayWorkout):
             hasher.combine("startWorkout")
             hasher.combine(todayWorkout.id)
+        case .logExercise(let exercise):
+            hasher.combine("logExercise")
+            hasher.combine(exercise.exercise.id)
         }
     }
     
@@ -74,6 +80,8 @@ enum WorkoutNavigationDestination: Hashable {
             return true
         case (.startWorkout(let lhsTodayWorkout), .startWorkout(let rhsTodayWorkout)):
             return lhsTodayWorkout.id == rhsTodayWorkout.id
+        case (.logExercise(let lhsExercise), .logExercise(let rhsExercise)):
+            return lhsExercise.exercise.id == rhsExercise.exercise.id
         default:
             return false
         }

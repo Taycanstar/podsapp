@@ -25,6 +25,7 @@
 //
 
 import SwiftUI
+import AVKit
 
 struct LogWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
@@ -391,11 +392,16 @@ struct LogWorkoutView: View {
         UserDefaults.standard.removeObject(forKey: customMusclesKey)
         selectedMuscleType = "Recovered Muscles"
         UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
+        customEquipment = nil
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomEquipment")
+        let userProfile = UserProfileService.shared
+        selectedEquipmentType = userProfile.workoutLocationDisplay
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutEquipmentType")
         sessionFitnessGoal = nil
         UserDefaults.standard.removeObject(forKey: sessionFitnessGoalKey)
         sessionFitnessLevel = nil
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
-        print("🗑️ Cleared session duration, custom muscles, and muscle type")
+        print("🗑️ Cleared session duration, custom muscles, custom equipment, and fitness preferences")
     }
     
     // Static method to clear session duration from anywhere in the app
@@ -404,9 +410,11 @@ struct LogWorkoutView: View {
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionDate")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomMuscles")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomEquipment")
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutEquipmentType")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessGoal")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
-        print("🗑️ Cleared workout session duration, custom muscles, muscle type, and fitness goal (static)")
+        print("🗑️ Cleared workout session duration, custom muscles, custom equipment, and fitness preferences (static)")
     }
     
     private func updateServerWorkoutDuration(email: String, durationMinutes: Int) {
@@ -755,7 +763,7 @@ struct LogWorkoutView: View {
                     customTargetMuscles: customTargetMuscles,
                     customEquipment: customEquipment,
                     effectiveFitnessGoal: effectiveFitnessGoal,
-                    effectiveFitnessLevel: selectedFitnessLevel
+                    effectiveFitnessLevel: sessionFitnessLevel ?? selectedFitnessLevel
                 )
             case .workouts:
                 RoutinesWorkoutView(
@@ -847,13 +855,9 @@ private struct TodayWorkoutView: View {
             
             // Show today's workout if available
             if let workout = todayWorkout {
-                TodayWorkoutCard(
+                TodayWorkoutExerciseList(
                     workout: workout,
-                    navigationPath: $navigationPath,
-                    onStartWorkout: {
-                        // Navigate to workout execution
-                        navigationPath.append(WorkoutNavigationDestination.startWorkout(workout))
-                    }
+                    navigationPath: $navigationPath
                 )
                 .padding(.horizontal)
             }
@@ -991,9 +995,11 @@ private struct TodayWorkoutView: View {
     }
     
     private func getWorkoutParameters(for goal: FitnessGoal, experienceLevel: ExperienceLevel) -> WorkoutParameters {
+        let baseParams: WorkoutParameters
+        
         switch goal {
         case .strength:
-            return WorkoutParameters(
+            baseParams = WorkoutParameters(
                 percentageOneRM: 80...90,
                 repRange: 1...6,
                 repDurationSeconds: 4...6,
@@ -1005,7 +1011,7 @@ private struct TodayWorkoutView: View {
             )
             
         case .hypertrophy:
-            return WorkoutParameters(
+            baseParams = WorkoutParameters(
                 percentageOneRM: 60...80,
                 repRange: 6...12,
                 repDurationSeconds: 2...8,
@@ -1017,7 +1023,7 @@ private struct TodayWorkoutView: View {
             )
             
         case .tone:
-            return WorkoutParameters(
+            baseParams = WorkoutParameters(
                 percentageOneRM: 50...70,
                 repRange: 12...15,
                 repDurationSeconds: 2...4,
@@ -1029,7 +1035,7 @@ private struct TodayWorkoutView: View {
             )
             
         case .endurance:
-            return WorkoutParameters(
+            baseParams = WorkoutParameters(
                 percentageOneRM: 40...60,
                 repRange: 15...25,
                 repDurationSeconds: 2...4,
@@ -1041,7 +1047,7 @@ private struct TodayWorkoutView: View {
             )
             
         case .powerlifting:
-            return WorkoutParameters(
+            baseParams = WorkoutParameters(
                 percentageOneRM: 85...100,
                 repRange: 1...3,
                 repDurationSeconds: 4...6,
@@ -1054,7 +1060,7 @@ private struct TodayWorkoutView: View {
             
         default:
             // General fitness fallback
-            return WorkoutParameters(
+            baseParams = WorkoutParameters(
                 percentageOneRM: 60...75,
                 repRange: 8...12,
                 repDurationSeconds: 2...4,
@@ -1065,6 +1071,49 @@ private struct TodayWorkoutView: View {
                 transitionSeconds: 15
             )
         }
+        
+        // Adjust parameters based on experience level
+        return adjustParametersForExperienceLevel(baseParams, experienceLevel: experienceLevel)
+    }
+    
+    private func adjustParametersForExperienceLevel(_ params: WorkoutParameters, experienceLevel: ExperienceLevel) -> WorkoutParameters {
+        switch experienceLevel {
+        case .beginner:
+            // Beginners: Lower intensity, fewer sets, longer rest
+            return WorkoutParameters(
+                percentageOneRM: adjustRange(params.percentageOneRM, by: -10...(-5)),
+                repRange: adjustRange(params.repRange, by: 2...4),
+                repDurationSeconds: params.repDurationSeconds,
+                setsPerExercise: adjustRange(params.setsPerExercise, by: -1...0),
+                restBetweenSetsSeconds: adjustRange(params.restBetweenSetsSeconds, by: 15...30),
+                compoundSetupSeconds: params.compoundSetupSeconds + 10,
+                isolationSetupSeconds: params.isolationSetupSeconds + 5,
+                transitionSeconds: params.transitionSeconds + 10
+            )
+            
+        case .intermediate:
+            // Intermediate: Base parameters (no adjustment)
+            return params
+            
+        case .advanced:
+            // Advanced: Maximum intensity, more sets, shorter rest
+            return WorkoutParameters(
+                percentageOneRM: adjustRange(params.percentageOneRM, by: 5...15),
+                repRange: adjustRange(params.repRange, by: -3...(-1)),
+                repDurationSeconds: params.repDurationSeconds,
+                setsPerExercise: adjustRange(params.setsPerExercise, by: 0...2),
+                restBetweenSetsSeconds: adjustRange(params.restBetweenSetsSeconds, by: -20...(-10)),
+                compoundSetupSeconds: params.compoundSetupSeconds,
+                isolationSetupSeconds: params.isolationSetupSeconds,
+                transitionSeconds: max(5, params.transitionSeconds - 5)
+            )
+        }
+    }
+    
+    private func adjustRange(_ range: ClosedRange<Int>, by adjustment: ClosedRange<Int>) -> ClosedRange<Int> {
+        let newLower = max(1, range.lowerBound + adjustment.lowerBound)
+        let newUpper = max(newLower, range.upperBound + adjustment.upperBound)
+        return newLower...newUpper
     }
     
     private func calculateOptimalWorkout(
@@ -1427,12 +1476,11 @@ private struct RoutinesWorkoutView: View {
     }
 }
 
-// MARK: - Today Workout Card
+// MARK: - Today Workout Exercise List
 
-private struct TodayWorkoutCard: View {
+private struct TodayWorkoutExerciseList: View {
     let workout: TodayWorkout
     @Binding var navigationPath: NavigationPath
-    let onStartWorkout: () -> Void
     
     var body: some View {
         VStack(spacing: 16) {
@@ -1476,53 +1524,126 @@ private struct TodayWorkoutCard: View {
                     }
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
             
-            // Exercise list preview
-            VStack(spacing: 8) {
-                ForEach(workout.exercises.prefix(3), id: \.exercise.id) { exercise in
-                    HStack {
-                        Text(exercise.exercise.name)
-                            .font(.system(size: 14))
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text("\(exercise.sets) × \(exercise.reps)")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color("iosfit"))
-                    .cornerRadius(8)
-                }
-                
-                if workout.exercises.count > 3 {
-                    Text("+ \(workout.exercises.count - 3) more exercises")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                        .padding(.top, 4)
+            // Exercise cards list
+            VStack(spacing: 12) {
+                ForEach(workout.exercises, id: \.exercise.id) { exercise in
+                    ExerciseWorkoutCard(
+                        exercise: exercise,
+                        navigationPath: $navigationPath
+                    )
                 }
             }
-            
-            // Start workout button
-            Button(action: onStartWorkout) {
-                HStack(spacing: 8) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 16))
-                    Text("Start Workout")
-                        .font(.system(size: 16, weight: .semibold))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Color.accentColor)
-                .cornerRadius(12)
-            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
         }
-        .padding(16)
         .background(Color("bg"))
         .cornerRadius(12)
+    }
+}
+
+// MARK: - Exercise Workout Card
+
+private struct ExerciseWorkoutCard: View {
+    let exercise: TodayWorkoutExercise
+    @Binding var navigationPath: NavigationPath
+    @State private var showingMenu = false
+    @State private var recommendMoreOften = false
+    @State private var recommendLessOften = false
+    
+    var body: some View {
+        Button(action: {
+            // Navigate to exercise logging view
+            navigationPath.append(WorkoutNavigationDestination.logExercise(exercise))
+        }) {
+            HStack(spacing: 12) {
+                // Exercise thumbnail
+                Group {
+                    if let image = UIImage(named: thumbnailImageName) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .overlay(
+                                Image(systemName: "dumbbell")
+                                    .foregroundColor(.gray)
+                                    .font(.system(size: 16))
+                            )
+                    }
+                }
+                .frame(width: 60, height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                
+                // Exercise info
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(exercise.exercise.name)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                    
+                    Text("\(exercise.sets) sets • \(exercise.reps) reps")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                // Menu button
+                Button(action: {
+                    showingMenu = true
+                }) {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color("iosfit"))
+            .cornerRadius(12)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .confirmationDialog("Exercise Options", isPresented: $showingMenu, titleVisibility: .visible) {
+            Button("Exercise History") {
+                // TODO: Show exercise history
+            }
+            
+            Button("Replace") {
+                // TODO: Replace exercise
+            }
+            
+            Button("Recommend more often") {
+                recommendMoreOften.toggle()
+                // TODO: Save preference
+            }
+            
+            Button("Recommend less often") {
+                recommendLessOften.toggle()
+                // TODO: Save preference
+            }
+            
+            Button("Don't recommend again", role: .destructive) {
+                // TODO: Add to avoided exercises
+            }
+            
+            Button("Delete from workout", role: .destructive) {
+                // TODO: Remove from current workout
+            }
+            
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+    
+    private var thumbnailImageName: String {
+        let imageId = String(format: "%04d", exercise.exercise.id)
+        return imageId
     }
 }
 
@@ -2124,6 +2245,335 @@ struct FitnessLevelPickerView: View {
             .cornerRadius(8)
         }
     }
+}
+
+// MARK: - Exercise Logging View
+
+struct ExerciseLoggingView: View {
+    let exercise: TodayWorkoutExercise
+    @Environment(\.dismiss) private var dismiss
+    @State private var currentSet = 1
+    @State private var completedSets: [SetLog] = []
+    @State private var weight: String = ""
+    @State private var reps: String = ""
+    @State private var isRestMode = false
+    @State private var restTimeRemaining = 0
+    @State private var restTimer: Timer?
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Video Header
+            videoHeaderView
+            
+            // Exercise info section
+            exerciseInfoSection
+            
+            // Sets logging section
+            setsLoggingSection
+            
+            Spacer()
+            
+            // Action buttons
+            actionButtonsSection
+        }
+        .navigationTitle(exercise.exercise.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            setupInitialValues()
+        }
+        .onDisappear {
+            stopRestTimer()
+        }
+    }
+    
+    private var videoHeaderView: some View {
+        Group {
+            if let videoURL = videoURL {
+                VideoPlayer(player: AVPlayer(url: videoURL))
+                    .frame(height: 200)
+                    .cornerRadius(12)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+            } else {
+                // Fallback thumbnail view
+                Group {
+                    if let image = UIImage(named: thumbnailImageName) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .overlay(
+                                VStack(spacing: 8) {
+                                    Image(systemName: "play.circle")
+                                        .foregroundColor(.white)
+                                        .font(.system(size: 32))
+                                    Text("Video not available")
+                                        .foregroundColor(.white)
+                                        .font(.caption)
+                                }
+                            )
+                    }
+                }
+                .frame(height: 200)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal)
+                .padding(.top, 8)
+            }
+        }
+    }
+    
+    private var exerciseInfoSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(exercise.exercise.name)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Text("\(exercise.sets) sets")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            if !exercise.exercise.target.isEmpty {
+                Text("Target: \(exercise.exercise.target)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            if !exercise.exercise.equipment.isEmpty {
+                Text("Equipment: \(exercise.exercise.equipment)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.top, 16)
+    }
+    
+    private var setsLoggingSection: some View {
+        VStack(spacing: 16) {
+            // Current set indicator
+            if !isRestMode {
+                Text("Set \(currentSet) of \(exercise.sets)")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .padding(.top)
+            }
+            
+            // Rest mode view
+            if isRestMode {
+                VStack(spacing: 16) {
+                    Text("Rest Time")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text(formatTime(restTimeRemaining))
+                        .font(.system(size: 48, weight: .bold, design: .monospaced))
+                        .foregroundColor(.accentColor)
+                    
+                    Button("Skip Rest") {
+                        skipRest()
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.accentColor)
+                }
+                .padding()
+                .background(Color("bg"))
+                .cornerRadius(12)
+                .padding(.horizontal)
+            } else {
+                // Input fields for current set
+                VStack(spacing: 16) {
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Weight (lbs)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            TextField("0", text: $weight)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .keyboardType(.decimalPad)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Reps")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            TextField("\(exercise.reps)", text: $reps)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .keyboardType(.numberPad)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+            
+            // Completed sets list
+            if !completedSets.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Completed Sets")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                    
+                    LazyVStack(spacing: 4) {
+                        ForEach(Array(completedSets.enumerated()), id: \.offset) { index, setLog in
+                            HStack {
+                                Text("Set \(index + 1)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                
+                                Spacer()
+                                
+                                Text("\(setLog.weight, specifier: "%.1f") lbs × \(setLog.reps) reps")
+                                    .font(.subheadline)
+                                    .foregroundColor(.primary)
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .background(Color("iosfit"))
+                            .cornerRadius(8)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+        }
+    }
+    
+    private var actionButtonsSection: some View {
+        VStack(spacing: 12) {
+            if !isRestMode {
+                // Complete set button
+                Button(action: completeSet) {
+                    Text("Complete Set")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(currentSetCanBeCompleted ? Color.accentColor : Color.gray)
+                        .cornerRadius(12)
+                }
+                .disabled(!currentSetCanBeCompleted)
+                .padding(.horizontal)
+            }
+            
+            if completedSets.count == exercise.sets {
+                // Finish exercise button
+                Button(action: finishExercise) {
+                    Text("Finish Exercise")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.green)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal)
+            }
+        }
+        .padding(.bottom)
+    }
+    
+    // MARK: - Computed Properties
+    
+    private var videoURL: URL? {
+        let videoId = String(format: "%04d", exercise.exercise.id)
+        return URL(string: "https://humulistoragecentral.blob.core.windows.net/videos/\(videoId).mp4")
+    }
+    
+    private var thumbnailImageName: String {
+        return String(format: "%04d", exercise.exercise.id)
+    }
+    
+    private var currentSetCanBeCompleted: Bool {
+        return !reps.isEmpty && (exercise.exercise.equipment.lowercased() == "body weight" || !weight.isEmpty)
+    }
+    
+    // MARK: - Methods
+    
+    private func setupInitialValues() {
+        reps = "\(exercise.reps)"
+        // Initialize weight based on exercise type
+        if exercise.exercise.equipment.lowercased() != "body weight" {
+            weight = "0"
+        }
+    }
+    
+    private func completeSet() {
+        guard let repsCount = Int(reps) else { return }
+        let weightValue = Double(weight) ?? 0.0
+        
+        let setLog = SetLog(
+            setNumber: currentSet,
+            weight: weightValue,
+            reps: repsCount,
+            completedAt: Date()
+        )
+        
+        completedSets.append(setLog)
+        
+        if currentSet < exercise.sets {
+            // Start rest period
+            startRestPeriod()
+        } else {
+            // All sets completed
+            finishExercise()
+        }
+    }
+    
+    private func startRestPeriod() {
+        isRestMode = true
+        restTimeRemaining = exercise.restTime
+        
+        restTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            if restTimeRemaining > 0 {
+                restTimeRemaining -= 1
+            } else {
+                skipRest()
+            }
+        }
+    }
+    
+    private func skipRest() {
+        stopRestTimer()
+        isRestMode = false
+        currentSet += 1
+        // Reset inputs for next set
+        reps = "\(exercise.reps)"
+    }
+    
+    private func stopRestTimer() {
+        restTimer?.invalidate()
+        restTimer = nil
+    }
+    
+    private func finishExercise() {
+        // TODO: Save exercise completion to database
+        print("Exercise completed: \(exercise.exercise.name)")
+        print("Completed sets: \(completedSets)")
+        dismiss()
+    }
+    
+    private func formatTime(_ seconds: Int) -> String {
+        let minutes = seconds / 60
+        let remainingSeconds = seconds % 60
+        return String(format: "%d:%02d", minutes, remainingSeconds)
+    }
+}
+
+// MARK: - Set Log Model
+
+struct SetLog {
+    let setNumber: Int
+    let weight: Double
+    let reps: Int
+    let completedAt: Date
 }
 
 #Preview {
