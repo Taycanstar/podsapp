@@ -760,7 +760,7 @@ struct LogWorkoutView: View {
                     workoutManager: workoutManager,
                     userEmail: userEmail,
                     selectedDuration: effectiveDuration,
-                    shouldRegenerate: shouldRegenerateWorkout,
+                    shouldRegenerate: $shouldRegenerateWorkout,
                     customTargetMuscles: customTargetMuscles,
                     customEquipment: customEquipment,
                     effectiveFitnessGoal: effectiveFitnessGoal,
@@ -831,7 +831,7 @@ private struct TodayWorkoutView: View {
     @ObservedObject var workoutManager: WorkoutManager
     let userEmail: String
     let selectedDuration: WorkoutDuration
-    let shouldRegenerate: Bool
+    @Binding var shouldRegenerate: Bool
     let customTargetMuscles: [String]? // Added this parameter
     let customEquipment: [Equipment]? // Added this parameter
     let effectiveFitnessGoal: FitnessGoal // Added this parameter
@@ -845,7 +845,7 @@ private struct TodayWorkoutView: View {
         GeometryReader { geometry in
             ZStack(alignment: .bottom) {
                 // Main scrollable content
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(spacing: 12) {
                         // Add invisible spacing at the top to prevent overlap with header
                         Color.clear.frame(height: 4)
@@ -859,11 +859,31 @@ private struct TodayWorkoutView: View {
                         
                         // Show today's workout if available
                         if let workout = todayWorkout {
-                            TodayWorkoutExerciseList(
-                                workout: workout,
-                                navigationPath: $navigationPath
-                            )
-                            .padding(.horizontal)
+                            VStack(spacing: 16) {
+                                TodayWorkoutExerciseList(
+                                    workout: workout,
+                                    navigationPath: $navigationPath
+                                )
+                                .padding(.horizontal)
+                                
+                                // Add Exercise button below the list
+                                Button(action: {
+                                    // TODO: Navigate to add exercise view
+                                }) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "plus")
+                                            .font(.system(size: 16, weight: .semibold))
+                                        Text("Add Exercise")
+                                            .font(.system(size: 16, weight: .semibold))
+                                    }
+                                    .foregroundColor(.primary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color("iosbtn"))
+                                    .cornerRadius(12)
+                                }
+                                .padding(.horizontal)
+                            }
                         }
                         
                         // Empty state when no workout and not generating
@@ -892,34 +912,11 @@ private struct TodayWorkoutView: View {
                     }
                     .padding(.bottom, 16)
                 }
-                .background(Color("iosbg2"))
+                .background(Color(.systemBackground))
                 
-                // Floating buttons at bottom
+                // Sticky Start Workout button at bottom
                 if todayWorkout != nil {
-                    VStack(spacing: 12) {
-                        // Add Exercise button
-                        HStack {
-                            Spacer()
-                            Button(action: {
-                                // TODO: Navigate to add exercise view
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "plus")
-                                        .font(.system(size: 16, weight: .semibold))
-                                    Text("Add Exercise")
-                                        .font(.system(size: 16, weight: .semibold))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 12)
-                                .background(Color.accentColor)
-                                .cornerRadius(25)
-                                .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        
-                        // Start Workout button (sticky)
+                    VStack {
                         Button(action: {
                             // TODO: Start workout
                         }) {
@@ -955,6 +952,7 @@ private struct TodayWorkoutView: View {
             if newValue {
                 // Reset the flag and regenerate workout
                 generateTodayWorkout()
+                shouldRegenerate = false
             }
         }
     }
@@ -1553,28 +1551,26 @@ private struct TodayWorkoutExerciseList: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            List {
-                ForEach(exercises, id: \.exercise.id) { exercise in
-                    ExerciseWorkoutCard(
-                        exercise: exercise,
-                        navigationPath: $navigationPath
-                    )
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
-                }
-                .onMove(perform: moveExercise)
-                .onDelete(perform: deleteExercise)
+        List {
+            ForEach(exercises, id: \.exercise.id) { exercise in
+                ExerciseWorkoutCard(
+                    exercise: exercise,
+                    navigationPath: $navigationPath
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
             }
-            .listStyle(PlainListStyle())
-            .scrollContentBackground(.hidden)
-            .background(Color.clear)
-            .frame(height: CGFloat(exercises.count * 120)) // Approximate height per exercise
+            .onMove(perform: moveExercise)
+            .onDelete(perform: deleteExercise)
         }
-        .padding(.horizontal, 16)
+        .listStyle(PlainListStyle())
+        .scrollContentBackground(.hidden)
+        .scrollDisabled(true)
         .background(Color("bg"))
         .cornerRadius(12)
+        .frame(height: CGFloat(exercises.count * 100 + 16)) // Tighter height calculation
+        .padding(.horizontal, 16)
         .onChange(of: exercises) { _, newValue in
             // TODO: Save updated exercise order to UserDefaults or backend
         }
