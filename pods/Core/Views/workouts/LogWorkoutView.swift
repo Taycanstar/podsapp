@@ -130,6 +130,8 @@ struct LogWorkoutView: View {
         .navigationBarBackButtonHidden(true)
         .navigationTitle(selectedWorkoutTab == .workouts ? "Workouts" : "Log Workout")
         .navigationBarTitleDisplayMode(selectedWorkoutTab == .workouts ? .large : .inline)
+        .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+        .modifier(ToolbarBackgroundVisibilityModifier())
         .if(selectedWorkoutTab == .workouts) { view in
             view.searchable(
                 text: $searchText,
@@ -859,7 +861,7 @@ private struct TodayWorkoutView: View {
                         
                         // Show today's workout if available
                         if let workout = todayWorkout {
-                            VStack(spacing: 16) {
+                            VStack(spacing: 8) {
                                 TodayWorkoutExerciseList(
                                     workout: workout,
                                     navigationPath: $navigationPath
@@ -1570,7 +1572,6 @@ private struct TodayWorkoutExerciseList: View {
         .background(Color("bg"))
         .cornerRadius(12)
         .frame(height: CGFloat(exercises.count * 100 + 16)) // Tighter height calculation
-        .padding(.horizontal, 16)
         .onChange(of: exercises) { _, newValue in
             // TODO: Save updated exercise order to UserDefaults or backend
         }
@@ -1669,8 +1670,9 @@ private struct ExerciseWorkoutCard: View {
                         .frame(width: 24, height: 24)
                 }
             }
+            .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color("iosfit"))
+            .background(Color("tiktoknp"))
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
@@ -2941,6 +2943,19 @@ class ChromaKeyVideoCompositor: NSObject, AVVideoCompositing {
         }
         
         return cubeData
+    }
+}
+
+// MARK: - Custom Modifiers
+
+struct ToolbarBackgroundVisibilityModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content
+                .toolbarBackgroundVisibility(.visible, for: .navigationBar)
+        } else {
+            content
+        }
     }
 }
 
