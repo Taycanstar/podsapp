@@ -26,6 +26,7 @@
 
 import SwiftUI
 import AVKit
+import AVFoundation
 
 struct LogWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
@@ -2242,11 +2243,12 @@ struct ExerciseLoggingView: View {
     private var videoHeaderView: some View {
         Group {
             if let videoURL = videoURL {
-                VideoPlayer(player: AVPlayer(url: videoURL))
+                CustomExerciseVideoPlayer(videoURL: videoURL)
                     .frame(height: 200)
+                    .clipped()
                     .cornerRadius(12)
-                    .padding(.horizontal)
-                    .padding(.top, 8)
+                    .padding([.horizontal], 16)
+                    .padding([.top], 8)
             } else {
                 // Fallback thumbnail view
                 Group {
@@ -2527,6 +2529,119 @@ struct SetLog {
     let weight: Double
     let reps: Int
     let completedAt: Date
+}
+
+// MARK: - Custom Exercise Video Player
+
+struct CustomExerciseVideoPlayer: UIViewControllerRepresentable {
+    let videoURL: URL
+    
+    func makeUIViewController(context: Context) -> ExerciseVideoPlayerController {
+        let controller = ExerciseVideoPlayerController()
+        controller.videoURL = videoURL  // Store URL for later setup
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: ExerciseVideoPlayerController, context: Context) {
+        // Update if needed
+        if uiViewController.videoURL != videoURL {
+            uiViewController.videoURL = videoURL
+            uiViewController.setupPlayerIfReady()
+        }
+    }
+    
+    static func dismantleUIViewController(_ uiViewController: ExerciseVideoPlayerController, coordinator: ()) {
+        uiViewController.cleanup()
+    }
+}
+
+class ExerciseVideoPlayerController: UIViewController {
+    private var playerView: UIView?
+    private var player: AVPlayer?
+    private var playerLayer: AVPlayerLayer?
+    var videoURL: URL?
+    private var viewHasLoaded = false
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupViews()
+        viewHasLoaded = true
+        setupPlayerIfReady()
+    }
+    
+    private func setupViews() {
+        playerView = UIView()
+        playerView?.translatesAutoresizingMaskIntoConstraints = false
+        playerView?.backgroundColor = .clear
+        
+        guard let playerView = playerView else { return }
+        view.addSubview(playerView)
+        
+        NSLayoutConstraint.activate([
+            playerView.topAnchor.constraint(equalTo: view.topAnchor),
+            playerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            playerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            playerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+    }
+    
+    func setupPlayerIfReady() {
+        guard viewHasLoaded, let videoURL = videoURL, let playerView = playerView else {
+            return
+        }
+        
+        // Clean up existing player if any
+        cleanup()
+        
+        // Create player
+        player = AVPlayer(url: videoURL)
+        
+        // Create player layer
+        playerLayer = AVPlayerLayer(player: player)
+        playerLayer?.videoGravity = .resizeAspect
+        playerLayer?.backgroundColor = UIColor.clear.cgColor
+        
+        // Add to view
+        if let playerLayer = playerLayer {
+            playerView.layer.addSublayer(playerLayer)
+        }
+        
+        // Setup auto-loop
+        setupAutoLoop()
+        
+        // Auto-play when ready
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.player?.play()
+        }
+    }
+    
+    private func setupAutoLoop() {
+        guard let player = player else { return }
+        
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: player.currentItem,
+            queue: .main
+        ) { [weak self] _ in
+            self?.player?.seek(to: .zero)
+            self?.player?.play()
+        }
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        if let playerView = playerView {
+            playerLayer?.frame = playerView.bounds
+        }
+    }
+    
+    func cleanup() {
+        player?.pause()
+        playerLayer?.removeFromSuperlayer()
+        NotificationCenter.default.removeObserver(self)
+        player = nil
+        playerLayer = nil
+    }
 }
 
 #Preview {
