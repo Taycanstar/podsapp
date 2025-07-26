@@ -1503,7 +1503,6 @@ private struct TodayWorkoutExerciseList: View {
 private struct ExerciseWorkoutCard: View {
     let exercise: TodayWorkoutExercise
     @Binding var navigationPath: NavigationPath
-    @State private var showingMenu = false
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
     
@@ -1548,50 +1547,46 @@ private struct ExerciseWorkoutCard: View {
                 Spacer()
                 
                 // Menu button
-                Button(action: {
-                    showingMenu = true
-                }) {
+                Menu {
+                    Button("Exercise History") {
+                        // TODO: Show exercise history
+                    }
+                    
+                    Button("Replace") {
+                        // TODO: Replace exercise
+                    }
+                    
+                    Button("Recommend more often") {
+                        recommendMoreOften.toggle()
+                        // TODO: Save preference
+                    }
+                    
+                    Button("Recommend less often") {
+                        recommendLessOften.toggle()
+                        // TODO: Save preference
+                    }
+                    
+                    Divider()
+                    
+                    Button("Don't recommend again", role: .destructive) {
+                        // TODO: Add to avoided exercises
+                    }
+                    
+                    Button("Delete from workout", role: .destructive) {
+                        // TODO: Remove from current workout
+                    }
+                } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.secondary)
                         .frame(width: 24, height: 24)
                 }
-                .buttonStyle(PlainButtonStyle())
             }
             .padding(.vertical, 12)
             .background(Color("iosfit"))
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
-        .confirmationDialog("Exercise Options", isPresented: $showingMenu, titleVisibility: .visible) {
-            Button("Exercise History") {
-                // TODO: Show exercise history
-            }
-            
-            Button("Replace") {
-                // TODO: Replace exercise
-            }
-            
-            Button("Recommend more often") {
-                recommendMoreOften.toggle()
-                // TODO: Save preference
-            }
-            
-            Button("Recommend less often") {
-                recommendLessOften.toggle()
-                // TODO: Save preference
-            }
-            
-            Button("Don't recommend again", role: .destructive) {
-                // TODO: Add to avoided exercises
-            }
-            
-            Button("Delete from workout", role: .destructive) {
-                // TODO: Remove from current workout
-            }
-            
-            Button("Cancel", role: .cancel) {}
-        }
     }
     
     private var thumbnailImageName: String {
