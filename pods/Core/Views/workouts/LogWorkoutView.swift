@@ -2593,8 +2593,53 @@ class ExerciseVideoPlayerController: UIViewController {
         // Clean up existing player if any
         cleanup()
         
+        // Create asset and composition for chroma key
+        let asset = AVURLAsset(url: videoURL)
+        let composition = AVMutableComposition()
+        
+        // Add video track
+        guard let videoTrack = asset.tracks(withMediaType: .video).first,
+              let compositionVideoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) else {
+            // Fallback to simple player without chroma key
+            setupSimplePlayer(url: videoURL)
+            return
+        }
+        
+        do {
+            try compositionVideoTrack.insertTimeRange(CMTimeRange(start: .zero, duration: asset.duration), of: videoTrack, at: .zero)
+        } catch {
+            setupSimplePlayer(url: videoURL)
+            return
+        }
+        
+        // Create video composition with chroma key filter
+        let videoComposition = AVMutableVideoComposition()
+        videoComposition.renderSize = videoTrack.naturalSize
+        videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+        
+        let instruction = AVMutableVideoCompositionInstruction()
+        instruction.timeRange = CMTimeRange(start: .zero, duration: asset.duration)
+        
+        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: compositionVideoTrack)
+        
+        // Create chroma key filter - use CIColorCube for custom green screen removal
+        guard let chromaKeyFilter = createGreenScreenFilter() else {
+            setupSimplePlayer(url: videoURL)
+            return
+        }
+        
+        instruction.layerInstructions = [layerInstruction]
+        videoComposition.instructions = [instruction]
+        
+        // Apply custom compositor for chroma key
+        videoComposition.customVideoCompositorClass = ChromaKeyVideoCompositor.self
+        
+        // Create player item with composition
+        let playerItem = AVPlayerItem(asset: composition)
+        playerItem.videoComposition = videoComposition
+        
         // Create player
-        player = AVPlayer(url: videoURL)
+        player = AVPlayer(playerItem: playerItem)
         
         // Create player layer
         playerLayer = AVPlayerLayer(player: player)
@@ -2613,6 +2658,72 @@ class ExerciseVideoPlayerController: UIViewController {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             self.player?.play()
         }
+    }
+    
+    private func setupSimplePlayer(url: URL) {
+        // Fallback simple player without chroma key
+        player = AVPlayer(url: url)
+        playerLayer = AVPlayerLayer(player: player)
+        playerLayer?.videoGravity = .resizeAspect
+        playerLayer?.backgroundColor = UIColor.clear.cgColor
+        
+        if let playerLayer = playerLayer, let playerView = playerView {
+            playerView.layer.addSublayer(playerLayer)
+        }
+        
+        setupAutoLoop()
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.player?.play()
+        }
+    }
+    
+    private func createGreenScreenFilter() -> CIFilter? {
+        // Use CIColorCube to create a custom green screen removal filter
+        let greenScreenFilter = CIFilter(name: "CIColorCube")
+        
+        // Create a color cube that makes green pixels transparent
+        let size = 64
+        let cubeData = generateGreenScreenCubeData(cubeSize: size)
+        let data = Data(bytes: cubeData, count: cubeData.count * MemoryLayout<Float>.size)
+        
+        greenScreenFilter?.setValue(data, forKey: "inputCubeData")
+        greenScreenFilter?.setValue(size, forKey: "inputCubeDimension")
+        
+        return greenScreenFilter
+    }
+    
+    private func generateGreenScreenCubeData(cubeSize: Int) -> [Float] {
+        var cubeData = [Float]()
+        
+        for z in 0..<cubeSize {
+            for y in 0..<cubeSize {
+                for x in 0..<cubeSize {
+                    let r = Float(x) / Float(cubeSize - 1)
+                    let g = Float(y) / Float(cubeSize - 1)
+                    let b = Float(z) / Float(cubeSize - 1)
+                    
+                    // Check if this is a green pixel (high green, low red/blue)
+                    let isGreen = g > 0.6 && r < 0.4 && b < 0.4
+                    
+                    if isGreen {
+                        // Make green pixels transparent by setting alpha to 0
+                        cubeData.append(r)
+                        cubeData.append(g)
+                        cubeData.append(b)
+                        cubeData.append(0.0) // Alpha = 0 (transparent)
+                    } else {
+                        // Keep non-green pixels as they are
+                        cubeData.append(r)
+                        cubeData.append(g)
+                        cubeData.append(b)
+                        cubeData.append(1.0) // Alpha = 1 (opaque)
+                    }
+                }
+            }
+        }
+        
+        return cubeData
     }
     
     private func setupAutoLoop() {
@@ -2641,6 +2752,114 @@ class ExerciseVideoPlayerController: UIViewController {
         NotificationCenter.default.removeObserver(self)
         player = nil
         playerLayer = nil
+    }
+}
+
+// MARK: - Chroma Key Video Compositor
+class ChromaKeyVideoCompositor: NSObject, AVVideoCompositing {
+    var sourcePixelBufferAttributes: [String : Any]? = [
+        String(kCVPixelBufferPixelFormatTypeKey): kCVPixelFormatType_32BGRA
+    ]
+    
+    var requiredPixelBufferAttributesForRenderContext: [String : Any] = [
+        String(kCVPixelBufferPixelFormatTypeKey): kCVPixelFormatType_32BGRA
+    ]
+    
+    func renderContextChanged(_ newRenderContext: AVVideoCompositionRenderContext) {
+        // Handle render context changes if needed
+    }
+    
+    func startRequest(_ asyncVideoCompositionRequest: AVAsynchronousVideoCompositionRequest) {
+        guard let trackID = asyncVideoCompositionRequest.sourceTrackIDs.first,
+              let sourcePixelBuffer = asyncVideoCompositionRequest.sourceFrame(byTrackID: trackID.int32Value) else {
+            asyncVideoCompositionRequest.finish(with: NSError(domain: "ChromaKey", code: 1, userInfo: nil))
+            return
+        }
+        
+        let renderContext = asyncVideoCompositionRequest.renderContext
+        guard let destinationPixelBuffer = renderContext.newPixelBuffer() else {
+            asyncVideoCompositionRequest.finish(with: NSError(domain: "ChromaKey", code: 2, userInfo: nil))
+            return
+        }
+        
+        // Create CIImages
+        let sourceImage = CIImage(cvPixelBuffer: sourcePixelBuffer)
+        
+        // Apply green screen removal using CIColorCube
+        guard let colorCubeFilter = CIFilter(name: "CIColorCube") else {
+            copyPixelBuffer(source: sourcePixelBuffer, destination: destinationPixelBuffer)
+            asyncVideoCompositionRequest.finish(withComposedVideoFrame: destinationPixelBuffer)
+            return
+        }
+        
+        // Create color cube data for green screen removal
+        let cubeData = createGreenScreenCubeData()
+        let data = Data(bytes: cubeData, count: cubeData.count * MemoryLayout<Float>.size)
+        
+        colorCubeFilter.setValue(sourceImage, forKey: kCIInputImageKey)
+        colorCubeFilter.setValue(data, forKey: "inputCubeData")
+        colorCubeFilter.setValue(64, forKey: "inputCubeDimension")
+        
+        guard let outputImage = colorCubeFilter.outputImage else {
+            copyPixelBuffer(source: sourcePixelBuffer, destination: destinationPixelBuffer)
+            asyncVideoCompositionRequest.finish(withComposedVideoFrame: destinationPixelBuffer)
+            return
+        }
+        
+        // Render to destination buffer
+        let context = CIContext()
+        context.render(outputImage, to: destinationPixelBuffer)
+        
+        asyncVideoCompositionRequest.finish(withComposedVideoFrame: destinationPixelBuffer)
+    }
+    
+    private func copyPixelBuffer(source: CVPixelBuffer, destination: CVPixelBuffer) {
+        CVPixelBufferLockBaseAddress(source, .readOnly)
+        CVPixelBufferLockBaseAddress(destination, [])
+        
+        let sourceData = CVPixelBufferGetBaseAddress(source)
+        let destData = CVPixelBufferGetBaseAddress(destination)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(source)
+        let height = CVPixelBufferGetHeight(source)
+        
+        memcpy(destData, sourceData, bytesPerRow * height)
+        
+        CVPixelBufferUnlockBaseAddress(destination, [])
+        CVPixelBufferUnlockBaseAddress(source, .readOnly)
+    }
+    
+    private func createGreenScreenCubeData() -> [Float] {
+        var cubeData = [Float]()
+        let cubeSize = 64
+        
+        for z in 0..<cubeSize {
+            for y in 0..<cubeSize {
+                for x in 0..<cubeSize {
+                    let r = Float(x) / Float(cubeSize - 1)
+                    let g = Float(y) / Float(cubeSize - 1)
+                    let b = Float(z) / Float(cubeSize - 1)
+                    
+                    // Check if this is a green pixel (high green, low red/blue)
+                    let isGreen = g > 0.6 && r < 0.4 && b < 0.4
+                    
+                    if isGreen {
+                        // Make green pixels transparent by setting alpha to 0
+                        cubeData.append(r)
+                        cubeData.append(g)
+                        cubeData.append(b)
+                        cubeData.append(0.0) // Alpha = 0 (transparent)
+                    } else {
+                        // Keep non-green pixels as they are
+                        cubeData.append(r)
+                        cubeData.append(g)
+                        cubeData.append(b)
+                        cubeData.append(1.0) // Alpha = 1 (opaque)
+                    }
+                }
+            }
+        }
+        
+        return cubeData
     }
 }
 
