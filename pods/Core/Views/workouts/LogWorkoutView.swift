@@ -1483,62 +1483,16 @@ private struct TodayWorkoutExerciseList: View {
     @Binding var navigationPath: NavigationPath
     
     var body: some View {
-        VStack(spacing: 16) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(workout.title)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-                    
-                    HStack(spacing: 12) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Text("\(workout.estimatedDuration) min")
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        HStack(spacing: 4) {
-                            Image(systemName: "dumbbell")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Text("\(workout.exercises.count) exercises")
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                
-                Spacer()
-                
-                // Difficulty indicator
-                HStack(spacing: 2) {
-                    ForEach(0..<3) { index in
-                        Circle()
-                            .fill(index < workout.difficulty ? Color.accentColor : Color.gray.opacity(0.3))
-                            .frame(width: 8, height: 8)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            
+        VStack(spacing: 12) {
             // Exercise cards list
-            VStack(spacing: 12) {
-                ForEach(workout.exercises, id: \.exercise.id) { exercise in
-                    ExerciseWorkoutCard(
-                        exercise: exercise,
-                        navigationPath: $navigationPath
-                    )
-                }
+            ForEach(workout.exercises, id: \.exercise.id) { exercise in
+                ExerciseWorkoutCard(
+                    exercise: exercise,
+                    navigationPath: $navigationPath
+                )
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 16)
         }
+        .padding(.horizontal, 16)
         .background(Color("bg"))
         .cornerRadius(12)
     }
@@ -1604,7 +1558,6 @@ private struct ExerciseWorkoutCard: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-            .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(Color("iosfit"))
             .cornerRadius(12)
@@ -2484,7 +2437,7 @@ struct ExerciseLoggingView: View {
     
     private var videoURL: URL? {
         let videoId = String(format: "%04d", exercise.exercise.id)
-        return URL(string: "https://humulistoragecentral.blob.core.windows.net/videos/\(videoId).mp4")
+        return URL(string: "https://humulistoragecentral.blob.core.windows.net/videos/filtered_vids/\(videoId).mp4")
     }
     
     private var thumbnailImageName: String {
