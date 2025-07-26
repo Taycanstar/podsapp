@@ -842,49 +842,112 @@ private struct TodayWorkoutView: View {
     @State private var userProfile = UserProfileService.shared
     
     var body: some View {
-        VStack(spacing: 12) {
-            // Add invisible spacing at the top to prevent overlap with header
-            Color.clear.frame(height: 4)
-            
-            // Show generation loading
-            if isGeneratingWorkout {
-                WorkoutGenerationCard()
-                    .padding(.horizontal)
-                    .transition(.opacity)
-            }
-            
-            // Show today's workout if available
-            if let workout = todayWorkout {
-                TodayWorkoutExerciseList(
-                    workout: workout,
-                    navigationPath: $navigationPath
-                )
-                .padding(.horizontal)
-            }
-            
-            // Empty state when no workout and not generating
-            if todayWorkout == nil && !isGeneratingWorkout {
-                VStack(spacing: 16) {
-                    Image("blackex")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: 200, maxHeight: 200)
-                    
-                    Text("Preparing your workout...")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    Text("We're creating a personalized workout based on your goals and preferences.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 45)
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                // Main scrollable content
+                ScrollView {
+                    VStack(spacing: 12) {
+                        // Add invisible spacing at the top to prevent overlap with header
+                        Color.clear.frame(height: 4)
+                        
+                        // Show generation loading
+                        if isGeneratingWorkout {
+                            WorkoutGenerationCard()
+                                .padding(.horizontal)
+                                .transition(.opacity)
+                        }
+                        
+                        // Show today's workout if available
+                        if let workout = todayWorkout {
+                            TodayWorkoutExerciseList(
+                                workout: workout,
+                                navigationPath: $navigationPath
+                            )
+                            .padding(.horizontal)
+                        }
+                        
+                        // Empty state when no workout and not generating
+                        if todayWorkout == nil && !isGeneratingWorkout {
+                            VStack(spacing: 16) {
+                                Image("blackex")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(maxWidth: 200, maxHeight: 200)
+                                
+                                Text("Preparing your workout...")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                
+                                Text("We're creating a personalized workout based on your goals and preferences.")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 45)
+                            }
+                            .padding(.top, 40)
+                        }
+                        
+                        // Add extra bottom padding for floating buttons
+                        Color.clear.frame(height: 120)
+                    }
+                    .padding(.bottom, 16)
                 }
-                .padding(.top, 40)
+                .background(Color("iosbg2"))
+                
+                // Floating buttons at bottom
+                if todayWorkout != nil {
+                    VStack(spacing: 12) {
+                        // Add Exercise button
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                // TODO: Navigate to add exercise view
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 16, weight: .semibold))
+                                    Text("Add Exercise")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(Color.accentColor)
+                                .cornerRadius(25)
+                                .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        
+                        // Start Workout button (sticky)
+                        Button(action: {
+                            // TODO: Start workout
+                        }) {
+                            Text("Start Workout")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.accentColor)
+                                .cornerRadius(12)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, geometry.safeAreaInsets.bottom + 10)
+                    }
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color("iosbg2").opacity(0),
+                                Color("iosbg2").opacity(0.95),
+                                Color("iosbg2")
+                            ]),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                }
             }
         }
-        .padding(.bottom, 16)
-        .background(Color("iosbg2"))
         .onAppear {
             loadOrGenerateTodayWorkout()
         }
@@ -1481,20 +1544,48 @@ private struct RoutinesWorkoutView: View {
 private struct TodayWorkoutExerciseList: View {
     let workout: TodayWorkout
     @Binding var navigationPath: NavigationPath
+    @State private var exercises: [TodayWorkoutExercise]
+    
+    init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>) {
+        self.workout = workout
+        self._navigationPath = navigationPath
+        self._exercises = State(initialValue: workout.exercises)
+    }
     
     var body: some View {
-        VStack(spacing: 12) {
-            // Exercise cards list
-            ForEach(workout.exercises, id: \.exercise.id) { exercise in
-                ExerciseWorkoutCard(
-                    exercise: exercise,
-                    navigationPath: $navigationPath
-                )
+        VStack(spacing: 0) {
+            List {
+                ForEach(exercises, id: \.exercise.id) { exercise in
+                    ExerciseWorkoutCard(
+                        exercise: exercise,
+                        navigationPath: $navigationPath
+                    )
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                }
+                .onMove(perform: moveExercise)
+                .onDelete(perform: deleteExercise)
             }
+            .listStyle(PlainListStyle())
+            .scrollContentBackground(.hidden)
+            .background(Color.clear)
+            .frame(height: CGFloat(exercises.count * 120)) // Approximate height per exercise
         }
         .padding(.horizontal, 16)
         .background(Color("bg"))
         .cornerRadius(12)
+        .onChange(of: exercises) { _, newValue in
+            // TODO: Save updated exercise order to UserDefaults or backend
+        }
+    }
+    
+    private func moveExercise(from source: IndexSet, to destination: Int) {
+        exercises.move(fromOffsets: source, toOffset: destination)
+    }
+    
+    private func deleteExercise(at offsets: IndexSet) {
+        exercises.remove(atOffsets: offsets)
     }
 }
 
