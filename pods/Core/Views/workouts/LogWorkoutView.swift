@@ -113,10 +113,8 @@ struct LogWorkoutView: View {
                 // Fixed non-transparent header
                 VStack(spacing: 0) {
                     tabHeaderView
-                    Divider()
-                        .background(Color.gray.opacity(0.3))
                 }
-                .background(Color("iosbg2"))
+                .background(Color(.systemBackground))
                 .zIndex(1) // Keep header on top
                 
                 // Main content
@@ -132,6 +130,7 @@ struct LogWorkoutView: View {
         .navigationBarTitleDisplayMode(selectedWorkoutTab == .workouts ? .large : .inline)
         .toolbarBackground(Color(.systemBackground), for: .navigationBar)
         .modifier(ToolbarBackgroundVisibilityModifier())
+        .navigationBarTitleDisplayMode(.inline)
         .if(selectedWorkoutTab == .workouts) { view in
             view.searchable(
                 text: $searchText,
@@ -815,9 +814,7 @@ private struct TabButton: View {
                 .padding(.vertical, 6)
                 .background(
                     Capsule()
-                        .fill(selectedTab == tab 
-                              ? (colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.06))
-                              : Color.clear)
+                        .fill(selectedTab == tab ? Color("tiktoknp") : Color.clear)
                 )
                 .foregroundColor(selectedTab == tab ? .primary : Color.gray.opacity(0.8))
         }
@@ -1561,7 +1558,7 @@ private struct TodayWorkoutExerciseList: View {
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
             }
             .onMove(perform: moveExercise)
             .onDelete(perform: deleteExercise)
@@ -1571,7 +1568,7 @@ private struct TodayWorkoutExerciseList: View {
         .scrollDisabled(true)
         .background(Color("bg"))
         .cornerRadius(12)
-        .frame(height: CGFloat(exercises.count * 100 + 16)) // Tighter height calculation
+        .frame(height: CGFloat(exercises.count * 88)) // Minimal height calculation
         .onChange(of: exercises) { _, newValue in
             // TODO: Save updated exercise order to UserDefaults or backend
         }
