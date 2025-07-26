@@ -780,11 +780,14 @@ struct LogWorkoutView: View {
     private var toolbarContent: some ToolbarContent {
         Group {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") {
+                Button(action: {
                     selectedTab = 0
                     dismiss()
+                }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.accentColor)
                 }
-                .foregroundColor(.accentColor)
             }
         }
     }
@@ -842,10 +845,6 @@ private struct TodayWorkoutView: View {
         VStack(spacing: 12) {
             // Add invisible spacing at the top to prevent overlap with header
             Color.clear.frame(height: 4)
-            
-            // Muscle recovery status
-            MuscleRecoveryCompactView()
-                .padding(.horizontal)
             
             // Show generation loading
             if isGeneratingWorkout {
