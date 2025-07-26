@@ -113,6 +113,8 @@ struct LogWorkoutView: View {
                 // Fixed non-transparent header
                 VStack(spacing: 0) {
                     tabHeaderView
+                    Divider()
+                        .background(Color.gray.opacity(0.3))
                 }
                 .background(Color(.systemBackground))
                 .zIndex(1) // Keep header on top
@@ -1558,7 +1560,7 @@ private struct TodayWorkoutExerciseList: View {
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
+                .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
             }
             .onMove(perform: moveExercise)
             .onDelete(perform: deleteExercise)
@@ -1568,7 +1570,11 @@ private struct TodayWorkoutExerciseList: View {
         .scrollDisabled(true)
         .background(Color("bg"))
         .cornerRadius(12)
-        .frame(height: CGFloat(exercises.count * 88)) // Minimal height calculation
+        .frame(height: CGFloat(exercises.count * 96)) // Height calculation with 10pt spacing
+        .onChange(of: workout.exercises) { _, newExercises in
+            // Update local exercises when workout changes (e.g., from muscle selection change)
+            exercises = newExercises
+        }
         .onChange(of: exercises) { _, newValue in
             // TODO: Save updated exercise order to UserDefaults or backend
         }
