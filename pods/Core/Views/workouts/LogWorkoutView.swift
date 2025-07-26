@@ -133,6 +133,7 @@ struct LogWorkoutView: View {
         .toolbarBackground(Color(.systemBackground), for: .navigationBar)
         .modifier(ToolbarBackgroundVisibilityModifier())
         .navigationBarTitleDisplayMode(.inline)
+        .modifier(NavigationBarSeparatorModifier())
         .if(selectedWorkoutTab == .workouts) { view in
             view.searchable(
                 text: $searchText,
@@ -2959,6 +2960,22 @@ struct ToolbarBackgroundVisibilityModifier: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+struct NavigationBarSeparatorModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                // Hide navigation bar separator
+                let appearance = UINavigationBarAppearance()
+                appearance.configureWithOpaqueBackground()
+                appearance.backgroundColor = UIColor.systemBackground
+                appearance.shadowColor = .clear // This removes the separator line
+                
+                UINavigationBar.appearance().standardAppearance = appearance
+                UINavigationBar.appearance().scrollEdgeAppearance = appearance
+            }
     }
 }
 
