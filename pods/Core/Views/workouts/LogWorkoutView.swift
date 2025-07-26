@@ -129,11 +129,8 @@ struct LogWorkoutView: View {
         .toolbar { toolbarContent }
         .navigationBarBackButtonHidden(true)
         .navigationTitle(selectedWorkoutTab == .workouts ? "Workouts" : "Log Workout")
-        .navigationBarTitleDisplayMode(selectedWorkoutTab == .workouts ? .large : .inline)
-        .toolbarBackground(Color(.systemBackground), for: .navigationBar)
-        .modifier(ToolbarBackgroundVisibilityModifier())
         .navigationBarTitleDisplayMode(.inline)
-        .modifier(NavigationBarSeparatorModifier())
+        .toolbarBackground(.hidden, for: .navigationBar)
         .if(selectedWorkoutTab == .workouts) { view in
             view.searchable(
                 text: $searchText,
