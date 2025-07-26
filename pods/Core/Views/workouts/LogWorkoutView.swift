@@ -878,7 +878,7 @@ private struct TodayWorkoutView: View {
                                     .foregroundColor(.primary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
-                                    .background(Color("iosbtn"))
+                                    .background(Color("tiktoknp"))
                                     .cornerRadius(12)
                                 }
                                 .padding(.horizontal)
