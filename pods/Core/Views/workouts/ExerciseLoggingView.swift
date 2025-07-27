@@ -12,37 +12,43 @@ import AVFoundation
 struct ExerciseLoggingView: View {
     let exercise: TodayWorkoutExercise
     @Environment(\.dismiss) private var dismiss
-    @State private var currentSet = 1
-    @State private var completedSets: [SetLog] = []
-    @State private var weight: String = ""
-    @State private var reps: String = ""
-    @State private var isRestMode = false
-    @State private var restTimeRemaining = 0
-    @State private var restTimer: Timer?
+    @State private var sets: [SetData] = []
+    @FocusState private var focusedField: FocusedField?
+    
+    enum FocusedField: Hashable {
+        case reps(Int)
+        case weight(Int)
+    }
+    
+    struct SetData: Identifiable {
+        let id = UUID()
+        var reps: String
+        var weight: String
+    }
     
     var body: some View {
         VStack(spacing: 0) {
             // Video Header
             videoHeaderView
-            
-            // Exercise info section
-            exerciseInfoSection
-            
-            // Sets logging section
-            setsLoggingSection
-            
-            Spacer()
-            
-            // Action buttons
-            actionButtonsSection
+            Text("Hello")
+            VStack(spacing: 16) {
+                // Exercise name with ellipsis
+                exerciseHeaderSection
+                
+                // Sets input section
+                setsInputSection
+                
+                Spacer()
+                
+                // Start Workout button
+                startWorkoutButton
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
         }
-        .navigationTitle(exercise.exercise.name)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarHidden(true)
         .onAppear {
-            setupInitialValues()
-        }
-        .onDisappear {
-            stopRestTimer()
+            setupInitialSets()
         }
     }
     
@@ -53,8 +59,6 @@ struct ExerciseLoggingView: View {
                     .frame(height: 200)
                     .clipped()
                     .cornerRadius(12)
-                    .padding([.horizontal], 16)
-                    .padding([.top], 8)
             } else {
                 // Fallback thumbnail view
                 Group {
@@ -79,166 +83,80 @@ struct ExerciseLoggingView: View {
                 }
                 .frame(height: 200)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+    
+    private var exerciseHeaderSection: some View {
+        HStack {
+            Text(exercise.exercise.name)
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+            
+            Spacer()
+            
+            Button(action: {}) {
+                Image(systemName: "ellipsis")
+                    .foregroundColor(.primary)
+                    .font(.title2)
+            }
+        }
+    }
+    
+    private var setsInputSection: some View {
+        VStack(spacing: 12) {
+            ForEach(Array(sets.enumerated()), id: \.offset) { index, set in
+                HStack(spacing: 12) {
+                    Text("\(index + 1)")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(width: 20, alignment: .leading)
+                    
+                    TextField("8 reps", text: Binding(
+                        get: { sets[index].reps },
+                        set: { sets[index].reps = $0 }
+                    ))
+                    .focused($focusedField, equals: .reps(index))
+                    .textFieldStyle(CustomTextFieldStyle(isFocused: focusedField == .reps(index)))
+                    .keyboardType(.numberPad)
+                    
+                    TextField("150 lbs", text: Binding(
+                        get: { sets[index].weight },
+                        set: { sets[index].weight = $0 }
+                    ))
+                    .focused($focusedField, equals: .weight(index))
+                    .textFieldStyle(CustomTextFieldStyle(isFocused: focusedField == .weight(index)))
+                    .keyboardType(.decimalPad)
+                }
+            }
+            
+            Button(action: addSet) {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .medium))
+                    Text("Add Set")
+                        .font(.system(size: 16, weight: .medium))
+                }
+                .foregroundColor(.primary)
                 .padding(.top, 8)
             }
         }
     }
     
-    private var exerciseInfoSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(exercise.exercise.name)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Text("\(exercise.sets) sets")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            if !exercise.exercise.target.isEmpty {
-                Text("Target: \(exercise.exercise.target)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            if !exercise.exercise.equipment.isEmpty {
-                Text("Equipment: \(exercise.exercise.equipment)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.horizontal)
-        .padding(.top, 16)
-    }
-    
-    private var setsLoggingSection: some View {
-        VStack(spacing: 16) {
-            // Current set indicator
-            if !isRestMode {
-                Text("Set \(currentSet) of \(exercise.sets)")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .padding(.top)
-            }
-            
-            // Rest mode view
-            if isRestMode {
-                VStack(spacing: 16) {
-                    Text("Rest Time")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    Text(formatTime(restTimeRemaining))
-                        .font(.system(size: 48, weight: .bold, design: .monospaced))
-                        .foregroundColor(.accentColor)
-                    
-                    Button("Skip Rest") {
-                        skipRest()
-                    }
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.accentColor)
-                }
-                .padding()
-                .background(Color("bg"))
+    private var startWorkoutButton: some View {
+        Button(action: startWorkout) {
+            Text("Start Workout")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color.blue)
                 .cornerRadius(12)
-                .padding(.horizontal)
-            } else {
-                // Input fields for current set
-                VStack(spacing: 16) {
-                    HStack(spacing: 16) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Weight (lbs)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            TextField("0", text: $weight)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .keyboardType(.decimalPad)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Reps")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            TextField("\(exercise.reps)", text: $reps)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .keyboardType(.numberPad)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-            }
-            
-            // Completed sets list
-            if !completedSets.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Completed Sets")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                    
-                    LazyVStack(spacing: 4) {
-                        ForEach(Array(completedSets.enumerated()), id: \.offset) { index, setLog in
-                            HStack {
-                                Text("Set \(index + 1)")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                
-                                Spacer()
-                                
-                                Text("\(setLog.weight, specifier: "%.1f") lbs × \(setLog.reps) reps")
-                                    .font(.subheadline)
-                                    .foregroundColor(.primary)
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .background(Color("iosfit"))
-                            .cornerRadius(8)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-            }
         }
-    }
-    
-    private var actionButtonsSection: some View {
-        VStack(spacing: 12) {
-            if !isRestMode {
-                // Complete set button
-                Button(action: completeSet) {
-                    Text("Complete Set")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(currentSetCanBeCompleted ? Color.accentColor : Color.gray)
-                        .cornerRadius(12)
-                }
-                .disabled(!currentSetCanBeCompleted)
-                .padding(.horizontal)
-            }
-            
-            if completedSets.count == exercise.sets {
-                // Finish exercise button
-                Button(action: finishExercise) {
-                    Text("Finish Exercise")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.green)
-                        .cornerRadius(12)
-                }
-                .padding(.horizontal)
-            }
-        }
-        .padding(.bottom)
+        .padding(.bottom, 20)
     }
     
     // MARK: - Computed Properties
@@ -252,89 +170,49 @@ struct ExerciseLoggingView: View {
         return String(format: "%04d", exercise.exercise.id)
     }
     
-    private var currentSetCanBeCompleted: Bool {
-        return !reps.isEmpty && (exercise.exercise.equipment.lowercased() == "body weight" || !weight.isEmpty)
-    }
-    
     // MARK: - Methods
     
-    private func setupInitialValues() {
-        reps = "\(exercise.reps)"
-        // Initialize weight based on exercise type
-        if exercise.exercise.equipment.lowercased() != "body weight" {
-            weight = "0"
+    private func setupInitialSets() {
+        sets = Array(1...exercise.sets).map { _ in
+            SetData(
+                reps: "\(exercise.reps)",
+                weight: exercise.exercise.equipment.lowercased() == "body weight" ? "" : "150"
+            )
         }
     }
     
-    private func completeSet() {
-        guard let repsCount = Int(reps) else { return }
-        let weightValue = Double(weight) ?? 0.0
-        
-        let setLog = SetLog(
-            setNumber: currentSet,
-            weight: weightValue,
-            reps: repsCount,
-            completedAt: Date()
+    private func addSet() {
+        let newSet = SetData(
+            reps: "\(exercise.reps)",
+            weight: exercise.exercise.equipment.lowercased() == "body weight" ? "" : "150"
         )
-        
-        completedSets.append(setLog)
-        
-        if currentSet < exercise.sets {
-            // Start rest period
-            startRestPeriod()
-        } else {
-            // All sets completed
-            finishExercise()
-        }
+        sets.append(newSet)
     }
     
-    private func startRestPeriod() {
-        isRestMode = true
-        restTimeRemaining = exercise.restTime
-        
-        restTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if restTimeRemaining > 0 {
-                restTimeRemaining -= 1
-            } else {
-                skipRest()
-            }
-        }
-    }
-    
-    private func skipRest() {
-        stopRestTimer()
-        isRestMode = false
-        currentSet += 1
-        // Reset inputs for next set
-        reps = "\(exercise.reps)"
-    }
-    
-    private func stopRestTimer() {
-        restTimer?.invalidate()
-        restTimer = nil
-    }
-    
-    private func finishExercise() {
-        // TODO: Save exercise completion to database
-        print("Exercise completed: \(exercise.exercise.name)")
-        print("Completed sets: \(completedSets)")
+    private func startWorkout() {
+        // TODO: Start workout logic
         dismiss()
     }
     
-    private func formatTime(_ seconds: Int) -> String {
-        let minutes = seconds / 60
-        let remainingSeconds = seconds % 60
-        return String(format: "%d:%02d", minutes, remainingSeconds)
-    }
 }
 
-// MARK: - Set Log Model
+// MARK: - Custom Text Field Style
 
-struct SetLog {
-    let setNumber: Int
-    let weight: Double
-    let reps: Int
-    let completedAt: Date
+struct CustomTextFieldStyle: TextFieldStyle {
+    let isFocused: Bool
+    
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .background(Color(.systemBackground))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isFocused ? Color.blue : Color(.systemGray4), lineWidth: isFocused ? 2 : 1)
+            )
+            .foregroundColor(isFocused ? .blue : .primary)
+            .font(.system(size: 16, weight: .medium))
+    }
 }
 
 // MARK: - Custom Exercise Video Player
