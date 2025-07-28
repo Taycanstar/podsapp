@@ -187,6 +187,7 @@
 		36A85D032DC2FFED00DD4266 /* FitnessLevelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85D022DC2FFED00DD4266 /* FitnessLevelView.swift */; };
 		36A85D052DC300FB00DD4266 /* FitnessGoalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85D042DC300FB00DD4266 /* FitnessGoalView.swift */; };
 		36A85D072DC3020000DD4266 /* SportSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85D062DC3020000DD4266 /* SportSelectionView.swift */; };
+		36A91DB72E37094500414543 /* ExerciseLoggingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DB62E37093E00414543 /* ExerciseLoggingView.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -470,6 +471,7 @@
 		36A85D022DC2FFED00DD4266 /* FitnessLevelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessLevelView.swift; sourceTree = "<group>"; };
 		36A85D042DC300FB00DD4266 /* FitnessGoalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FitnessGoalView.swift; path = Pods/onboarding/FitnessGoalView.swift; sourceTree = SOURCE_ROOT; };
 		36A85D062DC3020000DD4266 /* SportSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SportSelectionView.swift; path = Pods/onboarding/SportSelectionView.swift; sourceTree = SOURCE_ROOT; };
+		36A91DB62E37093E00414543 /* ExerciseLoggingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseLoggingView.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -715,6 +717,7 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				36A91DB62E37093E00414543 /* ExerciseLoggingView.swift */,
 				361FF34C2E2C244500B7F68E /* EquipmentView.swift */,
 				361FF34A2E2B290F00B7F68E /* MuscleGroupsView.swift */,
 				361FF3482E2B277D00B7F68E /* TargetMusclesView.swift */,
@@ -1454,6 +1457,7 @@
 				36ED35AB2DD529D600D174FB /* HealthKitViewModel.swift in Sources */,
 				36ED35A32DD0DE6000D174FB /* DayLogsViewModel.swift in Sources */,
 				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
+				36A91DB72E37094500414543 /* ExerciseLoggingView.swift in Sources */,
 				36C848182BFB0065008EA74B /* ColorThemeView.swift in Sources */,
 				363AFA192D47471B00C91A14 /* DashboardView.swift in Sources */,
 				361FF32B2E2085F000B7F68E /* ExerciseDetailView.swift in Sources */,

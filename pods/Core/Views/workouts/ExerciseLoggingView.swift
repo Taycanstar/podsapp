@@ -1,5 +1,12 @@
 //
 //  ExerciseLoggingView.swift
+//  pods
+//
+//  Created by Dimi Nunez on 7/27/25.
+//
+
+//
+//  ExerciseLoggingView.swift
 //  Pods
 //
 //  Created by Claude on 7/26/25.
@@ -30,9 +37,10 @@ struct ExerciseLoggingView: View {
         VStack(spacing: 0) {
             // Video Header
             videoHeaderView
-            Text("Hello")
+            
             VStack(spacing: 16) {
                 // Exercise name with ellipsis
+   
                 exerciseHeaderSection
                 
                 // Sets input section
@@ -120,7 +128,7 @@ struct ExerciseLoggingView: View {
                         set: { sets[index].reps = $0 }
                     ))
                     .focused($focusedField, equals: .reps(index))
-                    .textFieldStyle(CustomTextFieldStyle(isFocused: focusedField == .reps(index)))
+                    .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .reps(index)))
                     .keyboardType(.numberPad)
                     
                     TextField("150 lbs", text: Binding(
@@ -128,7 +136,7 @@ struct ExerciseLoggingView: View {
                         set: { sets[index].weight = $0 }
                     ))
                     .focused($focusedField, equals: .weight(index))
-                    .textFieldStyle(CustomTextFieldStyle(isFocused: focusedField == .weight(index)))
+                    .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .weight(index)))
                     .keyboardType(.decimalPad)
                 }
             }
@@ -198,7 +206,7 @@ struct ExerciseLoggingView: View {
 
 // MARK: - Custom Text Field Style
 
-struct CustomTextFieldStyle: TextFieldStyle {
+struct CustomTextFieldStyle2: TextFieldStyle {
     let isFocused: Bool
     
     func _body(configuration: TextField<Self._Label>) -> some View {

@@ -18,7 +18,6 @@ struct ExerciseDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let exercise: WorkoutExercise
     let onUpdate: (WorkoutExercise) -> Void
-    
     @State private var sets: [WorkoutSet]
     @State private var notes: String
     
