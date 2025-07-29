@@ -21,6 +21,7 @@ struct ExerciseLoggingView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var sets: [SetData] = []
     @FocusState private var focusedField: FocusedField?
+    @State private var showingFullscreenVideo = false
     
     enum FocusedField: Hashable {
         case reps(Int)
@@ -81,6 +82,11 @@ struct ExerciseLoggingView: View {
         .onAppear {
             setupInitialSets()
         }
+        .fullScreenCover(isPresented: $showingFullscreenVideo) {
+            if let videoURL = videoURL {
+                FullscreenVideoView(videoURL: videoURL, isPresented: $showingFullscreenVideo)
+            }
+        }
     }
     
     private var videoHeaderView: some View {
@@ -90,6 +96,9 @@ struct ExerciseLoggingView: View {
                     .frame(height: 200)
                     .clipped()
                     .cornerRadius(12)
+                    .onTapGesture {
+                        showingFullscreenVideo = true
+                    }
             } else {
                 // Fallback thumbnail view
                 Group {
@@ -363,6 +372,42 @@ class ExerciseVideoPlayerController: UIViewController {
     }
 }
 
+// MARK: - Fullscreen Video View
+
+struct FullscreenVideoView: View {
+    let videoURL: URL
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            // Video player
+            CustomExerciseVideoPlayer(videoURL: videoURL)
+                .ignoresSafeArea()
+            
+            // Close button overlay
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        isPresented = false
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing, 20)
+                    .padding(.top, 50)
+                }
+                Spacer()
+            }
+        }
+    }
+}
 
 
 #Preview {
