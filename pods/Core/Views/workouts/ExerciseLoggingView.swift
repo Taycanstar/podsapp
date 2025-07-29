@@ -22,6 +22,8 @@ struct ExerciseLoggingView: View {
     @State private var sets: [SetData] = []
     @FocusState private var focusedField: FocusedField?
     @State private var showingFullscreenVideo = false
+    @State private var isVideoHidden = false
+    @State private var dragOffset: CGFloat = 0
     
     enum FocusedField: Hashable {
         case reps(Int)
@@ -38,11 +40,17 @@ struct ExerciseLoggingView: View {
         ZStack {
             VStack(spacing: 0) {
                 // Video Header
-                videoHeaderView
+                if !isVideoHidden {
+                    videoHeaderView
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .move(edge: .top).combined(with: .opacity)
+                        ))
+                }
                 
                 VStack(spacing: 16) {
+                    
                     // Exercise name with ellipsis
-       
                     exerciseHeaderSection
                     
                     // Sets input section
@@ -54,7 +62,8 @@ struct ExerciseLoggingView: View {
                     startWorkoutButton
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 16)
+                .padding(.top, isVideoHidden ? 60 : 16)
+                .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
             }
             
             // Back button overlay
@@ -78,6 +87,30 @@ struct ExerciseLoggingView: View {
                 Spacer()
             }
         }
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    // Track gesture for potential header hiding
+                    dragOffset = value.translation.height
+                }
+                .onEnded { value in
+                    let velocity = value.predictedEndLocation.y - value.location.y
+                    let translation = value.translation.height
+                    
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        // Hide if swiping up with sufficient velocity or distance
+                        if (velocity < -300) || (translation < -50 && velocity < 0) {
+                            isVideoHidden = true
+                        }
+                        // Show if swiping down with sufficient velocity or distance
+                        else if (velocity > 300) || (translation > 50 && velocity > 0) {
+                            isVideoHidden = false
+                        }
+                        
+                        dragOffset = 0
+                    }
+                }
+        )
         .navigationBarHidden(true)
         .onAppear {
             setupInitialSets()
