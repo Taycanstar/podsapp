@@ -66,26 +66,6 @@ struct ExerciseLoggingView: View {
                 .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
             }
             
-            // Back button overlay
-            VStack {
-                HStack {
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.white)
-                            .frame(width: 40, height: 40)
-                            .background(Color.black.opacity(0.5))
-                            .clipShape(Circle())
-                    }
-                    .padding(.leading, 16)
-                    .padding(.top, 50)
-                    
-                    Spacer()
-                }
-                Spacer()
-            }
         }
         .gesture(
             DragGesture()
@@ -111,7 +91,20 @@ struct ExerciseLoggingView: View {
                     }
                 }
         )
-        .navigationBarHidden(true)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("")
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.primary)
+                }
+            }
+        }
         .onAppear {
             setupInitialSets()
         }
