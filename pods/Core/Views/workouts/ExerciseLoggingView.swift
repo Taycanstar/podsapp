@@ -62,7 +62,7 @@ struct ExerciseLoggingView: View {
                     startWorkoutButton
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, isVideoHidden ? 60 : 16)
+                .padding(.top, isVideoHidden ? 8 : 16)
                 .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
             }
             
