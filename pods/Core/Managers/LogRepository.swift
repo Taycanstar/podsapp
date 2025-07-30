@@ -61,17 +61,17 @@ final class LogRepository {
         }
     }
 
-    func updateLog(userEmail: String, logId: Int, servings: Double, date: Date, mealType: String, completion: @escaping (Result<UpdatedFoodLog, Error>) -> Void) {
-        api.updateFoodLog(userEmail: userEmail, logId: logId, servings: servings, date: date, mealType: mealType) { result in
+    func updateLog(userEmail: String, logId: Int, servings: Double, date: Date, mealType: String, calories: Double? = nil, protein: Double? = nil, carbs: Double? = nil, fat: Double? = nil, completion: @escaping (Result<UpdatedFoodLog, Error>) -> Void) {
+        api.updateFoodLog(userEmail: userEmail, logId: logId, servings: servings, date: date, mealType: mealType, calories: calories, protein: protein, carbs: carbs, fat: fat) { result in
             DispatchQueue.main.async {
                 completion(result)
             }
         }
     }
 
-    func updateMealLog(userEmail: String, logId: Int, servings: Double, date: Date, mealType: String, completion: @escaping (Result<UpdatedMealLog, Error>) -> Void) {
+    func updateMealLog(userEmail: String, logId: Int, servings: Double, date: Date, mealType: String, calories: Double? = nil, protein: Double? = nil, carbs: Double? = nil, fat: Double? = nil, completion: @escaping (Result<UpdatedMealLog, Error>) -> Void) {
         print("📡 LogRepository: updateMealLog called with logId: \(logId)")
-        api.updateMealLog(userEmail: userEmail, logId: logId, servings: servings, date: date, mealType: mealType) { result in
+        api.updateMealLog(userEmail: userEmail, logId: logId, servings: servings, date: date, mealType: mealType, calories: calories, protein: protein, carbs: carbs, fat: fat) { result in
             DispatchQueue.main.async {
                 completion(result)
             }

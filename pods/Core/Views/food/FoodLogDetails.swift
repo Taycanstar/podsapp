@@ -117,14 +117,6 @@ struct FoodLogDetails: View {
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
                                 .frame(width: 80)
-                                .toolbar {
-                                    ToolbarItemGroup(placement: .keyboard) {
-                                        Spacer()
-                                        Button("Done") {
-                                            hideKeyboard()
-                                        }
-                                    }
-                                }
                         }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -406,12 +398,24 @@ struct FoodLogDetails: View {
         
         isUpdating = true
         
+        // Convert string values to doubles with fallback
+        let caloriesValue = Double(editedCalories.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+        let proteinValue = Double(editedProtein.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+        let carbsValue = Double(editedCarbs.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+        let fatValue = Double(editedFat.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+        
+        print("🔢 Converting values: calories='\(editedCalories)' -> \(caloriesValue), protein='\(editedProtein)' -> \(proteinValue), carbs='\(editedCarbs)' -> \(carbsValue), fat='\(editedFat)' -> \(fatValue)")
+        
         // Use the new DayLogsViewModel.updateLog function
         dayLogsVM.updateLog(
             log: log,
             servings: editedServings,
             date: editedDate,
-            mealType: editedMealType
+            mealType: editedMealType,
+            calories: caloriesValue,
+            protein: proteinValue,
+            carbs: carbsValue,
+            fat: fatValue
         ) { result in
             isUpdating = false
             

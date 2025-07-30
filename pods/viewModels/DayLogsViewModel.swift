@@ -330,14 +330,14 @@ func loadLogs(for date: Date) {
         NotificationCenter.default.post(name: NSNotification.Name("LogsChangedNotification"), object: nil)
     }
 
-    func updateLog(log: CombinedLog, servings: Double, date: Date, mealType: String, completion: @escaping (Result<Void, Error>) -> Void) {
+    func updateLog(log: CombinedLog, servings: Double, date: Date, mealType: String, calories: Double? = nil, protein: Double? = nil, carbs: Double? = nil, fat: Double? = nil, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let foodLogId = log.foodLogId else {
             completion(.failure(NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid log ID"])))
             return
         }
 
         // Call the repository to update the log
-        repo.updateLog(userEmail: email, logId: foodLogId, servings: servings, date: date, mealType: mealType) { result in
+        repo.updateLog(userEmail: email, logId: foodLogId, servings: servings, date: date, mealType: mealType, calories: calories, protein: protein, carbs: carbs, fat: fat) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let updatedFoodLog):
@@ -377,6 +377,29 @@ func loadLogs(for date: Date) {
                             updatedLog.scheduledAt = updatedFoodLog.logDate
                             updatedLog.message = "\(updatedFoodLog.food.displayName) – \(updatedFoodLog.meal_type)"
                             
+                            // Update individual nutrient values if they were provided
+                            if let calories = calories, let protein = protein, let carbs = carbs, let fat = fat, let food = updatedLog.food {
+                                print("🔄 Updating food log (date change) with: calories=\(calories), protein=\(protein), carbs=\(carbs), fat=\(fat), servings=\(updatedFoodLog.servings)")
+                                
+                                // Avoid division by zero
+                                let servingsCount = max(updatedFoodLog.servings, 0.1)
+                                
+                                updatedLog.food = LoggedFoodItem(
+                                    foodLogId: food.foodLogId,
+                                    fdcId: food.fdcId,
+                                    displayName: food.displayName,
+                                    calories: calories / servingsCount, // Store per-serving value
+                                    servingSizeText: food.servingSizeText,
+                                    numberOfServings: updatedFoodLog.servings,
+                                    brandText: food.brandText,
+                                    protein: protein / servingsCount,
+                                    carbs: carbs / servingsCount,
+                                    fat: fat / servingsCount
+                                )
+                                
+                                print("✅ Updated food log locally (date change) with per-serving values: cal=\(calories / servingsCount), prot=\(protein / servingsCount), carbs=\(carbs / servingsCount), fat=\(fat / servingsCount)")
+                            }
+                            
                             // Don't add duplicate to pending
                             if !newPending.contains(where: { $0.id == updatedLog.id }) {
                                 newPending.insert(updatedLog, at: 0)
@@ -393,6 +416,29 @@ func loadLogs(for date: Date) {
                             updatedLog.mealType              = updatedFoodLog.meal_type
                             updatedLog.scheduledAt           = updatedFoodLog.logDate
                             updatedLog.message               = "\(updatedFoodLog.food.displayName) – \(updatedFoodLog.meal_type)"
+                            
+                            // Update individual nutrient values if they were provided
+                            if let calories = calories, let protein = protein, let carbs = carbs, let fat = fat, let food = updatedLog.food {
+                                print("🔄 Updating food log (same date) with: calories=\(calories), protein=\(protein), carbs=\(carbs), fat=\(fat), servings=\(updatedFoodLog.servings)")
+                                
+                                // Avoid division by zero
+                                let servingsCount = max(updatedFoodLog.servings, 0.1)
+                                
+                                updatedLog.food = LoggedFoodItem(
+                                    foodLogId: food.foodLogId,
+                                    fdcId: food.fdcId,
+                                    displayName: food.displayName,
+                                    calories: calories / servingsCount, // Store per-serving value
+                                    servingSizeText: food.servingSizeText,
+                                    numberOfServings: updatedFoodLog.servings,
+                                    brandText: food.brandText,
+                                    protein: protein / servingsCount,
+                                    carbs: carbs / servingsCount,
+                                    fat: fat / servingsCount
+                                )
+                                
+                                print("✅ Updated food log locally (same date) with per-serving values: cal=\(calories / servingsCount), prot=\(protein / servingsCount), carbs=\(carbs / servingsCount), fat=\(fat / servingsCount)")
+                            }
 
                             // 2️⃣ overwrite the slot – this changes the array instance, so @Published fires
                             self.logs[index] = updatedLog
@@ -412,7 +458,7 @@ func loadLogs(for date: Date) {
         }
     }
 
-    func updateMealLog(log: CombinedLog, servings: Double, date: Date, mealType: String, completion: @escaping (Result<Void, Error>) -> Void) {
+    func updateMealLog(log: CombinedLog, servings: Double, date: Date, mealType: String, calories: Double? = nil, protein: Double? = nil, carbs: Double? = nil, fat: Double? = nil, completion: @escaping (Result<Void, Error>) -> Void) {
         print("🍽️ DayLogsViewModel: updateMealLog called")
         
         guard let mealLogId = log.mealLogId else {
@@ -423,7 +469,7 @@ func loadLogs(for date: Date) {
 
         print("🔄 DayLogsViewModel: Calling repo.updateMealLog with ID: \(mealLogId)")
         // Call the repository to update the meal log
-        repo.updateMealLog(userEmail: email, logId: mealLogId, servings: servings, date: date, mealType: mealType) { result in
+        repo.updateMealLog(userEmail: email, logId: mealLogId, servings: servings, date: date, mealType: mealType, calories: calories, protein: protein, carbs: carbs, fat: fat) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let updatedMealLog):
@@ -458,17 +504,29 @@ func loadLogs(for date: Date) {
                             // Create updated log for the new date
                             var updatedLog = log
                             if let existingMeal = updatedLog.meal {
+                                // Update nutrient values if they were provided, otherwise keep original per-serving values
+                                let servingsCount = max(updatedMealLog.servings_consumed, 0.1)
+                                let perServingCalories = calories.map { $0 / servingsCount } ?? existingMeal.calories
+                                let perServingProtein = protein.map { $0 / servingsCount } ?? existingMeal.protein
+                                let perServingCarbs = carbs.map { $0 / servingsCount } ?? existingMeal.carbs
+                                let perServingFat = fat.map { $0 / servingsCount } ?? existingMeal.fat
+                                
+                                if let calories = calories, let protein = protein, let carbs = carbs, let fat = fat {
+                                    print("🔄 Updating meal log (date change) with: calories=\(calories), protein=\(protein), carbs=\(carbs), fat=\(fat), servings=\(servingsCount)")
+                                    print("✅ Per-serving values: cal=\(perServingCalories), prot=\(perServingProtein ?? 0), carbs=\(perServingCarbs ?? 0), fat=\(perServingFat ?? 0)")
+                                }
+                                
                                 updatedLog.meal = MealSummary(
                                     mealLogId: existingMeal.mealLogId,
                                     mealId: existingMeal.mealId,
                                     title: existingMeal.title,
                                     description: existingMeal.description,
                                     image: existingMeal.image,
-                                    calories: updatedMealLog.calories,
+                                    calories: perServingCalories,
                                     servings: updatedMealLog.servings_consumed,
-                                    protein: existingMeal.protein,
-                                    carbs: existingMeal.carbs,
-                                    fat: existingMeal.fat,
+                                    protein: perServingProtein,
+                                    carbs: perServingCarbs,
+                                    fat: perServingFat,
                                     scheduledAt: existingMeal.scheduledAt
                                 )
                             }
@@ -489,17 +547,29 @@ func loadLogs(for date: Date) {
                             // Same date – update in place **and** force Combine to emit
                             var updatedLog = self.logs[index]              // 1️⃣ copy the element (value-type struct)
                             if let existingMeal = updatedLog.meal {
+                                // Update nutrient values if they were provided, otherwise keep original per-serving values
+                                let servingsCount = max(updatedMealLog.servings_consumed, 0.1)
+                                let perServingCalories = calories.map { $0 / servingsCount } ?? existingMeal.calories
+                                let perServingProtein = protein.map { $0 / servingsCount } ?? existingMeal.protein
+                                let perServingCarbs = carbs.map { $0 / servingsCount } ?? existingMeal.carbs
+                                let perServingFat = fat.map { $0 / servingsCount } ?? existingMeal.fat
+                                
+                                if let calories = calories, let protein = protein, let carbs = carbs, let fat = fat {
+                                    print("🔄 Updating meal log (same date) with: calories=\(calories), protein=\(protein), carbs=\(carbs), fat=\(fat), servings=\(servingsCount)")
+                                    print("✅ Per-serving values: cal=\(perServingCalories), prot=\(perServingProtein ?? 0), carbs=\(perServingCarbs ?? 0), fat=\(perServingFat ?? 0)")
+                                }
+                                
                                 updatedLog.meal = MealSummary(
                                     mealLogId: existingMeal.mealLogId,
                                     mealId: existingMeal.mealId,
                                     title: existingMeal.title,
                                     description: existingMeal.description,
                                     image: existingMeal.image,
-                                    calories: updatedMealLog.calories,
+                                    calories: perServingCalories,
                                     servings: updatedMealLog.servings_consumed,
-                                    protein: existingMeal.protein,
-                                    carbs: existingMeal.carbs,
-                                    fat: existingMeal.fat,
+                                    protein: perServingProtein,
+                                    carbs: perServingCarbs,
+                                    fat: perServingFat,
                                     scheduledAt: existingMeal.scheduledAt
                                 )
                             }

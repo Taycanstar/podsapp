@@ -1580,6 +1580,10 @@ let baseUrl = "http://172.20.10.4:8000"
         servings: Double? = nil,
         date: Date? = nil,
         mealType: String? = nil,
+        calories: Double? = nil,
+        protein: Double? = nil,
+        carbs: Double? = nil,
+        fat: Double? = nil,
         completion: @escaping (Result<UpdatedFoodLog, Error>) -> Void
     ) {
         let urlString = "\(baseUrl)/update-food-log/\(logId)/"
@@ -1604,6 +1608,22 @@ let baseUrl = "http://172.20.10.4:8000"
         
         if let mealType = mealType {
             parameters["meal_type"] = mealType
+        }
+        
+        if let calories = calories {
+            parameters["calories"] = calories
+        }
+        
+        if let protein = protein {
+            parameters["protein"] = protein
+        }
+        
+        if let carbs = carbs {
+            parameters["carbs"] = carbs
+        }
+        
+        if let fat = fat {
+            parameters["fat"] = fat
         }
         
         var request = URLRequest(url: url)
@@ -1672,6 +1692,10 @@ let baseUrl = "http://172.20.10.4:8000"
         servings: Double? = nil,
         date: Date? = nil,
         mealType: String? = nil,
+        calories: Double? = nil,
+        protein: Double? = nil,
+        carbs: Double? = nil,
+        fat: Double? = nil,
         completion: @escaping (Result<UpdatedMealLog, Error>) -> Void
     ) {
         print("🌐 NetworkManagerTwo: updateMealLog called with logId: \(logId)")
@@ -1697,6 +1721,22 @@ let baseUrl = "http://172.20.10.4:8000"
         
         if let mealType = mealType {
             parameters["meal_type"] = mealType
+        }
+        
+        if let calories = calories {
+            parameters["calories"] = calories
+        }
+        
+        if let protein = protein {
+            parameters["protein"] = protein
+        }
+        
+        if let carbs = carbs {
+            parameters["carbs"] = carbs
+        }
+        
+        if let fat = fat {
+            parameters["fat"] = fat
         }
         
         var request = URLRequest(url: url)
