@@ -23,6 +23,12 @@ struct MealLogDetails: View {
     @State private var showDatePicker: Bool = false
     @State private var showTimePicker: Bool = false
     
+    // Editable macronutrients
+    @State private var editedCalories: String = ""
+    @State private var editedProtein: String = ""
+    @State private var editedCarbs: String = ""
+    @State private var editedFat: String = ""
+    
     var meal: MealSummary? {
         log.meal
     }
@@ -32,6 +38,21 @@ struct MealLogDetails: View {
         self._editedServings = State(initialValue: Double(log.servingsConsumed ?? 1))
         self._editedDate = State(initialValue: log.scheduledAt ?? Date())
         self._editedMealType = State(initialValue: log.mealType ?? "Lunch")
+        
+        // Initialize macronutrient values
+        let servings = Double(log.servingsConsumed ?? 1)
+        if let meal = log.meal {
+            // Scale by servings and convert to strings
+            self._editedCalories = State(initialValue: String(format: "%g", meal.calories * servings))
+            self._editedProtein = State(initialValue: String(format: "%g", (meal.protein ?? 0) * servings))
+            self._editedCarbs = State(initialValue: String(format: "%g", (meal.carbs ?? 0) * servings))
+            self._editedFat = State(initialValue: String(format: "%g", (meal.fat ?? 0) * servings))
+        } else {
+            self._editedCalories = State(initialValue: "0")
+            self._editedProtein = State(initialValue: "0")
+            self._editedCarbs = State(initialValue: "0")
+            self._editedFat = State(initialValue: "0")
+        }
     }
     
     // Helper to get nutrient value scaled by servings
@@ -203,8 +224,10 @@ struct MealLogDetails: View {
                             HStack {
                                 Text("Calories")
                                 Spacer()
-                                Text(nutrientValue(meal?.calories))
-                                    .foregroundColor(.secondary)
+                                TextField("0", text: $editedCalories)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 80)
                             }
                             .padding(.horizontal)
                             .padding(.vertical, 16)
@@ -214,8 +237,10 @@ struct MealLogDetails: View {
                             HStack {
                                 Text("Protein (g)")
                                 Spacer()
-                                Text(nutrientValue(meal?.protein))
-                                    .foregroundColor(.secondary)
+                                TextField("0", text: $editedProtein)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 80)
                             }
                             .padding(.horizontal)
                             .padding(.vertical, 16)
@@ -225,8 +250,10 @@ struct MealLogDetails: View {
                             HStack {
                                 Text("Carbs (g)")
                                 Spacer()
-                                Text(nutrientValue(meal?.carbs))
-                                    .foregroundColor(.secondary)
+                                TextField("0", text: $editedCarbs)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 80)
                             }
                             .padding(.horizontal)
                             .padding(.vertical, 16)
@@ -236,8 +263,10 @@ struct MealLogDetails: View {
                             HStack {
                                 Text("Total Fat (g)")
                                 Spacer()
-                                Text(nutrientValue(meal?.fat))
-                                    .foregroundColor(.secondary)
+                                TextField("0", text: $editedFat)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 80)
                             }
                             .padding(.horizontal)
                             .padding(.vertical, 16)
@@ -324,10 +353,22 @@ struct MealLogDetails: View {
                     .disabled(isUpdating)
                 }
             }
+            
+            // Keyboard toolbar
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    hideKeyboard()
+                }
+            }
         }
         .onChange(of: editedServings) { _ in checkForChanges() }
         .onChange(of: editedDate) { _ in checkForChanges() }
         .onChange(of: editedMealType) { _ in checkForChanges() }
+        .onChange(of: editedCalories) { _ in checkForChanges() }
+        .onChange(of: editedProtein) { _ in checkForChanges() }
+        .onChange(of: editedCarbs) { _ in checkForChanges() }
+        .onChange(of: editedFat) { _ in checkForChanges() }
         
         .sheet(isPresented: $showDatePicker) {
             NavigationView {
@@ -399,16 +440,32 @@ struct MealLogDetails: View {
         let originalDate = log.scheduledAt ?? Date()
         let originalMealType = log.mealType ?? "Lunch"
         
+        // Get original nutrient values
+        let servings = Double(log.servingsConsumed ?? 1)
+        let originalCalories = String(format: "%g", (meal?.calories ?? 0) * servings)
+        let originalProtein = String(format: "%g", (meal?.protein ?? 0) * servings)
+        let originalCarbs = String(format: "%g", (meal?.carbs ?? 0) * servings)
+        let originalFat = String(format: "%g", (meal?.fat ?? 0) * servings)
+        
         let servingsChanged = editedServings != originalServings
         let dateChanged = abs(editedDate.timeIntervalSince(originalDate)) > 60
         let mealTypeChanged = editedMealType != originalMealType
+        let caloriesChanged = editedCalories != originalCalories
+        let proteinChanged = editedProtein != originalProtein
+        let carbsChanged = editedCarbs != originalCarbs
+        let fatChanged = editedFat != originalFat
         
-        hasChanges = servingsChanged || dateChanged || mealTypeChanged
+        hasChanges = servingsChanged || dateChanged || mealTypeChanged || 
+                    caloriesChanged || proteinChanged || carbsChanged || fatChanged
         
         print("🔍 Checking for changes:")
         print("   Original servings: \(originalServings), Edited: \(editedServings), Changed: \(servingsChanged)")
         print("   Original date: \(originalDate), Edited: \(editedDate), Changed: \(dateChanged)")
         print("   Original meal type: \(originalMealType), Edited: \(editedMealType), Changed: \(mealTypeChanged)")
+        print("   Original calories: \(originalCalories), Edited: \(editedCalories), Changed: \(caloriesChanged)")
+        print("   Original protein: \(originalProtein), Edited: \(editedProtein), Changed: \(proteinChanged)")
+        print("   Original carbs: \(originalCarbs), Edited: \(editedCarbs), Changed: \(carbsChanged)")
+        print("   Original fat: \(originalFat), Edited: \(editedFat), Changed: \(fatChanged)")
         print("   Has changes: \(hasChanges)")
     }
     
