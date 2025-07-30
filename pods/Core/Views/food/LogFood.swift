@@ -1090,9 +1090,10 @@ private struct MealListView: View {
     var onItemAdded: ((Food) -> Void)?
     
     var body: some View {
-        VStack(spacing: 8) {
-            // Add invisible spacing at the top to prevent overlap with header
-            Color.clear.frame(height: 6)
+        ScrollView {
+            VStack(spacing: 8) {
+                // Add invisible spacing at the top to prevent overlap with header
+                Color.clear.frame(height: 6)
             
             // Show "Generate Meal with AI" button when search text is not empty
             if !searchText.isEmpty {
@@ -1234,6 +1235,7 @@ private struct MealListView: View {
             }
         }
         .padding(.bottom, 16)
+        }
         .background(Color("iosbg2"))
         .onAppear {
             if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
