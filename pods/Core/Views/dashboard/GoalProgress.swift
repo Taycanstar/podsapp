@@ -444,7 +444,7 @@ struct GoalProgress: View {
                         vmCalorieGoal: vm.calorieGoal,
                         vm: vm
                     )
-                    .presentationDetents([.fraction(0.45)])
+                    .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.fraction(0.45)])
                     .presentationDragIndicator(.visible)
                 }
                 

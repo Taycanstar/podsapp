@@ -1848,7 +1848,7 @@ struct MacroGenerationCard: View {
                     .foregroundColor(.blue)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Generating Macros with AI")
+                    Text(foodManager.macroLoadingTitle)
                         .font(.headline)
                         .fontWeight(.semibold)
                     

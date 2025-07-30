@@ -103,6 +103,7 @@ class FoodManager: ObservableObject {
     @Published var isGeneratingMacros = false
     @Published var macroGenerationStage = 0
     @Published var macroLoadingMessage: String = ""
+    @Published var macroLoadingTitle: String = "Generating Macros with AI"
     
     @Published var isScanningBarcode = false
     @Published var barcodeLoadingMessage: String = ""

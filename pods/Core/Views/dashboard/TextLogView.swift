@@ -244,17 +244,21 @@ struct TextLogView: View {
         foodManager.isLoading = true
         foodManager.macroGenerationStage = 0
         foodManager.macroLoadingMessage = "Analyzing description..."
+        foodManager.macroLoadingTitle = "Processing with AI"
+        
+        // Generic loading messages that work for both food and activities
+        let genericMessages = [
+            "Analyzing description...",
+            "Determining content type...",
+            "Processing information...",
+            "Creating log entry..."
+        ]
         
         // Create a timer to cycle through loading messages for better UX
         let loadingTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { timer in
             DispatchQueue.main.async {
                 foodManager.macroGenerationStage = (foodManager.macroGenerationStage + 1) % 4
-                foodManager.macroLoadingMessage = [
-                    "Analyzing description...",
-                    "Determining content type...",
-                    "Generating nutritional data...",
-                    "Creating log entry..."
-                ][foodManager.macroGenerationStage]
+                foodManager.macroLoadingMessage = genericMessages[foodManager.macroGenerationStage]
             }
         }
         
@@ -269,6 +273,18 @@ struct TextLogView: View {
                 
                 // Check what type of entry this is
                 if let entryType = responseData["entry_type"] as? String {
+                    
+                    // Update loading message and title based on detected type
+                    DispatchQueue.main.async {
+                        loadingTimer.invalidate() // Stop generic cycling
+                        if entryType == "food" {
+                            self.foodManager.macroLoadingTitle = "Generating Macros with AI"
+                            self.foodManager.macroLoadingMessage = "Calculating nutritional data..."
+                        } else if entryType == "activity" {
+                            self.foodManager.macroLoadingTitle = "Logging Activity with AI"
+                            self.foodManager.macroLoadingMessage = "Calculating calories burned..."
+                        }
+                    }
                     
                     if entryType == "food" {
                         // Handle food response - extract LoggedFood data
@@ -286,6 +302,7 @@ struct TextLogView: View {
                     self.foodManager.isGeneratingMacros = false
                     self.foodManager.isLoading = false
                     self.foodManager.macroLoadingMessage = ""
+                    self.foodManager.macroLoadingTitle = "Generating Macros with AI" // Reset to default
                 }
                 
             case .failure(let error):
@@ -297,6 +314,7 @@ struct TextLogView: View {
                     self.foodManager.isGeneratingMacros = false
                     self.foodManager.isLoading = false
                     self.foodManager.macroLoadingMessage = ""
+                    self.foodManager.macroLoadingTitle = "Generating Macros with AI" // Reset to default
                 }
             }
         }

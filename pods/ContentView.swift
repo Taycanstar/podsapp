@@ -147,17 +147,7 @@ struct ContentView: View {
                         .environmentObject(viewModel)
                 }
                 
-                .sheet(isPresented: $showQuickPodView) {
-                    QuickPodView(isPresented: $showQuickPodView) { newPod in
-                        self.newPodId = newPod.id
-                        self.selectedTab = 0
-                        self.showNewSheet = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            self.shouldNavigateToNewPod = true
-                        }
-                    }
-                    
-                }
+
                 
                 .sheet(isPresented: $showNewSheet) {
                     NewSheetView(isPresented: $showNewSheet,
