@@ -400,7 +400,8 @@ struct MealDetailView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.name)
-                                .font(.headline)
+                                .font(.system(size: 16))
+                                .fontWeight(.semibold)
                             
                             HStack {
                                 Text(item.servingText ?? "1 serving")

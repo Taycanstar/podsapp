@@ -42,6 +42,47 @@ struct MealLogDetails: View {
     
     @State private var showMoreNutrients: Bool = false
     
+    // List of additional nutrients to show (matching FoodLogDetails pattern)
+    private var additionalNutrients: [(String, Bool)] {
+        [
+            ("Saturated Fat (g)", false),
+            ("Polyunsaturated Fat (g)", false),
+            ("Monounsaturated Fat (g)", false),
+            ("Trans Fat (g)", false),
+            ("Cholesterol (mg)", false),
+            ("Sodium (mg)", false),
+            ("Potassium (mg)", false),
+            ("Sugar (g)", false),
+            ("Fiber (g)", false),
+            ("Vitamin A (%)", false),
+            ("Vitamin C (%)", false),
+            ("Calcium (%)", false),
+            ("Iron (%)", false),
+            ("Calories per serving", true),
+            ("Protein per serving (g)", true),
+            ("Carbs per serving (g)", true),
+            ("Fat per serving (g)", true)
+        ]
+    }
+    
+    // Calculate nutrient values for available metrics
+    private func calculateNutrientValue(for label: String) -> String {
+        guard let meal = meal else { return "0" }
+        
+        switch label {
+        case "Calories per serving":
+            return String(format: "%g", meal.calories)
+        case "Protein per serving (g)":
+            return String(format: "%g", meal.protein ?? 0)
+        case "Carbs per serving (g)":
+            return String(format: "%g", meal.carbs ?? 0)
+        case "Fat per serving (g)":
+            return String(format: "%g", meal.fat ?? 0)
+        default:
+            return "Not available"
+        }
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -202,10 +243,10 @@ struct MealLogDetails: View {
                     }
                     .padding(.horizontal)
                     
-                    // Show More Info button (similar to nutrients button)
+                    // Show More Nutrients button (matching FoodLogDetails)
                     Button(action: { withAnimation { showMoreNutrients.toggle() } }) {
                         HStack {
-                            Text(showMoreNutrients ? "Hide Additional Info" : "Show More Info")
+                            Text(showMoreNutrients ? "Hide Additional Nutrients" : "Show More Nutrients")
                                 .foregroundColor(.accentColor)
                             Image(systemName: showMoreNutrients ? "chevron.up" : "chevron.down")
                                 .foregroundColor(.accentColor)
@@ -218,60 +259,26 @@ struct MealLogDetails: View {
                     .padding(.horizontal)
                 }
                 
-                // Additional info section (collapsible)
+                // Additional nutrients section (collapsible)
                 if showMoreNutrients {
                     VStack(alignment: .leading, spacing: 16) {
                         ZStack(alignment: .top) {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color("iosnp"))
                             VStack(spacing: 0) {
-                                // Meal Type
-                                HStack {
-                                    Text("Meal Type")
-                                    Spacer()
-                                    Text(log.mealType ?? "Lunch")
-                                        .foregroundColor(.secondary)
-                                }
-                                .padding(.horizontal)
-                                .padding(.vertical, 16)
-                                Divider().padding(.leading, 16)
-                                
-                                // Meal Time
-                                if let mealTime = log.mealTime {
+                                ForEach(additionalNutrients, id: \.0) { label, isAvailable in
                                     HStack {
-                                        Text("Meal Time")
+                                        Text(label)
                                         Spacer()
-                                        Text(mealTime)
+                                        Text(isAvailable ? calculateNutrientValue(for: label) : "Not available")
                                             .foregroundColor(.secondary)
                                     }
                                     .padding(.horizontal)
                                     .padding(.vertical, 16)
-                                    Divider().padding(.leading, 16)
-                                }
-                                
-                                // Scheduled At
-                                if let scheduledAt = meal?.scheduledAt {
-                                    HStack {
-                                        Text("Originally Scheduled")
-                                        Spacer()
-                                        Text(scheduledAt, style: .time)
-                                            .foregroundColor(.secondary)
+                                    
+                                    if label != additionalNutrients.last?.0 {
+                                        Divider().padding(.leading, 16)
                                     }
-                                    .padding(.horizontal)
-                                    .padding(.vertical, 16)
-                                    Divider().padding(.leading, 16)
-                                }
-                                
-                                // Meal ID
-                                if let mealId = meal?.mealId {
-                                    HStack {
-                                        Text("Meal ID")
-                                        Spacer()
-                                        Text(String(mealId))
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .padding(.horizontal)
-                                    .padding(.vertical, 16)
                                 }
                             }
                         }
