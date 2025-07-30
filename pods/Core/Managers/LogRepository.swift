@@ -68,4 +68,13 @@ final class LogRepository {
             }
         }
     }
+
+    func updateMealLog(userEmail: String, logId: Int, servings: Double, date: Date, mealType: String, completion: @escaping (Result<UpdatedMealLog, Error>) -> Void) {
+        print("📡 LogRepository: updateMealLog called with logId: \(logId)")
+        api.updateMealLog(userEmail: userEmail, logId: logId, servings: servings, date: date, mealType: mealType) { result in
+            DispatchQueue.main.async {
+                completion(result)
+            }
+        }
+    }
 }

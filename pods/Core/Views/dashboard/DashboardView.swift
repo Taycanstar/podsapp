@@ -21,6 +21,7 @@ struct DashboardView: View {
 
 
     @State private var selectedFoodLogId: String? = nil
+    @State private var selectedMealLogId: String? = nil
     
     // ─── Nutrition label name input ────────────────────────────────────────
     @State private var nutritionProductName = ""
@@ -250,6 +251,8 @@ private var remainingCal: Double { vm.remainingCalories }
                                     .onTapGesture {
                                         if log.type == .food {
                                             selectedFoodLogId = log.id
+                                        } else if log.type == .meal {
+                                            selectedMealLogId = log.id
                                         }
                                     }
                                 // NavigationLink for food logs
@@ -258,6 +261,19 @@ private var remainingCal: Double { vm.remainingCalories }
                                         destination: FoodLogDetails(log: log),
                                         tag: log.id,
                                         selection: $selectedFoodLogId
+                                    ) {
+                                        EmptyView()
+                                    }
+                                    .opacity(0)
+                                    .frame(width: 0, height: 0)
+                                }
+                                
+                                // NavigationLink for meal logs
+                                if log.type == .meal {
+                                    NavigationLink(
+                                        destination: MealLogDetails(log: log),
+                                        tag: log.id,
+                                        selection: $selectedMealLogId
                                     ) {
                                         EmptyView()
                                     }

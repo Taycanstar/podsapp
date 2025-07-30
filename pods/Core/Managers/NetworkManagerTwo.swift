@@ -15,8 +15,8 @@ class NetworkManagerTwo {
     
 
 // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-// let baseUrl = "http://172.20.10.4:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+let baseUrl = "http://172.20.10.4:8000"
 
     // Network errors - scoped to NetworkManagerTwo
     enum NetworkError: LocalizedError {
@@ -1656,6 +1656,99 @@ class NetworkManagerTwo {
                 
             } catch {
                 print("❌ Decoding error in update food log: \(error)")
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("Response data: \(json)")
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+    
+    func updateMealLog(
+        userEmail: String,
+        logId: Int,
+        servings: Double? = nil,
+        date: Date? = nil,
+        mealType: String? = nil,
+        completion: @escaping (Result<UpdatedMealLog, Error>) -> Void
+    ) {
+        print("🌐 NetworkManagerTwo: updateMealLog called with logId: \(logId)")
+        let urlString = "\(baseUrl)/update-meal-log/\(logId)/"
+        
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var parameters: [String: Any] = [
+            "user_email": userEmail
+        ]
+        
+        // Add optional parameters
+        if let servings = servings {
+            parameters["servings"] = servings
+        }
+        
+        if let date = date {
+            parameters["date"] = ISO8601DateFormatter().string(from: date)
+        }
+        
+        if let mealType = mealType {
+            parameters["meal_type"] = mealType
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("🍽️ Updating meal log \(logId) for user \(userEmail) with parameters: \(parameters)")
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
+            // Check if there's an error response
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                // Don't use convertFromSnakeCase for this endpoint since UpdateMealLogResponse expects snake_case keys
+                
+                let response = try decoder.decode(UpdateMealLogResponse.self, from: data)
+                
+                DispatchQueue.main.async {
+                    print("✅ Successfully updated meal log \(logId) for user \(userEmail)")
+                    completion(.success(response.meal_log))
+                }
+                
+            } catch {
+                print("❌ Decoding error in update meal log: \(error)")
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     print("Response data: \(json)")
                 }

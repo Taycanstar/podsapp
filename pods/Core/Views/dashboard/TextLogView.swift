@@ -244,7 +244,7 @@ struct TextLogView: View {
         foodManager.isLoading = true
         foodManager.macroGenerationStage = 0
         foodManager.macroLoadingMessage = "Analyzing description..."
-        foodManager.macroLoadingTitle = "Processing with AI"
+        foodManager.macroLoadingTitle = "Generating with AI"
         
         // Generic loading messages that work for both food and activities
         let genericMessages = [

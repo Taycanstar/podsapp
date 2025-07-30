@@ -171,12 +171,12 @@ struct LoggedFood: Codable, Identifiable {
 // Models for updating food logs
 struct UpdatedFoodLog: Codable, Identifiable {
     let id: Int
-    let servings: Double
-    let date: String  // ISO format date string
-    let meal_type: String
-    let notes: String
-    let calories: Double
-    let food: LoggedFoodItem
+    var servings: Double
+    var date: String  // ISO format date string
+    var meal_type: String
+    var notes: String
+    var calories: Double
+    var food: LoggedFoodItem
     
     // Convert date string to Date object
     var logDate: Date? {
@@ -190,7 +190,26 @@ struct UpdateFoodLogResponse: Codable {
     let food_log: UpdatedFoodLog
 }
 
+struct UpdatedMealLog: Codable, Identifiable {
+    let id: Int
+    var servings_consumed: Double
+    var date: String  // ISO format date string
+    var meal_type: String
+    var notes: String
+    var calories: Double
+    var meal: MealSummary
+    
+    // Convert date string to Date object
+    var logDate: Date? {
+        let formatter = ISO8601DateFormatter()
+        return formatter.date(from: date)
+    }
+}
 
+struct UpdateMealLogResponse: Codable {
+    let success: Bool
+    var meal_log: UpdatedMealLog
+}
 
 // Add this struct to your models
 struct FoodLogsResponse: Codable {
