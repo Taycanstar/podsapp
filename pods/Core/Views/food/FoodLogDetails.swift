@@ -9,6 +9,7 @@ import SwiftUI
 
 struct FoodLogDetails: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isTabBarVisible) private var isTabBarVisible
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     let log: CombinedLog
@@ -238,6 +239,14 @@ struct FoodLogDetails: View {
             .padding(.top, 16)
         }
         .background(Color("iosbg"))
+        .onAppear {
+            // Hide tab bar when food log details appears
+            isTabBarVisible.wrappedValue = false
+        }
+        .onDisappear {
+            // Restore tab bar when food log details disappears
+            isTabBarVisible.wrappedValue = true
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {

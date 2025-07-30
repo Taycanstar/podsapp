@@ -157,6 +157,7 @@ struct FoodContainerView: View {
     @State private var selectedMeal: String
     @State private var initialFoodTab: String?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isTabBarVisible) private var isTabBarVisible
     @EnvironmentObject var viewModel: OnboardingViewModel
     
     // Add the observable state object
@@ -608,6 +609,9 @@ struct FoodContainerView: View {
             }
         }
         .onAppear {
+            // Hide tab bar when food container appears
+            isTabBarVisible.wrappedValue = false
+            
             // Set up notification listener for the "cancel edit" action
             NotificationCenter.default.addObserver(
                 forName: Notification.Name("RestoreOriginalMealItemsNotification"),
@@ -641,6 +645,10 @@ struct FoodContainerView: View {
             ) { _ in
                 dismissAndNavigateToDashboard()
             }
+        }
+        .onDisappear {
+            // Restore tab bar when food container disappears
+            isTabBarVisible.wrappedValue = true
         }
     }
 }

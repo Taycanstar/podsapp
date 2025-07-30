@@ -9,6 +9,7 @@ import SwiftUI
 
 struct MealLogDetails: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isTabBarVisible) private var isTabBarVisible
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     let log: CombinedLog
@@ -43,29 +44,29 @@ struct MealLogDetails: View {
     @State private var showMoreNutrients: Bool = false
     
     // List of additional nutrients to show (matching FoodLogDetails pattern)
-    private var additionalNutrients: [(String, Bool)] {
+    private var additionalNutrients: [String] {
         [
-            ("Saturated Fat (g)", false),
-            ("Polyunsaturated Fat (g)", false),
-            ("Monounsaturated Fat (g)", false),
-            ("Trans Fat (g)", false),
-            ("Cholesterol (mg)", false),
-            ("Sodium (mg)", false),
-            ("Potassium (mg)", false),
-            ("Sugar (g)", false),
-            ("Fiber (g)", false),
-            ("Vitamin A (%)", false),
-            ("Vitamin C (%)", false),
-            ("Calcium (%)", false),
-            ("Iron (%)", false),
-            ("Calories per serving", true),
-            ("Protein per serving (g)", true),
-            ("Carbs per serving (g)", true),
-            ("Fat per serving (g)", true)
+            "Saturated Fat (g)",
+            "Polyunsaturated Fat (g)",
+            "Monounsaturated Fat (g)",
+            "Trans Fat (g)",
+            "Cholesterol (mg)",
+            "Sodium (mg)",
+            "Potassium (mg)",
+            "Sugar (g)",
+            "Fiber (g)",
+            "Vitamin A (%)",
+            "Vitamin C (%)",
+            "Calcium (%)",
+            "Iron (%)",
+            "Calories per serving",
+            "Protein per serving (g)",
+            "Carbs per serving (g)",
+            "Fat per serving (g)"
         ]
     }
     
-    // Calculate nutrient values for available metrics
+    // Calculate nutrient values - show actual values for available nutrients, "0" for unavailable
     private func calculateNutrientValue(for label: String) -> String {
         guard let meal = meal else { return "0" }
         
@@ -79,7 +80,8 @@ struct MealLogDetails: View {
         case "Fat per serving (g)":
             return String(format: "%g", meal.fat ?? 0)
         default:
-            return "Not available"
+            // For nutrients we don't have data for, return "0"
+            return "0"
         }
     }
     
@@ -266,17 +268,17 @@ struct MealLogDetails: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color("iosnp"))
                             VStack(spacing: 0) {
-                                ForEach(additionalNutrients, id: \.0) { label, isAvailable in
+                                ForEach(additionalNutrients, id: \.self) { label in
                                     HStack {
                                         Text(label)
                                         Spacer()
-                                        Text(isAvailable ? calculateNutrientValue(for: label) : "Not available")
+                                        Text(calculateNutrientValue(for: label))
                                             .foregroundColor(.secondary)
                                     }
                                     .padding(.horizontal)
                                     .padding(.vertical, 16)
                                     
-                                    if label != additionalNutrients.last?.0 {
+                                    if label != additionalNutrients.last {
                                         Divider().padding(.leading, 16)
                                     }
                                 }
@@ -292,6 +294,14 @@ struct MealLogDetails: View {
             .padding(.top, 16)
         }
         .background(Color("iosbg"))
+        .onAppear {
+            // Hide tab bar when meal log details appears
+            isTabBarVisible.wrappedValue = false
+        }
+        .onDisappear {
+            // Restore tab bar when meal log details disappears
+            isTabBarVisible.wrappedValue = true
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
