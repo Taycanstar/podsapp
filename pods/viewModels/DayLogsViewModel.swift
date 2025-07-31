@@ -75,9 +75,9 @@ final class DayLogsViewModel: ObservableObject {
     clearPendingCache()
     
     // Load nutrition goals if email is provided
-    if !email.isEmpty {
-      fetchNutritionGoals()
-    }
+      if !email.isEmpty {
+          fetchNutritionGoals()
+      }
   }
 
   func setEmail(_ newEmail: String) {
