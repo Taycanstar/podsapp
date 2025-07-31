@@ -165,6 +165,7 @@ struct ProfileView: View {
                         
                     }
                     .scrollContentBackground(.hidden)
+                    .padding(.bottom, 80) // Add padding to account for custom tab bar
         }
         .navigationBarTitle("Settings and privacy", displayMode: .inline)
         .sheet(isPresented: $showingMail) {

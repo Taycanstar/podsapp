@@ -11,11 +11,17 @@ struct ScanLogView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.isTabBarVisible) var isTabBarVisible
     
-    // State for toggle switches - default values as specified
-    @State private var photoScanEnabled: Bool = false
-    @State private var foodLabelEnabled: Bool = true
-    @State private var barcodeEnabled: Bool = true
-    @State private var galleryImportEnabled: Bool = false
+    // UserDefaults keys
+    private let photoScanKey = "scanPreview_photoScan"
+    private let foodLabelKey = "scanPreview_foodLabel"
+    private let barcodeKey = "scanPreview_barcode"
+    private let galleryImportKey = "scanPreview_galleryImport"
+    
+    // State for toggle switches - initialized from UserDefaults with fallback to defaults
+    @State private var photoScanEnabled: Bool = UserDefaults.standard.object(forKey: "scanPreview_photoScan") as? Bool ?? false
+    @State private var foodLabelEnabled: Bool = UserDefaults.standard.object(forKey: "scanPreview_foodLabel") as? Bool ?? true
+    @State private var barcodeEnabled: Bool = UserDefaults.standard.object(forKey: "scanPreview_barcode") as? Bool ?? true
+    @State private var galleryImportEnabled: Bool = UserDefaults.standard.object(forKey: "scanPreview_galleryImport") as? Bool ?? false
     
     var body: some View {
         Form {
@@ -27,6 +33,9 @@ struct ScanLogView: View {
                     Spacer()
                     Toggle("", isOn: $photoScanEnabled)
                         .labelsHidden()
+                        .onChange(of: photoScanEnabled) { newValue in
+                            UserDefaults.standard.set(newValue, forKey: photoScanKey)
+                        }
                 }
                 .listRowBackground(rowBackgroundColor)
                 
@@ -37,6 +46,9 @@ struct ScanLogView: View {
                     Spacer()
                     Toggle("", isOn: $foodLabelEnabled)
                         .labelsHidden()
+                        .onChange(of: foodLabelEnabled) { newValue in
+                            UserDefaults.standard.set(newValue, forKey: foodLabelKey)
+                        }
                 }
                 .listRowBackground(rowBackgroundColor)
                 
@@ -47,6 +59,9 @@ struct ScanLogView: View {
                     Spacer()
                     Toggle("", isOn: $barcodeEnabled)
                         .labelsHidden()
+                        .onChange(of: barcodeEnabled) { newValue in
+                            UserDefaults.standard.set(newValue, forKey: barcodeKey)
+                        }
                 }
                 .listRowBackground(rowBackgroundColor)
                 
@@ -57,6 +72,9 @@ struct ScanLogView: View {
                     Spacer()
                     Toggle("", isOn: $galleryImportEnabled)
                         .labelsHidden()
+                        .onChange(of: galleryImportEnabled) { newValue in
+                            UserDefaults.standard.set(newValue, forKey: galleryImportKey)
+                        }
                 }
                 .listRowBackground(rowBackgroundColor)
             }
