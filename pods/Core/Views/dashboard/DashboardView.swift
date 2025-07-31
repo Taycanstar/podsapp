@@ -1704,6 +1704,15 @@ struct LogRow: View {
                         Text("\(Int(log.displayCalories))")
                             .font(.system(size: 22, weight: .semibold, design: .rounded))
                             .foregroundColor(.primary)
+                            .onAppear {
+                                print("🎯 DashboardView LogRow - Log ID: \(log.id), displayCalories: \(log.displayCalories), calories: \(log.calories)")
+                                if let food = log.food {
+                                    print("   Food calories: \(food.calories), servings: \(food.numberOfServings), calculated: \(food.calories * food.numberOfServings)")
+                                }
+                                if let meal = log.meal {
+                                    print("   Meal calories: \(meal.calories), servings: \(meal.servings), calculated: \(meal.calories * meal.servings)")
+                                }
+                            }
                         Text("cal")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.secondary)

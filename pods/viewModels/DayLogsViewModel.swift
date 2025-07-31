@@ -372,10 +372,16 @@ func loadLogs(for date: Date) {
                             // Create updated log for the new date
                             var updatedLog = log
                             updatedLog.food?.numberOfServings = updatedFoodLog.servings
-                            updatedLog.calories = updatedFoodLog.calories
                             updatedLog.mealType = updatedFoodLog.meal_type
                             updatedLog.scheduledAt = updatedFoodLog.logDate
                             updatedLog.message = "\(updatedFoodLog.food.displayName) – \(updatedFoodLog.meal_type)"
+                            
+                            // IMPORTANT: Use our edited calories value, not the backend's!
+                            if let editedCalories = calories {
+                                updatedLog.calories = editedCalories
+                            } else {
+                                updatedLog.calories = updatedFoodLog.calories
+                            }
                             
                             // Update individual nutrient values if they were provided
                             if let calories = calories, let protein = protein, let carbs = carbs, let fat = fat, let food = updatedLog.food {
@@ -412,10 +418,16 @@ func loadLogs(for date: Date) {
                             // Same date – update in place **and** force Combine to emit
                             var updatedLog = self.logs[index]              // 1️⃣ copy the element (value-type struct)
                             updatedLog.food?.numberOfServings = updatedFoodLog.servings
-                            updatedLog.calories              = updatedFoodLog.calories
                             updatedLog.mealType              = updatedFoodLog.meal_type
                             updatedLog.scheduledAt           = updatedFoodLog.logDate
                             updatedLog.message               = "\(updatedFoodLog.food.displayName) – \(updatedFoodLog.meal_type)"
+                            
+                            // IMPORTANT: Use our edited calories value, not the backend's!
+                            if let editedCalories = calories {
+                                updatedLog.calories = editedCalories
+                            } else {
+                                updatedLog.calories = updatedFoodLog.calories
+                            }
                             
                             // Update individual nutrient values if they were provided
                             if let calories = calories, let protein = protein, let carbs = carbs, let fat = fat, let food = updatedLog.food {
@@ -440,8 +452,12 @@ func loadLogs(for date: Date) {
                                 print("✅ Updated food log locally (same date) with per-serving values: cal=\(calories / servingsCount), prot=\(protein / servingsCount), carbs=\(carbs / servingsCount), fat=\(fat / servingsCount)")
                             }
 
-                            // 2️⃣ overwrite the slot – this changes the array instance, so @Published fires
-                            self.logs[index] = updatedLog
+                            // 2️⃣ Force SwiftUI to detect the change by replacing the entire array
+                            var newLogs = self.logs
+                            newLogs[index] = updatedLog
+                            self.logs = newLogs
+                            
+                            print("📱 Force UI refresh for food log - replaced logs array")
                         }
                         
                         // Recalculate totals for current day
@@ -530,7 +546,14 @@ func loadLogs(for date: Date) {
                                     scheduledAt: existingMeal.scheduledAt
                                 )
                             }
-                            updatedLog.calories = updatedMealLog.calories
+                            
+                            // IMPORTANT: Use our edited calories value, not the backend's!
+                            if let editedCalories = calories {
+                                updatedLog.calories = editedCalories
+                            } else {
+                                updatedLog.calories = updatedMealLog.calories
+                            }
+                            
                             updatedLog.mealType = updatedMealLog.meal_type
                             updatedLog.scheduledAt = ISO8601DateFormatter().date(from: updatedMealLog.date)
                             updatedLog.message = "\(updatedMealLog.meal.title) – \(updatedMealLog.meal_type)"
@@ -573,13 +596,24 @@ func loadLogs(for date: Date) {
                                     scheduledAt: existingMeal.scheduledAt
                                 )
                             }
-                            updatedLog.calories = updatedMealLog.calories
+                            
+                            // IMPORTANT: Use our edited calories value, not the backend's!
+                            if let editedCalories = calories {
+                                updatedLog.calories = editedCalories
+                            } else {
+                                updatedLog.calories = updatedMealLog.calories
+                            }
+                            
                             updatedLog.mealType = updatedMealLog.meal_type
                             updatedLog.scheduledAt = ISO8601DateFormatter().date(from: updatedMealLog.date)
                             updatedLog.message = "\(updatedMealLog.meal.title) – \(updatedMealLog.meal_type)"
 
-                            // 2️⃣ overwrite the slot – this changes the array instance, so @Published fires
-                            self.logs[index] = updatedLog
+                            // 2️⃣ Force SwiftUI to detect the change by replacing the entire array
+                            var newLogs = self.logs
+                            newLogs[index] = updatedLog
+                            self.logs = newLogs
+                            
+                            print("📱 Force UI refresh for meal log - replaced logs array")
                         }
                         
                         // Recalculate totals for current day
