@@ -17,22 +17,7 @@ struct DataControlsView: View {
         ZStack {
             Form {
                 Section {
-                    Button(action: {
-                        showingDeleteAllPodsAlert = true
-                    }) {
-                        Text("Delete all pods")
-                            .foregroundColor(.red)
-                    }
-                    .alert(isPresented: $showingDeleteAllPodsAlert) {
-                        Alert(
-                            title: Text("Delete All Pods"),
-                            message: Text("Are you sure you want to delete all pods? This action cannot be undone."),
-                            primaryButton: .destructive(Text("Delete")) {
-                                deleteAllPods()
-                            },
-                            secondaryButton: .cancel()
-                        )
-                    }
+                 
 
                     Button(action: {
                         showingDeleteAccountAlert = true
