@@ -118,6 +118,12 @@ struct ProfileView: View {
                               }
                               .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                               
+                              NavigationLink(destination: ScanLogView()) {
+                                  Label("Scan and Log Preview", systemImage: "viewfinder")
+                                      .foregroundColor(iconColor)
+                              }
+                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                              
                           }
                         .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                         Section(header: Text("Support & About")) {

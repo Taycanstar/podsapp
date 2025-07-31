@@ -189,6 +189,7 @@
 		36A85D072DC3020000DD4266 /* SportSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85D062DC3020000DD4266 /* SportSelectionView.swift */; };
 		36A91DB72E37094500414543 /* ExerciseLoggingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DB62E37093E00414543 /* ExerciseLoggingView.swift */; };
 		36A91DB92E39B37500414543 /* MealLogDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DB82E39B36D00414543 /* MealLogDetails.swift */; };
+		36A91DBB2E3BE2A100414543 /* ScanLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DBA2E3BE29B00414543 /* ScanLogView.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -474,6 +475,7 @@
 		36A85D062DC3020000DD4266 /* SportSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SportSelectionView.swift; path = Pods/onboarding/SportSelectionView.swift; sourceTree = SOURCE_ROOT; };
 		36A91DB62E37093E00414543 /* ExerciseLoggingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseLoggingView.swift; sourceTree = "<group>"; };
 		36A91DB82E39B36D00414543 /* MealLogDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealLogDetails.swift; sourceTree = "<group>"; };
+		36A91DBA2E3BE29B00414543 /* ScanLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanLogView.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -1007,6 +1009,7 @@
 		36CB032A2D5AAD4A006A74E9 /* food */ = {
 			isa = PBXGroup;
 			children = (
+				36A91DBA2E3BE29B00414543 /* ScanLogView.swift */,
 				36A91DB82E39B36D00414543 /* MealLogDetails.swift */,
 				36CB032B2D5AAD5C006A74E9 /* LogFood.swift */,
 				36CB032D2D5AAFA0006A74E9 /* FoodContainerView.swift */,
@@ -1376,6 +1379,7 @@
 				3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */,
 				36ED35F72DDE538E00D174FB /* NameFoodView.swift in Sources */,
 				36A85CF52DB453AD00DD4266 /* OnboardingProgress.swift in Sources */,
+				36A91DBB2E3BE2A100414543 /* ScanLogView.swift in Sources */,
 				363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */,
 				368D67182BDCC454000434E0 /* PodItemCellImage.swift in Sources */,
 				3698E4F22C21F9730040AF60 /* ResetPasswordView.swift in Sources */,
