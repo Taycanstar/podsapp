@@ -166,10 +166,13 @@ struct ContentView: View {
                 .fullScreenCover(isPresented: $showFoodScanner) {
                     FoodScannerView(isPresented: $showFoodScanner, selectedMeal: selectedMeal, onFoodScanned: { food, foodLogId in
                         // When a barcode is scanned and food is returned, show the confirmation view
+                        print("🔍 DEBUG ContentView: Received food: \(food.description), foodLogId: \(String(describing: foodLogId))")
                         scannedFood = food
                         scannedFoodLogId = foodLogId
+                        print("🔍 DEBUG ContentView: Set scannedFood and scannedFoodLogId")
                         // Small delay to ensure transitions are smooth
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            print("🔍 DEBUG ContentView: About to show ConfirmLogView sheet")
                             showConfirmFoodView = true
                         }
                     })
@@ -278,20 +281,29 @@ struct ContentView: View {
              fetchSubscriptionInfo()
          }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowFoodConfirmation"))) { notification in
-            // Handle barcode scan completion - show confirmation view
+            // Handle scan completion - show confirmation view (works for both barcode and photo scanning)
+            print("🔍 DEBUG NotificationCenter: Received ShowFoodConfirmation notification")
             if let userInfo = notification.userInfo,
-               let food = userInfo["food"] as? Food,
-               let barcode = userInfo["barcode"] as? String {
+               let food = userInfo["food"] as? Food {
                 print("📱 Received ShowFoodConfirmation notification for: \(food.displayName)")
+                print("🔍 DEBUG NotificationCenter: Setting scannedFood and showing sheet")
                 
                 // Set the scanned food data
                 scannedFood = food
-                scannedFoodLogId = nil  // No log ID yet since not confirmed
+                // Try to get foodLogId if it exists (for photo scanning), otherwise nil (for barcode scanning)
+                if let foodLogId = userInfo["foodLogId"] as? Int {
+                    scannedFoodLogId = foodLogId
+                } else {
+                    scannedFoodLogId = nil  // No log ID yet since not confirmed
+                }
                 
                 // Show the confirmation view
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    print("🔍 DEBUG NotificationCenter: About to set showConfirmFoodView = true")
                     showConfirmFoodView = true
                 }
+            } else {
+                print("❌ DEBUG NotificationCenter: Failed to extract food from notification userInfo")
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowNewSheetFromDashboard"))) { _ in

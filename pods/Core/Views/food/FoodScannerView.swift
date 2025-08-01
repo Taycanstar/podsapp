@@ -15,11 +15,7 @@ extension Notification.Name {
     static let toggleFlash = Notification.Name("toggleFlash")
 }
 
-// Simple enum for navigating to confirmation screen without external dependencies
-struct BarcodeFood: Hashable {
-    let food: Food
-    let foodLogId: Int?
-}
+// Removed BarcodeFood struct - using onFoodScanned callback instead
 
 struct FoodScannerView: View {
     @Binding var isPresented: Bool
@@ -41,15 +37,27 @@ struct FoodScannerView: View {
     // Callback for when food is scanned via barcode
     var onFoodScanned: ((Food, Int?) -> Void)?
     
-    // Navigation state for transitioning to the confirmation screen
-    @State private var navigationPath = NavigationPath()
+    // Removed navigationPath - using onFoodScanned callback instead
+    
+    // User preferences for scan preview
+    private var photoScanPreviewEnabled: Bool {
+        UserDefaults.standard.object(forKey: "scanPreview_photoScan") as? Bool ?? false
+    }
+    private var foodLabelPreviewEnabled: Bool {
+        UserDefaults.standard.object(forKey: "scanPreview_foodLabel") as? Bool ?? true
+    }
+    private var barcodePreviewEnabled: Bool {
+        UserDefaults.standard.object(forKey: "scanPreview_barcode") as? Bool ?? true
+    }
+    private var galleryImportPreviewEnabled: Bool {
+        UserDefaults.standard.object(forKey: "scanPreview_galleryImport") as? Bool ?? false
+    }
     
     enum ScanMode {
         case food, nutritionLabel, barcode, gallery
     }
     
     var body: some View {
-        NavigationStack(path: $navigationPath) {
             ZStack {
                 // Camera view (or error overlay)
                 if cameraPermissionDenied {
@@ -93,7 +101,14 @@ struct FoodScannerView: View {
                             guard let image = image else { return }
                             if selectedMode == .food {
                                 print("Food scanned with captured image")
-                                analyzeImage(image)
+                                // Check preference to decide between preview and one-tap logging
+                                if photoScanPreviewEnabled {
+                                    print("📸 Photo scan preview enabled - showing ConfirmLogView")
+                                    analyzeImageForPreview(image)
+                                } else {
+                                    print("📸 Photo scan preview disabled - one-tap logging")
+                                    analyzeImageDirectly(image)
+                                }
                             } else if selectedMode == .nutritionLabel {
                                 print("Nutrition label scanned with captured image")
                                 analyzeNutritionLabel(image)
@@ -267,16 +282,18 @@ struct FoodScannerView: View {
                 PhotosPickerView(selectedImage: $selectedImage)
                     .ignoresSafeArea()
                     .onDisappear {
-                        // if let image = selectedImage {
-                        //     isGalleryImageLoaded = true
-                        //     analyzeImage(image)
-                        // }
-                               if let image = selectedImage {
-          // switch back into "food scan" UI
-          selectedMode = .food
-          // kick off the exact same analyzeImage(_:) path
-          analyzeImage(image)
-        }
+                        if let image = selectedImage {
+                            // Check if preview is enabled for gallery import
+                            if galleryImportPreviewEnabled {
+                                print("🖼️ Gallery import preview enabled - will show confirmation screen after analysis")
+                                selectedMode = .food
+                                analyzeImageForPreview(image)
+                            } else {
+                                print("🖼️ Gallery import preview disabled - one-tap logging enabled")
+                                selectedMode = .food
+                                analyzeImageDirectly(image)
+                            }
+                        }
                     }
             }
             .sheet(isPresented: $showScanFlow) {
@@ -286,11 +303,6 @@ struct FoodScannerView: View {
                     }
             }
             .background(Color.black)
-            // Add navigation destination for ConfirmLogView using BarcodeFood struct
-            .navigationDestination(for: BarcodeFood.self) { barcodeFood in
-                ConfirmLogView(path: $navigationPath, food: barcodeFood.food, foodLogId: barcodeFood.foodLogId)
-            }
-        }
         .onAppear {
             // Check camera permissions when the view appears
             checkCameraPermissions()
@@ -334,33 +346,44 @@ private func analyzeImage(_ image: UIImage) {
   foodManager.loadingMessage   = "Analyzing image..."
   foodManager.uploadProgress   = 0.1
 
-  print("🔍 Starting food image analysis via server with meal: \(selectedMeal)")
+  print("🔍 Starting pure food image analysis via server with meal: \(selectedMeal)")
 
   foodManager.analyzeFoodImage(image: image,
                                userEmail: userEmail,
                                mealType: selectedMeal) { result in
     switch result {
     case .success(let combinedLog):
-      // Instant optimistic insert
-      dayLogsVM.addPending(combinedLog)
-
-      DispatchQueue.main.async {
-  // 1) see if there's an existing entry with that foodLogId
-  if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
-    foodManager.combinedLogs.remove(at: idx)
-  }
-  // 2) prepend the fresh log
-  foodManager.combinedLogs.insert(combinedLog, at: 0)
-}
-
+        // Pure analysis function - always show preview (used by gallery when preview is enabled)
+        print("📸 Pure image analysis complete - showing preview")
+        if let food = combinedLog.food?.asFood {
+          DispatchQueue.main.async {
+            // Use the callback to trigger ConfirmLogView sheet in ContentView
+            self.onFoodScanned?(food, combinedLog.foodLogId)
+          }
+        }
 
     case .failure(let error):
-      print("❌ scan failed:", error.localizedDescription)
+      print("❌ pure scan failed:", error.localizedDescription)
     }
   }
 }
 
 private func analyzeNutritionLabel(_ image: UIImage) {
+    guard !isAnalyzing,
+          let userEmail = UserDefaults.standard.string(forKey: "userEmail")
+    else { return }
+
+    // Check preference at the start and branch accordingly
+    if foodLabelPreviewEnabled {
+        print("🏷️ Food label preview enabled - will show ConfirmLogView after analysis")
+        analyzeNutritionLabelForPreview(image)
+    } else {
+        print("🏷️ Food label preview disabled - one-tap logging")
+        analyzeNutritionLabelDirectly(image)
+    }
+}
+
+private func analyzeNutritionLabelForPreview(_ image: UIImage) {
     guard !isAnalyzing,
           let userEmail = UserDefaults.standard.string(forKey: "userEmail")
     else { return }
@@ -371,14 +394,56 @@ private func analyzeNutritionLabel(_ image: UIImage) {
     foodManager.loadingMessage   = "Reading nutrition label..."
     foodManager.uploadProgress   = 0.1
 
-    print("🏷️ Starting nutrition label analysis via server with meal: \(selectedMeal)")
+    print("🏷️ Starting nutrition label analysis for preview with meal: \(selectedMeal)")
 
     foodManager.analyzeNutritionLabel(image: image,
                                      userEmail: userEmail,
                                      mealType: selectedMeal) { result in
         switch result {
         case .success(let combinedLog):
-            // Instant optimistic insert
+            // Always show confirmation view for preview mode
+            print("🏷️ Nutrition label scan complete - showing preview")
+            if let food = combinedLog.food?.asFood {
+                DispatchQueue.main.async {
+                    // Use the same NotificationCenter mechanism as barcode scanning
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("ShowFoodConfirmation"),
+                        object: nil,
+                        userInfo: [
+                            "food": food,
+                            "foodLogId": combinedLog.foodLogId ?? NSNull()
+                        ]
+                    )
+                    print("🔍 DEBUG: Posted ShowFoodConfirmation notification for nutrition label: \(food.description)")
+                }
+            }
+
+        case .failure(let error):
+            self.handleNutritionLabelError(error)
+        }
+    }
+}
+
+private func analyzeNutritionLabelDirectly(_ image: UIImage) {
+    guard !isAnalyzing,
+          let userEmail = UserDefaults.standard.string(forKey: "userEmail")
+    else { return }
+
+    isPresented                  = false
+    foodManager.scannedImage     = image
+    foodManager.isScanningFood   = true
+    foodManager.loadingMessage   = "Reading nutrition label..."
+    foodManager.uploadProgress   = 0.1
+
+    print("🏷️ Starting nutrition label analysis for one-tap with meal: \(selectedMeal)")
+
+    foodManager.analyzeNutritionLabel(image: image,
+                                     userEmail: userEmail,
+                                     mealType: selectedMeal) { result in
+        switch result {
+        case .success(let combinedLog):
+            // Always do instant optimistic insert for direct analysis (one-tap logging)
+            print("🏷️ Nutrition label scan complete - one-tap logging")
             dayLogsVM.addPending(combinedLog)
 
             DispatchQueue.main.async {
@@ -391,23 +456,111 @@ private func analyzeNutritionLabel(_ image: UIImage) {
             }
 
         case .failure(let error):
-            // Check if this is the special "name required" error
-            if let nsError = error as? NSError, nsError.code == 1001 {
-                // Product name not found - let FoodManager handle this for DashboardView
-                print("🏷️ Product name not found, storing data for dashboard popup")
-                if let nutritionData = nsError.userInfo["nutrition_data"] as? [String: Any],
-                   let mealType = nsError.userInfo["meal_type"] as? String {
-                    
-                    // Store in FoodManager for DashboardView to access
-                    foodManager.pendingNutritionData = nutritionData
-                    foodManager.pendingMealType = mealType
-                    foodManager.showNutritionNameInput = true
-                }
-            } else {
-                print("❌ nutrition label scan failed:", error.localizedDescription)
-            }
+            self.handleNutritionLabelError(error)
         }
     }
+}
+
+private func handleNutritionLabelError(_ error: Error) {
+    // Check if this is the special "name required" error
+    if let nsError = error as? NSError, nsError.code == 1001 {
+        // Product name not found - let FoodManager handle this for DashboardView
+        print("🏷️ Product name not found, storing data for dashboard popup")
+        if let nutritionData = nsError.userInfo["nutrition_data"] as? [String: Any],
+           let mealType = nsError.userInfo["meal_type"] as? String {
+            
+            // Store in FoodManager for DashboardView to access
+            foodManager.pendingNutritionData = nutritionData
+            foodManager.pendingMealType = mealType
+            foodManager.showNutritionNameInput = true
+        }
+    } else {
+        print("❌ nutrition label scan failed:", error.localizedDescription)
+    }
+}
+
+private func analyzeImageForPreview(_ image: UIImage) {
+  guard !isAnalyzing,
+        let userEmail = UserDefaults.standard.string(forKey: "userEmail")
+  else { return }
+
+  isPresented                  = false
+  foodManager.scannedImage     = image
+  foodManager.isScanningFood   = true
+  foodManager.loadingMessage   = "Analyzing image..."
+  foodManager.uploadProgress   = 0.1
+
+  print("🔍 Starting food image analysis for preview with meal: \(selectedMeal)")
+
+  foodManager.analyzeFoodImage(image: image,
+                               userEmail: userEmail,
+                               mealType: selectedMeal) { result in
+    switch result {
+    case .success(let combinedLog):
+        // Always show confirmation view for preview mode
+        print("📸 Image analysis complete - showing preview")
+        print("🔍 DEBUG: combinedLog.food = \(String(describing: combinedLog.food))")
+        if let food = combinedLog.food?.asFood {
+          print("🔍 DEBUG: Converted to Food object: \(food.description), fdcId: \(food.fdcId)")
+          print("🔍 DEBUG: Using NotificationCenter instead of callback (like barcode scanning)")
+          DispatchQueue.main.async {
+            // Use the same NotificationCenter mechanism as barcode scanning
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ShowFoodConfirmation"),
+                object: nil,
+                userInfo: [
+                    "food": food,
+                    "foodLogId": combinedLog.foodLogId ?? NSNull()
+                ]
+            )
+            print("🔍 DEBUG: Posted ShowFoodConfirmation notification for food: \(food.description)")
+          }
+        } else {
+          print("❌ DEBUG: Failed to convert combinedLog.food to Food object")
+          print("❌ DEBUG: combinedLog.food is nil: \(combinedLog.food == nil)")
+        }
+
+    case .failure(let error):
+      print("❌ preview scan failed:", error.localizedDescription)
+    }
+  }
+}
+
+private func analyzeImageDirectly(_ image: UIImage) {
+  guard !isAnalyzing,
+        let userEmail = UserDefaults.standard.string(forKey: "userEmail")
+  else { return }
+
+  isPresented                  = false
+  foodManager.scannedImage     = image
+  foodManager.isScanningFood   = true
+  foodManager.loadingMessage   = "Analyzing image..."
+  foodManager.uploadProgress   = 0.1
+
+  print("🔍 Starting direct food image analysis (one-tap) with meal: \(selectedMeal)")
+
+  foodManager.analyzeFoodImage(image: image,
+                               userEmail: userEmail,
+                               mealType: selectedMeal) { result in
+    switch result {
+    case .success(let combinedLog):
+        // Always do instant optimistic insert for direct analysis (one-tap logging)
+        print("📸 Image analysis complete - one-tap logging")
+        dayLogsVM.addPending(combinedLog)
+
+        DispatchQueue.main.async {
+            // 1) see if there's an existing entry with that foodLogId
+            if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                foodManager.combinedLogs.remove(at: idx)
+            }
+            // 2) prepend the fresh log
+            foodManager.combinedLogs.insert(combinedLog, at: 0)
+        }
+
+    case .failure(let error):
+      print("❌ direct scan failed:", error.localizedDescription)
+    }
+  }
 }
 
 
@@ -418,6 +571,7 @@ private func analyzeNutritionLabel(_ image: UIImage) {
         }
         
         print("🧩 Processing barcode directly (without photo): \(barcode)")
+        print("📊 Barcode preview enabled: \(barcodePreviewEnabled)")
         
         // ENHANCED: Close scanner immediately and show loading in DashboardView
         // Set the loading state in FoodManager to show the loading card
@@ -433,6 +587,7 @@ private func analyzeNutritionLabel(_ image: UIImage) {
         isProcessingBarcode = false
         
         // Start the enhanced barcode lookup process
+        // The FoodManager will handle showing ConfirmLogView based on the existing flow
         foodManager.lookupFoodByBarcodeEnhanced(
                 barcode: barcode,
             userEmail: userEmail,

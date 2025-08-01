@@ -2531,74 +2531,81 @@ func analyzeNutritionLabel(
   }
 }
 
-    // Add this function to handle the barcode scanning logic
-    func lookupFoodByBarcode(barcode: String, image: UIImage? = nil, userEmail: String, navigationPath: Binding<NavigationPath>, completion: @escaping (Bool, String?) -> Void) {
-        // Set barcode scanning state for UI feedback
-        isScanningBarcode = true
-        isLoading = true
-        barcodeLoadingMessage = "Looking up barcode..."
-        uploadProgress = 0.3
+    // // Add this function to handle the barcode scanning logic
+    // func lookupFoodByBarcode(barcode: String, image: UIImage? = nil, userEmail: String, completion: @escaping (Bool, String?) -> Void) {
+    //     // Set barcode scanning state for UI feedback
+    //     isScanningBarcode = true
+    //     isLoading = true
+    //     barcodeLoadingMessage = "Looking up barcode..."
+    //     uploadProgress = 0.3
         
-        // Convert image to base64 if available
-        var imageBase64: String? = nil
-        if let image = image {
-            if let imageData = image.jpegData(compressionQuality: 0.7) {
-                imageBase64 = imageData.base64EncodedString()
-            }
-        }
+    //     // Convert image to base64 if available
+    //     var imageBase64: String? = nil
+    //     if let image = image {
+    //         if let imageData = image.jpegData(compressionQuality: 0.7) {
+    //             imageBase64 = imageData.base64EncodedString()
+    //         }
+    //     }
         
-        // Call NetworkManagerTwo to look up the barcode
-        NetworkManagerTwo.shared.lookupFoodByBarcode(
-            barcode: barcode,
-            userEmail: userEmail,
-            imageData: imageBase64,
-            mealType: "Lunch", // Default meal type since this method doesn't have mealType parameter
-            shouldLog: false
-        ) { [weak self] result in
-            guard let self = self else { return }
+    //     // Call NetworkManagerTwo to look up the barcode
+    //     NetworkManagerTwo.shared.lookupFoodByBarcode(
+    //         barcode: barcode,
+    //         userEmail: userEmail,
+    //         imageData: imageBase64,
+    //         mealType: "Lunch", // Default meal type since this method doesn't have mealType parameter
+    //         shouldLog: false
+    //     ) { [weak self] result in
+    //         guard let self = self else { return }
             
-            // Update progress for UI
-            self.uploadProgress = 1.0
+    //         // Update progress for UI
+    //         self.uploadProgress = 1.0
             
-            switch result {
-            case .success(let response):
-                // Reset barcode scanning state since we'll show the confirmation screen
-                self.isScanningBarcode = false
-                self.isLoading = false
-                self.barcodeLoadingMessage = ""
-                self.scannedImage = nil
+    //         switch result {
+    //         case .success(let response):
+    //             // Reset barcode scanning state since we'll show the confirmation screen
+    //             self.isScanningBarcode = false
+    //             self.isLoading = false
+    //             self.barcodeLoadingMessage = ""
+    //             self.scannedImage = nil
                 
-                // Show the ConfirmFoodView with the barcode data
-                DispatchQueue.main.async {
-                    // Add the ConfirmFoodView to the navigation path using BarcodeFood
-                    navigationPath.wrappedValue.append(BarcodeFood(food: response.food, foodLogId: response.foodLogId))
-                    completion(true, nil)
-                }
+    //             // Show the ConfirmFoodView with the barcode data using notification system
+    //             DispatchQueue.main.async {
+    //                 // Use notification system instead of navigationPath
+    //                 NotificationCenter.default.post(
+    //                     name: NSNotification.Name("ShowFoodConfirmation"),
+    //                     object: nil,
+    //                     userInfo: [
+    //                         "food": response.food,
+    //                         "foodLogId": response.foodLogId
+    //                     ]
+    //                 )
+    //                 completion(true, nil)
+    //             }
                 
-            case .failure(let error):
-                // Update barcode scanner state on failure
-                self.isScanningBarcode = false
-                self.isLoading = false
-                self.barcodeLoadingMessage = ""
-                self.scannedImage = nil
+    //         case .failure(let error):
+    //             // Update barcode scanner state on failure
+    //             self.isScanningBarcode = false
+    //             self.isLoading = false
+    //             self.barcodeLoadingMessage = ""
+    //             self.scannedImage = nil
                 
-                // Set error message for display
-                let errorMsg: String
-                if let networkError = error as? NetworkManagerTwo.NetworkError,
-                   case .serverError(let message) = networkError {
-                    // Use server error message
-                    errorMsg = message
-                } else {
-                    // General error message
-                    errorMsg = "Could not find food for barcode"
-                }
+    //             // Set error message for display
+    //             let errorMsg: String
+    //             if let networkError = error as? NetworkManagerTwo.NetworkError,
+    //                case .serverError(let message) = networkError {
+    //                 // Use server error message
+    //                 errorMsg = message
+    //             } else {
+    //                 // General error message
+    //                 errorMsg = "Could not find food for barcode"
+    //             }
                 
-                print("Barcode scan error: \(errorMsg)")
-                self.scanningFoodError = errorMsg
-                completion(false, errorMsg)
-            }
-        }
-    }
+    //             print("Barcode scan error: \(errorMsg)")
+    //             self.scanningFoodError = errorMsg
+    //             completion(false, errorMsg)
+    //         }
+    //     }
+    // }
     
     // Original method for backwards compatibility (calls the new method)
     func lookupFoodByBarcode(barcode: String, image: UIImage? = nil, userEmail: String, completion: @escaping (Bool, String?) -> Void) {

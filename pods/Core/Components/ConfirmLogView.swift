@@ -86,6 +86,8 @@ struct ConfirmLogView: View {
     
     // This view is ONLY for logging scanned foods
     init(path: Binding<NavigationPath>, food: Food, foodLogId: Int? = nil) {
+        print("🔍 DEBUG ConfirmLogView: Initializing with food: \(food.description), fdcId: \(food.fdcId)")
+        print("🔍 DEBUG ConfirmLogView: foodLogId: \(String(describing: foodLogId))")
         self._path = path
         self._title = State(initialValue: food.description)
         
