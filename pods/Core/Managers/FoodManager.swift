@@ -3462,13 +3462,31 @@ func analyzeNutritionLabel(
                             servingsConsumed: nil
                         )
                         
-                        // Add to logs (same as successful scan)
-                        self.dayLogsViewModel?.addPending(combinedLog)
+                        // Check if we should show the sheet based on user preference
+                        let shouldShowSheet = UserDefaults.standard.bool(forKey: "scanPreview_foodLabel")
                         
-                        if let idx = self.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
-                            self.combinedLogs.remove(at: idx)
+                        if shouldShowSheet {
+                            // Show confirmation sheet for food label (similar to barcode)
+                            let food = loggedFood.food.asFood
+                            print("📊 Food label preview enabled - showing confirmation sheet")
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("ShowFoodConfirmation"),
+                                object: nil,
+                                userInfo: [
+                                    "food": food,
+                                    "foodLogId": loggedFood.foodLogId ?? NSNull()
+                                ]
+                            )
+                        } else {
+                            // Add to logs directly (same as successful scan)
+                            print("📊 Food label preview disabled - logging directly")
+                            self.dayLogsViewModel?.addPending(combinedLog)
+                            
+                            if let idx = self.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                                self.combinedLogs.remove(at: idx)
+                            }
+                            self.combinedLogs.insert(combinedLog, at: 0)
                         }
-                        self.combinedLogs.insert(combinedLog, at: 0)
                         
                         // Clear the pending state
                         self.showNutritionNameInput = false
