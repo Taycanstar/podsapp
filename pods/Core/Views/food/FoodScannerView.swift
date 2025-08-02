@@ -586,19 +586,34 @@ private func analyzeImageDirectly(_ image: UIImage) {
         isAnalyzing = false
         isProcessingBarcode = false
         
-        // Start the enhanced barcode lookup process
-        // The FoodManager will handle showing ConfirmLogView based on the existing flow
-        foodManager.lookupFoodByBarcodeEnhanced(
+        // Check preference to decide between preview and direct logging
+        if barcodePreviewEnabled {
+            print("📊 Barcode preview enabled - will show confirmation sheet")
+            // Start the enhanced barcode lookup process (shows confirmation)
+            foodManager.lookupFoodByBarcodeEnhanced(
                 barcode: barcode,
-            userEmail: userEmail,
-            mealType: selectedMeal
+                userEmail: userEmail,
+                mealType: selectedMeal
             ) { success, message in
-            // The FoodManager will handle all UI state updates
-            // including showing the confirmation view when ready
                 if success {
-                print("✅ Enhanced barcode lookup success for: \(barcode)")
+                    print("✅ Enhanced barcode lookup success for: \(barcode)")
                 } else {
-                print("❌ Enhanced barcode lookup failed: \(message ?? "Unknown error")")
+                    print("❌ Enhanced barcode lookup failed: \(message ?? "Unknown error")")
+                }
+            }
+        } else {
+            print("📊 Barcode preview disabled - direct logging")
+            // Use direct logging (no confirmation sheet)
+            foodManager.lookupFoodByBarcodeDirect(
+                barcode: barcode,
+                userEmail: userEmail,
+                mealType: selectedMeal
+            ) { success, message in
+                if success {
+                    print("✅ Direct barcode lookup success for: \(barcode)")
+                } else {
+                    print("❌ Direct barcode lookup failed: \(message ?? "Unknown error")")
+                }
             }
         }
     }
