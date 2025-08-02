@@ -168,32 +168,36 @@ struct AddFoodView: View {
                 }
             }
             .sheet(isPresented: $showCreateFoodWithScan) {
-                AddFoodWithScan { createdFood, scanType in
-                    print("🔍 DEBUG: AddFoodWithScan completion called with food: \(createdFood.displayName), scanType: \(scanType)")
-                    
-                    // Use a slight delay to ensure the sheet has properly dismissed
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        switch scanType {
-                        case .barcode:
-                            // Show confirmation sheet for barcode scans
-                            scannedFoodForConfirmation = createdFood
-                            showConfirmationSheet = true
-                            print("🔍 DEBUG: Set showConfirmationSheet = true for barcode food: \(createdFood.displayName)")
-                            
-                        case .photo, .gallery:
-                            // Directly add to selected foods for photo/gallery scans
-                            generatedFoods.append(createdFood)
-                            selectedFoodIds.insert(createdFood.fdcId)
-                            
-                            // Track as recently added
-                            foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
-                            
-                            // Clean up scanning states immediately since no confirmation needed
-                            cleanupScanningStates()
-                            print("🔍 DEBUG: Directly added \(scanType) food to selected foods: \(createdFood.displayName)")
+                AddFoodWithScan(
+                    onFoodScanned: { createdFood, scanType in
+                        print("🔍 DEBUG: AddFoodWithScan completion called with food: \(createdFood.displayName), scanType: \(scanType)")
+                        
+                        // Use a slight delay to ensure the sheet has properly dismissed
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            switch scanType {
+                            case .barcode:
+                                // Show confirmation sheet for barcode scans
+                                scannedFoodForConfirmation = createdFood
+                                showConfirmationSheet = true
+                                print("🔍 DEBUG: Set showConfirmationSheet = true for barcode food: \(createdFood.displayName)")
+                                
+                            case .photo, .gallery:
+                                // Directly add to selected foods for photo/gallery scans
+                                generatedFoods.append(createdFood)
+                                selectedFoodIds.insert(createdFood.fdcId)
+                                
+                                // Track as recently added
+                                foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                                
+                                // Clean up scanning states immediately since no confirmation needed
+                                cleanupScanningStates()
+                                print("🔍 DEBUG: Directly added \(scanType) food to selected foods: \(createdFood.displayName)")
+                            }
                         }
-                    }
-                }
+                    },
+                    generatedFoods: $generatedFoods,
+                    selectedFoodIds: $selectedFoodIds
+                )
             }
             .sheet(isPresented: $showCreateFood) {
                 CreateAddFoodView { createdFood in

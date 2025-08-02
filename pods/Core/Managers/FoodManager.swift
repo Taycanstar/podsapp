@@ -2030,7 +2030,7 @@ func generateFoodWithAI(
 }
 // Add the createManualFood function after the generateFoodWithAI function
 // This is around line 1879 after the last function in the file
-func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) -> Void) {
+func createManualFood(food: Food, showPreview: Bool = true, completion: @escaping (Result<Food, Error>) -> Void) {
     // Set generating food flag
     isGeneratingFood = true
     showFoodGenerationSuccess = false
@@ -2052,8 +2052,10 @@ func createManualFood(food: Food, completion: @escaping (Result<Food, Error>) ->
             
             switch result {
             case .success(let food):
-                // Store the created food
-                self.lastGeneratedFood = food
+                // Store the created food only if preview should be shown
+                if showPreview {
+                    self.lastGeneratedFood = food
+                }
                 
                 // Add the food to userFoods so it appears in MyFoods tab immediately
                 if !self.userFoods.contains(where: { $0.fdcId == food.fdcId }) {

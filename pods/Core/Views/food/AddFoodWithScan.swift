@@ -22,6 +22,10 @@ struct AddFoodWithScan: View {
     // Completion closure to pass scanned food and scan type back to parent
     var onFoodScanned: (Food, ScanType) -> Void
     
+    // For direct addition when preview is disabled
+    @Binding var generatedFoods: [Food]
+    @Binding var selectedFoodIds: Set<Int>
+    
     @State private var selectedMode: FoodScannerView.ScanMode = .food
     @State private var showPhotosPicker = false
     @State private var selectedImage: UIImage?
@@ -32,6 +36,20 @@ struct AddFoodWithScan: View {
     @State private var isProcessingBarcode = false
     @State private var lastProcessedBarcode: String?
     @State private var isGalleryImageLoaded = false
+    
+    // User preferences for scan preview
+    private var photoScanPreviewEnabled: Bool {
+        UserDefaults.standard.object(forKey: "scanPreview_photoScan") as? Bool ?? false
+    }
+    private var foodLabelPreviewEnabled: Bool {
+        UserDefaults.standard.object(forKey: "scanPreview_foodLabel") as? Bool ?? true
+    }
+    private var barcodePreviewEnabled: Bool {
+        UserDefaults.standard.object(forKey: "scanPreview_barcode") as? Bool ?? true
+    }
+    private var galleryImportPreviewEnabled: Bool {
+        UserDefaults.standard.object(forKey: "scanPreview_galleryImport") as? Bool ?? false
+    }
     
     var body: some View {
         ZStack {
@@ -351,9 +369,20 @@ struct AddFoodWithScan: View {
                         // Clear lastGeneratedFood to prevent triggering other sheets
                         foodManager.lastGeneratedFood = nil
                         
-                        // Pass the food to parent (view already dismissed)
-                        // Note: Don't cleanup scanning states here - let parent handle it
-                        onFoodScanned(createdFood, .photo)
+                        // Check preference for photo scan
+                        if photoScanPreviewEnabled {
+                            // Show confirmation sheet
+                            print("📸 Photo scan preview enabled - showing confirmation")
+                            onFoodScanned(createdFood, .photo)
+                        } else {
+                            // Add directly without confirmation
+                            print("📸 Photo scan preview disabled - adding directly")
+                            generatedFoods.append(createdFood)
+                            selectedFoodIds.insert(createdFood.fdcId)
+                            
+                            // Track as recently added
+                            foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                        }
                     } else {
                         print("❌ No food found in analysis result")
                         // Note: Don't cleanup here - parent will handle it
@@ -396,9 +425,20 @@ struct AddFoodWithScan: View {
                         // Clear lastGeneratedFood to prevent triggering other sheets
                         foodManager.lastGeneratedFood = nil
                         
-                        // Pass the food to parent (view already dismissed)
-                        // Note: Don't cleanup scanning states here - let parent handle it
-                        onFoodScanned(createdFood, .photo)
+                        // Check preference for food label scan
+                        if foodLabelPreviewEnabled {
+                            // Show confirmation sheet
+                            print("🏷️ Food label preview enabled - showing confirmation")
+                            onFoodScanned(createdFood, .photo)
+                        } else {
+                            // Add directly without confirmation
+                            print("🏷️ Food label preview disabled - adding directly")
+                            generatedFoods.append(createdFood)
+                            selectedFoodIds.insert(createdFood.fdcId)
+                            
+                            // Track as recently added
+                            foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                        }
                     } else {
                         print("❌ No food found in nutrition label analysis result")
                         // Note: Don't cleanup here - parent will handle it
@@ -454,9 +494,20 @@ struct AddFoodWithScan: View {
                         // Clear lastGeneratedFood to prevent triggering other sheets
                         foodManager.lastGeneratedFood = nil
                         
-                        // Pass the food to parent (view already dismissed)
-                        // Note: Don't cleanup scanning states here - let parent handle it
-                        onFoodScanned(createdFood, .gallery)
+                        // Check preference for gallery import
+                        if galleryImportPreviewEnabled {
+                            // Show confirmation sheet
+                            print("🖼️ Gallery import preview enabled - showing confirmation")
+                            onFoodScanned(createdFood, .gallery)
+                        } else {
+                            // Add directly without confirmation
+                            print("🖼️ Gallery import preview disabled - adding directly")
+                            generatedFoods.append(createdFood)
+                            selectedFoodIds.insert(createdFood.fdcId)
+                            
+                            // Track as recently added
+                            foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                        }
                     } else {
                         print("❌ No food found in gallery analysis result")
                         // Note: Don't cleanup here - parent will handle it
@@ -501,9 +552,20 @@ struct AddFoodWithScan: View {
                     // CRITICAL: Reset isProcessingBarcode to allow future scans
                     isProcessingBarcode = false
                     
-                    // Pass food to parent for confirmation (view already dismissed)
-                    // Note: Don't cleanup scanning states here - let parent handle it
-                    onFoodScanned(createdFood, .barcode)
+                    // Check preference for barcode scan
+                    if barcodePreviewEnabled {
+                        // Show confirmation sheet
+                        print("📊 Barcode preview enabled - showing confirmation")
+                        onFoodScanned(createdFood, .barcode)
+                    } else {
+                        // Add directly without confirmation
+                        print("📊 Barcode preview disabled - adding directly")
+                        generatedFoods.append(createdFood)
+                        selectedFoodIds.insert(createdFood.fdcId)
+                        
+                        // Track as recently added
+                        foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                    }
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from barcode: \(error)")
@@ -529,7 +591,14 @@ struct AddFoodWithScan: View {
 }
 
 #Preview {
-    AddFoodWithScan { food, scanType in
-        print("Food scanned: \(food.displayName), scanType: \(scanType)")
-    }
+    @State var generatedFoods: [Food] = []
+    @State var selectedFoodIds: Set<Int> = []
+    
+    return AddFoodWithScan(
+        onFoodScanned: { food, scanType in
+            print("Food scanned: \(food.displayName), scanType: \(scanType)")
+        },
+        generatedFoods: $generatedFoods,
+        selectedFoodIds: $selectedFoodIds
+    )
 }
