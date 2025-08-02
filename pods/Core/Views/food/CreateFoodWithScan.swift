@@ -485,10 +485,7 @@ struct CreateFoodWithScan: View {
                         print("📊 Barcode preview disabled - creating food directly")
                         let createdFood = response.food
                         
-                        // Clear lastGeneratedFood BEFORE calling createManualFood to prevent triggering ConfirmFoodView sheet
-                        self.foodManager.lastGeneratedFood = nil
-                        
-                        self.foodManager.createManualFood(food: createdFood) { result in
+                        self.foodManager.createManualFood(food: createdFood, showPreview: false) { result in
                             DispatchQueue.main.async {
                                 switch result {
                                 case .success(let savedFood):
