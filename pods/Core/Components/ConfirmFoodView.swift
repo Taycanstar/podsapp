@@ -762,8 +762,9 @@ struct ConfirmFoodView: View {
                 case .success(let createdFood):
                     print("Food created successfully: \(createdFood.displayName)")
                     
-                    // Show success toast via the food manager
-                    foodManager.lastGeneratedFood = createdFood
+                    // Clear the lastGeneratedFood to prevent showing confirmation again
+                    foodManager.lastGeneratedFood = nil
+                    // Show success toast
                     foodManager.showFoodGenerationSuccess = true
                     
                     // Hide toast after delay

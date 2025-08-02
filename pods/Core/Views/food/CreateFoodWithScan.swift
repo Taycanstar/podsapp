@@ -329,47 +329,43 @@ struct CreateFoodWithScan: View {
         foodManager.loadingMessage = "Analyzing food image..."
         foodManager.uploadProgress = 0.1
         
-        // Use FoodManager to analyze the image (same as FoodScannerView)
-        foodManager.analyzeFoodImage(
+        // Use FoodManager to analyze the image for creation (without logging)
+        foodManager.analyzeFoodImageForCreation(
             image: image,
-            userEmail: viewModel.email,
-            mealType: "Lunch"
+            userEmail: viewModel.email
         ) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let combinedLog):
+                case .success(let food):
                     print("✅ Successfully analyzed food from image for creation")
                     
-                    // Extract the food from the combined log and store in lastGeneratedFood
-                    if let food = combinedLog.food {
-                        // Check preference for photo scan
-                        if photoScanPreviewEnabled {
-                            // Show confirmation sheet by setting lastGeneratedFood
-                            print("📸 Photo scan preview enabled - showing confirmation")
-                            self.foodManager.lastGeneratedFood = food.asFood
-                        } else {
-                            // Create food directly without confirmation
-                            print("📸 Photo scan preview disabled - creating food directly")
-                            let createdFood = food.asFood
-                            
-                            self.foodManager.createManualFood(food: createdFood, showPreview: false) { result in
-                                DispatchQueue.main.async {
-                                    switch result {
-                                    case .success(let savedFood):
-                                        print("✅ Successfully created food from photo scan: \(savedFood.displayName)")
-                                        
-                                        // Track as recently added
-                                        self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
-                                        
-                                        // Show success toast
-                                        self.foodManager.showFoodGenerationSuccess = true
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                            self.foodManager.showFoodGenerationSuccess = false
-                                        }
-                                        
-                                    case .failure(let error):
-                                        print("❌ Failed to create food from photo scan: \(error)")
+                    // Use the food directly (no need to extract from combinedLog)
+                    // Check preference for photo scan
+                    if photoScanPreviewEnabled {
+                        // Show confirmation sheet by setting lastGeneratedFood
+                        print("📸 Photo scan preview enabled - showing confirmation")
+                        self.foodManager.lastGeneratedFood = food
+                    } else {
+                        // Create food directly without confirmation
+                        print("📸 Photo scan preview disabled - creating food directly")
+                        
+                        self.foodManager.createManualFood(food: food, showPreview: false) { result in
+                            DispatchQueue.main.async {
+                                switch result {
+                                case .success(let savedFood):
+                                    print("✅ Successfully created food from photo scan: \(savedFood.displayName)")
+                                    
+                                    // Track as recently added
+                                    self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
+                                    
+                                    // Show success toast
+                                    self.foodManager.showFoodGenerationSuccess = true
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                        self.foodManager.showFoodGenerationSuccess = false
                                     }
+                                    
+                                case .failure(let error):
+                                    print("❌ Failed to create food from photo scan: \(error)")
                                 }
                             }
                         }
@@ -405,47 +401,43 @@ struct CreateFoodWithScan: View {
         foodManager.loadingMessage = "Reading nutrition label..."
         foodManager.uploadProgress = 0.1
         
-        // Use FoodManager to analyze the nutrition label
-        foodManager.analyzeNutritionLabel(
+        // Use FoodManager to analyze the nutrition label for creation (without logging)
+        foodManager.analyzeNutritionLabelForCreation(
             image: image,
-            userEmail: viewModel.email,
-            mealType: "Lunch"
+            userEmail: viewModel.email
         ) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let combinedLog):
+                case .success(let food):
                     print("✅ Successfully analyzed nutrition label for creation")
                     
-                    // Extract the food from the combined log and store in lastGeneratedFood
-                    if let food = combinedLog.food {
-                        // Check preference for food label scan
-                        if foodLabelPreviewEnabled {
-                            // Show confirmation sheet by setting lastGeneratedFood
-                            print("🏷️ Food label preview enabled - showing confirmation")
-                            self.foodManager.lastGeneratedFood = food.asFood
-                        } else {
-                            // Create food directly without confirmation
-                            print("🏷️ Food label preview disabled - creating food directly")
-                            let createdFood = food.asFood
-                            
-                            self.foodManager.createManualFood(food: createdFood, showPreview: false) { result in
-                                DispatchQueue.main.async {
-                                    switch result {
-                                    case .success(let savedFood):
-                                        print("✅ Successfully created food from nutrition label: \(savedFood.displayName)")
-                                        
-                                        // Track as recently added
-                                        self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
-                                        
-                                        // Show success toast
-                                        self.foodManager.showFoodGenerationSuccess = true
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                            self.foodManager.showFoodGenerationSuccess = false
-                                        }
-                                        
-                                    case .failure(let error):
-                                        print("❌ Failed to create food from nutrition label: \(error)")
+                    // Use the food directly (no need to extract from combinedLog)
+                    // Check preference for food label scan
+                    if foodLabelPreviewEnabled {
+                        // Show confirmation sheet by setting lastGeneratedFood
+                        print("🏷️ Food label preview enabled - showing confirmation")
+                        self.foodManager.lastGeneratedFood = food
+                    } else {
+                        // Create food directly without confirmation
+                        print("🏷️ Food label preview disabled - creating food directly")
+                        
+                        self.foodManager.createManualFood(food: food, showPreview: false) { result in
+                            DispatchQueue.main.async {
+                                switch result {
+                                case .success(let savedFood):
+                                    print("✅ Successfully created food from nutrition label: \(savedFood.displayName)")
+                                    
+                                    // Track as recently added
+                                    self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
+                                    
+                                    // Show success toast
+                                    self.foodManager.showFoodGenerationSuccess = true
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                        self.foodManager.showFoodGenerationSuccess = false
                                     }
+                                    
+                                case .failure(let error):
+                                    print("❌ Failed to create food from nutrition label: \(error)")
                                 }
                             }
                         }
@@ -563,47 +555,43 @@ struct CreateFoodWithScan: View {
         foodManager.loadingMessage = "Analyzing image from gallery..."
         foodManager.uploadProgress = 0.1
         
-        // Use FoodManager to analyze the image (same as FoodScannerView)
-        foodManager.analyzeFoodImage(
+        // Use FoodManager to analyze the image for creation (without logging)
+        foodManager.analyzeFoodImageForCreation(
             image: image,
-            userEmail: viewModel.email,
-            mealType: "Lunch"
+            userEmail: viewModel.email
         ) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let combinedLog):
+                case .success(let food):
                     print("✅ Successfully analyzed food from gallery for creation")
                     
-                    // Extract the food from the combined log and store in lastGeneratedFood
-                    if let food = combinedLog.food {
-                        // Check preference for gallery import
-                        if galleryImportPreviewEnabled {
-                            // Show confirmation sheet by setting lastGeneratedFood
-                            print("🖼️ Gallery import preview enabled - showing confirmation")
-                            self.foodManager.lastGeneratedFood = food.asFood
-                        } else {
-                            // Create food directly without confirmation
-                            print("🖼️ Gallery import preview disabled - creating food directly")
-                            let createdFood = food.asFood
-                            
-                            self.foodManager.createManualFood(food: createdFood, showPreview: false) { result in
-                                DispatchQueue.main.async {
-                                    switch result {
-                                    case .success(let savedFood):
-                                        print("✅ Successfully created food from gallery: \(savedFood.displayName)")
-                                        
-                                        // Track as recently added
-                                        self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
-                                        
-                                        // Show success toast
-                                        self.foodManager.showFoodGenerationSuccess = true
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                            self.foodManager.showFoodGenerationSuccess = false
-                                        }
-                                        
-                                    case .failure(let error):
-                                        print("❌ Failed to create food from gallery: \(error)")
+                    // Use the food directly (no need to extract from combinedLog)
+                    // Check preference for gallery import
+                    if galleryImportPreviewEnabled {
+                        // Show confirmation sheet by setting lastGeneratedFood
+                        print("🖼️ Gallery import preview enabled - showing confirmation")
+                        self.foodManager.lastGeneratedFood = food
+                    } else {
+                        // Create food directly without confirmation
+                        print("🖼️ Gallery import preview disabled - creating food directly")
+                        
+                        self.foodManager.createManualFood(food: food, showPreview: false) { result in
+                            DispatchQueue.main.async {
+                                switch result {
+                                case .success(let savedFood):
+                                    print("✅ Successfully created food from gallery: \(savedFood.displayName)")
+                                    
+                                    // Track as recently added
+                                    self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
+                                    
+                                    // Show success toast
+                                    self.foodManager.showFoodGenerationSuccess = true
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                        self.foodManager.showFoodGenerationSuccess = false
                                     }
+                                    
+                                case .failure(let error):
+                                    print("❌ Failed to create food from gallery: \(error)")
                                 }
                             }
                         }

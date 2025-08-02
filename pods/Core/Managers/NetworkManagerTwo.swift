@@ -3046,6 +3046,175 @@ class NetworkManagerTwo {
             }
         }.resume()
     }
+    
+    // MARK: - Creation-Only Functions
+    // These functions create foods without logging them, for use in food creation contexts
+    
+    // Function to analyze food image for creation (without logging)
+    func analyzeFoodImageForCreation(image: UIImage, userEmail: String, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
+        // Configure the URL
+        guard let url = URL(string: "\(baseUrl)/analyze_food_image_for_creation/") else {
+            completion(false, nil, "Invalid URL")
+            return
+        }
+        
+        // Compress the image to reduce upload size (quality: 0.7 is a good balance)
+        guard let imageData = image.jpegData(compressionQuality: 0.7) else {
+            completion(false, nil, "Failed to compress image")
+            return
+        }
+        
+        // Convert image data to Base64 string
+        let base64Image = imageData.base64EncodedString()
+        
+        // Create request body (no meal_type needed for creation)
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "image_data": base64Image
+        ]
+        
+        // Configure the request
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(false, nil, "Failed to serialize request: \(error.localizedDescription)")
+            return
+        }
+        
+        // Create and start the data task
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            // Handle network error
+            if let error = error {
+                completion(false, nil, "Network error: \(error.localizedDescription)")
+                return
+            }
+            
+            // Validate HTTP response
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(false, nil, "Invalid response")
+                return
+            }
+            
+            // Check status code
+            if httpResponse.statusCode < 200 || httpResponse.statusCode >= 300 {
+                completion(false, nil, "Server error: HTTP \(httpResponse.statusCode)")
+                return
+            }
+            
+            // Parse response data
+            guard let data = data else {
+                completion(false, nil, "No data received")
+                return
+            }
+            
+            do {
+                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    // Check for error in response
+                    if let errorMessage = jsonResponse["error"] as? String {
+                        completion(false, nil, errorMessage)
+                        return
+                    }
+                    
+                    // Handle successful response
+                    completion(true, jsonResponse, nil)
+                } else {
+                    completion(false, nil, "Invalid response format")
+                }
+            } catch {
+                completion(false, nil, "Failed to parse response: \(error.localizedDescription)")
+            }
+        }
+        
+        // Start the request
+        task.resume()
+    }
+    
+    // Function to analyze nutrition label for creation (without logging)
+    func analyzeNutritionLabelForCreation(image: UIImage, userEmail: String, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
+        // Configure the URL
+        guard let url = URL(string: "\(baseUrl)/analyze_nutrition_label_for_creation/") else {
+            completion(false, nil, "Invalid URL")
+            return
+        }
+        
+        // Compress the image to reduce upload size (quality: 0.8 for better text clarity)
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            completion(false, nil, "Failed to compress image")
+            return
+        }
+        
+        // Convert image data to Base64 string
+        let base64Image = imageData.base64EncodedString()
+        
+        // Create request body (no meal_type needed for creation)
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "image_data": base64Image
+        ]
+        
+        // Configure the request
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(false, nil, "Failed to serialize request: \(error.localizedDescription)")
+            return
+        }
+        
+        // Create and start the data task
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            // Handle network error
+            if let error = error {
+                completion(false, nil, "Network error: \(error.localizedDescription)")
+                return
+            }
+            
+            // Validate HTTP response
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(false, nil, "Invalid response")
+                return
+            }
+            
+            // Check status code
+            if httpResponse.statusCode < 200 || httpResponse.statusCode >= 300 {
+                completion(false, nil, "Server error: HTTP \(httpResponse.statusCode)")
+                return
+            }
+            
+            // Parse response data
+            guard let data = data else {
+                completion(false, nil, "No data received")
+                return
+            }
+            
+            do {
+                if let jsonResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    // Check for error in response
+                    if let errorMessage = jsonResponse["error"] as? String {
+                        completion(false, nil, errorMessage)
+                        return
+                    }
+                    
+                    // Handle successful response
+                    completion(true, jsonResponse, nil)
+                } else {
+                    completion(false, nil, "Invalid response format")
+                }
+            } catch {
+                completion(false, nil, "Failed to parse response: \(error.localizedDescription)")
+            }
+        }
+        
+        // Start the request
+        task.resume()
+    }
 
 }
 

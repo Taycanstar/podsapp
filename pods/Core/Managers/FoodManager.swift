@@ -132,6 +132,9 @@ class FoodManager: ObservableObject {
     @Published var showNutritionNameInput = false
     @Published var pendingNutritionData: [String: Any] = [:]
     @Published var pendingMealType = "Lunch"
+    
+    // Progress timer for upload progress
+    private var progressTimer: Timer?
 
     
     init() {
@@ -3639,6 +3642,164 @@ func analyzeNutritionLabel(
         showNutritionNameInput = false
         pendingNutritionData = [:]
         pendingMealType = "Lunch"
+    }
+    
+    // MARK: - Creation-Only Functions
+    // These functions create foods without logging them, for use in food creation contexts
+    
+    @MainActor
+    func analyzeFoodImageForCreation(
+        image: UIImage,
+        userEmail: String,
+        completion: @escaping (Result<Food, Error>) -> Void
+    ) {
+        // ─── 1) UI state ─────────────────────────────
+        isAnalyzingImage = true
+        isLoading        = true
+        imageAnalysisMessage = "Analyzing image for creation…"
+        uploadProgress   = 0
+        
+        // ─── 2) Progress ticker ─────────────────────
+        progressTimer?.invalidate()
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            DispatchQueue.main.async {
+                if self.uploadProgress < 0.9 {
+                    self.uploadProgress += 0.02
+                }
+            }
+        }
+        
+        // ─── 3) Call backend ─────────────────────────
+        NetworkManagerTwo.shared.analyzeFoodImageForCreation(image: image, userEmail: userEmail) { [weak self] success, payload, errMsg in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                // stop ticker + UI
+                self.progressTimer?.invalidate()
+                withAnimation {
+                    self.uploadProgress = 1.0
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self.isAnalyzingImage = false
+                    self.isLoading = false
+                }
+                
+                // failure path
+                guard success, let payload = payload else {
+                    let msg = errMsg ?? "Unknown error"
+                    print("🔴 [analyzeFoodImageForCreation] error: \(msg)")
+                    completion(.failure(NSError(
+                        domain: "FoodScan", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: msg])))
+                    return
+                }
+                
+                //── 4) Parse response as Food object (not LoggedFood)
+                do {
+                    if let foodData = payload["food"] as? [String: Any] {
+                        let jsonData = try JSONSerialization.data(withJSONObject: foodData, options: [])
+                        let decoder = JSONDecoder()
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        let food = try decoder.decode(Food.self, from: jsonData)
+                        completion(.success(food))
+                    } else {
+                        completion(.failure(NSError(
+                            domain: "FoodManager", code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])))
+                    }
+                } catch {
+                    print("❌ [analyzeFoodImageForCreation] decoding error:", error)
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    func analyzeNutritionLabelForCreation(
+        image: UIImage,
+        userEmail: String,
+        completion: @escaping (Result<Food, Error>) -> Void
+    ) {
+        // ─── 1) UI state ─────────────────────────────
+        isAnalyzingImage = true
+        isLoading        = true
+        imageAnalysisMessage = "Reading nutrition label for creation…"
+        uploadProgress   = 0
+        
+        // ─── 2) Progress ticker ─────────────────────
+        progressTimer?.invalidate()
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            DispatchQueue.main.async {
+                if self.uploadProgress < 0.9 {
+                    self.uploadProgress += 0.02
+                }
+            }
+        }
+        
+        // ─── 3) Call backend ─────────────────────────
+        NetworkManagerTwo.shared.analyzeNutritionLabelForCreation(image: image, userEmail: userEmail) { [weak self] success, payload, errMsg in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                // stop ticker + UI
+                self.progressTimer?.invalidate()
+                withAnimation {
+                    self.uploadProgress = 1.0
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self.isAnalyzingImage = false
+                    self.isLoading = false
+                }
+                
+                // failure path
+                guard success, let payload = payload else {
+                    let msg = errMsg ?? "Unknown error"
+                    print("🔴 [analyzeNutritionLabelForCreation] error: \(msg)")
+                    completion(.failure(NSError(
+                        domain: "FoodManager",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: msg]
+                    )))
+                    return
+                }
+                
+                // ─── 4) Check if name input is required ─────────────────
+                if let status = payload["status"] as? String, status == "name_required" {
+                    // Product name not found - we need user input
+                    print("🏷️ [analyzeNutritionLabelForCreation] Product name not found, user input required")
+                    
+                    // For creation context, we still need to handle name input
+                    // This would need UI handling similar to the logging version
+                    completion(.failure(NSError(
+                        domain: "FoodManager",
+                        code: 1001, // Custom code for name required
+                        userInfo: [
+                            NSLocalizedDescriptionKey: "Product name not found on label",
+                            "nutrition_data": payload["nutrition_data"] ?? [:]
+                        ]
+                    )))
+                    return
+                }
+                
+                // ─── 5) Parse response as Food object (not LoggedFood) ───────────
+                do {
+                    if let foodData = payload["food"] as? [String: Any] {
+                        let jsonData = try JSONSerialization.data(withJSONObject: foodData, options: [])
+                        let decoder = JSONDecoder()
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        let food = try decoder.decode(Food.self, from: jsonData)
+                        completion(.success(food))
+                    } else {
+                        completion(.failure(NSError(
+                            domain: "FoodManager", code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])))
+                    }
+                } catch {
+                    print("❌ [analyzeNutritionLabelForCreation] decoding error:", error)
+                    completion(.failure(error))
+                }
+            }
+        }
     }
 }
 
