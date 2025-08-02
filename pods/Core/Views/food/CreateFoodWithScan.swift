@@ -15,7 +15,9 @@ struct CreateFoodWithScan: View {
     @State private var showPhotosPicker = false
     @State private var selectedImage: UIImage?
     @State private var flashEnabled = false
-    @State private var isAnalyzing = false
+    @State private var isAnalyzingPhoto = false
+    @State private var isAnalyzingLabel = false
+    @State private var isAnalyzingGallery = false
     @State private var scannedBarcode: String?
     @State private var cameraPermissionDenied = false
     @State private var isProcessingBarcode = false
@@ -84,14 +86,14 @@ struct CreateFoodWithScan: View {
                         guard let image = image else { return }
                         if selectedMode == .food {
                             print("Food scanned with captured image for creation")
-                            // Dismiss immediately and start analysis
-                            dismiss()
+                            // Start analysis first, then dismiss
                             analyzeImageForCreation(image)
+                            dismiss()
                         } else if selectedMode == .nutritionLabel {
                             print("Nutrition label scanned with captured image for creation")
-                            // Dismiss immediately and start analysis
-                            dismiss()
+                            // Start analysis first, then dismiss
                             analyzeNutritionLabelForCreation(image)
+                            dismiss()
                         }
                     },
                     onBarcodeDetected: { barcode in
@@ -120,9 +122,9 @@ struct CreateFoodWithScan: View {
                             takePhoto()
                             
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                // Dismiss immediately and start processing
-                                dismiss()
+                                // Start processing first, then dismiss
                                 processBarcodeForCreation(barcode)
+                                dismiss()
                             }
                         }
                     }
@@ -271,9 +273,9 @@ struct CreateFoodWithScan: View {
                         DispatchQueue.main.async {
                             self.selectedImage = image
                             self.isGalleryImageLoaded = true
-                            // Dismiss immediately and start analysis
-                            self.dismiss()
+                            // Start analysis first, then dismiss
                             self.analyzeImageForGallery(image)
+                            self.dismiss()
                         }
                     }
                 }
@@ -312,6 +314,14 @@ struct CreateFoodWithScan: View {
     }
     
     func analyzeImageForCreation(_ image: UIImage) {
+        // Guard against duplicate processing
+        guard !isAnalyzingPhoto else {
+            print("⚠️ Already analyzing photo, ignoring duplicate call")
+            return
+        }
+        
+        isAnalyzingPhoto = true
+        
         // Set scanning state to show loader card in LogFood
         foodManager.isScanningFood = true
         foodManager.isGeneratingFood = true
@@ -373,11 +383,21 @@ struct CreateFoodWithScan: View {
                 self.foodManager.isScanningFood = false
                 self.foodManager.isGeneratingFood = false
                 self.foodManager.scannedImage = nil
+                // Reset analyzing flag
+                self.isAnalyzingPhoto = false
             }
         }
     }
     
     func analyzeNutritionLabelForCreation(_ image: UIImage) {
+        // Guard against duplicate processing
+        guard !isAnalyzingLabel else {
+            print("⚠️ Already analyzing nutrition label, ignoring duplicate call")
+            return
+        }
+        
+        isAnalyzingLabel = true
+        
         // Set scanning state to show loader card in LogFood
         foodManager.isScanningFood = true
         foodManager.isGeneratingFood = true
@@ -452,6 +472,8 @@ struct CreateFoodWithScan: View {
                 self.foodManager.isScanningFood = false
                 self.foodManager.isGeneratingFood = false
                 self.foodManager.scannedImage = nil
+                // Reset analyzing flag
+                self.isAnalyzingLabel = false
             }
         }
     }
@@ -510,18 +532,30 @@ struct CreateFoodWithScan: View {
                     // Reset scanning states
                     self.foodManager.isScanningFood = false
                     self.foodManager.isGeneratingFood = false
+                    // Reset barcode processing flag
+                    self.isProcessingBarcode = false
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from barcode: \(error)")
                     // Reset states on failure
                     self.foodManager.isScanningFood = false
                     self.foodManager.isGeneratingFood = false
+                    // Reset barcode processing flag
+                    self.isProcessingBarcode = false
                 }
             }
         }
     }
     
     func analyzeImageForGallery(_ image: UIImage) {
+        // Guard against duplicate processing
+        guard !isAnalyzingGallery else {
+            print("⚠️ Already analyzing gallery image, ignoring duplicate call")
+            return
+        }
+        
+        isAnalyzingGallery = true
+        
         // Set scanning state to show loader card in LogFood
         foodManager.isScanningFood = true
         foodManager.isGeneratingFood = true
@@ -583,6 +617,8 @@ struct CreateFoodWithScan: View {
                 self.foodManager.isScanningFood = false
                 self.foodManager.isGeneratingFood = false
                 self.foodManager.scannedImage = nil
+                // Reset analyzing flag
+                self.isAnalyzingGallery = false
             }
         }
     }
