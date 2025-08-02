@@ -3592,7 +3592,7 @@ func analyzeNutritionLabel(
                         )
                         
                         // Check if we should show the sheet based on user preference
-                        let shouldShowSheet = UserDefaults.standard.bool(forKey: "scanPreview_foodLabel")
+                        let shouldShowSheet = UserDefaults.standard.object(forKey: "scanPreview_foodLabel") as? Bool ?? true
                         
                         if shouldShowSheet {
                                 // Show confirmation sheet for food label (similar to barcode)
