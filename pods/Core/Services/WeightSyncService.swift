@@ -440,13 +440,13 @@ class WeightSyncService: ObservableObject {
         return appleHealthWeights.filter { appleWeight in
             // Skip if we've already synced this specific Apple Health entry
             if syncedIDs.contains(appleWeight.id) {
-                print("⏭️ Skipping already synced weight ID: \(appleWeight.id)")
+      
                 return false
             }
             
             // Skip if this weight is currently being processed by another sync operation
             if processingWeightIDs.contains(appleWeight.id) {
-                print("⏭️ Skipping weight currently being processed: \(appleWeight.id)")
+              
                 return false
             }
             
@@ -456,7 +456,7 @@ class WeightSyncService: ObservableObject {
             
             // Skip if a weight with the same timestamp already exists on server
             if serverWeightTimestamps.contains(appleTimestamp) {
-                print("⏭️ Skipping duplicate weight from \(appleWeight.date) (already on server)")
+               
                 return false
             }
             
@@ -470,7 +470,7 @@ class WeightSyncService: ObservableObject {
                 if serverDate >= tenMinutesBefore && serverDate <= tenMinutesAfter {
                     let weightDifference = abs(appleWeight.weightKg - serverWeight.weightKg)
                     if weightDifference <= 0.5 { // Within 0.5kg
-                        print("⏭️ Skipping similar weight: Apple Health \(appleWeight.weightKg)kg vs Server \(serverWeight.weightKg)kg")
+    
                         return false
                     }
                 }

@@ -24,6 +24,7 @@ struct CreateFoodWithScan: View {
     @State private var lastProcessedBarcode: String?
     @State private var isGalleryImageLoaded = false
     @State private var navigationPath = NavigationPath()
+    @State private var nutritionProductName = ""
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
     
@@ -446,18 +447,27 @@ struct CreateFoodWithScan: View {
                 case .failure(let error):
                     // Check if this is the special "name required" error
                     if let nsError = error as? NSError, nsError.code == 1001 {
-                        print("🏷️ Product name not found for creation, storing data for dashboard popup")
+                        print("🏷️ Product name not found for creation, setting up for name input in LogFood")
                         if let nutritionData = nsError.userInfo["nutrition_data"] as? [String: Any],
-                           let mealType = nsError.userInfo["meal_type"] as? String {
+                           let mealType = nsError.userInfo["meal_type"] as? String,
+                           let isCreationFlow = nsError.userInfo["is_creation_flow"] as? Bool, isCreationFlow {
                             
-                            // Store in FoodManager for DashboardView to access
-                            self.foodManager.pendingNutritionData = nutritionData
-                            self.foodManager.pendingMealType = mealType
-                            self.foodManager.showNutritionNameInput = true
+                            // Store in FoodManager for LogFood alert to use (creation-specific properties)
+                            self.foodManager.pendingNutritionDataForCreation = nutritionData
+                            self.foodManager.pendingMealTypeForCreation = mealType
+                            self.foodManager.showNutritionNameInputForCreation = true
+                            
+                            // Add a small delay before dismissing to ensure LogFood can react
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                dismiss()
+                            }
+                            return // Don't dismiss immediately
                         }
                     } else {
                         print("❌ Failed to analyze nutrition label: \(error)")
                     }
+                    // Always dismiss the scanner for other cases
+                    dismiss()
                 }
                 
                 // Reset scanning states

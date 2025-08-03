@@ -38,6 +38,9 @@ struct LogFood: View {
     @State private var showCreateFoodWithVoice = false
     @State private var showCreateFoodWithScan = false
     @State private var showConfirmFoodView = false
+    
+    // Nutrition label name input
+    @State private var nutritionProductName = ""
 
     
     enum FoodTab: Hashable {
@@ -134,6 +137,65 @@ struct LogFood: View {
                 foodManager: foodManager,
                 searchFoods: searchFoods
             ))
+            .alert("Product Name Required", isPresented: $foodManager.showNutritionNameInputForCreation) {
+                TextField("Enter product name", text: $nutritionProductName)
+                    .textInputAutocapitalization(.words)
+                Button("Cancel", role: .cancel) {
+                    foodManager.cancelNutritionNameInputForCreation()
+                }
+                Button("Save") {
+                    if !nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        foodManager.createNutritionLabelFoodForCreation(nutritionProductName) { result in
+                            DispatchQueue.main.async {
+                                nutritionProductName = "" // Reset for next time
+                                switch result {
+                                case .success(let food):
+                                    print("✅ Successfully created nutrition label food for creation")
+                                    
+                                    // Check preference for food label scan
+                                    let foodLabelPreviewEnabled = UserDefaults.standard.object(forKey: "scanPreview_foodLabel") as? Bool ?? true
+                                    
+                                    if foodLabelPreviewEnabled {
+                                        // Show confirmation sheet by setting lastGeneratedFood
+                                        print("🏷️ Food label preview enabled - showing confirmation")
+                                        self.foodManager.lastGeneratedFood = food
+                                    } else {
+                                        // Create food directly without confirmation
+                                        print("🏷️ Food label preview disabled - creating food directly")
+                                        
+                                        self.foodManager.createManualFood(food: food, showPreview: false) { result in
+                                            DispatchQueue.main.async {
+                                                switch result {
+                                                case .success(let savedFood):
+                                                    print("✅ Successfully created food from nutrition label with name: \(savedFood.displayName)")
+                                                    
+                                                    // Track as recently added
+                                                    self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
+                                                    
+                                                    // Show success toast
+                                                    self.foodManager.showFoodGenerationSuccess = true
+                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                                        self.foodManager.showFoodGenerationSuccess = false
+                                                    }
+                                                    
+                                                case .failure(let error):
+                                                    print("❌ Failed to create food from nutrition label with name: \(error)")
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                case .failure(let error):
+                                    print("❌ Failed to create nutrition label food for creation: \(error)")
+                                }
+                            }
+                        }
+                    }
+                }
+                .disabled(nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            } message: {
+                Text("We couldn't find the product name on the nutrition label. Please enter it manually.")
+            }
     }
     
     private var coreContent: some View {
@@ -2771,7 +2833,7 @@ struct ChangeModifiers: ViewModifier {
                 }
             }
             .onChange(of: foodManager.lastGeneratedFood) { _, newFood in
-                if newFood != nil {
+                if newFood != nil && !foodManager.showNutritionNameInput && !foodManager.showNutritionNameInputForCreation {
                     showConfirmFoodView = true
                 }
             }

@@ -1061,8 +1061,6 @@ private extension DashboardView {
 
     // Sleep card for page 3
     var sleepCard: some View {
-        // Debug print
-        let _ = print("Sleep data: \(healthViewModel.sleepHours) hours, \(healthViewModel.sleepMinutes) minutes")
         
         return HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {

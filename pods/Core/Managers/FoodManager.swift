@@ -128,10 +128,15 @@ class FoodManager: ObservableObject {
     // Reference to DayLogsViewModel for updating UI after voice logging
     weak var dayLogsViewModel: DayLogsViewModel?
     
-    // Nutrition label name input state
+    // Nutrition label name input state (for logging)
     @Published var showNutritionNameInput = false
     @Published var pendingNutritionData: [String: Any] = [:]
     @Published var pendingMealType = "Lunch"
+    
+    // Nutrition label name input state (for creation)
+    @Published var showNutritionNameInputForCreation = false
+    @Published var pendingNutritionDataForCreation: [String: Any] = [:]
+    @Published var pendingMealTypeForCreation = "Lunch"
     
     // Progress timer for upload progress
     private var progressTimer: Timer?
@@ -3644,6 +3649,95 @@ func analyzeNutritionLabel(
         pendingMealType = "Lunch"
     }
     
+    func cancelNutritionNameInputForCreation() {
+        showNutritionNameInputForCreation = false
+        pendingNutritionDataForCreation = [:]
+        pendingMealTypeForCreation = "Lunch"
+    }
+    
+    // MARK: - Creation-Only Nutrition Label Food
+    func createNutritionLabelFoodForCreation(_ productName: String, completion: @escaping (Result<Food, Error>) -> Void) {
+        guard !productName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let userEmail = userEmail else {
+            completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid product name or user email"])))
+            return
+        }
+        
+        print("🏷️ Creating nutrition label food for creation mode with user-provided name: \(productName)")
+        
+        // Call the backend API to create food with the user-provided name and stored nutrition data
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "name": productName.trimmingCharacters(in: .whitespacesAndNewlines),
+            "nutrition_data": pendingNutritionDataForCreation,
+            "meal_type": pendingMealTypeForCreation,
+            "should_log": false  // Key difference: don't log the food
+        ]
+        
+        // Create the food using NetworkManager
+        guard let url = URL(string: "\(networkManager.baseUrl)/create_nutrition_label_food_for_creation/") else {
+            completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    if let errorMessage = json["error"] as? String {
+                        completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMessage])))
+                        return
+                    }
+                    
+                    // Parse the food from the response
+                    if let foodData = json["food"] as? [String: Any] {
+                        let jsonData = try JSONSerialization.data(withJSONObject: foodData, options: [])
+                        let decoder = JSONDecoder()
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        let food = try decoder.decode(Food.self, from: jsonData)
+                        
+                        // Clear the pending state for creation
+                        DispatchQueue.main.async {
+                            self.showNutritionNameInputForCreation = false
+                            self.pendingNutritionDataForCreation = [:]
+                            self.pendingMealTypeForCreation = "Lunch"
+                        }
+                        
+                        completion(.success(food))
+                        print("✅ Successfully created nutrition label food for creation with user-provided name")
+                    } else {
+                        completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])))
+                    }
+                }
+            } catch {
+                print("❌ Failed to parse response: \(error)")
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+    
     // MARK: - Creation-Only Functions
     // These functions create foods without logging them, for use in food creation contexts
     
@@ -3775,7 +3869,9 @@ func analyzeNutritionLabel(
                         code: 1001, // Custom code for name required
                         userInfo: [
                             NSLocalizedDescriptionKey: "Product name not found on label",
-                            "nutrition_data": payload["nutrition_data"] ?? [:]
+                            "nutrition_data": payload["nutrition_data"] ?? [:],
+                            "meal_type": "Lunch", // Default meal type for creation mode
+                            "is_creation_flow": true // Flag to distinguish creation vs logging
                         ]
                     )))
                     return
