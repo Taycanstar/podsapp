@@ -78,11 +78,15 @@ struct ConfirmFoodView: View {
         self._isCreationMode = State(initialValue: true)
     }
     
+    // Store the original scanned food data
+    @State private var originalScannedFood: Food? = nil
+    
     // Initializer for editing/confirming a scanned/analyzed food
     init(path: Binding<NavigationPath>, food: Food) {
         self._path = path
         self._isCreationMode = State(initialValue: true)
         self._isFromScannedData = State(initialValue: true)
+        self._originalScannedFood = State(initialValue: food)
         
         // Populate fields with the food data
         self._title = State(initialValue: food.description)
@@ -678,20 +682,57 @@ struct ConfirmFoodView: View {
     
     // Function to create the food (for manual food creation)
     private func createFood() {
+        // Mark as creating
+        isCreating = true
+        
+        // If this is from scanned data, use the original food with updated servings
+        if isFromScannedData, let originalFood = originalScannedFood {
+            var updatedFood = originalFood
+            updatedFood.numberOfServings = numberOfServings
+            
+            // Use the updated scanned food data
+            foodManager.createManualFood(food: updatedFood) { result in
+                DispatchQueue.main.async {
+                    self.isCreating = false
+                    switch result {
+                    case .success(let savedFood):
+                        print("✅ Successfully created scanned food: \(savedFood.displayName)")
+                        
+                        // Track as recently added
+                        self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
+                        
+                        // Show success and dismiss
+                        self.foodManager.showFoodGenerationSuccess = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            self.foodManager.showFoodGenerationSuccess = false
+                        }
+                        
+                        self.dismiss()
+                        
+                    case .failure(let error):
+                        print("❌ Failed to create scanned food: \(error)")
+                        self.errorMessage = "Failed to create food: \(error.localizedDescription)"
+                        self.showErrorAlert = true
+                    }
+                }
+            }
+            return
+        }
+        
+        // For manual food creation, continue with the original validation and creation logic
         guard !title.isEmpty, !calories.isEmpty else {
             errorMessage = "Title and calories are required"
             showErrorAlert = true
+            isCreating = false
             return
         }
         
         guard let caloriesValue = Double(calories) else {
             errorMessage = "Calories must be a valid number"
             showErrorAlert = true
+            isCreating = false
             return
         }
-        
-        // Mark as creating
-        isCreating = true
         
         // Format serving text
         let servingText = servingSize.isEmpty ? "1 serving" : servingSize
