@@ -68,6 +68,9 @@ struct AddFoodView: View {
     // Confirmation sheet for scanned foods
     @State private var scannedFoodForConfirmation: Food? = nil
     @State private var showConfirmationSheet = false
+    
+    // Nutrition label name input for recipe
+    @State private var nutritionProductName = ""
 
     
     let foodTabs: [AddFoodTab] = [.all, .myFoods]
@@ -214,6 +217,61 @@ struct AddFoodView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage)
+            }
+            .alert("Product Name Required", isPresented: $foodManager.showNutritionNameInputForRecipe) {
+                TextField("Enter product name", text: $nutritionProductName)
+                    .textInputAutocapitalization(.words)
+                Button("Cancel", role: .cancel) {
+                    foodManager.cancelNutritionNameInputForRecipe()
+                }
+                Button("Save") {
+                    if !nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        // Build food data from pending nutrition data instead of creating it in DB
+                        foodManager.buildFoodFromNutritionData(
+                            name: nutritionProductName,
+                            nutritionData: foodManager.pendingNutritionDataForRecipe
+                        ) { result in
+                            DispatchQueue.main.async {
+                                nutritionProductName = "" // Reset for next time
+                                switch result {
+                                case .success(let food):
+                                    print("✅ Successfully built nutrition label food data for recipe")
+                                    
+                                    // Check preference for food label scan
+                                    let foodLabelPreviewEnabled = UserDefaults.standard.object(forKey: "scanPreview_foodLabel") as? Bool ?? true
+                                    
+                                    if foodLabelPreviewEnabled {
+                                        // Show confirmation sheet by setting scannedFoodForConfirmation
+                                        print("🏷️ Food label preview enabled - showing confirmation")
+                                        self.scannedFoodForConfirmation = food
+                                        self.showConfirmationSheet = true
+                                        // Clear loader states since food data is ready
+                                        self.foodManager.isScanningFood = false
+                                        self.foodManager.isGeneratingFood = false
+                                    } else {
+                                        // Add directly without confirmation
+                                        print("🏷️ Food label preview disabled - adding directly")
+                                        self.generatedFoods.append(food)
+                                        self.selectedFoodIds.insert(food.fdcId)
+                                        
+                                        // Track as recently added
+                                        self.foodManager.trackRecentlyAdded(foodId: food.fdcId)
+                                        
+                                        // Clear loader states
+                                        self.foodManager.isScanningFood = false
+                                        self.foodManager.isGeneratingFood = false
+                                    }
+                                    
+                                case .failure(let error):
+                                    print("❌ Failed to build nutrition label food data: \(error)")
+                                }
+                            }
+                        }
+                    }
+                }
+                .disabled(nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            } message: {
+                Text("We couldn't find the product name on the nutrition label. Please enter it manually.")
             }
                         .sheet(isPresented: $showConfirmationSheet, onDismiss: {
                 // Clean up scanning states if sheet is dismissed without confirming

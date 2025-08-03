@@ -138,6 +138,11 @@ class FoodManager: ObservableObject {
     @Published var pendingNutritionDataForCreation: [String: Any] = [:]
     @Published var pendingMealTypeForCreation = "Lunch"
     
+    // Nutrition label name input state (for recipe/meal adding)
+    @Published var showNutritionNameInputForRecipe = false
+    @Published var pendingNutritionDataForRecipe: [String: Any] = [:]
+    @Published var pendingMealTypeForRecipe = "Lunch"
+    
     // Progress timer for upload progress
     private var progressTimer: Timer?
 
@@ -3653,6 +3658,15 @@ func analyzeNutritionLabel(
         showNutritionNameInputForCreation = false
         pendingNutritionDataForCreation = [:]
         pendingMealTypeForCreation = "Lunch"
+        // Clear loader states when user cancels name input
+        isScanningFood = false
+        isGeneratingFood = false
+    }
+    
+    func cancelNutritionNameInputForRecipe() {
+        showNutritionNameInputForRecipe = false
+        pendingNutritionDataForRecipe = [:]
+        pendingMealTypeForRecipe = "Lunch"
         // Clear loader states when user cancels name input
         isScanningFood = false
         isGeneratingFood = false

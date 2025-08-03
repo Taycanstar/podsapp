@@ -351,41 +351,35 @@ struct AddFoodWithScan: View {
         // Clear lastGeneratedFood BEFORE calling analyzeFoodImage to prevent triggering ConfirmFoodView sheet
         foodManager.lastGeneratedFood = nil
         
-        // Use FoodManager to analyze the image (same as FoodScannerView)
-        foodManager.analyzeFoodImage(
+        // Use FoodManager to analyze the image for recipe/meal (without creating in DB)
+        foodManager.analyzeFoodImageForCreation(
             image: image,
-            userEmail: viewModel.email,
-            mealType: "Lunch"
+            userEmail: viewModel.email
         ) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let combinedLog):
+                case .success(let food):
                     print("✅ Successfully analyzed food from image for recipe")
                     
-                    // Extract the food from the combined log
-                    if let food = combinedLog.food {
-                        let createdFood = food.asFood
-                        
-                        // Clear lastGeneratedFood to prevent triggering other sheets
-                        foodManager.lastGeneratedFood = nil
-                        
-                        // Check preference for photo scan
-                        if photoScanPreviewEnabled {
-                            // Show confirmation sheet
-                            print("📸 Photo scan preview enabled - showing confirmation")
-                            onFoodScanned(createdFood, .photo)
-                        } else {
-                            // Add directly without confirmation
-                            print("📸 Photo scan preview disabled - adding directly")
-                            generatedFoods.append(createdFood)
-                            selectedFoodIds.insert(createdFood.fdcId)
-                            
-                            // Track as recently added
-                            foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
-                        }
+                    // Use the food directly (no need to extract from combinedLog)
+                    let createdFood = food
+                    
+                    // Clear lastGeneratedFood to prevent triggering other sheets
+                    foodManager.lastGeneratedFood = nil
+                    
+                    // Check preference for photo scan
+                    if photoScanPreviewEnabled {
+                        // Show confirmation sheet
+                        print("📸 Photo scan preview enabled - showing confirmation")
+                        onFoodScanned(createdFood, .photo)
                     } else {
-                        print("❌ No food found in analysis result")
-                        // Note: Don't cleanup here - parent will handle it
+                        // Add directly without confirmation
+                        print("📸 Photo scan preview disabled - adding directly")
+                        generatedFoods.append(createdFood)
+                        selectedFoodIds.insert(createdFood.fdcId)
+                        
+                        // Track as recently added
+                        foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
                     }
                     
                 case .failure(let error):
@@ -407,54 +401,49 @@ struct AddFoodWithScan: View {
         // Clear lastGeneratedFood BEFORE calling analyzeNutritionLabel to prevent triggering ConfirmFoodView sheet
         foodManager.lastGeneratedFood = nil
         
-        // Use FoodManager to analyze the nutrition label
-        foodManager.analyzeNutritionLabel(
+        // Use FoodManager to analyze the nutrition label for recipe/meal (without creating in DB)
+        foodManager.analyzeNutritionLabelForCreation(
             image: image,
-            userEmail: viewModel.email,
-            mealType: "Lunch"
+            userEmail: viewModel.email
         ) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let combinedLog):
+                case .success(let food):
                     print("✅ Successfully analyzed nutrition label for recipe")
                     
-                    // Extract the food from the combined log
-                    if let food = combinedLog.food {
-                        let createdFood = food.asFood
-                        
-                        // Clear lastGeneratedFood to prevent triggering other sheets
-                        foodManager.lastGeneratedFood = nil
-                        
-                        // Check preference for food label scan
-                        if foodLabelPreviewEnabled {
-                            // Show confirmation sheet
-                            print("🏷️ Food label preview enabled - showing confirmation")
-                            onFoodScanned(createdFood, .photo)
-                        } else {
-                            // Add directly without confirmation
-                            print("🏷️ Food label preview disabled - adding directly")
-                            generatedFoods.append(createdFood)
-                            selectedFoodIds.insert(createdFood.fdcId)
-                            
-                            // Track as recently added
-                            foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
-                        }
+                    // Use the food directly (no need to extract from combinedLog)
+                    let createdFood = food
+                    
+                    // Clear lastGeneratedFood to prevent triggering other sheets
+                    foodManager.lastGeneratedFood = nil
+                    
+                    // Check preference for food label scan
+                    if foodLabelPreviewEnabled {
+                        // Show confirmation sheet
+                        print("🏷️ Food label preview enabled - showing confirmation")
+                        onFoodScanned(createdFood, .photo)
                     } else {
-                        print("❌ No food found in nutrition label analysis result")
-                        // Note: Don't cleanup here - parent will handle it
+                        // Add directly without confirmation
+                        print("🏷️ Food label preview disabled - adding directly")
+                        generatedFoods.append(createdFood)
+                        selectedFoodIds.insert(createdFood.fdcId)
+                        
+                        // Track as recently added
+                        foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
                     }
                     
                 case .failure(let error):
                     // Check if this is the special "name required" error
                     if let nsError = error as? NSError, nsError.code == 1001 {
-                        print("🏷️ Product name not found for recipe, storing data for dashboard popup")
+                        print("🏷️ Product name not found for recipe, setting up for name input in AddFoodView")
                         if let nutritionData = nsError.userInfo["nutrition_data"] as? [String: Any],
-                           let mealType = nsError.userInfo["meal_type"] as? String {
+                           let mealType = nsError.userInfo["meal_type"] as? String,
+                           let isCreationFlow = nsError.userInfo["is_creation_flow"] as? Bool, isCreationFlow {
                             
-                            // Store in FoodManager for DashboardView to access
-                            foodManager.pendingNutritionData = nutritionData
-                            foodManager.pendingMealType = mealType
-                            foodManager.showNutritionNameInput = true
+                            // Store in FoodManager for AddFoodView alert to use (recipe-specific properties)
+                            foodManager.pendingNutritionDataForRecipe = nutritionData
+                            foodManager.pendingMealTypeForRecipe = mealType
+                            foodManager.showNutritionNameInputForRecipe = true
                         }
                     } else {
                         print("❌ Failed to analyze nutrition label: \(error)")
@@ -476,41 +465,35 @@ struct AddFoodWithScan: View {
         // Clear lastGeneratedFood BEFORE calling analyzeFoodImage to prevent triggering ConfirmFoodView sheet
         foodManager.lastGeneratedFood = nil
         
-        // Use FoodManager to analyze the image (same as FoodScannerView)
-        foodManager.analyzeFoodImage(
+        // Use FoodManager to analyze the image for recipe/meal (without creating in DB)
+        foodManager.analyzeFoodImageForCreation(
             image: image,
-            userEmail: viewModel.email,
-            mealType: "Lunch"
+            userEmail: viewModel.email
         ) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let combinedLog):
+                case .success(let food):
                     print("✅ Successfully analyzed food from gallery image for recipe")
                     
-                    // Extract the food from the combined log
-                    if let food = combinedLog.food {
-                        let createdFood = food.asFood
-                        
-                        // Clear lastGeneratedFood to prevent triggering other sheets
-                        foodManager.lastGeneratedFood = nil
-                        
-                        // Check preference for gallery import
-                        if galleryImportPreviewEnabled {
-                            // Show confirmation sheet
-                            print("🖼️ Gallery import preview enabled - showing confirmation")
-                            onFoodScanned(createdFood, .gallery)
-                        } else {
-                            // Add directly without confirmation
-                            print("🖼️ Gallery import preview disabled - adding directly")
-                            generatedFoods.append(createdFood)
-                            selectedFoodIds.insert(createdFood.fdcId)
-                            
-                            // Track as recently added
-                            foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
-                        }
+                    // Use the food directly (no need to extract from combinedLog)
+                    let createdFood = food
+                    
+                    // Clear lastGeneratedFood to prevent triggering other sheets
+                    foodManager.lastGeneratedFood = nil
+                    
+                    // Check preference for gallery import
+                    if galleryImportPreviewEnabled {
+                        // Show confirmation sheet
+                        print("🖼️ Gallery import preview enabled - showing confirmation")
+                        onFoodScanned(createdFood, .gallery)
                     } else {
-                        print("❌ No food found in gallery analysis result")
-                        // Note: Don't cleanup here - parent will handle it
+                        // Add directly without confirmation
+                        print("🖼️ Gallery import preview disabled - adding directly")
+                        generatedFoods.append(createdFood)
+                        selectedFoodIds.insert(createdFood.fdcId)
+                        
+                        // Track as recently added
+                        foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
                     }
                     
                 case .failure(let error):
