@@ -145,12 +145,16 @@ struct LogFood: View {
                 }
                 Button("Save") {
                     if !nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        foodManager.createNutritionLabelFoodForCreation(nutritionProductName) { result in
+                        // Build food data from pending nutrition data instead of creating it in DB
+                        foodManager.buildFoodFromNutritionData(
+                            name: nutritionProductName,
+                            nutritionData: foodManager.pendingNutritionDataForCreation
+                        ) { result in
                             DispatchQueue.main.async {
                                 nutritionProductName = "" // Reset for next time
                                 switch result {
                                 case .success(let food):
-                                    print("✅ Successfully created nutrition label food for creation")
+                                    print("✅ Successfully built nutrition label food data for creation")
                                     
                                     // Check preference for food label scan
                                     let foodLabelPreviewEnabled = UserDefaults.standard.object(forKey: "scanPreview_foodLabel") as? Bool ?? true
@@ -159,7 +163,7 @@ struct LogFood: View {
                                         // Show confirmation sheet by setting lastGeneratedFood
                                         print("🏷️ Food label preview enabled - showing confirmation")
                                         self.foodManager.lastGeneratedFood = food
-                                        // Clear loader states since food creation is complete
+                                        // Clear loader states since food data is ready
                                         self.foodManager.isScanningFood = false
                                         self.foodManager.isGeneratingFood = false
                                     } else {
@@ -189,7 +193,7 @@ struct LogFood: View {
                                     }
                                     
                                 case .failure(let error):
-                                    print("❌ Failed to create nutrition label food for creation: \(error)")
+                                    print("❌ Failed to build nutrition label food data: \(error)")
                                 }
                             }
                         }

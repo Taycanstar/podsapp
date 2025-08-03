@@ -78,17 +78,13 @@ class WeightSyncService: ObservableObject {
             // The previous logic with lastSyncDate was causing weights to be missed
             let syncStartDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
             
-            print("📅 WeightSyncService: Sync start date: \(syncStartDate)")
-            print("📅 WeightSyncService: Current time: \(Date())")
-            print("📅 WeightSyncService: Last sync date was: \(lastSyncDate?.description ?? "never")")
-            
             // Fetch Apple Health weight entries
             let appleHealthWeights = try await fetchAppleHealthWeights(since: syncStartDate)
-            print("📊 WeightSyncService: Found \(appleHealthWeights.count) Apple Health weight entries since \(syncStartDate)")
+       
             
             // Debug: Print each Apple Health weight
             for (index, weight) in appleHealthWeights.enumerated() {
-                print("  - Apple Health Weight \(index + 1): \(weight.weightKg)kg from \(weight.date) (source: \(weight.sourceApp))")
+
             }
             
             if appleHealthWeights.isEmpty {
@@ -100,24 +96,24 @@ class WeightSyncService: ObservableObject {
             
             // Get existing server weight logs to check for duplicates
             let serverWeights = try await fetchServerWeights(for: userEmail)
-            print("📊 WeightSyncService: Found \(serverWeights.count) existing server weight logs")
+
             
             // Debug: Print recent server weights
             for (index, weight) in serverWeights.prefix(5).enumerated() {
-                print("  - Server Weight \(index + 1): \(weight.weightKg)kg from \(weight.dateLogged)")
+
             }
             
             // Filter out weights that already exist on server
             let newWeights = filterNewWeights(appleHealthWeights: appleHealthWeights, serverWeights: serverWeights)
-            print("📊 WeightSyncService: \(newWeights.count) new weight entries to sync after filtering")
+   
             
             // Debug: Print weights that will be synced
             for (index, weight) in newWeights.enumerated() {
-                print("  - Will sync Weight \(index + 1): \(weight.weightKg)kg from \(weight.date)")
+ 
             }
             
             if newWeights.isEmpty {
-                print("✅ WeightSyncService: All Apple Health weights already synced")
+
                 updateLastSyncDate()
                 isSyncing = false
                 return
@@ -134,13 +130,13 @@ class WeightSyncService: ObservableObject {
                 do {
                     try await syncWeightToServer(weightEntry: weightEntry, userEmail: userEmail)
                     syncedCount += 1
-                    print("✅ WeightSyncService: Synced weight \(weightEntry.weightKg)kg from \(weightEntry.date)")
+
                 } catch {
                     print("❌ WeightSyncService: Failed to sync weight from \(weightEntry.date): \(error)")
                 }
             }
             
-            print("✅ WeightSyncService: Successfully synced \(syncedCount)/\(newWeights.count) weight entries")
+
             
             // Update last sync date and post notification
             updateLastSyncDate()

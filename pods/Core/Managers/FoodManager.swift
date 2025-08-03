@@ -3658,6 +3658,90 @@ func analyzeNutritionLabel(
         isGeneratingFood = false
     }
     
+    // MARK: - Build Food Data Without Database Creation
+    func buildFoodFromNutritionData(name: String, nutritionData: [String: Any], completion: @escaping (Result<Food, Error>) -> Void) {
+        // Build Food object from nutrition data without hitting the backend
+        let servingText = nutritionData["serving_size"] as? String ?? "1 serving"
+        
+        // Create food nutrients from the nutrition data
+        var foodNutrients: [Nutrient] = []
+        
+        if let calories = nutritionData["calories"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Energy", value: calories, unitName: "kcal"))
+        }
+        if let protein = nutritionData["protein"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Protein", value: protein, unitName: "g"))
+        }
+        if let carbs = nutritionData["carbs"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "g"))
+        }
+        if let fat = nutritionData["fat"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "g"))
+        }
+        if let saturatedFat = nutritionData["saturated_fat"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Saturated Fatty Acids", value: saturatedFat, unitName: "g"))
+        }
+        if let transFat = nutritionData["trans_fat"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Trans Fatty Acids", value: transFat, unitName: "g"))
+        }
+        if let cholesterol = nutritionData["cholesterol"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Cholesterol", value: cholesterol, unitName: "mg"))
+        }
+        if let sodium = nutritionData["sodium"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Sodium", value: sodium, unitName: "mg"))
+        }
+        if let totalCarbs = nutritionData["total_carbs"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Total Carbohydrate", value: totalCarbs, unitName: "g"))
+        }
+        if let dietaryFiber = nutritionData["dietary_fiber"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Dietary Fiber", value: dietaryFiber, unitName: "g"))
+        }
+        if let totalSugars = nutritionData["total_sugars"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Total Sugars", value: totalSugars, unitName: "g"))
+        }
+        if let addedSugars = nutritionData["added_sugars"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Added Sugars", value: addedSugars, unitName: "g"))
+        }
+        if let vitaminD = nutritionData["vitamin_d"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Vitamin D", value: vitaminD, unitName: "mcg"))
+        }
+        if let calcium = nutritionData["calcium"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Calcium", value: calcium, unitName: "mg"))
+        }
+        if let iron = nutritionData["iron"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Iron", value: iron, unitName: "mg"))
+        }
+        if let potassium = nutritionData["potassium"] as? Double {
+            foodNutrients.append(Nutrient(nutrientName: "Potassium", value: potassium, unitName: "mg"))
+        }
+        
+        // Create food measure
+        let foodMeasure = FoodMeasure(
+            disseminationText: servingText,
+            gramWeight: 100.0,
+            id: 1,
+            modifier: servingText,
+            measureUnitName: "serving",
+            rank: 1
+        )
+        
+        // Create the food object
+        let food = Food(
+            fdcId: Int.random(in: 1000000..<9999999), // Temporary ID
+            description: name,
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: 1.0,
+            numberOfServings: 1.0,
+            servingSizeUnit: "serving",
+            householdServingFullText: servingText,
+            foodNutrients: foodNutrients,
+            foodMeasures: [foodMeasure]
+        )
+        
+        completion(.success(food))
+    }
+    
     // MARK: - Creation-Only Nutrition Label Food
     func createNutritionLabelFoodForCreation(_ productName: String, completion: @escaping (Result<Food, Error>) -> Void) {
         guard !productName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
