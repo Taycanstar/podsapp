@@ -159,6 +159,9 @@ struct LogFood: View {
                                         // Show confirmation sheet by setting lastGeneratedFood
                                         print("🏷️ Food label preview enabled - showing confirmation")
                                         self.foodManager.lastGeneratedFood = food
+                                        // Clear loader states since food creation is complete
+                                        self.foodManager.isScanningFood = false
+                                        self.foodManager.isGeneratingFood = false
                                     } else {
                                         // Create food directly without confirmation
                                         print("🏷️ Food label preview disabled - creating food directly")
@@ -2703,6 +2706,9 @@ struct SheetModifiers: ViewModifier {
             }
             .sheet(isPresented: $showConfirmFoodView, onDismiss: {
                 foodManager.lastGeneratedFood = nil
+                // Clear loader states when confirmation sheet is dismissed
+                foodManager.isScanningFood = false
+                foodManager.isGeneratingFood = false
             }) {
                 if let food = foodManager.lastGeneratedFood {
                     NavigationView {

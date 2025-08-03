@@ -3653,6 +3653,9 @@ func analyzeNutritionLabel(
         showNutritionNameInputForCreation = false
         pendingNutritionDataForCreation = [:]
         pendingMealTypeForCreation = "Lunch"
+        // Clear loader states when user cancels name input
+        isScanningFood = false
+        isGeneratingFood = false
     }
     
     // MARK: - Creation-Only Nutrition Label Food
