@@ -143,6 +143,11 @@ class FoodManager: ObservableObject {
     @Published var pendingNutritionDataForRecipe: [String: Any] = [:]
     @Published var pendingMealTypeForRecipe = "Lunch"
     
+    // Scan failure error handling
+    @Published var showScanFailureAlert = false
+    @Published var scanFailureMessage = ""
+    @Published var scanFailureType = ""
+    
     // Progress timer for upload progress
     private var progressTimer: Timer?
 
@@ -2298,6 +2303,15 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
       guard success, let payload = payload else {
         let msg = errMsg ?? "Unknown error"
         print("🔴 [analyzeFoodImage] error: \(msg)")
+        
+        // Show user-friendly error message for photo scan failures
+        DispatchQueue.main.async {
+          self.showScanFailure(
+            type: "Photo Scan",
+            message: "We couldn't recognize the food in this photo. Try taking a clearer picture or enter the food manually."
+          )
+        }
+        
         completion(.failure(NSError(
           domain: "FoodScan", code: -1,
           userInfo: [NSLocalizedDescriptionKey: msg])))
@@ -2433,6 +2447,15 @@ func analyzeNutritionLabel(
     guard success, let payload = payload else {
       let msg = errMsg ?? "Unknown error"
       print("🔴 [analyzeNutritionLabel] error: \(msg)")
+      
+      // Show user-friendly error message for nutrition label failures
+      DispatchQueue.main.async {
+        self.showScanFailure(
+          type: "No Nutrition Label Detected",
+          message: "Try scanning again."
+        )
+      }
+      
       completion(.failure(NSError(
         domain: "FoodManager",
         code: -1,
@@ -3668,6 +3691,15 @@ func analyzeNutritionLabel(
         pendingNutritionDataForRecipe = [:]
         pendingMealTypeForRecipe = "Lunch"
         // Clear loader states when user cancels name input
+        isScanningFood = false
+        isGeneratingFood = false
+    }
+    
+    func showScanFailure(type: String, message: String) {
+        scanFailureType = type
+        scanFailureMessage = message
+        showScanFailureAlert = true
+        // Clear scanning states
         isScanningFood = false
         isGeneratingFood = false
     }

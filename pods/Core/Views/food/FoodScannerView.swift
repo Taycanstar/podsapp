@@ -522,6 +522,11 @@ private func analyzeImageForPreview(_ image: UIImage) {
 
     case .failure(let error):
       print("❌ preview scan failed:", error.localizedDescription)
+      // Show user-friendly error message for photo scan failures
+      foodManager.showScanFailure(
+        type: "No Food Detected",
+        message: "Try scanning again."
+      )
     }
   }
 }

@@ -273,6 +273,11 @@ struct AddFoodView: View {
             } message: {
                 Text("We couldn't find the product name on the nutrition label. Please enter it manually.")
             }
+            .alert(foodManager.scanFailureType, isPresented: $foodManager.showScanFailureAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(foodManager.scanFailureMessage)
+            }
                         .sheet(isPresented: $showConfirmationSheet, onDismiss: {
                 // Clean up scanning states if sheet is dismissed without confirming
                 if scannedFoodForConfirmation != nil {

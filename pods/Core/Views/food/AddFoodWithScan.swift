@@ -384,6 +384,11 @@ struct AddFoodWithScan: View {
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from image: \(error)")
+                    // Show user-friendly error message
+                    foodManager.showScanFailure(
+                        type: "No Food Detected",
+                        message: "Try scanning again."
+                    )
                     // Note: Don't cleanup here - parent will handle it
                 }
             }
@@ -447,6 +452,11 @@ struct AddFoodWithScan: View {
                         }
                     } else {
                         print("❌ Failed to analyze nutrition label: \(error)")
+                        // Show user-friendly error message for other nutrition label failures
+                        foodManager.showScanFailure(
+                            type: "No Nutrition Label Detected",
+                            message: "Try scanning again."
+                        )
                     }
                     // Note: Don't cleanup here - parent will handle it
                 }
@@ -498,6 +508,11 @@ struct AddFoodWithScan: View {
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from gallery image: \(error)")
+                    // Show user-friendly error message
+                    foodManager.showScanFailure(
+                        type: "Gallery Image",
+                        message: "We couldn't recognize the food in this image. Try selecting a clearer photo or enter the food manually."
+                    )
                     // Note: Don't cleanup here - parent will handle it
                 }
             }
@@ -552,6 +567,11 @@ struct AddFoodWithScan: View {
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from barcode: \(error)")
+                    // Show user-friendly error message
+                    foodManager.showScanFailure(
+                        type: "Barcode Scan",
+                        message: "We couldn't find this product in our database. Try scanning again or enter the food manually."
+                    )
                     // CRITICAL: Reset isProcessingBarcode on error too
                     isProcessingBarcode = false
                     // Note: Don't cleanup scanning states here - parent will handle it

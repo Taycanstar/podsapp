@@ -203,6 +203,11 @@ struct LogFood: View {
             } message: {
                 Text("We couldn't find the product name on the nutrition label. Please enter it manually.")
             }
+            .alert(foodManager.scanFailureType, isPresented: $foodManager.showScanFailureAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(foodManager.scanFailureMessage)
+            }
     }
     
     private var coreContent: some View {

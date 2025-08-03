@@ -405,6 +405,11 @@ private var remainingCal: Double { vm.remainingCalories }
             } message: {
                 Text("We couldn't find the product name on the nutrition label. Please enter it manually.")
             }
+            .alert(foodMgr.scanFailureType, isPresented: $foodMgr.showScanFailureAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(foodMgr.scanFailureMessage)
+            }
             .onAppear {
                 configureOnAppear() 
                 

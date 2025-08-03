@@ -374,6 +374,11 @@ struct CreateFoodWithScan: View {
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from image: \(error)")
+                    // Show user-friendly error message
+                    self.foodManager.showScanFailure(
+                        type: "No Food Detected",
+                        message: "Try scanning again."
+                    )
                 }
                 
                 // Reset scanning states
@@ -465,6 +470,11 @@ struct CreateFoodWithScan: View {
                         }
                     } else {
                         print("❌ Failed to analyze nutrition label: \(error)")
+                        // Show user-friendly error message for other nutrition label failures
+                        self.foodManager.showScanFailure(
+                            type: "No Nutrition Label Detected",
+                            message: "Try scanning again."
+                        )
                     }
                     // Always dismiss the scanner for other cases
                     dismiss()
@@ -539,9 +549,11 @@ struct CreateFoodWithScan: View {
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from barcode: \(error)")
-                    // Reset states on failure
-                    self.foodManager.isScanningFood = false
-                    self.foodManager.isGeneratingFood = false
+                    // Show user-friendly error message
+                    self.foodManager.showScanFailure(
+                        type: "Barcode Scan",
+                        message: "We couldn't find this product in our database. Try scanning again or enter the food manually."
+                    )
                     // Reset barcode processing flag
                     self.isProcessingBarcode = false
                 }
@@ -609,6 +621,11 @@ struct CreateFoodWithScan: View {
                     
                 case .failure(let error):
                     print("❌ Failed to analyze food from gallery: \(error)")
+                    // Show user-friendly error message
+                    self.foodManager.showScanFailure(
+                        type: "Gallery Image",
+                        message: "We couldn't recognize the food in this image. Try selecting a clearer photo or enter the food manually."
+                    )
                 }
                 
                 // Reset scanning states
