@@ -190,6 +190,7 @@
 		36A91DB72E37094500414543 /* ExerciseLoggingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DB62E37093E00414543 /* ExerciseLoggingView.swift */; };
 		36A91DB92E39B37500414543 /* MealLogDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DB82E39B36D00414543 /* MealLogDetails.swift */; };
 		36A91DBB2E3BE2A100414543 /* ScanLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DBA2E3BE29B00414543 /* ScanLogView.swift */; };
+		36A91DBD2E411BCD00414543 /* ReviewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DBC2E411BC700414543 /* ReviewManager.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -476,6 +477,7 @@
 		36A91DB62E37093E00414543 /* ExerciseLoggingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseLoggingView.swift; sourceTree = "<group>"; };
 		36A91DB82E39B36D00414543 /* MealLogDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealLogDetails.swift; sourceTree = "<group>"; };
 		36A91DBA2E3BE29B00414543 /* ScanLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanLogView.swift; sourceTree = "<group>"; };
+		36A91DBC2E411BC700414543 /* ReviewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewManager.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -675,6 +677,7 @@
 		363AF9F32D1125F600C91A14 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				36A91DBC2E411BC700414543 /* ReviewManager.swift */,
 				361FF33E2E26EF5A00B7F68E /* StreakManager.swift */,
 				361FF3302E21A4BD00B7F68E /* WorkoutDataManager.swift */,
 				363AF9F42D11261D00C91A14 /* ActivityLogManager.swift */,
@@ -1522,6 +1525,7 @@
 				363AFA172D4746A900C91A14 /* PodsView.swift in Sources */,
 				36ED35A52DD5291900D174FB /* HealthKitManager.swift in Sources */,
 				361FF3312E21A4C600B7F68E /* WorkoutDataManager.swift in Sources */,
+				36A91DBD2E411BCD00414543 /* ReviewManager.swift in Sources */,
 				3682C86C2BBAED7100B350E2 /* CustomVideoPlayer.swift in Sources */,
 				36ED35A92DD529B600D174FB /* HealthDataDetailView.swift in Sources */,
 				3617B93C2C58A0A4008FB5FA /* AddSheetView.swift in Sources */,

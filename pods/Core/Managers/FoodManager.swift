@@ -696,6 +696,9 @@ func loadMoreFoods(refresh: Bool = false) {
                     self.showLogSuccess = false
                 }
                 
+                // Trigger review check after successful food log
+                ReviewManager.shared.foodWasLogged()
+                
                 // Show the local toast if the food was added manually (not AI generated)
                 if !self.isAnalyzingFood {
                     self.showToast = true
@@ -2369,6 +2372,9 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
              self.showLogSuccess = false
            }
+           
+           // Trigger review check after successful food log
+           ReviewManager.shared.foodWasLogged()
         }
    
         // Track image scanning in Mixpanel
@@ -2549,6 +2555,9 @@ func analyzeNutritionLabel(
          DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
            self.showLogSuccess = false
          }
+         
+         // Trigger review check after successful food log
+         ReviewManager.shared.foodWasLogged()
        }
        
        // Track nutrition label scanning in Mixpanel
@@ -2834,6 +2843,9 @@ func analyzeNutritionLabel(
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                         self.showLogSuccess = false
                     }
+                    
+                    // Trigger review check after successful food log
+                    ReviewManager.shared.foodWasLogged()
                     
                     completion(true, nil)
                 }
@@ -3357,6 +3369,9 @@ func analyzeNutritionLabel(
                             }
                         }
                     }
+                    
+                    // Trigger review check after successful food log
+                    ReviewManager.shared.foodWasLogged()
                     
              
                     

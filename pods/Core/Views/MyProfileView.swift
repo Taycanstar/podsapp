@@ -433,6 +433,11 @@ struct MyProfileView: View {
                         nutritionGoalsView(profileData: profileData)
                     }
                     
+                    // Debug section (only in debug builds)
+                    #if DEBUG
+                    debugSectionView
+                    #endif
+                    
                     Spacer(minLength: 100)
                 }
                 .frame(width: geometry.size.width)
@@ -672,6 +677,103 @@ struct MyProfileView: View {
             print("  - Chart trend: \(chartData.first?.1.weightKg ?? 0)kg → \(chartData.last?.1.weightKg ?? 0)kg")
         }
     }
+    
+    // MARK: - Debug Section (Debug builds only)
+    
+    #if DEBUG
+    private var debugSectionView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "ladybug")
+                    .foregroundColor(.orange)
+                    .font(.system(size: 16))
+                Text("Debug Tools")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            
+            VStack(spacing: 12) {
+                // Review status info
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Review Status (Simplified)")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    
+                    HStack {
+                        Text("Foods logged:")
+                        Spacer()
+                        Text("\(ReviewManager.shared.totalFoodsLogged)")
+                            .fontWeight(.medium)
+                    }
+                    .font(.caption)
+                    
+                    HStack {
+                        Text("Review shown:")
+                        Spacer()
+                        Text(ReviewManager.shared.hasShownAnyReview() ? "Yes" : "No")
+                            .fontWeight(.medium)
+                            .foregroundColor(ReviewManager.shared.hasShownAnyReview() ? .green : .orange)
+                    }
+                    .font(.caption)
+                    
+                    HStack {
+                        Text("Next food log will:")
+                        Spacer()
+                        Text(ReviewManager.shared.hasShownAnyReview() ? "Do nothing" : "Show review")
+                            .fontWeight(.medium)
+                            .foregroundColor(ReviewManager.shared.hasShownAnyReview() ? .secondary : .blue)
+                    }
+                    .font(.caption)
+                }
+                
+                Divider()
+                
+                // Debug actions
+                VStack(spacing: 8) {
+                    Button("Force Show Review Prompt") {
+                        ReviewManager.shared.forceShowReview()
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.blue)
+                    .cornerRadius(8)
+                    
+                    Button("Reset Review Tracking") {
+                        ReviewManager.shared.resetAllTracking()
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.red)
+                    .cornerRadius(8)
+                    
+                    Button("Check Review Milestones") {
+                        ReviewManager.shared.checkAndRequestReviewIfNeeded()
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.green)
+                    .cornerRadius(8)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .background(Color("iosfit"))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.orange.opacity(0.5), lineWidth: 1)
+        )
+    }
+    #endif
     
     // MARK: - Macro Split Data Methods
     
