@@ -2360,6 +2360,11 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
            )
            self.showLogSuccess = true
            
+           // Reset scanning states when food is successfully logged
+           self.isScanningFood = false
+           self.isGeneratingFood = false
+           self.scannedImage = nil
+           
            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
              self.showLogSuccess = false
            }
@@ -2533,6 +2538,11 @@ func analyzeNutritionLabel(
            calories: loggedFood.calories
          )
          self.showLogSuccess = true
+         
+         // Reset scanning states when food is successfully logged
+         self.isScanningFood = false
+         self.isGeneratingFood = false
+         self.scannedImage = nil
          
          DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
            self.showLogSuccess = false
@@ -3908,6 +3918,11 @@ func analyzeNutritionLabel(
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     self.isAnalyzingImage = false
                     self.isLoading = false
+                    // Reset other scanning states
+                    self.isScanningFood = false
+                    self.isGeneratingFood = false
+                    self.scannedImage = nil
+                    self.uploadProgress = 0
                 }
                 
                 // failure path
@@ -3976,6 +3991,11 @@ func analyzeNutritionLabel(
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     self.isAnalyzingImage = false
                     self.isLoading = false
+                    // Reset other scanning states
+                    self.isScanningFood = false
+                    self.isGeneratingFood = false
+                    self.scannedImage = nil
+                    self.uploadProgress = 0
                 }
                 
                 // failure path
