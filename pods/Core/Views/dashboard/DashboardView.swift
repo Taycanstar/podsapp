@@ -1939,7 +1939,7 @@ struct FoodGenerationCard: View {
             
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Text(foodManager.isScanningFood ? foodManager.loadingMessage : "Generating food item...")
+                    Text(foodManager.loadingMessage.isEmpty ? "Generating food item..." : foodManager.loadingMessage)
                         .font(.headline)
                         .foregroundColor(.primary)
                     Spacer()

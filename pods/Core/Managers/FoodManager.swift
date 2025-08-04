@@ -2294,6 +2294,12 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
         self.isAnalyzingImage = false
         self.isLoading        = false
         self.imageAnalysisMessage = ""
+        
+        // Reset ALL scanning states together to prevent UI glitches
+        self.isScanningFood = false
+        self.isGeneratingFood = false
+        self.scannedImage = nil
+        self.loadingMessage = ""
 
         // reset for next time
         self.uploadProgress = 0
@@ -2359,11 +2365,6 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
              calories: loggedFood.calories
            )
            self.showLogSuccess = true
-           
-           // Reset scanning states when food is successfully logged
-           self.isScanningFood = false
-           self.isGeneratingFood = false
-           self.scannedImage = nil
            
            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
              self.showLogSuccess = false
@@ -2442,6 +2443,12 @@ func analyzeNutritionLabel(
         self.isAnalyzingImage = false
         self.isLoading        = false
         self.imageAnalysisMessage = ""
+        
+        // Reset ALL scanning states together to prevent UI glitches
+        self.isScanningFood = false
+        self.isGeneratingFood = false
+        self.scannedImage = nil
+        self.loadingMessage = ""
 
         // reset for next time
         self.uploadProgress = 0
@@ -2538,11 +2545,6 @@ func analyzeNutritionLabel(
            calories: loggedFood.calories
          )
          self.showLogSuccess = true
-         
-         // Reset scanning states when food is successfully logged
-         self.isScanningFood = false
-         self.isGeneratingFood = false
-         self.scannedImage = nil
          
          DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
            self.showLogSuccess = false
@@ -3923,6 +3925,7 @@ func analyzeNutritionLabel(
                     self.isGeneratingFood = false
                     self.scannedImage = nil
                     self.uploadProgress = 0
+                    self.loadingMessage = ""
                 }
                 
                 // failure path
@@ -3996,6 +3999,7 @@ func analyzeNutritionLabel(
                     self.isGeneratingFood = false
                     self.scannedImage = nil
                     self.uploadProgress = 0
+                    self.loadingMessage = ""
                 }
                 
                 // failure path
