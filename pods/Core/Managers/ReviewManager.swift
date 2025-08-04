@@ -36,6 +36,19 @@ class ReviewManager: ObservableObject {
     // Public accessors for debugging
     var debugFirstFoodDate: Date? { firstFoodDate }
     
+    /// Public methods for debug UI to check milestone status
+    func hasShownFirstFoodReview() -> Bool {
+        return hasShownReview(for: .firstFood)
+    }
+    
+    func hasShownEngagedReview() -> Bool {
+        return hasShownReview(for: .engaged)
+    }
+    
+    func hasShownRetentionReview() -> Bool {
+        return hasShownReview(for: .retention)
+    }
+    
     // MARK: - Initialization
     private init() {
         loadPersistedData()
@@ -58,15 +71,42 @@ class ReviewManager: ObservableObject {
         checkAndRequestReviewIfNeeded()
     }
     
-    /// Check if we should request a review - simplified logic
+    /// Check if we should request a review - 3-milestone system with simplified milestone #1
     func checkAndRequestReviewIfNeeded() {
-        // Simple rule: If user has never been shown a review, show it now
-        if !hasShownAnyReview() {
-            // Check if we're under the 3-per-year limit (Apple's restriction)
-            let recentRequests = reviewRequestDates.filter { daysSince($0) < 365 }
-            if recentRequests.count < 3 {
-                requestReview()
+        // Check if we're under the 3-per-year limit (Apple's restriction)
+        let recentRequests = reviewRequestDates.filter { daysSince($0) < 365 }
+        if recentRequests.count >= 3 {
+            print("📱 Skipping review request - already hit 3-per-year limit")
+            return
+        }
+        
+        // Milestone #1: Any food log (simplified) - if never shown any review before
+        if !hasShownReview(for: .firstFood) {
+            requestReview(for: .firstFood)
+            return
+        }
+        
+        // Milestone #2: Engaged user (14+ days, 10+ foods OR 7-day streak)
+        if let firstFood = firstFoodDate,
+           daysSince(firstFood) >= 14,
+           !hasShownReview(for: .engaged) {
+            
+            let hasEnoughFoods = totalFoodsLogged >= 10
+            let hasStreak = StreakManager.shared.currentStreak >= 7
+            
+            if hasEnoughFoods || hasStreak {
+                requestReview(for: .engaged)
+                return
             }
+        }
+        
+        // Milestone #3: Retention (30+ days after engaged milestone)
+        if hasShownReview(for: .engaged),
+           let lastEngagedDate = getLastReviewDate(for: .engaged),
+           daysSince(lastEngagedDate) >= 30,
+           !hasShownReview(for: .retention) {
+            
+            requestReview(for: .retention)
         }
     }
     
@@ -109,13 +149,32 @@ class ReviewManager: ObservableObject {
         }
     }
     
-    /// Legacy method for backward compatibility and debug helpers
+    /// Request review for specific milestone (3-milestone system)
     private func requestReview(for milestone: ReviewMilestone) {
-        // Log for analytics (legacy milestone tracking)
+        // Record the request
+        reviewRequestDates.append(Date())
+        saveReviewRequestDates()
+        
+        // Mark both simplified tracking and milestone-specific tracking
+        markReviewShown()  // Simplified tracking
+        markReviewShown(for: milestone)  // Milestone-specific tracking
+        
+        // Log for analytics
         print("📱 Requesting App Store review for milestone: \(milestone.rawValue)")
         
-        // Just call the simplified version
-        requestReview()
+        // Request review from the current window scene
+        DispatchQueue.main.async {
+            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+                print("❌ Could not find window scene for review request")
+                return
+            }
+            
+            if #available(iOS 18.0, *) {
+                AppStore.requestReview(in: windowScene)
+            } else {
+                SKStoreReviewController.requestReview(in: windowScene)
+            }
+        }
     }
     
     // MARK: - Persistence
@@ -221,7 +280,7 @@ extension ReviewManager {
         }
     }
     
-    /// Reset all review tracking for testing
+    /// Reset all review tracking for testing - ALWAYS AVAILABLE
     func resetAllTracking() {
         let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
         
@@ -241,6 +300,23 @@ extension ReviewManager {
         reviewRequestDates = []
         
         print("🧹 DEBUG: Reset all review tracking (simplified + legacy)")
+    }
+    
+    /// Force show review prompt for testing
+    func forceShowReview() {
+        DispatchQueue.main.async {
+            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+                print("❌ Could not find window scene for review request")
+                return
+            }
+            
+            print("🧪 DEBUG: Force showing review prompt")
+            if #available(iOS 18.0, *) {
+                AppStore.requestReview(in: windowScene)
+            } else {
+                SKStoreReviewController.requestReview(in: windowScene)
+            }
+        }
     }
 }
 #endif

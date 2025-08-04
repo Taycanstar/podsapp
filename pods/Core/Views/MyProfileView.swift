@@ -696,7 +696,7 @@ struct MyProfileView: View {
             VStack(spacing: 12) {
                 // Review status info
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Review Status (Simplified)")
+                    Text("Review Status (3-Milestone System)")
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.secondary)
@@ -710,22 +710,53 @@ struct MyProfileView: View {
                     .font(.caption)
                     
                     HStack {
-                        Text("Review shown:")
+                        Text("First food date:")
                         Spacer()
-                        Text(ReviewManager.shared.hasShownAnyReview() ? "Yes" : "No")
+                        Text(ReviewManager.shared.debugFirstFoodDate?.formatted(date: .abbreviated, time: .omitted) ?? "None")
                             .fontWeight(.medium)
-                            .foregroundColor(ReviewManager.shared.hasShownAnyReview() ? .green : .orange)
                     }
                     .font(.caption)
                     
                     HStack {
-                        Text("Next food log will:")
+                        Text("Current streak:")
                         Spacer()
-                        Text(ReviewManager.shared.hasShownAnyReview() ? "Do nothing" : "Show review")
+                        Text("\(streakManager.currentStreak) days")
                             .fontWeight(.medium)
-                            .foregroundColor(ReviewManager.shared.hasShownAnyReview() ? .secondary : .blue)
                     }
                     .font(.caption)
+                    
+                    // Milestone status
+                    Divider()
+                        .padding(.vertical, 4)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Milestone #1 (Any food):")
+                            Spacer()
+                            Text(ReviewManager.shared.hasShownFirstFoodReview() ? "✅ Shown" : "⭕ Pending")
+                                .fontWeight(.medium)
+                                .foregroundColor(ReviewManager.shared.hasShownFirstFoodReview() ? .green : .orange)
+                        }
+                        .font(.caption)
+                        
+                        HStack {
+                            Text("Milestone #2 (Engaged):")
+                            Spacer()
+                            Text(ReviewManager.shared.hasShownEngagedReview() ? "✅ Shown" : "⭕ Pending")
+                                .fontWeight(.medium)
+                                .foregroundColor(ReviewManager.shared.hasShownEngagedReview() ? .green : .orange)
+                        }
+                        .font(.caption)
+                        
+                        HStack {
+                            Text("Milestone #3 (Retention):")
+                            Spacer()
+                            Text(ReviewManager.shared.hasShownRetentionReview() ? "✅ Shown" : "⭕ Pending")
+                                .fontWeight(.medium)
+                                .foregroundColor(ReviewManager.shared.hasShownRetentionReview() ? .green : .orange)
+                        }
+                        .font(.caption)
+                    }
                 }
                 
                 Divider()

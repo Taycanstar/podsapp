@@ -133,6 +133,7 @@ struct ContentView: View {
                         CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView, showNewSheet: $showNewSheet)
                             .ignoresSafeArea(.keyboard)
                     }
+                    
                 }
                 .ignoresSafeArea(.keyboard)
 
