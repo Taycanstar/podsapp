@@ -191,6 +191,9 @@
 		36A91DB92E39B37500414543 /* MealLogDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DB82E39B36D00414543 /* MealLogDetails.swift */; };
 		36A91DBB2E3BE2A100414543 /* ScanLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DBA2E3BE29B00414543 /* ScanLogView.swift */; };
 		36A91DBD2E411BCD00414543 /* ReviewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DBC2E411BC700414543 /* ReviewManager.swift */; };
+		36A91DBF2E419A6D00414543 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DBE2E419A6700414543 /* NotificationManager.swift */; };
+		36A91DC22E419A9400414543 /* NotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DC12E419A8E00414543 /* NotificationSettingsView.swift */; };
+		36A91DC42E419AD200414543 /* MealReminderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A91DC32E419ACC00414543 /* MealReminderService.swift */; };
 		36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF862C84014000265F91 /* MediaPreview.swift */; };
 		36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF882C86894600265F91 /* SubscriptionManager.swift */; };
 		36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */; };
@@ -478,6 +481,9 @@
 		36A91DB82E39B36D00414543 /* MealLogDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealLogDetails.swift; sourceTree = "<group>"; };
 		36A91DBA2E3BE29B00414543 /* ScanLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanLogView.swift; sourceTree = "<group>"; };
 		36A91DBC2E411BC700414543 /* ReviewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewManager.swift; sourceTree = "<group>"; };
+		36A91DBE2E419A6700414543 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		36A91DC12E419A8E00414543 /* NotificationSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsView.swift; sourceTree = "<group>"; };
+		36A91DC32E419ACC00414543 /* MealReminderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealReminderService.swift; sourceTree = "<group>"; };
 		36B3CF862C84014000265F91 /* MediaPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreview.swift; sourceTree = "<group>"; };
 		36B3CF882C86894600265F91 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		36B3CF8A2C86C46600265F91 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
@@ -610,6 +616,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				36A91DC32E419ACC00414543 /* MealReminderService.swift */,
 				361FF3402E288D9600B7F68E /* MuscleRecoveryService.swift */,
 				361FF33A2E234F4E00B7F68E /* WeightSyncService.swift */,
 				361FF3362E22E56A00B7F68E /* DataLayer.swift */,
@@ -677,6 +684,7 @@
 		363AF9F32D1125F600C91A14 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				36A91DBE2E419A6700414543 /* NotificationManager.swift */,
 				36A91DBC2E411BC700414543 /* ReviewManager.swift */,
 				361FF33E2E26EF5A00B7F68E /* StreakManager.swift */,
 				361FF3302E21A4BD00B7F68E /* WorkoutDataManager.swift */,
@@ -813,6 +821,7 @@
 		3688DBF62BDEAE54001E244C /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				36A91DC02E419A8800414543 /* settings */,
 				363068DE2E19E3DA00F2D4EC /* profile */,
 				363068CD2E0CA78200F2D4EC /* biometrics */,
 				3662A54D2DFDE02100847487 /* workouts */,
@@ -912,6 +921,14 @@
 				368A27362B977F5A0001BBCA /* LandingView.swift */,
 			);
 			path = auth;
+			sourceTree = "<group>";
+		};
+		36A91DC02E419A8800414543 /* settings */ = {
+			isa = PBXGroup;
+			children = (
+				36A91DC12E419A8E00414543 /* NotificationSettingsView.swift */,
+			);
+			path = settings;
 			sourceTree = "<group>";
 		};
 		36B8516C2D507BD000A876C3 /* friends */ = {
@@ -1382,6 +1399,7 @@
 				3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */,
 				36ED35F72DDE538E00D174FB /* NameFoodView.swift in Sources */,
 				36A85CF52DB453AD00DD4266 /* OnboardingProgress.swift in Sources */,
+				36A91DBF2E419A6D00414543 /* NotificationManager.swift in Sources */,
 				36A91DBB2E3BE2A100414543 /* ScanLogView.swift in Sources */,
 				363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */,
 				368D67182BDCC454000434E0 /* PodItemCellImage.swift in Sources */,
@@ -1403,6 +1421,7 @@
 				36ED35AE2DD53B6C00D174FB /* LogWaterView.swift in Sources */,
 				3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */,
 				36A85D052DC300FB00DD4266 /* FitnessGoalView.swift in Sources */,
+				36A91DC42E419AD200414543 /* MealReminderService.swift in Sources */,
 				363AFA0F2D3C1A0900C91A14 /* ItemSummaryView.swift in Sources */,
 				363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */,
 				36ED35F12DDE536800D174FB /* DescribeFoodView.swift in Sources */,
@@ -1605,6 +1624,7 @@
 				363AFA1D2D4759E000C91A14 /* FoldersView.swift in Sources */,
 				36ED35BC2DD938C800D174FB /* HeightDataView.swift in Sources */,
 				369474562CB9C0B600CD197F /* MetricCard.swift in Sources */,
+				36A91DC22E419A9400414543 /* NotificationSettingsView.swift in Sources */,
 				361FF3472E2A012700B7F68E /* TextLogView.swift in Sources */,
 				364A83CC2DACA02F009D2620 /* NetworkManagerTwo.swift in Sources */,
 			);

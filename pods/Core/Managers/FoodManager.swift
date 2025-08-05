@@ -699,6 +699,9 @@ func loadMoreFoods(refresh: Bool = false) {
                 // Trigger review check after successful food log
                 ReviewManager.shared.foodWasLogged()
                 
+                // Track meal timing for smart reminders
+                MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
+                
                 // Show the local toast if the food was added manually (not AI generated)
                 if !self.isAnalyzingFood {
                     self.showToast = true
@@ -2375,6 +2378,9 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
            
            // Trigger review check after successful food log
            ReviewManager.shared.foodWasLogged()
+           
+           // Track meal timing for smart reminders
+           MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
         }
    
         // Track image scanning in Mixpanel
@@ -2558,6 +2564,9 @@ func analyzeNutritionLabel(
          
          // Trigger review check after successful food log
          ReviewManager.shared.foodWasLogged()
+         
+         // Track meal timing for smart reminders
+         MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
        }
        
        // Track nutrition label scanning in Mixpanel
@@ -2846,6 +2855,9 @@ func analyzeNutritionLabel(
                     
                     // Trigger review check after successful food log
                     ReviewManager.shared.foodWasLogged()
+                    
+                    // Track meal timing for smart reminders
+                    MealReminderService.shared.mealWasLogged(mealType: mealType)
                     
                     completion(true, nil)
                 }
@@ -3372,6 +3384,9 @@ func analyzeNutritionLabel(
                     
                     // Trigger review check after successful food log
                     ReviewManager.shared.foodWasLogged()
+                    
+                    // Track meal timing for smart reminders
+                    MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
                     
              
                     

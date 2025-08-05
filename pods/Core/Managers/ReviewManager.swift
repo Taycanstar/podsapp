@@ -62,13 +62,36 @@ class ReviewManager: ObservableObject {
         saveTotalFoodsLogged()
         
         // Set first food date if not already set (for analytics/debugging)
-        if firstFoodDate == nil {
+        let isFirstFood = firstFoodDate == nil
+        if isFirstFood {
             firstFoodDate = Date()
             saveFirstFoodDate()
+            
+            // Request notification permissions after first food log (happy moment)
+            requestNotificationPermissionsAfterFirstFood()
         }
         
         // Simple check: Show review if user has never been shown one before
         checkAndRequestReviewIfNeeded()
+    }
+    
+    /// Request notification permissions after first food log (happy moment)
+    private func requestNotificationPermissionsAfterFirstFood() {
+        // Add a small delay to let the food log success animation complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            Task {
+                let granted = await NotificationManager.shared.requestPermissions()
+                print("📱 First food log permission request: \(granted ? "granted" : "denied")")
+                
+                if granted {
+                    // Setup notification categories and meal reminders
+                    NotificationManager.shared.setupNotificationCategories()
+                    MealReminderService.shared.refreshAllReminders()
+                    
+                    print("✅ Notification system initialized after first food log")
+                }
+            }
+        }
     }
     
     /// Check if we should request a review - 3-milestone system with simplified milestone #1

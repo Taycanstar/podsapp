@@ -87,6 +87,12 @@ struct ProfileView: View {
                               }
                               .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                               
+                              NavigationLink(destination: NotificationSettingsView()) {
+                                  Label("Notifications", systemImage: "bell")
+                                      .foregroundColor(iconColor)
+                              }
+                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                              
                               // Units selection row
                               HStack {
                                   Label("Units", systemImage: "globe")

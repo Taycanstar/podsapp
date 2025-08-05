@@ -23,6 +23,8 @@ struct podsApp: App {
     @StateObject private var deepLinkHandler = DeepLinkHandler()
     @StateObject private var subscriptionManager = SubscriptionManager()
     @StateObject private var dayLogsVM    = DayLogsViewModel()
+    @StateObject private var notificationManager = NotificationManager.shared
+    @StateObject private var mealReminderService = MealReminderService.shared
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 //    @State private var isAuthenticated = false
     @Environment(\.scenePhase) var scenePhase
@@ -53,6 +55,8 @@ struct podsApp: App {
                 .environmentObject(dayLogsVM)
                 .environmentObject(dataLayer)
                 .environmentObject(dataSyncService)
+                .environmentObject(notificationManager)
+                .environmentObject(mealReminderService)
                 .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
 //                .onChange(of: scenePhase) { newPhase in
 //                                   if newPhase == .active {
@@ -185,6 +189,28 @@ class DeepLinkHandler: ObservableObject {
     static let shared = DeepLinkHandler()
     @Published var activeInvitation: PodInvitation?
     @Published var activeTeamInvitation: TeamInvitation?
+    @Published var shouldNavigateToActivitySummary: Bool = false
+    @Published var activityData: [String: Any] = [:]
+
+    init() {
+        // Listen for activity navigation notifications from NotificationManager
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("NavigateToActivitySummary"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleActivityNavigation(userInfo: notification.userInfo)
+        }
+        
+        // Listen for food logging navigation from meal reminders
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("NavigateToFoodLogging"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleFoodLoggingNavigation(userInfo: notification.userInfo)
+        }
+    }
 
     func handle(url: URL) {
             guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
@@ -198,6 +224,48 @@ class DeepLinkHandler: ObservableObject {
                 fetchTeamInvitationDetails(token: token)
             }
         }
+    
+    // MARK: - Activity Navigation
+    
+    private func handleActivityNavigation(userInfo: [AnyHashable: Any]?) {
+        guard let userInfo = userInfo else { return }
+        
+        // Store activity data for the dashboard to display
+        self.activityData = Dictionary(uniqueKeysWithValues: 
+            userInfo.compactMap { key, value in
+                guard let stringKey = key as? String else { return nil }
+                return (stringKey, value)
+            }
+        )
+        self.shouldNavigateToActivitySummary = true
+        
+        print("🏃‍♂️ Deep linking to activity summary with data: \(activityData)")
+        
+        // Reset navigation flag after a delay to allow navigation to complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            self.shouldNavigateToActivitySummary = false
+        }
+    }
+    
+    // MARK: - Food Logging Navigation
+    
+    private func handleFoodLoggingNavigation(userInfo: [AnyHashable: Any]?) {
+        guard let userInfo = userInfo,
+              let mealType = userInfo["mealType"] as? String else {
+            print("📱 Food logging navigation: Invalid meal type")
+            return
+        }
+        
+        print("🍽️ Deep linking to food logging for meal: \(mealType)")
+        
+        // Navigate to food logging view
+        // This would typically trigger a navigation change in the main app
+        NotificationCenter.default.post(
+            name: NSNotification.Name("ShowFoodLogging"),
+            object: nil,
+            userInfo: ["mealType": mealType]
+        )
+    }
 
     private func fetchInvitationDetails(token: String) {
         NetworkManager().fetchInvitationDetails(token: token) { result in
@@ -238,7 +306,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             print("Error: MP_TOKEN is missing or not a valid String.")
         }
 
-
+        // Register for remote notifications
+        registerForPushNotifications()
    
         // Restore previous sign-in state if available
         GIDSignIn.sharedInstance.restorePreviousSignIn { user, error in
@@ -250,6 +319,50 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         }
      
         return true
+    }
+    
+    // MARK: - Push Notification Registration
+    
+    func registerForPushNotifications() {
+        UNUserNotificationCenter.current().delegate = NotificationManager.shared
+        
+        DispatchQueue.main.async {
+            UIApplication.shared.registerForRemoteNotifications()
+        }
+    }
+    
+    // MARK: - Remote Notification Handling
+    
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
+        let token = tokenParts.joined()
+        print("📱 Device token: \(token)")
+        
+        // Send token to backend for push notifications
+        // This would typically be done when user is authenticated
+        if let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty {
+            NetworkManagerTwo.shared.updateDeviceToken(token: token, userEmail: userEmail) { result in
+                switch result {
+                case .success:
+                    print("✅ Device token updated successfully")
+                case .failure(let error):
+                    print("❌ Failed to update device token: \(error)")
+                }
+            }
+        }
+    }
+    
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("❌ Failed to register for remote notifications: \(error)")
+    }
+    
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        print("📱 Received remote notification: \(userInfo)")
+        
+        // Handle activity push notifications
+        NotificationManager.shared.handleActivityPushNotification(userInfo: userInfo)
+        
+        completionHandler(.newData)
     }
     
     func application(_ application: UIApplication, continue userActivity: NSUserActivity,

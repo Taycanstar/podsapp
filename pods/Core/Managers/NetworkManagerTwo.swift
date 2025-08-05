@@ -3215,6 +3215,63 @@ let baseUrl = "http://172.20.10.4:8000"
         // Start the request
         task.resume()
     }
+    
+    // MARK: - Device Token Management
+    
+    /// Update device token for push notifications
+    /// - Parameters:
+    ///   - token: The device token string
+    ///   - userEmail: User's email address
+    ///   - completion: Result callback with success/failure
+    func updateDeviceToken(token: String, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/api/update-device-token/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let requestBody: [String: Any] = [
+            "device_token": token,
+            "user_email": userEmail
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("📱 Updating device token for user: \(userEmail)")
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("❌ Device token update failed: \(error.localizedDescription)")
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    completion(.failure(NetworkError.invalidResponse))
+                    return
+                }
+                
+                if httpResponse.statusCode == 200 {
+                    print("✅ Device token updated successfully")
+                    completion(.success(()))
+                } else {
+                    print("❌ Device token update failed with status: \(httpResponse.statusCode)")
+                    completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+            }
+        }
+        
+        task.resume()
+    }
 
 }
 
