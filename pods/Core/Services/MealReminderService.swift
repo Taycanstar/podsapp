@@ -70,7 +70,7 @@ class MealReminderService: ObservableObject {
         // Initialize time properties with default values first
         self.breakfastTime = Calendar.current.date(from: DateComponents(hour: 8, minute: 0)) ?? Date()
         self.lunchTime = Calendar.current.date(from: DateComponents(hour: 12, minute: 0)) ?? Date()
-        self.dinnerTime = Calendar.current.date(from: DateComponents(hour: 18, minute: 0)) ?? Date()
+        self.dinnerTime = Calendar.current.date(from: DateComponents(hour: 19, minute: 0)) ?? Date()
         
         // Load saved preferences
         self.isBreakfastEnabled = UserDefaults.standard.bool(forKey: breakfastEnabledKey)

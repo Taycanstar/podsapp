@@ -130,16 +130,36 @@ class NotificationManager: NSObject, ObservableObject {
     
     /// Request notification permissions after first food log (happy moment)
     func requestPermissions() async -> Bool {
+        // First check current settings
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        print("📱 Current notification settings: authStatus=\(settings.authorizationStatus.rawValue)")
+        
+        // If already determined, don't request again
+        if settings.authorizationStatus == .authorized {
+            print("📱 Notifications already authorized")
+            await MainActor.run {
+                self.authorizationStatus = .authorized
+            }
+            return true
+        } else if settings.authorizationStatus == .denied {
+            print("📱 Notifications already denied - user must enable in Settings")
+            await MainActor.run {
+                self.authorizationStatus = .denied
+            }
+            return false
+        }
+        
+        // Only request if status is .notDetermined
         do {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(
-                options: [.alert, .sound, .badge, .provisional]
+                options: [.alert, .sound, .badge]
             )
             
             await MainActor.run {
                 self.authorizationStatus = granted ? .authorized : .denied
             }
             
-            print("📱 Notification permissions: \(granted ? "granted" : "denied")")
+            print("📱 Notification permission request result: \(granted ? "granted" : "denied")")
             return granted
         } catch {
             print("❌ Failed to request notification permissions: \(error)")

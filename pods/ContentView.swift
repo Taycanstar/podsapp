@@ -40,6 +40,7 @@ struct ContentView: View {
     @State private var showFoodScanner = false
     @State private var showVoiceLog = false
     @State private var showLogWorkoutView = false
+    @State private var showBiWeeklyNotificationAlert = false
     
     // State for selected meal - initialized with time-based default
     @State private var selectedMeal: String = {
@@ -233,6 +234,7 @@ struct ContentView: View {
         .onAppear {
             print("⚠️ ContentView appeared: Force checking onboarding status")
             forceCheckOnboarding()
+            setupNotificationObservers()
         }
         .onChange(of: selectedMeal) { _, newValue in
             print("🍽️ ContentView selectedMeal changed to: \(newValue)")
@@ -278,6 +280,20 @@ struct ContentView: View {
 //        .sheet(isPresented: $showTourView) {
 //            TourView(isTourViewPresented: $showTourView)
 //        }
+        .alert("Stay on Track", isPresented: $showBiWeeklyNotificationAlert) {
+            Button("Enable in Settings") {
+                if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(settingsURL)
+                }
+            }
+            Button("Remind Me Later", role: .cancel) {
+                // Snooze for another 2 weeks
+                let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
+                UserDefaults.standard.set(Date(), forKey: "notification_prompt_date_\(userEmail)")
+            }
+        } message: {
+            Text("Get gentle meal reminders and activity celebrations to help maintain your streak. You can configure these in Settings.")
+        }
         .onReceive(NotificationCenter.default.publisher(for: .subscriptionPurchased)) { _ in
              fetchSubscriptionInfo()
          }
@@ -601,6 +617,20 @@ struct ContentView: View {
         NotificationCenter.default.addObserver(forName: Notification.Name("AuthenticationCompleted"), object: nil, queue: .main) { _ in
             // Refresh authentication state
             self.isAuthenticated = true
+        }
+    }
+    
+    // MARK: - Notification Permission Sheet Setup
+    
+    private func setupNotificationObservers() {
+        // Listen for bi-weekly notification reminder
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("ShowBiWeeklyNotificationReminder"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            print("📱 Showing bi-weekly notification alert")
+            showBiWeeklyNotificationAlert = true
         }
     }
 }

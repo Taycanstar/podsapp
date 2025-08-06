@@ -37,7 +37,7 @@
 		<true/>
 	</dict>
 	<key>NSUserNotificationsUsageDescription</key>
-	<string>Notifications may include alerts, sounds, and icon badges. These can be configured in Settings.</string>
+	<string>Enable meal &amp; activity reminders for day-long coaching. These can be configured in Settings.</string>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 </dict>

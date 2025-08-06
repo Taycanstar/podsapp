@@ -58,37 +58,104 @@ class ReviewManager: ObservableObject {
     
     /// Call this after a food is successfully logged
     func foodWasLogged() {
+        // Reload data to ensure we have the correct user's count
+        loadPersistedData()
+        
         totalFoodsLogged += 1
         saveTotalFoodsLogged()
+        
+        let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
+        print("🍽️ DEBUG: Food logged! User: \(userEmail), Total count: \(totalFoodsLogged)")
         
         // Set first food date if not already set (for analytics/debugging)
         let isFirstFood = firstFoodDate == nil
         if isFirstFood {
             firstFoodDate = Date()
             saveFirstFoodDate()
-            
-            // Request notification permissions after first food log (happy moment)
-            requestNotificationPermissionsAfterFirstFood()
         }
+        
+        // Request notification permissions after 5 food logs (commitment moment)
+        if totalFoodsLogged == 5 {
+            print("🍽️ DEBUG: Reached 5 food logs! Attempting notification request...")
+            requestNotificationPermissionsAfter5Logs()
+        }
+        
+        // Check for bi-weekly notification reminder
+        checkForBiWeeklyNotificationReminder()
         
         // Simple check: Show review if user has never been shown one before
         checkAndRequestReviewIfNeeded()
     }
     
-    /// Request notification permissions after first food log (happy moment)
-    private func requestNotificationPermissionsAfterFirstFood() {
-        // Add a small delay to let the food log success animation complete
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+    /// Request notification permissions after 5 food logs (commitment moment)
+    private func requestNotificationPermissionsAfter5Logs() {
+        let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
+        let hasPromptedKey = "has_prompted_for_notifications_\(userEmail)"
+        
+        print("🔍 DEBUG: Checking notification permission requirements...")
+        print("🔍 DEBUG: User email: \(userEmail)")
+        print("🔍 DEBUG: Has prompted key: \(hasPromptedKey)")
+        print("🔍 DEBUG: Has been prompted before: \(UserDefaults.standard.bool(forKey: hasPromptedKey))")
+        print("🔍 DEBUG: Current authorization status: \(NotificationManager.shared.authorizationStatus.rawValue)")
+        
+        // Only prompt if we haven't already prompted and notifications aren't already authorized
+        guard !UserDefaults.standard.bool(forKey: hasPromptedKey),
+              NotificationManager.shared.authorizationStatus != .authorized else {
+            print("📱 SKIPPED: Notification prompt - already prompted or authorized")
+            return
+        }
+        
+        print("📱 Requesting native notification permissions after 5 food logs")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             Task {
                 let granted = await NotificationManager.shared.requestPermissions()
-                print("📱 First food log permission request: \(granted ? "granted" : "denied")")
+                print("📱 5-food-log permission request: \(granted ? "granted" : "denied")")
+                
+                // Mark as prompted regardless of result
+                let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
+                UserDefaults.standard.set(Date(), forKey: "notification_prompt_date_\(userEmail)")
+                UserDefaults.standard.set(true, forKey: "has_prompted_for_notifications_\(userEmail)")
                 
                 if granted {
                     // Setup notification categories and meal reminders
                     NotificationManager.shared.setupNotificationCategories()
                     MealReminderService.shared.refreshAllReminders()
-                    
-                    print("✅ Notification system initialized after first food log")
+                    print("✅ Notification system initialized after 5 food logs")
+                } else {
+                    // Mark as declined for bi-weekly reminders
+                    UserDefaults.standard.set(true, forKey: "notification_declined_\(userEmail)")
+                }
+            }
+        }
+    }
+    
+    /// Check if we should show bi-weekly notification reminder
+    private func checkForBiWeeklyNotificationReminder() {
+        let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
+        let hasPromptedKey = "has_prompted_for_notifications_\(userEmail)"
+        let promptDateKey = "notification_prompt_date_\(userEmail)"
+        let declinedKey = "notification_declined_\(userEmail)"
+        
+        // Only check if user has been prompted before and declined
+        guard UserDefaults.standard.bool(forKey: hasPromptedKey),
+              UserDefaults.standard.bool(forKey: declinedKey),
+              NotificationManager.shared.authorizationStatus != .authorized else {
+            return
+        }
+        
+        // Check if it's been 2 weeks since last prompt
+        if let lastPromptDate = UserDefaults.standard.object(forKey: promptDateKey) as? Date {
+            let twoWeeksAgo = Calendar.current.date(byAdding: .weekOfYear, value: -2, to: Date()) ?? Date()
+            
+            if lastPromptDate < twoWeeksAgo {
+                print("📱 Triggering bi-weekly notification reminder")
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("ShowBiWeeklyNotificationReminder"),
+                        object: nil
+                    )
                 }
             }
         }
@@ -284,24 +351,9 @@ private enum ReviewMilestone: String {
 
 // MARK: - Debug Helpers
 
-#if DEBUG
 extension ReviewManager {
     /// Force show review prompt for testing (only works in debug/TestFlight)
-    func forceShowReview() {
-        DispatchQueue.main.async {
-            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
-                print("❌ Could not find window scene for review request")
-                return
-            }
-            
-            print("🧪 DEBUG: Force showing review prompt")
-            if #available(iOS 18.0, *) {
-                AppStore.requestReview(in: windowScene)
-            } else {
-                SKStoreReviewController.requestReview(in: windowScene)
-            }
-        }
-    }
+
     
     /// Reset all review tracking for testing - ALWAYS AVAILABLE
     func resetAllTracking() {
@@ -341,5 +393,12 @@ extension ReviewManager {
             }
         }
     }
+    
+    /// Reset food count for testing notification flow
+    func resetFoodCountForTesting(to count: Int) {
+        let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
+        totalFoodsLogged = count
+        UserDefaults.standard.set(count, forKey: "\(totalFoodsLoggedKey)_\(userEmail)")
+        print("🧪 DEBUG: Reset food count to \(count) for testing")
+    }
 }
-#endif

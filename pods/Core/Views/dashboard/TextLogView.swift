@@ -374,6 +374,12 @@ struct TextLogView: View {
             self.foodManager.lastLoggedItem = (name: displayName, calories: Double(calories))
             self.foodManager.showLogSuccess = true
             
+            // Trigger review manager for notification permission after 5 foods
+            ReviewManager.shared.foodWasLogged()
+            
+            // Track meal timing for smart reminders
+            MealReminderService.shared.mealWasLogged(mealType: mealType)
+            
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 self.foodManager.showLogSuccess = false
             }
