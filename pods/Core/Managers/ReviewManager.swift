@@ -120,6 +120,7 @@ class ReviewManager: ObservableObject {
                 if granted {
                     // Setup notification categories and meal reminders
                     NotificationManager.shared.setupNotificationCategories()
+                    MealReminderService.shared.enableAllMealReminders()
                     MealReminderService.shared.refreshAllReminders()
                     print("✅ Notification system initialized after 5 food logs")
                 } else {

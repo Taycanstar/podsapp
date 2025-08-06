@@ -54,6 +54,7 @@ struct NotificationSettingsView: View {
                 // Settings Button outside Form
                 settingsButtonSection
                 
+                
                 Spacer()
             }
         }
@@ -191,7 +192,6 @@ struct NotificationSettingsView: View {
             quietHoursEndData = endData
         }
     }
-    
     
     
     

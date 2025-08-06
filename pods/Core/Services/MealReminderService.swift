@@ -72,10 +72,11 @@ class MealReminderService: ObservableObject {
         self.lunchTime = Calendar.current.date(from: DateComponents(hour: 12, minute: 0)) ?? Date()
         self.dinnerTime = Calendar.current.date(from: DateComponents(hour: 19, minute: 0)) ?? Date()
         
-        // Load saved preferences
-        self.isBreakfastEnabled = UserDefaults.standard.bool(forKey: breakfastEnabledKey)
-        self.isLunchEnabled = UserDefaults.standard.bool(forKey: lunchEnabledKey)
-        self.isDinnerEnabled = UserDefaults.standard.bool(forKey: dinnerEnabledKey)
+        // Load saved preferences - but default to true if notifications are authorized
+        let shouldDefaultToEnabled = NotificationManager.shared.authorizationStatus == .authorized
+        self.isBreakfastEnabled = UserDefaults.standard.object(forKey: breakfastEnabledKey) != nil ? UserDefaults.standard.bool(forKey: breakfastEnabledKey) : shouldDefaultToEnabled
+        self.isLunchEnabled = UserDefaults.standard.object(forKey: lunchEnabledKey) != nil ? UserDefaults.standard.bool(forKey: lunchEnabledKey) : shouldDefaultToEnabled
+        self.isDinnerEnabled = UserDefaults.standard.object(forKey: dinnerEnabledKey) != nil ? UserDefaults.standard.bool(forKey: dinnerEnabledKey) : shouldDefaultToEnabled
         
         // Now load saved times or keep defaults (this won't trigger didSet during init)
         if let savedBreakfastTime = loadSavedTime(for: .breakfast) {
@@ -113,6 +114,14 @@ class MealReminderService: ObservableObject {
     /// Manually refresh all reminders (useful for settings changes)
     func refreshAllReminders() {
         scheduleAllReminders()
+    }
+    
+    /// Enable all meal reminders when notifications are first granted
+    func enableAllMealReminders() {
+        isBreakfastEnabled = true
+        isLunchEnabled = true
+        isDinnerEnabled = true
+        print("✅ All meal reminders enabled automatically")
     }
     
     /// Get default time for meal type
