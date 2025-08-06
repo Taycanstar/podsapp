@@ -42,15 +42,19 @@ struct NotificationSettingsView: View {
         ZStack {
             formBackgroundColor.edgesIgnoringSafeArea(.all)
             
-            Form {
-                // Activity Notifications Section
-                activityNotificationsSection
+            VStack(spacing: 0) {
+                Form {
+                    // Activity Notifications Section
+                    activityNotificationsSection
+                    
+                    // Quiet Hours Section
+                    quietHoursSection
+                }
                 
-                // Quiet Hours Section
-                quietHoursSection
-                
-                // Settings Button
+                // Settings Button outside Form
                 settingsButtonSection
+                
+                Spacer()
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -195,21 +199,21 @@ struct NotificationSettingsView: View {
     // MARK: - Settings Button Section
     
     private var settingsButtonSection: some View {
-        Section {
-            Button(action: openNotificationSettings) {
-                HStack {
-                    Spacer()
-                    Text(notificationManager.authorizationStatus == .authorized ? "Notification Settings" : "Enable Notifications")
-                        .foregroundColor(.white)
-                        .fontWeight(.medium)
-                    Spacer()
-                }
-                .padding(.vertical, 12)
-                .background(Color.systemGray3)
-                .cornerRadius(8)
+        Button(action: openNotificationSettings) {
+            HStack {
+                Spacer()
+                Text(notificationManager.authorizationStatus == .authorized ? "Notification Settings" : "Enable Notifications")
+                    .foregroundColor(.white)
+                    .fontWeight(.medium)
+                Spacer()
             }
-            .buttonStyle(PlainButtonStyle())
+            .padding(.vertical, 12)
+            .background(Color(.systemGray3))
+            .cornerRadius(8)
         }
+        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
     
     private func openNotificationSettings() {
