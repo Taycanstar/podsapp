@@ -324,12 +324,12 @@ struct ConfirmLogView: View {
                 }
             }
         )
-        .onAppear {
-            // Auto-focus the servings field when the view appears
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isServingsFocused = true
-            }
-        }
+        // .onAppear {
+        //     // Auto-focus the servings field when the view appears
+        //     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        //         isServingsFocused = true
+        //     }
+        // }
 
     }
     
@@ -798,68 +798,112 @@ struct ConfirmLogView: View {
                                 .padding(.bottom, 12)
                                 
                                 // Negative items
-                                ForEach(Array(health.negatives.enumerated()), id: \.offset) { index, negative in
+                                // ForEach(Array(health.negatives.enumerated()), id: \.offset) { index, negative in
+                                //     VStack(spacing: 0) {
+                                //         HStack(alignment: .center, spacing: 12) {
+                                //             // Icon based on negative type
+                                //             ZStack {
+                                //                 RoundedRectangle(cornerRadius: 8)
+                                //                     .fill(Color.gray.opacity(0.1))
+                                //                     .frame(width: 40, height: 40)
+                                //                 Image(systemName: getIconForNegative(negative))
+                                //                     .font(.system(size: 20))
+                                //                     .foregroundColor(.primary)
+                                //             }
+                                            
+                                //             VStack(alignment: .leading, spacing: 2) {
+                                //                 Text(getNegativeTitle(negative))
+                                //                     .font(.body)
+                                //                     .fontWeight(.medium)
+                                //                 Text(getNegativeSubtitle(negative))
+                                //                     .font(.caption)
+                                //                     .foregroundColor(.secondary)
+                                //             }
+                                            
+                                //             Spacer()
+                                            
+                                //             // Value and indicator
+                                //             HStack(spacing: 8) {
+                                //                 Text(getNegativeValue(negative))
+                                //                     .font(.body)
+                                //                     .fontWeight(.medium)
+                                //                 Circle()
+                                //                     .fill(Color.red)
+                                //                     .frame(width: 12, height: 12)
+                                //                 Image(systemName: expandedNegativeIndex == index ? "chevron.up" : "chevron.down")
+                                //                     .font(.caption)
+                                //                     .foregroundColor(.secondary)
+                                //             }
+                                //         }
+                                //         .padding(.horizontal, 16)
+                                //         .padding(.vertical, 12)
+                                //         .onTapGesture {
+                                //             withAnimation(.easeInOut(duration: 0.3)) {
+                                //                 expandedNegativeIndex = (expandedNegativeIndex == index) ? nil : index
+                                //             }
+                                //         }
+                                        
+                                //         // Accordion content
+                                //         if expandedNegativeIndex == index {
+                                //             VStack(spacing: 8) {
+                                //                 // Range visualization
+                                //                 getNegativeRangeView(for: negative)
+                                //             }
+                                //             .padding(.horizontal, 16)
+                                //             .padding(.bottom, 12)
+                                //             .transition(.opacity.combined(with: .slide))
+                                //         }
+                                        
+                                //         if index < health.negatives.count - 1 {
+                                //             Divider()
+                                //                 .padding(.leading, 68) // Indent to align with text
+                                //         }
+                                //     }
+                                // }
+                                ForEach(Array(health.negatives.enumerated()), id: \.offset) { index, facet in
                                     VStack(spacing: 0) {
                                         HStack(alignment: .center, spacing: 12) {
-                                            // Icon based on negative type
-                                            ZStack {
-                                                RoundedRectangle(cornerRadius: 8)
-                                                    .fill(Color.gray.opacity(0.1))
-                                                    .frame(width: 40, height: 40)
-                                                Image(systemName: getIconForNegative(negative))
-                                                    .font(.system(size: 20))
-                                                    .foregroundColor(.primary)
-                                            }
-                                            
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(getNegativeTitle(negative))
-                                                    .font(.body)
-                                                    .fontWeight(.medium)
-                                                Text(getNegativeSubtitle(negative))
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
-                                            
-                                            Spacer()
-                                            
-                                            // Value and indicator
-                                            HStack(spacing: 8) {
-                                                Text(getNegativeValue(negative))
-                                                    .font(.body)
-                                                    .fontWeight(.medium)
-                                                Circle()
-                                                    .fill(Color.red)
-                                                    .frame(width: 12, height: 12)
-                                                Image(systemName: expandedNegativeIndex == index ? "chevron.up" : "chevron.down")
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.gray.opacity(0.1))
+                                            .frame(width: 40, height: 40)
+                                            Image(systemName: iconForNegative(facet))
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.primary)
                                         }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 12)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(facet.title).font(.body).fontWeight(.medium)
+                                            Text(facet.subtitle).font(.caption).foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                        HStack(spacing: 8) {
+                                            Text(valueForFacet(facet)) // ✅ value by facet.id
+                                            .font(.body).fontWeight(.medium)
+                                            Circle().fill(Color.red).frame(width: 12, height: 12)
+                                            Image(systemName: expandedNegativeIndex == index ? "chevron.up" : "chevron.down")
+                                            .font(.caption).foregroundColor(.secondary)
+                                        }
+                                        }
+                                        .padding(.horizontal, 16).padding(.vertical, 12)
                                         .onTapGesture {
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                expandedNegativeIndex = (expandedNegativeIndex == index) ? nil : index
-                                            }
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            expandedNegativeIndex = (expandedNegativeIndex == index) ? nil : index
                                         }
-                                        
-                                        // Accordion content
+                                        }
+
                                         if expandedNegativeIndex == index {
-                                            VStack(spacing: 8) {
-                                                // Range visualization
-                                                getNegativeRangeView(for: negative)
-                                            }
-                                            .padding(.horizontal, 16)
-                                            .padding(.bottom, 12)
-                                            .transition(.opacity.combined(with: .slide))
+                                        VStack(spacing: 8) {
+                                            negativeRangeView(for: facet) // ✅ range by facet.id
                                         }
-                                        
+                                        .padding(.horizontal, 16).padding(.bottom, 12)
+                                        .transition(.opacity.combined(with: .slide))
+                                        }
+
                                         if index < health.negatives.count - 1 {
-                                            Divider()
-                                                .padding(.leading, 68) // Indent to align with text
+                                        Divider().padding(.leading, 68)
                                         }
                                     }
-                                }
+                                    }
                             }
                         }
                         
@@ -895,68 +939,112 @@ struct ConfirmLogView: View {
                                 .padding(.bottom, 12)
                                 
                                 // Positive items
-                                ForEach(Array(health.positives.enumerated()), id: \.offset) { index, positive in
+                                // ForEach(Array(health.positives.enumerated()), id: \.offset) { index, positive in
+                                //     VStack(spacing: 0) {
+                                //         HStack(alignment: .center, spacing: 12) {
+                                //             // Icon based on positive type
+                                //             ZStack {
+                                //                 RoundedRectangle(cornerRadius: 8)
+                                //                     .fill(Color.gray.opacity(0.1))
+                                //                     .frame(width: 40, height: 40)
+                                //                 Image(systemName: getIconForPositive(positive))
+                                //                     .font(.system(size: 20))
+                                //                     .foregroundColor(.primary)
+                                //             }
+                                            
+                                //             VStack(alignment: .leading, spacing: 2) {
+                                //                 Text(getPositiveTitle(positive))
+                                //                     .font(.body)
+                                //                     .fontWeight(.medium)
+                                //                 Text(getPositiveSubtitle(positive))
+                                //                     .font(.caption)
+                                //                     .foregroundColor(.secondary)
+                                //             }
+                                            
+                                //             Spacer()
+                                            
+                                //             // Value and indicator
+                                //             HStack(spacing: 8) {
+                                //                 Text(getPositiveValue(positive))
+                                //                     .font(.body)
+                                //                     .fontWeight(.medium)
+                                //                 Circle()
+                                //                     .fill(Color.green)
+                                //                     .frame(width: 12, height: 12)
+                                //                 Image(systemName: expandedPositiveIndex == index ? "chevron.up" : "chevron.down")
+                                //                     .font(.caption)
+                                //                     .foregroundColor(.secondary)
+                                //             }
+                                //         }
+                                //         .padding(.horizontal, 16)
+                                //         .padding(.vertical, 12)
+                                //         .onTapGesture {
+                                //             withAnimation(.easeInOut(duration: 0.3)) {
+                                //                 expandedPositiveIndex = (expandedPositiveIndex == index) ? nil : index
+                                //             }
+                                //         }
+                                        
+                                //         // Accordion content
+                                //         if expandedPositiveIndex == index {
+                                //             VStack(spacing: 8) {
+                                //                 // Range visualization
+                                //                 getPositiveRangeView(for: positive)
+                                //             }
+                                //             .padding(.horizontal, 16)
+                                //             .padding(.bottom, 12)
+                                //             .transition(.opacity.combined(with: .slide))
+                                //         }
+                                        
+                                //         if index < health.positives.count - 1 {
+                                //             Divider()
+                                //                 .padding(.leading, 68) // Indent to align with text
+                                //         }
+                                //     }
+                                // }
+                                ForEach(Array(health.positives.enumerated()), id: \.offset) { index, facet in
                                     VStack(spacing: 0) {
                                         HStack(alignment: .center, spacing: 12) {
-                                            // Icon based on positive type
-                                            ZStack {
-                                                RoundedRectangle(cornerRadius: 8)
-                                                    .fill(Color.gray.opacity(0.1))
-                                                    .frame(width: 40, height: 40)
-                                                Image(systemName: getIconForPositive(positive))
-                                                    .font(.system(size: 20))
-                                                    .foregroundColor(.primary)
-                                            }
-                                            
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(getPositiveTitle(positive))
-                                                    .font(.body)
-                                                    .fontWeight(.medium)
-                                                Text(getPositiveSubtitle(positive))
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
-                                            
-                                            Spacer()
-                                            
-                                            // Value and indicator
-                                            HStack(spacing: 8) {
-                                                Text(getPositiveValue(positive))
-                                                    .font(.body)
-                                                    .fontWeight(.medium)
-                                                Circle()
-                                                    .fill(Color.green)
-                                                    .frame(width: 12, height: 12)
-                                                Image(systemName: expandedPositiveIndex == index ? "chevron.up" : "chevron.down")
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.gray.opacity(0.1))
+                                            .frame(width: 40, height: 40)
+                                            Image(systemName: iconForPositive(facet))
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.primary)
                                         }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 12)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(facet.title).font(.body).fontWeight(.medium)
+                                            Text(facet.subtitle).font(.caption).foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                        HStack(spacing: 8) {
+                                            Text(valueForFacet(facet))
+                                            .font(.body).fontWeight(.medium)
+                                            Circle().fill(Color.green).frame(width: 12, height: 12)
+                                            Image(systemName: expandedPositiveIndex == index ? "chevron.up" : "chevron.down")
+                                            .font(.caption).foregroundColor(.secondary)
+                                        }
+                                        }
+                                        .padding(.horizontal, 16).padding(.vertical, 12)
                                         .onTapGesture {
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                expandedPositiveIndex = (expandedPositiveIndex == index) ? nil : index
-                                            }
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            expandedPositiveIndex = (expandedPositiveIndex == index) ? nil : index
                                         }
-                                        
-                                        // Accordion content
+                                        }
+
                                         if expandedPositiveIndex == index {
-                                            VStack(spacing: 8) {
-                                                // Range visualization
-                                                getPositiveRangeView(for: positive)
-                                            }
-                                            .padding(.horizontal, 16)
-                                            .padding(.bottom, 12)
-                                            .transition(.opacity.combined(with: .slide))
+                                        VStack(spacing: 8) {
+                                            positiveRangeView(for: facet)
                                         }
-                                        
+                                        .padding(.horizontal, 16).padding(.bottom, 12)
+                                        .transition(.opacity.combined(with: .slide))
+                                        }
+
                                         if index < health.positives.count - 1 {
-                                            Divider()
-                                                .padding(.leading, 68) // Indent to align with text
+                                        Divider().padding(.leading, 68)
                                         }
                                     }
-                                }
+                                    }
                                 .padding(.bottom, 16)
                             }
                         }
@@ -971,13 +1059,14 @@ struct ConfirmLogView: View {
         .padding(.horizontal)
     }
     
-    // MARK: - Health Analysis Functions
-    private func setupHealthAnalysis() {
-        guard let food = originalFood else { return }
-        
-        // Extract health analysis from the food object if available
-        healthAnalysis = food.healthAnalysis
-    }
+
+private func setupHealthAnalysis() {
+    guard let food = originalFood else { return }
+    self.healthAnalysis = food.healthAnalysis
+    self.isLiquid = food.healthAnalysis?.isBeverage ?? false
+}
+
+
     
     private func healthColor(for colorName: String) -> Color {
         switch colorName.lowercased() {
@@ -1021,33 +1110,168 @@ struct ConfirmLogView: View {
             return Color.gray
         }
     }
-    
-    // MARK: - Health Analysis Helper Functions
-    private func getIconForNegative(_ negative: String) -> String {
-        if negative.lowercased().contains("additive") {
-            return "flask"
-        } else if negative.lowercased().contains("calor") {
-            return "flame"
-        } else if negative.lowercased().contains("sugar") || negative.lowercased().contains("sweet") {
-            return "cube"
-        } else if negative.lowercased().contains("sodium") || negative.lowercased().contains("salt") {
-            return "aqi.low"
-        } else {
-            return "exclamationmark.circle"
-        }
+
+
+    // MARK: - Facet helpers
+
+private func iconForNegative(_ facet: HealthFacet) -> String {
+  switch facet.id {
+  case "too_sugary", "a_bit_sugary": return "cube"
+  case "too_salty", "a_bit_salty":   return "aqi.low"
+  case "too_much_sat_fat", "high_sat_fat": return "drop"
+  case "too_caloric", "a_bit_caloric", "high_cal_density": return "flame"
+  case "ultra_processed", "risky_additives": return "flask"
+  default: return "exclamationmark.circle"
+  }
+}
+
+private func iconForPositive(_ facet: HealthFacet) -> String {
+  switch facet.id {
+  case "no_sat_fat", "low_sat_fat":      return "drop"
+  case "low_sodium", "no_sodium":        return "aqi.low"
+  case "low_sugar", "no_sugar":          return "cube"
+  case "some_fiber", "high_fiber":       return "leaf"
+  case "some_protein", "high_protein":   return "bolt"
+  case "low_calories", "low_impact_cal": return "flame"
+  case "organic":                        return "leaf.circle"
+  case "no_additives":                   return "checkmark.seal"
+  default:                               return "checkmark.circle"
+  }
+}
+
+
+
+
+private func valueForFacet(_ facet: HealthFacet) -> String {
+  switch facet.id {
+  // sugar
+  case "too_sugary", "a_bit_sugary", "low_sugar", "no_sugar":
+    let v = showPerServing ? baseSugar * numberOfServings : baseSugar
+    return "\(Int(v))g"
+
+  // sodium
+  case "too_salty", "a_bit_salty", "low_sodium", "no_sodium":
+    let v = showPerServing ? baseSodium * numberOfServings : baseSodium
+    return "\(Int(v))mg"
+
+  // saturated fat
+  case "too_much_sat_fat", "high_sat_fat", "low_sat_fat", "no_sat_fat":
+    let v = showPerServing ? baseSaturatedFat * numberOfServings : baseSaturatedFat
+    return "\(Int(v))g"
+
+  // calories
+  case "too_caloric", "a_bit_caloric", "high_cal_density", "low_calories", "low_impact_cal":
+    let v = showPerServing ? baseCalories * numberOfServings : baseCalories
+    return "\(Int(v)) Cal"
+
+  // fiber / protein
+  case "some_fiber", "high_fiber":
+    let v = showPerServing ? baseFiber * numberOfServings : baseFiber
+    return "\(Int(v))g"
+
+  case "some_protein", "high_protein":
+    let v = showPerServing ? baseProtein * numberOfServings : baseProtein
+    return "\(Int(v))g"
+
+  // additives count
+  case "ultra_processed", "risky_additives", "no_additives":
+    return "\(healthAnalysis?.additives?.count ?? 0)"
+
+  default:
+    return "—"
+  }
+}
+
+
+// MARK: - Build health-analysis payload from Food
+private func buildHealthPayload(from food: Food) -> [String: Any] {
+    func bestGramWeight(_ food: Food) -> Double? {
+        // try the USDA measure’s gram weight first
+        food.foodMeasures.first?.gramWeight
     }
-    
-    private func getIconForPositive(_ positive: String) -> String {
-        if positive.lowercased().contains("fat") {
-            return "drop"
-        } else if positive.lowercased().contains("sodium") || positive.lowercased().contains("salt") {
-            return "aqi.low"
-        } else if positive.lowercased().contains("fiber") {
-            return "leaf"
-        } else {
-            return "checkmark.circle"
+    func bestMlVolume(_ food: Food) -> Double? {
+        // very rough fallback: if serving unit is fl oz, convert to ml
+        if let unit = food.servingSizeUnit?.lowercased(),
+           let size = food.servingSize {
+            if unit.contains("ml") { return size }
+            if unit.contains("fl") || unit.contains("oz") { return size * 29.5735 }
         }
+        return nil
     }
+
+    let name = food.description.lowercased()
+    let unit = (food.servingSizeUnit ?? "").lowercased()
+    let isBeverage =
+        name.contains("water") || name.contains("sparkling") || name.contains("soda") ||
+        name.contains("cola")  || name.contains("juice")     || name.contains("drink") ||
+        name.contains("beverage") || name.contains("tea")    || name.contains("coffee") ||
+        unit.contains("ml") || unit.contains("fl") || unit.contains("oz")
+
+    // your “base” values are already per serving
+    let perServing: [String: Any?] = [
+        "per_basis": "per_serving",
+        "serving_g": isBeverage ? nil : (food.servingSizeUnit?.lowercased().contains("g") == true
+                                         ? food.servingSize : bestGramWeight(food)),
+        "serving_ml": isBeverage ? (food.servingSizeUnit?.lowercased().contains("ml") == true
+                                    ? food.servingSize : bestMlVolume(food)) : nil,
+        "product_name": food.description,
+
+        "energy_kcal": baseCalories,
+        "protein_g": baseProtein,
+        "saturated_fat_g": baseSaturatedFat,
+        "sugars_g": baseSugar,
+        "sodium_mg": baseSodium,
+        "fiber_g": baseFiber,
+
+        "is_beverage": isBeverage,
+        // mark as snack for chips/puffs/strips/bars
+        "is_snack": name.contains("chip") || name.contains("puff") ||
+                    name.contains("straw") || name.contains("bar")
+    ]
+    // strip nils
+    return perServing.compactMapValues { $0 }
+}
+
+
+// MARK: - Range views driven by facet.id
+
+@ViewBuilder
+private func negativeRangeView(for facet: HealthFacet) -> some View {
+  switch facet.id {
+  case "too_sugary", "a_bit_sugary":
+    sugarRangeView(currentValue: Double(baseSugar), per100ml: isLiquid && !showPerServing)
+  case "too_caloric", "a_bit_caloric", "high_cal_density":
+    let v = showPerServing ? Double(baseCalories * numberOfServings) : Double(baseCalories)
+    caloriesRangeView(currentValue: v)
+  case "too_salty", "a_bit_salty":
+    sodiumRangeView(currentValue: Double(baseSodium))
+  case "too_much_sat_fat", "high_sat_fat":
+    saturatedFatRangeView(currentValue: Double(baseSaturatedFat))
+  default:
+    Text("Range visualization unavailable").font(.caption).foregroundColor(.secondary)
+  }
+}
+
+@ViewBuilder
+private func positiveRangeView(for facet: HealthFacet) -> some View {
+  switch facet.id {
+  case "low_sat_fat", "no_sat_fat":
+    saturatedFatRangeView(currentValue: Double(baseSaturatedFat))
+  case "low_sodium", "no_sodium":
+    sodiumRangeView(currentValue: Double(baseSodium))
+  case "some_fiber", "high_fiber":
+    fiberRangeView(currentValue: Double(baseFiber))
+  case "some_protein", "high_protein":
+    proteinRangeView(currentValue: Double(baseProtein))
+  case "low_calories", "low_impact_cal":
+    let v = showPerServing ? Double(baseCalories * numberOfServings) : Double(baseCalories)
+    caloriesRangeView(currentValue: v)
+  default:
+    Text("Range visualization unavailable").font(.caption).foregroundColor(.secondary)
+  }
+}
+
+
     
     private func getNegativeTitle(_ negative: String) -> String {
         if negative.lowercased().contains("additive") {

@@ -6,34 +6,6 @@
 //
 import Foundation
 
-// MARK: - Health Analysis Models
-struct HealthAnalysis: Codable {
-    let score: Int
-    let color: String
-    let positives: [String]
-    let negatives: [String]
-    let additives: [HealthAdditive]
-    let nutriScore: HealthNutriScore
-    let organicBonus: Int?
-    let additivePenalty: Int?
-    
-    enum CodingKeys: String, CodingKey {
-        case score, color, positives, negatives, additives
-        case nutriScore = "nutri_score"
-        case organicBonus = "organic_bonus"
-        case additivePenalty = "additive_penalty"
-    }
-}
-
-struct HealthAdditive: Codable {
-    let code: String
-    let risk: String
-}
-
-struct HealthNutriScore: Codable {
-    let points: Int
-    let letter: String
-}
 
 struct FoodSearchResponse: Codable {
     let foods: [Food]
@@ -177,6 +149,51 @@ class FoodService {
 
 
 }
+
+struct HealthFacet: Codable {
+  let id: String
+  let title: String
+  let subtitle: String
+}
+
+struct NutriScore: Codable {
+  let points: Int
+  let letter: String
+}
+
+struct Additive: Codable {
+  let code: String?
+  let risk: String
+}
+
+struct HealthAnalysis: Codable {
+  let score: Int
+  let color: String
+  let positives: [HealthFacet]      // facets only
+  let negatives: [HealthFacet]      // facets only
+  let additives: [Additive]?
+  let nutriScore: NutriScore
+  let nutritionalQualityScore: Double?
+  let additivePenalty: Int?
+  let organicBonus: Int?
+  let ultraProcessedPenalty: Int?
+  let isBeverage: Bool?
+
+
+  enum CodingKeys: String, CodingKey {
+    case score, color, positives, negatives, additives
+    case nutriScore = "nutri_score"
+    case nutritionalQualityScore = "nutritional_quality_score"
+    case additivePenalty = "additive_penalty"
+    case organicBonus = "organic_bonus"
+    case ultraProcessedPenalty = "ultra_processed_penalty"
+     case isBeverage = "is_beverage"
+
+  }
+}
+
+typealias HealthAdditive = Additive
+typealias HealthNutriScore = NutriScore
 
 
 // For logged foods from our database

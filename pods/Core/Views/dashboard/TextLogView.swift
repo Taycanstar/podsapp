@@ -333,38 +333,51 @@ struct TextLogView: View {
         }
         
         // Extract health analysis from the response
-        var healthAnalysisData: HealthAnalysis? = nil
-        if let healthData = foodData["health_analysis"] as? [String: Any] {
-            // Parse the health analysis manually
-            if let score = healthData["score"] as? Int,
-               let color = healthData["color"] as? String,
-               let positives = healthData["positives"] as? [String],
-               let negatives = healthData["negatives"] as? [String],
-               let additives = healthData["additives"] as? [[String: Any]],
-               let nutriScoreData = healthData["nutri_score"] as? [String: Any],
-               let nutriScorePoints = nutriScoreData["points"] as? Int,
-               let nutriScoreLetter = nutriScoreData["letter"] as? String {
+        // var healthAnalysisData: HealthAnalysis? = nil
+        // if let healthData = foodData["health_analysis"] as? [String: Any] {
+        //     // Parse the health analysis manually
+        //     if let score = healthData["score"] as? Int,
+        //        let color = healthData["color"] as? String,
+        //        let positives = healthData["positives"] as? [String],
+        //        let negatives = healthData["negatives"] as? [String],
+        //        let additives = healthData["additives"] as? [[String: Any]],
+        //        let nutriScoreData = healthData["nutri_score"] as? [String: Any],
+        //        let nutriScorePoints = nutriScoreData["points"] as? Int,
+        //        let nutriScoreLetter = nutriScoreData["letter"] as? String {
                 
-                // Parse additives array
-                let parsedAdditives = additives.compactMap { additive -> HealthAdditive? in
-                    guard let code = additive["code"] as? String,
-                          let risk = additive["risk"] as? String else { return nil }
-                    return HealthAdditive(code: code, risk: risk)
+        //         // Parse additives array
+        //         let parsedAdditives = additives.compactMap { additive -> HealthAdditive? in
+        //             guard let code = additive["code"] as? String,
+        //                   let risk = additive["risk"] as? String else { return nil }
+        //             return HealthAdditive(code: code, risk: risk)
+        //         }
+                
+        //         // Create health analysis object
+        //         healthAnalysisData = HealthAnalysis(
+        //             score: score,
+        //             color: color,
+        //             positives: positives,
+        //             negatives: negatives,
+        //             additives: parsedAdditives,
+        //             nutriScore: HealthNutriScore(points: nutriScorePoints, letter: nutriScoreLetter),
+        //             organicBonus: healthData["organic_bonus"] as? Int,
+        //             additivePenalty: healthData["additive_penalty"] as? Int
+        //         )
+        //     }
+        // }
+        // Extract health analysis from the response
+            var healthAnalysisData: HealthAnalysis? = nil
+            if let healthDict = foodData["health_analysis"] as? [String: Any] {
+                do {
+                    let data = try JSONSerialization.data(withJSONObject: healthDict, options: [])
+                    let decoder = JSONDecoder()
+                    // We already mapped the snake_case keys via CodingKeys above, so no need for keyDecodingStrategy here.
+                    healthAnalysisData = try decoder.decode(HealthAnalysis.self, from: data)
+                } catch {
+                    print("❌ Failed to decode HealthAnalysis: \(error)")
                 }
-                
-                // Create health analysis object
-                healthAnalysisData = HealthAnalysis(
-                    score: score,
-                    color: color,
-                    positives: positives,
-                    negatives: negatives,
-                    additives: parsedAdditives,
-                    nutriScore: HealthNutriScore(points: nutriScorePoints, letter: nutriScoreLetter),
-                    organicBonus: healthData["organic_bonus"] as? Int,
-                    additivePenalty: healthData["additive_penalty"] as? Int
-                )
             }
-        }
+
         
         // Extract foodNutrients array from response
         var foodNutrients: [Nutrient]? = nil
