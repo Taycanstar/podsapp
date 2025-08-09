@@ -322,7 +322,7 @@ struct TextLogView: View {
     
     private func handleFoodResponse(_ responseData: [String: Any]) {
         // Convert response back to LoggedFood format for compatibility
-        guard let foodLogId = responseData["food_log_id"] as? Int,
+        guard let foodLogId = responseData["foodLogId"] as? Int,
               let foodData = responseData["food"] as? [String: Any],
               let displayName = foodData["displayName"] as? String,
               let calories = responseData["calories"] as? Int,
@@ -332,8 +332,54 @@ struct TextLogView: View {
             return
         }
         
+        // Extract health analysis from the response
+        var healthAnalysisData: HealthAnalysis? = nil
+        if let healthData = foodData["health_analysis"] as? [String: Any] {
+            // Parse the health analysis manually
+            if let score = healthData["score"] as? Int,
+               let color = healthData["color"] as? String,
+               let positives = healthData["positives"] as? [String],
+               let negatives = healthData["negatives"] as? [String],
+               let additives = healthData["additives"] as? [[String: Any]],
+               let nutriScoreData = healthData["nutri_score"] as? [String: Any],
+               let nutriScorePoints = nutriScoreData["points"] as? Int,
+               let nutriScoreLetter = nutriScoreData["letter"] as? String {
+                
+                // Parse additives array
+                let parsedAdditives = additives.compactMap { additive -> HealthAdditive? in
+                    guard let code = additive["code"] as? String,
+                          let risk = additive["risk"] as? String else { return nil }
+                    return HealthAdditive(code: code, risk: risk)
+                }
+                
+                // Create health analysis object
+                healthAnalysisData = HealthAnalysis(
+                    score: score,
+                    color: color,
+                    positives: positives,
+                    negatives: negatives,
+                    additives: parsedAdditives,
+                    nutriScore: HealthNutriScore(points: nutriScorePoints, letter: nutriScoreLetter),
+                    organicBonus: healthData["organic_bonus"] as? Int,
+                    additivePenalty: healthData["additive_penalty"] as? Int
+                )
+            }
+        }
+        
+        // Extract foodNutrients array from response
+        var foodNutrients: [Nutrient]? = nil
+        if let nutrientsArray = foodData["foodNutrients"] as? [[String: Any]] {
+            foodNutrients = nutrientsArray.compactMap { nutrientData in
+                guard let name = nutrientData["nutrientName"] as? String,
+                      let value = nutrientData["value"] as? Double,
+                      let unit = nutrientData["unitName"] as? String else { return nil }
+                return Nutrient(nutrientName: name, value: value, unitName: unit)
+            }
+        }
+        
         // Create LoggedFoodItem from response
         let loggedFoodItem = LoggedFoodItem(
+            foodLogId: foodLogId,
             fdcId: foodData["fdcId"] as? Int ?? 0,
             displayName: displayName,
             calories: foodData["calories"] as? Double ?? Double(calories),
@@ -342,7 +388,9 @@ struct TextLogView: View {
             brandText: foodData["brandText"] as? String ?? "",
             protein: foodData["protein"] as? Double ?? 0.0,
             carbs: foodData["carbs"] as? Double ?? 0.0,
-            fat: foodData["fat"] as? Double ?? 0.0
+            fat: foodData["fat"] as? Double ?? 0.0,
+            healthAnalysis: healthAnalysisData,
+            foodNutrients: foodNutrients
         )
         
         // Create CombinedLog for dashboard display

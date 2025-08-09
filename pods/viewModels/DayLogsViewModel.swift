@@ -400,7 +400,9 @@ func loadLogs(for date: Date) {
                                     brandText: food.brandText,
                                     protein: protein / servingsCount,
                                     carbs: carbs / servingsCount,
-                                    fat: fat / servingsCount
+                                    fat: fat / servingsCount,
+                                    healthAnalysis: food.healthAnalysis,
+                                    foodNutrients: food.foodNutrients
                                 )
                                 
                                 print("✅ Updated food log locally (date change) with per-serving values: cal=\(calories / servingsCount), prot=\(protein / servingsCount), carbs=\(carbs / servingsCount), fat=\(fat / servingsCount)")
@@ -446,7 +448,9 @@ func loadLogs(for date: Date) {
                                     brandText: food.brandText,
                                     protein: protein / servingsCount,
                                     carbs: carbs / servingsCount,
-                                    fat: fat / servingsCount
+                                    fat: fat / servingsCount,
+                                    healthAnalysis: food.healthAnalysis,
+                                    foodNutrients: food.foodNutrients
                                 )
                                 
                                 print("✅ Updated food log locally (same date) with per-serving values: cal=\(calories / servingsCount), prot=\(protein / servingsCount), carbs=\(carbs / servingsCount), fat=\(fat / servingsCount)")

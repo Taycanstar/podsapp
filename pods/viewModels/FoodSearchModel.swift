@@ -6,6 +6,35 @@
 //
 import Foundation
 
+// MARK: - Health Analysis Models
+struct HealthAnalysis: Codable {
+    let score: Int
+    let color: String
+    let positives: [String]
+    let negatives: [String]
+    let additives: [HealthAdditive]
+    let nutriScore: HealthNutriScore
+    let organicBonus: Int?
+    let additivePenalty: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case score, color, positives, negatives, additives
+        case nutriScore = "nutri_score"
+        case organicBonus = "organic_bonus"
+        case additivePenalty = "additive_penalty"
+    }
+}
+
+struct HealthAdditive: Codable {
+    let code: String
+    let risk: String
+}
+
+struct HealthNutriScore: Codable {
+    let points: Int
+    let letter: String
+}
+
 struct FoodSearchResponse: Codable {
     let foods: [Food]
 }
@@ -28,7 +57,7 @@ struct BarcodeLookupResponse: Codable {
     }
     
     private enum CodingKeys: String, CodingKey {
-        case foodLogId
+        case foodLogId = "foodLogId"  // Backend returns foodLogId, not food_log_id
     }
 }
 
@@ -43,8 +72,15 @@ struct Food: Codable, Identifiable, Hashable{
     var householdServingFullText: String?
     var foodNutrients: [Nutrient]
     let foodMeasures: [FoodMeasure]
+    var healthAnalysis: HealthAnalysis?
     
     var id: Int { fdcId }
+    
+    enum CodingKeys: String, CodingKey {
+        case fdcId, description, brandOwner, brandName, servingSize, numberOfServings
+        case servingSizeUnit, householdServingFullText, foodNutrients, foodMeasures
+        case healthAnalysis = "health_analysis"
+    }
     
     var calories: Double? {
         foodNutrients.first { $0.nutrientName == "Energy" }?.value ?? 0
@@ -154,7 +190,15 @@ struct LoggedFoodItem: Codable {
     let brandText: String?
     let protein: Double?  // Make optional
     let carbs: Double?    // Make optional
-    let fat: Double? 
+    let fat: Double?
+    let healthAnalysis: HealthAnalysis?  // Add health analysis field
+    let foodNutrients: [Nutrient]?  // Add complete nutrients array from backend
+    
+    enum CodingKeys: String, CodingKey {
+        case foodLogId, fdcId, displayName, calories, servingSizeText, numberOfServings, brandText, protein, carbs, fat
+        case healthAnalysis = "health_analysis"
+        case foodNutrients
+    }
 }
 
 struct LoggedFood: Codable, Identifiable {
@@ -230,7 +274,7 @@ extension LoggedFoodItem {
             numberOfServings: numberOfServings,
             servingSizeUnit: nil,
             householdServingFullText: servingSizeText,
-            foodNutrients: [
+            foodNutrients: foodNutrients ?? [
                 Nutrient(
                     nutrientName: "Energy",
                     value: calories,
@@ -252,12 +296,13 @@ extension LoggedFoodItem {
                     unitName: "g"
                 )
             ],
-            foodMeasures: []
+            foodMeasures: [],
+            healthAnalysis: self.healthAnalysis  // Preserve health analysis
         )
     }
     
     // Helper to create LoggedFoodItem without foodLogId (for backward compatibility)
-    init(fdcId: Int, displayName: String, calories: Double, servingSizeText: String, numberOfServings: Double, brandText: String?, protein: Double?, carbs: Double?, fat: Double?) {
+    init(fdcId: Int, displayName: String, calories: Double, servingSizeText: String, numberOfServings: Double, brandText: String?, protein: Double?, carbs: Double?, fat: Double?, healthAnalysis: HealthAnalysis? = nil) {
         self.foodLogId = nil
         self.fdcId = fdcId
         self.displayName = displayName
@@ -268,6 +313,8 @@ extension LoggedFoodItem {
         self.protein = protein
         self.carbs = carbs
         self.fat = fat
+        self.healthAnalysis = healthAnalysis
+        self.foodNutrients = nil
     }
 }
 

@@ -5,6 +5,7 @@ import Mixpanel
 extension Food {
     var asLoggedFoodItem: LoggedFoodItem {
         return LoggedFoodItem(
+            foodLogId: nil,
             fdcId: self.fdcId,
             displayName: self.displayName,
             calories: self.calories ?? 0,
@@ -13,7 +14,9 @@ extension Food {
             brandText: self.brandText,
             protein: self.protein,
             carbs: self.carbs,
-            fat: self.fat
+            fat: self.fat,
+            healthAnalysis: nil,
+            foodNutrients: self.foodNutrients
         )
     }
 }
@@ -2340,7 +2343,8 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
         //── 5) Decode directly into your LoggedFood
         let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
         let decoder  = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        // Remove snake case conversion since backend now sends camelCase directly
+        // decoder.keyDecodingStrategy = .convertFromSnakeCase
 
         let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
 
@@ -2526,7 +2530,8 @@ func analyzeNutritionLabel(
       // Decode directly into LoggedFood (same as analyzeFoodImage)
       let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
       let decoder  = JSONDecoder()
-      decoder.keyDecodingStrategy = .convertFromSnakeCase
+      // Remove snake case conversion since backend now sends camelCase directly
+      // decoder.keyDecodingStrategy = .convertFromSnakeCase
 
       let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
 
@@ -3650,7 +3655,8 @@ func analyzeNutritionLabel(
                         // Parse as LoggedFood and create CombinedLog (same as successful nutrition label scan)
                         let jsonData = try JSONSerialization.data(withJSONObject: payload)
                         let decoder = JSONDecoder()
-                        decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        // Remove snake case conversion since backend now sends camelCase directly
+                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
                         
                         let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
                         

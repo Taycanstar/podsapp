@@ -15,8 +15,8 @@ class NetworkManagerTwo {
     
 
 // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-let baseUrl = "http://172.20.10.4:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+// let baseUrl = "http://172.20.10.4:8000"
 
     // Network errors - scoped to NetworkManagerTwo
     enum NetworkError: LocalizedError {
@@ -154,7 +154,7 @@ let baseUrl = "http://172.20.10.4:8000"
             
             do {
                 let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                // Don't use convertFromSnakeCase as our structs handle key mapping manually
                 
                 // Try to parse as BarcodeLookupResponse
                 let response = try decoder.decode(BarcodeLookupResponse.self, from: data)
@@ -354,7 +354,7 @@ let baseUrl = "http://172.20.10.4:8000"
             
             do {
                 let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                // Don't use convertFromSnakeCase as our Food struct handles key mapping manually
                 
                 // Check if we have a nested structure with 'food' key
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],

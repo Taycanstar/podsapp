@@ -925,6 +925,7 @@ private struct FoodListView: View {
                                              brandText == "Custom" || brandText == "Generic") ? nil : brandText
                 
                 let loggedFoodItem = LoggedFoodItem(
+                    foodLogId: nil,
                     fdcId: food.fdcId,
                     displayName: food.displayName,
                     calories: food.calories ?? 0,
@@ -933,7 +934,9 @@ private struct FoodListView: View {
                     brandText: cleanBrandText,
                     protein: food.protein,
                     carbs: food.carbs,
-                    fat: food.fat
+                    fat: food.fat,
+                    healthAnalysis: nil,
+                    foodNutrients: food.foodNutrients
                 )
                 
 

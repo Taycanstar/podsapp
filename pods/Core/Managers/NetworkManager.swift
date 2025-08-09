@@ -58,8 +58,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"  
-    let baseUrl = "http://172.20.10.4:8000" 
+  let baseUrl = "http://192.168.1.92:8000"  
+    // let baseUrl = "http://172.20.10.4:8000" 
 
     func determineUserLocation() {
         let url = URL(string: "https://ipapi.co/json/")!
@@ -5285,7 +5285,8 @@ func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escapi
         do {
             // Try to decode as normal LoggedFood
             let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            // Remove snake case conversion since backend now sends camelCase directly
+            // decoder.keyDecodingStrategy = .convertFromSnakeCase
             let loggedFood = try decoder.decode(LoggedFood.self, from: data)
             
             DispatchQueue.main.async {
@@ -5317,6 +5318,7 @@ func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escapi
                 
                 // Create LoggedFoodItem with proper calories
                 let loggedFoodItem = LoggedFoodItem(
+                    foodLogId: nil,
                     fdcId: fdcId,
                     displayName: displayName,
                     calories: calculatedCalories / Double(servings), // Per serving
@@ -5325,7 +5327,9 @@ func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escapi
                     brandText: brandText,
                     protein: protein,
                     carbs: carbs,
-                    fat: fat
+                    fat: fat,
+                    healthAnalysis: nil,
+                    foodNutrients: nil
                 )
                 
                 // Create LoggedFood with default status if missing
@@ -5385,7 +5389,8 @@ func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escapi
         
         do {
             let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            // Remove snake case conversion since backend now sends camelCase directly
+            // decoder.keyDecodingStrategy = .convertFromSnakeCase
             let response = try decoder.decode(FoodLogsResponse.self, from: data)
             completion(.success(response))
             } catch {
@@ -7210,7 +7215,8 @@ func updateRecipeWithFoods(
             
             do {
                 let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                // Remove snake case conversion since backend now sends camelCase directly
+                // decoder.keyDecodingStrategy = .convertFromSnakeCase
                 let loggedFood = try decoder.decode(LoggedFood.self, from: data)
                 
                 DispatchQueue.main.async {

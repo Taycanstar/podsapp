@@ -496,6 +496,7 @@ struct FoodLogDetails: View {
         message: "Sample Food – Lunch",
         foodLogId: 1,
         food: LoggedFoodItem(
+            foodLogId: 1,
             fdcId: 1,
             displayName: "Sample Food",
             calories: 120,
@@ -504,7 +505,9 @@ struct FoodLogDetails: View {
             brandText: "Sample Brand",
             protein: 5,
             carbs: 20,
-            fat: 2
+            fat: 2,
+            healthAnalysis: nil,
+            foodNutrients: nil
         ),
         mealType: "Lunch",
         mealLogId: nil,
@@ -516,7 +519,7 @@ struct FoodLogDetails: View {
         servingsConsumed: nil
     )
     
-    return FoodLogDetails(log: mockLog)
+    FoodLogDetails(log: mockLog)
         .environmentObject(FoodManager())
         .environmentObject(DayLogsViewModel())
 }
