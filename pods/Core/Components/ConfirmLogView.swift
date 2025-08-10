@@ -88,8 +88,8 @@ struct ConfirmLogView: View {
     @State private var healthAnalysis: HealthAnalysis? = nil
     @State private var showPerServing: Bool = true // true = per serving, false = per 100g/100ml
     @State private var isLiquid: Bool = false // Detect if it's a beverage
-    @State private var expandedNegativeIndex: Int? = nil
-    @State private var expandedPositiveIndex: Int? = nil
+    @State private var expandedNegativeIndices: Set<Int> = []
+    @State private var expandedPositiveIndices: Set<Int> = []
     
     // This view is ONLY for logging scanned foods
     init(path: Binding<NavigationPath>, food: Food, foodLogId: Int? = nil) {
@@ -825,7 +825,7 @@ struct ConfirmLogView: View {
                                                         Text(valueForFacet(facet))
                                                             .font(.body).fontWeight(.medium)
                                                         Circle().fill(Color.red).frame(width: 12, height: 12)
-                                                        Image(systemName: expandedNegativeIndex == index ? "chevron.up" : "chevron.down")
+                                                        Image(systemName: expandedNegativeIndices.contains(index) ? "chevron.up" : "chevron.down")
                                                             .font(.caption).foregroundColor(.secondary)
                                                     }
                                                 }
@@ -834,11 +834,15 @@ struct ConfirmLogView: View {
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     withAnimation(.easeInOut(duration: 0.3)) {
-                                                        expandedNegativeIndex = (expandedNegativeIndex == index) ? nil : index
+                                                        if expandedNegativeIndices.contains(index) {
+                                                            expandedNegativeIndices.remove(index)
+                                                        } else {
+                                                            expandedNegativeIndices.insert(index)
+                                                        }
                                                     }
                                                 }
 
-                                                if expandedNegativeIndex == index {
+                                                if expandedNegativeIndices.contains(index) {
                                                     VStack(spacing: 8) {
                                                         negativeRangeView(for: facet)
                                                     }
@@ -908,7 +912,7 @@ struct ConfirmLogView: View {
                                                         Text(valueForFacet(facet))
                                                             .font(.body).fontWeight(.medium)
                                                         Circle().fill(Color.green).frame(width: 12, height: 12)
-                                                        Image(systemName: expandedPositiveIndex == index ? "chevron.up" : "chevron.down")
+                                                        Image(systemName: expandedPositiveIndices.contains(index) ? "chevron.up" : "chevron.down")
                                                             .font(.caption).foregroundColor(.secondary)
                                                     }
                                                 }
@@ -917,11 +921,15 @@ struct ConfirmLogView: View {
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     withAnimation(.easeInOut(duration: 0.3)) {
-                                                        expandedPositiveIndex = (expandedPositiveIndex == index) ? nil : index
+                                                        if expandedPositiveIndices.contains(index) {
+                                                            expandedPositiveIndices.remove(index)
+                                                        } else {
+                                                            expandedPositiveIndices.insert(index)
+                                                        }
                                                     }
                                                 }
 
-                                                if expandedPositiveIndex == index {
+                                                if expandedPositiveIndices.contains(index) {
                                                     VStack(spacing: 8) {
                                                         positiveRangeView(for: facet)
                                                     }
