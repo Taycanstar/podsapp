@@ -771,288 +771,167 @@ struct ConfirmLogView: View {
                 
                 VStack(spacing: 0) {
                     if let health = healthAnalysis {
-                        // Negatives section
-                        if !health.negatives.isEmpty {
-                            VStack(spacing: 0) {
-                                // Header
-                                HStack {
-                                    Text("Negatives")
-                                        .font(.headline)
-                                        .fontWeight(.bold)
-                                    Spacer()
-                                    Text(showPerServing ? 
-                                        "per serving (\(servingSize))" : 
-                                        isLiquid ? "per 100ml" : "per 100g")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Button(action: {
-                                        showPerServing.toggle()
-                                    }) {
-                                        Image(systemName: "arrow.left.arrow.right")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+                                // Compute which facets to show for the current toggle
+                                let negs: [HealthFacet] = showPerServing ? (health.servingFacets?.negatives ?? []) : health.negatives
+                                let poss: [HealthFacet] = showPerServing ? (health.servingFacets?.positives ?? []) : health.positives
+
+                                // Negatives section
+                                if !negs.isEmpty {
+                                    VStack(spacing: 0) {
+                                        // Header
+                                        HStack {
+                                            Text("Negatives")
+                                                .font(.headline)
+                                                .fontWeight(.bold)
+                                            Spacer()
+                                            Text(showPerServing ?
+                                                "per serving (\(servingSize))" :
+                                                (isLiquid ? "per 100ml" : "per 100g"))
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            Button(action: {
+                                                showPerServing.toggle()
+                                            }) {
+                                                Image(systemName: "arrow.left.arrow.right")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.top, 16)
+                                        .padding(.bottom, 12)
+
+                                        ForEach(Array(negs.enumerated()), id: \.offset) { index, facet in
+                                            VStack(spacing: 0) {
+                                                HStack(alignment: .center, spacing: 12) {
+                                                    ZStack {
+                                                        RoundedRectangle(cornerRadius: 8)
+                                                            .fill(Color.gray.opacity(0.1))
+                                                            .frame(width: 40, height: 40)
+                                                        Image(systemName: iconForNegative(facet))
+                                                            .font(.system(size: 20))
+                                                            .foregroundColor(.primary)
+                                                    }
+                                                    VStack(alignment: .leading, spacing: 2) {
+                                                        Text(facet.title).font(.body).fontWeight(.medium)
+                                                        Text(facet.subtitle).font(.caption).foregroundColor(.secondary)
+                                                    }
+                                                    Spacer()
+                                                    HStack(spacing: 8) {
+                                                        Text(valueForFacet(facet))
+                                                            .font(.body).fontWeight(.medium)
+                                                        Circle().fill(Color.red).frame(width: 12, height: 12)
+                                                        Image(systemName: expandedNegativeIndex == index ? "chevron.up" : "chevron.down")
+                                                            .font(.caption).foregroundColor(.secondary)
+                                                    }
+                                                }
+                                                .padding(.horizontal, 16).padding(.vertical, 12)
+                                                .onTapGesture {
+                                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                                        expandedNegativeIndex = (expandedNegativeIndex == index) ? nil : index
+                                                    }
+                                                }
+
+                                                if expandedNegativeIndex == index {
+                                                    VStack(spacing: 8) {
+                                                        negativeRangeView(for: facet)
+                                                    }
+                                                    .padding(.horizontal, 16).padding(.bottom, 12)
+                                                    .transition(.opacity.combined(with: .slide))
+                                                }
+
+                                                if index < negs.count - 1 {
+                                                    Divider().padding(.leading, 68)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.top, 16)
-                                .padding(.bottom, 12)
-                                
-                                // Negative items
-                                // ForEach(Array(health.negatives.enumerated()), id: \.offset) { index, negative in
-                                //     VStack(spacing: 0) {
-                                //         HStack(alignment: .center, spacing: 12) {
-                                //             // Icon based on negative type
-                                //             ZStack {
-                                //                 RoundedRectangle(cornerRadius: 8)
-                                //                     .fill(Color.gray.opacity(0.1))
-                                //                     .frame(width: 40, height: 40)
-                                //                 Image(systemName: getIconForNegative(negative))
-                                //                     .font(.system(size: 20))
-                                //                     .foregroundColor(.primary)
-                                //             }
-                                            
-                                //             VStack(alignment: .leading, spacing: 2) {
-                                //                 Text(getNegativeTitle(negative))
-                                //                     .font(.body)
-                                //                     .fontWeight(.medium)
-                                //                 Text(getNegativeSubtitle(negative))
-                                //                     .font(.caption)
-                                //                     .foregroundColor(.secondary)
-                                //             }
-                                            
-                                //             Spacer()
-                                            
-                                //             // Value and indicator
-                                //             HStack(spacing: 8) {
-                                //                 Text(getNegativeValue(negative))
-                                //                     .font(.body)
-                                //                     .fontWeight(.medium)
-                                //                 Circle()
-                                //                     .fill(Color.red)
-                                //                     .frame(width: 12, height: 12)
-                                //                 Image(systemName: expandedNegativeIndex == index ? "chevron.up" : "chevron.down")
-                                //                     .font(.caption)
-                                //                     .foregroundColor(.secondary)
-                                //             }
-                                //         }
-                                //         .padding(.horizontal, 16)
-                                //         .padding(.vertical, 12)
-                                //         .onTapGesture {
-                                //             withAnimation(.easeInOut(duration: 0.3)) {
-                                //                 expandedNegativeIndex = (expandedNegativeIndex == index) ? nil : index
-                                //             }
-                                //         }
-                                        
-                                //         // Accordion content
-                                //         if expandedNegativeIndex == index {
-                                //             VStack(spacing: 8) {
-                                //                 // Range visualization
-                                //                 getNegativeRangeView(for: negative)
-                                //             }
-                                //             .padding(.horizontal, 16)
-                                //             .padding(.bottom, 12)
-                                //             .transition(.opacity.combined(with: .slide))
-                                //         }
-                                        
-                                //         if index < health.negatives.count - 1 {
-                                //             Divider()
-                                //                 .padding(.leading, 68) // Indent to align with text
-                                //         }
-                                //     }
-                                // }
-                                ForEach(Array(health.negatives.enumerated()), id: \.offset) { index, facet in
+
+                                // Divider only if both sections exist
+                                if !poss.isEmpty && !negs.isEmpty {
+                                    Divider().padding(.vertical, 8)
+                                }
+
+                                // Positives section
+                                if !poss.isEmpty {
                                     VStack(spacing: 0) {
-                                        HStack(alignment: .center, spacing: 12) {
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.gray.opacity(0.1))
-                                            .frame(width: 40, height: 40)
-                                            Image(systemName: iconForNegative(facet))
-                                            .font(.system(size: 20))
-                                            .foregroundColor(.primary)
+                                        // Header
+                                        HStack {
+                                            Text("Positives")
+                                                .font(.headline)
+                                                .fontWeight(.bold)
+                                            Spacer()
+                                            Text(showPerServing ?
+                                                "per serving (\(servingSize))" :
+                                                (isLiquid ? "per 100ml" : "per 100g"))
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            Button(action: {
+                                                showPerServing.toggle()
+                                            }) {
+                                                Image(systemName: "arrow.left.arrow.right")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
                                         }
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(facet.title).font(.body).fontWeight(.medium)
-                                            Text(facet.subtitle).font(.caption).foregroundColor(.secondary)
-                                        }
-                                        Spacer()
-                                        HStack(spacing: 8) {
-                                            Text(valueForFacet(facet)) // ✅ value by facet.id
-                                            .font(.body).fontWeight(.medium)
-                                            Circle().fill(Color.red).frame(width: 12, height: 12)
-                                            Image(systemName: expandedNegativeIndex == index ? "chevron.up" : "chevron.down")
-                                            .font(.caption).foregroundColor(.secondary)
-                                        }
-                                        }
-                                        .padding(.horizontal, 16).padding(.vertical, 12)
-                                        .onTapGesture {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            expandedNegativeIndex = (expandedNegativeIndex == index) ? nil : index
-                                        }
-                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.top, negs.isEmpty ? 16 : 8)
+                                        .padding(.bottom, 12)
 
-                                        if expandedNegativeIndex == index {
-                                        VStack(spacing: 8) {
-                                            negativeRangeView(for: facet) // ✅ range by facet.id
-                                        }
-                                        .padding(.horizontal, 16).padding(.bottom, 12)
-                                        .transition(.opacity.combined(with: .slide))
-                                        }
+                                        ForEach(Array(poss.enumerated()), id: \.offset) { index, facet in
+                                            VStack(spacing: 0) {
+                                                HStack(alignment: .center, spacing: 12) {
+                                                    ZStack {
+                                                        RoundedRectangle(cornerRadius: 8)
+                                                            .fill(Color.gray.opacity(0.1))
+                                                            .frame(width: 40, height: 40)
+                                                        Image(systemName: iconForPositive(facet))
+                                                            .font(.system(size: 20))
+                                                            .foregroundColor(.primary)
+                                                    }
+                                                    VStack(alignment: .leading, spacing: 2) {
+                                                        Text(facet.title).font(.body).fontWeight(.medium)
+                                                        Text(facet.subtitle).font(.caption).foregroundColor(.secondary)
+                                                    }
+                                                    Spacer()
+                                                    HStack(spacing: 8) {
+                                                        Text(valueForFacet(facet))
+                                                            .font(.body).fontWeight(.medium)
+                                                        Circle().fill(Color.green).frame(width: 12, height: 12)
+                                                        Image(systemName: expandedPositiveIndex == index ? "chevron.up" : "chevron.down")
+                                                            .font(.caption).foregroundColor(.secondary)
+                                                    }
+                                                }
+                                                .padding(.horizontal, 16).padding(.vertical, 12)
+                                                .onTapGesture {
+                                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                                        expandedPositiveIndex = (expandedPositiveIndex == index) ? nil : index
+                                                    }
+                                                }
 
-                                        if index < health.negatives.count - 1 {
-                                        Divider().padding(.leading, 68)
+                                                if expandedPositiveIndex == index {
+                                                    VStack(spacing: 8) {
+                                                        positiveRangeView(for: facet)
+                                                    }
+                                                    .padding(.horizontal, 16).padding(.bottom, 12)
+                                                    .transition(.opacity.combined(with: .slide))
+                                                }
+
+                                                if index < poss.count - 1 {
+                                                    Divider().padding(.leading, 68)
+                                                }
+                                            }
                                         }
-                                    }
-                                    }
-                            }
-                        }
-                        
-                        // Positives section
-                        if !health.positives.isEmpty && !health.negatives.isEmpty {
-                            Divider()
-                                .padding(.vertical, 8)
-                        }
-                        
-                        if !health.positives.isEmpty {
-                            VStack(spacing: 0) {
-                                // Header
-                                HStack {
-                                    Text("Positives")
-                                        .font(.headline)
-                                        .fontWeight(.bold)
-                                    Spacer()
-                                    Text(showPerServing ? 
-                                        "per serving (\(servingSize))" : 
-                                        isLiquid ? "per 100ml" : "per 100g")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Button(action: {
-                                        showPerServing.toggle()
-                                    }) {
-                                        Image(systemName: "arrow.left.arrow.right")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+                                        .padding(.bottom, 16)
                                     }
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.top, health.negatives.isEmpty ? 16 : 8)
-                                .padding(.bottom, 12)
-                                
-                                // Positive items
-                                // ForEach(Array(health.positives.enumerated()), id: \.offset) { index, positive in
-                                //     VStack(spacing: 0) {
-                                //         HStack(alignment: .center, spacing: 12) {
-                                //             // Icon based on positive type
-                                //             ZStack {
-                                //                 RoundedRectangle(cornerRadius: 8)
-                                //                     .fill(Color.gray.opacity(0.1))
-                                //                     .frame(width: 40, height: 40)
-                                //                 Image(systemName: getIconForPositive(positive))
-                                //                     .font(.system(size: 20))
-                                //                     .foregroundColor(.primary)
-                                //             }
-                                            
-                                //             VStack(alignment: .leading, spacing: 2) {
-                                //                 Text(getPositiveTitle(positive))
-                                //                     .font(.body)
-                                //                     .fontWeight(.medium)
-                                //                 Text(getPositiveSubtitle(positive))
-                                //                     .font(.caption)
-                                //                     .foregroundColor(.secondary)
-                                //             }
-                                            
-                                //             Spacer()
-                                            
-                                //             // Value and indicator
-                                //             HStack(spacing: 8) {
-                                //                 Text(getPositiveValue(positive))
-                                //                     .font(.body)
-                                //                     .fontWeight(.medium)
-                                //                 Circle()
-                                //                     .fill(Color.green)
-                                //                     .frame(width: 12, height: 12)
-                                //                 Image(systemName: expandedPositiveIndex == index ? "chevron.up" : "chevron.down")
-                                //                     .font(.caption)
-                                //                     .foregroundColor(.secondary)
-                                //             }
-                                //         }
-                                //         .padding(.horizontal, 16)
-                                //         .padding(.vertical, 12)
-                                //         .onTapGesture {
-                                //             withAnimation(.easeInOut(duration: 0.3)) {
-                                //                 expandedPositiveIndex = (expandedPositiveIndex == index) ? nil : index
-                                //             }
-                                //         }
-                                        
-                                //         // Accordion content
-                                //         if expandedPositiveIndex == index {
-                                //             VStack(spacing: 8) {
-                                //                 // Range visualization
-                                //                 getPositiveRangeView(for: positive)
-                                //             }
-                                //             .padding(.horizontal, 16)
-                                //             .padding(.bottom, 12)
-                                //             .transition(.opacity.combined(with: .slide))
-                                //         }
-                                        
-                                //         if index < health.positives.count - 1 {
-                                //             Divider()
-                                //                 .padding(.leading, 68) // Indent to align with text
-                                //         }
-                                //     }
-                                // }
-                                ForEach(Array(health.positives.enumerated()), id: \.offset) { index, facet in
-                                    VStack(spacing: 0) {
-                                        HStack(alignment: .center, spacing: 12) {
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.gray.opacity(0.1))
-                                            .frame(width: 40, height: 40)
-                                            Image(systemName: iconForPositive(facet))
-                                            .font(.system(size: 20))
-                                            .foregroundColor(.primary)
-                                        }
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(facet.title).font(.body).fontWeight(.medium)
-                                            Text(facet.subtitle).font(.caption).foregroundColor(.secondary)
-                                        }
-                                        Spacer()
-                                        HStack(spacing: 8) {
-                                            Text(valueForFacet(facet))
-                                            .font(.body).fontWeight(.medium)
-                                            Circle().fill(Color.green).frame(width: 12, height: 12)
-                                            Image(systemName: expandedPositiveIndex == index ? "chevron.up" : "chevron.down")
-                                            .font(.caption).foregroundColor(.secondary)
-                                        }
-                                        }
-                                        .padding(.horizontal, 16).padding(.vertical, 12)
-                                        .onTapGesture {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            expandedPositiveIndex = (expandedPositiveIndex == index) ? nil : index
-                                        }
-                                        }
-
-                                        if expandedPositiveIndex == index {
-                                        VStack(spacing: 8) {
-                                            positiveRangeView(for: facet)
-                                        }
-                                        .padding(.horizontal, 16).padding(.bottom, 12)
-                                        .transition(.opacity.combined(with: .slide))
-                                        }
-
-                                        if index < health.positives.count - 1 {
-                                        Divider().padding(.leading, 68)
-                                        }
-                                    }
-                                    }
-                                .padding(.bottom, 16)
+                            } else {
+                                Text("Health analysis unavailable")
+                                    .foregroundColor(.secondary)
+                                    .padding()
                             }
-                        }
-                    } else {
-                        Text("Health analysis unavailable")
-                            .foregroundColor(.secondary)
-                            .padding()
-                    }
+
                 }
             }
         }
@@ -1114,6 +993,43 @@ private func setupHealthAnalysis() {
 
     // MARK: - Facet helpers
 
+private func valueForFacet(_ facet: HealthFacet) -> String {
+    guard let health = healthAnalysis else { return "—" }
+    let vals = showPerServing ? health.perServingValues : health.per100Values
+
+    func fmt(_ v: Double, _ unit: String) -> String {
+        let adj = showPerServing ? (v * numberOfServings) : v
+        return "\(Int(round(adj)))\(unit)"
+    }
+
+    switch facet.id {
+    // sugar
+    case "too_sugary", "a_bit_sugary", "low_sugar", "no_sugar":
+        return fmt(vals?.sugars_g ?? 0, "g")
+    // sodium
+    case "too_salty", "a_bit_salty", "low_sodium", "no_sodium":
+        return fmt(vals?.sodium_mg ?? 0, "mg")
+    // saturated fat
+    case "too_much_sat_fat", "high_sat_fat", "low_sat_fat", "no_sat_fat":
+        return fmt(vals?.saturated_fat_g ?? 0, "g")
+    // calories
+    case "too_caloric", "a_bit_caloric", "high_cal_density", "low_calories", "low_impact_cal":
+        return fmt(vals?.energy_kcal ?? 0, " Cal")
+    // fiber / protein
+    case "some_fiber", "high_fiber":
+        return fmt(vals?.fiber_g ?? 0, "g")
+    case "some_protein", "high_protein":
+        return fmt(vals?.protein_g ?? 0, "g")
+    // additives
+    case "ultra_processed", "risky_additives", "no_additives":
+        return "\(health.additives?.count ?? 0)"
+    default:
+        return "—"
+    }
+}
+
+
+
 private func iconForNegative(_ facet: HealthFacet) -> String {
   switch facet.id {
   case "too_sugary", "a_bit_sugary": return "cube"
@@ -1140,47 +1056,6 @@ private func iconForPositive(_ facet: HealthFacet) -> String {
 }
 
 
-
-
-private func valueForFacet(_ facet: HealthFacet) -> String {
-  switch facet.id {
-  // sugar
-  case "too_sugary", "a_bit_sugary", "low_sugar", "no_sugar":
-    let v = showPerServing ? baseSugar * numberOfServings : baseSugar
-    return "\(Int(v))g"
-
-  // sodium
-  case "too_salty", "a_bit_salty", "low_sodium", "no_sodium":
-    let v = showPerServing ? baseSodium * numberOfServings : baseSodium
-    return "\(Int(v))mg"
-
-  // saturated fat
-  case "too_much_sat_fat", "high_sat_fat", "low_sat_fat", "no_sat_fat":
-    let v = showPerServing ? baseSaturatedFat * numberOfServings : baseSaturatedFat
-    return "\(Int(v))g"
-
-  // calories
-  case "too_caloric", "a_bit_caloric", "high_cal_density", "low_calories", "low_impact_cal":
-    let v = showPerServing ? baseCalories * numberOfServings : baseCalories
-    return "\(Int(v)) Cal"
-
-  // fiber / protein
-  case "some_fiber", "high_fiber":
-    let v = showPerServing ? baseFiber * numberOfServings : baseFiber
-    return "\(Int(v))g"
-
-  case "some_protein", "high_protein":
-    let v = showPerServing ? baseProtein * numberOfServings : baseProtein
-    return "\(Int(v))g"
-
-  // additives count
-  case "ultra_processed", "risky_additives", "no_additives":
-    return "\(healthAnalysis?.additives?.count ?? 0)"
-
-  default:
-    return "—"
-  }
-}
 
 
 // MARK: - Build health-analysis payload from Food
@@ -1233,43 +1108,7 @@ private func buildHealthPayload(from food: Food) -> [String: Any] {
 }
 
 
-// MARK: - Range views driven by facet.id
 
-@ViewBuilder
-private func negativeRangeView(for facet: HealthFacet) -> some View {
-  switch facet.id {
-  case "too_sugary", "a_bit_sugary":
-    sugarRangeView(currentValue: Double(baseSugar), per100ml: isLiquid && !showPerServing)
-  case "too_caloric", "a_bit_caloric", "high_cal_density":
-    let v = showPerServing ? Double(baseCalories * numberOfServings) : Double(baseCalories)
-    caloriesRangeView(currentValue: v)
-  case "too_salty", "a_bit_salty":
-    sodiumRangeView(currentValue: Double(baseSodium))
-  case "too_much_sat_fat", "high_sat_fat":
-    saturatedFatRangeView(currentValue: Double(baseSaturatedFat))
-  default:
-    Text("Range visualization unavailable").font(.caption).foregroundColor(.secondary)
-  }
-}
-
-@ViewBuilder
-private func positiveRangeView(for facet: HealthFacet) -> some View {
-  switch facet.id {
-  case "low_sat_fat", "no_sat_fat":
-    saturatedFatRangeView(currentValue: Double(baseSaturatedFat))
-  case "low_sodium", "no_sodium":
-    sodiumRangeView(currentValue: Double(baseSodium))
-  case "some_fiber", "high_fiber":
-    fiberRangeView(currentValue: Double(baseFiber))
-  case "some_protein", "high_protein":
-    proteinRangeView(currentValue: Double(baseProtein))
-  case "low_calories", "low_impact_cal":
-    let v = showPerServing ? Double(baseCalories * numberOfServings) : Double(baseCalories)
-    caloriesRangeView(currentValue: v)
-  default:
-    Text("Range visualization unavailable").font(.caption).foregroundColor(.secondary)
-  }
-}
 
 
     
@@ -1372,159 +1211,216 @@ private func positiveRangeView(for facet: HealthFacet) -> some View {
     }
     
     // MARK: - Range Visualization Functions
-    @ViewBuilder
-    private func getNegativeRangeView(for negative: String) -> some View {
-        if negative.lowercased().contains("sugar") || negative.lowercased().contains("sweet") {
-            sugarRangeView(currentValue: Double(baseSugar), per100ml: isLiquid && !showPerServing)
-        } else if negative.lowercased().contains("calor") {
-            caloriesRangeView(currentValue: showPerServing ? Double(baseCalories * numberOfServings) : Double(baseCalories))
-        } else if negative.lowercased().contains("sodium") {
-            sodiumRangeView(currentValue: Double(baseSodium))
-        } else if negative.lowercased().contains("fat") {
-            saturatedFatRangeView(currentValue: Double(baseSaturatedFat))
+    // MARK: - Range Visualization (driven by backend thresholds)
+
+private enum NutrientKey: String {
+    case energy_kcal, sugars_g, sodium_mg, sat_fat_g, fiber_g, protein_g
+}
+
+private func nutrientKey(for facet: HealthFacet) -> NutrientKey? {
+    switch facet.id {
+    case "too_sugary", "a_bit_sugary", "low_sugar", "no_sugar":
+        return .sugars_g
+    case "too_salty", "a_bit_salty", "low_sodium", "no_sodium":
+        return .sodium_mg
+    case "too_much_sat_fat", "high_sat_fat", "low_sat_fat", "no_sat_fat":
+        return .sat_fat_g
+    case "too_caloric", "a_bit_caloric", "low_calories", "low_impact_cal", "high_cal_density":
+        return .energy_kcal
+    case "some_fiber", "high_fiber":
+        return .fiber_g
+    case "some_protein", "high_protein":
+        return .protein_g
+    default:
+        return nil
+    }
+}
+
+private func currentValue(for key: NutrientKey) -> Double {
+    guard let health = healthAnalysis else { return 0 }
+    let vals = showPerServing ? health.perServingValues : health.per100Values
+
+    let raw: Double = {
+        switch key {
+        case .energy_kcal: return vals?.energy_kcal ?? 0
+        case .sugars_g:    return vals?.sugars_g ?? 0
+        case .sodium_mg:   return vals?.sodium_mg ?? 0
+        case .sat_fat_g:   return vals?.saturated_fat_g ?? 0
+        case .fiber_g:     return vals?.fiber_g ?? 0
+        case .protein_g:   return vals?.protein_g ?? 0
+        }
+    }()
+
+    return showPerServing ? raw * numberOfServings : raw
+}
+
+private func activeThresholds(for key: NutrientKey) -> [Double] {
+    guard let health = healthAnalysis else { return [] }
+    if showPerServing {
+        switch key {
+        case .sugars_g:    return health.thresholds?.per_serving.sugars_g ?? []
+        case .sodium_mg:   return health.thresholds?.per_serving.sodium_mg ?? []
+        case .energy_kcal: return health.thresholds?.per_serving.energy_kcal ?? []
+        case .sat_fat_g:   return health.thresholds?.per_serving.sat_fat_g ?? []
+        case .fiber_g:     return health.thresholds?.per100_g.fiber_g ?? []   // no per-serving fiber scale; per-100 shown for context
+        case .protein_g:   return health.thresholds?.per100_g.protein_g ?? [] // same
+        }
+    } else {
+        // per 100 basis
+        if isLiquid {
+            switch key {
+            case .sugars_g:    return health.thresholds?.per100_ml.sugars_g ?? []
+            case .sodium_mg:   return health.thresholds?.per100_ml.sodium_mg ?? []
+            case .energy_kcal: return health.thresholds?.per100_ml.energy_kcal ?? []
+            case .sat_fat_g:   return health.thresholds?.per100_g.sat_fat_g ?? []
+            case .fiber_g:     return health.thresholds?.per100_g.fiber_g ?? []
+            case .protein_g:   return health.thresholds?.per100_g.protein_g ?? []
+            }
         } else {
-            Text("Range visualization unavailable")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            switch key {
+            case .sugars_g:    return health.thresholds?.per100_g.sugars_g ?? []
+            case .sodium_mg:   return health.thresholds?.per100_g.sodium_mg ?? []
+            case .energy_kcal:
+                // backend sends energy_kj for foods; convert to kcal
+                let kj = health.thresholds?.per100_g.energy_kj ?? []
+                return kj.map { $0 / 4.184 }
+            case .sat_fat_g:   return health.thresholds?.per100_g.sat_fat_g ?? []
+            case .fiber_g:     return health.thresholds?.per100_g.fiber_g ?? []
+            case .protein_g:   return health.thresholds?.per100_g.protein_g ?? []
+            }
         }
     }
-    
-    @ViewBuilder
-    private func getPositiveRangeView(for positive: String) -> some View {
-        if positive.lowercased().contains("fat") {
-            saturatedFatRangeView(currentValue: Double(baseSaturatedFat))
-        } else if positive.lowercased().contains("sodium") {
-            sodiumRangeView(currentValue: Double(baseSodium))
-        } else if positive.lowercased().contains("fiber") {
-            fiberRangeView(currentValue: Double(baseFiber))
-        } else if positive.lowercased().contains("protein") {
-            proteinRangeView(currentValue: Double(baseProtein))
-        } else {
-            Text("Range visualization unavailable")
-                .font(.caption)
-                .foregroundColor(.secondary)
+}
+
+private func unit(for key: NutrientKey) -> String {
+    switch key {
+    case .sodium_mg:   return "mg"
+    case .energy_kcal: return "Cal"
+    default:           return "g"
+    }
+}
+@ViewBuilder
+private func negativeRangeView(for facet: HealthFacet) -> some View {
+    if let key = nutrientKey(for: facet) {
+        dynamicRange(for: key)
+    } else {
+        Text("Range visualization unavailable")
+            .font(.caption)
+            .foregroundColor(.secondary)
+    }
+}
+
+@ViewBuilder
+private func positiveRangeView(for facet: HealthFacet) -> some View {
+    if let key = nutrientKey(for: facet) {
+        dynamicRange(for: key)
+    } else {
+        Text("Range visualization unavailable")
+            .font(.caption)
+            .foregroundColor(.secondary)
+    }
+}
+
+
+@ViewBuilder
+private func dynamicRange(for key: NutrientKey) -> some View {
+    let value = currentValue(for: key)
+    let th    = activeThresholds(for: key)
+    let unit  = unit(for: key)
+
+    if th.isEmpty {
+        Text("Range unavailable").font(.caption).foregroundColor(.secondary)
+    } else {
+        let segments = buildSegments(from: th)
+        rangeBarView(currentValue: value, segments: segments, unit: unit)
+    }
+}
+
+/// Build color stops from threshold arrays:
+/// - 11-point scales (per-100 negative nutrients): [0..2]=greens, [3..5]=orange, [6..]=red
+/// - 4-point serving scales: [g, mint, orange, red]
+/// - 3-point serving scales: [mint, orange, red]
+private func buildSegments(from thresholds: [Double]) -> [(threshold: Double, color: Color)] {
+    // 11-point arrays have 10 bounds
+    if thresholds.count >= 10 {
+        let last = thresholds.last!
+        return [
+            (thresholds[1], .green),
+            (thresholds[2], .mint),
+            (thresholds[5], .orange),
+            (last,         .red)
+        ]
+    }
+    // 4-point serving scales
+    if thresholds.count == 4 {
+        return [
+            (thresholds[0], .green),
+            (thresholds[1], .mint),
+            (thresholds[2], .orange),
+            (thresholds[3], .red),
+        ]
+    }
+    // 3-point serving scales
+    if thresholds.count == 3 {
+        return [
+            (thresholds[0], .mint),
+            (thresholds[1], .orange),
+            (thresholds[2], .red),
+        ]
+    }
+    // Fallback: single stop -> red
+    return [(thresholds.last ?? 1, .red)]
+}
+
+private func rangeBarView(currentValue: Double,
+                          segments: [(threshold: Double, color: Color)],
+                          unit: String) -> some View {
+    let maxValue = max(segments.last?.threshold ?? 1, currentValue)
+    let stops: [Gradient.Stop] = {
+        var arr: [Gradient.Stop] = [.init(color: .green, location: 0.0)]
+        for s in segments {
+            let loc = CGFloat(min(max(s.threshold / maxValue, 0), 1))
+            arr.append(.init(color: s.color, location: loc))
         }
-    }
-    
-    private func sugarRangeView(currentValue: Double, per100ml: Bool) -> some View {
-        let maxValue: Double = per100ml ? 13.5 : 47 // Different ranges for liquids vs solids
-        let segments: [(threshold: Double, color: Color)] = per100ml ? 
-            [(1.5, .green), (3.0, .mint), (6.0, .orange), (maxValue, .red)] :
-            [(4.5, .green), (9.0, .mint), (13.5, .orange), (maxValue, .red)]
-        
-        return rangeBarView(currentValue: currentValue, maxValue: maxValue, segments: segments, unit: "g")
-    }
-    
-    private func caloriesRangeView(currentValue: Double) -> some View {
-        let maxValue: Double = 230
-        let segments: [(threshold: Double, color: Color)] = [
-            (80, .green),
-            (160, .mint), 
-            (240, .orange),
-            (maxValue, .red)
-        ]
-        
-        return rangeBarView(currentValue: currentValue, maxValue: maxValue, segments: segments, unit: "Cal")
-    }
-    
-    private func saturatedFatRangeView(currentValue: Double) -> some View {
-        let maxValue: Double = 36
-        let segments: [(threshold: Double, color: Color)] = [
-            (3.5, .green),
-            (10.6, .mint),
-            (21.3, .orange), 
-            (maxValue, .red)
-        ]
-        
-        return rangeBarView(currentValue: currentValue, maxValue: maxValue, segments: segments, unit: "g")
-    }
-    
-    private func sodiumRangeView(currentValue: Double) -> some View {
-        let maxValue: Double = 900
-        let segments: [(threshold: Double, color: Color)] = [
-            (90, .green),
-            (180, .mint),
-            (270, .orange),
-            (maxValue, .red)
-        ]
-        
-        return rangeBarView(currentValue: currentValue, maxValue: maxValue, segments: segments, unit: "mg")
-    }
-    
-    private func fiberRangeView(currentValue: Double) -> some View {
-        let maxValue: Double = 25
-        let segments: [(threshold: Double, color: Color)] = [
-            (12.5, .green),
-            (19, .mint),
-            (22, .orange),
-            (maxValue, .red)
-        ]
-        
-        return rangeBarView(currentValue: currentValue, maxValue: maxValue, segments: segments, unit: "g")
-    }
-    
-    private func proteinRangeView(currentValue: Double) -> some View {
-        let maxValue: Double = 50
-        let segments: [(threshold: Double, color: Color)] = [
-            (25, .green),
-            (35, .mint),
-            (45, .orange),
-            (maxValue, .red)
-        ]
-        
-        return rangeBarView(currentValue: currentValue, maxValue: maxValue, segments: segments, unit: "g")
-    }
-    
-    private func rangeBarView(currentValue: Double, maxValue: Double, segments: [(threshold: Double, color: Color)], unit: String) -> some View {
-        VStack(spacing: 8) {
-            // Range bar with continuous gradient
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    // Background gradient bar
-                    LinearGradient(
-                        gradient: Gradient(stops: [
-                            .init(color: .green, location: 0.0),
-                            .init(color: .green, location: segments[0].threshold / maxValue),
-                            .init(color: .mint, location: segments[1].threshold / maxValue),
-                            .init(color: .orange, location: segments[2].threshold / maxValue),
-                            .init(color: .red, location: 1.0)
-                        ]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+        return arr
+    }()
+
+    return VStack(spacing: 8) {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                LinearGradient(gradient: Gradient(stops: stops),
+                               startPoint: .leading,
+                               endPoint: .trailing)
                     .frame(height: 8)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
-                    
-                    // Current value indicator
-                    let position = min(currentValue / maxValue, 1.0) * geometry.size.width
-                    VStack(spacing: 0) {
-                        Image(systemName: "arrowtriangle.down.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(.primary)
-                    }
-                    .offset(x: position - 5, y: -4)
-                }
-            }
-            .frame(height: 8)
-            
-            // Range labels
-            HStack {
-                Text("0")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                Spacer()
-                ForEach(segments.dropLast(), id: \.threshold) { segment in
-                    Text(String(format: segment.threshold < 10 ? "%.1f" : "%.0f", segment.threshold))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-                Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+
+                let pos = min(currentValue / maxValue, 1.0) * geometry.size.width
+                Image(systemName: "arrowtriangle.down.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(.primary)
+                    .offset(x: pos - 5, y: -4)
             }
         }
+        .frame(height: 8)
+
+        HStack {
+            Text("0").font(.caption2).foregroundColor(.secondary)
+            Spacer()
+           ForEach(Array(segments.dropLast().enumerated()), id: \.offset) { _, s in
+    Text(String(format: s.threshold < 10 ? "%.1f" : "%.0f", s.threshold))
+        .font(.caption2)
+        .foregroundColor(.secondary)
+    Spacer()
+}
+
+Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
+
+
+                .font(.caption2).foregroundColor(.secondary)
+        }
     }
+}
+
 
     private func logBarcodeFood() {
     // 1. Validate inputs

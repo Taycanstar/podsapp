@@ -150,6 +150,81 @@ class FoodService {
 
 }
 
+struct FacetSet: Codable {
+  let positives: [HealthFacet]
+  let negatives: [HealthFacet]
+}
+
+struct NutrientValues: Codable {
+  let energy_kcal: Double
+  let sugars_g: Double
+  let sodium_mg: Double
+  let saturated_fat_g: Double
+  let protein_g: Double
+  let fiber_g: Double
+}
+
+struct Thresholds: Codable {
+  struct Per100G: Codable {
+    let energy_kj: [Double]
+    let sugars_g: [Double]
+    let sodium_mg: [Double]
+    let sat_fat_g: [Double]
+    let protein_g: [Double]
+    let fiber_g: [Double]
+    let fv_pct: [Double]
+  }
+  struct Per100ML: Codable {
+    let energy_kcal: [Double]
+    let sugars_g: [Double]
+    let sodium_mg: [Double]
+  }
+  struct PerServing: Codable {
+    let sodium_mg: [Double]
+    let sugars_g: [Double]
+    let energy_kcal: [Double]
+    let sat_fat_g: [Double]
+  }
+  let per100_g: Per100G
+  let per100_ml: Per100ML
+  let per_serving: PerServing
+}
+
+struct HealthAnalysis: Codable {
+  let score: Int
+  let color: String
+  let positives: [HealthFacet]            // per-100
+  let negatives: [HealthFacet]            // per-100
+  let additives: [Additive]?
+  let nutriScore: NutriScore
+  let nutritionalQualityScore: Double?
+  let additivePenalty: Int?
+  let organicBonus: Int?
+  let ultraProcessedPenalty: Int?
+  let isBeverage: Bool?
+  let per100Unit: String?                 // "g" or "ml"
+  let servingFacets: FacetSet?            // NEW
+  let per100Values: NutrientValues?       // NEW
+  let perServingValues: NutrientValues?   // NEW
+  let thresholds: Thresholds?             // NEW
+
+  enum CodingKeys: String, CodingKey {
+    case score, color, positives, negatives, additives
+    case nutriScore = "nutri_score"
+    case nutritionalQualityScore = "nutritional_quality_score"
+    case additivePenalty = "additive_penalty"
+    case organicBonus = "organic_bonus"
+    case ultraProcessedPenalty = "ultra_processed_penalty"
+    case isBeverage = "is_beverage"
+    case per100Unit = "per100_unit"
+    case servingFacets = "serving_facets"
+    case per100Values = "per100_values"
+    case perServingValues = "per_serving_values"
+    case thresholds
+  }
+}
+
+
 struct HealthFacet: Codable {
   let id: String
   let title: String
@@ -166,31 +241,6 @@ struct Additive: Codable {
   let risk: String
 }
 
-struct HealthAnalysis: Codable {
-  let score: Int
-  let color: String
-  let positives: [HealthFacet]      // facets only
-  let negatives: [HealthFacet]      // facets only
-  let additives: [Additive]?
-  let nutriScore: NutriScore
-  let nutritionalQualityScore: Double?
-  let additivePenalty: Int?
-  let organicBonus: Int?
-  let ultraProcessedPenalty: Int?
-  let isBeverage: Bool?
-
-
-  enum CodingKeys: String, CodingKey {
-    case score, color, positives, negatives, additives
-    case nutriScore = "nutri_score"
-    case nutritionalQualityScore = "nutritional_quality_score"
-    case additivePenalty = "additive_penalty"
-    case organicBonus = "organic_bonus"
-    case ultraProcessedPenalty = "ultra_processed_penalty"
-     case isBeverage = "is_beverage"
-
-  }
-}
 
 typealias HealthAdditive = Additive
 typealias HealthNutriScore = NutriScore
