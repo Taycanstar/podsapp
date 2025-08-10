@@ -785,18 +785,21 @@ struct ConfirmLogView: View {
                                                 .font(.headline)
                                                 .fontWeight(.bold)
                                             Spacer()
-                                            Text(showPerServing ?
-                                                "per serving (\(servingSize))" :
-                                                (isLiquid ? "per 100ml" : "per 100g"))
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
                                             Button(action: {
                                                 showPerServing.toggle()
                                             }) {
-                                                Image(systemName: "arrow.left.arrow.right")
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
+                                                HStack(spacing: 4) {
+                                                    Text(showPerServing ?
+                                                        "per serving (\(servingSize))" :
+                                                        (isLiquid ? "per 100ml" : "per 100g"))
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                    Image(systemName: "arrow.left.arrow.right")
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                }
                                             }
+                                            .buttonStyle(PlainButtonStyle())
                                         }
                                         .padding(.horizontal, 16)
                                         .padding(.top, 16)
@@ -865,18 +868,21 @@ struct ConfirmLogView: View {
                                                 .font(.headline)
                                                 .fontWeight(.bold)
                                             Spacer()
-                                            Text(showPerServing ?
-                                                "per serving (\(servingSize))" :
-                                                (isLiquid ? "per 100ml" : "per 100g"))
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
                                             Button(action: {
                                                 showPerServing.toggle()
                                             }) {
-                                                Image(systemName: "arrow.left.arrow.right")
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
+                                                HStack(spacing: 4) {
+                                                    Text(showPerServing ?
+                                                        "per serving (\(servingSize))" :
+                                                        (isLiquid ? "per 100ml" : "per 100g"))
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                    Image(systemName: "arrow.left.arrow.right")
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                }
                                             }
+                                            .buttonStyle(PlainButtonStyle())
                                         }
                                         .padding(.horizontal, 16)
                                         .padding(.top, negs.isEmpty ? 16 : 8)
