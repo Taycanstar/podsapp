@@ -1066,7 +1066,7 @@ private func iconForPositive(_ facet: HealthFacet) -> String {
   case "low_sodium", "no_sodium":        return "aqi.low"
   case "low_sugar", "no_sugar":          return "cube"
   case "some_fiber", "high_fiber":       return "leaf"
-  case "some_protein", "high_protein":   return "bolt"
+  case "some_protein", "high_protein":   return "fish"
   case "low_calories", "low_impact_cal": return "flame"
   case "organic":                        return "leaf.circle"
   case "no_additives":                   return "checkmark.seal"
