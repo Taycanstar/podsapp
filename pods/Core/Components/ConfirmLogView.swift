@@ -772,8 +772,9 @@ struct ConfirmLogView: View {
                 VStack(spacing: 0) {
                     if let health = healthAnalysis {
                                 // Compute which facets to show for the current toggle
-                                let negs: [HealthFacet] = showPerServing ? (health.servingFacets?.negatives ?? []) : health.negatives
-                                let poss: [HealthFacet] = showPerServing ? (health.servingFacets?.positives ?? []) : health.positives
+                                let negs: [HealthFacet] = health.negatives
+
+                                let poss: [HealthFacet] = health.positives
 
                                 // Negatives section
                                 if !negs.isEmpty {
@@ -826,6 +827,8 @@ struct ConfirmLogView: View {
                                                     }
                                                 }
                                                 .padding(.horizontal, 16).padding(.vertical, 12)
+                                                .background(Color.clear)
+                                                .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     withAnimation(.easeInOut(duration: 0.3)) {
                                                         expandedNegativeIndex = (expandedNegativeIndex == index) ? nil : index
@@ -904,6 +907,8 @@ struct ConfirmLogView: View {
                                                     }
                                                 }
                                                 .padding(.horizontal, 16).padding(.vertical, 12)
+                                                .background(Color.clear)
+                                                .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     withAnimation(.easeInOut(duration: 0.3)) {
                                                         expandedPositiveIndex = (expandedPositiveIndex == index) ? nil : index
