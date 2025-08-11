@@ -16,20 +16,20 @@ struct BarcodeLookupResponse: Codable {
     let food: Food
     let foodLogId: Int
     
-    // Custom init to handle the fact that barcode response has Food properties at the top level
+    // Custom init to handle the nested food object from backend
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
-        // Extract foodLogId directly
+        // Extract foodLogId directly from top level
         foodLogId = try container.decode(Int.self, forKey: .foodLogId)
         
-        // For the food, we need to decode the entire response again
-        // This handles the case where food properties are at the top level
-        food = try Food(from: decoder)
+        // Decode the food object from the nested "food" key
+        food = try container.decode(Food.self, forKey: .food)
     }
     
     private enum CodingKeys: String, CodingKey {
-        case foodLogId = "foodLogId"  // Backend returns foodLogId, not food_log_id
+        case foodLogId
+        case food
     }
 }
 

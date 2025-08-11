@@ -751,7 +751,7 @@ struct ConfirmLogView: View {
                         
                         Text(iron.isEmpty ? "0" : iron)
                             .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
+                            .multilineTextAlignment(.trailing) 
                     }
                         .padding(.horizontal)
                         .padding(.vertical, 16)
@@ -772,9 +772,17 @@ struct ConfirmLogView: View {
                 VStack(spacing: 0) {
                     if let health = healthAnalysis {
                                 // Compute which facets to show for the current toggle
-                                let negs: [HealthFacet] = health.negatives
+                                // let negs: [HealthFacet] = health.negatives
 
-                                let poss: [HealthFacet] = health.positives
+                                // let poss: [HealthFacet] = health.positives
+                                let negs: [HealthFacet] = showPerServing
+                                    ? (health.servingFacets?.negatives ?? health.negatives)
+                                    : health.negatives
+
+                                let poss: [HealthFacet] = showPerServing
+                                    ? (health.servingFacets?.positives ?? health.positives)
+                                    : health.positives
+
 
                                 // Negatives section
                                 if !negs.isEmpty {

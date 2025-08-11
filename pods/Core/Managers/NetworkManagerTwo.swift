@@ -15,8 +15,8 @@ class NetworkManagerTwo {
     
 
 // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-// let baseUrl = "http://172.20.10.4:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+let baseUrl = "http://172.20.10.4:8000"
 
     // Network errors - scoped to NetworkManagerTwo
     enum NetworkError: LocalizedError {
@@ -76,16 +76,7 @@ class NetworkManagerTwo {
         }
     }
     
-    // MARK: - Barcode Lookup
-    
-    /// Look up food by barcode (UPC/EAN code)
-    /// - Parameters:
-    ///   - barcode: The barcode string
-    ///   - userEmail: User's email address
-    ///   - imageData: Optional base64 image data from the photo taken during barcode scanning
-    ///   - mealType: Type of meal (Breakfast, Lunch, Dinner, Snack)
-    ///   - shouldLog: Whether to log the lookup
-    ///   - completion: Result callback with Food object or error
+
     func lookupFoodByBarcode(
         barcode: String,
         userEmail: String,
