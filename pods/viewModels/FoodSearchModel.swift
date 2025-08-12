@@ -195,6 +195,8 @@ struct HealthAnalysis: Codable {
   let color: String
   let positives: [HealthFacet]            // per-100
   let negatives: [HealthFacet]            // per-100
+  let positivesText: [String]?            // Backend includes these arrays
+  let negativesText: [String]?            // Backend includes these arrays
   let additives: [Additive]?
   let nutriScore: NutriScore
   let nutritionalQualityScore: Double?
@@ -210,6 +212,8 @@ struct HealthAnalysis: Codable {
 
   enum CodingKeys: String, CodingKey {
     case score, color, positives, negatives, additives
+    case positivesText = "positives_text"
+    case negativesText = "negatives_text"
     case nutriScore = "nutri_score"
     case nutritionalQualityScore = "nutritional_quality_score"
     case additivePenalty = "additive_penalty"

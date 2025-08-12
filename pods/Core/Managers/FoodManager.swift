@@ -3894,10 +3894,46 @@ func analyzeNutritionLabel(
                     
                     // Parse the food from the response
                     if let foodData = json["food"] as? [String: Any] {
-                        let jsonData = try JSONSerialization.data(withJSONObject: foodData, options: [])
+                        // Extract health analysis from root level and merge it into food data
+                        var completeFoodData = foodData
+                        if let healthAnalysis = json["health_analysis"] {
+                            completeFoodData["health_analysis"] = healthAnalysis
+                            print("🩺 [DEBUG] Health analysis found and merged into food data (createNutritionLabelFoodForCreation)")
+                            
+                            // Debug: Print the actual health analysis data structure
+                            if let healthDict = healthAnalysis as? [String: Any] {
+                                print("🩺 [DEBUG] Health analysis keys: \(Array(healthDict.keys))")
+                                print("🩺 [DEBUG] Health analysis score from payload: \(healthDict["score"] ?? "nil")")
+                                print("🩺 [DEBUG] Health analysis color from payload: \(healthDict["color"] ?? "nil")")
+                            }
+                        } else {
+                            print("⚠️ [DEBUG] No health analysis found in response (createNutritionLabelFoodForCreation)")
+                        }
+                        
+                        // Debug: Print the complete food data structure before decoding
+                        print("🩺 [DEBUG] Complete food data keys: \(Array(completeFoodData.keys))")
+                        if let healthInFood = completeFoodData["health_analysis"] as? [String: Any] {
+                            print("🩺 [DEBUG] Health analysis in complete food data - score: \(healthInFood["score"] ?? "nil")")
+                        }
+                        
+                        let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
-                        decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        // Remove snake case conversion since backend now sends camelCase directly
+                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        
+                        // Debug: Print the actual JSON being decoded
+                        if let jsonString = String(data: jsonData, encoding: .utf8) {
+                            print("🩺 [DEBUG] JSON being decoded (createNutritionLabelFoodForCreation): \(jsonString)")
+                        }
+                        
                         let food = try decoder.decode(Food.self, from: jsonData)
+                        
+                        print("🩺 [DEBUG] Food decoded. Health analysis present: \(food.healthAnalysis != nil)")
+                        if let healthAnalysis = food.healthAnalysis {
+                            print("🩺 [DEBUG] Health analysis score: \(healthAnalysis.score)")
+                            print("🩺 [DEBUG] Health analysis negatives count: \(healthAnalysis.negatives.count)")
+                            print("🩺 [DEBUG] Health analysis positives count: \(healthAnalysis.positives.count)")
+                        }
                         
                         // Clear the pending state for creation
                         DispatchQueue.main.async {
@@ -3977,10 +4013,26 @@ func analyzeNutritionLabel(
                 //── 4) Parse response as Food object (not LoggedFood)
                 do {
                     if let foodData = payload["food"] as? [String: Any] {
-                        let jsonData = try JSONSerialization.data(withJSONObject: foodData, options: [])
+                        // Extract health analysis from root level and merge it into food data
+                        var completeFoodData = foodData
+                        if let healthAnalysis = payload["health_analysis"] {
+                            completeFoodData["health_analysis"] = healthAnalysis
+                            print("🩺 [DEBUG] Health analysis found and merged into food data (analyzeFoodImageForCreation)")
+                        } else {
+                            print("⚠️ [DEBUG] No health analysis found in response (analyzeFoodImageForCreation)")
+                        }
+                        
+                        let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
-                        decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        // Remove snake case conversion since backend now sends camelCase directly
+                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
                         let food = try decoder.decode(Food.self, from: jsonData)
+                        
+                        print("🩺 [DEBUG] Food decoded (analyzeFoodImageForCreation). Health analysis present: \(food.healthAnalysis != nil)")
+                        if let healthAnalysis = food.healthAnalysis {
+                            print("🩺 [DEBUG] Health analysis score (analyzeFoodImageForCreation): \(healthAnalysis.score)")
+                        }
+                        
                         completion(.success(food))
                     } else {
                         completion(.failure(NSError(
@@ -4073,10 +4125,45 @@ func analyzeNutritionLabel(
                 // ─── 5) Parse response as Food object (not LoggedFood) ───────────
                 do {
                     if let foodData = payload["food"] as? [String: Any] {
-                        let jsonData = try JSONSerialization.data(withJSONObject: foodData, options: [])
+                        // Extract health analysis from root level and merge it into food data
+                        var completeFoodData = foodData
+                        if let healthAnalysis = payload["health_analysis"] {
+                            completeFoodData["health_analysis"] = healthAnalysis
+                            print("🩺 [DEBUG] Health analysis found and merged into food data (analyzeNutritionLabelForCreation)")
+                            
+                            // Debug: Print the actual health analysis data structure
+                            if let healthDict = healthAnalysis as? [String: Any] {
+                                print("🩺 [DEBUG] Health analysis keys: \(Array(healthDict.keys))")
+                                print("🩺 [DEBUG] Health analysis score from payload: \(healthDict["score"] ?? "nil")")
+                                print("🩺 [DEBUG] Health analysis color from payload: \(healthDict["color"] ?? "nil")")
+                            }
+                        } else {
+                            print("⚠️ [DEBUG] No health analysis found in response (analyzeNutritionLabelForCreation)")
+                        }
+                        
+                        // Debug: Print the complete food data structure before decoding
+                        print("🩺 [DEBUG] Complete food data keys: \(Array(completeFoodData.keys))")
+                        if let healthInFood = completeFoodData["health_analysis"] as? [String: Any] {
+                            print("🩺 [DEBUG] Health analysis in complete food data - score: \(healthInFood["score"] ?? "nil")")
+                        }
+                        
+                        let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
-                        decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        // Remove snake case conversion since backend now sends camelCase directly
+                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        
+                        // Debug: Print the actual JSON being decoded
+                        if let jsonString = String(data: jsonData, encoding: .utf8) {
+                            print("🩺 [DEBUG] JSON being decoded (analyzeNutritionLabelForCreation): \(jsonString)")
+                        }
+                        
                         let food = try decoder.decode(Food.self, from: jsonData)
+                        
+                        print("🩺 [DEBUG] Food decoded (analyzeNutritionLabelForCreation). Health analysis present: \(food.healthAnalysis != nil)")
+                        if let healthAnalysis = food.healthAnalysis {
+                            print("🩺 [DEBUG] Health analysis score (analyzeNutritionLabelForCreation): \(healthAnalysis.score)")
+                        }
+                        
                         completion(.success(food))
                     } else {
                         completion(.failure(NSError(

@@ -45,6 +45,13 @@ struct ConfirmAddFoodView: View {
     // Store the original food for reference
     @State private var originalFood: Food
     
+    // Health analysis state
+    @State private var healthAnalysis: HealthAnalysis? = nil
+    @State private var showPerServing: Bool = true // true = per serving, false = per 100g/100ml
+    @State private var isLiquid: Bool = false // Detect if it's a beverage
+    @State private var expandedNegativeIndices: Set<Int> = []
+    @State private var expandedPositiveIndices: Set<Int> = []
+    
     // Initializer for confirming a scanned/analyzed food for adding to recipe
     init(food: Food, onFoodAdded: @escaping (Food) -> Void) {
         self.onFoodAdded = onFoodAdded
@@ -89,6 +96,10 @@ struct ConfirmAddFoodView: View {
         self._protein = State(initialValue: String(format: "%.1f", proteinBase * servings))
         self._carbs = State(initialValue: String(format: "%.1f", carbsBase * servings))
         self._fat = State(initialValue: String(format: "%.1f", fatBase * servings))
+        
+        // Initialize health analysis from food if available
+        self._healthAnalysis = State(initialValue: food.healthAnalysis)
+        self._isLiquid = State(initialValue: food.healthAnalysis?.isBeverage ?? false)
     }
     
     var body: some View {
@@ -97,6 +108,11 @@ struct ConfirmAddFoodView: View {
                 VStack(spacing: 16) {
                     // Basic food info card
                     basicInfoCard
+                    
+                    // Health analysis section (if available)
+                    if healthAnalysis != nil {
+                        healthAnalysisCard
+                    }
                     
                     // Nutrition facts section
                     nutritionFactsCard
@@ -382,6 +398,274 @@ struct ConfirmAddFoodView: View {
         
         isAdding = false
         dismiss()
+    }
+    
+    // MARK: - Health Analysis Card
+    private var healthAnalysisCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ZStack(alignment: .top) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color("iosnp"))
+                
+                VStack(spacing: 0) {
+                    if let health = healthAnalysis {
+                        // Compute which facets to show for the current toggle
+                        let negs: [HealthFacet] = showPerServing
+                            ? (health.servingFacets?.negatives ?? health.negatives)
+                            : health.negatives
+
+                        let poss: [HealthFacet] = showPerServing
+                            ? (health.servingFacets?.positives ?? health.positives)
+                            : health.positives
+
+                        // Negatives section
+                        if !negs.isEmpty {
+                            VStack(spacing: 0) {
+                                // Header
+                                HStack {
+                                    Text("Negatives")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                    Spacer()
+                                    Button(action: {
+                                        showPerServing.toggle()
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Text(showPerServing ?
+                                                "per serving (\(servingSize))" :
+                                                (isLiquid ? "per 100ml" : "per 100g"))
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            Image(systemName: "arrow.left.arrow.right")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.top, 16)
+                                .padding(.bottom, 12)
+
+                                ForEach(Array(negs.enumerated()), id: \.offset) { index, facet in
+                                    VStack(spacing: 0) {
+                                        HStack(alignment: .center, spacing: 12) {
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(Color.gray.opacity(0.1))
+                                                    .frame(width: 40, height: 40)
+                                                Image(systemName: iconForNegative(facet))
+                                                    .font(.system(size: 20))
+                                                    .foregroundColor(.primary)
+                                            }
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(facet.title).font(.body).fontWeight(.medium)
+                                                Text(facet.subtitle).font(.caption).foregroundColor(.secondary)
+                                            }
+                                            Spacer()
+                                            HStack(spacing: 8) {
+                                                Text(valueForFacet(facet))
+                                                    .font(.body).fontWeight(.medium)
+                                                Circle().fill(Color.red).frame(width: 12, height: 12)
+                                                Image(systemName: expandedNegativeIndices.contains(index) ? "chevron.up" : "chevron.down")
+                                                    .font(.caption).foregroundColor(.secondary)
+                                            }
+                                        }
+                                        .padding(.horizontal, 16).padding(.vertical, 12)
+                                        .background(Color.clear)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                if expandedNegativeIndices.contains(index) {
+                                                    expandedNegativeIndices.remove(index)
+                                                } else {
+                                                    expandedNegativeIndices.insert(index)
+                                                }
+                                            }
+                                        }
+
+                                        if expandedNegativeIndices.contains(index) {
+                                            VStack(spacing: 8) {
+                                                negativeRangeView(for: facet)
+                                            }
+                                            .padding(.horizontal, 16).padding(.bottom, 12)
+                                            .transition(.opacity.combined(with: .slide))
+                                        }
+
+                                        if index < negs.count - 1 {
+                                            Divider().padding(.leading, 68)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Divider only if both sections exist
+                        if !poss.isEmpty && !negs.isEmpty {
+                            Divider().padding(.vertical, 8)
+                        }
+
+                        // Positives section
+                        if !poss.isEmpty {
+                            VStack(spacing: 0) {
+                                // Header
+                                HStack {
+                                    Text("Positives")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                    Spacer()
+                                    Button(action: {
+                                        showPerServing.toggle()
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Text(showPerServing ?
+                                                "per serving (\(servingSize))" :
+                                                (isLiquid ? "per 100ml" : "per 100g"))
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            Image(systemName: "arrow.left.arrow.right")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.top, negs.isEmpty ? 16 : 8)
+                                .padding(.bottom, 12)
+
+                                ForEach(Array(poss.enumerated()), id: \.offset) { index, facet in
+                                    VStack(spacing: 0) {
+                                        HStack(alignment: .center, spacing: 12) {
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(Color.gray.opacity(0.1))
+                                                    .frame(width: 40, height: 40)
+                                                Image(systemName: iconForPositive(facet))
+                                                    .font(.system(size: 20))
+                                                    .foregroundColor(.primary)
+                                            }
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(facet.title).font(.body).fontWeight(.medium)
+                                                Text(facet.subtitle).font(.caption).foregroundColor(.secondary)
+                                            }
+                                            Spacer()
+                                            HStack(spacing: 8) {
+                                                Text(valueForFacet(facet))
+                                                    .font(.body).fontWeight(.medium)
+                                                Circle().fill(Color.green).frame(width: 12, height: 12)
+                                                Image(systemName: expandedPositiveIndices.contains(index) ? "chevron.up" : "chevron.down")
+                                                    .font(.caption).foregroundColor(.secondary)
+                                            }
+                                        }
+                                        .padding(.horizontal, 16).padding(.vertical, 12)
+                                        .background(Color.clear)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                if expandedPositiveIndices.contains(index) {
+                                                    expandedPositiveIndices.remove(index)
+                                                } else {
+                                                    expandedPositiveIndices.insert(index)
+                                                }
+                                            }
+                                        }
+
+                                        if expandedPositiveIndices.contains(index) {
+                                            VStack(spacing: 8) {
+                                                positiveRangeView(for: facet)
+                                            }
+                                            .padding(.horizontal, 16).padding(.bottom, 12)
+                                            .transition(.opacity.combined(with: .slide))
+                                        }
+
+                                        if index < poss.count - 1 {
+                                            Divider().padding(.leading, 68)
+                                        }
+                                    }
+                                }
+                                .padding(.bottom, 16)
+                            }
+                        }
+                    } else {
+                        Text("Health analysis unavailable")
+                            .foregroundColor(.secondary)
+                            .padding()
+                    }
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+    
+    // MARK: - Health Analysis Helper Methods
+    
+    private func valueForFacet(_ facet: HealthFacet) -> String {
+        guard let health = healthAnalysis else { return "—" }
+        let vals = showPerServing ? health.perServingValues : health.per100Values
+        
+        func fmt(_ v: Double, _ unit: String) -> String {
+            let adj = showPerServing ? (v * numberOfServings) : v
+            return "\(Int(round(adj)))\(unit)"
+        }
+        
+        switch facet.id {
+        case "too_sugary", "a_bit_sugary", "low_sugar", "no_sugar":
+            return fmt(vals?.sugars_g ?? 0, "g")
+        case "too_salty", "a_bit_salty", "low_sodium", "no_sodium":
+            return fmt(vals?.sodium_mg ?? 0, "mg")
+        case "too_much_sat_fat", "high_sat_fat", "low_sat_fat", "no_sat_fat":
+            return fmt(vals?.saturated_fat_g ?? 0, "g")
+        case "too_caloric", "a_bit_caloric", "high_cal_density", "low_calories", "low_impact_cal":
+            return fmt(vals?.energy_kcal ?? 0, " Cal")
+        case "some_fiber", "high_fiber":
+            return fmt(vals?.fiber_g ?? 0, "g")
+        case "some_protein", "high_protein":
+            return fmt(vals?.protein_g ?? 0, "g")
+        case "ultra_processed", "risky_additives", "no_additives":
+            return "\(health.additives?.count ?? 0)"
+        default:
+            return "—"
+        }
+    }
+    
+    private func iconForNegative(_ facet: HealthFacet) -> String {
+        switch facet.id {
+        case "too_sugary", "a_bit_sugary": return "cube"
+        case "too_salty", "a_bit_salty": return "aqi.low"
+        case "too_much_sat_fat", "high_sat_fat": return "drop"
+        case "too_caloric", "a_bit_caloric", "high_cal_density": return "flame"
+        case "ultra_processed", "risky_additives": return "flask"
+        default: return "exclamationmark.circle"
+        }
+    }
+    
+    private func iconForPositive(_ facet: HealthFacet) -> String {
+        switch facet.id {
+        case "no_sat_fat", "low_sat_fat": return "drop"
+        case "low_sodium", "no_sodium": return "aqi.low"
+        case "low_sugar", "no_sugar": return "cube"
+        case "some_fiber", "high_fiber": return "leaf"
+        case "some_protein", "high_protein": return "fish"
+        case "low_calories", "low_impact_cal": return "flame"
+        case "organic": return "leaf.circle"
+        case "no_additives": return "checkmark.seal"
+        default: return "checkmark.circle"
+        }
+    }
+    
+    @ViewBuilder
+    private func negativeRangeView(for facet: HealthFacet) -> some View {
+        Text("Range visualization unavailable")
+            .font(.caption)
+            .foregroundColor(.secondary)
+    }
+    
+    @ViewBuilder
+    private func positiveRangeView(for facet: HealthFacet) -> some View {
+        Text("Range visualization unavailable")
+            .font(.caption)
+            .foregroundColor(.secondary)
     }
     
     // Update all nutrition values when number of servings changes

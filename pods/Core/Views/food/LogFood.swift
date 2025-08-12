@@ -145,11 +145,8 @@ struct LogFood: View {
                 }
                 Button("Save") {
                     if !nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        // Build food data from pending nutrition data instead of creating it in DB
-                        foodManager.buildFoodFromNutritionData(
-                            name: nutritionProductName,
-                            nutritionData: foodManager.pendingNutritionDataForCreation
-                        ) { result in
+                        // Create food with user-provided name using the backend to get health analysis
+                        foodManager.createNutritionLabelFoodForCreation(nutritionProductName) { result in
                             DispatchQueue.main.async {
                                 nutritionProductName = "" // Reset for next time
                                 switch result {
