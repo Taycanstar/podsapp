@@ -338,6 +338,20 @@ struct ConfirmFoodView: View {
                 
                 // Number of Servings
                 servingsRowView
+                
+                // Divider
+                Divider()
+                    .padding(.leading, 16)
+                
+                // Calories Row
+                caloriesRowView
+                
+                // Divider 
+                Divider()
+                    .padding(.leading, 16)
+                
+                // Health Score Row
+                healthScoreRowView
             }
         }
         .padding(.horizontal)
@@ -362,6 +376,36 @@ struct ConfirmFoodView: View {
         .padding()
     }
     
+    private var caloriesRowView: some View {
+        HStack {
+            Text("Calories")
+                .foregroundColor(.primary)
+            Spacer()
+            TextField("Calories", text: $calories)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+        }
+        .padding()
+    }
+    
+    private var healthScoreRowView: some View {
+        HStack {
+            Text("Health Score")
+                .foregroundColor(.primary)
+            Spacer()
+            if let health = healthAnalysis {
+                Text("\(health.score)/100")
+                    .foregroundColor(healthColor(for: health.color))
+                    .fontWeight(.medium)
+            } else {
+                Text("Not available")
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+    }
+    
     private var nutritionFactsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Nutrition Facts")
@@ -376,25 +420,6 @@ struct ConfirmFoodView: View {
                 
                 // Content
                 VStack(spacing: 0) {
-                    // Calories (editable)
-                    HStack {
-                        Text("Calories")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        TextField("Calories", text: $calories)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 80)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    // Divider
-                    Divider()
-                        .padding(.leading, 16)
-                    
                     // Protein (editable)
                     HStack {
                         Text("Protein (g)")
@@ -1339,6 +1364,21 @@ struct ConfirmFoodView: View {
                 Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                     .font(.caption2).foregroundColor(.secondary)
             }
+        }
+    }
+    
+    private func healthColor(for colorName: String) -> Color {
+        switch colorName.lowercased() {
+        case "dark_green":
+            return Color.green
+        case "light_green":
+            return Color.mint
+        case "orange":
+            return Color.orange
+        case "red":
+            return Color.red
+        default:
+            return Color.gray
         }
     }
 
