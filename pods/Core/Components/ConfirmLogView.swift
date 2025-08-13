@@ -140,11 +140,15 @@ struct ConfirmLogView: View {
         
         
         // Set serving size information
-        if let servingSize = food.servingSize, let unit = food.servingSizeUnit {
-            self._servingSize = State(initialValue: "\(servingSize) \(unit)")
-            self._servingUnit = State(initialValue: unit)
-        } else if let servingText = food.householdServingFullText {
+        // Prioritize householdServingFullText when available (more detailed format)
+        if let servingText = food.householdServingFullText, !servingText.isEmpty {
             self._servingSize = State(initialValue: servingText)
+            self._servingUnit = State(initialValue: food.servingSizeUnit ?? "serving")
+        } else if let servingSize = food.servingSize, let unit = food.servingSizeUnit {
+            // Format serving size to remove unnecessary decimal places (1.0 → 1, 1.5 → 1.5)
+            let formattedSize = servingSize == floor(servingSize) ? String(Int(servingSize)) : String(servingSize)
+            self._servingSize = State(initialValue: "\(formattedSize) \(unit)")
+            self._servingUnit = State(initialValue: unit)
         }
         
         // Set number of servings (default to 1 if nil)
