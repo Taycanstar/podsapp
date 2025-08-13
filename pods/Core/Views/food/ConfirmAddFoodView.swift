@@ -151,6 +151,13 @@ struct ConfirmAddFoodView: View {
                     .disabled(isAdding || title.isEmpty)
                     .foregroundColor(.accentColor)
                 }
+                
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                }
             }
         }
         .alert("Error", isPresented: $showErrorAlert) {
