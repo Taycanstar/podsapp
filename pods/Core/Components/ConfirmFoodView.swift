@@ -270,9 +270,9 @@ struct ConfirmFoodView: View {
         }
         .navigationBarBackButtonHidden(true)
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isServingsFocused = true
-            }
+            // DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            //     isServingsFocused = true
+            // }
         }
         .alert(isPresented: $showErrorAlert) {
             Alert(

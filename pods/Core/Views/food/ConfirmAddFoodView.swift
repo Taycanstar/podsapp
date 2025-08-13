@@ -163,9 +163,9 @@ struct ConfirmAddFoodView: View {
         }
         .onAppear {
             // Auto-focus the servings field when the view appears
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isServingsFocused = true
-            }
+            // DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            //     isServingsFocused = true
+            // }
         }
     }
     
@@ -232,6 +232,20 @@ struct ConfirmAddFoodView: View {
                 
                 // Number of Servings
                 servingsRowView
+                
+                // Divider
+                Divider()
+                    .padding(.leading, 16)
+                
+                // Calories Row
+                caloriesRowView
+                
+                // Divider 
+                Divider()
+                    .padding(.leading, 16)
+                
+                // Health Score Row
+                healthScoreRowView
             }
         }
         .padding(.horizontal)
@@ -254,6 +268,36 @@ struct ConfirmAddFoodView: View {
         .padding()
     }
     
+    private var caloriesRowView: some View {
+        HStack {
+            Text("Calories")
+                .foregroundColor(.primary)
+            Spacer()
+            TextField("Calories", text: $calories)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+        }
+        .padding()
+    }
+    
+    private var healthScoreRowView: some View {
+        HStack {
+            Text("Health Score")
+                .foregroundColor(.primary)
+            Spacer()
+            if let health = healthAnalysis {
+                Text("\(health.score)/100")
+                    .foregroundColor(healthColor(for: health.color))
+                    .fontWeight(.medium)
+            } else {
+                Text("Not available")
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+    }
+    
     private var nutritionFactsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Nutrition Facts")
@@ -268,26 +312,6 @@ struct ConfirmAddFoodView: View {
                 
                 // Content
                 VStack(spacing: 0) {
-                    // Calories
-                    HStack {
-                        Text("Calories")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        TextField("0", text: $calories)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 80)
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
-                    
-                    // Divider
-                    Divider()
-                        .padding(.leading, 16)
-                    
                     // Protein
                     HStack {
                         Text("Protein (g)")
@@ -675,6 +699,21 @@ struct ConfirmAddFoodView: View {
         protein = String(format: "%.1f", baseProtein * numberOfServings)
         carbs = String(format: "%.1f", baseCarbs * numberOfServings)
         fat = String(format: "%.1f", baseFat * numberOfServings)
+    }
+    
+    private func healthColor(for colorName: String) -> Color {
+        switch colorName.lowercased() {
+        case "dark_green":
+            return Color.green
+        case "light_green":
+            return Color.mint
+        case "orange":
+            return Color.orange
+        case "red":
+            return Color.red
+        default:
+            return Color.gray
+        }
     }
 }
 
