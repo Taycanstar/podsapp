@@ -200,21 +200,43 @@ struct AddFoodWithVoice: View {
         foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText, skipConfirmation: true) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let createdFood):
-                    print("✅ Food created successfully from voice for recipe: \(createdFood.displayName)")
+                case .success(let generatedFood):
+                    print("✅ Food generated successfully from voice: \(generatedFood.displayName)")
                     
-                    // Clear lastGeneratedFood to prevent triggering other sheets
-                    foodManager.lastGeneratedFood = nil
-                    
-                    // Pass the food to parent (view already dismissed)
-                    // Note: Don't cleanup scanning states here - let parent handle it
-                    onFoodVoiceAdded(createdFood)
+                    // Now create the food in the database
+                    self.foodManager.createManualFood(food: generatedFood, showPreview: false) { createResult in
+                        DispatchQueue.main.async {
+                            switch createResult {
+                            case .success(let createdFood):
+                                print("✅ Food created in database from voice: \(createdFood.displayName)")
+                                
+                                // Track as recently added
+                                self.foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                                
+                                // Pass the created food to parent (view already dismissed)
+                                // Parent will add it to generatedFoods and selectedFoodIds
+                                onFoodVoiceAdded(createdFood)
+                                
+                                // Clear scanning states
+                                self.foodManager.isScanningFood = false
+                                self.foodManager.isGeneratingFood = false
+                                
+                            case .failure(let error):
+                                print("❌ Failed to create food in database: \(error)")
+                                
+                                // Clear scanning states
+                                self.foodManager.isScanningFood = false
+                                self.foodManager.isGeneratingFood = false
+                            }
+                        }
+                    }
                     
                 case .failure(let error):
-                    print("❌ Failed to analyze food from voice: \(error)")
-                    // Clear lastGeneratedFood on error
-                    foodManager.lastGeneratedFood = nil
-                    // Note: Don't cleanup scanning states here - let parent handle it
+                    print("❌ Failed to generate food from voice: \(error)")
+                    
+                    // Clear scanning states
+                    self.foodManager.isScanningFood = false
+                    self.foodManager.isGeneratingFood = false
                 }
             }
         }

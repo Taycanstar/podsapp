@@ -161,12 +161,16 @@ struct AddFoodView: View {
                 AddFoodWithVoice { createdFood in
                     print("🔍 DEBUG: AddFoodWithVoice completion called with food: \(createdFood.displayName)")
                     
-                    // Use a slight delay to ensure the sheet has properly dismissed
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        // Store the food for confirmation
-                        scannedFoodForConfirmation = createdFood
-                        showConfirmationSheet = true
-                        print("🔍 DEBUG: Set showConfirmationSheet = true for food: \(createdFood.displayName)")
+                    // Voice input automatically adds without confirmation
+                    DispatchQueue.main.async {
+                        // Add the food directly to the recipe (no confirmation needed for voice)
+                        generatedFoods.append(createdFood)
+                        selectedFoodIds.insert(createdFood.fdcId)
+                        
+                        print("✅ Food added to recipe from voice: \(createdFood.displayName)")
+                        
+                        // Clean up scanning states
+                        cleanupScanningStates()
                     }
                 }
             }
