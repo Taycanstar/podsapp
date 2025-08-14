@@ -393,30 +393,37 @@ struct AddFoodView: View {
                             // Set loading state to true
                             isGeneratingFood = true
                             
-                            // Clear lastGeneratedFood BEFORE calling generateFoodWithAI to prevent triggering ConfirmFoodView sheet
-                            foodManager.lastGeneratedFood = nil
-                            
-                            // Generate food with AI
-                            foodManager.generateFoodWithAI(foodDescription: searchText) { result in
+                            // Generate food with AI - skip confirmation for text search
+                            foodManager.generateFoodWithAI(foodDescription: searchText, skipConfirmation: true) { result in
                                 // Set loading state to false
                                 isGeneratingFood = false
                                 
                                 switch result {
-                                case .success(let food):
-                                    // Clear lastGeneratedFood to prevent triggering other sheets
-                                    foodManager.lastGeneratedFood = nil
-                                    
-                                    // Store the generated food
-                                    generatedFoods.append(food)
-                                    
-                                    // Mark as selected in the UI (but don't add to meal yet)
-                                    selectedFoodIds.insert(food.fdcId)
-                                    
-                                    // Track as recently added
-                                    foodManager.trackRecentlyAdded(foodId: food.fdcId)
-                                    
-                                    // Clear the search text after successful generation
-                                    searchText = ""
+                                case .success(let generatedFood):
+                                    // Create the food in the database
+                                    foodManager.createManualFood(food: generatedFood, showPreview: false) { createResult in
+                                        DispatchQueue.main.async {
+                                            switch createResult {
+                                            case .success(let createdFood):
+                                                // Store the created food
+                                                generatedFoods.append(createdFood)
+                                                
+                                                // Mark as selected in the UI (but don't add to meal yet)
+                                                selectedFoodIds.insert(createdFood.fdcId)
+                                                
+                                                // Track as recently added
+                                                foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                                                
+                                                // Clear the search text after successful generation
+                                                searchText = ""
+                                                
+                                                print("✅ Food created from text search for recipe: \(createdFood.displayName)")
+                                                
+                                            case .failure(let error):
+                                                print("❌ Failed to create food in database: \(error)")
+                                            }
+                                        }
+                                    }
                                     
                                 case .failure(let error):
                                     // Show error alert

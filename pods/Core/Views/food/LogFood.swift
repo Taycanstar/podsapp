@@ -660,33 +660,44 @@ private struct FoodListView: View {
                     // Set loading state
                     isGeneratingFood = true
                     
-                    // Generate food with AI
-                    foodManager.generateFoodWithAI(foodDescription: searchText) { result in
+                    // Generate food with AI - skip confirmation for text search
+                    foodManager.generateFoodWithAI(foodDescription: searchText, skipConfirmation: true) { result in
                         // Set loading state to false
                         isGeneratingFood = false
                         
                         switch result {
-                        case .success(let food):
-                            // Store the generated food
-                            generatedFood = food
-                            
-                            // Track as recently added
-                            foodManager.trackRecentlyAdded(foodId: food.fdcId)
-                            
-                            // IMPORTANT: Add the food to userFoods so it appears in MyFoods tab immediately
-                            // Check if it's not already in the userFoods array
-                            if !foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
+                        case .success(let generated):
+                            // Create the food in the database
+                            foodManager.createManualFood(food: generated, showPreview: false) { createResult in
                                 DispatchQueue.main.async {
-                                    foodManager.userFoods.insert(food, at: 0) // Add to beginning of list
+                                    switch createResult {
+                                    case .success(let createdFood):
+                                        // Store the created food
+                                        self.generatedFood = createdFood
+                                        
+                                        // Track as recently added
+                                        foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                                        
+                                        // IMPORTANT: Add the food to userFoods so it appears in MyFoods tab immediately
+                                        // Check if it's not already in the userFoods array
+                                        if !foodManager.userFoods.contains(where: { $0.fdcId == createdFood.fdcId }) {
+                                            foodManager.userFoods.insert(createdFood, at: 0) // Add to beginning of list
+                                        }
+                                        
+                                        // Show success toast
+                                        showFoodCreatedToast = true
+                                        
+                                        // Hide the toast after a delay
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                            showFoodCreatedToast = false
+                                        }
+                                        
+                                        print("✅ Food created from text search: \(createdFood.displayName)")
+                                        
+                                    case .failure(let error):
+                                        print("❌ Failed to create food in database: \(error)")
+                                    }
                                 }
-                            }
-                            
-                            // Show success toast
-                            showFoodCreatedToast = true
-                            
-                            // Hide the toast after a delay
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                showFoodCreatedToast = false
                             }
                             
                         case .failure(let error):
