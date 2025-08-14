@@ -1454,6 +1454,10 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
 
 
     private func logBarcodeFood() {
+    print("🔍 DEBUG ConfirmLogView: logBarcodeFood() called")
+    print("🔍 DEBUG ConfirmLogView: barcodeFoodLogId = \(String(describing: barcodeFoodLogId))")
+    print("🔍 DEBUG ConfirmLogView: This will log the food to database")
+    
     // 1. Validate inputs
     guard !title.isEmpty, !calories.isEmpty else {
         errorMessage = "Title and calories are required"

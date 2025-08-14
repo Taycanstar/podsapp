@@ -303,6 +303,7 @@ struct ContentView: View {
             if let userInfo = notification.userInfo,
                let food = userInfo["food"] as? Food {
                 print("📱 Received ShowFoodConfirmation notification for: \(food.displayName)")
+                print("🩺 [DEBUG] ContentView received food.healthAnalysis: \(food.healthAnalysis?.score ?? -1)")
                 print("🔍 DEBUG NotificationCenter: Setting scannedFood and showing sheet")
                 
                 // Set the scanned food data

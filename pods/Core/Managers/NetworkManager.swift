@@ -7809,7 +7809,7 @@ func updateRecipeWithFoods(
     }
 
     // Function to analyze food image
-func analyzeFoodImage(image: UIImage, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
+func analyzeFoodImage(image: UIImage, userEmail: String, mealType: String = "Lunch", shouldLog: Bool = true, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
     // Configure the URL
     guard let url = URL(string: "\(baseUrl)/analyze_food_image/") else {
         completion(false, nil, "Invalid URL")
@@ -7829,8 +7829,11 @@ func analyzeFoodImage(image: UIImage, userEmail: String, mealType: String = "Lun
     let parameters: [String: Any] = [
         "user_email": userEmail,
         "image_data": base64Image,
-        "meal_type": mealType
+        "meal_type": mealType,
+        "should_log": shouldLog
     ]
+    
+    print("🔍 DEBUG NetworkManager.analyzeFoodImage: Sending should_log = \(shouldLog)")
     
     // Configure the request
     var request = URLRequest(url: url)
@@ -7893,7 +7896,7 @@ func analyzeFoodImage(image: UIImage, userEmail: String, mealType: String = "Lun
 } 
 
 // Function to analyze nutrition label
-func analyzeNutritionLabel(image: UIImage, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
+func analyzeNutritionLabel(image: UIImage, userEmail: String, mealType: String = "Lunch", shouldLog: Bool = true, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
     // Configure the URL
     guard let url = URL(string: "\(baseUrl)/analyze_nutrition_label/") else {
         completion(false, nil, "Invalid URL")
@@ -7913,8 +7916,18 @@ func analyzeNutritionLabel(image: UIImage, userEmail: String, mealType: String =
     let parameters: [String: Any] = [
         "user_email": userEmail,
         "image_data": base64Image,
-        "meal_type": mealType
+        "meal_type": mealType,
+        "should_log": shouldLog
     ]
+    
+    print("🌐 [DEBUG] ====== NetworkManager.analyzeNutritionLabel START ======")
+    print("🌐 [DEBUG] shouldLog parameter: \(shouldLog)")
+    print("🌐 [DEBUG] Parameters being sent to backend:")
+    print("🌐 [DEBUG]   - user_email: \(userEmail)")
+    print("🌐 [DEBUG]   - meal_type: \(mealType)")
+    print("🌐 [DEBUG]   - should_log: \(shouldLog)")
+    print("🌐 [DEBUG]   - image_data: [Base64 string, \(base64Image.count) chars]")
+    print("🌐 [DEBUG] Sending POST request to: \(url.absoluteString)")
     
     // Configure the request
     var request = URLRequest(url: url)

@@ -2271,8 +2271,16 @@ func analyzeFoodImage(
   image: UIImage,
   userEmail: String,
   mealType: String = "Lunch",
+  shouldLog: Bool = true,  // Default to true for backward compatibility
   completion: @escaping (Result<CombinedLog, Error>) -> Void
 ) {
+  print("🔍 DEBUG FoodManager.analyzeFoodImage: shouldLog = \(shouldLog)")
+  if shouldLog {
+      print("🔍 DEBUG FoodManager: Will create food AND log to database")
+  } else {
+      print("🔍 DEBUG FoodManager: Will create food WITHOUT logging (preview mode)")
+  }
+  
   // ─── 1) UI state ─────────────────────────────
   isAnalyzingImage = true
   isLoading        = true
@@ -2290,7 +2298,7 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
 }
 
   // ─── 3) Call backend ─────────────────────────
-  networkManager.analyzeFoodImage(image: image, userEmail: userEmail, mealType: mealType) { [weak self] success, payload, errMsg in
+  networkManager.analyzeFoodImage(image: image, userEmail: userEmail, mealType: mealType, shouldLog: shouldLog) { [weak self] success, payload, errMsg in
     guard let self = self else { return }
     DispatchQueue.main.async {
       // stop ticker + UI
@@ -2340,39 +2348,146 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
       }
 
       do {
-        //── 5) Decode directly into your LoggedFood
+        //── 5) Handle different response formats based on shouldLog parameter
         let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
         let decoder  = JSONDecoder()
-        // Remove snake case conversion since backend now sends camelCase directly
-        // decoder.keyDecodingStrategy = .convertFromSnakeCase
-
-        let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
-
-        //── 6) Wrap it in a CombinedLog
-        let combined = CombinedLog(
-          type:        .food,
-          status:      loggedFood.status,
-          calories:    loggedFood.calories,
-          message:     loggedFood.message,
-          foodLogId:   loggedFood.foodLogId,
-          food:        loggedFood.food,
-          mealType:    loggedFood.mealType,
-          mealLogId:   nil,
-          meal:        nil,
-          mealTime:    nil,
-          scheduledAt: Date(),
-          recipeLogId: nil,
-          recipe:      nil,
-          servingsConsumed: nil
-        )
-
+        
+        let combined: CombinedLog
+        
+        if shouldLog {
+          // When shouldLog=true, backend returns LoggedFood with foodLogId
+          print("🔍 DEBUG FoodManager: Decoding LoggedFood (shouldLog=true)")
+          let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
+          
+          combined = CombinedLog(
+            type:        .food,
+            status:      loggedFood.status,
+            calories:    loggedFood.calories,
+            message:     loggedFood.message,
+            foodLogId:   loggedFood.foodLogId,
+            food:        loggedFood.food,
+            mealType:    loggedFood.mealType,
+            mealLogId:   nil,
+            meal:        nil,
+            mealTime:    nil,
+            scheduledAt: Date(),
+            recipeLogId: nil,
+            recipe:      nil,
+            servingsConsumed: nil
+          )
+        } else {
+            // When shouldLog=false, backend returns creation response without foodLogId
+            print("🔍 DEBUG FoodManager: Decoding creation response (shouldLog=false)")
+            
+            // Extract the food from the creation response and convert to LoggedFoodItem
+            guard let foodDict = payload["food"] as? [String: Any] else {
+                throw NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No food data in creation response"])
+            }
+            
+            // Extract basic food info
+            let fdcId = foodDict["fdcId"] as? Int ?? 0
+            let description = foodDict["description"] as? String ?? "Unknown Food"
+            let brandName = foodDict["brandName"] as? String
+            let servingSize = foodDict["servingSize"] as? Double ?? 1
+            let servingSizeUnit = foodDict["servingSizeUnit"] as? String ?? "serving"
+            let householdServingFullText = foodDict["householdServingFullText"] as? String
+            let numberOfServings = foodDict["numberOfServings"] as? Double ?? 1
+            
+            // Extract calories from nutrients
+            var calories: Double = 0
+            var protein: Double = 0
+            var carbs: Double = 0
+            var fat: Double = 0
+            
+            if let nutrients = foodDict["foodNutrients"] as? [[String: Any]] {
+                for nutrient in nutrients {
+                    let name = nutrient["nutrientName"] as? String ?? ""
+                    let value = nutrient["value"] as? Double ?? 0
+                    
+                    switch name {
+                    case "Energy":
+                        calories = value
+                    case "Protein":
+                        protein = value
+                    case "Carbohydrate, by difference":
+                        carbs = value
+                    case "Total lipid (fat)":
+                        fat = value
+                    default:
+                        break
+                    }
+                }
+            }
+            
+            // Extract health analysis if available
+            var healthAnalysis: HealthAnalysis? = nil
+            // First try to get health analysis from food object (correct location for image analysis)
+            if let foodDict = payload["food"] as? [String: Any],
+               let healthAnalysisDict = foodDict["health_analysis"] as? [String: Any] {
+                do {
+                    let healthAnalysisData = try JSONSerialization.data(withJSONObject: healthAnalysisDict)
+                    healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthAnalysisData)
+                    print("🩺 [DEBUG] Health analysis extracted from image analysis food object: score=\(healthAnalysis?.score ?? 0)")
+                } catch {
+                    print("⚠️ [DEBUG] Failed to decode health analysis from image analysis food object: \(error)")
+                }
+            }
+            // Fallback: try top-level health_analysis (for backward compatibility)
+            else if let healthAnalysisDict = payload["health_analysis"] as? [String: Any] {
+                do {
+                    let healthAnalysisData = try JSONSerialization.data(withJSONObject: healthAnalysisDict)
+                    healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthAnalysisData)
+                    print("🩺 [DEBUG] Health analysis extracted from top-level payload: score=\(healthAnalysis?.score ?? 0)")
+                } catch {
+                    print("⚠️ [DEBUG] Failed to decode health analysis from top-level payload: \(error)")
+                }
+            }
+            
+            // Create LoggedFoodItem from creation response
+            let loggedFoodItem = LoggedFoodItem(
+                foodLogId: nil,  // No log ID when not logged yet
+                fdcId: fdcId,
+                displayName: description,
+                calories: calories,
+                servingSizeText: householdServingFullText ?? "\(Int(servingSize)) \(servingSizeUnit)",
+                numberOfServings: numberOfServings,
+                brandText: brandName,
+                protein: protein,
+                carbs: carbs,
+                fat: fat,
+                healthAnalysis: healthAnalysis,
+                foodNutrients: nil   // Could extract if needed
+            )
+            
+            // Extract other fields
+            let status = payload["status"] as? String ?? "success"
+            let message = payload["message"] as? String ?? "Food created"
+            let mealType = payload["meal_type"] as? String ?? "Lunch"
+            
+            combined = CombinedLog(
+                type:        .food,
+                status:      status,
+                calories:    calories,
+                message:     message,
+                foodLogId:   nil,  // No log ID when shouldLog=false
+                food:        loggedFoodItem,
+                mealType:    mealType,
+                mealLogId:   nil,
+                meal:        nil,
+                mealTime:    nil,
+                scheduledAt: Date(),
+                recipeLogId: nil,
+                recipe:      nil,
+                servingsConsumed: nil)
+            
+        }
         completion(.success(combined))
         
         // Set success data and show toast - MUST be on main thread
         DispatchQueue.main.async {
            self.lastLoggedItem = (
-             name:     loggedFood.food.displayName,
-             calories: loggedFood.calories
+             name:     combined.food?.displayName ?? "Unknown Food",
+             calories: combined.calories
            )
            self.showLogSuccess = true
            
@@ -2384,22 +2499,22 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
            ReviewManager.shared.foodWasLogged()
            
            // Track meal timing for smart reminders
-           MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
+           MealReminderService.shared.mealWasLogged(mealType: combined.mealType ?? "Lunch")
         }
    
         // Track image scanning in Mixpanel
         Mixpanel.mainInstance().track(event: "Image Scan", properties: [
-            "food_name": loggedFood.food.displayName,
-            "meal_type": loggedFood.mealType,
-            "calories": loggedFood.calories,
+            "food_name": combined.food?.displayName ?? "Unknown Food",
+            "meal_type": combined.mealType ?? "Lunch",
+            "calories": combined.calories,
             "user_email": userEmail
         ])
         
         // Track universal food logging
         Mixpanel.mainInstance().track(event: "Log Food", properties: [
-            "food_name": loggedFood.food.displayName,
-            "meal_type": loggedFood.mealType,
-            "calories": loggedFood.calories,
+            "food_name": combined.food?.displayName ?? "Unknown Food",
+            "meal_type": combined.mealType ?? "Lunch",
+            "calories": combined.calories,
             "servings": 1,
             "log_method": "image_scan",
             "user_email": userEmail
@@ -2424,8 +2539,20 @@ func analyzeNutritionLabel(
   image: UIImage,
   userEmail: String,
   mealType: String = "Lunch",
+  shouldLog: Bool = true,  // Default to true for backward compatibility
   completion: @escaping (Result<CombinedLog, Error>) -> Void
 ) {
+  print("📊 [DEBUG] ====== FoodManager.analyzeNutritionLabel START ======")
+  print("📊 [DEBUG] shouldLog parameter received: \(shouldLog)")
+  print("📊 [DEBUG] userEmail: \(userEmail)")
+  print("📊 [DEBUG] mealType: \(mealType)")
+  if shouldLog {
+      print("📊 [DEBUG] MODE: Will create food AND log to database (should_log=true)")
+  } else {
+      print("📊 [DEBUG] MODE: Will create food WITHOUT logging (should_log=false, preview mode)")
+  }
+  print("📊 [DEBUG] About to call NetworkManager.analyzeNutritionLabel with shouldLog=\(shouldLog)")
+  
   // ─── 1) UI state ─────────────────────────────
   isAnalyzingImage = true
   isLoading        = true
@@ -2445,7 +2572,7 @@ func analyzeNutritionLabel(
   }
 
   // ─── 3) Call backend ─────────────────────────
-  networkManager.analyzeNutritionLabel(image: image, userEmail: userEmail, mealType: mealType) { [weak self] success, payload, errMsg in
+  networkManager.analyzeNutritionLabel(image: image, userEmail: userEmail, mealType: mealType, shouldLog: shouldLog) { [weak self] success, payload, errMsg in
     guard let self = self else { return }
     
     DispatchQueue.main.async {
@@ -2527,39 +2654,147 @@ func analyzeNutritionLabel(
         print("🔍 [analyzeNutritionLabel] raw payload:\n\(str)")
       }
 
-      // Decode directly into LoggedFood (same as analyzeFoodImage)
+      // Handle different response formats based on shouldLog parameter (same as analyzeFoodImage)
       let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
       let decoder  = JSONDecoder()
-      // Remove snake case conversion since backend now sends camelCase directly
-      // decoder.keyDecodingStrategy = .convertFromSnakeCase
-
-      let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
-
-             // Wrap it in a CombinedLog (same as analyzeFoodImage)
-       let combinedLog = CombinedLog(
-         type:        .food,
-         status:      loggedFood.status,
-         calories:    loggedFood.calories,
-         message:     loggedFood.message,
-         foodLogId:   loggedFood.foodLogId,
-         food:        loggedFood.food,
-         mealType:    loggedFood.mealType,
-         mealLogId:   nil,
-         meal:        nil,
-         mealTime:    nil,
-         scheduledAt: Date(),
-         recipeLogId: nil,
-         recipe:      nil,
-         servingsConsumed: nil
-       )
+      
+      let combinedLog: CombinedLog
+      
+      if shouldLog {
+        // When shouldLog=true, backend returns LoggedFood with foodLogId
+        print("🔍 DEBUG FoodManager: Decoding LoggedFood (shouldLog=true)")
+        let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
+        
+        combinedLog = CombinedLog(
+          type:        .food,
+          status:      loggedFood.status,
+          calories:    loggedFood.calories,
+          message:     loggedFood.message,
+          foodLogId:   loggedFood.foodLogId,
+          food:        loggedFood.food,
+          mealType:    loggedFood.mealType,
+          mealLogId:   nil,
+          meal:        nil,
+          mealTime:    nil,
+          scheduledAt: Date(),
+          recipeLogId: nil,
+          recipe:      nil,
+          servingsConsumed: nil
+        )
+      } else {
+        // When shouldLog=false, backend returns creation response without foodLogId
+        print("🔍 DEBUG FoodManager: Decoding creation response (shouldLog=false)")
+        
+        // Extract the food from the creation response and convert to LoggedFoodItem
+        guard let foodDict = payload["food"] as? [String: Any] else {
+          throw NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No food data in creation response"])
+        }
+        
+        // Extract basic food info
+        let fdcId = foodDict["fdcId"] as? Int ?? 0
+        let description = foodDict["description"] as? String ?? "Unknown Food"
+        let brandName = foodDict["brandName"] as? String
+        let servingSize = foodDict["servingSize"] as? Double ?? 1
+        let servingSizeUnit = foodDict["servingSizeUnit"] as? String ?? "serving"
+        let householdServingFullText = foodDict["householdServingFullText"] as? String
+        let numberOfServings = foodDict["numberOfServings"] as? Double ?? 1
+        
+        // Extract calories from nutrients
+        var calories: Double = 0
+        var protein: Double = 0
+        var carbs: Double = 0
+        var fat: Double = 0
+        
+        if let nutrients = foodDict["foodNutrients"] as? [[String: Any]] {
+          for nutrient in nutrients {
+            let name = nutrient["nutrientName"] as? String ?? ""
+            let value = nutrient["value"] as? Double ?? 0
+            
+            switch name {
+            case "Energy":
+              calories = value
+            case "Protein":
+              protein = value
+            case "Carbohydrate, by difference":
+              carbs = value  
+            case "Total lipid (fat)":
+              fat = value
+            default:
+              break
+            }
+          }
+        }
+        
+        // Extract health analysis if available
+        var healthAnalysis: HealthAnalysis? = nil
+        // First try to get health analysis from food object (correct location for nutrition labels)
+        if let foodDict = payload["food"] as? [String: Any],
+           let healthAnalysisDict = foodDict["health_analysis"] as? [String: Any] {
+          do {
+            let healthAnalysisData = try JSONSerialization.data(withJSONObject: healthAnalysisDict)
+            healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthAnalysisData)
+            print("🩺 [DEBUG] Health analysis extracted from nutrition label food object: score=\(healthAnalysis?.score ?? 0)")
+          } catch {
+            print("⚠️ [DEBUG] Failed to decode health analysis from nutrition label food object: \(error)")
+          }
+        }
+        // Fallback: try top-level health_analysis (for backward compatibility)
+        else if let healthAnalysisDict = payload["health_analysis"] as? [String: Any] {
+          do {
+            let healthAnalysisData = try JSONSerialization.data(withJSONObject: healthAnalysisDict)
+            healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthAnalysisData)
+            print("🩺 [DEBUG] Health analysis extracted from top-level payload: score=\(healthAnalysis?.score ?? 0)")
+          } catch {
+            print("⚠️ [DEBUG] Failed to decode health analysis from top-level payload: \(error)")
+          }
+        }
+        
+        // Create LoggedFoodItem from creation response
+        let loggedFoodItem = LoggedFoodItem(
+          foodLogId: nil,  // No log ID when not logged yet
+          fdcId: fdcId,
+          displayName: description,
+          calories: calories,
+          servingSizeText: householdServingFullText ?? "\(Int(servingSize)) \(servingSizeUnit)",
+          numberOfServings: numberOfServings,
+          brandText: brandName,
+          protein: protein,
+          carbs: carbs,
+          fat: fat,
+          healthAnalysis: healthAnalysis,
+          foodNutrients: nil   // Could extract if needed
+        )
+        
+        // Extract other fields
+        let status = payload["status"] as? String ?? "success"
+        let message = payload["message"] as? String ?? "Food created"
+        let mealType = payload["meal_type"] as? String ?? "Lunch"
+        
+        combinedLog = CombinedLog(
+          type:        .food,
+          status:      status,
+          calories:    calories,
+          message:     message,
+          foodLogId:   nil,  // No log ID when shouldLog=false
+          food:        loggedFoodItem,
+          mealType:    mealType,
+          mealLogId:   nil,
+          meal:        nil,
+          mealTime:    nil,
+          scheduledAt: Date(),
+          recipeLogId: nil,
+          recipe:      nil,
+          servingsConsumed: nil
+        )
+      }
 
        completion(.success(combinedLog))
        
        // Set success data and show toast (same as analyzeFoodImage) - MUST be on main thread
        DispatchQueue.main.async {
          self.lastLoggedItem = (
-           name:     loggedFood.food.displayName,
-           calories: loggedFood.calories
+           name:     combinedLog.food?.displayName ?? "Unknown Food",
+           calories: combinedLog.calories
          )
          self.showLogSuccess = true
          
@@ -2571,22 +2806,22 @@ func analyzeNutritionLabel(
          ReviewManager.shared.foodWasLogged()
          
          // Track meal timing for smart reminders
-         MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
+         MealReminderService.shared.mealWasLogged(mealType: combinedLog.mealType ?? "Lunch")
        }
        
        // Track nutrition label scanning in Mixpanel
        Mixpanel.mainInstance().track(event: "Nutrition Label Scan", properties: [
-           "food_name": loggedFood.food.displayName,
-           "meal_type": loggedFood.mealType,
-           "calories": loggedFood.calories,
+           "food_name": combinedLog.food?.displayName ?? "Unknown Food",
+           "meal_type": combinedLog.mealType ?? "Lunch",
+           "calories": combinedLog.calories,
            "user_email": userEmail
        ])
        
        // Track universal food logging
        Mixpanel.mainInstance().track(event: "Log Food", properties: [
-           "food_name": loggedFood.food.displayName,
-           "meal_type": loggedFood.mealType,
-           "calories": loggedFood.calories,
+           "food_name": combinedLog.food?.displayName ?? "Unknown Food",
+           "meal_type": combinedLog.mealType ?? "Lunch",
+           "calories": combinedLog.calories,
            "servings": 1,
            "log_method": "nutrition_label_scan",
            "user_email": userEmail
@@ -2998,6 +3233,7 @@ func analyzeNutritionLabel(
                 
                 // Trigger navigation to confirmation view
                 // This will be handled by the DashboardView or ContentView
+                print("🩺 [DEBUG] Barcode food.healthAnalysis: \(food.healthAnalysis?.score ?? -1)")
                 NotificationCenter.default.post(
                     name: NSNotification.Name("ShowFoodConfirmation"),
                     object: nil,
@@ -3006,6 +3242,8 @@ func analyzeNutritionLabel(
                         "barcode": barcode
                     ]
                 )
+                print("🔍 DEBUG: Posted ShowFoodConfirmation notification for barcode: \(food.description)")
+                print("🔍 DEBUG: Health analysis in barcode notification food: \(food.healthAnalysis?.score ?? -1)")
                 
                 completion(true, nil)
                 
@@ -4013,11 +4251,10 @@ func analyzeNutritionLabel(
                 //── 4) Parse response as Food object (not LoggedFood)
                 do {
                     if let foodData = payload["food"] as? [String: Any] {
-                        // Extract health analysis from root level and merge it into food data
-                        var completeFoodData = foodData
-                        if let healthAnalysis = payload["health_analysis"] {
-                            completeFoodData["health_analysis"] = healthAnalysis
-                            print("🩺 [DEBUG] Health analysis found and merged into food data (analyzeFoodImageForCreation)")
+                        // Health analysis should already be inside foodData from backend
+                        let completeFoodData = foodData
+                        if let healthAnalysis = foodData["health_analysis"] {
+                            print("🩺 [DEBUG] Health analysis found in food data (analyzeFoodImageForCreation)")
                         } else {
                             print("⚠️ [DEBUG] No health analysis found in response (analyzeFoodImageForCreation)")
                         }

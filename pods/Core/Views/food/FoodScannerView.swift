@@ -103,10 +103,13 @@ struct FoodScannerView: View {
                                 print("Food scanned with captured image")
                                 // Check preference to decide between preview and one-tap logging
                                 if photoScanPreviewEnabled {
-                                    print("📸 Photo scan preview enabled - showing ConfirmLogView")
+                                    print("🔍 PREVIEW MODE: Photo scan preview enabled - will NOT log automatically")
+                                    print("🔍 PREVIEW MODE: Food will be created without logging (shouldLog: false)")
+                                    print("🔍 PREVIEW MODE: User must tap 'Log' in ConfirmLogView to actually log")
                                     analyzeImageForPreview(image)
                                 } else {
-                                    print("📸 Photo scan preview disabled - one-tap logging")
+                                    print("🔍 DIRECT MODE: Photo scan preview disabled - will log immediately")
+                                    print("🔍 DIRECT MODE: Food will be created and logged in one step (shouldLog: true)")
                                     analyzeImageDirectly(image)
                                 }
                             } else if selectedMode == .nutritionLabel {
@@ -350,7 +353,8 @@ private func analyzeImage(_ image: UIImage) {
 
   foodManager.analyzeFoodImage(image: image,
                                userEmail: userEmail,
-                               mealType: selectedMeal) { result in
+                               mealType: selectedMeal,
+                               shouldLog: false) { result in
     switch result {
     case .success(let combinedLog):
         // Pure analysis function - always show preview (used by gallery when preview is enabled)
@@ -375,10 +379,15 @@ private func analyzeNutritionLabel(_ image: UIImage) {
 
     // Check preference at the start and branch accordingly
     if foodLabelPreviewEnabled {
-        print("🏷️ Food label preview enabled - will show ConfirmLogView after analysis")
+        print("🔍 [DEBUG] PREVIEW MODE: Nutrition label preview enabled - will NOT log automatically")
+        print("🔍 [DEBUG] UserDefaults foodLabelPreviewEnabled = \(foodLabelPreviewEnabled)")
+        print("🔍 [DEBUG] Calling analyzeNutritionLabelForPreview (shouldLog will be FALSE)")
+        print("🔍 [DEBUG] User must tap 'Log' in ConfirmLogView to actually log")
         analyzeNutritionLabelForPreview(image)
     } else {
-        print("🏷️ Food label preview disabled - one-tap logging")
+        print("🔍 [DEBUG] DIRECT MODE: Nutrition label preview disabled - will log immediately")
+        print("🔍 [DEBUG] UserDefaults foodLabelPreviewEnabled = \(foodLabelPreviewEnabled)")
+        print("🔍 [DEBUG] Calling analyzeNutritionLabelDirectly (shouldLog will be TRUE)")
         analyzeNutritionLabelDirectly(image)
     }
 }
@@ -398,12 +407,17 @@ private func analyzeNutritionLabelForPreview(_ image: UIImage) {
 
     foodManager.analyzeNutritionLabel(image: image,
                                      userEmail: userEmail,
-                                     mealType: selectedMeal) { result in
+                                     mealType: selectedMeal,
+                                     shouldLog: false) { result in
         switch result {
         case .success(let combinedLog):
             // Always show confirmation view for preview mode
             print("🏷️ Nutrition label scan complete - showing preview")
             if let food = combinedLog.food?.asFood {
+                // Debug health analysis preservation
+                print("🩺 [DEBUG] combinedLog.food?.healthAnalysis: \(combinedLog.food?.healthAnalysis?.score ?? -1)")
+                print("🩺 [DEBUG] food.healthAnalysis: \(food.healthAnalysis?.score ?? -1)")
+                
                 DispatchQueue.main.async {
                     // Use the same NotificationCenter mechanism as barcode scanning
                     NotificationCenter.default.post(
@@ -415,6 +429,7 @@ private func analyzeNutritionLabelForPreview(_ image: UIImage) {
                         ]
                     )
                     print("🔍 DEBUG: Posted ShowFoodConfirmation notification for nutrition label: \(food.description)")
+                    print("🔍 DEBUG: Health analysis in notification food: \(food.healthAnalysis?.score ?? -1)")
                 }
             }
 
@@ -494,7 +509,8 @@ private func analyzeImageForPreview(_ image: UIImage) {
 
   foodManager.analyzeFoodImage(image: image,
                                userEmail: userEmail,
-                               mealType: selectedMeal) { result in
+                               mealType: selectedMeal,
+                               shouldLog: false) { result in
     switch result {
     case .success(let combinedLog):
         // Always show confirmation view for preview mode

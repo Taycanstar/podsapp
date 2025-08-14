@@ -14,14 +14,14 @@ struct FoodSearchResponse: Codable {
 // New struct to handle barcode lookup responses
 struct BarcodeLookupResponse: Codable {
     let food: Food
-    let foodLogId: Int
+    let foodLogId: Int?  // Optional for preview mode
     
     // Custom init to handle the nested food object from backend
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
-        // Extract foodLogId directly from top level
-        foodLogId = try container.decode(Int.self, forKey: .foodLogId)
+        // Extract foodLogId directly from top level (optional for preview mode)
+        foodLogId = try container.decodeIfPresent(Int.self, forKey: .foodLogId)
         
         // Decode the food object from the nested "food" key
         food = try container.decode(Food.self, forKey: .food)
