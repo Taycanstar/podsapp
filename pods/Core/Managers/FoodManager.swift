@@ -2002,6 +2002,7 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
 }
 func generateFoodWithAI(
     foodDescription: String,
+    skipConfirmation: Bool = false,
     completion: @escaping (Result<Food, Error>) -> Void
 ) {
     // Set generating food flag and reset stage
@@ -2036,8 +2037,11 @@ func generateFoodWithAI(
             
             switch result {
             case .success(let food):
-                // Store the generated food
-                self.lastGeneratedFood = food
+                // Only set lastGeneratedFood if we want to show confirmation
+                if !skipConfirmation {
+                    // Store the generated food to trigger confirmation sheet
+                    self.lastGeneratedFood = food
+                }
                 
                 // Show success toast
                 self.showFoodGenerationSuccess = true

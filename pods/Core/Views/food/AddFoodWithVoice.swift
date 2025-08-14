@@ -196,11 +196,8 @@ struct AddFoodWithVoice: View {
         foodManager.loadingMessage = "Generating food from voice..."
         foodManager.uploadProgress = 0.3
         
-        // Clear lastGeneratedFood BEFORE calling generateFoodWithAI to prevent triggering ConfirmFoodView sheet
-        foodManager.lastGeneratedFood = nil
-        
-        // Use FoodManager to generate food with AI (NOT generateMacrosWithAI)
-        foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText) { result in
+        // Use FoodManager to generate food with AI with skipConfirmation=true to prevent sheet
+        foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText, skipConfirmation: true) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let createdFood):

@@ -285,9 +285,6 @@ struct CreateFoodWithVoice: View {
             AudioSessionManager.shared.deactivateSession()
         }
 
-        .navigationDestination(for: Food.self) { food in
-                            ConfirmFoodView(path: $navigationPath)
-        }
     }
     
     private func checkMicrophonePermission() {
@@ -349,17 +346,58 @@ struct CreateFoodWithVoice: View {
     private func generateFoodFromTranscription() {
         guard !audioRecorder.transcribedText.isEmpty else { return }
         
-        // Use FoodManager to generate food with AI (NOT generateMacrosWithAI)
-        foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText) { result in
+        // Set scanning state to show loader card
+        foodManager.isScanningFood = true
+        foodManager.isGeneratingFood = true
+        foodManager.loadingMessage = "Creating food from voice..."
+        foodManager.uploadProgress = 0.3
+        
+        // Use FoodManager to generate food with AI with skipConfirmation=true to prevent sheet
+        foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText, skipConfirmation: true) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let food):
                     print("✅ Successfully analyzed food from voice for creation: \(food.displayName)")
-                    // Navigate to ConfirmFoodView instead of directly adding to userFoods
-                    navigationPath.append(food)
+                    
+                    // Create food directly without confirmation (like barcode with preview disabled)
+                    self.foodManager.createManualFood(food: food, showPreview: false) { result in
+                        DispatchQueue.main.async {
+                            switch result {
+                            case .success(let savedFood):
+                                print("✅ Successfully created food from voice: \(savedFood.displayName)")
+                                
+                                // Track as recently added
+                                self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
+                                
+                                // Clear scanning states
+                                self.foodManager.isScanningFood = false
+                                self.foodManager.isGeneratingFood = false
+                                
+                                // Show success toast
+                                self.foodManager.lastLoggedItem = (name: savedFood.displayName, calories: savedFood.calories ?? 0)
+                                self.foodManager.showLogSuccess = true
+                                
+                                // Auto-hide success message after 2 seconds
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                    self.foodManager.showLogSuccess = false
+                                }
+                                
+                            case .failure(let error):
+                                print("❌ Failed to create food from voice: \(error)")
+                                
+                                // Clear scanning states
+                                self.foodManager.isScanningFood = false
+                                self.foodManager.isGeneratingFood = false
+                            }
+                        }
+                    }
+                    
                 case .failure(let error):
                     print("❌ Failed to analyze food from voice: \(error)")
-                    // Could show an alert here if needed
+                    
+                    // Clear scanning states
+                    self.foodManager.isScanningFood = false
+                    self.foodManager.isGeneratingFood = false
                 }
             }
         }
