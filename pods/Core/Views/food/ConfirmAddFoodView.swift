@@ -498,24 +498,30 @@ struct ConfirmAddFoodView: View {
                                                 Text(valueForFacet(facet))
                                                     .font(.body).fontWeight(.medium)
                                                 Circle().fill(Color.red).frame(width: 12, height: 12)
-                                                Image(systemName: expandedNegativeIndices.contains(index) ? "chevron.up" : "chevron.down")
-                                                    .font(.caption).foregroundColor(.secondary)
+                                                // Don't show chevron for additives as there's no range to display
+                                                if facet.id != "risky_additives" {
+                                                    Image(systemName: expandedNegativeIndices.contains(index) ? "chevron.up" : "chevron.down")
+                                                        .font(.caption).foregroundColor(.secondary)
+                                                }
                                             }
                                         }
                                         .padding(.horizontal, 16).padding(.vertical, 12)
                                         .background(Color.clear)
                                         .contentShape(Rectangle())
                                         .onTapGesture {
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                if expandedNegativeIndices.contains(index) {
-                                                    expandedNegativeIndices.remove(index)
-                                                } else {
-                                                    expandedNegativeIndices.insert(index)
+                                            // Don't allow tap for additives as there's no range to display
+                                            if facet.id != "risky_additives" {
+                                                withAnimation(.easeInOut(duration: 0.3)) {
+                                                    if expandedNegativeIndices.contains(index) {
+                                                        expandedNegativeIndices.remove(index)
+                                                    } else {
+                                                        expandedNegativeIndices.insert(index)
+                                                    }
                                                 }
                                             }
                                         }
 
-                                        if expandedNegativeIndices.contains(index) {
+                                        if expandedNegativeIndices.contains(index) && facet.id != "risky_additives" {
                                             VStack(spacing: 8) {
                                                 negativeRangeView(for: facet)
                                             }
