@@ -72,6 +72,9 @@ struct ConfirmFoodView: View {
     // Flag to indicate if this food was created from scanned data (should update dynamically)
     @State private var isFromScannedData: Bool = false
     
+    // Flag to indicate if this food is already created (AI-generated) vs needs creation (manual)
+    @State private var isAlreadyCreated: Bool = false
+    
     // Health analysis state
     @State private var healthAnalysis: HealthAnalysis? = nil
     @State private var showPerServing: Bool = true // true = per serving, false = per 100g/100ml
@@ -89,10 +92,11 @@ struct ConfirmFoodView: View {
     @State private var originalScannedFood: Food? = nil
     
     // Initializer for editing/confirming a scanned/analyzed food
-    init(path: Binding<NavigationPath>, food: Food) {
+    init(path: Binding<NavigationPath>, food: Food, isAlreadyCreated: Bool = false) {
         self._path = path
         self._isCreationMode = State(initialValue: true)
         self._isFromScannedData = State(initialValue: true)
+        self._isAlreadyCreated = State(initialValue: isAlreadyCreated)
         self._originalScannedFood = State(initialValue: food)
         
         // Populate fields with the food data
@@ -940,34 +944,59 @@ struct ConfirmFoodView: View {
         // Mark as creating
         isCreating = true
         
-        // If this is from scanned data, use the original food with updated servings
+        // If this is from scanned data, handle based on whether it's already created
         if isFromScannedData, let originalFood = originalScannedFood {
             var updatedFood = originalFood
             updatedFood.numberOfServings = numberOfServings
             
-            // Use the updated scanned food data
-            foodManager.createManualFood(food: updatedFood) { result in
-                DispatchQueue.main.async {
-                    self.isCreating = false
-                    switch result {
-                    case .success(let savedFood):
-                        print("✅ Successfully created scanned food: \(savedFood.displayName)")
-                        
-                        // Track as recently added
-                        self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
-                        
-                        // Show success and dismiss
-                        self.foodManager.showFoodGenerationSuccess = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                            self.foodManager.showFoodGenerationSuccess = false
+            if isAlreadyCreated {
+                // Food is already created by AI analysis - just handle success actions
+                print("✅ Food already created by AI analysis, confirming: \(updatedFood.displayName)")
+                
+                // Add the food to userFoods so it appears in MyFoods tab immediately
+                if !foodManager.userFoods.contains(where: { $0.fdcId == updatedFood.fdcId }) {
+                    foodManager.userFoods.insert(updatedFood, at: 0) // Add to beginning of list
+                }
+                
+                // Clear the userFoods cache to force refresh from server next time
+                foodManager.clearUserFoodsCache()
+                
+                // Track as recently added
+                foodManager.trackRecentlyAdded(foodId: updatedFood.fdcId)
+                
+                // Show success and dismiss
+                foodManager.showFoodGenerationSuccess = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    foodManager.showFoodGenerationSuccess = false
+                }
+                
+                isCreating = false
+                dismiss()
+            } else {
+                // Food needs to be created (manual food or scanned food without auto-creation)
+                foodManager.createManualFood(food: updatedFood) { result in
+                    DispatchQueue.main.async {
+                        self.isCreating = false
+                        switch result {
+                        case .success(let savedFood):
+                            print("✅ Successfully created scanned food: \(savedFood.displayName)")
+                            
+                            // Track as recently added
+                            self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
+                            
+                            // Show success and dismiss
+                            self.foodManager.showFoodGenerationSuccess = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                self.foodManager.showFoodGenerationSuccess = false
+                            }
+                            
+                            self.dismiss()
+                            
+                        case .failure(let error):
+                            print("❌ Failed to create scanned food: \(error)")
+                            self.errorMessage = "Failed to create food: \(error.localizedDescription)"
+                            self.showErrorAlert = true
                         }
-                        
-                        self.dismiss()
-                        
-                    case .failure(let error):
-                        print("❌ Failed to create scanned food: \(error)")
-                        self.errorMessage = "Failed to create food: \(error.localizedDescription)"
-                        self.showErrorAlert = true
                     }
                 }
             }

@@ -440,7 +440,7 @@ func loadMoreFoods(refresh: Bool = false) {
     
     // MARK: - User Foods Methods
     
-    private func clearUserFoodsCache() {
+     func clearUserFoodsCache() {
         guard let userEmail = userEmail else { return }
         
         // Clear all pages of user foods cache

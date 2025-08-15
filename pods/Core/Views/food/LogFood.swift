@@ -679,11 +679,10 @@ private struct FoodListView: View {
                                         foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
                                         
                                         // IMPORTANT: Add the food to userFoods so it appears in MyFoods tab immediately
-                                        // Check if it's not already in the userFoods array
+
                                         if !foodManager.userFoods.contains(where: { $0.fdcId == createdFood.fdcId }) {
                                             foodManager.userFoods.insert(createdFood, at: 0) // Add to beginning of list
                                         }
-                                        
                                         // Show success toast
                                         showFoodCreatedToast = true
                                         
@@ -2650,7 +2649,7 @@ struct SheetModifiers: ViewModifier {
             }) {
                 if let food = foodManager.lastGeneratedFood {
                     NavigationView {
-                        ConfirmFoodView(path: .constant(NavigationPath()), food: food)
+                        ConfirmFoodView(path: .constant(NavigationPath()), food: food, isAlreadyCreated: true)
                     }
                 }
             }

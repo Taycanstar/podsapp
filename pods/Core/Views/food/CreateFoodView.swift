@@ -483,7 +483,6 @@ struct CreateFoodView: View {
                     print("Food created successfully: \(createdFood.displayName)")
                     
                     // Show success toast via the food manager
-                    foodManager.lastGeneratedFood = createdFood
                     foodManager.showFoodGenerationSuccess = true
                     
                     // Hide toast after delay

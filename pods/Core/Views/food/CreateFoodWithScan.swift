@@ -350,25 +350,24 @@ struct CreateFoodWithScan: View {
                         // Create food directly without confirmation
                         print("📸 Photo scan preview disabled - creating food directly")
                         
-                        self.foodManager.createManualFood(food: food, showPreview: false) { result in
-                            DispatchQueue.main.async {
-                                switch result {
-                                case .success(let savedFood):
-                                    print("✅ Successfully created food from photo scan: \(savedFood.displayName)")
-                                    
-                                    // Track as recently added
-                                    self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
-                                    
-                                    // Show success toast
-                                    self.foodManager.showFoodGenerationSuccess = true
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                        self.foodManager.showFoodGenerationSuccess = false
-                                    }
-                                    
-                                case .failure(let error):
-                                    print("❌ Failed to create food from photo scan: \(error)")
-                                }
-                            }
+                        // Food already created by analyzeFoodImageForCreation - just handle success
+                        print("✅ Food already created by photo scan analysis: \(food.displayName)")
+                        
+                        // Add the food to userFoods so it appears in MyFoods tab immediately
+                        if !self.foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
+                            self.foodManager.userFoods.insert(food, at: 0) // Add to beginning of list
+                        }
+                        
+                        // Clear the userFoods cache to force refresh from server next time
+                        self.foodManager.clearUserFoodsCache()
+                        
+                        // Track as recently added
+                        self.foodManager.trackRecentlyAdded(foodId: food.fdcId)
+                        
+                        // Show success toast
+                        self.foodManager.showFoodGenerationSuccess = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            self.foodManager.showFoodGenerationSuccess = false
                         }
                     }
                     
@@ -427,25 +426,24 @@ struct CreateFoodWithScan: View {
                         // Create food directly without confirmation
                         print("🏷️ Food label preview disabled - creating food directly")
                         
-                        self.foodManager.createManualFood(food: food, showPreview: false) { result in
-                            DispatchQueue.main.async {
-                                switch result {
-                                case .success(let savedFood):
-                                    print("✅ Successfully created food from nutrition label: \(savedFood.displayName)")
-                                    
-                                    // Track as recently added
-                                    self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
-                                    
-                                    // Show success toast
-                                    self.foodManager.showFoodGenerationSuccess = true
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                        self.foodManager.showFoodGenerationSuccess = false
-                                    }
-                                    
-                                case .failure(let error):
-                                    print("❌ Failed to create food from nutrition label: \(error)")
-                                }
-                            }
+                        // Food already created by analyzeFoodImageForCreation - just handle success
+                        print("✅ Food already created by nutrition label analysis: \(food.displayName)")
+                        
+                        // Add the food to userFoods so it appears in MyFoods tab immediately
+                        if !self.foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
+                            self.foodManager.userFoods.insert(food, at: 0) // Add to beginning of list
+                        }
+                        
+                        // Clear the userFoods cache to force refresh from server next time
+                        self.foodManager.clearUserFoodsCache()
+                        
+                        // Track as recently added
+                        self.foodManager.trackRecentlyAdded(foodId: food.fdcId)
+                        
+                        // Show success toast
+                        self.foodManager.showFoodGenerationSuccess = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            self.foodManager.showFoodGenerationSuccess = false
                         }
                     }
                     
@@ -597,25 +595,24 @@ struct CreateFoodWithScan: View {
                         // Create food directly without confirmation
                         print("🖼️ Gallery import preview disabled - creating food directly")
                         
-                        self.foodManager.createManualFood(food: food, showPreview: false) { result in
-                            DispatchQueue.main.async {
-                                switch result {
-                                case .success(let savedFood):
-                                    print("✅ Successfully created food from gallery: \(savedFood.displayName)")
-                                    
-                                    // Track as recently added
-                                    self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
-                                    
-                                    // Show success toast
-                                    self.foodManager.showFoodGenerationSuccess = true
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                        self.foodManager.showFoodGenerationSuccess = false
-                                    }
-                                    
-                                case .failure(let error):
-                                    print("❌ Failed to create food from gallery: \(error)")
-                                }
-                            }
+                        // Food already created by analyzeFoodImageForCreation - just handle success
+                        print("✅ Food already created by gallery image analysis: \(food.displayName)")
+                        
+                        // Add the food to userFoods so it appears in MyFoods tab immediately
+                        if !self.foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
+                            self.foodManager.userFoods.insert(food, at: 0) // Add to beginning of list
+                        }
+                        
+                        // Clear the userFoods cache to force refresh from server next time
+                        self.foodManager.clearUserFoodsCache()
+                        
+                        // Track as recently added
+                        self.foodManager.trackRecentlyAdded(foodId: food.fdcId)
+                        
+                        // Show success toast
+                        self.foodManager.showFoodGenerationSuccess = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            self.foodManager.showFoodGenerationSuccess = false
                         }
                     }
                     
