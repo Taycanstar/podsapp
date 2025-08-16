@@ -15,8 +15,8 @@ class NetworkManagerTwo {
     
 
 // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-let baseUrl = "http://172.20.10.4:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+// let baseUrl = "http://172.20.10.4:8000"
 
     // Network errors - scoped to NetworkManagerTwo
     enum NetworkError: LocalizedError {
@@ -1316,17 +1316,15 @@ let baseUrl = "http://172.20.10.4:8000"
                 
                 // Debug: Print raw response to see what we're getting
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("🔍 Raw API Response Keys: \(json.keys.sorted())")
-                    print("🔍 Contains workout_profile: \(json.keys.contains("workout_profile"))")
+               
                     if let workoutProfile = json["workout_profile"] as? [String: Any] {
-                        print("🔍 Workout profile keys: \(workoutProfile.keys.sorted())")
+                 
                     }
                 }
                 
                 let response = try decoder.decode(ProfileDataResponse.self, from: data)
                 DispatchQueue.main.async { 
-                    print("✅ Successfully fetched profile data for: \(response.username)")
-                    print("✅ Workout profile present: \(response.workoutProfile != nil)")
+             
                     completion(.success(response)) 
                 }
             } catch {

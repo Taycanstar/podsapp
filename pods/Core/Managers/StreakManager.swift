@@ -228,6 +228,31 @@ class StreakManager: ObservableObject {
             }
             
             do {
+                // First, let's check the raw JSON to debug the issue
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("🔍 StreakManager: Raw response data: \(json)")
+                    
+                    // Manual parsing as fallback
+                    if let currentStreak = json["current_streak"] as? Int,
+                       let longestStreak = json["longest_streak"] as? Int,
+                       let streakAsset = json["streak_asset"] as? String {
+                        
+                        let streakData = UserStreakData(
+                            currentStreak: currentStreak,
+                            longestStreak: longestStreak,
+                            streakAsset: streakAsset,
+                            lastActivityDate: json["last_activity_date"] as? String,
+                            streakStartDate: json["streak_start_date"] as? String
+                        )
+                        
+                        DispatchQueue.main.async {
+                            completion(.success(streakData))
+                        }
+                        return
+                    }
+                }
+                
+                // Try normal decoding
                 let decoder = JSONDecoder()
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
                 

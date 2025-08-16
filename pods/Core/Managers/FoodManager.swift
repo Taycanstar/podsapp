@@ -367,12 +367,12 @@ func loadMoreFoods(refresh: Bool = false) {
                 
                 if refresh {
                     // When refreshing, replace all logs with the new ones
-                    print("🔄 FoodManager.loadMoreLogs() - Refresh mode: replacing \(self.combinedLogs.count) logs with \(response.logs.count) new logs")
+            
                     withAnimation(.easeOut(duration: 0.3)) {
                         self.combinedLogs = response.logs
                     }
                     self.currentPage = 2
-                    print("⏭️ FoodManager.loadMoreLogs() - Set currentPage to 2 after refresh")
+        
                 } else {
                     // For pagination, append new logs at the end
                     let startCount = self.combinedLogs.count
@@ -389,23 +389,19 @@ func loadMoreFoods(refresh: Bool = false) {
                             }
                         }
                     }
-                    
-                    print("🔍 FoodManager.loadMoreLogs() - Filtered \(response.logs.count) logs to \(newLogs.count) new unique logs")
-                    
                     if !newLogs.isEmpty {
                         withAnimation(.easeOut(duration: 0.3)) {
                             self.combinedLogs.append(contentsOf: newLogs)
                         }
-                        print("📈 FoodManager.loadMoreLogs() - Added \(newLogs.count) new logs, total now: \(self.combinedLogs.count)")
+
                     } else {
-                        print("ℹ️ FoodManager.loadMoreLogs() - No new unique logs to add")
+             
                     }
-                    
-                    print("⏭️ FoodManager.loadMoreLogs() - Incrementing currentPage from \(self.currentPage) to \(self.currentPage + 1)")
+
                     self.currentPage += 1
                 }
                 
-                print("🚩 FoodManager.loadMoreLogs() - Setting hasMore to \(response.hasMore)")
+     
                 self.hasMore = response.hasMore
                 self.cacheLogs(response, forPage: pageToLoad)
                 
