@@ -15,6 +15,7 @@
 import SwiftUI
 import AVKit
 import AVFoundation
+import UIKit
 
 struct ExerciseLoggingView: View {
     let exercise: TodayWorkoutExercise
@@ -24,6 +25,7 @@ struct ExerciseLoggingView: View {
     @State private var showingFullscreenVideo = false
     @State private var isVideoHidden = false
     @State private var dragOffset: CGFloat = 0
+    @State private var showKeyboardToolbar = false
     
     enum FocusedField: Hashable {
         case reps(Int)
@@ -104,6 +106,25 @@ struct ExerciseLoggingView: View {
                         .foregroundColor(.primary)
                 }
             }
+            
+            // Keyboard toolbar items
+            ToolbarItemGroup(placement: .keyboard) {
+                if focusedField != nil {
+                    HStack {
+                        Button("Done") {
+                            focusedField = nil
+                        }
+                        .font(.system(size: 16, weight: .medium))
+                        
+                        Spacer()
+                        
+                        Button("Next") {
+                            moveToNextField()
+                        }
+                        .font(.system(size: 16, weight: .medium))
+                    }
+                }
+            }
         }
         .onAppear {
             setupInitialSets()
@@ -177,7 +198,7 @@ struct ExerciseLoggingView: View {
             ForEach(Array(sets.enumerated()), id: \.offset) { index, set in
                 HStack(spacing: 12) {
                     Text("\(index + 1)")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.primary)
                         .frame(width: 20, alignment: .leading)
                     
@@ -188,6 +209,12 @@ struct ExerciseLoggingView: View {
                     .focused($focusedField, equals: .reps(index))
                     .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .reps(index)))
                     .keyboardType(.numberPad)
+                    .onTapGesture {
+                        // Generate haptic feedback
+                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                        impactFeedback.prepare()
+                        impactFeedback.impactOccurred()
+                    }
                     
                     TextField("150 lbs", text: Binding(
                         get: { sets[index].weight },
@@ -196,6 +223,12 @@ struct ExerciseLoggingView: View {
                     .focused($focusedField, equals: .weight(index))
                     .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .weight(index)))
                     .keyboardType(.decimalPad)
+                    .onTapGesture {
+                        // Generate haptic feedback
+                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                        impactFeedback.prepare()
+                        impactFeedback.impactOccurred()
+                    }
                 }
             }
             
@@ -263,6 +296,28 @@ struct ExerciseLoggingView: View {
         dismiss()
     }
     
+    private func moveToNextField() {
+        guard let currentField = focusedField else { return }
+        
+        // Generate haptic feedback for next button
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.prepare()
+        impactFeedback.impactOccurred()
+        
+        switch currentField {
+        case .reps(let index):
+            // Move to weight field of same set
+            focusedField = .weight(index)
+        case .weight(let index):
+            // Move to reps field of next set, or dismiss if last
+            if index < sets.count - 1 {
+                focusedField = .reps(index + 1)
+            } else {
+                focusedField = nil
+            }
+        }
+    }
+    
 }
 
 // MARK: - Custom Text Field Style
@@ -314,6 +369,9 @@ class ExerciseVideoPlayerController: UIViewController {
     private var playerLayer: AVPlayerLayer?
     var videoURL: URL?
     private var viewHasLoaded = false
+    private var loadingIndicator: UIActivityIndicatorView?
+    private var playerItem: AVPlayerItem?
+    private var playerItemContext = 0
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -336,6 +394,21 @@ class ExerciseVideoPlayerController: UIViewController {
             playerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             playerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+        
+        // Add loading indicator
+        loadingIndicator = UIActivityIndicatorView(style: .large)
+        loadingIndicator?.translatesAutoresizingMaskIntoConstraints = false
+        loadingIndicator?.color = .white
+        loadingIndicator?.hidesWhenStopped = true
+        
+        if let loadingIndicator = loadingIndicator {
+            view.addSubview(loadingIndicator)
+            NSLayoutConstraint.activate([
+                loadingIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                loadingIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+            ])
+            loadingIndicator.startAnimating()
+        }
     }
     
     func setupPlayerIfReady() {
@@ -346,8 +419,18 @@ class ExerciseVideoPlayerController: UIViewController {
         // Clean up existing player if any
         cleanup()
         
-        // Create simple player
-        player = AVPlayer(url: videoURL)
+        // Show loading indicator
+        loadingIndicator?.startAnimating()
+        
+        // Create player item and observe its status
+        playerItem = AVPlayerItem(url: videoURL)
+        
+        // Add observer for player item status
+        playerItem?.addObserver(self, forKeyPath: #keyPath(AVPlayerItem.status), options: [.old, .new], context: &playerItemContext)
+        
+        // Create player with item
+        player = AVPlayer(playerItem: playerItem)
+        player?.automaticallyWaitsToMinimizeStalling = false
         playerLayer = AVPlayerLayer(player: player)
         playerLayer?.videoGravity = .resizeAspect
         playerLayer?.backgroundColor = UIColor.clear.cgColor
@@ -359,10 +442,39 @@ class ExerciseVideoPlayerController: UIViewController {
         
         // Setup auto-loop
         setupAutoLoop()
+    }
+    
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+        guard context == &playerItemContext else {
+            super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
+            return
+        }
         
-        // Auto-play when ready
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.player?.play()
+        if keyPath == #keyPath(AVPlayerItem.status) {
+            let status: AVPlayerItem.Status
+            if let statusNumber = change?[.newKey] as? NSNumber {
+                status = AVPlayerItem.Status(rawValue: statusNumber.intValue)!
+            } else {
+                status = .unknown
+            }
+            
+            switch status {
+            case .readyToPlay:
+                // Hide loading indicator and start playing
+                DispatchQueue.main.async {
+                    self.loadingIndicator?.stopAnimating()
+                    self.player?.play()
+                }
+            case .failed:
+                // Hide loading indicator on failure
+                DispatchQueue.main.async {
+                    self.loadingIndicator?.stopAnimating()
+                }
+            case .unknown:
+                break
+            @unknown default:
+                break
+            }
         }
     }
     
@@ -389,10 +501,17 @@ class ExerciseVideoPlayerController: UIViewController {
     }
     
     func cleanup() {
+        // Remove observer
+        playerItem?.removeObserver(self, forKeyPath: #keyPath(AVPlayerItem.status), context: &playerItemContext)
+        
         player?.pause()
         player?.replaceCurrentItem(with: nil)  // Properly release video memory
         playerLayer?.removeFromSuperlayer()
         NotificationCenter.default.removeObserver(self)
+        
+        loadingIndicator?.stopAnimating()
+        loadingIndicator = nil
+        playerItem = nil
         player = nil
         playerLayer = nil
     }
