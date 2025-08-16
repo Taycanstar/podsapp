@@ -19,6 +19,7 @@ import UIKit
 
 struct ExerciseLoggingView: View {
     let exercise: TodayWorkoutExercise
+    let allExercises: [TodayWorkoutExercise]? // Pass all exercises for the workout
     @Environment(\.dismiss) private var dismiss
     @State private var sets: [SetData] = []
     @FocusState private var focusedField: FocusedField?
@@ -26,6 +27,7 @@ struct ExerciseLoggingView: View {
     @State private var isVideoHidden = false
     @State private var dragOffset: CGFloat = 0
     @State private var showKeyboardToolbar = false
+    @State private var showingWorkoutInProgress = false
     
     enum FocusedField: Hashable {
         case reps(Int)
@@ -297,8 +299,18 @@ struct ExerciseLoggingView: View {
     }
     
     private func startWorkout() {
-        // TODO: Start workout logic
+        // Navigate back to LogWorkoutView
         dismiss()
+        
+        // Show workout in progress after navigating back
+        if let exercises = allExercises {
+            // Post notification to trigger workout in progress
+            NotificationCenter.default.post(
+                name: NSNotification.Name("StartWorkoutInProgress"),
+                object: nil,
+                userInfo: ["exercises": exercises]
+            )
+        }
     }
     
     private func moveToNextField() {
@@ -591,6 +603,6 @@ struct FullscreenVideoView: View {
     )
     
     NavigationView {
-        ExerciseLoggingView(exercise: sampleTodayWorkoutExercise)
+        ExerciseLoggingView(exercise: sampleTodayWorkoutExercise, allExercises: nil)
     }
 }

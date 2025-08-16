@@ -66,6 +66,10 @@ struct LogWorkoutView: View {
     @State private var sessionFitnessLevel: ExperienceLevel? = nil // Session-specific level (doesn't affect defaults)
     @State private var showingFitnessLevelPicker = false
     
+    // Add state for showing workout in progress
+    @State private var showingWorkoutInProgress = false
+    @State private var workoutExercises: [TodayWorkoutExercise] = []
+    
     // Computed property for the actual duration to use
     private var effectiveDuration: WorkoutDuration {
         return sessionDuration ?? selectedDuration
@@ -143,6 +147,25 @@ struct LogWorkoutView: View {
             if !userEmail.isEmpty {
                 workoutManager.initialize(userEmail: userEmail)
             }
+            
+            // Listen for start workout notification from ExerciseLoggingView
+            NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("StartWorkoutInProgress"),
+                object: nil,
+                queue: .main
+            ) { notification in
+                if let exercises = notification.userInfo?["exercises"] as? [TodayWorkoutExercise] {
+                    workoutExercises = exercises
+                    showingWorkoutInProgress = true
+                }
+            }
+        }
+        .onDisappear {
+            NotificationCenter.default.removeObserver(
+                self,
+                name: NSNotification.Name("StartWorkoutInProgress"),
+                object: nil
+            )
             
             // Load user's default workout duration preference
             if let defaultDurationString = UserDefaults.standard.string(forKey: "defaultWorkoutDuration"),
@@ -372,6 +395,12 @@ struct LogWorkoutView: View {
                     showingFitnessLevelPicker = false
                     regenerateWorkoutWithNewDuration()
                 }
+            )
+        }
+        .fullScreenCover(isPresented: $showingWorkoutInProgress) {
+            WorkoutInProgressView(
+                isPresented: $showingWorkoutInProgress,
+                exercises: workoutExercises
             )
         }
     }
@@ -765,7 +794,9 @@ struct LogWorkoutView: View {
                     customTargetMuscles: customTargetMuscles,
                     customEquipment: customEquipment,
                     effectiveFitnessGoal: effectiveFitnessGoal,
-                    effectiveFitnessLevel: sessionFitnessLevel ?? selectedFitnessLevel
+                    effectiveFitnessLevel: sessionFitnessLevel ?? selectedFitnessLevel,
+                    showingWorkoutInProgress: $showingWorkoutInProgress,
+                    workoutExercises: $workoutExercises
                 )
             case .workouts:
                 RoutinesWorkoutView(
@@ -835,6 +866,8 @@ private struct TodayWorkoutView: View {
     let customEquipment: [Equipment]? // Added this parameter
     let effectiveFitnessGoal: FitnessGoal // Added this parameter
     let effectiveFitnessLevel: ExperienceLevel // Added this parameter
+    @Binding var showingWorkoutInProgress: Bool
+    @Binding var workoutExercises: [TodayWorkoutExercise]
     
     @State private var todayWorkout: TodayWorkout?
     @State private var isGeneratingWorkout = false
@@ -914,10 +947,11 @@ private struct TodayWorkoutView: View {
                 .background(Color(.systemBackground))
                 
                 // Sticky Start Workout button at bottom
-                if todayWorkout != nil {
+                if let workout = todayWorkout {
                     VStack {
                         Button(action: {
-                            // TODO: Start workout
+                            workoutExercises = workout.exercises
+                            showingWorkoutInProgress = true
                         }) {
                             Text("Start Workout")
                                 .font(.system(size: 18, weight: .semibold))
@@ -1554,6 +1588,7 @@ private struct TodayWorkoutExerciseList: View {
             ForEach(exercises, id: \.exercise.id) { exercise in
                 ExerciseWorkoutCard(
                     exercise: exercise,
+                    allExercises: exercises,
                     navigationPath: $navigationPath
                 )
                 .listRowBackground(Color.clear)
@@ -1591,6 +1626,7 @@ private struct TodayWorkoutExerciseList: View {
 
 private struct ExerciseWorkoutCard: View {
     let exercise: TodayWorkoutExercise
+    let allExercises: [TodayWorkoutExercise]
     @Binding var navigationPath: NavigationPath
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
@@ -1598,7 +1634,7 @@ private struct ExerciseWorkoutCard: View {
     var body: some View {
         Button(action: {
             // Navigate to exercise logging view
-            navigationPath.append(WorkoutNavigationDestination.logExercise(exercise))
+            navigationPath.append(WorkoutNavigationDestination.logExercise(exercise, allExercises))
         }) {
             HStack(spacing: 12) {
                 // Exercise thumbnail
