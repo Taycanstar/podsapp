@@ -50,24 +50,34 @@ struct ExerciseLoggingView: View {
                         ))
                 }
                 
-                VStack(spacing: 16) {
-                    
-                    // Exercise name with ellipsis
-                    exerciseHeaderSection
-                    
-                    // Sets input section
-                    setsInputSection
-                    
-                    Spacer()
-                    
-                    // Start Workout button
-                    startWorkoutButton
+                ScrollView {
+                    VStack(spacing: 16) {
+                        
+                        // Exercise name with ellipsis
+                        exerciseHeaderSection
+                        
+                        // Sets input section
+                        setsInputSection
+                        
+                        // Add bottom padding to ensure content isn't hidden behind floating button
+                        Color.clear
+                            .frame(height: 100)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, isVideoHidden ? 8 : 16)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, isVideoHidden ? 8 : 16)
                 .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
             }
             
+            // Floating Start Workout button
+            VStack {
+                Spacer()
+                
+                startWorkoutButton
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, focusedField != nil ? 10 : 20)
+                    .animation(.easeInOut(duration: 0.25), value: focusedField != nil)
+            }
         }
         .gesture(
             DragGesture()
@@ -128,6 +138,14 @@ struct ExerciseLoggingView: View {
         }
         .onAppear {
             setupInitialSets()
+        }
+        .onChange(of: focusedField) { oldValue, newValue in
+            if newValue != nil && oldValue != newValue {
+                // Generate haptic feedback when focus changes
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.prepare()
+                impactFeedback.impactOccurred()
+            }
         }
         .fullScreenCover(isPresented: $showingFullscreenVideo) {
             if let videoURL = videoURL {
@@ -209,12 +227,6 @@ struct ExerciseLoggingView: View {
                     .focused($focusedField, equals: .reps(index))
                     .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .reps(index)))
                     .keyboardType(.numberPad)
-                    .onTapGesture {
-                        // Generate haptic feedback
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                        impactFeedback.prepare()
-                        impactFeedback.impactOccurred()
-                    }
                     
                     TextField("150 lbs", text: Binding(
                         get: { sets[index].weight },
@@ -223,12 +235,6 @@ struct ExerciseLoggingView: View {
                     .focused($focusedField, equals: .weight(index))
                     .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .weight(index)))
                     .keyboardType(.decimalPad)
-                    .onTapGesture {
-                        // Generate haptic feedback
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                        impactFeedback.prepare()
-                        impactFeedback.impactOccurred()
-                    }
                 }
             }
             
@@ -254,10 +260,9 @@ struct ExerciseLoggingView: View {
                 .padding(.vertical, 16)
                 .background(Color.blue)
                 .cornerRadius(12)
+                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
-        .padding(.bottom, 20)
     }
-    
     // MARK: - Computed Properties
 
     private var videoURL: URL? {
@@ -430,9 +435,12 @@ class ExerciseVideoPlayerController: UIViewController {
         
         // Create player with item
         player = AVPlayer(playerItem: playerItem)
-        player?.automaticallyWaitsToMinimizeStalling = false
+        player?.automaticallyWaitsToMinimizeStalling = true  // Let it buffer properly
+        player?.volume = 0  // Mute video for exercise demos
+        
+        // Set up player layer
         playerLayer = AVPlayerLayer(player: player)
-        playerLayer?.videoGravity = .resizeAspect
+        playerLayer?.videoGravity = .resizeAspect  // Keep original aspect ratio
         playerLayer?.backgroundColor = UIColor.clear.cgColor
         
         // Add to view
@@ -461,9 +469,14 @@ class ExerciseVideoPlayerController: UIViewController {
             switch status {
             case .readyToPlay:
                 // Hide loading indicator and start playing
-                DispatchQueue.main.async {
-                    self.loadingIndicator?.stopAnimating()
-                    self.player?.play()
+                DispatchQueue.main.async { [weak self] in
+                    self?.loadingIndicator?.stopAnimating()
+                    // Add a small delay to ensure smooth playback start
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        self?.player?.play()
+                        // Set preferred playback rate for smoother playback
+                        self?.player?.rate = 1.0
+                    }
                 }
             case .failed:
                 // Hide loading indicator on failure
@@ -488,8 +501,9 @@ class ExerciseVideoPlayerController: UIViewController {
             object: player.currentItem,
             queue: .main
         ) { [weak self] _ in
-            self?.player?.seek(to: .zero)
-            self?.player?.play()
+            self?.player?.seek(to: .zero) { _ in
+                self?.player?.play()
+            }
         }
     }
     
