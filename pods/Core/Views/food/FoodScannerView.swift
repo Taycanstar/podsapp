@@ -39,19 +39,11 @@ struct FoodScannerView: View {
     
     // Removed navigationPath - using onFoodScanned callback instead
     
-    // User preferences for scan preview
-    private var photoScanPreviewEnabled: Bool {
-        UserDefaults.standard.object(forKey: "scanPreview_photoScan") as? Bool ?? false
-    }
-    private var foodLabelPreviewEnabled: Bool {
-        UserDefaults.standard.object(forKey: "scanPreview_foodLabel") as? Bool ?? true
-    }
-    private var barcodePreviewEnabled: Bool {
-        UserDefaults.standard.object(forKey: "scanPreview_barcode") as? Bool ?? true
-    }
-    private var galleryImportPreviewEnabled: Bool {
-        UserDefaults.standard.object(forKey: "scanPreview_galleryImport") as? Bool ?? false
-    }
+    // User preferences for scan preview - using @State to avoid UserDefaults threading issues
+    @State private var photoScanPreviewEnabled: Bool = false
+    @State private var foodLabelPreviewEnabled: Bool = true
+    @State private var barcodePreviewEnabled: Bool = true
+    @State private var galleryImportPreviewEnabled: Bool = false
     
     enum ScanMode {
         case food, nutritionLabel, barcode, gallery
@@ -307,6 +299,9 @@ struct FoodScannerView: View {
             }
             .background(Color.black)
         .onAppear {
+            // Initialize UserDefaults values safely on main thread
+            loadUserDefaultsPreferences()
+            
             // Check camera permissions when the view appears
             checkCameraPermissions()
             print("📱 FoodScannerView appeared - Mode: \(selectedMode)")
@@ -326,6 +321,18 @@ struct FoodScannerView: View {
     }
     
     // MARK: - Functions
+    
+    /// Safely load UserDefaults preferences on main thread to avoid threading race conditions
+    private func loadUserDefaultsPreferences() {
+        DispatchQueue.main.async {
+            self.photoScanPreviewEnabled = UserDefaults.standard.object(forKey: "scanPreview_photoScan") as? Bool ?? false
+            self.foodLabelPreviewEnabled = UserDefaults.standard.object(forKey: "scanPreview_foodLabel") as? Bool ?? true
+            self.barcodePreviewEnabled = UserDefaults.standard.object(forKey: "scanPreview_barcode") as? Bool ?? true
+            self.galleryImportPreviewEnabled = UserDefaults.standard.object(forKey: "scanPreview_galleryImport") as? Bool ?? false
+            
+            print("🔍 Loaded UserDefaults preferences: photoScan=\(self.photoScanPreviewEnabled), foodLabel=\(self.foodLabelPreviewEnabled), barcode=\(self.barcodePreviewEnabled), gallery=\(self.galleryImportPreviewEnabled)")
+        }
+    }
     
     private func takePhoto() {
         print("📸 Taking photo")
