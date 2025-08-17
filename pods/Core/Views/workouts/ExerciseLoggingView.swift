@@ -99,7 +99,7 @@ struct ExerciseLoggingView: View {
                     startWorkoutButton
                         .padding(.horizontal, 16)
                         .padding(.bottom, focusedField != nil ? 10 : 20)
-                } else if isWorkoutComplete {
+                } else if showRIRSection {
                     doneButton
                         .padding(.horizontal, 16)
                         .padding(.bottom, focusedField != nil ? 10 : 20)
@@ -334,10 +334,10 @@ struct ExerciseLoggingView: View {
             Button(action: logAllSets) {
                 Text("Log All Sets")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.green)
+                    .background(Color("tiktoknp"))
                     .cornerRadius(12)
                     .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
             }
@@ -348,10 +348,10 @@ struct ExerciseLoggingView: View {
         Button(action: completeWorkout) {
             Text("Done")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundColor(Color(.systemBackground))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Color.green)
+                .background(.primary)
                 .cornerRadius(12)
                 .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
