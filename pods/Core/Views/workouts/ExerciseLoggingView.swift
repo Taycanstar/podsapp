@@ -22,13 +22,8 @@ struct ExerciseLoggingView: View {
     let exercise: TodayWorkoutExercise
     let allExercises: [TodayWorkoutExercise]? // Pass all exercises for the workout
     let onSetLogged: (() -> Void)? // Callback to notify when a set is logged
+    let isFromWorkoutInProgress: Bool // Track if we came from WorkoutInProgressView
     @Environment(\.dismiss) private var dismiss
-    
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: (() -> Void)? = nil) {
-        self.exercise = exercise
-        self.allExercises = allExercises
-        self.onSetLogged = onSetLogged
-    }
     @State private var sets: [SetData] = []
     @FocusState private var focusedField: FocusedField?
     @State private var showingFullscreenVideo = false
@@ -36,11 +31,20 @@ struct ExerciseLoggingView: View {
     @State private var dragOffset: CGFloat = 0
     @State private var showKeyboardToolbar = false
     @State private var showingWorkoutInProgress = false
-    @State private var workoutStarted = false
+    @State private var workoutStarted: Bool
     @State private var currentSetIndex = 0
     @State private var showRIRSection = false
     @State private var rirValue: Double = 0 // RIR (Reps in Reserve) 0-4+
     @State private var isWorkoutComplete = false
+    
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: (() -> Void)? = nil, isFromWorkoutInProgress: Bool = false) {
+        self.exercise = exercise
+        self.allExercises = allExercises
+        self.onSetLogged = onSetLogged
+        self.isFromWorkoutInProgress = isFromWorkoutInProgress
+        // If coming from WorkoutInProgressView, workout is already started
+        self._workoutStarted = State(initialValue: isFromWorkoutInProgress)
+    }
     
     enum FocusedField: Hashable {
         case reps(Int)
@@ -351,7 +355,7 @@ struct ExerciseLoggingView: View {
                 .foregroundColor(Color(.systemBackground))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(.primary)
+                .background(Color.primary)
                 .cornerRadius(12)
                 .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
@@ -383,7 +387,7 @@ struct ExerciseLoggingView: View {
         // Videos were encoded as ProRes 4444 and stored as .mov in Azure
         let videoId = String(format: "%04d", exercise.exercise.id)
         return URL(string:
-            "https://humulistoragecentral.blob.core.windows.net/videos/alpha_vids/\(videoId).mov"
+            "https://humulistoragecentral.blob.core.windows.net/videos/hevc/filtered_vids_alpha_hevc/\(videoId).mov"
         )
     }
     
@@ -411,8 +415,11 @@ struct ExerciseLoggingView: View {
     }
     
     private func startWorkout() {
-        workoutStarted = true
-        currentSetIndex = 0
+        // Show the workout in progress view immediately
+        if let exercises = allExercises {
+            print("🏋️ Starting workout with \(exercises.count) exercises")
+            showingWorkoutInProgress = true
+        }
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -457,16 +464,11 @@ struct ExerciseLoggingView: View {
     }
     
     private func completeWorkout() {
-        isWorkoutComplete = true
-        
         // TODO: Save workout data with RIR value
-        print("🏋️ Workout completed with RIR: \(rirValue)")
+        print("🏋️ Exercise completed with RIR: \(rirValue)")
         
-        // Show the workout in progress view if we have all exercises
-        if let exercises = allExercises {
-            print("🏋️ Starting workout with \(exercises.count) exercises")
-            showingWorkoutInProgress = true
-        }
+        // Dismiss this view to go back to WorkoutInProgressView
+        dismiss()
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
@@ -600,37 +602,44 @@ class ExerciseVideoPlayerController: UIViewController {
     // MARK: - Playback Setup
 func setupPlayerIfReady() {
     guard let url = videoURL else { return }
-    loadingIndicator?.startAnimating()
 
-    Task.detached { [weak self] in
-        guard let self else { return }
-        do {
-            // 20s hard timeout to avoid “infinite loader”
-            let playableURL = try await withTimeout(seconds: 20) {
-                try await VideoPrep.preparePlayableURL(from: url)
-            }
+    // Stream the MOV directly (HEVC w/ alpha is hardware-decoded on iOS 13+)
+    let item = AVPlayerItem(url: url)
+    let p = AVPlayer(playerItem: item)
+    p.isMuted = true
+    p.automaticallyWaitsToMinimizeStalling = true
+    self.player = p
 
-            await MainActor.run {
-                let item = AVPlayerItem(url: playableURL)
-                item.preferredPeakBitRate = 0 // local file; no throttling
-                self.setupPlayer(with: item)
-                self.player?.playImmediately(atRate: 1.0)
-                self.loadingIndicator?.stopAnimating()
-            }
-        } catch {
-            // Clean fallback: try streaming (at least you see something)
-            await MainActor.run {
-                let asset = AVURLAsset(url: url, options: [AVURLAssetAllowsConstrainedNetworkAccessKey: true])
-                let item = AVPlayerItem(asset: asset)
-                item.preferredPeakBitRate = 4_000_000
-                self.setupPlayer(with: item)
-                self.player?.automaticallyWaitsToMinimizeStalling = true
-                self.player?.play()
-                self.loadingIndicator?.stopAnimating()
-            }
-        }
+    if playerLayer == nil {
+        let layer = AVPlayerLayer(player: p)
+        layer.videoGravity = .resizeAspect
+        layer.isOpaque = false                          // <-- critical
+        layer.backgroundColor = UIColor.clear.cgColor   // <-- critical
+        self.playerLayer = layer
+        self.playerView.layer.addSublayer(layer)
+    } else {
+        self.playerLayer?.player = p
     }
+
+    // Make sure every container is transparent too
+    self.view.backgroundColor = .clear
+    self.playerView.backgroundColor = .clear
+
+    view.setNeedsLayout()
+    view.layoutIfNeeded()
+    playerLayer?.frame = playerView.bounds
+
+    // Loop
+    NotificationCenter.default.addObserver(
+        self,
+        selector: #selector(loopVideo),
+        name: .AVPlayerItemDidPlayToEndTime,
+        object: item
+    )
+
+    p.play()
 }
+
 
 // Utility: timeout wrapper
 func withTimeout<T>(seconds: TimeInterval, _ op: @escaping () async throws -> T) async throws -> T {

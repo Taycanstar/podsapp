@@ -21,6 +21,8 @@ struct WorkoutInProgressView: View {
     // Track if any sets have been logged during this workout
     @State private var hasLoggedSets = false
     @State private var showDiscardAlert = false
+    // Track completed exercises with their logged sets count
+    @State private var exerciseCompletionStatus: [Int: Int] = [:] // exerciseIndex: loggedSetsCount
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -46,6 +48,7 @@ struct WorkoutInProgressView: View {
                                         exercise: exercise,
                                         allExercises: exercises,
                                         isCompleted: completedExercises.contains(index),
+                                        loggedSetsCount: exerciseCompletionStatus[index],
                                         onToggle: {
                                             toggleExerciseCompletion(index)
                                         },
@@ -75,10 +78,10 @@ struct WorkoutInProgressView: View {
                             Button(action: resumeWorkout) {
                                 Text("Resume")
                                     .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
-                                    .background(Color.green)
+                                    .background(Color("tiktoknp"))
                                     .cornerRadius(12)
                                     .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
                             }
@@ -117,9 +120,19 @@ struct WorkoutInProgressView: View {
             .navigationDestination(for: WorkoutNavigationDestination.self) { destination in
                 switch destination {
                 case .logExercise(let exercise, let allExercises):
-                    ExerciseLoggingView(exercise: exercise, allExercises: allExercises, onSetLogged: {
-                        hasLoggedSets = true
-                    })
+                    ExerciseLoggingView(
+                        exercise: exercise, 
+                        allExercises: allExercises, 
+                        onSetLogged: {
+                            hasLoggedSets = true
+                            // Find the exercise index and update completion status
+                            if let exerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                                // For now, assume all sets are logged when callback is triggered
+                                exerciseCompletionStatus[exerciseIndex] = exercise.sets
+                            }
+                        },
+                        isFromWorkoutInProgress: true  // Pass this flag to show Log Set/Log All Sets buttons immediately
+                    )
                 default:
                     EmptyView()
                 }
@@ -284,6 +297,7 @@ struct ExerciseRowInProgress: View {
     let exercise: TodayWorkoutExercise
     let allExercises: [TodayWorkoutExercise]
     let isCompleted: Bool
+    let loggedSetsCount: Int?
     let onToggle: () -> Void
     let onExerciseTap: () -> Void
     
@@ -321,9 +335,17 @@ struct ExerciseRowInProgress: View {
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                     
-                    Text("\(exercise.sets) sets • \(exercise.reps) reps")
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
+                    Group {
+                        if let loggedCount = loggedSetsCount {
+                            Text("\(loggedCount)/\(exercise.sets) logged")
+                                .font(.system(size: 14))
+                                .foregroundColor(.green)
+                        } else {
+                            Text("\(exercise.sets) sets • \(exercise.reps) reps")
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
                 
                 Spacer()
