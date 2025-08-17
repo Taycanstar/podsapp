@@ -66,40 +66,13 @@ struct ExerciseLoggingView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                // Video Header or Placeholder
+                // Video Header
                 if !isVideoHidden {
                     videoHeaderView
                         .transition(.asymmetric(
                             insertion: .move(edge: .top).combined(with: .opacity),
                             removal: .move(edge: .top).combined(with: .opacity)
                         ))
-                } else {
-                    // Video placeholder - tap to show video again
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            isVideoHidden = false
-                        }
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "play.rectangle")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.secondary)
-                            Text("Tap to show video")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 16)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .top).combined(with: .opacity),
-                        removal: .move(edge: .top).combined(with: .opacity)
-                    ))
                 }
                 
                 ScrollView {
@@ -123,6 +96,30 @@ struct ExerciseLoggingView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, isVideoHidden ? 8 : 16)
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                // Track gesture for potential header hiding
+                                dragOffset = value.translation.height
+                            }
+                            .onEnded { value in
+                                let velocity = value.predictedEndLocation.y - value.location.y
+                                let translation = value.translation.height
+                                
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    // Hide if swiping up with sufficient velocity or distance
+                                    if (velocity < -200) || (translation < -30 && velocity < 0) {
+                                        isVideoHidden = true
+                                    }
+                                    // Show if swiping down with sufficient velocity or distance (when video is hidden)
+                                    else if ((velocity > 200) || (translation > 30 && velocity > 0)) && isVideoHidden {
+                                        isVideoHidden = false
+                                    }
+                                    
+                                    dragOffset = 0
+                                }
+                            }
+                    )
                 }
                 .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
             }
@@ -147,30 +144,6 @@ struct ExerciseLoggingView: View {
             }
             .animation(.easeInOut(duration: 0.25), value: focusedField != nil)
         }
-        .gesture(
-            DragGesture()
-                .onChanged { value in
-                    // Track gesture for potential header hiding
-                    dragOffset = value.translation.height
-                }
-                .onEnded { value in
-                    let velocity = value.predictedEndLocation.y - value.location.y
-                    let translation = value.translation.height
-                    
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        // Hide if swiping up with sufficient velocity or distance (made more sensitive)
-                        if (velocity < -200) || (translation < -30 && velocity < 0) {
-                            isVideoHidden = true
-                        }
-                        // Show if swiping down with sufficient velocity or distance (when video is hidden)
-                        else if ((velocity > 200) || (translation > 30 && velocity > 0)) && isVideoHidden {
-                            isVideoHidden = false
-                        }
-                        
-                        dragOffset = 0
-                    }
-                }
-        )
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
         .navigationBarBackButtonHidden(true)
