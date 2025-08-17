@@ -123,15 +123,21 @@ struct WorkoutInProgressView: View {
                     ExerciseLoggingView(
                         exercise: exercise, 
                         allExercises: allExercises, 
-                        onSetLogged: {
+                        onSetLogged: { completedSetsCount in
                             hasLoggedSets = true
-                            // Find the exercise index and update completion status
+                            // Find the exercise index and update completion status with actual count
                             if let exerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
-                                // For now, assume all sets are logged when callback is triggered
-                                exerciseCompletionStatus[exerciseIndex] = exercise.sets
+                                exerciseCompletionStatus[exerciseIndex] = completedSetsCount
                             }
                         },
-                        isFromWorkoutInProgress: true  // Pass this flag to show Log Set/Log All Sets buttons immediately
+                        isFromWorkoutInProgress: true,  // Pass this flag to show Log Set/Log All Sets buttons immediately
+                        initialCompletedSetsCount: {
+                            // Pass the current completed sets count for this exercise
+                            if let exerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                                return exerciseCompletionStatus[exerciseIndex]
+                            }
+                            return nil
+                        }()
                     )
                 default:
                     EmptyView()
@@ -305,41 +311,61 @@ struct ExerciseRowInProgress: View {
         String(format: "%04d", exercise.exercise.id)
     }
     
+    private var isExerciseFullyLogged: Bool {
+        guard let loggedCount = loggedSetsCount else { return false }
+        return loggedCount >= exercise.sets
+    }
+    
     var body: some View {
         Button(action: onExerciseTap) {
             HStack(spacing: 12) {
-                // Exercise thumbnail - exactly like LogWorkoutView
-                Group {
-                    if let image = UIImage(named: thumbnailImageName) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } else {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
+                // Exercise thumbnail with completion overlay
+                ZStack {
+                    Group {
+                        if let image = UIImage(named: thumbnailImageName) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .overlay(
+                                    Image(systemName: "dumbbell")
+                                        .foregroundColor(.gray)
+                                        .font(.system(size: 16))
+                                )
+                        }
+                    }
+                    .opacity(isExerciseFullyLogged ? 0.6 : 1.0) // Dim when fully completed
+                    
+                    // Completion checkmark overlay
+                    if isExerciseFullyLogged {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 24, height: 24)
                             .overlay(
-                                Image(systemName: "dumbbell")
-                                    .foregroundColor(.gray)
-                                    .font(.system(size: 16))
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
                             )
                     }
                 }
                 .frame(width: 60, height: 60)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 
-                // Exercise info - exactly like LogWorkoutView
+                // Exercise info with completion styling
                 VStack(alignment: .leading, spacing: 4) {
                     Text(exercise.exercise.name)
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
+                        .foregroundColor(isExerciseFullyLogged ? .secondary : .primary)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                     
                     Group {
                         if let loggedCount = loggedSetsCount {
                             Text("\(loggedCount)/\(exercise.sets) logged")
-                                .font(.system(size: 14))
-                                .foregroundColor(.green)
+                                .font(.system(size: 14, weight: isExerciseFullyLogged ? .semibold : .regular))
+                                .foregroundColor(isExerciseFullyLogged ? .green : .orange)
                         } else {
                             Text("\(exercise.sets) sets • \(exercise.reps) reps")
                                 .font(.system(size: 14))
@@ -378,8 +404,16 @@ struct ExerciseRowInProgress: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color("tiktoknp"))
+            .background(
+                isExerciseFullyLogged ? 
+                Color("tiktoknp").opacity(0.5) : 
+                Color("tiktoknp")
+            )
             .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isExerciseFullyLogged ? Color.green.opacity(0.3) : Color.clear, lineWidth: 1)
+            )
         }
         .buttonStyle(PlainButtonStyle())
     }

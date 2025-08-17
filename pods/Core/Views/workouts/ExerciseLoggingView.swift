@@ -21,8 +21,9 @@ import CryptoKit
 struct ExerciseLoggingView: View {
     let exercise: TodayWorkoutExercise
     let allExercises: [TodayWorkoutExercise]? // Pass all exercises for the workout
-    let onSetLogged: (() -> Void)? // Callback to notify when a set is logged
+    let onSetLogged: ((Int) -> Void)? // Callback to notify when sets are logged with count
     let isFromWorkoutInProgress: Bool // Track if we came from WorkoutInProgressView
+    let initialCompletedSetsCount: Int? // Pass previously completed sets count
     @Environment(\.dismiss) private var dismiss
     @State private var sets: [SetData] = []
     @FocusState private var focusedField: FocusedField?
@@ -36,12 +37,14 @@ struct ExerciseLoggingView: View {
     @State private var showRIRSection = false
     @State private var rirValue: Double = 0 // RIR (Reps in Reserve) 0-4+
     @State private var isWorkoutComplete = false
+    @State private var videoPlayerID = UUID() // Force video player refresh when needed
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: (() -> Void)? = nil, isFromWorkoutInProgress: Bool = false) {
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil) {
         self.exercise = exercise
         self.allExercises = allExercises
         self.onSetLogged = onSetLogged
         self.isFromWorkoutInProgress = isFromWorkoutInProgress
+        self.initialCompletedSetsCount = initialCompletedSetsCount
         // If coming from WorkoutInProgressView, workout is already started
         self._workoutStarted = State(initialValue: isFromWorkoutInProgress)
     }
@@ -183,6 +186,13 @@ struct ExerciseLoggingView: View {
                 impactFeedback.impactOccurred()
             }
         }
+        .onChange(of: isVideoHidden) { oldValue, newValue in
+            // When video becomes visible again, refresh the video player
+            if oldValue == true && newValue == false {
+                print("🎬 Video becoming visible again, refreshing player")
+                videoPlayerID = UUID()
+            }
+        }
         .fullScreenCover(isPresented: $showingFullscreenVideo) {
             if let videoURL = videoURL {
                 FullscreenVideoView(videoURL: videoURL, isPresented: $showingFullscreenVideo)
@@ -202,6 +212,7 @@ struct ExerciseLoggingView: View {
         Group {
             if let videoURL = videoURL {
                 CustomExerciseVideoPlayer(videoURL: videoURL)
+                    .id(videoPlayerID) // Use ID to force refresh when needed
                     .frame(height: 200)
                     .clipped()
                     .cornerRadius(12)
@@ -395,14 +406,36 @@ struct ExerciseLoggingView: View {
         return String(format: "%04d", exercise.exercise.id)
     }
     
+    // MARK: - Computed Properties
+    
+    private var completedSetsCount: Int {
+        sets.filter { $0.isCompleted }.count
+    }
+    
+    private var isExerciseFullyCompleted: Bool {
+        !sets.isEmpty && sets.allSatisfy { $0.isCompleted }
+    }
+    
     // MARK: - Methods
     
     private func setupInitialSets() {
-        sets = Array(1...exercise.sets).map { _ in
-            SetData(
+        sets = Array(1...exercise.sets).map { setIndex in
+            let isCompleted = initialCompletedSetsCount != nil && setIndex <= (initialCompletedSetsCount ?? 0)
+            return SetData(
                 reps: "\(exercise.reps)",
-                weight: exercise.exercise.equipment.lowercased() == "body weight" ? "" : "150"
+                weight: exercise.exercise.equipment.lowercased() == "body weight" ? "" : "150",
+                isCompleted: isCompleted
             )
+        }
+        
+        // Set currentSetIndex to the next incomplete set
+        if let completedCount = initialCompletedSetsCount {
+            currentSetIndex = min(completedCount, sets.count - 1)
+            
+            // If all sets are completed, show RIR section
+            if completedCount >= exercise.sets {
+                showRIRSection = true
+            }
         }
     }
     
@@ -432,17 +465,19 @@ struct ExerciseLoggingView: View {
         
         // Mark current set as completed
         sets[currentSetIndex].isCompleted = true
-        onSetLogged?()
         
         // Move to next set
         currentSetIndex += 1
+        
+        // Notify parent with current completed sets count
+        onSetLogged?(completedSetsCount)
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
         
-        print("🏋️ Logged set \(currentSetIndex) of \(sets.count)")
+        print("🏋️ Logged set \(currentSetIndex) of \(sets.count) - Total completed: \(completedSetsCount)")
     }
     
     private func logAllSets() {
@@ -453,14 +488,16 @@ struct ExerciseLoggingView: View {
         
         // Show RIR section
         showRIRSection = true
-        onSetLogged?()
+        
+        // Notify parent with completed sets count (should be all sets now)
+        onSetLogged?(completedSetsCount)
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
         
-        print("🏋️ All sets logged, showing RIR section")
+        print("🏋️ All sets logged, showing RIR section - Total completed: \(completedSetsCount)")
     }
     
     private func completeWorkout() {
