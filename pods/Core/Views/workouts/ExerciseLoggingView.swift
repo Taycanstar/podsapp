@@ -799,8 +799,7 @@ struct RIRSlider: View {
                     ForEach(0..<barCount, id: \.self) { index in
                         RIRTriangleBar(
                             height: barHeight(for: index),
-                            isActive: Double(index) <= value,
-                            isPartial: shouldShowPartial(for: index)
+                            isActive: Double(index) <= value
                         )
                         .frame(maxWidth: .infinity)
                     }
@@ -850,10 +849,6 @@ struct RIRSlider: View {
         return baseHeight + (heightIncrement * CGFloat(index))
     }
     
-    private func shouldShowPartial(for index: Int) -> Bool {
-        let indexValue = Double(index)
-        return value > indexValue && value < indexValue + 1
-    }
     
     private func barLabel(for index: Int) -> String {
         if index == barCount - 1 {
@@ -867,7 +862,6 @@ struct RIRSlider: View {
 struct RIRTriangleBar: View {
     let height: CGFloat
     let isActive: Bool
-    let isPartial: Bool
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -877,7 +871,7 @@ struct RIRTriangleBar: View {
                 .frame(height: height)
             
             // Active bar with smooth gradient fill
-            if isActive || isPartial {
+            if isActive {
                 RoundedRectangle(cornerRadius: 6)
                     .fill(
                         LinearGradient(
@@ -886,9 +880,8 @@ struct RIRTriangleBar: View {
                             endPoint: .top
                         )
                     )
-                    .frame(height: height * (isPartial ? 0.5 : 1.0))
+                    .frame(height: height)
                     .animation(.easeInOut(duration: 0.15), value: isActive)
-                    .animation(.easeInOut(duration: 0.15), value: isPartial)
             }
         }
     }
