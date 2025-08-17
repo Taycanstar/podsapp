@@ -21,9 +21,10 @@ import CryptoKit
 struct ExerciseLoggingView: View {
     let exercise: TodayWorkoutExercise
     let allExercises: [TodayWorkoutExercise]? // Pass all exercises for the workout
-    let onSetLogged: ((Int) -> Void)? // Callback to notify when sets are logged with count
+    let onSetLogged: ((Int, Double?) -> Void)? // Callback to notify when sets are logged with count and optional RIR
     let isFromWorkoutInProgress: Bool // Track if we came from WorkoutInProgressView
     let initialCompletedSetsCount: Int? // Pass previously completed sets count
+    let initialRIRValue: Double? // Pass previously set RIR value
     @Environment(\.dismiss) private var dismiss
     @State private var sets: [SetData] = []
     @FocusState private var focusedField: FocusedField?
@@ -39,12 +40,13 @@ struct ExerciseLoggingView: View {
     @State private var isWorkoutComplete = false
     @State private var videoPlayerID = UUID() // Force video player refresh when needed
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil) {
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil) {
         self.exercise = exercise
         self.allExercises = allExercises
         self.onSetLogged = onSetLogged
         self.isFromWorkoutInProgress = isFromWorkoutInProgress
         self.initialCompletedSetsCount = initialCompletedSetsCount
+        self.initialRIRValue = initialRIRValue
         // If coming from WorkoutInProgressView, workout is already started
         self._workoutStarted = State(initialValue: isFromWorkoutInProgress)
     }
@@ -64,13 +66,40 @@ struct ExerciseLoggingView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                // Video Header
+                // Video Header or Placeholder
                 if !isVideoHidden {
                     videoHeaderView
                         .transition(.asymmetric(
                             insertion: .move(edge: .top).combined(with: .opacity),
                             removal: .move(edge: .top).combined(with: .opacity)
                         ))
+                } else {
+                    // Video placeholder - tap to show video again
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            isVideoHidden = false
+                        }
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "play.rectangle")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.secondary)
+                            Text("Tap to show video")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
                 }
                 
                 ScrollView {
@@ -129,12 +158,12 @@ struct ExerciseLoggingView: View {
                     let translation = value.translation.height
                     
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        // Hide if swiping up with sufficient velocity or distance
-                        if (velocity < -300) || (translation < -50 && velocity < 0) {
+                        // Hide if swiping up with sufficient velocity or distance (made more sensitive)
+                        if (velocity < -200) || (translation < -30 && velocity < 0) {
                             isVideoHidden = true
                         }
-                        // Show if swiping down with sufficient velocity or distance
-                        else if (velocity > 300) || (translation > 50 && velocity > 0) {
+                        // Show if swiping down with sufficient velocity or distance (when video is hidden)
+                        else if ((velocity > 200) || (translation > 30 && velocity > 0)) && isVideoHidden {
                             isVideoHidden = false
                         }
                         
@@ -386,6 +415,10 @@ struct ExerciseLoggingView: View {
             // Apple Fitness-style effort slider
             RIRSlider(value: $rirValue)
                 .frame(height: 80)
+                .onChange(of: rirValue) { oldValue, newValue in
+                    // Notify parent whenever RIR value changes for real-time saving
+                    onSetLogged?(completedSetsCount, newValue)
+                }
         }
         .padding()
         .background(Color("tiktoknp"))
@@ -432,9 +465,12 @@ struct ExerciseLoggingView: View {
         if let completedCount = initialCompletedSetsCount {
             currentSetIndex = min(completedCount, sets.count - 1)
             
-            // If all sets are completed, show RIR section
+            // If all sets are completed, show RIR section and restore RIR value
             if completedCount >= exercise.sets {
                 showRIRSection = true
+                if let savedRIR = initialRIRValue {
+                    rirValue = savedRIR
+                }
             }
         }
     }
@@ -469,8 +505,8 @@ struct ExerciseLoggingView: View {
         // Move to next set
         currentSetIndex += 1
         
-        // Notify parent with current completed sets count
-        onSetLogged?(completedSetsCount)
+        // Notify parent with current completed sets count (no RIR for individual sets)
+        onSetLogged?(completedSetsCount, nil)
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
@@ -489,8 +525,8 @@ struct ExerciseLoggingView: View {
         // Show RIR section
         showRIRSection = true
         
-        // Notify parent with completed sets count (should be all sets now)
-        onSetLogged?(completedSetsCount)
+        // Notify parent with completed sets count (should be all sets now, no RIR yet)
+        onSetLogged?(completedSetsCount, nil)
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -501,7 +537,9 @@ struct ExerciseLoggingView: View {
     }
     
     private func completeWorkout() {
-        // TODO: Save workout data with RIR value
+        // Notify parent with final completed sets count and RIR value
+        onSetLogged?(completedSetsCount, rirValue)
+        
         print("🏋️ Exercise completed with RIR: \(rirValue)")
         
         // Dismiss this view to go back to WorkoutInProgressView

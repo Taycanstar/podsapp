@@ -21,8 +21,9 @@ struct WorkoutInProgressView: View {
     // Track if any sets have been logged during this workout
     @State private var hasLoggedSets = false
     @State private var showDiscardAlert = false
-    // Track completed exercises with their logged sets count
+    // Track completed exercises with their logged sets count and RIR values
     @State private var exerciseCompletionStatus: [Int: Int] = [:] // exerciseIndex: loggedSetsCount
+    @State private var exerciseRIRValues: [Int: Double] = [:] // exerciseIndex: rirValue
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -123,11 +124,14 @@ struct WorkoutInProgressView: View {
                     ExerciseLoggingView(
                         exercise: exercise, 
                         allExercises: allExercises, 
-                        onSetLogged: { completedSetsCount in
+                        onSetLogged: { completedSetsCount, rirValue in
                             hasLoggedSets = true
-                            // Find the exercise index and update completion status with actual count
+                            // Find the exercise index and update completion status with actual count and RIR
                             if let exerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
                                 exerciseCompletionStatus[exerciseIndex] = completedSetsCount
+                                if let rir = rirValue {
+                                    exerciseRIRValues[exerciseIndex] = rir
+                                }
                             }
                         },
                         isFromWorkoutInProgress: true,  // Pass this flag to show Log Set/Log All Sets buttons immediately
@@ -135,6 +139,13 @@ struct WorkoutInProgressView: View {
                             // Pass the current completed sets count for this exercise
                             if let exerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
                                 return exerciseCompletionStatus[exerciseIndex]
+                            }
+                            return nil
+                        }(),
+                        initialRIRValue: {
+                            // Pass the current RIR value for this exercise
+                            if let exerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                                return exerciseRIRValues[exerciseIndex]
                             }
                             return nil
                         }()
