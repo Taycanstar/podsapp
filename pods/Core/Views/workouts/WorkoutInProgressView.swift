@@ -15,91 +15,116 @@ struct WorkoutInProgressView: View {
     @State private var elapsedTime: TimeInterval = 0
     @State private var timer: Timer?
     @State private var completedExercises: Set<Int> = []
+    @State private var navigationPath = NavigationPath()
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        ZStack {
-            // Background
-            Color(.systemBackground)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Header with close button and timer
-                headerSection
+        NavigationStack(path: $navigationPath) {
+            ZStack {
+                // Background
+                Color(.systemBackground)
+                    .ignoresSafeArea()
                 
-                // Exercise list
-                ScrollView {
-                    VStack(spacing: 8) {
-                        ForEach(Array(exercises.enumerated()), id: \.offset) { index, exercise in
-                            ExerciseRowInProgress(
-                                exercise: exercise,
-                                isCompleted: completedExercises.contains(index),
-                                onToggle: {
-                                    toggleExerciseCompletion(index)
+                VStack(spacing: 0) {
+                    // Header with close button and timer
+                    headerSection
+                    
+                    // Exercise list
+                    ScrollView {
+                        VStack(spacing: 8) {
+                            if exercises.isEmpty {
+                                Text("No exercises loaded")
+                                    .foregroundColor(.secondary)
+                                    .padding(.top, 50)
+                            } else {
+                                ForEach(Array(exercises.enumerated()), id: \.offset) { index, exercise in
+                                    ExerciseRowInProgress(
+                                        exercise: exercise,
+                                        allExercises: exercises,
+                                        isCompleted: completedExercises.contains(index),
+                                        onToggle: {
+                                            toggleExerciseCompletion(index)
+                                        },
+                                        onExerciseTap: {
+                                            navigationPath.append(WorkoutNavigationDestination.logExercise(exercise, exercises))
+                                        }
+                                    )
                                 }
-                            )
+                            }
+                            
+                            // Bottom padding for floating buttons
+                            Color.clear
+                                .frame(height: 100)
                         }
-                        
-                        // Bottom padding for floating buttons
-                        Color.clear
-                            .frame(height: 100)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
                 }
-            }
-            
-            // Floating buttons
-            VStack {
-                Spacer()
                 
-                if isPaused {
-                    // Resume and Log Workout buttons when paused
-                    HStack(spacing: 16) {
-                        Button(action: resumeWorkout) {
-                            Text("Resume")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(Color.green)
-                                .cornerRadius(12)
-                                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+                // Floating buttons
+                VStack {
+                    Spacer()
+                    
+                    if isPaused {
+                        // Resume and Log Workout buttons when paused
+                        HStack(spacing: 16) {
+                            Button(action: resumeWorkout) {
+                                Text("Resume")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(Color.green)
+                                    .cornerRadius(12)
+                                    .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+                            }
+                            
+                            Button(action: logWorkout) {
+                                Text("Log Workout")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(Color.blue)
+                                    .cornerRadius(12)
+                                    .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+                            }
                         }
-                        
-                        Button(action: logWorkout) {
-                            Text("Log Workout")
-                                .font(.system(size: 16, weight: .semibold))
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 20)
+                        .transition(.scale.combined(with: .opacity))
+                    } else {
+                        // Pause button when running
+                        Button(action: pauseWorkout) {
+                            Image(systemName: "pause.fill")
+                                .font(.system(size: 24))
                                 .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(Color.blue)
-                                .cornerRadius(12)
-                                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+                                .frame(width: 60, height: 60)
+                                .background(Color.red)
+                                .clipShape(Circle())
+                                .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 4)
                         }
+                        .padding(.bottom, 30)
+                        .transition(.scale.combined(with: .opacity))
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
-                    .transition(.scale.combined(with: .opacity))
-                } else {
-                    // Pause button when running
-                    Button(action: pauseWorkout) {
-                        Image(systemName: "pause.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white)
-                            .frame(width: 60, height: 60)
-                            .background(Color.red)
-                            .clipShape(Circle())
-                            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 4)
-                    }
-                    .padding(.bottom, 30)
-                    .transition(.scale.combined(with: .opacity))
+                }
+                .animation(.easeInOut(duration: 0.2), value: isPaused)
+            } // Closes ZStack
+            .navigationDestination(for: WorkoutNavigationDestination.self) { destination in
+                switch destination {
+                case .logExercise(let exercise, let allExercises):
+                    ExerciseLoggingView(exercise: exercise, allExercises: allExercises)
+                default:
+                    EmptyView()
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: isPaused)
-        }
+        } // Closes NavigationStack
         .onAppear {
             startTimer()
+            print("🏋️ WorkoutInProgressView appeared with \(exercises.count) exercises")
+            for (index, exercise) in exercises.enumerated() {
+                print("🏋️ Exercise \(index): \(exercise.exercise.name)")
+            }
         }
         .onDisappear {
             stopTimer()
@@ -232,25 +257,19 @@ struct WorkoutInProgressView: View {
 
 struct ExerciseRowInProgress: View {
     let exercise: TodayWorkoutExercise
+    let allExercises: [TodayWorkoutExercise]
     let isCompleted: Bool
     let onToggle: () -> Void
+    let onExerciseTap: () -> Void
     
     private var thumbnailImageName: String {
         String(format: "%04d", exercise.exercise.id)
     }
     
     var body: some View {
-        HStack(spacing: 12) {
-            // Checkbox
-            Button(action: onToggle) {
-                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 24))
-                    .foregroundColor(isCompleted ? .green : Color(.systemGray3))
-            }
-            
-            // Exercise thumbnail with muscles overlay
-            ZStack(alignment: .bottomTrailing) {
-                // Main exercise image
+        Button(action: onExerciseTap) {
+            HStack(spacing: 12) {
+                // Exercise thumbnail - exactly like LogWorkoutView
                 Group {
                     if let image = UIImage(named: thumbnailImageName) {
                         Image(uiImage: image)
@@ -268,87 +287,58 @@ struct ExerciseRowInProgress: View {
                 }
                 .frame(width: 60, height: 60)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
-                .opacity(isCompleted ? 0.6 : 1.0)
                 
-                // Muscle group overlay (bottom half)
-                if let muscleImageName = getMuscleImageName(for: exercise.exercise.bodyPart) {
-                    Image(muscleImageName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 24, height: 24)
-                        .background(Color.white.opacity(0.9))
-                        .clipShape(Circle())
-                        .offset(x: 4, y: 4)
-                }
-            }
-            
-            // Exercise info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(exercise.exercise.name)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .strikethrough(isCompleted)
-                    .opacity(isCompleted ? 0.6 : 1.0)
-                
-                HStack(spacing: 4) {
-                    Text("\(exercise.sets) sets")
-                    Text("•")
+                // Exercise info - exactly like LogWorkoutView
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(exercise.exercise.name)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                    
+                    Text("\(exercise.sets) sets • \(exercise.reps) reps")
+                        .font(.system(size: 14))
                         .foregroundColor(.secondary)
-                    Text("\(exercise.reps) reps")
-                    if let weight = exercise.weight, weight > 0 {
-                        Text("•")
-                            .foregroundColor(.secondary)
-                        Text("\(Int(weight)) lb")
+                }
+                
+                Spacer()
+                
+                // Menu button - exactly like LogWorkoutView
+                Menu {
+                    Button("Exercise History") {
+                        // TODO: Show exercise history
                     }
+                    
+                    Button("Replace") {
+                        // TODO: Replace exercise
+                    }
+                    
+                    Button("Skip Exercise") {
+                        // TODO: Skip this exercise
+                    }
+                    
+                    Divider()
+                    
+                    Button("Mark Complete") {
+                        onToggle()
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 24, height: 24)
                 }
-                .font(.system(size: 14))
-                .foregroundColor(.secondary)
-                .opacity(isCompleted ? 0.6 : 1.0)
             }
-            
-            Spacer()
-            
-            // Menu button
-            Menu {
-                Button("View Details") {
-                    // TODO: Show exercise details
-                }
-                
-                Button("Skip Exercise") {
-                    // TODO: Skip this exercise
-                }
-                
-                Button("Replace Exercise") {
-                    // TODO: Replace with alternative
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .frame(width: 24, height: 24)
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color("tiktoknp"))
+            .cornerRadius(12)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color("tiktoknp"))
-        .cornerRadius(12)
+        .buttonStyle(PlainButtonStyle())
     }
     
-    private func getMuscleImageName(for bodyPart: String) -> String? {
-        // Map body parts to muscle overlay images
-        let muscleMapping: [String: String] = [
-            "Chest": "muscle_chest",
-            "Back": "muscle_back",
-            "Shoulders": "muscle_shoulders",
-            "Arms": "muscle_arms",
-            "Legs": "muscle_legs",
-            "Core": "muscle_core",
-            "Full Body": "muscle_full"
-        ]
-        
-        return muscleMapping[bodyPart]
-    }
 }
+
 
 // MARK: - Preview
 

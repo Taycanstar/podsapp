@@ -67,8 +67,7 @@ struct LogWorkoutView: View {
     @State private var showingFitnessLevelPicker = false
     
     // Add state for showing workout in progress
-    @State private var showingWorkoutInProgress = false
-    @State private var workoutExercises: [TodayWorkoutExercise] = []
+    @State private var currentWorkout: TodayWorkout? = nil
     
     // Computed property for the actual duration to use
     private var effectiveDuration: WorkoutDuration {
@@ -148,24 +147,10 @@ struct LogWorkoutView: View {
                 workoutManager.initialize(userEmail: userEmail)
             }
             
-            // Listen for start workout notification from ExerciseLoggingView
-            NotificationCenter.default.addObserver(
-                forName: NSNotification.Name("StartWorkoutInProgress"),
-                object: nil,
-                queue: .main
-            ) { notification in
-                if let exercises = notification.userInfo?["exercises"] as? [TodayWorkoutExercise] {
-                    workoutExercises = exercises
-                    showingWorkoutInProgress = true
-                }
-            }
+            // No longer need notification listener
         }
         .onDisappear {
-            NotificationCenter.default.removeObserver(
-                self,
-                name: NSNotification.Name("StartWorkoutInProgress"),
-                object: nil
-            )
+            // Don't remove observer here as it might be needed
             
             // Load user's default workout duration preference
             if let defaultDurationString = UserDefaults.standard.string(forKey: "defaultWorkoutDuration"),
@@ -397,11 +382,17 @@ struct LogWorkoutView: View {
                 }
             )
         }
-        .fullScreenCover(isPresented: $showingWorkoutInProgress) {
+        .fullScreenCover(item: $currentWorkout) { workout in
             WorkoutInProgressView(
-                isPresented: $showingWorkoutInProgress,
-                exercises: workoutExercises
+                isPresented: Binding(
+                    get: { currentWorkout != nil },
+                    set: { if !$0 { currentWorkout = nil } }
+                ),
+                exercises: workout.exercises
             )
+            .onAppear {
+                print("📱 FullScreenCover appeared with \(workout.exercises.count) exercises")
+            }
         }
     }
     
@@ -795,8 +786,7 @@ struct LogWorkoutView: View {
                     customEquipment: customEquipment,
                     effectiveFitnessGoal: effectiveFitnessGoal,
                     effectiveFitnessLevel: sessionFitnessLevel ?? selectedFitnessLevel,
-                    showingWorkoutInProgress: $showingWorkoutInProgress,
-                    workoutExercises: $workoutExercises
+                    currentWorkout: $currentWorkout
                 )
             case .workouts:
                 RoutinesWorkoutView(
@@ -866,8 +856,7 @@ private struct TodayWorkoutView: View {
     let customEquipment: [Equipment]? // Added this parameter
     let effectiveFitnessGoal: FitnessGoal // Added this parameter
     let effectiveFitnessLevel: ExperienceLevel // Added this parameter
-    @Binding var showingWorkoutInProgress: Bool
-    @Binding var workoutExercises: [TodayWorkoutExercise]
+    @Binding var currentWorkout: TodayWorkout?
     
     @State private var todayWorkout: TodayWorkout?
     @State private var isGeneratingWorkout = false
@@ -950,8 +939,11 @@ private struct TodayWorkoutView: View {
                 if let workout = todayWorkout {
                     VStack {
                         Button(action: {
-                            workoutExercises = workout.exercises
-                            showingWorkoutInProgress = true
+                            print("🚀 Starting workout with \(workout.exercises.count) exercises")
+                            for (index, exercise) in workout.exercises.enumerated() {
+                                print("🚀 Exercise \(index): \(exercise.exercise.name)")
+                            }
+                            currentWorkout = workout
                         }) {
                             Text("Start Workout")
                                 .font(.system(size: 18, weight: .semibold))
@@ -1794,7 +1786,7 @@ private struct ProgressBarWorkout: View {
 
 // MARK: - Data Models
 
-struct TodayWorkout: Codable, Hashable {
+struct TodayWorkout: Codable, Hashable, Identifiable {
     let id: UUID
     let date: Date
     let title: String

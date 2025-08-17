@@ -154,6 +154,14 @@ struct ExerciseLoggingView: View {
                 FullscreenVideoView(videoURL: videoURL, isPresented: $showingFullscreenVideo)
             }
         }
+        .fullScreenCover(isPresented: $showingWorkoutInProgress) {
+            if let exercises = allExercises {
+                WorkoutInProgressView(
+                    isPresented: $showingWorkoutInProgress,
+                    exercises: exercises
+                )
+            }
+        }
     }
     
     private var videoHeaderView: some View {
@@ -299,17 +307,10 @@ struct ExerciseLoggingView: View {
     }
     
     private func startWorkout() {
-        // Navigate back to LogWorkoutView
-        dismiss()
-        
-        // Show workout in progress after navigating back
+        // Show the workout in progress view directly
         if let exercises = allExercises {
-            // Post notification to trigger workout in progress
-            NotificationCenter.default.post(
-                name: NSNotification.Name("StartWorkoutInProgress"),
-                object: nil,
-                userInfo: ["exercises": exercises]
-            )
+            print("🏋️ Starting workout with \(exercises.count) exercises")
+            showingWorkoutInProgress = true
         }
     }
     
