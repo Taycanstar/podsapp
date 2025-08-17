@@ -18,6 +18,10 @@ struct WorkoutInProgressView: View {
     @State private var navigationPath = NavigationPath()
     @Environment(\.colorScheme) var colorScheme
     
+    // Track if any sets have been logged during this workout
+    @State private var hasLoggedSets = false
+    @State private var showDiscardAlert = false
+    
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
@@ -113,7 +117,9 @@ struct WorkoutInProgressView: View {
             .navigationDestination(for: WorkoutNavigationDestination.self) { destination in
                 switch destination {
                 case .logExercise(let exercise, let allExercises):
-                    ExerciseLoggingView(exercise: exercise, allExercises: allExercises)
+                    ExerciseLoggingView(exercise: exercise, allExercises: allExercises, onSetLogged: {
+                        hasLoggedSets = true
+                    })
                 default:
                     EmptyView()
                 }
@@ -129,6 +135,14 @@ struct WorkoutInProgressView: View {
         .onDisappear {
             stopTimer()
         }
+        .alert("Discard Workout?", isPresented: $showDiscardAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Discard", role: .destructive) {
+                isPresented = false
+            }
+        } message: {
+            Text("You have logged sets in this workout. Are you sure you want to discard this workout?")
+        }
     }
     
     private var headerSection: some View {
@@ -136,7 +150,7 @@ struct WorkoutInProgressView: View {
             // Top bar with close button
             HStack {
                 Button(action: {
-                    isPresented = false
+                    handleDismiss()
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 18, weight: .medium))
@@ -249,6 +263,17 @@ struct WorkoutInProgressView: View {
             return String(format: "%d:%02d:%02d", hours, minutes, seconds)
         } else {
             return String(format: "%d:%02d", minutes, seconds)
+        }
+    }
+    
+    private func handleDismiss() {
+        // Check if any sets have been logged
+        if hasLoggedSets {
+            // Show confirmation alert if sets have been logged
+            showDiscardAlert = true
+        } else {
+            // Dismiss immediately if no sets have been logged
+            isPresented = false
         }
     }
 }
