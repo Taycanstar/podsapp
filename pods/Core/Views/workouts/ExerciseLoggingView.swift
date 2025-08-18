@@ -18,6 +18,15 @@ import AVFoundation
 import UIKit
 import CryptoKit
 
+enum WeightUnit: String, CaseIterable {
+    case kg = "kg"
+    case lbs = "lbs"
+    
+    var displayName: String {
+        return rawValue
+    }
+}
+
 struct ExerciseLoggingView: View {
     let exercise: TodayWorkoutExercise
     let allExercises: [TodayWorkoutExercise]? // Pass all exercises for the workout
@@ -39,6 +48,11 @@ struct ExerciseLoggingView: View {
     @State private var rirValue: Double = 0 // RIR (Reps in Reserve) 0-4+
     @State private var isWorkoutComplete = false
     @State private var videoPlayerID = UUID() // Force video player refresh when needed
+    @State private var showingExerciseOptions = false
+    @State private var selectedUnit: WeightUnit = .lbs
+    @State private var exerciseNotes: String = ""
+    @State private var recommendMoreOften = false
+    @State private var recommendLessOften = false
     
     init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil) {
         self.exercise = exercise
@@ -208,6 +222,18 @@ struct ExerciseLoggingView: View {
                 )
             }
         }
+        .sheet(isPresented: $showingExerciseOptions) {
+            ExerciseOptionsSheet(
+                exercise: exercise,
+                selectedUnit: $selectedUnit,
+                exerciseNotes: $exerciseNotes,
+                recommendMoreOften: $recommendMoreOften,
+                recommendLessOften: $recommendLessOften,
+                rirValue: rirValue
+            )
+            .presentationDetents([.fraction(0.75)])
+            .presentationDragIndicator(.visible)
+        }
     }
     
     private var videoHeaderView: some View {
@@ -260,7 +286,9 @@ struct ExerciseLoggingView: View {
             
             Spacer()
             
-            Button(action: {}) {
+            Button(action: {
+                showingExerciseOptions = true
+            }) {
                 Image(systemName: "ellipsis")
                     .foregroundColor(.primary)
                     .font(.title2)
@@ -1036,6 +1064,294 @@ struct FullscreenVideoView: View {
                     .padding(.top, 50)
                 }
                 Spacer()
+            }
+        }
+    }
+}
+
+// MARK: - Exercise Options Sheet
+
+struct ExerciseOptionsSheet: View {
+    let exercise: TodayWorkoutExercise
+    @Binding var selectedUnit: WeightUnit
+    @Binding var exerciseNotes: String
+    @Binding var recommendMoreOften: Bool
+    @Binding var recommendLessOften: Bool
+    let rirValue: Double
+    
+    @Environment(\.dismiss) private var dismiss
+    @State private var showingReplaceExercise = false
+    @State private var showingDeleteConfirmation = false
+    @State private var showingNotes = false
+    @State private var restTimerEnabled = false
+    
+    var body: some View {
+        NavigationView {
+            List {
+                // History - Navigate to ExerciseHistory view
+                NavigationLink(destination: ExerciseHistory(exercise: exercise)) {
+                    HStack {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 20))
+                            .foregroundColor(.primary)
+                            .frame(width: 28)
+                        Text("History")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                }
+                .padding(.vertical, 16)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                .listRowSeparator(.hidden, edges: .top)
+                
+                // Rest Timer
+                HStack {
+                    Image(systemName: "timer")
+                        .font(.system(size: 20))
+                        .foregroundColor(.primary)
+                        .frame(width: 28)
+                    Text("Rest Timer")
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Toggle("", isOn: $restTimerEnabled)
+                }
+                .padding(.vertical, 16)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                
+                // Replace
+                Button(action: {
+                    showingReplaceExercise = true
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 20))
+                            .foregroundColor(.primary)
+                            .frame(width: 28)
+                        Text("Replace")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                }
+                .padding(.vertical, 16)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                
+                // Notes
+                Button(action: {
+                    showingNotes = true
+                }) {
+                    HStack {
+                        Image(systemName: "note.text")
+                            .font(.system(size: 20))
+                            .foregroundColor(.primary)
+                            .frame(width: 28)
+                        Text("Notes")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                }
+                .padding(.vertical, 16)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                
+                // Add Warm-up set
+                Button(action: {
+                    // Handle add warm-up set
+                    print("Add warm-up set for \(exercise.exercise.name)")
+                }) {
+                    HStack {
+                        Image(systemName: "w.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(.primary)
+                            .frame(width: 28)
+                        Text("Add Warm-up set")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                }
+                .padding(.vertical, 16)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                
+                // Units
+                HStack {
+                    Image(systemName: "scalemass")
+                        .font(.system(size: 20))
+                        .foregroundColor(.primary)
+                        .frame(width: 28)
+                    Text("Units")
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Picker("Units", selection: $selectedUnit) {
+                        ForEach(WeightUnit.allCases, id: \.self) { unit in
+                            Text(unit.displayName).tag(unit)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .frame(width: 100)
+                }
+                .padding(.vertical, 16)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                
+                // Recommend more often
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.up.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.primary)
+                        .frame(width: 28)
+                    Text("Recommend more often")
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
+                    Spacer()
+                    Toggle("", isOn: $recommendMoreOften)
+                        .onChange(of: recommendMoreOften) { _, newValue in
+                            if newValue {
+                                recommendLessOften = false
+                            }
+                        }
+                }
+                .padding(.vertical, 16)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                
+                // Recommend less often
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.down.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.primary)
+                        .frame(width: 28)
+                    Text("Recommend less often")
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
+                    Spacer()
+                    Toggle("", isOn: $recommendLessOften)
+                        .onChange(of: recommendLessOften) { _, newValue in
+                            if newValue {
+                                recommendMoreOften = false
+                            }
+                        }
+                }
+                .padding(.vertical, 16)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                
+                // Don't recommend again
+                Button(action: {
+                    // Handle don't recommend again
+                    print("Don't recommend \(exercise.exercise.name) again")
+                    dismiss()
+                }) {
+                    HStack {
+                        Image(systemName: "nosign")
+                            .font(.system(size: 20))
+                            .foregroundColor(.primary)
+                            .frame(width: 28)
+                        Text("Don't recommend again")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                }
+                .padding(.vertical, 14)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                
+                // Spacer
+                Color.clear
+                    .frame(height: 5)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                
+                // Delete from workout
+                Button(action: {
+                    showingDeleteConfirmation = true
+                }) {
+                    HStack {
+                        Image(systemName: "trash")
+                            .font(.system(size: 20))
+                            .foregroundColor(.red)
+                            .frame(width: 28)
+                        Text("Delete from workout")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.red)
+                        Spacer()
+                    }
+                }
+                .padding(.vertical, 16)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                .listRowSeparator(.hidden, edges: .bottom)
+            }
+            .listStyle(PlainListStyle())
+            .navigationTitle(exercise.exercise.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
+        }
+        .alert("Delete Exercise", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                // Handle delete exercise from workout
+                print("Deleting \(exercise.exercise.name) from workout")
+                dismiss()
+            }
+        } message: {
+            Text("Are you sure you want to remove \(exercise.exercise.name) from this workout?")
+        }
+        .sheet(isPresented: $showingReplaceExercise) {
+            ReplaceExerciseSheet(currentExercise: exercise)
+        }
+        .sheet(isPresented: $showingNotes) {
+            // Notes sheet will be implemented when you provide specifications
+            Text("Notes Sheet - To be implemented")
+        }
+    }
+}
+
+// MARK: - Placeholder sheet for Replace
+
+struct ReplaceExerciseSheet: View {
+    let currentExercise: TodayWorkoutExercise
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                Text("Replace Exercise")
+                    .font(.title2)
+                    .padding()
+                
+                Text("Replace \(currentExercise.exercise.name) with:")
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Text("Exercise selection will be implemented here")
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+            }
+            .navigationTitle("Replace")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
             }
         }
     }
