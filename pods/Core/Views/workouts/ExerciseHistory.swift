@@ -19,29 +19,14 @@ struct ExerciseHistory: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Custom Picker
-            HStack(spacing: 0) {
+            // Native iOS Segmented Picker
+            Picker("", selection: $selectedTab) {
                 ForEach(HistoryTab.allCases, id: \.self) { tab in
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            selectedTab = tab
-                        }
-                    }) {
-                        Text(tab.rawValue)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(selectedTab == tab ? .white : .secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(
-                                selectedTab == tab ?
-                                Color.primary :
-                                Color(.systemGray6)
-                            )
-                    }
+                    Text(tab.rawValue)
+                        .tag(tab)
                 }
             }
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
+            .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal, 16)
             .padding(.top, 16)
             
@@ -101,47 +86,43 @@ struct ExerciseTrendsView: View {
     
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 16) {
+            LazyVStack(spacing: 24) {
+                HistoryMetricCard(
+                    title: "Reps",
+                    currentValue: "15",
+                    loggedAgo: "Logged 47 seconds ago",
+                    data: sampleRepsData,
+                    chartType: .line,
+                    color: .red
+                )
+                
+                HistoryMetricCard(
+                    title: "Volume",
+                    currentValue: "2,025 lb",
+                    loggedAgo: "Logged 47 seconds ago",
+                    data: sampleVolumeData,
+                    chartType: .bar,
+                    color: .red
+                )
+                
                 HistoryMetricCard(
                     title: "Weight",
                     currentValue: "52.5 lb",
-                    trend: "+2 more lbs",
+                    loggedAgo: "Logged 47 seconds ago",
                     data: sampleWeightData,
                     chartType: .line,
                     color: .blue
                 )
                 
                 HistoryMetricCard(
-                    title: "Reps",
-                    currentValue: "17",
-                    trend: "+2 more reps",
-                    data: sampleRepsData,
-                    chartType: .line,
-                    color: .green
-                )
-                
-                HistoryMetricCard(
-                    title: "Volume",
-                    currentValue: "1,785 lb",
-                    trend: "+285 more lbs",
-                    data: sampleVolumeData,
-                    chartType: .bar,
-                    color: .purple
-                )
-                
-                HistoryMetricCard(
                     title: "Est. 1 Rep Max",
                     currentValue: "85.3 lb",
-                    trend: "+4.8 more lbs",
+                    loggedAgo: "Logged 47 seconds ago",
                     data: sampleOneRepMaxData,
                     chartType: .line,
                     color: .orange
                 )
             }
-            .padding(.horizontal, 16)
             .padding(.top, 20)
         }
     }
@@ -233,7 +214,7 @@ struct HistoryWorkoutSet {
 struct HistoryMetricCard: View {
     let title: String
     let currentValue: String
-    let trend: String
+    let loggedAgo: String
     let data: [(Date, Double)]
     let chartType: ChartType
     let color: Color
@@ -243,36 +224,115 @@ struct HistoryMetricCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.secondary)
-            
-            if chartType == .line {
-                HistoryLineChart(data: data, color: color)
-                    .frame(height: 80)
-            } else {
-                HistoryBarChart(data: data, color: color)
-                    .frame(height: 80)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(currentValue)
-                    .font(.system(size: 20, weight: .bold))
+        VStack(alignment: .leading, spacing: 20) {
+            // Header with title and chevron
+            HStack {
+                Text(title)
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.primary)
                 
-                Text(trend)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.red)
-                    .cornerRadius(12)
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
             }
+            
+            // Chart Card with integrated labels
+            VStack(alignment: .leading, spacing: 0) {
+                // Top section with value and description
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(currentValue)
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    if title == "Reps" {
+                        Text("reps in 1 set")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.primary)
+                    } else if title == "Volume" {
+                        Text("total volume")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.primary)
+                    } else if title == "Weight" {
+                        Text("per set")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.primary)
+                    } else if title == "Est. 1 Rep Max" {
+                        Text("estimated")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.primary)
+                    }
+                    
+                    Text(loggedAgo)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                
+                // Chart with Y-axis labels
+                HStack(alignment: .top, spacing: 8) {
+                    // Y-axis labels
+                    VStack(alignment: .trailing, spacing: 0) {
+                        let maxValue = data.map { $0.1 }.max() ?? 1
+                        let minValue = data.map { $0.1 }.min() ?? 0
+                        
+                        Text(formatAxisValue(maxValue))
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Text(formatAxisValue((maxValue + minValue) / 2))
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Text(formatAxisValue(minValue))
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(width: 30, height: 100)
+                    .padding(.leading, 8)
+                    
+                    // Chart
+                    if chartType == .line {
+                        HistoryLineChart(data: data, color: color)
+                            .frame(height: 100)
+                            .padding(.trailing, 16)
+                    } else {
+                        HistoryBarChart(data: data, color: color)
+                            .frame(height: 100)
+                            .padding(.trailing, 16)
+                    }
+                }
+                .padding(.top, 16)
+                .padding(.bottom, 8)
+                
+                // Bottom label
+                Text("Most Recent Performances")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.bottom, 12)
+            }
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
         }
-        .padding(16)
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .padding(.horizontal, 16)
+    }
+    
+    private func formatAxisValue(_ value: Double) -> String {
+        if value >= 1000 {
+            return String(format: "%.1fk", value / 1000)
+        } else if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(format: "%.0f", value)
+        } else {
+            return String(format: "%.1f", value)
+        }
     }
 }
 

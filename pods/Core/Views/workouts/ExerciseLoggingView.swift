@@ -231,7 +231,7 @@ struct ExerciseLoggingView: View {
                 recommendLessOften: $recommendLessOften,
                 rirValue: rirValue
             )
-            .presentationDetents([.fraction(0.75)])
+            // .presentationDetents([.fraction(0.75)])
             .presentationDragIndicator(.visible)
         }
     }
