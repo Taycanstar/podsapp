@@ -98,7 +98,7 @@ struct ExerciseTrendsView: View {
                 
                 HistoryMetricCard(
                     title: "Volume",
-                    currentValue: "2,025 lb",
+                    currentValue: "2,025",
                     loggedAgo: "Logged 47 seconds ago",
                     data: sampleVolumeData,
                     chartType: .bar,
@@ -107,7 +107,7 @@ struct ExerciseTrendsView: View {
                 
                 HistoryMetricCard(
                     title: "Weight",
-                    currentValue: "52.5 lb",
+                    currentValue: "52.5",
                     loggedAgo: "Logged 47 seconds ago",
                     data: sampleWeightData,
                     chartType: .line,
@@ -116,7 +116,7 @@ struct ExerciseTrendsView: View {
                 
                 HistoryMetricCard(
                     title: "Est. 1 Rep Max",
-                    currentValue: "85.3 lb",
+                    currentValue: "85.3",
                     loggedAgo: "Logged 47 seconds ago",
                     data: sampleOneRepMaxData,
                     chartType: .line,
@@ -241,27 +241,30 @@ struct HistoryMetricCard: View {
             // Chart Card with integrated labels
             VStack(alignment: .leading, spacing: 0) {
                 // Top section with value and description
+
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(currentValue)
-                        .font(.system(size: 36, weight: .bold))
-                        .foregroundColor(.primary)
-                    
-                    if title == "Reps" {
-                        Text("reps in 1 set")
-                            .font(.system(size: 14, weight: .regular))
+                    HStack(alignment: .lastTextBaseline, spacing: 4) {
+                        Text(currentValue)
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
-                    } else if title == "Volume" {
-                        Text("total volume")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundColor(.primary)
-                    } else if title == "Weight" {
-                        Text("per set")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundColor(.primary)
-                    } else if title == "Est. 1 Rep Max" {
-                        Text("estimated")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundColor(.primary)
+                        
+                        if title == "Reps" {
+                            Text("reps in 1 set")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.secondary)
+                        } else if title == "Volume" {
+                            Text("lbs")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.secondary)
+                        } else if title == "Weight" {
+                            Text("lbs in 1 set")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.secondary)
+                        } else if title == "Est. 1 Rep Max" {
+                            Text("lbs in 1 rep")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
                     }
                     
                     Text(loggedAgo)
@@ -274,8 +277,34 @@ struct HistoryMetricCard: View {
                 
                 // Chart with Y-axis labels
                 HStack(alignment: .top, spacing: 8) {
-                    // Y-axis labels
-                    VStack(alignment: .trailing, spacing: 0) {
+                    // Chart
+                    ZStack {
+                        // Horizontal gridlines
+                        GeometryReader { geometry in
+                            Path { path in
+                                let positions = [0.0, 0.5, 1.0]
+                                for position in positions {
+                                    let y = geometry.size.height * CGFloat(position)
+                                    path.move(to: CGPoint(x: 0, y: y))
+                                    path.addLine(to: CGPoint(x: geometry.size.width, y: y))
+                                }
+                            }
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 0.5)
+                        }
+                        
+                        // Chart content
+                        if chartType == .line {
+                            HistoryLineChart(data: data, color: color)
+                                .frame(height: 100)
+                        } else {
+                            HistoryBarChart(data: data, color: color)
+                                .frame(height: 100)
+                        }
+                    }
+                    .padding(.leading, 16)
+                    
+                    // Y-axis labels on the right
+                    VStack(alignment: .leading, spacing: 0) {
                         let maxValue = data.map { $0.1 }.max() ?? 1
                         let minValue = data.map { $0.1 }.min() ?? 0
                         
@@ -296,18 +325,7 @@ struct HistoryMetricCard: View {
                             .foregroundColor(.secondary)
                     }
                     .frame(width: 30, height: 100)
-                    .padding(.leading, 8)
-                    
-                    // Chart
-                    if chartType == .line {
-                        HistoryLineChart(data: data, color: color)
-                            .frame(height: 100)
-                            .padding(.trailing, 16)
-                    } else {
-                        HistoryBarChart(data: data, color: color)
-                            .frame(height: 100)
-                            .padding(.trailing, 16)
-                    }
+                    .padding(.trailing, 8)
                 }
                 .padding(.top, 16)
                 .padding(.bottom, 8)
@@ -317,7 +335,7 @@ struct HistoryMetricCard: View {
                     .font(.system(size: 12, weight: .regular))
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.bottom, 12)
+                    .padding(.vertical)
             }
             .background(Color(.systemGray6))
             .cornerRadius(12)
