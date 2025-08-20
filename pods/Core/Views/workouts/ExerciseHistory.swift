@@ -16,6 +16,7 @@ struct ExerciseHistory: View {
     enum HistoryTab: String, CaseIterable {
         case trends = "Trends"
         case results = "Results"
+        case records = "Records"
     }
     
     var body: some View {
@@ -32,10 +33,13 @@ struct ExerciseHistory: View {
             .padding(.top, 16)
             
             // Content
-            if selectedTab == .trends {
+            switch selectedTab {
+            case .trends:
                 ExerciseTrendsView(exercise: exercise)
-            } else {
+            case .results:
                 ExerciseResultsView(exercise: exercise)
+            case .records:
+                ExerciseRecordsView(exercise: exercise)
             }
         }
         .navigationTitle(exercise.exercise.name)
@@ -364,58 +368,64 @@ struct ExerciseHistoryCard: View {
     @State private var rirValue: Double = 0 // Store RIR rating
     @State private var hasRatedRIR = false // Track if RIR has been set
     
-    private var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        return formatter
+    private var dateString: String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(workout.date) {
+            return "Today"
+        } else if calendar.isDateInYesterday(workout.date) {
+            return "Yesterday"
+        } else if let daysDiff = calendar.dateComponents([.day], from: workout.date, to: now).day,
+                  daysDiff < 7 {
+            // Within last week, show day name
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE"
+            return formatter.string(from: workout.date)
+        } else {
+            // Show full date
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            return formatter.string(from: workout.date)
+        }
     }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             // Header
             HStack {
-                Text(isToday ? "Today" : dateFormatter.string(from: workout.date))
+                Text(dateString)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
                 
                 Spacer()
                 
-                // Rate Exertion button moved to the right side of header
-                if isToday {
-                    if hasRatedRIR {
-                        Text("\(Int(rirValue)) more rep\(Int(rirValue) == 1 ? "" : "s")")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color.accentColor)
-                            .cornerRadius(12)
-                            .onTapGesture {
-                                showingRIRSheet = true
-                            }
-                    } else {
-                        Button(action: {
-                            showingRIRSheet = true
-                        }) {
-                            Text("Rate Exertion")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.primary)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .stroke(Color(.systemGray3), lineWidth: 1)
-                                )
-                        }
-                    }
-                } else if let trend = workout.trend {
-                    Text(trend)
+                // Rate Exertion button for all results
+                if hasRatedRIR {
+                    Text("\(Int(rirValue)) more rep\(Int(rirValue) == 1 ? "" : "s")")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(Color.red)
+                        .background(Color.accentColor)
                         .cornerRadius(12)
+                        .onTapGesture {
+                            showingRIRSheet = true
+                        }
+                } else {
+                    Button(action: {
+                        showingRIRSheet = true
+                    }) {
+                        Text("Rate Exertion")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(Color(.systemGray3), lineWidth: 1)
+                            )
+                    }
                 }
             }
             
@@ -463,10 +473,7 @@ struct ExerciseHistoryCard: View {
                     Text("\(workout.estimatedOneRepMax, specifier: "%.1f") lb")
                         .font(.system(size: 16, weight: .regular))
                         .foregroundColor(.primary)
-                    
-                    Text("in 1 Rep")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundColor(.secondary)
+        
                 }
             }
         }
@@ -595,12 +602,104 @@ struct HistoryBarChart: View {
     }
 }
 
+// MARK: - Records View
+
+struct ExerciseRecordsView: View {
+    let exercise: TodayWorkoutExercise
+    
+    // Sample record data - in real implementation, this would come from database
+    private let records = [
+        RecordItem(label: "Weight", value: "85 lb", date: Date.now.addingTimeInterval(-86400 * 10)),
+        RecordItem(label: "Volume", value: "3,150 lb", date: Date.now.addingTimeInterval(-86400 * 5)),
+        RecordItem(label: "Est. 1 Rep Max", value: "95.5 lb", date: Date.now.addingTimeInterval(-86400 * 3)),
+        RecordItem(label: "Rep", value: "20 reps", date: Date.now.addingTimeInterval(-86400 * 15))
+    ]
+    
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(records, id: \.label) { record in
+                    RecordRow(record: record)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 20)
+            .padding(.bottom, 40)
+        }
+    }
+}
+
+struct RecordItem {
+    let label: String
+    let value: String
+    let date: Date
+}
+
+struct RecordRow: View {
+    let record: RecordItem
+    
+    private var dateString: String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(record.date) {
+            return "Today"
+        } else if calendar.isDateInYesterday(record.date) {
+            return "Yesterday"
+        } else if let daysDiff = calendar.dateComponents([.day], from: record.date, to: now).day,
+                  daysDiff < 7 {
+            // Within last week, show day name
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE"
+            return formatter.string(from: record.date)
+        } else {
+            // Show full date
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            return formatter.string(from: record.date)
+        }
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Trophy icon
+            Image(systemName: "trophy.fill")
+                .font(.system(size: 24))
+                .foregroundColor(.yellow)
+                .frame(width: 32)
+            
+            // Label and value
+            VStack(alignment: .leading, spacing: 4) {
+                Text(record.label)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+                
+                Text(record.value)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+            
+            Spacer()
+            
+            // Date
+            Text(dateString)
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+}
+
 // MARK: - RIR Rating Sheet
 
 struct RIRRatingSheet: View {
     @Binding var rirValue: Double
     @Binding var hasRatedRIR: Bool
     @Binding var isPresented: Bool
+    @State private var tempRirValue: Double = 0
     
     var body: some View {
         NavigationView {
@@ -617,36 +716,37 @@ struct RIRRatingSheet: View {
                 }
                 
                 // RIR Slider
-                RIRSlider(value: $rirValue)
+                RIRSlider(value: $tempRirValue)
                     .frame(height: 80)
                 
                 Spacer()
-                
-                // Done button
-                Button(action: {
-                    hasRatedRIR = true
-                    isPresented = false
-                }) {
-                    Text("Done")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.accentColor)
-                        .cornerRadius(12)
-                }
-                .padding(.horizontal, 16)
             }
             .padding()
             .navigationTitle("Rate Exertion")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
+                        // Reset to no value
+                        hasRatedRIR = false
+                        rirValue = 0
                         isPresented = false
                     }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        // Save the value
+                        rirValue = tempRirValue
+                        hasRatedRIR = true
+                        isPresented = false
+                    }
+                    .fontWeight(.semibold)
+                }
             }
+        }
+        .onAppear {
+            // Initialize temp value with current value
+            tempRirValue = rirValue
         }
     }
 }
