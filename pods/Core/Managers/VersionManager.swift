@@ -3,13 +3,13 @@
 import Foundation
 import SwiftUI
 
+@MainActor
 class VersionManager: ObservableObject {
     @Published var requiresUpdate = false
     @Published var storeUrl: String?
     
     static let shared = VersionManager()
     
-    @MainActor
     func checkVersion() async {
         do {
             let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""

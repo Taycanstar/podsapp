@@ -1,6 +1,30 @@
 import Foundation
 import SwiftUI
 import Mixpanel
+
+// Memory tracking helper for crash debugging (duplicated from FoodScannerView)
+func getMemoryUsage() -> (used: Double, available: Double) {
+    var info = mach_task_basic_info()
+    var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
+    
+    let kerr: kern_return_t = withUnsafeMutablePointer(to: &info) {
+        $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+            task_info(mach_task_self_,
+                     task_flavor_t(MACH_TASK_BASIC_INFO),
+                     $0,
+                     &count)
+        }
+    }
+    
+    if kerr == KERN_SUCCESS {
+        let usedMB = Double(info.resident_size) / 1024.0 / 1024.0
+        let totalMB = Double(ProcessInfo.processInfo.physicalMemory) / 1024.0 / 1024.0
+        let availableMB = totalMB - usedMB
+        return (used: usedMB, available: availableMB)
+    } else {
+        return (used: 0, available: 0)
+    }
+}
 // Extension to convert Food to LoggedFoodItem
 extension Food {
     var asLoggedFoodItem: LoggedFoodItem {
@@ -22,6 +46,7 @@ extension Food {
 }
 
 
+@MainActor
 class FoodManager: ObservableObject {
     @Published var loggedFoods: [LoggedFood] = []
     @Published var isLoading = false
@@ -153,6 +178,10 @@ class FoodManager: ObservableObject {
     
     // Progress timer for upload progress
     private var progressTimer: Timer?
+    
+    // CRITICAL FIX: Track all active timers for cleanup
+    private var activeTimers: Set<Timer> = []
+    private var scannerDismissed = false
 
     
     init() {
@@ -680,32 +709,31 @@ func loadMoreFoods(refresh: Bool = false) {
                     servingsConsumed: nil
                 )
                 
-           
-                
-                // Track the food in recently added - fdcId is non-optional
-                self.lastLoggedFoodId = food.fdcId
-                self.trackRecentlyAdded(foodId: food.fdcId)
-                
-               
-                
-                // Set data for success toast in dashboard
-                self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
-                self.showLogSuccess = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    self.showLogSuccess = false
-                }
-                
-                // Trigger review check after successful food log
-                ReviewManager.shared.foodWasLogged()
-                
-                // Track meal timing for smart reminders
-                MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
-                
-                // Show the local toast if the food was added manually (not AI generated)
-                if !self.isAnalyzingFood {
-                    self.showToast = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        self.showToast = false
+                // Ensure all @Published property updates happen on main thread
+                DispatchQueue.main.async {
+                    // Track the food in recently added - fdcId is non-optional
+                    self.lastLoggedFoodId = food.fdcId
+                    self.trackRecentlyAdded(foodId: food.fdcId)
+                    
+                    // Set data for success toast in dashboard
+                    self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
+                    self.showLogSuccess = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self.showLogSuccess = false
+                    }
+                    
+                    // Trigger review check after successful food log
+                    ReviewManager.shared.foodWasLogged()
+                    
+                    // Track meal timing for smart reminders
+                    MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
+                    
+                    // Show the local toast if the food was added manually (not AI generated)
+                    if !self.isAnalyzingFood {
+                        self.showToast = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            self.showToast = false
+                        }
                     }
                 }
                 
@@ -1819,8 +1847,11 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             return 
         }
         
-        // Cycle through macro generation stages 0-3
-        self.macroGenerationStage = (self.macroGenerationStage + 1) % 4
+        // CRITICAL FIX: Ensure all @Published updates happen on main thread
+        DispatchQueue.main.async {
+            // Cycle through macro generation stages 0-3
+            self.macroGenerationStage = (self.macroGenerationStage + 1) % 4
+        }
         
         // Update loading message based on current stage
         self.macroLoadingMessage = [
@@ -1950,8 +1981,11 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
             return 
         }
         
-        // Cycle through stages 0-3
-        self.mealGenerationStage = (self.mealGenerationStage + 1) % 4
+        // CRITICAL FIX: Ensure all @Published updates happen on main thread
+        DispatchQueue.main.async {
+            // Cycle through stages 0-3
+            self.mealGenerationStage = (self.mealGenerationStage + 1) % 4
+        }
     }
     
     // Make the API request
@@ -2013,8 +2047,11 @@ func generateFoodWithAI(
             return 
         }
         
-        // Cycle through stages 0-3
-        self.foodGenerationStage = (self.foodGenerationStage + 1) % 4
+        // CRITICAL FIX: Ensure all @Published updates happen on main thread
+        DispatchQueue.main.async {
+            // Cycle through stages 0-3
+            self.foodGenerationStage = (self.foodGenerationStage + 1) % 4
+        }
     }
     
     // Make the API request
@@ -2274,7 +2311,47 @@ func analyzeFoodImage(
   shouldLog: Bool = true,  // Default to true for backward compatibility
   completion: @escaping (Result<CombinedLog, Error>) -> Void
 ) {
-  print("🔍 DEBUG FoodManager.analyzeFoodImage: shouldLog = \(shouldLog)")
+  print("🔍 CRASH_DEBUG: ===== FoodManager.analyzeFoodImage START =====")
+  print("🔍 CRASH_DEBUG: shouldLog = \(shouldLog), userEmail = \(userEmail), mealType = \(mealType)")
+  
+  // CRITICAL FIX: Defensive checks at start of function
+  guard !userEmail.isEmpty else {
+    print("❌ CRASH_DEBUG: Empty user email, aborting analysis")
+    completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User email is required"])))
+    return
+  }
+  
+  guard image.size.width > 0 && image.size.height > 0 else {
+    print("❌ CRASH_DEBUG: Invalid image size: \(image.size), aborting analysis")
+    completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid image"])))
+    return
+  }
+  
+  // CRITICAL FIX: Reset scanner dismissed flag for new scan
+  resetScannerDismissedFlag()
+  
+  // Log image details and optimize if needed
+  let imageSize = image.size
+  let imageSizeBytes = image.jpegData(compressionQuality: 1.0)?.count ?? 0
+  let imageSizeMB = Double(imageSizeBytes) / 1024.0 / 1024.0
+  print("🔍 CRASH_DEBUG: Image analysis - Size: \(imageSize), File size: \(String(format: "%.2f", imageSizeMB))MB")
+  
+  // CRITICAL FIX: Auto-compress large images to prevent memory crashes
+  let optimizedImage = optimizeImageForProcessing(image)
+  let optimizedSizeBytes = optimizedImage.jpegData(compressionQuality: 0.8)?.count ?? 0
+  let optimizedSizeMB = Double(optimizedSizeBytes) / 1024.0 / 1024.0
+  print("🔍 CRASH_DEBUG: Optimized image - File size: \(String(format: "%.2f", optimizedSizeMB))MB")
+  
+  // Log memory before starting and check for high pressure
+  let memoryBefore = getMemoryUsage()
+  print("🔍 CRASH_DEBUG: Memory before analysis - Used: \(String(format: "%.1f", memoryBefore.used))MB, Available: \(String(format: "%.1f", memoryBefore.available))MB")
+  
+  // Check memory pressure and warn if high
+  let isHighMemoryPressure = checkMemoryPressure()
+  if isHighMemoryPressure {
+    print("⚠️ CRASH_DEBUG: High memory pressure detected, proceeding with extra caution")
+  }
+  
   if shouldLog {
       print("🔍 DEBUG FoodManager: Will create food AND log to database")
   } else {
@@ -2282,25 +2359,42 @@ func analyzeFoodImage(
   }
   
   // ─── 1) UI state ─────────────────────────────
+  print("🔍 CRASH_DEBUG: Setting UI state - isAnalyzingImage = true, isLoading = true")
   isAnalyzingImage = true
   isLoading        = true
   imageAnalysisMessage = "Analyzing image…"
   uploadProgress   = 0
 
   // ─── 2) Fake progress ticker ─────────────────
-
+  print("🔍 CRASH_DEBUG: Creating progress timer")
 
   uploadProgress = 0
 let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] t in
-  guard let self = self else { t.invalidate(); return }
-  // bump progress up to, say, 90%
-  self.uploadProgress = min(0.9, self.uploadProgress + 0.1)
+  guard let self = self else { 
+    print("🔍 CRASH_DEBUG: Progress timer - self is nil, invalidating timer")
+    t.invalidate(); return 
+  }
+  
+  // CRITICAL FIX: Ensure all @Published updates happen on main thread
+  DispatchQueue.main.async {
+    self.uploadProgress = min(0.9, self.uploadProgress + 0.1)
+    print("🔍 CRASH_DEBUG: Progress updated to \(self.uploadProgress) [MAIN THREAD]")
+  }
 }
+// Track timer for cleanup
+trackTimer(progressTimer)
 
   // ─── 3) Call backend ─────────────────────────
-  networkManager.analyzeFoodImage(image: image, userEmail: userEmail, mealType: mealType, shouldLog: shouldLog) { [weak self] success, payload, errMsg in
-    guard let self = self else { return }
+  print("🔍 CRASH_DEBUG: Calling networkManager.analyzeFoodImage with optimized image")
+  networkManager.analyzeFoodImage(image: optimizedImage, userEmail: userEmail, mealType: mealType, shouldLog: shouldLog) { [weak self] success, payload, errMsg in
+    print("🔍 CRASH_DEBUG: Network callback received - success: \(success)")
+    guard let self = self else { 
+      print("🔍 CRASH_DEBUG: Network callback - self is nil, returning early")
+      return 
+    }
     DispatchQueue.main.async {
+      print("🔍 CRASH_DEBUG: Network callback - on main queue, stopping timer")
+      
       // stop ticker + UI
       progressTimer.invalidate()
 
@@ -2308,6 +2402,10 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
         self.uploadProgress = 1.0
       }
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        print("🔍 CRASH_DEBUG: Resetting UI state after analysis completion")
+        let memoryAfter = getMemoryUsage()
+        print("🔍 CRASH_DEBUG: Memory after analysis - Used: \(String(format: "%.1f", memoryAfter.used))MB, Available: \(String(format: "%.1f", memoryAfter.available))MB")
+        
         self.isAnalyzingImage = false
         self.isLoading        = false
         self.imageAnalysisMessage = ""
@@ -2320,11 +2418,13 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
 
         // reset for next time
         self.uploadProgress = 0
+        print("🔍 CRASH_DEBUG: UI state reset complete")
       }
 
       // failure path
       guard success, let payload = payload else {
         let msg = errMsg ?? "Unknown error"
+        print("🔍 CRASH_DEBUG: Network call failed - error: \(msg)")
         print("🔴 [analyzeFoodImage] error: \(msg)")
         
         // Show user-friendly error message for photo scan failures
@@ -2335,6 +2435,7 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
           )
         }
         
+        print("🔍 CRASH_DEBUG: Calling completion(.failure) - Network error")
         completion(.failure(NSError(
           domain: "FoodScan", code: -1,
           userInfo: [NSLocalizedDescriptionKey: msg])))
@@ -2342,12 +2443,21 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
       }
 
       //── 4) Dump raw payload for debugging
+     
       if let rawJSON = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
          let str     = String(data: rawJSON, encoding: .utf8) {
-        print("🔍 [analyzeFoodImage] raw payload:\n\(str)")
+     
       }
 
+      // CRITICAL FIX: Add defensive checks before processing response
+      guard let payload = payload as? [String: Any] else {
+        print("❌ CRASH_DEBUG: Invalid payload type - not a dictionary")
+        completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])))
+        return
+      }
+      
       do {
+        print("🔍 CRASH_DEBUG: Starting to decode network response")
         //── 5) Handle different response formats based on shouldLog parameter
         let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
         let decoder  = JSONDecoder()
@@ -2356,8 +2466,9 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
         
         if shouldLog {
           // When shouldLog=true, backend returns LoggedFood with foodLogId
-          print("🔍 DEBUG FoodManager: Decoding LoggedFood (shouldLog=true)")
+
           let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
+   
           
           combined = CombinedLog(
             type:        .food,
@@ -2481,9 +2592,11 @@ let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) {
                 servingsConsumed: nil)
             
         }
+        print("🔍 CRASH_DEBUG: Calling completion(.success(combined)) - Analysis complete")
         completion(.success(combined))
         
         // Set success data and show toast - MUST be on main thread
+        print("🔍 CRASH_DEBUG: Setting success data and showing toast")
         DispatchQueue.main.async {
            self.lastLoggedItem = (
              name:     combined.food?.displayName ?? "Unknown Food",
@@ -2567,8 +2680,11 @@ func analyzeNutritionLabel(
       progressTimer?.invalidate()
       return 
     }
-    // bump progress up to, say, 90%
-    self.uploadProgress = min(0.9, self.uploadProgress + 0.1)
+    // CRITICAL FIX: Ensure all @Published updates happen on main thread
+    DispatchQueue.main.async {
+      self.uploadProgress = min(0.9, self.uploadProgress + 0.1)
+      print("🔍 CRASH_DEBUG: Nutrition label progress updated to \(self.uploadProgress) [MAIN THREAD]")
+    }
   }
 
   // ─── 3) Call backend ─────────────────────────
@@ -2959,21 +3075,25 @@ func analyzeNutritionLabel(
                 // Track ID for later use when confirmed
                 self.lastLoggedFoodId = food.fdcId
                 
-                // Update barcode scanner state
-                self.isScanningBarcode = false
-                self.isLoading = false
-                self.barcodeLoadingMessage = ""
-                self.scannedImage = nil
+                // CRITICAL FIX: Update barcode scanner state on main thread
+                DispatchQueue.main.async {
+                    self.isScanningBarcode = false
+                    self.isLoading = false
+                    self.barcodeLoadingMessage = ""
+                    self.scannedImage = nil
+                }
                 
                 // Return success so the scanner can close
                 completion(true, nil)
                 
             case .failure(let error):
-                // Update barcode scanner state on failure
-                self.isScanningBarcode = false
-                self.isLoading = false
-                self.barcodeLoadingMessage = ""
-                self.scannedImage = nil
+                // CRITICAL FIX: Update barcode scanner state on failure - main thread
+                DispatchQueue.main.async {
+                    self.isScanningBarcode = false
+                    self.isLoading = false
+                    self.barcodeLoadingMessage = ""
+                    self.scannedImage = nil
+                }
                 
                 // Set error message for display
                 let errorMsg: String
@@ -3009,16 +3129,20 @@ func analyzeNutritionLabel(
                 return 
             }
             
-            // Update barcode loading message
-            self.barcodeLoadingMessage = [
-                "Looking up barcode...",
-                "Searching nutrition databases...",
-                "Enhancing with web search...",
-                "Finalizing food data..."
-            ].randomElement() ?? "Processing barcode..."
-            
-            // Gradually increase progress
-            self.uploadProgress = min(self.uploadProgress + 0.1, 0.9)
+            // CRITICAL FIX: Ensure all @Published updates happen on main thread
+            DispatchQueue.main.async {
+                // Update barcode loading message
+                self.barcodeLoadingMessage = [
+                    "Looking up barcode...",
+                    "Searching nutrition databases...",
+                    "Enhancing with web search...",
+                    "Finalizing food data..."
+                ].randomElement() ?? "Processing barcode..."
+                
+                // Gradually increase progress
+                self.uploadProgress = min(self.uploadProgress + 0.1, 0.9)
+                print("🔍 CRASH_DEBUG: Barcode progress updated to \(self.uploadProgress) [MAIN THREAD]")
+            }
         }
         
         // Call the enhanced barcode lookup endpoint with shouldLog = true
@@ -3070,34 +3194,33 @@ func analyzeNutritionLabel(
                     servingsConsumed: nil
                 )
                 
-                // Add to logs
+                // Ensure all @Published property updates and manager calls happen on main thread
                 DispatchQueue.main.async {
-                    self.dayLogsViewModel?.addPending(combinedLog)
-                    
-                    if let idx = self.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
-                        self.combinedLogs.remove(at: idx)
-                    }
-                    self.combinedLogs.insert(combinedLog, at: 0)
-                    
-                    // Show success message
-                    self.lastLoggedItem = (name: food.displayName, calories: food.calories ?? 0)
-                    self.showLogSuccess = true
-                    
-                    // Reset barcode scanning states
-                    self.isScanningBarcode = false
-                    self.isLoading = false
-                    self.barcodeLoadingMessage = ""
-                    
-                    // Auto-hide success message after 2 seconds
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        self.showLogSuccess = false
-                    }
-                    
-                    // Trigger review check after successful food log
-                    ReviewManager.shared.foodWasLogged()
-                    
-                    // Track meal timing for smart reminders
-                    MealReminderService.shared.mealWasLogged(mealType: mealType)
+                        self.dayLogsViewModel?.addPending(combinedLog)
+                        
+                        if let idx = self.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                            self.combinedLogs.remove(at: idx)
+                        }
+                        self.combinedLogs.insert(combinedLog, at: 0)
+                        
+                        self.lastLoggedItem = (name: food.displayName, calories: food.calories ?? 0)
+                        self.showLogSuccess = true
+                        
+                        // Reset barcode scanning states
+                        self.isScanningBarcode = false
+                        self.isLoading = false
+                        self.barcodeLoadingMessage = ""
+                        
+                        // Auto-hide success message after 2 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            self.showLogSuccess = false
+                        }
+                        
+                        // Trigger review check after successful food log
+                        ReviewManager.shared.foodWasLogged()
+                        
+                        // Track meal timing for smart reminders
+                        MealReminderService.shared.mealWasLogged(mealType: mealType)
                     
                     completion(true, nil)
                 }
@@ -3144,16 +3267,20 @@ func analyzeNutritionLabel(
                 return 
             }
             
-            // Update barcode loading message
-            self.barcodeLoadingMessage = [
-                "Looking up barcode...",
-                "Searching nutrition databases...",
-                "Enhancing with web search...",
-                "Finalizing food data..."
-            ].randomElement() ?? "Processing barcode..."
-            
-            // Gradually increase progress
-            self.uploadProgress = min(self.uploadProgress + 0.1, 0.9)
+            // CRITICAL FIX: Ensure all @Published updates happen on main thread
+            DispatchQueue.main.async {
+                // Update barcode loading message
+                self.barcodeLoadingMessage = [
+                    "Looking up barcode...",
+                    "Searching nutrition databases...",
+                    "Enhancing with web search...",
+                    "Finalizing food data..."
+                ].randomElement() ?? "Processing barcode..."
+                
+                // Gradually increase progress
+                self.uploadProgress = min(self.uploadProgress + 0.1, 0.9)
+                print("🔍 CRASH_DEBUG: Barcode progress updated to \(self.uploadProgress) [MAIN THREAD]")
+            }
         }
         
         // Call the enhanced barcode lookup endpoint
@@ -3250,10 +3377,12 @@ func analyzeNutritionLabel(
             case .failure(let error):
                 print("❌ Enhanced barcode lookup failed: \(error)")
                 
-                // Reset barcode scanning states
-                self.isScanningBarcode = false
-                self.isLoading = false
-                self.barcodeLoadingMessage = ""
+                // CRITICAL FIX: Reset barcode scanning states on main thread
+                DispatchQueue.main.async {
+                    self.isScanningBarcode = false
+                    self.isLoading = false
+                    self.barcodeLoadingMessage = ""
+                }
                 
                 // Set error message
                 let errorMsg: String
@@ -3284,14 +3413,17 @@ func analyzeNutritionLabel(
                 return 
             }
             
-            // Cycle through macro generation stages 0-3
-            self.macroGenerationStage = (self.macroGenerationStage + 1) % 4
-            self.macroLoadingMessage = [
-                "Transcribing your voice...",
-                "Analyzing food description...",
-                "Generating nutritional data...",
-                "Finalizing your food log..."
-            ][self.macroGenerationStage]
+            // CRITICAL FIX: Ensure all @Published updates happen on main thread
+            DispatchQueue.main.async {
+                // Cycle through macro generation stages 0-3
+                self.macroGenerationStage = (self.macroGenerationStage + 1) % 4
+                self.macroLoadingMessage = [
+                    "Transcribing your voice...",
+                    "Analyzing food description...",
+                    "Generating nutritional data...",
+                    "Finalizing your food log..."
+                ][self.macroGenerationStage]
+            }
         }
         
         // First step: Transcribe the audio using the backend
@@ -3599,49 +3731,49 @@ func analyzeNutritionLabel(
                         servingsConsumed: nil
                     )
                     
-                    // Add the log to today's logs using the helper method
-                
-                    
-                    // Track the food in recently added - fdcId is non-optional
-                    self.lastLoggedFoodId = food.fdcId
-                    self.trackRecentlyAdded(foodId: food.fdcId)
-                    
-            
-                    
-                    // Set data for success toast in dashboard
-                    self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
-                    self.showLogSuccess = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        self.showLogSuccess = false
-                    }
-                    
-                    // Clear the lastLoggedFoodId after 2 seconds
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation {
-                            // Only clear if it still matches the food we logged
-                            if self.lastLoggedFoodId == food.fdcId {
-                                self.lastLoggedFoodId = nil
+                    // Ensure all @Published property updates happen on main thread
+                    DispatchQueue.main.async {
+                        // Track the food in recently added - fdcId is non-optional
+                        self.lastLoggedFoodId = food.fdcId
+                        self.trackRecentlyAdded(foodId: food.fdcId)
+                        
+                        // Set data for success toast in dashboard
+                        self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
+                        self.showLogSuccess = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            self.showLogSuccess = false
+                        }
+                        
+                        // Clear the lastLoggedFoodId after 2 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            withAnimation {
+                                // Only clear if it still matches the food we logged
+                                if self.lastLoggedFoodId == food.fdcId {
+                                    self.lastLoggedFoodId = nil
+                                }
                             }
                         }
+                        
+                        // Trigger review check after successful food log
+                        ReviewManager.shared.foodWasLogged()
+                        
+                        // Track meal timing for smart reminders
+                        MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
                     }
-                    
-                    // Trigger review check after successful food log
-                    ReviewManager.shared.foodWasLogged()
-                    
-                    // Track meal timing for smart reminders
-                    MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
                     
              
                     
                 case .failure(let error):
                     print("❌ Failed to log food: \(error.localizedDescription)")
                     
-                    // Display error message
-                    self.errorMessage = "Failed to log food: \(error.localizedDescription)"
-                   
-                    
-                    // Clear the lastLoggedFoodId immediately on error
-                    self.lastLoggedFoodId = nil
+                    // Ensure all @Published property updates happen on main thread
+                    DispatchQueue.main.async {
+                        // Display error message
+                        self.errorMessage = "Failed to log food: \(error.localizedDescription)"
+                        
+                        // Clear the lastLoggedFoodId immediately on error
+                        self.lastLoggedFoodId = nil
+                    }
                 }
                 
                 // Call the completion handler
@@ -4413,6 +4545,169 @@ func analyzeNutritionLabel(
                 }
             }
         }
+    }
+    
+    // MARK: - Timer Management and Cleanup Functions
+    
+    /// Only cancel timers without resetting loading states
+    func cancelTimersOnly() {
+        print("🔍 CRASH_DEBUG: cancelTimersOnly called - preserving progress timer to show continued loading")
+        
+        // DON'T invalidate progress timer - let it continue until network completes
+        // progressTimer?.invalidate()  // REMOVED - this was causing progress to freeze at 10%
+        
+        // Only invalidate non-essential timers (stage animations, etc)
+        for timer in activeTimers {
+            // Only invalidate if it's not the main progress timer
+            if timer != progressTimer {
+                timer.invalidate()
+                print("🔍 CRASH_DEBUG: Invalidated non-progress timer: \(timer)")
+            }
+        }
+        // Remove invalidated timers but keep progress timer
+        activeTimers = activeTimers.filter { $0 == progressTimer }
+        
+        print("🔍 CRASH_DEBUG: Non-essential timers cleaned up, progress timer preserved for smooth loading")
+    }
+    
+    /// Cancel all ongoing operations and timers to prevent crashes (OLD - kept for compatibility)
+    func cancelOngoingOperations() {
+        print("🔍 CRASH_DEBUG: cancelOngoingOperations called - invalidating all active timers")
+        
+        // Mark scanner as dismissed to prevent new UI updates
+        scannerDismissed = true
+        
+        // Invalidate main progress timer
+        progressTimer?.invalidate()
+        progressTimer = nil
+        
+        // Invalidate all tracked active timers
+        for timer in activeTimers {
+            timer.invalidate()
+            print("🔍 CRASH_DEBUG: Invalidated timer: \(timer)")
+        }
+        activeTimers.removeAll()
+        
+        // Note: We don't cancel network operations as they should complete
+        // We just prevent UI updates after scanner dismissal
+        print("🔍 CRASH_DEBUG: All timers invalidated, operations cancelled")
+    }
+    
+    /// Reset all scanning-related @Published states
+    func resetScanningStates() {
+        print("🔍 CRASH_DEBUG: resetScanningStates called - clearing all scanning UI states")
+        
+        // Use main thread for all @Published updates
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Reset image analysis states
+            self.isAnalyzingImage = false
+            self.isLoading = false
+            self.isScanningFood = false
+            self.imageAnalysisMessage = ""
+            self.loadingMessage = ""
+            
+            // Reset barcode states
+            self.isScanningBarcode = false
+            self.barcodeLoadingMessage = ""
+            
+            // Reset generation states
+            self.isGeneratingFood = false
+            self.isGeneratingMacros = false
+            self.isGeneratingMeal = false
+            self.macroLoadingMessage = ""
+            
+            // Reset progress
+            self.uploadProgress = 0.0
+            
+            // Clear scanned image reference
+            self.scannedImage = nil
+            
+            print("🔍 CRASH_DEBUG: All scanning states reset on main thread")
+        }
+    }
+    
+    /// Helper to track timers for cleanup
+    private func trackTimer(_ timer: Timer) {
+        activeTimers.insert(timer)
+    }
+    
+    /// Reset scanner dismissed flag when new scan starts
+    private func resetScannerDismissedFlag() {
+        scannerDismissed = false
+        print("🔍 CRASH_DEBUG: Scanner dismissed flag reset - new scan can proceed")
+    }
+    
+    // MARK: - Memory Management Functions
+    
+    /// Optimize image size and quality to prevent memory crashes
+    private func optimizeImageForProcessing(_ image: UIImage) -> UIImage {
+        // CRITICAL FIX: Defensive check for invalid image
+        guard image.size.width > 0 && image.size.height > 0 else {
+            print("❌ CRASH_DEBUG: Invalid image dimensions: \(image.size)")
+            return image
+        }
+        
+        let originalSize = image.size
+        let originalData = image.jpegData(compressionQuality: 1.0)
+        let originalSizeMB = Double(originalData?.count ?? 0) / 1024.0 / 1024.0
+        
+        // If image is under 10MB, no optimization needed
+        guard originalSizeMB > 10.0 else {
+            print("🔍 MEMORY_DEBUG: Image size (\(String(format: "%.1f", originalSizeMB))MB) is acceptable, no optimization needed")
+            return image
+        }
+        
+        print("🔍 MEMORY_DEBUG: Large image detected (\(String(format: "%.1f", originalSizeMB))MB), applying optimization")
+        
+        // Calculate target size - max 2048x2048 for processing
+        let maxDimension: CGFloat = 2048
+        var targetSize = originalSize
+        
+        if originalSize.width > maxDimension || originalSize.height > maxDimension {
+            let aspectRatio = originalSize.width / originalSize.height
+            if originalSize.width > originalSize.height {
+                targetSize = CGSize(width: maxDimension, height: maxDimension / aspectRatio)
+            } else {
+                targetSize = CGSize(width: maxDimension * aspectRatio, height: maxDimension)
+            }
+            print("🔍 MEMORY_DEBUG: Resizing from \(originalSize) to \(targetSize)")
+        }
+        
+        // Create optimized image with error handling
+        UIGraphicsBeginImageContextWithOptions(targetSize, false, 0.0)
+        defer { UIGraphicsEndImageContext() }
+        
+        image.draw(in: CGRect(origin: .zero, size: targetSize))
+        
+        guard let optimizedImage = UIGraphicsGetImageFromCurrentImageContext() else {
+            print("❌ CRASH_DEBUG: Failed to create optimized image, returning original")
+            return image
+        }
+        
+        // Verify optimization worked
+        let optimizedData = optimizedImage.jpegData(compressionQuality: 0.8)
+        let optimizedSizeMB = Double(optimizedData?.count ?? 0) / 1024.0 / 1024.0
+        print("🔍 MEMORY_DEBUG: Image optimized from \(String(format: "%.1f", originalSizeMB))MB to \(String(format: "%.1f", optimizedSizeMB))MB")
+        
+        return optimizedImage
+    }
+    
+    /// Monitor memory usage and handle memory warnings
+    private func checkMemoryPressure() -> Bool {
+        let memoryUsage = getMemoryUsage()
+        let usedMemoryMB = memoryUsage.used
+        let availableMemoryMB = memoryUsage.available
+        
+        // Consider high memory pressure if using more than 300MB or less than 100MB available
+        let isHighPressure = usedMemoryMB > 300 || availableMemoryMB < 100
+        
+        if isHighPressure {
+            print("⚠️ MEMORY_DEBUG: High memory pressure detected - Used: \(String(format: "%.1f", usedMemoryMB))MB, Available: \(String(format: "%.1f", availableMemoryMB))MB")
+        }
+        
+        return isHighPressure
     }
 }
 

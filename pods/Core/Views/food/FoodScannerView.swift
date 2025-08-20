@@ -8,6 +8,9 @@
 import SwiftUI
 import AVFoundation
 import PhotosUI
+import Foundation
+
+
 
 // Notification names - moved to file scope
 extension Notification.Name {
@@ -90,21 +93,39 @@ struct FoodScannerView: View {
                         selectedMode: $selectedMode,
                         flashEnabled: flashEnabled, 
                         onCapture: { image in
-                            guard let image = image else { return }
+                            print("🔍 CRASH_DEBUG: onCapture called")
+                            guard let image = image else { 
+                                print("❌ CRASH_DEBUG: Image is nil in onCapture")
+                                return 
+                            }
+                            
+                            // Log detailed image information
+                            let imageSize = image.size
+                            let imageSizeBytes = image.jpegData(compressionQuality: 1.0)?.count ?? 0
+                            let imageSizeMB = Double(imageSizeBytes) / 1024.0 / 1024.0
+                            print("🔍 CRASH_DEBUG: Image captured - Size: \(imageSize), File size: \(String(format: "%.2f", imageSizeMB))MB (\(imageSizeBytes) bytes)")
+                            
+                            // Log memory usage before processing
+                            let memoryUsage = getMemoryUsage()
+                            print("🔍 CRASH_DEBUG: Memory before processing - Used: \(String(format: "%.1f", memoryUsage.used))MB, Available: \(String(format: "%.1f", memoryUsage.available))MB")
+                            
                             if selectedMode == .food {
-                                print("Food scanned with captured image")
+                                print("🔍 CRASH_DEBUG: Food scan mode selected")
                                 // Check preference to decide between preview and one-tap logging
                                 if photoScanPreviewEnabled {
+                                    print("🔍 CRASH_DEBUG: PREVIEW MODE - calling analyzeImageForPreview")
                                     print("🔍 PREVIEW MODE: Photo scan preview enabled - will NOT log automatically")
                                     print("🔍 PREVIEW MODE: Food will be created without logging (shouldLog: false)")
                                     print("🔍 PREVIEW MODE: User must tap 'Log' in ConfirmLogView to actually log")
                                     analyzeImageForPreview(image)
                                 } else {
+                                    print("🔍 CRASH_DEBUG: DIRECT MODE - calling analyzeImageDirectly")
                                     print("🔍 DIRECT MODE: Photo scan preview disabled - will log immediately")
                                     print("🔍 DIRECT MODE: Food will be created and logged in one step (shouldLog: true)")
                                     analyzeImageDirectly(image)
                                 }
                             } else if selectedMode == .nutritionLabel {
+                                print("🔍 CRASH_DEBUG: Nutrition label scan mode selected")
                                 print("Nutrition label scanned with captured image")
                                 analyzeNutritionLabel(image)
                             }
@@ -299,10 +320,16 @@ struct FoodScannerView: View {
             }
             .background(Color.black)
         .onAppear {
+            print("🔍 CRASH_DEBUG: FoodScannerView onAppear - START")
+            let memoryUsage = getMemoryUsage()
+            print("🔍 CRASH_DEBUG: Memory on appear - Used: \(String(format: "%.1f", memoryUsage.used))MB, Available: \(String(format: "%.1f", memoryUsage.available))MB")
+            
             // Initialize UserDefaults values safely on main thread
+            print("🔍 CRASH_DEBUG: Loading UserDefaults preferences")
             loadUserDefaultsPreferences()
             
             // Check camera permissions when the view appears
+            print("🔍 CRASH_DEBUG: Checking camera permissions")
             checkCameraPermissions()
             print("📱 FoodScannerView appeared - Mode: \(selectedMode)")
             print("🔍 hasShownScanFlow: \(hasShownScanFlow), hasSeenScanFlow: \(UserDefaults.standard.hasSeenScanFlow)")
@@ -317,6 +344,16 @@ struct FoodScannerView: View {
             } else {
                 print("🔍 Not showing scan flow - already shown or user has seen it")
             }
+            print("🔍 CRASH_DEBUG: FoodScannerView onAppear - END")
+        }
+        .onDisappear {
+            print("🔍 CRASH_DEBUG: FoodScannerView onDisappear - Scanner being dismissed")
+            let memoryUsage = getMemoryUsage()
+            print("🔍 CRASH_DEBUG: Memory on disappear - Used: \(String(format: "%.1f", memoryUsage.used))MB, Available: \(String(format: "%.1f", memoryUsage.available))MB")
+            
+            // CRITICAL FIX: Don't cancel any timers - let them complete naturally
+            print("🔍 CRASH_DEBUG: Scanner dismissed - timers will complete naturally with network operations")
+            // No timer cancellation needed - they'll stop when network completes
         }
     }
     

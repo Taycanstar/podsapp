@@ -14,6 +14,7 @@
 
 import Foundation
 
+@MainActor
 class StreakManager: ObservableObject {
     static let shared = StreakManager()
     
@@ -88,33 +89,32 @@ class StreakManager: ObservableObject {
     
     /// Update published properties and save to cache
     private func updateLocalStreakData(_ streakData: UserStreakData) {
-        DispatchQueue.main.async {
-            self.currentStreak = streakData.currentStreak
-            self.longestStreak = streakData.longestStreak
-            self.streakAsset = streakData.streakAsset
-            
-            // Update dates if available
-            if let lastActivityDateString = streakData.lastActivityDate {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd"
-                self.lastActivityDate = formatter.date(from: lastActivityDateString)
-            }
-            
-            if let streakStartDateString = streakData.streakStartDate {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd"
-                self.streakStartDate = formatter.date(from: streakStartDateString)
-            }
-            
-            // Save to cache for next app launch
-            self.saveStreakDataToCache(streakData)
-            
-            // Post notification for any views still using the old pattern
-            NotificationCenter.default.post(
-                name: NSNotification.Name("StreakUpdatedNotification"),
-                object: streakData
-            )
+        // Update published properties (already on main actor)
+        self.currentStreak = streakData.currentStreak
+        self.longestStreak = streakData.longestStreak
+        self.streakAsset = streakData.streakAsset
+        
+        // Update dates if available
+        if let lastActivityDateString = streakData.lastActivityDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            self.lastActivityDate = formatter.date(from: lastActivityDateString)
         }
+        
+        if let streakStartDateString = streakData.streakStartDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            self.streakStartDate = formatter.date(from: streakStartDateString)
+        }
+        
+        // Save to cache for next app launch
+        self.saveStreakDataToCache(streakData)
+        
+        // Post notification for any views still using the old pattern
+        NotificationCenter.default.post(
+            name: NSNotification.Name("StreakUpdatedNotification"),
+            object: streakData
+        )
     }
     
     /// Clear cached data when user logs out
@@ -128,7 +128,7 @@ class StreakManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "\(streakStartDateKey)_\(userEmail)")
         UserDefaults.standard.removeObject(forKey: "\(lastSyncDateKey)_\(userEmail)")
         
-        // Reset to defaults
+        // Reset to defaults (already on main actor)
         currentStreak = 0
         longestStreak = 0
         streakAsset = "streaks1"
@@ -155,13 +155,15 @@ class StreakManager: ObservableObject {
         
         // Call the backend to update the streak
         updateStreakOnServer(userEmail: userEmail, activityDate: activityDate) { result in
-            switch result {
-            case .success(let streakData):
-                print("✅ StreakManager: Successfully updated streak - Current: \(streakData.currentStreak), Longest: \(streakData.longestStreak)")
-                self.updateLocalStreakData(streakData)
-                
-            case .failure(let error):
-                print("❌ StreakManager: Failed to update streak - \(error.localizedDescription)")
+            Task { @MainActor in
+                switch result {
+                case .success(let streakData):
+                    print("✅ StreakManager: Successfully updated streak - Current: \(streakData.currentStreak), Longest: \(streakData.longestStreak)")
+                    self.updateLocalStreakData(streakData)
+                    
+                case .failure(let error):
+                    print("❌ StreakManager: Failed to update streak - \(error.localizedDescription)")
+                }
             }
         }
     }

@@ -17,6 +17,7 @@ import StoreKit
 
 /// Manages in-app review requests following Apple's guidelines
 /// Tracks milestones and ensures we don't over-prompt users
+@MainActor
 class ReviewManager: ObservableObject {
     static let shared = ReviewManager()
     
@@ -58,33 +59,38 @@ class ReviewManager: ObservableObject {
     
     /// Call this after a food is successfully logged
     func foodWasLogged() {
-        // Reload data to ensure we have the correct user's count
-        loadPersistedData()
-        
-        totalFoodsLogged += 1
-        saveTotalFoodsLogged()
-        
-        let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
-        print("🍽️ DEBUG: Food logged! User: \(userEmail), Total count: \(totalFoodsLogged)")
-        
-        // Set first food date if not already set (for analytics/debugging)
-        let isFirstFood = firstFoodDate == nil
-        if isFirstFood {
-            firstFoodDate = Date()
-            saveFirstFoodDate()
+        // CRITICAL FIX: Ensure @Published updates happen on main thread
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Reload data to ensure we have the correct user's count
+            self.loadPersistedData()
+            
+            self.totalFoodsLogged += 1
+            self.saveTotalFoodsLogged()
+            
+            let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
+            print("🍽️ DEBUG: Food logged! User: \(userEmail), Total count: \(self.totalFoodsLogged) [MAIN THREAD]")
+            
+            // Set first food date if not already set (for analytics/debugging)
+            let isFirstFood = self.firstFoodDate == nil
+            if isFirstFood {
+                self.firstFoodDate = Date()
+                self.saveFirstFoodDate()
+            }
+            
+            // Request notification permissions after 5 food logs (commitment moment)
+            if self.totalFoodsLogged == 5 {
+                print("🍽️ DEBUG: Reached 5 food logs! Attempting notification request...")
+                self.requestNotificationPermissionsAfter5Logs()
+            }
+            
+            // Check for bi-weekly notification reminder
+            self.checkForBiWeeklyNotificationReminder()
+            
+            // Simple check: Show review if user has never been shown one before
+            self.checkAndRequestReviewIfNeeded()
         }
-        
-        // Request notification permissions after 5 food logs (commitment moment)
-        if totalFoodsLogged == 5 {
-            print("🍽️ DEBUG: Reached 5 food logs! Attempting notification request...")
-            requestNotificationPermissionsAfter5Logs()
-        }
-        
-        // Check for bi-weekly notification reminder
-        checkForBiWeeklyNotificationReminder()
-        
-        // Simple check: Show review if user has never been shown one before
-        checkAndRequestReviewIfNeeded()
     }
     
     /// Request notification permissions after 5 food logs (commitment moment)

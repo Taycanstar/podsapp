@@ -14,6 +14,7 @@ enum UnitsSystem: String, CaseIterable {
     }
 }
 
+@MainActor
 class OnboardingViewModel: ObservableObject {
     // Original enum for core navigation states
     enum OnboardingStep {

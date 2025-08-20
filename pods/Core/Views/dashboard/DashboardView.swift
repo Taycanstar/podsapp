@@ -476,7 +476,9 @@ private var remainingCal: Double { vm.remainingCalories }
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LogsChangedNotification"))) { _ in
                 print("🔄 DashboardView received LogsChangedNotification - refreshing preloaded profile data")
-                refreshPreloadedProfileData()
+                DispatchQueue.main.async {
+                    refreshPreloadedProfileData()
+                }
             }
 
 

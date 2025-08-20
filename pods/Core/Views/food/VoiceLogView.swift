@@ -432,7 +432,9 @@ class AudioRecorder: NSObject, ObservableObject {
             if let foodManager = foodManager {
                 print("🎤 Passing audio data to FoodManager for processing with meal: \(selectedMeal)")
                 print("🍽️ AudioRecorder.selectedMeal value: \(selectedMeal)")
-                foodManager.processVoiceRecording(audioData: audioData, mealType: selectedMeal)
+                Task { @MainActor in
+                    foodManager.processVoiceRecording(audioData: audioData, mealType: selectedMeal)
+                }
             } else {
                 print("⚠️ No FoodManager available to process audio")
             }

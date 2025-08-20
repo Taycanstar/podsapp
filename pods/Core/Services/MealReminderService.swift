@@ -153,13 +153,18 @@ class MealReminderService: ObservableObject {
         // Get auto-tuned time or default
         let autoTime = calculateOptimalTime(for: meal) ?? defaultTime(for: meal)
         
-        switch meal {
-        case .breakfast:
-            breakfastTime = autoTime
-        case .lunch:
-            lunchTime = autoTime
-        case .dinner:
-            dinnerTime = autoTime
+        // CRITICAL FIX: Ensure @Published meal time updates happen on main thread
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            switch meal {
+            case .breakfast:
+                self.breakfastTime = autoTime
+            case .lunch:
+                self.lunchTime = autoTime
+            case .dinner:
+                self.dinnerTime = autoTime
+            }
         }
         
         print("🔄 Reset \(meal.displayName) to auto time: \(formatTime(autoTime))")
@@ -281,21 +286,26 @@ class MealReminderService: ObservableObject {
             
             // Calculate optimal time based on historical data
             if let optimalTime = calculateOptimalTime(for: meal) {
-                switch meal {
-                case .breakfast:
-                    if !isUserCustomTime(.breakfast) {
-                        breakfastTime = optimalTime
-                        print("🎯 Auto-tuned breakfast time to \(formatTime(optimalTime))")
-                    }
-                case .lunch:
-                    if !isUserCustomTime(.lunch) {
-                        lunchTime = optimalTime
-                        print("🎯 Auto-tuned lunch time to \(formatTime(optimalTime))")
-                    }
-                case .dinner:
-                    if !isUserCustomTime(.dinner) {
-                        dinnerTime = optimalTime
-                        print("🎯 Auto-tuned dinner time to \(formatTime(optimalTime))")
+                // CRITICAL FIX: Ensure @Published meal time updates happen on main thread
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    
+                    switch meal {
+                    case .breakfast:
+                        if !self.isUserCustomTime(.breakfast) {
+                            self.breakfastTime = optimalTime
+                            print("🎯 Auto-tuned breakfast time to \(self.formatTime(optimalTime)) [MAIN THREAD]")
+                        }
+                    case .lunch:
+                        if !self.isUserCustomTime(.lunch) {
+                            self.lunchTime = optimalTime
+                            print("🎯 Auto-tuned lunch time to \(self.formatTime(optimalTime)) [MAIN THREAD]")
+                        }
+                    case .dinner:
+                        if !self.isUserCustomTime(.dinner) {
+                            self.dinnerTime = optimalTime
+                            print("🎯 Auto-tuned dinner time to \(self.formatTime(optimalTime)) [MAIN THREAD]")
+                        }
                     }
                 }
             }
