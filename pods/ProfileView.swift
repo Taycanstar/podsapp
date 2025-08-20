@@ -171,7 +171,12 @@ struct ProfileView: View {
                         
                     }
                     .scrollContentBackground(.hidden)
-                    .padding(.bottom, 80) // Add padding to account for custom tab bar
+                    .safeAreaInset(edge: .bottom) {
+                        // Dynamic spacing that only appears when tab bar is visible
+                        if isTabBarVisible.wrappedValue {
+                            Color.clear.frame(height: 50)
+                        }
+                    }
         }
         .navigationBarTitle("Settings and privacy", displayMode: .inline)
         .sheet(isPresented: $showingMail) {
