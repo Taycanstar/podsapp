@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ExerciseHistory: View {
     let exercise: TodayWorkoutExercise
@@ -359,6 +360,9 @@ struct HistoryMetricCard: View {
 struct ExerciseHistoryCard: View {
     let workout: ExerciseHistoryItem
     let isToday: Bool
+    @State private var showingRIRSheet = false
+    @State private var rirValue: Double = 0 // Store RIR rating
+    @State private var hasRatedRIR = false // Track if RIR has been set
     
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
@@ -376,7 +380,35 @@ struct ExerciseHistoryCard: View {
                 
                 Spacer()
                 
-                if let trend = workout.trend {
+                // Rate Exertion button moved to the right side of header
+                if isToday {
+                    if hasRatedRIR {
+                        Text("\(Int(rirValue)) more rep\(Int(rirValue) == 1 ? "" : "s")")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.accentColor)
+                            .cornerRadius(12)
+                            .onTapGesture {
+                                showingRIRSheet = true
+                            }
+                    } else {
+                        Button(action: {
+                            showingRIRSheet = true
+                        }) {
+                            Text("Rate Exertion")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.primary)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(Color(.systemGray3), lineWidth: 1)
+                                )
+                        }
+                    }
+                } else if let trend = workout.trend {
                     Text(trend)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.white)
@@ -387,22 +419,6 @@ struct ExerciseHistoryCard: View {
                 }
             }
             
-            if isToday {
-                // Rate Exertion button for today's workout
-                Button(action: {
-                    // Handle rate exertion
-                }) {
-                    Text("Rate Exertion")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.primary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color(.systemGray3), lineWidth: 1)
-                        )
-                }
-            }
             
             // Working Sets
             VStack(alignment: .leading, spacing: 12) {
@@ -414,9 +430,9 @@ struct ExerciseHistoryCard: View {
                     HStack(spacing: 12) {
                         // Set number badge with hexagon shape
                         ZStack {
-                            Image(systemName: "hexagon.fill")
-                                .font(.system(size: 28))
-                                .foregroundColor(Color(.systemGray5))
+                            // Image(systemName: "hexagon.fill")
+                            //     .font(.system(size: 28))
+                            //     .foregroundColor(Color(.systemGray5))
                             
                             Text("\(index + 1)")
                                 .font(.system(size: 14, weight: .bold))
@@ -440,7 +456,7 @@ struct ExerciseHistoryCard: View {
                     .foregroundColor(.secondary)
                 
                 HStack {
-                    Image(systemName: "sparkles")
+                    Image(systemName: "figure.strengthtraining.traditional")
                         .font(.system(size: 16))
                         .foregroundColor(.secondary)
                     
@@ -455,6 +471,15 @@ struct ExerciseHistoryCard: View {
             }
         }
         .padding(.vertical, 4)
+        .sheet(isPresented: $showingRIRSheet) {
+            RIRRatingSheet(
+                rirValue: $rirValue,
+                hasRatedRIR: $hasRatedRIR,
+                isPresented: $showingRIRSheet
+            )
+            .presentationDetents([.fraction(0.4)])
+            .presentationDragIndicator(.hidden)
+        }
     }
 }
 
@@ -569,6 +594,64 @@ struct HistoryBarChart: View {
         }
     }
 }
+
+// MARK: - RIR Rating Sheet
+
+struct RIRRatingSheet: View {
+    @Binding var rirValue: Double
+    @Binding var hasRatedRIR: Bool
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                VStack(spacing: 16) {
+                    Text("Rate Your Workout")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    
+                    Text("How many more reps could you do?")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
+                // RIR Slider
+                RIRSlider(value: $rirValue)
+                    .frame(height: 80)
+                
+                Spacer()
+                
+                // Done button
+                Button(action: {
+                    hasRatedRIR = true
+                    isPresented = false
+                }) {
+                    Text("Done")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.accentColor)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal, 16)
+            }
+            .padding()
+            .navigationTitle("Rate Exertion")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Note: RIRSlider and RIRTriangleBar components are imported from ExerciseLoggingView.swift
 
 #Preview {
     NavigationView {

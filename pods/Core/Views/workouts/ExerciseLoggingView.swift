@@ -232,7 +232,7 @@ struct ExerciseLoggingView: View {
                 rirValue: rirValue
             )
             // .presentationDetents([.fraction(0.75)])
-            .presentationDragIndicator(.visible)
+            .presentationDragIndicator(.hidden)
         }
     }
     
