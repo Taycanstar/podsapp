@@ -30,7 +30,8 @@ struct ExerciseHistory: View {
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal, 16)
-            .padding(.top, 16)
+            .padding(.top, 8)
+            .padding(.bottom)
             
             // Content
             switch selectedTab {
@@ -179,19 +180,6 @@ struct ExerciseResultsView: View {
                     ExerciseHistoryCard(workout: workout, isToday: index == 0)
                 }
                 
-                // Show records button
-                Button(action: {
-                    // Handle show records action
-                }) {
-                    HStack {
-                        Text("Show records")
-                            .font(.system(size: 16, weight: .medium))
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundColor(.secondary)
-                }
-                .padding(.top, 8)
             }
             .padding(.horizontal, 16)
             .padding(.top, 20)
@@ -403,12 +391,14 @@ struct ExerciseHistoryCard: View {
                 // Rate Exertion button for all results
                 if hasRatedRIR {
                     Text("\(Int(rirValue)) more rep\(Int(rirValue) == 1 ? "" : "s")")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.accentColor)
-                        .cornerRadius(12)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color.accentColor)
+                        )
                         .onTapGesture {
                             showingRIRSheet = true
                         }
