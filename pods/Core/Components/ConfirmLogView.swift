@@ -1522,21 +1522,24 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                     servingsConsumed:nil
                 )
 
-                // 5. Optimistically insert into today's view
-                dayLogsVM.addPending(combined)
+                // Ensure all @Published property updates happen on main thread
+                DispatchQueue.main.async {
+                    // 5. Optimistically insert into today's view
+                    dayLogsVM.addPending(combined)
 
-                // 6. Also insert into the global timeline, de-duplicating first
-                if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combined.foodLogId }) {
-                    foodManager.combinedLogs.remove(at: idx)
-                }
-                foodManager.combinedLogs.insert(combined, at: 0)
+                    // 6. Also insert into the global timeline, de-duplicating first
+                    if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combined.foodLogId }) {
+                        foodManager.combinedLogs.remove(at: idx)
+                    }
+                    foodManager.combinedLogs.insert(combined, at: 0)
 
-                // 7. Show the success toast
-                foodManager.lastLoggedItem = (name: combined.food?.displayName ?? title,
-                                              calories: combined.displayCalories)
-                foodManager.showLogSuccess = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    foodManager.showLogSuccess = false
+                    // 7. Show the success toast
+                    foodManager.lastLoggedItem = (name: combined.food?.displayName ?? title,
+                                                  calories: combined.displayCalories)
+                    foodManager.showLogSuccess = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        foodManager.showLogSuccess = false
+                    }
                 }
 
                 // 8. Finally dismiss

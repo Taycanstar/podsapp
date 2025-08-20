@@ -320,15 +320,18 @@ struct QuickLogFood: View {
                         isOptimistic: true
                     )
                     
-                    // Add to DayLogsViewModel to update dashboard
-                    dayLogsVM.addPending(combinedLog)
-                    print("After addPending from QuickLogFood, logs contains food? \(dayLogsVM.logs.contains(where: { $0.id == combinedLog.id }))")
-                    
-                    // Update foodManager.combinedLogs
-                    if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
-                        foodManager.combinedLogs.remove(at: idx)
+                    // Ensure all @Published property updates happen on main thread
+                    DispatchQueue.main.async {
+                        // Add to DayLogsViewModel to update dashboard
+                        dayLogsVM.addPending(combinedLog)
+                        print("After addPending from QuickLogFood, logs contains food? \(dayLogsVM.logs.contains(where: { $0.id == combinedLog.id }))")
+                        
+                        // Update foodManager.combinedLogs
+                        if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                            foodManager.combinedLogs.remove(at: idx)
+                        }
+                        foodManager.combinedLogs.insert(combinedLog, at: 0)
                     }
-                    foodManager.combinedLogs.insert(combinedLog, at: 0)
                     
                 case .failure(let error):
                     errorMessage = error.localizedDescription

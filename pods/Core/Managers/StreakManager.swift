@@ -43,19 +43,22 @@ class StreakManager: ObservableObject {
     private func loadCachedStreakData() {
         let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
         
-        currentStreak = UserDefaults.standard.integer(forKey: "\(currentStreakKey)_\(userEmail)")
-        longestStreak = UserDefaults.standard.integer(forKey: "\(longestStreakKey)_\(userEmail)")
-        streakAsset = UserDefaults.standard.string(forKey: "\(streakAssetKey)_\(userEmail)") ?? "streaks1"
-        
-        if let lastActivityTimestamp = UserDefaults.standard.object(forKey: "\(lastActivityDateKey)_\(userEmail)") as? Date {
-            lastActivityDate = lastActivityTimestamp
+        // CRITICAL FIX: Ensure all @Published property updates happen on main thread
+        DispatchQueue.main.async {
+            self.currentStreak = UserDefaults.standard.integer(forKey: "\(self.currentStreakKey)_\(userEmail)")
+            self.longestStreak = UserDefaults.standard.integer(forKey: "\(self.longestStreakKey)_\(userEmail)")
+            self.streakAsset = UserDefaults.standard.string(forKey: "\(self.streakAssetKey)_\(userEmail)") ?? "streaks1"
+            
+            if let lastActivityTimestamp = UserDefaults.standard.object(forKey: "\(self.lastActivityDateKey)_\(userEmail)") as? Date {
+                self.lastActivityDate = lastActivityTimestamp
+            }
+            
+            if let streakStartTimestamp = UserDefaults.standard.object(forKey: "\(self.streakStartDateKey)_\(userEmail)") as? Date {
+                self.streakStartDate = streakStartTimestamp
+            }
+            
+            print("📱 StreakManager: Loaded cached streak data - Current: \(self.currentStreak), Longest: \(self.longestStreak), Asset: \(self.streakAsset)")
         }
-        
-        if let streakStartTimestamp = UserDefaults.standard.object(forKey: "\(streakStartDateKey)_\(userEmail)") as? Date {
-            streakStartDate = streakStartTimestamp
-        }
-        
-        print("📱 StreakManager: Loaded cached streak data - Current: \(currentStreak), Longest: \(longestStreak), Asset: \(streakAsset)")
     }
     
     /// Save streak data to UserDefaults for persistence
@@ -89,32 +92,35 @@ class StreakManager: ObservableObject {
     
     /// Update published properties and save to cache
     private func updateLocalStreakData(_ streakData: UserStreakData) {
-        // Update published properties (already on main actor)
-        self.currentStreak = streakData.currentStreak
-        self.longestStreak = streakData.longestStreak
-        self.streakAsset = streakData.streakAsset
-        
-        // Update dates if available
-        if let lastActivityDateString = streakData.lastActivityDate {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            self.lastActivityDate = formatter.date(from: lastActivityDateString)
+        // CRITICAL FIX: Ensure all @Published property updates happen on main thread
+        DispatchQueue.main.async {
+            // Update published properties
+            self.currentStreak = streakData.currentStreak
+            self.longestStreak = streakData.longestStreak
+            self.streakAsset = streakData.streakAsset
+            
+            // Update dates if available
+            if let lastActivityDateString = streakData.lastActivityDate {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                self.lastActivityDate = formatter.date(from: lastActivityDateString)
+            }
+            
+            if let streakStartDateString = streakData.streakStartDate {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                self.streakStartDate = formatter.date(from: streakStartDateString)
+            }
+            
+            // Save to cache for next app launch
+            self.saveStreakDataToCache(streakData)
+            
+            // Post notification for any views still using the old pattern
+            NotificationCenter.default.post(
+                name: NSNotification.Name("StreakUpdatedNotification"),
+                object: streakData
+            )
         }
-        
-        if let streakStartDateString = streakData.streakStartDate {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            self.streakStartDate = formatter.date(from: streakStartDateString)
-        }
-        
-        // Save to cache for next app launch
-        self.saveStreakDataToCache(streakData)
-        
-        // Post notification for any views still using the old pattern
-        NotificationCenter.default.post(
-            name: NSNotification.Name("StreakUpdatedNotification"),
-            object: streakData
-        )
     }
     
     /// Clear cached data when user logs out
@@ -128,14 +134,17 @@ class StreakManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "\(streakStartDateKey)_\(userEmail)")
         UserDefaults.standard.removeObject(forKey: "\(lastSyncDateKey)_\(userEmail)")
         
-        // Reset to defaults (already on main actor)
-        currentStreak = 0
-        longestStreak = 0
-        streakAsset = "streaks1"
-        lastActivityDate = nil
-        streakStartDate = nil
-        
-        print("🧹 StreakManager: Cleared cached streak data")
+        // CRITICAL FIX: Ensure all @Published property updates happen on main thread
+        DispatchQueue.main.async {
+            // Reset to defaults
+            self.currentStreak = 0
+            self.longestStreak = 0
+            self.streakAsset = "streaks1"
+            self.lastActivityDate = nil
+            self.streakStartDate = nil
+            
+            print("🧹 StreakManager: Cleared cached streak data")
+        }
     }
     
     /// Sync streak data from server (called by DataSyncService)

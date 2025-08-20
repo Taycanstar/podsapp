@@ -1851,15 +1851,15 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
         DispatchQueue.main.async {
             // Cycle through macro generation stages 0-3
             self.macroGenerationStage = (self.macroGenerationStage + 1) % 4
+            
+            // Update loading message based on current stage
+            self.macroLoadingMessage = [
+                "Analyzing food description...",
+                "Generating nutritional data...",
+                "Calculating macros...",
+                "Finalizing food creation..."
+            ][self.macroGenerationStage]
         }
-        
-        // Update loading message based on current stage
-        self.macroLoadingMessage = [
-            "Analyzing food description...",
-            "Generating nutritional data...",
-            "Calculating macros...",
-            "Finalizing food creation..."
-        ][self.macroGenerationStage]
     }
     
     // Call the network manager to generate macros

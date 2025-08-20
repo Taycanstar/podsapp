@@ -1467,7 +1467,7 @@ private extension DashboardView {
         print("🚀 DashboardView - Starting profile data preload for: \(email)")
         print("🕐 DashboardView.preloadHealthData - Using timezone offset: \(timezoneOffset) minutes")
         NetworkManagerTwo.shared.fetchProfileData(userEmail: email, timezoneOffset: timezoneOffset) { result in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 switch result {
                 case .success(let profileData):
                     // Store in onboarding for MyProfileView to use
@@ -1538,7 +1538,7 @@ private extension DashboardView {
         print("🔄 DashboardView - Refreshing profile data for: \(email)")
         print("🕐 DashboardView.refreshPreloadedProfileData - Using timezone offset: \(timezoneOffset) minutes")
         NetworkManagerTwo.shared.fetchProfileData(userEmail: email, timezoneOffset: timezoneOffset) { result in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 switch result {
                 case .success(let profileData):
                     // Update the preloaded profile data

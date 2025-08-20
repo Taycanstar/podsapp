@@ -163,7 +163,7 @@ struct EditProfilePhotoView: View {
             email: onboarding.email,
             imageData: imageData
         ) { result in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 isLoading = false
                 
                 switch result {

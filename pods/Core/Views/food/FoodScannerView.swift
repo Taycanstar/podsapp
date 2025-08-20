@@ -503,9 +503,9 @@ private func analyzeNutritionLabelDirectly(_ image: UIImage) {
         case .success(let combinedLog):
             // Always do instant optimistic insert for direct analysis (one-tap logging)
             print("🏷️ Nutrition label scan complete - one-tap logging")
-            dayLogsVM.addPending(combinedLog)
-
+            
             DispatchQueue.main.async {
+                dayLogsVM.addPending(combinedLog)
                 // 1) see if there's an existing entry with that foodLogId
                 if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
                     foodManager.combinedLogs.remove(at: idx)
@@ -611,9 +611,9 @@ private func analyzeImageDirectly(_ image: UIImage) {
     case .success(let combinedLog):
         // Always do instant optimistic insert for direct analysis (one-tap logging)
         print("📸 Image analysis complete - one-tap logging")
-        dayLogsVM.addPending(combinedLog)
-
+        
         DispatchQueue.main.async {
+            dayLogsVM.addPending(combinedLog)
             // 1) see if there's an existing entry with that foodLogId
             if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
                 foodManager.combinedLogs.remove(at: idx)

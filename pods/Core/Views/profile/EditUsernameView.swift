@@ -241,7 +241,7 @@ struct EditUsernameView: View {
         
         // Call API to update username
         NetworkManagerTwo.shared.updateUsername(email: onboarding.email, username: trimmedUsername) { result in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 isLoading = false
                 
                 switch result {

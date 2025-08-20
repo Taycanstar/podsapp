@@ -225,7 +225,7 @@ struct EditMyProfileView: View {
             email: onboarding.email,
             imageData: imageData
         ) { result in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 isUploadingPhoto = false
                 
                 switch result {
