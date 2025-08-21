@@ -65,76 +65,134 @@ struct ExerciseHistory: View {
 struct ExerciseTrendsView: View {
     let exercise: TodayWorkoutExercise
     
-    // Sample data - in real implementation, this would come from database
-    private let sampleWeightData = [(Date.now.addingTimeInterval(-86400 * 4), 45.0),
-                                   (Date.now.addingTimeInterval(-86400 * 3), 47.5),
-                                   (Date.now.addingTimeInterval(-86400 * 2), 45.0),
-                                   (Date.now.addingTimeInterval(-86400 * 1), 50.0),
-                                   (Date.now, 52.5)]
-    
-    private let sampleRepsData = [(Date.now.addingTimeInterval(-86400 * 4), 12.0),
-                                 (Date.now.addingTimeInterval(-86400 * 3), 15.0),
-                                 (Date.now.addingTimeInterval(-86400 * 2), 13.0),
-                                 (Date.now.addingTimeInterval(-86400 * 1), 15.0),
-                                 (Date.now, 17.0)]
-    
-    private let sampleVolumeData = [(Date.now.addingTimeInterval(-86400 * 4), 1350.0),
-                                   (Date.now.addingTimeInterval(-86400 * 3), 1425.0),
-                                   (Date.now.addingTimeInterval(-86400 * 2), 1170.0),
-                                   (Date.now.addingTimeInterval(-86400 * 1), 1500.0),
-                                   (Date.now, 1785.0)]
-    
-    private let sampleOneRepMaxData = [(Date.now.addingTimeInterval(-86400 * 4), 71.6),
-                                      (Date.now.addingTimeInterval(-86400 * 3), 76.2),
-                                      (Date.now.addingTimeInterval(-86400 * 2), 72.8),
-                                      (Date.now.addingTimeInterval(-86400 * 1), 80.5),
-                                      (Date.now, 85.3)]
+    @StateObject private var dataService = ExerciseHistoryDataService.shared
+    @State private var metrics: ExerciseMetrics?
+    @State private var repsData: [(Date, Double)] = []
+    @State private var weightData: [(Date, Double)] = []
+    @State private var volumeData: [(Date, Double)] = []
+    @State private var oneRepMaxData: [(Date, Double)] = []
+    @State private var isLoading = true
+    @State private var selectedPeriod: TimePeriod = .month
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 24) {
-                HistoryMetricCard(
-                    title: "Reps",
-                    currentValue: "15",
-                    loggedAgo: "Logged 47 seconds ago",
-                    data: sampleRepsData,
-                    chartType: .line,
-                    color: .red,
-                    exercise: exercise
-                )
-                
-                HistoryMetricCard(
-                    title: "Volume",
-                    currentValue: "2,025",
-                    loggedAgo: "Logged 47 seconds ago",
-                    data: sampleVolumeData,
-                    chartType: .bar,
-                    color: .red,
-                    exercise: exercise
-                )
-                
-                HistoryMetricCard(
-                    title: "Weight",
-                    currentValue: "52.5",
-                    loggedAgo: "Logged 47 seconds ago",
-                    data: sampleWeightData,
-                    chartType: .line,
-                    color: .blue,
-                    exercise: exercise
-                )
-                
-                HistoryMetricCard(
-                    title: "Est. 1 Rep Max",
-                    currentValue: "85.3",
-                    loggedAgo: "Logged 47 seconds ago",
-                    data: sampleOneRepMaxData,
-                    chartType: .line,
-                    color: .orange,
-                    exercise: exercise
-                )
+            if isLoading {
+                VStack {
+                    ProgressView("Loading exercise data...")
+                        .padding()
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                LazyVStack(spacing: 24) {
+                    HistoryMetricCard(
+                        title: "Reps",
+                        currentValue: formatCurrentValue(Double(metrics?.maxReps ?? 0), unit: ""),
+                        loggedAgo: getLastLoggedTime(),
+                        data: repsData,
+                        chartType: .line,
+                        color: .red,
+                        exercise: exercise
+                    )
+                    
+                    HistoryMetricCard(
+                        title: "Volume",
+                        currentValue: formatCurrentValue(metrics?.totalVolume, unit: " lb"),
+                        loggedAgo: getLastLoggedTime(),
+                        data: volumeData,
+                        chartType: .bar,
+                        color: .red,
+                        exercise: exercise
+                    )
+                    
+                    HistoryMetricCard(
+                        title: "Weight",
+                        currentValue: formatCurrentValue(metrics?.maxWeight, unit: " lb"),
+                        loggedAgo: getLastLoggedTime(),
+                        data: weightData,
+                        chartType: .line,
+                        color: .blue,
+                        exercise: exercise
+                    )
+                    
+                    HistoryMetricCard(
+                        title: "Est. 1 Rep Max",
+                        currentValue: formatCurrentValue(metrics?.estimatedOneRepMax, unit: " lb"),
+                        loggedAgo: getLastLoggedTime(),
+                        data: oneRepMaxData,
+                        chartType: .line,
+                        color: .orange,
+                        exercise: exercise
+                    )
+                }
+                .padding(.top, 20)
             }
-            .padding(.top, 20)
         }
+        .task {
+            await loadExerciseData()
+        }
+        .refreshable {
+            await loadExerciseData()
+        }
+    }
+    
+    // MARK: - Private Methods
+    
+    private func loadExerciseData() async {
+        print("🔄 ExerciseTrendsView: Starting to load data for exercise \(exercise.exercise.id)")
+        isLoading = true
+        
+        do {
+            // Load metrics and chart data concurrently
+            async let metricsTask = dataService.getExerciseMetrics(exerciseId: exercise.exercise.id, period: selectedPeriod)
+            async let repsTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .reps, period: selectedPeriod)
+            async let weightTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .weight, period: selectedPeriod)
+            async let volumeTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .volume, period: selectedPeriod)
+            async let oneRepMaxTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .estOneRepMax, period: selectedPeriod)
+            
+            metrics = try await metricsTask
+            repsData = try await repsTask
+            weightData = try await weightTask
+            volumeData = try await volumeTask
+            oneRepMaxData = try await oneRepMaxTask
+            
+            print("✅ ExerciseTrendsView: Data loaded successfully")
+            print("   - Metrics: maxReps=\(metrics?.maxReps ?? 0), maxWeight=\(metrics?.maxWeight ?? 0)")
+            print("   - Chart data points: reps=\(repsData.count), weight=\(weightData.count)")
+            
+        } catch {
+            print("❌ ExerciseTrendsView: Error loading data - \(error)")
+            // Fallback to empty data
+            metrics = nil
+            repsData = []
+            weightData = []
+            volumeData = []
+            oneRepMaxData = []
+        }
+        
+        isLoading = false
+    }
+    
+    private func formatCurrentValue(_ value: Double?, unit: String) -> String {
+        guard let value = value, value > 0 else { return "--" }
+        
+        if unit.contains("lb") {
+            return String(format: "%.1f", value)
+        } else {
+            return String(format: "%.0f", value)
+        }
+    }
+    
+    private func getLastLoggedTime() -> String {
+        // Get the most recent workout date
+        let allData = [repsData, weightData, volumeData, oneRepMaxData].flatMap { $0 }
+        guard let latestDate = allData.map({ $0.0 }).max() else {
+            return "No recent data"
+        }
+        
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return "Logged \(formatter.localizedString(for: latestDate, relativeTo: Date()))"
     }
 }
 
@@ -143,52 +201,105 @@ struct ExerciseTrendsView: View {
 struct ExerciseResultsView: View {
     let exercise: TodayWorkoutExercise
     
-    // Sample workout history data
-    private let sampleWorkouts = [
-        ExerciseHistoryItem(
-            date: Date.now,
-            sets: [
-                HistoryWorkoutSet(reps: 10, weight: 45),
-                HistoryWorkoutSet(reps: 10, weight: 45),
-                HistoryWorkoutSet(reps: 10, weight: 45)
-            ],
-            estimatedOneRepMax: 63.9,
-            trend: "+2 more reps"
-        ),
-        ExerciseHistoryItem(
-            date: Date.now.addingTimeInterval(-86400),
-            sets: [
-                HistoryWorkoutSet(reps: 15, weight: 45),
-                HistoryWorkoutSet(reps: 15, weight: 45),
-                HistoryWorkoutSet(reps: 15, weight: 45)
-            ],
-            estimatedOneRepMax: 71.6,
-            trend: nil
-        ),
-        ExerciseHistoryItem(
-            date: Date.now.addingTimeInterval(-86400 * 3),
-            sets: [
-                HistoryWorkoutSet(reps: 12, weight: 40),
-                HistoryWorkoutSet(reps: 12, weight: 40),
-                HistoryWorkoutSet(reps: 10, weight: 40)
-            ],
-            estimatedOneRepMax: 58.2,
-            trend: nil
-        )
-    ]
+    @StateObject private var dataService = ExerciseHistoryDataService.shared
+    @State private var workoutSessions: [WorkoutSessionSummary] = []
+    @State private var isLoading = true
+    @State private var selectedPeriod: TimePeriod = .month
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 24) {
-                ForEach(Array(sampleWorkouts.enumerated()), id: \.offset) { index, workout in
-                    ExerciseHistoryCard(workout: workout, isToday: index == 0)
+            if isLoading {
+                VStack {
+                    ProgressView("Loading workout history...")
+                        .padding()
+                    Spacer()
                 }
-                
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if workoutSessions.isEmpty {
+                VStack {
+                    Image(systemName: "figure.strengthtraining.traditional")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    Text("No workout history found")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("Start logging workouts to see your progress here")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+            } else {
+                LazyVStack(spacing: 24) {
+                    ForEach(Array(workoutSessions.enumerated()), id: \.offset) { index, session in
+                        ExerciseHistoryCard(
+                            workout: convertToHistoryItem(session, previousSession: index > 0 ? workoutSessions[index - 1] : nil),
+                            isToday: Calendar.current.isDateInToday(session.date)
+                        )
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+                .padding(.bottom, 40)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 20)
-            .padding(.bottom, 40)
         }
+        .task {
+            await loadWorkoutHistory()
+        }
+        .refreshable {
+            await loadWorkoutHistory()
+        }
+    }
+    
+    // MARK: - Private Methods
+    
+    private func loadWorkoutHistory() async {
+        isLoading = true
+        
+        do {
+            let historyData = try await dataService.getExerciseHistory(
+                exerciseId: exercise.exercise.id,
+                period: selectedPeriod
+            )
+            workoutSessions = historyData.workoutSessions.sorted { $0.date > $1.date } // Most recent first
+        } catch {
+            print("❌ ExerciseResultsView: Error loading history - \(error)")
+            workoutSessions = []
+        }
+        
+        isLoading = false
+    }
+    
+    private func convertToHistoryItem(_ session: WorkoutSessionSummary, previousSession: WorkoutSessionSummary?) -> ExerciseHistoryItem {
+        let sets = session.sets.map { set in
+            HistoryWorkoutSet(reps: set.reps, weight: set.weight ?? 0.0)
+        }
+        
+        // Calculate trend compared to previous session
+        let trend: String?
+        if let previousSession = previousSession {
+            let currentMaxReps = session.maxReps
+            let previousMaxReps = previousSession.maxReps
+            
+            if currentMaxReps > previousMaxReps {
+                let diff = currentMaxReps - previousMaxReps
+                trend = "+\(diff) more rep\(diff == 1 ? "" : "s")"
+            } else if currentMaxReps < previousMaxReps {
+                let diff = previousMaxReps - currentMaxReps
+                trend = "-\(diff) rep\(diff == 1 ? "" : "s")"
+            } else {
+                trend = nil
+            }
+        } else {
+            trend = nil
+        }
+        
+        return ExerciseHistoryItem(
+            date: session.date,
+            sets: sets,
+            estimatedOneRepMax: session.estimatedOneRepMax,
+            trend: trend
+        )
     }
 }
 
@@ -614,25 +725,85 @@ struct HistoryBarChart: View {
 struct ExerciseRecordsView: View {
     let exercise: TodayWorkoutExercise
     
-    // Sample record data - in real implementation, this would come from database
-    private let records = [
-        RecordItem(label: "Weight", value: "85 lb", date: Date.now.addingTimeInterval(-86400 * 10)),
-        RecordItem(label: "Volume", value: "3,150 lb", date: Date.now.addingTimeInterval(-86400 * 5)),
-        RecordItem(label: "Est. 1 Rep Max", value: "95.5 lb", date: Date.now.addingTimeInterval(-86400 * 3)),
-        RecordItem(label: "Rep", value: "20 reps", date: Date.now.addingTimeInterval(-86400 * 15))
-    ]
+    @StateObject private var dataService = ExerciseHistoryDataService.shared
+    @State private var personalRecords: PersonalRecords?
+    @State private var isLoading = true
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 16) {
-                ForEach(records, id: \.label) { record in
-                    RecordRow(record: record)
+            if isLoading {
+                VStack {
+                    ProgressView("Loading personal records...")
+                        .padding()
+                    Spacer()
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let records = personalRecords {
+                LazyVStack(spacing: 16) {
+                    RecordRow(record: RecordItem(
+                        label: "Weight",
+                        value: String(format: "%.1f lb", records.maxWeight.value),
+                        date: records.maxWeight.date
+                    ))
+                    
+                    RecordRow(record: RecordItem(
+                        label: "Volume",
+                        value: String(format: "%.0f lb", records.maxVolume.value),
+                        date: records.maxVolume.date
+                    ))
+                    
+                    RecordRow(record: RecordItem(
+                        label: "Est. 1 Rep Max",
+                        value: String(format: "%.1f lb", records.maxEstimatedOneRepMax.value),
+                        date: records.maxEstimatedOneRepMax.date
+                    ))
+                    
+                    RecordRow(record: RecordItem(
+                        label: "Reps",
+                        value: "\(records.maxReps.value) reps",
+                        date: records.maxReps.date
+                    ))
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+                .padding(.bottom, 40)
+            } else {
+                VStack {
+                    Image(systemName: "trophy")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    Text("No records found")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("Complete more workouts to set personal records")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 20)
-            .padding(.bottom, 40)
         }
+        .task {
+            await loadPersonalRecords()
+        }
+        .refreshable {
+            await loadPersonalRecords()
+        }
+    }
+    
+    // MARK: - Private Methods
+    
+    private func loadPersonalRecords() async {
+        isLoading = true
+        
+        do {
+            personalRecords = try await dataService.getPersonalRecords(exerciseId: exercise.exercise.id)
+        } catch {
+            print("❌ ExerciseRecordsView: Error loading records - \(error)")
+            personalRecords = nil
+        }
+        
+        isLoading = false
     }
 }
 

@@ -56,6 +56,11 @@ class WorkoutHistoryService {
         // Clear workout session duration since workout is completed
         LogWorkoutView.clearWorkoutSessionDuration()
         
+        // Invalidate exercise history cache for real-time updates
+        Task {
+            await ExerciseHistoryDataService.shared.invalidateCache(for: workout.exercise.id)
+        }
+        
         // Log completion
         print("✅ Workout completed: \(completedExercise.exerciseName)")
     }
@@ -100,6 +105,13 @@ class WorkoutHistoryService {
         
         // Clear workout session duration since workout is completed
         LogWorkoutView.clearWorkoutSessionDuration()
+        
+        // Invalidate exercise history cache for all exercises in the workout
+        Task {
+            for exercise in completedExercises {
+                await ExerciseHistoryDataService.shared.invalidateCache(for: exercise.exerciseId)
+            }
+        }
         
         // Log completion
         print("✅ Full workout completed with \(completedExercises.count) exercises")

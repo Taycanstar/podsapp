@@ -38,46 +38,41 @@ struct ExerciseChart: View {
     @State private var selectedPeriod: TimePeriod = .month
     @State private var showingPersonalRecord = false
     @State private var showingYourAverage = false
-    @State private var cachedChartData: [TimePeriod: [(Date, Double)]] = [:]
+    @State private var chartData: [(Date, Double)] = []
+    @State private var metrics: ExerciseMetrics?
+    @State private var isLoading = true
     @Environment(\.dismiss) private var dismiss
+    
+    @StateObject private var dataService = ExerciseHistoryDataService.shared
     
     // Theme colors for record and average lines
     private var recordLineColor: Color { .yellow }
     private var averageLineColor: Color { .green }
     
-    // Sample data - in real implementation, this would come from database
-    private var chartData: [(Date, Double)] {
-        if let cached = cachedChartData[selectedPeriod] {
-            return cached
-        }
-        
-        let data: [(Date, Double)]
-        switch selectedPeriod {
-        case .week:
-            data = generateWeekData()
-        case .month:
-            data = generateMonthData()
-        case .sixMonths:
-            data = generateSixMonthData()
-        case .year:
-            data = generateYearData()
-        }
-        
-        // Cache the data so it doesn't regenerate on every render
-        DispatchQueue.main.async {
-            cachedChartData[selectedPeriod] = data
-        }
-        
-        return data
-    }
-    
     private var personalRecord: Double {
-        chartData.map { $0.1 }.max() ?? 0
+        switch metric {
+        case .reps:
+            return Double(metrics?.maxReps ?? 0)
+        case .weight:
+            return metrics?.maxWeight ?? 0
+        case .volume:
+            return metrics?.totalVolume ?? 0
+        case .estOneRepMax:
+            return metrics?.estimatedOneRepMax ?? 0
+        }
     }
     
     private var averageValue: Double {
-        let values = chartData.map { $0.1 }
-        return values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)
+        switch metric {
+        case .reps:
+            return metrics?.averageReps ?? 0
+        case .weight:
+            return metrics?.averageWeight ?? 0
+        case .volume:
+            return metrics?.averageVolume ?? 0
+        case .estOneRepMax:
+            return metrics?.estimatedOneRepMax ?? 0
+        }
     }
     
     // Computed properties for new header design
@@ -90,7 +85,7 @@ struct ExerciseChart: View {
     }
     
     private var totalPeriodVolume: Double {
-        chartData.map { $0.1 }.reduce(0, +)
+        metrics?.totalVolume ?? 0
     }
     
     private var periodName: String {
@@ -193,104 +188,22 @@ struct ExerciseChart: View {
                 // Reset overlay states when period changes
                 showingPersonalRecord = false
                 showingYourAverage = false
-            }
-            
-            // Header with title, value, and date range
-            VStack(alignment: .leading, spacing: 12) {
-                // Title (Reps, Weight, Volume, etc.)
-                Text(metricTitle)
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                
-                // Value and label
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(headlinePrimary)
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
-                    
-                    if !chartData.isEmpty && chartData.map({ $0.1 }).max() != nil {
-                        Text(valueLabel)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                // Date range
-                if !dateRangeString.isEmpty {
-                    Text(dateRangeString)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                // Load new data for the selected period
+                Task {
+                    await loadChartData()
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 32)
             
-            // Chart with axis
-            chartSection
-                .padding(.horizontal, 16)
-                .padding(.bottom, 32)
-            
-            // Record and Average buttons
-            VStack(spacing: 12) {
-                // Personal Record button
-                Button(action: {
-                    showingPersonalRecord.toggle()
-                }) {
-                    HStack {
-                        HStack(spacing: 8) {
-                            Image(systemName: "trophy")
-                                .font(.system(size: 16))
-                            Text("Personal Record")
-                                .font(.system(size: 16, weight: .medium))
-                        }
-                        .foregroundColor(showingPersonalRecord ? .white : .primary)
-                        
-                        Spacer()
-                        
-                        Text(formatValue(personalRecord))
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(showingPersonalRecord ? .white : .primary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(showingPersonalRecord ? recordLineColor : Color(.systemGray6))
-                    )
+            if isLoading {
+                VStack {
+                    ProgressView("Loading exercise data...")
+                        .padding()
+                    Spacer()
                 }
-                
-                // Your Average button
-                Button(action: {
-                    showingYourAverage.toggle()
-                }) {
-                    HStack {
-                        HStack(spacing: 8) {
-                            Image(systemName: "chart.line.uptrend.xyaxis")
-                                .font(.system(size: 16))
-                            Text("Your Average")
-                                .font(.system(size: 16, weight: .medium))
-                        }
-                        .foregroundColor(showingYourAverage ? .white : .primary)
-                        
-                        Spacer()
-                        
-                        Text(formatValue(averageValue))
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(showingYourAverage ? .white : .primary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(showingYourAverage ? averageLineColor : Color(.systemGray6))
-                    )
-                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                chartContent
             }
-            .padding(.horizontal, 16)
-            
-            Spacer()
         }
         .navigationTitle(exercise.exercise.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -306,6 +219,138 @@ struct ExerciseChart: View {
                 }
             }
         }
+        .task {
+            await loadChartData()
+        }
+    }
+    
+    private var chartContent: some View {
+        VStack(spacing: 0) {
+            
+        // Header with title, value, and date range
+        VStack(alignment: .leading, spacing: 12) {
+            // Title (Reps, Weight, Volume, etc.)
+            Text(metricTitle)
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+            
+            // Value and label
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(headlinePrimary)
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                
+                if !chartData.isEmpty && chartData.map({ $0.1 }).max() != nil {
+                    Text(valueLabel)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            // Date range
+            if !dateRangeString.isEmpty {
+                Text(dateRangeString)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 32)
+        
+        // Chart with axis
+        chartSection
+            .padding(.horizontal, 16)
+            .padding(.bottom, 32)
+        
+        // Record and Average buttons
+        VStack(spacing: 12) {
+            // Personal Record button
+            Button(action: {
+                showingPersonalRecord.toggle()
+            }) {
+                HStack {
+                    HStack(spacing: 8) {
+                        Image(systemName: "trophy")
+                            .font(.system(size: 16))
+                        Text("Personal Record")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                    .foregroundColor(showingPersonalRecord ? .white : .primary)
+                    
+                    Spacer()
+                    
+                    Text(formatValue(personalRecord))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(showingPersonalRecord ? .white : .primary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(showingPersonalRecord ? recordLineColor : Color(.systemGray6))
+                )
+            }
+            
+            // Your Average button
+            Button(action: {
+                showingYourAverage.toggle()
+            }) {
+                HStack {
+                    HStack(spacing: 8) {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .font(.system(size: 16))
+                        Text("Your Average")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                    .foregroundColor(showingYourAverage ? .white : .primary)
+                    
+                    Spacer()
+                    
+                    Text(formatValue(averageValue))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(showingYourAverage ? .white : .primary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(showingYourAverage ? averageLineColor : Color(.systemGray6))
+                )
+            }
+        }
+        .padding(.horizontal, 16)
+        
+        Spacer()
+        }
+    }
+    
+    // MARK: - Data Loading
+    
+    private func loadChartData() async {
+        print("🔄 ExerciseChart: Loading data for exercise \(exercise.exercise.id), metric: \(metric.rawValue)")
+        isLoading = true
+        
+        do {
+            // Load metrics and chart data concurrently
+            async let metricsTask = dataService.getExerciseMetrics(exerciseId: exercise.exercise.id, period: selectedPeriod)
+            async let chartDataTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: metric, period: selectedPeriod)
+            
+            metrics = try await metricsTask
+            chartData = try await chartDataTask
+            
+            print("✅ ExerciseChart: Data loaded - \(chartData.count) data points")
+            print("   - Headlines: \(headlinePrimary)")
+            
+        } catch {
+            print("❌ ExerciseChart: Error loading data - \(error)")
+            // Fallback to empty data
+            metrics = nil
+            chartData = []
+        }
+        
+        isLoading = false
     }
     
     private var chartSection: some View {
@@ -488,57 +533,6 @@ struct ExerciseChart: View {
         }
     }
     
-    // MARK: - Data Generation Methods
-    
-    private func generateWeekData() -> [(Date, Double)] {
-        let baseValue = getBaseValue()
-        return (0..<7).map { dayOffset in
-            let date = Calendar.current.date(byAdding: .day, value: -dayOffset, to: Date()) ?? Date()
-            let variation = Double.random(in: -0.2...0.2)
-            let value = max(baseValue * (1 + variation), 0)
-            return (date, value)
-        }.reversed()
-    }
-    
-    private func generateMonthData() -> [(Date, Double)] {
-        let baseValue = getBaseValue()
-        let dataPoints = stride(from: 0, to: 30, by: 3).map { dayOffset in
-            let date = Calendar.current.date(byAdding: .day, value: -dayOffset, to: Date()) ?? Date()
-            let variation = Double.random(in: -0.3...0.3)
-            let value = max(baseValue * (1 + variation), 0)
-            return (date, value)
-        }
-        return dataPoints.reversed()
-    }
-    
-    private func generateSixMonthData() -> [(Date, Double)] {
-        let baseValue = getBaseValue()
-        return (0..<26).map { weekOffset in
-            let date = Calendar.current.date(byAdding: .weekOfYear, value: -weekOffset, to: Date()) ?? Date()
-            let variation = Double.random(in: -0.4...0.4)
-            let value = max(baseValue * (1 + variation), 0)
-            return (date, value)
-        }.reversed()
-    }
-    
-    private func generateYearData() -> [(Date, Double)] {
-        let baseValue = getBaseValue()
-        return (0..<12).map { monthOffset in
-            let date = Calendar.current.date(byAdding: .month, value: -monthOffset, to: Date()) ?? Date()
-            let variation = Double.random(in: -0.5...0.5)
-            let value = max(baseValue * (1 + variation), 0)
-            return (date, value)
-        }.reversed()
-    }
-    
-    private func getBaseValue() -> Double {
-        switch metric {
-        case .reps: return 15.0
-        case .weight: return 52.5
-        case .volume: return 2025.0
-        case .estOneRepMax: return 85.3
-        }
-    }
 }
 
 // MARK: - Custom Chart View for iOS 15 and below
