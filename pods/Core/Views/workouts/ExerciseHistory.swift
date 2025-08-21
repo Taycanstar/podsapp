@@ -99,7 +99,8 @@ struct ExerciseTrendsView: View {
                     loggedAgo: "Logged 47 seconds ago",
                     data: sampleRepsData,
                     chartType: .line,
-                    color: .red
+                    color: .red,
+                    exercise: exercise
                 )
                 
                 HistoryMetricCard(
@@ -108,7 +109,8 @@ struct ExerciseTrendsView: View {
                     loggedAgo: "Logged 47 seconds ago",
                     data: sampleVolumeData,
                     chartType: .bar,
-                    color: .red
+                    color: .red,
+                    exercise: exercise
                 )
                 
                 HistoryMetricCard(
@@ -117,7 +119,8 @@ struct ExerciseTrendsView: View {
                     loggedAgo: "Logged 47 seconds ago",
                     data: sampleWeightData,
                     chartType: .line,
-                    color: .blue
+                    color: .blue,
+                    exercise: exercise
                 )
                 
                 HistoryMetricCard(
@@ -126,7 +129,8 @@ struct ExerciseTrendsView: View {
                     loggedAgo: "Logged 47 seconds ago",
                     data: sampleOneRepMaxData,
                     chartType: .line,
-                    color: .orange
+                    color: .orange,
+                    exercise: exercise
                 )
             }
             .padding(.top, 20)
@@ -211,25 +215,37 @@ struct HistoryMetricCard: View {
     let data: [(Date, Double)]
     let chartType: ChartType
     let color: Color
+    let exercise: TodayWorkoutExercise
     
     enum ChartType {
         case line, bar
     }
     
+    private var chartMetric: ChartMetric {
+        switch title {
+        case "Reps": return .reps
+        case "Weight": return .weight
+        case "Volume": return .volume
+        case "Est. 1 Rep Max": return .estOneRepMax
+        default: return .weight
+        }
+    }
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // Header with title and chevron
-            HStack {
-                Text(title)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
+        NavigationLink(destination: ExerciseChart(exercise: exercise, metric: chartMetric)) {
+            VStack(alignment: .leading, spacing: 20) {
+                // Header with title and chevron
+                HStack {
+                    Text(title)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
             
             // Chart Card with integrated labels
             VStack(alignment: .leading, spacing: 0) {
@@ -332,6 +348,7 @@ struct HistoryMetricCard: View {
             }
             .background(Color(.systemGray6))
             .cornerRadius(12)
+            }
         }
         .padding(.horizontal, 16)
     }
