@@ -118,27 +118,53 @@ struct ExerciseChart: View {
         }
     }
     
-    private var headlineCaption: String {
-        guard !chartData.isEmpty && chartData.map({ $0.1 }).max() != nil else {
-            return "No data for \(periodName)"
+    private var metricTitle: String {
+        switch metric {
+        case .reps: return "Reps"
+        case .weight: return "Weight"
+        case .volume: return "Volume"
+        case .estOneRepMax: return "Est. 1 Rep Max"
         }
-        
-        let rangeText: String
-        if minPeriodValue == maxPeriodValue {
-            rangeText = "Range: \(formatValue(minPeriodValue))"
-        } else {
-            rangeText = "Range: \(formatValue(minPeriodValue))–\(formatValue(maxPeriodValue))"
-        }
-        
+    }
+    
+    private var valueLabel: String {
         switch metric {
         case .reps:
-            return "Max reps • 1 set • \(rangeText) • \(periodName)"
+            return "Max reps in 1 set"
         case .weight:
-            return "Heaviest set • 1 set • \(periodName)"
+            return "Heaviest set"
         case .volume:
-            return "Total volume • \(periodName)"
+            return "Total volume"
         case .estOneRepMax:
-            return "Estimated 1RM (peak) • \(rangeText) • \(periodName)"
+            return "Est. 1 rep max"
+        }
+    }
+    
+    private var dateRangeString: String {
+        guard let firstDate = chartData.first?.0,
+              let lastDate = chartData.last?.0 else {
+            return ""
+        }
+        
+        let formatter = DateFormatter()
+        
+        switch selectedPeriod {
+        case .week:
+            formatter.dateFormat = "MMM d"
+            return "\(formatter.string(from: firstDate))-\(formatter.string(from: lastDate))"
+        case .month:
+            formatter.dateFormat = "MMM d"
+            return "\(formatter.string(from: firstDate))-\(formatter.string(from: lastDate))"
+        case .sixMonths:
+            formatter.dateFormat = "MMM"
+            let startMonth = formatter.string(from: firstDate)
+            let endMonth = formatter.string(from: lastDate)
+            return "\(startMonth)-\(endMonth)"
+        case .year:
+            formatter.dateFormat = "MMM yyyy"
+            let startMonth = formatter.string(from: firstDate)
+            let endMonth = formatter.string(from: lastDate)
+            return "\(startMonth)-\(endMonth)"
         }
     }
     
@@ -169,17 +195,36 @@ struct ExerciseChart: View {
                 showingYourAverage = false
             }
             
-            // Current value display with new Apple-like clarity
-            VStack(spacing: 4) {
-                Text(headlinePrimary)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
+            // Header with title, value, and date range
+            VStack(alignment: .leading, spacing: 12) {
+                // Title (Reps, Weight, Volume, etc.)
+                Text(metricTitle)
+                    .font(.title)
+                    .fontWeight(.bold)
                     .foregroundColor(.primary)
-                    .accessibilityLabel("\(headlinePrimary) \(headlineCaption)")
                 
-                Text(headlineCaption)
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
+                // Value and label
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(headlinePrimary)
+                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                    
+                    if !chartData.isEmpty && chartData.map({ $0.1 }).max() != nil {
+                        Text(valueLabel)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                // Date range
+                if !dateRangeString.isEmpty {
+                    Text(dateRangeString)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
             .padding(.bottom, 32)
             
             // Chart with axis
