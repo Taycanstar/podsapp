@@ -38,20 +38,37 @@ struct ExerciseChart: View {
     @State private var selectedPeriod: TimePeriod = .month
     @State private var showingPersonalRecord = false
     @State private var showingYourAverage = false
+    @State private var cachedChartData: [TimePeriod: [(Date, Double)]] = [:]
     @Environment(\.dismiss) private var dismiss
+    
+    // Theme colors for record and average lines
+    private var recordLineColor: Color { .yellow }
+    private var averageLineColor: Color { .green }
     
     // Sample data - in real implementation, this would come from database
     private var chartData: [(Date, Double)] {
+        if let cached = cachedChartData[selectedPeriod] {
+            return cached
+        }
+        
+        let data: [(Date, Double)]
         switch selectedPeriod {
         case .week:
-            return generateWeekData()
+            data = generateWeekData()
         case .month:
-            return generateMonthData()
+            data = generateMonthData()
         case .sixMonths:
-            return generateSixMonthData()
+            data = generateSixMonthData()
         case .year:
-            return generateYearData()
+            data = generateYearData()
         }
+        
+        // Cache the data so it doesn't regenerate on every render
+        DispatchQueue.main.async {
+            cachedChartData[selectedPeriod] = data
+        }
+        
+        return data
     }
     
     private var personalRecord: Double {
@@ -61,6 +78,68 @@ struct ExerciseChart: View {
     private var averageValue: Double {
         let values = chartData.map { $0.1 }
         return values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)
+    }
+    
+    // Computed properties for new header design
+    private var minPeriodValue: Double {
+        chartData.map { $0.1 }.min() ?? 0
+    }
+    
+    private var maxPeriodValue: Double {
+        chartData.map { $0.1 }.max() ?? 0
+    }
+    
+    private var totalPeriodVolume: Double {
+        chartData.map { $0.1 }.reduce(0, +)
+    }
+    
+    private var periodName: String {
+        selectedPeriod.displayName
+    }
+    
+    private var headlinePrimary: String {
+        guard !chartData.isEmpty && chartData.map({ $0.1 }).max() != nil else {
+            return "—"
+        }
+        
+        switch metric {
+        case .reps:
+            // Max reps in a single set
+            return String(format: "%.0f", maxPeriodValue)
+        case .weight:
+            // Heaviest set weight
+            return formatValue(maxPeriodValue)
+        case .volume:
+            // Total volume
+            return formatValue(totalPeriodVolume)
+        case .estOneRepMax:
+            // Peak estimated 1RM
+            return formatValue(maxPeriodValue)
+        }
+    }
+    
+    private var headlineCaption: String {
+        guard !chartData.isEmpty && chartData.map({ $0.1 }).max() != nil else {
+            return "No data for \(periodName)"
+        }
+        
+        let rangeText: String
+        if minPeriodValue == maxPeriodValue {
+            rangeText = "Range: \(formatValue(minPeriodValue))"
+        } else {
+            rangeText = "Range: \(formatValue(minPeriodValue))–\(formatValue(maxPeriodValue))"
+        }
+        
+        switch metric {
+        case .reps:
+            return "Max reps • 1 set • \(rangeText) • \(periodName)"
+        case .weight:
+            return "Heaviest set • 1 set • \(periodName)"
+        case .volume:
+            return "Total volume • \(periodName)"
+        case .estOneRepMax:
+            return "Estimated 1RM (peak) • \(rangeText) • \(periodName)"
+        }
     }
     
     private var chartColor: Color {
@@ -90,14 +169,15 @@ struct ExerciseChart: View {
                 showingYourAverage = false
             }
             
-            // Current value display
+            // Current value display with new Apple-like clarity
             VStack(spacing: 4) {
-                Text(currentValueString)
+                Text(headlinePrimary)
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
+                    .accessibilityLabel("\(headlinePrimary) \(headlineCaption)")
                 
-                Text(unitString)
-                    .font(.system(size: 16, weight: .medium))
+                Text(headlineCaption)
+                    .font(.footnote)
                     .foregroundColor(.secondary)
             }
             .padding(.bottom, 32)
@@ -112,9 +192,6 @@ struct ExerciseChart: View {
                 // Personal Record button
                 Button(action: {
                     showingPersonalRecord.toggle()
-                    if showingPersonalRecord {
-                        showingYourAverage = false
-                    }
                 }) {
                     HStack {
                         HStack(spacing: 8) {
@@ -135,16 +212,13 @@ struct ExerciseChart: View {
                     .padding(.vertical, 14)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(showingPersonalRecord ? Color.primary : Color(.systemGray6))
+                            .fill(showingPersonalRecord ? recordLineColor : Color(.systemGray6))
                     )
                 }
                 
                 // Your Average button
                 Button(action: {
                     showingYourAverage.toggle()
-                    if showingYourAverage {
-                        showingPersonalRecord = false
-                    }
                 }) {
                     HStack {
                         HStack(spacing: 8) {
@@ -165,7 +239,7 @@ struct ExerciseChart: View {
                     .padding(.vertical, 14)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(showingYourAverage ? Color.primary : Color(.systemGray6))
+                            .fill(showingYourAverage ? averageLineColor : Color(.systemGray6))
                     )
                 }
             }
@@ -193,72 +267,76 @@ struct ExerciseChart: View {
         VStack(spacing: 0) {
             if #available(iOS 16.0, *) {
                 // Use native Charts framework for iOS 16+
-                Chart(chartData, id: \.0) { item in
-                    if metric == .volume {
-                        BarMark(
-                            x: .value("Date", item.0),
-                            y: .value("Value", item.1)
-                        )
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [chartColor, chartColor.opacity(0.7)],
-                                startPoint: .top,
-                                endPoint: .bottom
+                Chart {
+                    ForEach(chartData, id: \.0) { item in
+                        if metric == .volume {
+                            BarMark(
+                                x: .value("Date", item.0),
+                                y: .value("Value", item.1)
                             )
-                        )
-                        .cornerRadius(4)
-                    } else {
-                        LineMark(
-                            x: .value("Date", item.0),
-                            y: .value("Value", item.1)
-                        )
-                        .foregroundStyle(chartColor)
-                        .lineStyle(StrokeStyle(lineWidth: 3))
-                        
-                        AreaMark(
-                            x: .value("Date", item.0),
-                            y: .value("Value", item.1)
-                        )
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [chartColor.opacity(0.2), chartColor.opacity(0.0)],
-                                startPoint: .top,
-                                endPoint: .bottom
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [chartColor, chartColor.opacity(0.7)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
                             )
-                        )
-                        
-                        PointMark(
-                            x: .value("Date", item.0),
-                            y: .value("Value", item.1)
-                        )
-                        .foregroundStyle(Color(.systemBackground))
-                        .symbolSize(50)
-                        
-                        PointMark(
-                            x: .value("Date", item.0),
-                            y: .value("Value", item.1)
-                        )
-                        .foregroundStyle(.clear)
-                        .symbolSize(50)
-                        .annotation(position: .overlay) {
-                            Circle()
-                                .stroke(chartColor, lineWidth: 2)
-                                .frame(width: 8, height: 8)
-                                .background(Circle().fill(Color(.systemBackground)))
+                            .cornerRadius(4)
+                        } else {
+                            LineMark(
+                                x: .value("Date", item.0),
+                                y: .value("Value", item.1)
+                            )
+                            .foregroundStyle(chartColor)
+                            .lineStyle(StrokeStyle(lineWidth: 3))
+                            
+                            AreaMark(
+                                x: .value("Date", item.0),
+                                y: .value("Value", item.1)
+                            )
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [chartColor.opacity(0.2), chartColor.opacity(0.0)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            
+                            PointMark(
+                                x: .value("Date", item.0),
+                                y: .value("Value", item.1)
+                            )
+                            .foregroundStyle(Color(.systemBackground))
+                            .symbolSize(50)
+                            
+                            PointMark(
+                                x: .value("Date", item.0),
+                                y: .value("Value", item.1)
+                            )
+                            .foregroundStyle(.clear)
+                            .symbolSize(50)
+                            .annotation(position: .overlay) {
+                                Circle()
+                                    .stroke(chartColor, lineWidth: 2)
+                                    .frame(width: 8, height: 8)
+                                    .background(Circle().fill(Color(.systemBackground)))
+                            }
                         }
                     }
                     
-                    // Add horizontal lines for record/average
+                    // Add horizontal lines for record/average - moved outside the data loop
                     if showingPersonalRecord {
                         RuleMark(y: .value("Personal Record", personalRecord))
-                            .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
-                            .foregroundStyle(Color.primary)
+                            .lineStyle(StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                            .foregroundStyle(recordLineColor)
+                            .accessibilityLabel("Personal record line")
                     }
                     
                     if showingYourAverage {
                         RuleMark(y: .value("Average", averageValue))
-                            .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
-                            .foregroundStyle(Color.primary)
+                            .lineStyle(StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                            .foregroundStyle(averageLineColor)
+                            .accessibilityLabel("Average line")
                     }
                 }
                 .frame(height: 200)
@@ -297,7 +375,9 @@ struct ExerciseChart: View {
                     showingPersonalRecord: showingPersonalRecord,
                     showingYourAverage: showingYourAverage,
                     personalRecord: personalRecord,
-                    averageValue: averageValue
+                    averageValue: averageValue,
+                    recordLineColor: recordLineColor,
+                    averageLineColor: averageLineColor
                 )
                 .frame(height: 200)
             }
@@ -426,6 +506,8 @@ struct CustomChartView: View {
     let showingYourAverage: Bool
     let personalRecord: Double
     let averageValue: Double
+    let recordLineColor: Color
+    let averageLineColor: Color
     
     var body: some View {
         GeometryReader { geometry in
@@ -548,7 +630,7 @@ struct CustomChartView: View {
                         path.move(to: CGPoint(x: 0, y: y))
                         path.addLine(to: CGPoint(x: width, y: y))
                     }
-                    .stroke(Color.primary, style: StrokeStyle(lineWidth: 2, dash: [5, 5]))
+                    .stroke(recordLineColor, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
                 }
                 
                 if showingYourAverage {
@@ -557,7 +639,7 @@ struct CustomChartView: View {
                         path.move(to: CGPoint(x: 0, y: y))
                         path.addLine(to: CGPoint(x: width, y: y))
                     }
-                    .stroke(Color.primary, style: StrokeStyle(lineWidth: 2, dash: [5, 5]))
+                    .stroke(averageLineColor, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
                 }
             }
         }
