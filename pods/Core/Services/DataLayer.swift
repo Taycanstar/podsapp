@@ -253,6 +253,22 @@ class DataLayer: ObservableObject {
         print("✅ DataLayer: Data set successfully for key: \(key)")
     }
     
+    /// Remove data from all layers
+    func removeData(key: String) async {
+        print("🗑️ DataLayer: Removing data for key: \(key)")
+        
+        // Layer 1: Remove from memory cache
+        memoryCache.removeValue(forKey: key)
+        cacheTimestamps.removeValue(forKey: key)
+        print("   └── Memory cache cleared")
+        
+        // Layer 3: Remove from UserDefaults
+        userDefaults.removeObject(forKey: "\(key)_\(userEmail ?? "unknown")")
+        print("   └── UserDefaults cleared")
+        
+        print("✅ DataLayer: Data removed successfully for key: \(key)")
+    }
+    
     // MARK: - Cache Management
     
     /// Clear expired cache entries

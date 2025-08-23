@@ -54,9 +54,9 @@ class ExerciseNotesService: ObservableObject {
         // Save to DataLayer in JSON format
         let dataKey = "exercise_notes_\(exerciseId)"
         if notes.isEmpty {
-            // Skip DataLayer for empty notes - just clear UserDefaults and let sync handle server deletion
-            // DataLayer doesn't have a proper removeData method, so we avoid JSON serialization issues
-            print("📝 Skipping DataLayer for empty notes - cleared from UserDefaults")
+            // Remove from DataLayer completely when notes are empty
+            await DataLayer.shared.removeData(key: dataKey)
+            print("📝 Cleared notes from DataLayer for exercise \(exerciseId)")
         } else {
             // Create JSON structure for DataLayer
             let notesData: [String: Any] = [
@@ -79,9 +79,10 @@ class ExerciseNotesService: ObservableObject {
         // Remove from UserDefaults
         UserDefaults.standard.removeObject(forKey: key)
         
-        // Skip DataLayer removal since it doesn't have a proper removeData method
-        // UserDefaults clearing above is sufficient for local storage
-        print("📝 Skipped DataLayer removal for exercise \(exerciseId) - UserDefaults cleared")
+        // Remove from DataLayer completely
+        let dataKey = "exercise_notes_\(exerciseId)"
+        await DataLayer.shared.removeData(key: dataKey)
+        print("📝 Cleared notes from both UserDefaults and DataLayer for exercise \(exerciseId)")
     }
     
     /// Check if notes exist for an exercise (quick check)

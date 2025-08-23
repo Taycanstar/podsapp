@@ -77,13 +77,13 @@ struct QuickNotesCaptureView: View {
                     // Remove disabled state to allow saving empty notes
                 }
             }
-            // Add keyboard toolbar with Clear button
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Button("Clear") {
                         clearNotes()
                     }
-                    .foregroundColor(.accentColor)
+                    .font(.system(size: 17, weight: .regular))
+                    .foregroundColor(tempNotes.isEmpty ? Color(.systemGray3) : .accentColor)
                     .disabled(tempNotes.isEmpty)
                     
                     Spacer()
