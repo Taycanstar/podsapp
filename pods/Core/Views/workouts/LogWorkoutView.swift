@@ -854,7 +854,7 @@ private struct TodayWorkoutView: View {
     @Binding var navigationPath: NavigationPath
     @ObservedObject var workoutManager: WorkoutManager
     let userEmail: String
-    let selectedDuration: WorkoutDuration
+    let selectedDuration: WorkoutDuration  // Keep as let since we'll handle changes differently
     @Binding var shouldRegenerate: Bool
     let customTargetMuscles: [String]? // Added this parameter
     let customEquipment: [Equipment]? // Added this parameter
@@ -987,6 +987,27 @@ private struct TodayWorkoutView: View {
                 generateTodayWorkout()
                 shouldRegenerate = false
             }
+        }
+        .onChange(of: selectedDuration) { _, newDuration in
+            // Regenerate workout when duration changes (ensures fresh data)
+            print("🔄 Duration changed to \(newDuration.minutes) minutes - regenerating workout")
+            generateTodayWorkout()
+        }
+        .onChange(of: customTargetMuscles) { _, newMuscles in
+            print("🎯 Custom muscles changed to: \(newMuscles?.description ?? "nil") - regenerating workout")
+            generateTodayWorkout()
+        }
+        .onChange(of: customEquipment) { _, newEquipment in
+            print("⚙️ Custom equipment changed to: \(newEquipment?.description ?? "nil") - regenerating workout") 
+            generateTodayWorkout()
+        }
+        .onChange(of: effectiveFitnessGoal) { _, newGoal in
+            print("🏋️ Fitness goal changed to: \(newGoal.displayName) - regenerating workout")
+            generateTodayWorkout()
+        }
+        .onChange(of: effectiveFitnessLevel) { _, newLevel in
+            print("📈 Fitness level changed to: \(newLevel.displayName) - regenerating workout")
+            generateTodayWorkout()
         }
     }
     
