@@ -18,6 +18,11 @@ import AVFoundation
 import UIKit
 import CryptoKit
 
+struct WarmupSetData: Codable, Hashable {
+    let reps: String
+    let weight: String
+}
+
 enum WeightUnit: String, CaseIterable {
     case kg = "kg"
     case lbs = "lbs"
@@ -35,6 +40,7 @@ struct ExerciseLoggingView: View {
     let initialCompletedSetsCount: Int? // Pass previously completed sets count
     let initialRIRValue: Double? // Pass previously set RIR value
     let onExerciseReplaced: ((ExerciseData) -> Void)? // Callback to notify when exercise is replaced
+    let onWarmupSetsChanged: (([WarmupSetData]) -> Void)? // Callback to notify when warm-up sets change
     @Environment(\.dismiss) private var dismiss
     @State private var sets: [SetData] = []
     @FocusState private var focusedField: FocusedField?
@@ -57,7 +63,7 @@ struct ExerciseLoggingView: View {
     @State private var currentExercise: TodayWorkoutExercise
     @State private var showingNotes = false
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil) {
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil, onWarmupSetsChanged: (([WarmupSetData]) -> Void)? = nil) {
         self.exercise = exercise
         self.allExercises = allExercises
         self.onSetLogged = onSetLogged
@@ -65,6 +71,7 @@ struct ExerciseLoggingView: View {
         self.initialCompletedSetsCount = initialCompletedSetsCount
         self.initialRIRValue = initialRIRValue
         self.onExerciseReplaced = onExerciseReplaced
+        self.onWarmupSetsChanged = onWarmupSetsChanged
         // If coming from WorkoutInProgressView, workout is already started
         self._workoutStarted = State(initialValue: isFromWorkoutInProgress)
         self._currentExercise = State(initialValue: exercise)
@@ -393,20 +400,22 @@ struct ExerciseLoggingView: View {
                         ZStack {
                             Circle()
                                 .fill(set.isCompleted ? Color.green : 
-                                      (workoutStarted && index == currentSetIndex) ? 
-                                      (set.isWarmupSet ? Color.orange.opacity(0.2) : Color.blue.opacity(0.2)) : Color.clear)
+                                      (workoutStarted && index == currentSetIndex && !set.isWarmupSet) ? 
+                                      Color.blue.opacity(0.2) : Color.clear)
                                 .frame(width: 24, height: 24)
                             
                             if set.isCompleted {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.white)
+                            } else if set.isWarmupSet {
+                                Image(systemName: "flame")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.primary)
                             } else {
                                 Text(setDisplayNumber(for: set, at: index))
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(workoutStarted && index == currentSetIndex ? 
-                                                   (set.isWarmupSet ? .orange : .blue) : 
-                                                   (set.isWarmupSet ? .orange : .primary))
+                                    .foregroundColor(workoutStarted && index == currentSetIndex ? .blue : .primary)
                             }
                         }
                         .frame(width: 24, alignment: .leading)
@@ -572,19 +581,30 @@ struct ExerciseLoggingView: View {
     }
     
     private func setDisplayNumber(for set: SetData, at index: Int) -> String {
-        if set.isWarmupSet {
-            let warmupIndex = warmupSets.firstIndex(where: { $0.id == set.id }) ?? 0
-            return "W\(warmupIndex + 1)"
-        } else {
-            let regularIndex = regularSets.firstIndex(where: { $0.id == set.id }) ?? 0
-            return "\(regularIndex + 1)"
-        }
+        // Only used for regular sets now, warm-up sets use flame icon
+        let regularIndex = regularSets.firstIndex(where: { $0.id == set.id }) ?? 0
+        return "\(regularIndex + 1)"
     }
     
     // MARK: - Methods
     
     private func setupInitialSets() {
-        sets = Array(1...currentExercise.sets).map { setIndex in
+        var allSets: [SetData] = []
+        
+        // First, add warm-up sets if they exist
+        if let warmupSets = currentExercise.warmupSets {
+            for warmupSet in warmupSets {
+                allSets.append(SetData(
+                    reps: warmupSet.reps,
+                    weight: warmupSet.weight,
+                    isCompleted: false,
+                    isWarmupSet: true
+                ))
+            }
+        }
+        
+        // Then add regular sets
+        let regularSets = Array(1...currentExercise.sets).map { setIndex in
             let isCompleted = initialCompletedSetsCount != nil && setIndex <= (initialCompletedSetsCount ?? 0)
             return SetData(
                 reps: "\(currentExercise.reps)",
@@ -592,6 +612,9 @@ struct ExerciseLoggingView: View {
                 isCompleted: isCompleted
             )
         }
+        
+        allSets.append(contentsOf: regularSets)
+        sets = allSets
         
         // Set currentSetIndex to the next incomplete set
         if let completedCount = initialCompletedSetsCount {
@@ -625,10 +648,35 @@ struct ExerciseLoggingView: View {
         let warmupCount = warmupSets.count
         sets.insert(newWarmupSet, at: warmupCount)
         
+        // Persist warm-up sets to the exercise data
+        saveWarmupSetsToExercise()
+        
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
+    }
+    
+    private func saveWarmupSetsToExercise() {
+        // Convert current warm-up sets to WarmupSetData for persistence
+        let warmupSetData = warmupSets.map { WarmupSetData(reps: $0.reps, weight: $0.weight) }
+        
+        // Create updated exercise with warm-up sets
+        let updatedExercise = TodayWorkoutExercise(
+            exercise: currentExercise.exercise,
+            sets: currentExercise.sets,
+            reps: currentExercise.reps,
+            weight: currentExercise.weight,
+            restTime: currentExercise.restTime,
+            notes: currentExercise.notes,
+            warmupSets: warmupSetData.isEmpty ? nil : warmupSetData
+        )
+        
+        // Update the current exercise reference
+        currentExercise = updatedExercise
+        
+        // Save to UserDefaults via callback if available
+        onWarmupSetsChanged?(warmupSetData)
     }
     
     private func deleteSet(at indexSet: IndexSet) {
@@ -649,6 +697,9 @@ struct ExerciseLoggingView: View {
         if let firstIndex = indexSet.first, currentSetIndex >= firstIndex {
             currentSetIndex = max(0, currentSetIndex - indexSet.count)
         }
+        
+        // Persist changes if warm-up sets were affected
+        saveWarmupSetsToExercise()
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -1346,7 +1397,7 @@ struct ExerciseOptionsSheet: View {
                                             .tag(minute)
                                     }
                                 }
-                                .pickerStyle(.wheel)
+                                .pickerStyle(.wheel) 
                                 .frame(width: 80)
                                 .clipped()
                                 
@@ -2181,6 +2232,8 @@ struct ExerciseReplacementRow: View {
     )
     
     NavigationView {
-        ExerciseLoggingView(exercise: sampleTodayWorkoutExercise, allExercises: nil)
+        ExerciseLoggingView(
+            exercise: sampleTodayWorkoutExercise
+        )
     }
 }

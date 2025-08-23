@@ -40,9 +40,17 @@ struct WorkoutContainerView: View {
                         ExerciseLoggingView(
                             exercise: exercise, 
                             allExercises: allExercises,
+                            onSetLogged: nil, // No set logging needed from this context
+                            isFromWorkoutInProgress: false,
+                            initialCompletedSetsCount: nil,
+                            initialRIRValue: nil,
                             onExerciseReplaced: { newExercise in
                                 // Call the stored callback to update the parent list
                                 exerciseReplacementCallback?(index, newExercise)
+                            },
+                            onWarmupSetsChanged: { warmupSets in
+                                // TODO: Handle warm-up sets persistence in parent context
+                                // This will need to update the specific exercise in the workout data
                             }
                         )
                     }

@@ -148,7 +148,12 @@ struct WorkoutInProgressView: View {
                                 return exerciseRIRValues[exerciseIndex]
                             }
                             return nil
-                        }()
+                        }(),
+                        onExerciseReplaced: nil, // No exercise replacement needed in workout progress
+                        onWarmupSetsChanged: { warmupSets in
+                            // TODO: Handle warm-up sets persistence during workout
+                            // This should update the exercise in the workout data structure
+                        }
                     )
                 default:
                     EmptyView()

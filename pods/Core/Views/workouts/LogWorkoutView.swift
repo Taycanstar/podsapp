@@ -1639,7 +1639,9 @@ private struct TodayWorkoutExerciseList: View {
             sets: oldExercise.sets,
             reps: oldExercise.reps,
             weight: oldExercise.weight,
-            restTime: oldExercise.restTime
+            restTime: oldExercise.restTime,
+            notes: oldExercise.notes, // Preserve existing notes
+            warmupSets: oldExercise.warmupSets // Preserve existing warm-up sets
         )
         
         exercises[index] = replacedExercise
@@ -1854,15 +1856,17 @@ struct TodayWorkoutExercise: Codable, Hashable {
     let weight: Double?
     let restTime: Int // in seconds
     let notes: String? // Exercise-specific notes
+    let warmupSets: [WarmupSetData]? // Warm-up sets data for persistence
     
     // Convenience initializer for backward compatibility
-    init(exercise: ExerciseData, sets: Int, reps: Int, weight: Double?, restTime: Int, notes: String? = nil) {
+    init(exercise: ExerciseData, sets: Int, reps: Int, weight: Double?, restTime: Int, notes: String? = nil, warmupSets: [WarmupSetData]? = nil) {
         self.exercise = exercise
         self.sets = sets
         self.reps = reps
         self.weight = weight
         self.restTime = restTime
         self.notes = notes
+        self.warmupSets = warmupSets
     }
 }
 
