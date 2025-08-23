@@ -55,7 +55,6 @@ struct ExerciseLoggingView: View {
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
     @State private var currentExercise: TodayWorkoutExercise
-    @State private var notesExpanded = false
     @State private var showingNotes = false
     
     init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil) {
@@ -347,27 +346,6 @@ struct ExerciseLoggingView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
                     
-                    // Progressive disclosure: Only show notes indicator when notes exist
-                    if !exerciseNotes.isEmpty {
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                notesExpanded.toggle()
-                            }
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "note.text")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                
-                                Text(notesExpanded ? "Hide notes" : "Tap for notes")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .accessibilityLabel("Exercise notes available")
-                        .accessibilityHint("Double tap to \(notesExpanded ? "hide" : "view") notes")
-                        .buttonStyle(PlainButtonStyle())
-                    }
                 }
                 
                 Spacer()
@@ -382,8 +360,8 @@ struct ExerciseLoggingView: View {
                 .accessibilityLabel("Exercise options")
             }
             
-            // Notes display when expanded
-            if notesExpanded && !exerciseNotes.isEmpty {
+            // Always display notes when they exist
+            if !exerciseNotes.isEmpty {
                 Text(exerciseNotes)
                     .font(.subheadline)
                     .foregroundColor(.primary)
@@ -391,10 +369,6 @@ struct ExerciseLoggingView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(.systemGray6))
                     .cornerRadius(8)
-                    .transition(.asymmetric(
-                        insertion: .push(from: .top).combined(with: .opacity),
-                        removal: .push(from: .bottom).combined(with: .opacity)
-                    ))
                     .onTapGesture {
                         showingNotes = true
                     }
