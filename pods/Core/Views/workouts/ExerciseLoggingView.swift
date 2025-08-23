@@ -213,6 +213,13 @@ struct ExerciseLoggingView: View {
                 videoPlayerID = UUID()
             }
         }
+        .onChange(of: currentExercise.exercise.id) { oldId, newId in
+            // When exercise is replaced, refresh the video player to load the new exercise video
+            if oldId != newId {
+                print("🎬 Exercise replaced (ID: \(oldId) → \(newId)), refreshing video player")
+                videoPlayerID = UUID()
+            }
+        }
         .fullScreenCover(isPresented: $showingFullscreenVideo) {
             if let videoURL = videoURL {
                 FullscreenVideoView(videoURL: videoURL, isPresented: $showingFullscreenVideo)
@@ -435,14 +442,14 @@ struct ExerciseLoggingView: View {
 
     private var videoURL: URL? {
         // Videos were encoded as ProRes 4444 and stored as .mov in Azure
-        let videoId = String(format: "%04d", exercise.exercise.id)
+        let videoId = String(format: "%04d", currentExercise.exercise.id)
         return URL(string:
             "https://humulistoragecentral.blob.core.windows.net/videos/hevc/filtered_vids_alpha_hevc/\(videoId).mov"
         )
     }
     
     private var thumbnailImageName: String {
-        return String(format: "%04d", exercise.exercise.id)
+        return String(format: "%04d", currentExercise.exercise.id)
     }
     
     // MARK: - Computed Properties
