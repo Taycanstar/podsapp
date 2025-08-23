@@ -3265,6 +3265,84 @@ class NetworkManagerTwo {
         
         task.resume()
     }
+    
+    // MARK: - Exercise Notes Management
+    
+    /// Create or update exercise notes for a user
+    /// - Parameters:
+    ///   - exerciseId: The ID of the exercise
+    ///   - notes: The notes text to save
+    ///   - userEmail: User's email address
+    ///   - completion: Result callback with success/failure
+    func createOrUpdateExerciseNotes(exerciseId: Int, notes: String, userEmail: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/create-or-update-exercise-notes/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let requestBody: [String: Any] = [
+            "user_email": userEmail,
+            "exercise_id": exerciseId,
+            "notes": notes
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        print("📝 Updating exercise notes for exercise \(exerciseId), user: \(userEmail)")
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("❌ Exercise notes update failed: \(error.localizedDescription)")
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    completion(.failure(NetworkError.invalidResponse))
+                    return
+                }
+                
+                guard let data = data else {
+                    completion(.failure(NetworkError.invalidResponse))
+                    return
+                }
+                
+                if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
+                    do {
+                        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                            print("✅ Exercise notes updated successfully")
+                            completion(.success(json))
+                        } else {
+                            completion(.failure(NetworkError.decodingError))
+                        }
+                    } catch {
+                        completion(.failure(error))
+                    }
+                } else {
+                    print("❌ Exercise notes update failed with status: \(httpResponse.statusCode)")
+                    // Try to parse error message from response
+                    if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let errorMessage = errorJson["error"] as? String {
+                        completion(.failure(NetworkError.serverError(message: errorMessage)))
+                    } else {
+                        completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
+                    }
+                }
+            }
+        }
+        
+        task.resume()
+    }
 
 }
 

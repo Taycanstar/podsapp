@@ -70,7 +70,7 @@ struct QuickNotesCaptureView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("Done") {
                         saveNotes()
                     }
                     .fontWeight(.semibold)

@@ -28,9 +28,10 @@ class ExerciseNotesService: ObservableObject {
             return cachedNotes
         }
         
-        // Try to load from DataLayer
+        // Try to load from DataLayer - expect JSON structure
         let dataKey = "exercise_notes_\(exerciseId)"
-        if let notesString = await DataLayer.shared.getData(key: dataKey) as? String {
+        if let notesData = await DataLayer.shared.getData(key: dataKey) as? [String: Any],
+           let notesString = notesData["notes"] as? String {
             // Cache in UserDefaults for faster access
             UserDefaults.standard.set(notesString, forKey: key)
             return notesString
@@ -50,14 +51,20 @@ class ExerciseNotesService: ObservableObject {
             UserDefaults.standard.set(notes, forKey: key)
         }
         
-        // Save to DataLayer
+        // Save to DataLayer in JSON format
         let dataKey = "exercise_notes_\(exerciseId)"
         if notes.isEmpty {
             // Remove from DataLayer if notes are empty
             await DataLayer.shared.setData(key: dataKey, value: NSNull())
         } else {
-            // Save notes string to DataLayer
-            await DataLayer.shared.setData(key: dataKey, value: notes)
+            // Create JSON structure for DataLayer
+            let notesData: [String: Any] = [
+                "exercise_id": exerciseId,
+                "notes": notes,
+                "updated_at": ISO8601DateFormatter().string(from: Date()),
+                "sync_version": 1
+            ]
+            await DataLayer.shared.setData(key: dataKey, value: notesData)
         }
         
         // Schedule debounced server sync
@@ -103,26 +110,44 @@ class ExerciseNotesService: ObservableObject {
     }
     
     private func performServerSync(exerciseId: Int, notes: String) async {
-        // This would sync with the Django backend
-        // For now, just log the action
         print("Syncing notes for exercise \(exerciseId) to server...")
         
-        // TODO: Implement actual API call when backend endpoint is ready
-        /*
-        do {
-            let endpoint = "/api/exercise-notes/"
-            let payload = [
-                "exercise_id": exerciseId,
-                "notes": notes,
-                "last_modified": ISO8601DateFormatter().string(from: Date())
-            ]
-            
-            // Use NetworkManager to make the API call
-            // await NetworkManager.shared.post(endpoint, body: payload)
-        } catch {
-            print("Server sync failed for exercise \(exerciseId): \(error)")
+        guard let userEmail = await getCurrentUserEmail() else {
+            print("No user email found for server sync")
+            return
         }
-        */
+        
+        // Use NetworkManagerTwo with proper completion handler
+        await withCheckedContinuation { continuation in
+            NetworkManagerTwo.shared.createOrUpdateExerciseNotes(
+                exerciseId: exerciseId,
+                notes: notes,
+                userEmail: userEmail
+            ) { result in
+                switch result {
+                case .success(let responseData):
+                    print("Server sync successful for exercise \(exerciseId)")
+                case .failure(let error):
+                    print("Server sync failed for exercise \(exerciseId): \(error)")
+                }
+                continuation.resume()
+            }
+        }
+    }
+    
+    private func getCurrentUserEmail() async -> String? {
+        // Get the current user's email from UserDefaults or DataLayer
+        if let email = UserDefaults.standard.string(forKey: "user_email") {
+            return email
+        }
+        
+        // Try to get from DataLayer as fallback
+        if let userData = await DataLayer.shared.getData(key: "current_user") as? [String: Any],
+           let email = userData["email"] as? String {
+            return email
+        }
+        
+        return nil
     }
 }
 
