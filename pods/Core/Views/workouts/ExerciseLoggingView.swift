@@ -47,7 +47,6 @@ struct ExerciseLoggingView: View {
     @FocusState private var focusedField: FocusedField?
     @State private var showingFullscreenVideo = false
     @State private var isVideoHidden = false
-    @State private var dragOffset: CGFloat = 0
     @State private var showKeyboardToolbar = false
     @State private var showingWorkoutInProgress = false
     @State private var workoutStarted: Bool
@@ -94,64 +93,38 @@ struct ExerciseLoggingView: View {
     
     var body: some View {
         ZStack {
-            VStack(spacing: 0) {
-                // Video Header
-                if !isVideoHidden {
-                    videoHeaderView
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .top).combined(with: .opacity),
-                            removal: .move(edge: .top).combined(with: .opacity)
-                        ))
-                }
-                
-                ScrollView {
-                    VStack(spacing: 16) {
-                        
-                        // Exercise name with ellipsis
-                        exerciseHeaderSection
-                        
-                        // Sets input section
-                        setsInputSection
-                        
-                        // RIR Section (shown after Log All Sets)
-                        if showRIRSection {
-                            rirSection
-                                .padding(.top, 20)
-                        }
-                        
-                        // Add bottom padding to ensure content isn't hidden behind floating button
-                        Color.clear
-                            .frame(height: 100)
+            ScrollView {
+                VStack(spacing: 16) {
+                    
+                    // Video Header - now scrolls with content
+                    if !isVideoHidden {
+                        videoHeaderView
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .top).combined(with: .opacity),
+                                removal: .move(edge: .top).combined(with: .opacity)
+                            ))
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, isVideoHidden ? 8 : 16)
-                    .gesture(
-                        DragGesture()
-                            .onChanged { value in
-                                // Track gesture for potential header hiding
-                                dragOffset = value.translation.height
-                            }
-                            .onEnded { value in
-                                let velocity = value.predictedEndLocation.y - value.location.y
-                                let translation = value.translation.height
-                                
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    // Hide if swiping up with sufficient velocity or distance
-                                    if (velocity < -200) || (translation < -30 && velocity < 0) {
-                                        isVideoHidden = true
-                                    }
-                                    // Show if swiping down with sufficient velocity or distance (when video is hidden)
-                                    else if ((velocity > 200) || (translation > 30 && velocity > 0)) && isVideoHidden {
-                                        isVideoHidden = false
-                                    }
-                                    
-                                    dragOffset = 0
-                                }
-                            }
-                    )
+                    
+                    // Exercise name with ellipsis
+                    exerciseHeaderSection
+                    
+                    // Sets input section
+                    setsInputSection
+                    
+                    // RIR Section (shown after Log All Sets)
+                    if showRIRSection {
+                        rirSection
+                            .padding(.top, 20)
+                    }
+                    
+                    // Add bottom padding to ensure content isn't hidden behind floating button
+                    Color.clear
+                        .frame(height: 100)
                 }
-                .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
             }
+            .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
             
             // Floating Workout Buttons
             VStack {
@@ -367,14 +340,45 @@ struct ExerciseLoggingView: View {
                 
                 Spacer()
                 
-                Button(action: {
-                    showingExerciseOptions = true
-                }) {
-                    Image(systemName: "ellipsis")
-                        .foregroundColor(.primary)
-                        .font(.title2)
+                HStack(spacing: 12) {
+                    // Airplay button (video visibility toggle)
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            isVideoHidden.toggle()
+                        }
+                        
+                        // Generate haptic feedback
+                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                        impactFeedback.prepare()
+                        impactFeedback.impactOccurred()
+                    }) {
+                        Image(systemName: "airplayvideo")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(isVideoHidden ? .accentColor : .white)
+                            .frame(width: 28, height: 28)
+                            .background(
+                                Circle()
+                                    .fill(isVideoHidden ? Color(.systemGray5) : Color.accentColor)
+                            )
+                    }
+                    .accessibilityLabel(isVideoHidden ? "Show video" : "Hide video")
+                    .accessibilityHint(isVideoHidden ? "Tap to show exercise video" : "Tap to hide exercise video")
+                    
+                    // Ellipsis button (exercise options)
+                    Button(action: {
+                        showingExerciseOptions = true
+                    }) {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.accentColor)
+                            .frame(width: 28, height: 28)
+                            .background(
+                                Circle()
+                                    .fill(Color(.systemGray5))
+                            )
+                    }
+                    .accessibilityLabel("Exercise options")
                 }
-                .accessibilityLabel("Exercise options")
             }
             
             // Always display notes when they exist
