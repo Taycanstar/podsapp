@@ -10,7 +10,7 @@ import UIKit
 
 struct WorkoutInProgressView: View {
     @Binding var isPresented: Bool
-    let exercises: [TodayWorkoutExercise]
+    @State private var exercises: [TodayWorkoutExercise]
     @State private var isPaused = false
     @State private var elapsedTime: TimeInterval = 0
     @State private var timer: Timer?
@@ -24,6 +24,11 @@ struct WorkoutInProgressView: View {
     // Track completed exercises with their logged sets count and RIR values
     @State private var exerciseCompletionStatus: [Int: Int] = [:] // exerciseIndex: loggedSetsCount
     @State private var exerciseRIRValues: [Int: Double] = [:] // exerciseIndex: rirValue
+    
+    init(isPresented: Binding<Bool>, exercises: [TodayWorkoutExercise]) {
+        self._isPresented = isPresented
+        self._exercises = State(initialValue: exercises)
+    }
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -153,6 +158,12 @@ struct WorkoutInProgressView: View {
                         onWarmupSetsChanged: { warmupSets in
                             // TODO: Handle warm-up sets persistence during workout
                             // This should update the exercise in the workout data structure
+                        },
+                        onExerciseUpdated: { updatedExercise in
+                            // Update the exercise in the workout data
+                            if let exerciseIndex = exercises.firstIndex(where: { $0.exercise.id == updatedExercise.exercise.id }) {
+                                exercises[exerciseIndex] = updatedExercise
+                            }
                         }
                     )
                 default:

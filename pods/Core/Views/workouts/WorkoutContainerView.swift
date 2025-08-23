@@ -11,6 +11,7 @@ struct WorkoutContainerView: View {
     @Binding var selectedTab: Int
     @State private var navigationPath = NavigationPath()
     @State private var exerciseReplacementCallback: ((Int, ExerciseData) -> Void)?
+    @State private var exerciseUpdateCallback: ((Int, TodayWorkoutExercise) -> Void)?
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -19,6 +20,9 @@ struct WorkoutContainerView: View {
                 navigationPath: $navigationPath,
                 onExerciseReplacementCallbackSet: { callback in
                     exerciseReplacementCallback = callback
+                },
+                onExerciseUpdateCallbackSet: { callback in
+                    exerciseUpdateCallback = callback
                 }
             )
                 .navigationDestination(for: WorkoutNavigationDestination.self) { destination in
@@ -51,6 +55,10 @@ struct WorkoutContainerView: View {
                             onWarmupSetsChanged: { warmupSets in
                                 // TODO: Handle warm-up sets persistence in parent context
                                 // This will need to update the specific exercise in the workout data
+                            },
+                            onExerciseUpdated: { updatedExercise in
+                                // Update the exercise with full data (including warm-up sets and set count)
+                                exerciseUpdateCallback?(index, updatedExercise)
                             }
                         )
                     }

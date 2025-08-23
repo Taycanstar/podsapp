@@ -41,6 +41,7 @@ struct ExerciseLoggingView: View {
     let initialRIRValue: Double? // Pass previously set RIR value
     let onExerciseReplaced: ((ExerciseData) -> Void)? // Callback to notify when exercise is replaced
     let onWarmupSetsChanged: (([WarmupSetData]) -> Void)? // Callback to notify when warm-up sets change
+    let onExerciseUpdated: ((TodayWorkoutExercise) -> Void)? // Callback to notify when exercise is updated (sets added/removed)
     @Environment(\.dismiss) private var dismiss
     @State private var sets: [SetData] = []
     @FocusState private var focusedField: FocusedField?
@@ -63,7 +64,7 @@ struct ExerciseLoggingView: View {
     @State private var currentExercise: TodayWorkoutExercise
     @State private var showingNotes = false
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil, onWarmupSetsChanged: (([WarmupSetData]) -> Void)? = nil) {
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil, onWarmupSetsChanged: (([WarmupSetData]) -> Void)? = nil, onExerciseUpdated: ((TodayWorkoutExercise) -> Void)? = nil) {
         self.exercise = exercise
         self.allExercises = allExercises
         self.onSetLogged = onSetLogged
@@ -72,6 +73,7 @@ struct ExerciseLoggingView: View {
         self.initialRIRValue = initialRIRValue
         self.onExerciseReplaced = onExerciseReplaced
         self.onWarmupSetsChanged = onWarmupSetsChanged
+        self.onExerciseUpdated = onExerciseUpdated
         // If coming from WorkoutInProgressView, workout is already started
         self._workoutStarted = State(initialValue: isFromWorkoutInProgress)
         self._currentExercise = State(initialValue: exercise)
@@ -410,7 +412,7 @@ struct ExerciseLoggingView: View {
                                     .foregroundColor(.white)
                             } else if set.isWarmupSet {
                                 Image(systemName: "flame.fill")
-                                    .font(.system(size: 12, weight: .bold))
+                                    .font(.system(size: 15, weight: .bold))
                                     .foregroundColor(.primary)
                             } else {
                                 Text(setDisplayNumber(for: set, at: index))
@@ -636,6 +638,9 @@ struct ExerciseLoggingView: View {
             weight: currentExercise.exercise.equipment.lowercased() == "body weight" ? "" : "150"
         )
         sets.append(newSet)
+        
+        // Persist the updated exercise with new set count
+        saveWarmupSetsToExercise()
     }
     
     private func addWarmupSet() {
@@ -661,10 +666,13 @@ struct ExerciseLoggingView: View {
         // Convert current warm-up sets to WarmupSetData for persistence
         let warmupSetData = warmupSets.map { WarmupSetData(reps: $0.reps, weight: $0.weight) }
         
-        // Create updated exercise with warm-up sets
+        // Count the actual number of regular sets (non-warmup)
+        let regularSetCount = regularSets.count
+        
+        // Create updated exercise with warm-up sets and updated regular set count
         let updatedExercise = TodayWorkoutExercise(
             exercise: currentExercise.exercise,
-            sets: currentExercise.sets,
+            sets: regularSetCount, // Update the set count to match actual regular sets
             reps: currentExercise.reps,
             weight: currentExercise.weight,
             restTime: currentExercise.restTime,
@@ -675,7 +683,10 @@ struct ExerciseLoggingView: View {
         // Update the current exercise reference
         currentExercise = updatedExercise
         
-        // Save to UserDefaults via callback if available
+        // Save to parent via callback if available
+        onExerciseUpdated?(updatedExercise)
+        
+        // Also call the legacy callback for compatibility
         onWarmupSetsChanged?(warmupSetData)
     }
     

@@ -33,6 +33,7 @@ struct LogWorkoutView: View {
     @Binding var selectedTab: Int
     @Binding var navigationPath: NavigationPath
     let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
+    let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
     @State private var searchText = ""
     @FocusState private var isSearchFieldFocused: Bool
     
@@ -788,6 +789,7 @@ struct LogWorkoutView: View {
                     effectiveFitnessGoal: effectiveFitnessGoal,
                     effectiveFitnessLevel: sessionFitnessLevel ?? selectedFitnessLevel,
                     onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
+                    onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
                     currentWorkout: $currentWorkout
                 )
             case .workouts:
@@ -859,6 +861,7 @@ private struct TodayWorkoutView: View {
     let effectiveFitnessGoal: FitnessGoal // Added this parameter
     let effectiveFitnessLevel: ExperienceLevel // Added this parameter
     let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
+    let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
     @Binding var currentWorkout: TodayWorkout?
     
     @State private var todayWorkout: TodayWorkout?
@@ -887,7 +890,8 @@ private struct TodayWorkoutView: View {
                                 TodayWorkoutExerciseList(
                                     workout: workout,
                                     navigationPath: $navigationPath,
-                                    onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet
+                                    onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
+                                    onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet
                                 )
                                 .padding(.horizontal)
                                 
@@ -1572,12 +1576,14 @@ private struct TodayWorkoutExerciseList: View {
     let workout: TodayWorkout
     @Binding var navigationPath: NavigationPath
     let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
+    let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
     @State private var exercises: [TodayWorkoutExercise]
     
-    init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>, onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void) {
+    init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>, onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void, onExerciseUpdateCallbackSet: @escaping (((Int, TodayWorkoutExercise) -> Void)?) -> Void) {
         self.workout = workout
         self._navigationPath = navigationPath
         self.onExerciseReplacementCallbackSet = onExerciseReplacementCallbackSet
+        self.onExerciseUpdateCallbackSet = onExerciseUpdateCallbackSet
         self._exercises = State(initialValue: workout.exercises)
     }
     
@@ -1611,6 +1617,10 @@ private struct TodayWorkoutExerciseList: View {
             onExerciseReplacementCallbackSet { index, newExercise in
                 replaceExercise(at: index, with: newExercise)
             }
+            // Also register the update callback for full exercise updates (with warm-up sets)
+            onExerciseUpdateCallbackSet { index, updatedExercise in
+                updateExercise(at: index, with: updatedExercise)
+            }
         }
         .onChange(of: workout.exercises) { _, newExercises in
             // Update local exercises when workout changes (e.g., from muscle selection change)
@@ -1627,6 +1637,30 @@ private struct TodayWorkoutExerciseList: View {
     
     private func deleteExercise(at offsets: IndexSet) {
         exercises.remove(atOffsets: offsets)
+    }
+    
+    private func updateExercise(at index: Int, with updatedExercise: TodayWorkoutExercise) {
+        guard index < exercises.count else { return }
+        
+        // Replace the exercise with the updated one (including warm-up sets and new set count)
+        exercises[index] = updatedExercise
+        
+        // Save to UserDefaults if needed
+        if let userEmail = UserDefaults.standard.string(forKey: "userEmail") {
+            let updatedWorkout = TodayWorkout(
+                id: workout.id,
+                date: workout.date,
+                title: workout.title,
+                exercises: exercises,
+                estimatedDuration: workout.estimatedDuration,
+                fitnessGoal: workout.fitnessGoal,
+                difficulty: workout.difficulty
+            )
+            
+            if let encoded = try? JSONEncoder().encode(updatedWorkout) {
+                UserDefaults.standard.set(encoded, forKey: "todayWorkout_\(userEmail)")
+            }
+        }
     }
     
     private func replaceExercise(at index: Int, with newExercise: ExerciseData) {
@@ -2425,7 +2459,8 @@ struct NavigationBarSeparatorModifier: ViewModifier {
         LogWorkoutView(
             selectedTab: .constant(0), 
             navigationPath: .constant(NavigationPath()),
-            onExerciseReplacementCallbackSet: { _ in }
+            onExerciseReplacementCallbackSet: { _ in },
+            onExerciseUpdateCallbackSet: { _ in }
         )
     }
 }
