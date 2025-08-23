@@ -74,7 +74,19 @@ struct QuickNotesCaptureView: View {
                         saveNotes()
                     }
                     .fontWeight(.semibold)
-                    .disabled(tempNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    // Remove disabled state to allow saving empty notes
+                }
+            }
+            // Add keyboard toolbar with Clear button
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Button("Clear") {
+                        clearNotes()
+                    }
+                    .foregroundColor(.accentColor)
+                    .disabled(tempNotes.isEmpty)
+                    
+                    Spacer()
                 }
             }
         }
@@ -98,11 +110,20 @@ struct QuickNotesCaptureView: View {
         }
     }
     
+    private func clearNotes() {
+        tempNotes = ""
+        
+        // Haptic feedback for clear action
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.prepare()
+        impactFeedback.impactOccurred()
+    }
+    
     private func saveNotes() {
-        // Update the binding
+        // Update the binding (allow empty strings to clear notes)
         notes = tempNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Save to service
+        // Save to service (empty string will clear the notes)
         Task {
             await ExerciseNotesService.shared.saveNotes(notes, for: exerciseId)
         }
