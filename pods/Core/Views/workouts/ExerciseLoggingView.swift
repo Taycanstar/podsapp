@@ -55,6 +55,8 @@ struct ExerciseLoggingView: View {
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
     @State private var currentExercise: TodayWorkoutExercise
+    @State private var notesExpanded = false
+    @State private var showingNotes = false
     
     init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil) {
         self.exercise = exercise
@@ -197,6 +199,10 @@ struct ExerciseLoggingView: View {
         }
         .onAppear {
             setupInitialSets()
+            // Load existing notes for this exercise
+            Task {
+                exerciseNotes = await ExerciseNotesService.shared.loadNotes(for: currentExercise.exercise.id)
+            }
         }
         .onChange(of: focusedField) { oldValue, newValue in
             if newValue != nil && oldValue != newValue {
@@ -241,10 +247,54 @@ struct ExerciseLoggingView: View {
                 recommendMoreOften: $recommendMoreOften,
                 recommendLessOften: $recommendLessOften,
                 rirValue: rirValue,
-                onExerciseReplaced: onExerciseReplaced
+                onExerciseReplaced: onExerciseReplaced,
+                onNotesRequested: {
+                    // Dismiss ExerciseOptionsSheet first, then present NotesSheet
+                    showingExerciseOptions = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        showingNotes = true
+                    }
+                }
             )
             // .presentationDetents([.fraction(0.75)])
             .presentationDragIndicator(.hidden)
+        }
+        .sheet(isPresented: $showingNotes) {
+            // Determine which sheet to show based on notes length
+            if exerciseNotes.count > 100 {
+                // Full sheet for extensive notes
+                ExerciseNotesSheet(
+                    notes: $exerciseNotes,
+                    exerciseId: currentExercise.exercise.id,
+                    exerciseName: currentExercise.exercise.name
+                )
+            } else {
+                // Quick capture modal for brief notes
+                QuickNotesCaptureView(
+                    notes: $exerciseNotes,
+                    exerciseId: currentExercise.exercise.id,
+                    exerciseName: currentExercise.exercise.name
+                )
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+            }
+        }
+        .onAppear {
+            // Load existing notes for the exercise
+            if let notes = currentExercise.notes {
+                exerciseNotes = notes
+            } else {
+                // Load from service if available
+                Task {
+                    exerciseNotes = await ExerciseNotesService.shared.loadNotes(for: currentExercise.exercise.id)
+                }
+            }
+        }
+        .onChange(of: exerciseNotes) { _, newValue in
+            // Save notes when changed
+            Task {
+                await ExerciseNotesService.shared.saveNotes(newValue, for: currentExercise.exercise.id)
+            }
         }
     }
     
@@ -290,20 +340,66 @@ struct ExerciseLoggingView: View {
     }
     
     private var exerciseHeaderSection: some View {
-        HStack {
-            Text(currentExercise.exercise.name)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
+        VStack(alignment: .leading, spacing: 8) {
+            // Primary header row
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(currentExercise.exercise.name)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    
+                    // Progressive disclosure: Only show notes indicator when notes exist
+                    if !exerciseNotes.isEmpty {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                notesExpanded.toggle()
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "note.text")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Text(notesExpanded ? "Hide notes" : "Tap for notes")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .accessibilityLabel("Exercise notes available")
+                        .accessibilityHint("Double tap to \(notesExpanded ? "hide" : "view") notes")
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                
+                Spacer()
+                
+                Button(action: {
+                    showingExerciseOptions = true
+                }) {
+                    Image(systemName: "ellipsis")
+                        .foregroundColor(.primary)
+                        .font(.title2)
+                }
+                .accessibilityLabel("Exercise options")
+            }
             
-            Spacer()
-            
-            Button(action: {
-                showingExerciseOptions = true
-            }) {
-                Image(systemName: "ellipsis")
+            // Notes display when expanded
+            if notesExpanded && !exerciseNotes.isEmpty {
+                Text(exerciseNotes)
+                    .font(.subheadline)
                     .foregroundColor(.primary)
-                    .font(.title2)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+                    .transition(.asymmetric(
+                        insertion: .push(from: .top).combined(with: .opacity),
+                        removal: .push(from: .bottom).combined(with: .opacity)
+                    ))
+                    .onTapGesture {
+                        showingNotes = true
+                    }
             }
         }
     }
@@ -1091,11 +1187,11 @@ struct ExerciseOptionsSheet: View {
     @Binding var recommendLessOften: Bool
     let rirValue: Double
     let onExerciseReplaced: ((ExerciseData) -> Void)?
+    let onNotesRequested: () -> Void
     
     @Environment(\.dismiss) private var dismiss
     @State private var showingReplaceExercise = false
     @State private var showingDeleteConfirmation = false
-    @State private var showingNotes = false
     @State private var restTimerEnabled = false
     @State private var workingSetsTime = 60 // Default 1 minute in seconds
     @State private var warmupSetsTime = 60 // Default 1 minute in seconds
@@ -1311,19 +1407,32 @@ struct ExerciseOptionsSheet: View {
                 .padding(.vertical, 16)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                 
-                // Notes
+                // Notes with visual indicator
                 Button(action: {
-                    showingNotes = true
+                    onNotesRequested()
                 }) {
                     HStack {
-                        Image(systemName: "note.text")
+                        Image(systemName: exerciseNotes.isEmpty ? "note.text" : "note.text.badge.plus")
                             .font(.system(size: 20))
                             .foregroundColor(.primary)
                             .frame(width: 28)
+                        
                         Text("Notes")
                             .font(.system(size: 16, weight: .regular))
                             .foregroundColor(.primary)
+                        
                         Spacer()
+                        
+                        // Subtle character count indicator instead of blue dot
+                        if !exerciseNotes.isEmpty {
+                            Text("\(exerciseNotes.count)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(Color(.systemGray5))
+                                .cornerRadius(4)
+                        }
                     }
                 }
                 .padding(.vertical, 16)
@@ -1490,10 +1599,6 @@ struct ExerciseOptionsSheet: View {
                 onExerciseReplaced: onExerciseReplaced
             )
         }
-        .sheet(isPresented: $showingNotes) {
-            // Notes sheet will be implemented when you provide specifications
-            Text("Notes Sheet - To be implemented")
-        }
     }
     
     // MARK: - Helper Functions
@@ -1621,7 +1726,7 @@ struct ReplaceExerciseSheet: View {
                             .stroke(Color(.systemGray4), lineWidth: 1)
                     )
                     .padding(.horizontal)
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 8)
                     
                     // Filter Controls
                     HStack {
@@ -1911,13 +2016,17 @@ struct ReplaceExerciseSheet: View {
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
         
-        // Update the current exercise
+        // Preserve existing notes when replacing exercise
+        let preservedNotes = currentExercise.notes
+        
+        // Update the current exercise with preserved notes
         currentExercise = TodayWorkoutExercise(
             exercise: newExercise,
             sets: currentExercise.sets,
             reps: currentExercise.reps,
             weight: currentExercise.weight,
-            restTime: currentExercise.restTime
+            restTime: currentExercise.restTime,
+            notes: preservedNotes
         )
         
         // Pass the new exercise back to parent view

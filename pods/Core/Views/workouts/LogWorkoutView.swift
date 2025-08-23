@@ -1853,6 +1853,17 @@ struct TodayWorkoutExercise: Codable, Hashable {
     let reps: Int
     let weight: Double?
     let restTime: Int // in seconds
+    let notes: String? // Exercise-specific notes
+    
+    // Convenience initializer for backward compatibility
+    init(exercise: ExerciseData, sets: Int, reps: Int, weight: Double?, restTime: Int, notes: String? = nil) {
+        self.exercise = exercise
+        self.sets = sets
+        self.reps = reps
+        self.weight = weight
+        self.restTime = restTime
+        self.notes = notes
+    }
 }
 
 // MARK: - Workout Parameters

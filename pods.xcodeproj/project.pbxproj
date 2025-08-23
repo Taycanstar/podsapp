@@ -168,6 +168,10 @@
 		36A8518F2E56708C004E5CED /* ExerciseChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A8518E2E567083004E5CED /* ExerciseChart.swift */; };
 		36A851912E57AECF004E5CED /* ExerciseHistoryDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851902E57AEBA004E5CED /* ExerciseHistoryDataService.swift */; };
 		36A851932E58B419004E5CED /* ReplaceExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851922E58B412004E5CED /* ReplaceExerciseView.swift */; };
+		36A851952E5A1060004E5CED /* QuickNotesCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851942E5A1052004E5CED /* QuickNotesCaptureView.swift */; };
+		36A851972E5A106F004E5CED /* ExerciseNotesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851962E5A1064004E5CED /* ExerciseNotesSheet.swift */; };
+		36A8519B2E5A109A004E5CED /* ExerciseNotesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A8519A2E5A108F004E5CED /* ExerciseNotesService.swift */; };
+		36A8519D2E5A10A6004E5CED /* ExerciseNotesData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A8519C2E5A10A0004E5CED /* ExerciseNotesData.swift */; };
 		36A85CD72DB182BA00DD4266 /* GenderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD62DB182BA00DD4266 /* GenderView.swift */; };
 		36A85CD92DB1CC4500DD4266 /* WorkoutDaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */; };
 		36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */; };
@@ -463,6 +467,10 @@
 		36A8518E2E567083004E5CED /* ExerciseChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseChart.swift; sourceTree = "<group>"; };
 		36A851902E57AEBA004E5CED /* ExerciseHistoryDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseHistoryDataService.swift; sourceTree = "<group>"; };
 		36A851922E58B412004E5CED /* ReplaceExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplaceExerciseView.swift; sourceTree = "<group>"; };
+		36A851942E5A1052004E5CED /* QuickNotesCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNotesCaptureView.swift; sourceTree = "<group>"; };
+		36A851962E5A1064004E5CED /* ExerciseNotesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseNotesSheet.swift; sourceTree = "<group>"; };
+		36A8519A2E5A108F004E5CED /* ExerciseNotesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseNotesService.swift; sourceTree = "<group>"; };
+		36A8519C2E5A10A0004E5CED /* ExerciseNotesData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseNotesData.swift; sourceTree = "<group>"; };
 		36A85CD62DB182BA00DD4266 /* GenderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenderView.swift; sourceTree = "<group>"; };
 		36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDaysView.swift; sourceTree = "<group>"; };
 		36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightWeightView.swift; sourceTree = "<group>"; };
@@ -626,6 +634,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				36A8519A2E5A108F004E5CED /* ExerciseNotesService.swift */,
 				36A851902E57AEBA004E5CED /* ExerciseHistoryDataService.swift */,
 				36A91DC32E419ACC00414543 /* MealReminderService.swift */,
 				361FF3402E288D9600B7F68E /* MuscleRecoveryService.swift */,
@@ -643,6 +652,7 @@
 		361FF31B2E20617800B7F68E /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				36A8519C2E5A10A0004E5CED /* ExerciseNotesData.swift */,
 				361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */,
 				361FF32C2E21988600B7F68E /* Equipment.swift */,
 				361FF3242E2065E400B7F68E /* Exercise.swift */,
@@ -743,6 +753,8 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				36A851962E5A1064004E5CED /* ExerciseNotesSheet.swift */,
+				36A851942E5A1052004E5CED /* QuickNotesCaptureView.swift */,
 				36A851922E58B412004E5CED /* ReplaceExerciseView.swift */,
 				36A8518E2E567083004E5CED /* ExerciseChart.swift */,
 				36A91DC72E53725F00414543 /* ExerciseHistory.swift */,
@@ -1525,6 +1537,7 @@
 				364A83C82DA7738B009D2620 /* CreateFoodView.swift in Sources */,
 				363068E62E1B3FC700F2D4EC /* EditProfilePhotoView.swift in Sources */,
 				361FF3272E20722500B7F68E /* UserProfileService.swift in Sources */,
+				36A8519D2E5A10A6004E5CED /* ExerciseNotesData.swift in Sources */,
 				36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */,
 				36E97C752BB3B5E7003CDAB9 /* PhotoEditorViewController.swift in Sources */,
 				363AF9FB2D2095AA00C91A14 /* SingularColumnActivityView.swift in Sources */,
@@ -1569,6 +1582,7 @@
 				364A83C52DA59627009D2620 /* AddFoodView.swift in Sources */,
 				36F722862DE52E2C009C1CA0 /* ScanFoodHelper.swift in Sources */,
 				36A85CF32DB44D7800DD4266 /* CaloriesBurnedView.swift in Sources */,
+				36A8519B2E5A109A004E5CED /* ExerciseNotesService.swift in Sources */,
 				361FF31D2E20618800B7F68E /* SetInstance.swift in Sources */,
 				362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */,
 				36ED35D62DDBD5ED00D174FB /* UpdateDesiredWeight.swift in Sources */,
@@ -1627,8 +1641,10 @@
 				36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */,
 				36ED35DF2DDE52B400D174FB /* GenerateLogView.swift in Sources */,
 				361FF33B2E234F5500B7F68E /* WeightSyncService.swift in Sources */,
+				36A851952E5A1060004E5CED /* QuickNotesCaptureView.swift in Sources */,
 				362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */,
 				363068E02E19E3F400F2D4EC /* EditMyProfileView.swift in Sources */,
+				36A851972E5A106F004E5CED /* ExerciseNotesSheet.swift in Sources */,
 				3662A54F2DFDE03700847487 /* LogWorkoutView.swift in Sources */,
 				36CB03442D72C1B9006A74E9 /* BottomPopup.swift in Sources */,
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,

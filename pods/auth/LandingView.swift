@@ -428,22 +428,22 @@ struct AuthenticationButtonStyle: ButtonStyle {
 }
 
 // Allows corner-specific rounding
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
-    }
-}
+// extension View {
+//     func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+//         clipShape(RoundedCorner(radius: radius, corners: corners))
+//     }
+// }
 
-// Add this struct to enable specific corner rounding
-struct RoundedCorner: Shape {
-    var radius: CGFloat
-    var corners: UIRectCorner
+// // Add this struct to enable specific corner rounding
+// struct RoundedCorner: Shape {
+//     var radius: CGFloat
+//     var corners: UIRectCorner
 
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
-        return Path(path.cgPath)
-    }
-}
+//     func path(in rect: CGRect) -> Path {
+//         let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
+//         return Path(path.cgPath)
+//     }
+// }
 
 struct LandingView_Previews: PreviewProvider {
     static var previews: some View {
