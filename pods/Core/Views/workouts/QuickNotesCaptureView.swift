@@ -27,100 +27,61 @@ struct QuickNotesCaptureView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Handle indicator
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.secondary.opacity(0.3))
-                .frame(width: 36, height: 4)
-                .padding(.top, 8)
-            
-            // Exercise context
-            Text(exerciseName)
-                .font(.headline)
-                .foregroundColor(.primary)
-                .padding(.top, 16)
-                .padding(.horizontal)
-            
-            // Text input with proper styling
-            VStack(alignment: .leading, spacing: 8) {
+        NavigationView {
+            VStack {
+                // Text input with proper height
                 ZStack(alignment: .topLeading) {
                     if tempNotes.isEmpty {
-                        Text("Add notes about form, modifications, or progress...")
+                        Text("Add your notes here...")
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
+                            .padding(.vertical, 12)
                             .allowsHitTesting(false)
                     }
                     
                     TextEditor(text: $tempNotes)
                         .focused($isFocused)
                         .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 8)
                         .scrollContentBackground(.hidden)
                         .background(Color(.systemGray6))
                         .cornerRadius(8)
-                        .frame(minHeight: 100, maxHeight: 200)
+                        .frame(minHeight: 40, maxHeight: 200) // Start single line, grow to max 9 lines
                         .onChange(of: tempNotes) { _, newValue in
-                            // Enforce character limit
+                            // Enforce character limit silently
                             if newValue.count > maxCharacters {
                                 tempNotes = String(newValue.prefix(maxCharacters))
                             }
-                            // Show warning when approaching limit
-                            showCharacterWarning = newValue.count >= warningThreshold
                         }
                 }
+                .padding(.horizontal)
+                .padding(.top, 20)
                 
-                // Character count and warning
-                HStack {
-                    Text("\(tempNotes.count)/\(maxCharacters)")
-                        .font(.caption)
-                        .foregroundColor(characterCountColor)
-                    
-                    if showCharacterWarning {
-                        Text("Approaching character limit")
-                            .font(.caption)
-                            .foregroundColor(.orange)
+                Spacer()
+            }
+            .navigationTitle("Add Notes")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
                     }
-                    
-                    Spacer()
+                    .foregroundColor(.primary)
                 }
-            }
-            .padding()
-            
-            Spacer()
-            
-            // Action buttons
-            HStack(spacing: 16) {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Color(.systemGray6))
-                .cornerRadius(10)
                 
-                Button("Save") {
-                    saveNotes()
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveNotes()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(tempNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(tempNotes.isEmpty ? Color.gray : Color.blue)
-                .cornerRadius(10)
-                .disabled(tempNotes.isEmpty)
             }
-            .padding(.horizontal)
-            .padding(.bottom, 20)
         }
-        .background(Color(.systemBackground))
-        .cornerRadius(16, corners: [.topLeft, .topRight])
         .onAppear {
             tempNotes = notes
-            // Small delay to ensure smooth presentation before keyboard appears
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            // Auto-focus with slight delay for smooth presentation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isFocused = true
             }
         }

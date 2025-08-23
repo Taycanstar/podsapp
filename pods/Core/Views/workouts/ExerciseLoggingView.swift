@@ -275,8 +275,6 @@ struct ExerciseLoggingView: View {
                     exerciseId: currentExercise.exercise.id,
                     exerciseName: currentExercise.exercise.name
                 )
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
             }
         }
         .onAppear {
@@ -1444,7 +1442,7 @@ struct ExerciseOptionsSheet: View {
                     print("Add warm-up set for \(exercise.exercise.name)")
                 }) {
                     HStack {
-                        Image(systemName: "w.square.fill")
+                        Image(systemName: "flame")
                             .font(.system(size: 20))
                             .foregroundColor(.primary)
                             .frame(width: 28)
