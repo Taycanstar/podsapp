@@ -54,7 +54,7 @@ struct WorkoutInProgressView: View {
                                             toggleExerciseCompletion(index)
                                         },
                                         onExerciseTap: {
-                                            navigationPath.append(WorkoutNavigationDestination.logExercise(exercise, exercises))
+                                            navigationPath.append(WorkoutNavigationDestination.logExercise(exercise, exercises, index))
                                         }
                                     )
                                 }
@@ -120,7 +120,7 @@ struct WorkoutInProgressView: View {
             } // Closes ZStack
             .navigationDestination(for: WorkoutNavigationDestination.self) { destination in
                 switch destination {
-                case .logExercise(let exercise, let allExercises):
+                case .logExercise(let exercise, let allExercises, let index):
                     ExerciseLoggingView(
                         exercise: exercise, 
                         allExercises: allExercises, 

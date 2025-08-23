@@ -32,6 +32,7 @@ struct LogWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedTab: Int
     @Binding var navigationPath: NavigationPath
+    let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
     @State private var searchText = ""
     @FocusState private var isSearchFieldFocused: Bool
     
@@ -131,7 +132,7 @@ struct LogWorkoutView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
         .navigationBarBackButtonHidden(true)
-        .navigationTitle(selectedWorkoutTab == .workouts ? "Workouts" : "Log Workout")
+        .navigationTitle(selectedWorkoutTab == .workouts ? "Workouts" : "Today's Workout")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .if(selectedWorkoutTab == .workouts) { view in
@@ -786,6 +787,7 @@ struct LogWorkoutView: View {
                     customEquipment: customEquipment,
                     effectiveFitnessGoal: effectiveFitnessGoal,
                     effectiveFitnessLevel: sessionFitnessLevel ?? selectedFitnessLevel,
+                    onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
                     currentWorkout: $currentWorkout
                 )
             case .workouts:
@@ -856,6 +858,7 @@ private struct TodayWorkoutView: View {
     let customEquipment: [Equipment]? // Added this parameter
     let effectiveFitnessGoal: FitnessGoal // Added this parameter
     let effectiveFitnessLevel: ExperienceLevel // Added this parameter
+    let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
     @Binding var currentWorkout: TodayWorkout?
     
     @State private var todayWorkout: TodayWorkout?
@@ -883,7 +886,8 @@ private struct TodayWorkoutView: View {
                             VStack(spacing: 8) {
                                 TodayWorkoutExerciseList(
                                     workout: workout,
-                                    navigationPath: $navigationPath
+                                    navigationPath: $navigationPath,
+                                    onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet
                                 )
                                 .padding(.horizontal)
                                 
@@ -1567,20 +1571,26 @@ private struct RoutinesWorkoutView: View {
 private struct TodayWorkoutExerciseList: View {
     let workout: TodayWorkout
     @Binding var navigationPath: NavigationPath
+    let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
     @State private var exercises: [TodayWorkoutExercise]
     
-    init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>) {
+    init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>, onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void) {
         self.workout = workout
         self._navigationPath = navigationPath
+        self.onExerciseReplacementCallbackSet = onExerciseReplacementCallbackSet
         self._exercises = State(initialValue: workout.exercises)
     }
     
     var body: some View {
         List {
-            ForEach(exercises, id: \.exercise.id) { exercise in
+            ForEach(Array(exercises.enumerated()), id: \.element.exercise.id) { index, exercise in
                 ExerciseWorkoutCard(
                     exercise: exercise,
                     allExercises: exercises,
+                    exerciseIndex: index,
+                    onExerciseReplaced: { idx, newExercise in
+                        replaceExercise(at: idx, with: newExercise)
+                    },
                     navigationPath: $navigationPath
                 )
                 .listRowBackground(Color.clear)
@@ -1596,6 +1606,12 @@ private struct TodayWorkoutExerciseList: View {
         .background(Color("bg"))
         .cornerRadius(12)
         .frame(height: CGFloat(exercises.count * 96)) // Height calculation with 10pt spacing
+        .onAppear {
+            // Register the exercise replacement callback with the navigation container
+            onExerciseReplacementCallbackSet { index, newExercise in
+                replaceExercise(at: index, with: newExercise)
+            }
+        }
         .onChange(of: workout.exercises) { _, newExercises in
             // Update local exercises when workout changes (e.g., from muscle selection change)
             exercises = newExercises
@@ -1612,6 +1628,39 @@ private struct TodayWorkoutExerciseList: View {
     private func deleteExercise(at offsets: IndexSet) {
         exercises.remove(atOffsets: offsets)
     }
+    
+    private func replaceExercise(at index: Int, with newExercise: ExerciseData) {
+        guard index < exercises.count else { return }
+        
+        // Create a new TodayWorkoutExercise with the replaced exercise data
+        let oldExercise = exercises[index]
+        let replacedExercise = TodayWorkoutExercise(
+            exercise: newExercise,
+            sets: oldExercise.sets,
+            reps: oldExercise.reps,
+            weight: oldExercise.weight,
+            restTime: oldExercise.restTime
+        )
+        
+        exercises[index] = replacedExercise
+        
+        // Save to UserDefaults if needed
+        if let userEmail = UserDefaults.standard.string(forKey: "userEmail") {
+            let updatedWorkout = TodayWorkout(
+                id: workout.id,
+                date: workout.date,
+                title: workout.title,
+                exercises: exercises,
+                estimatedDuration: workout.estimatedDuration,
+                fitnessGoal: workout.fitnessGoal,
+                difficulty: workout.difficulty
+            )
+            
+            if let encoded = try? JSONEncoder().encode(updatedWorkout) {
+                UserDefaults.standard.set(encoded, forKey: "todayWorkout_\(userEmail)")
+            }
+        }
+    }
 }
 
 // MARK: - Exercise Workout Card
@@ -1619,14 +1668,16 @@ private struct TodayWorkoutExerciseList: View {
 private struct ExerciseWorkoutCard: View {
     let exercise: TodayWorkoutExercise
     let allExercises: [TodayWorkoutExercise]
+    let exerciseIndex: Int
+    let onExerciseReplaced: (Int, ExerciseData) -> Void
     @Binding var navigationPath: NavigationPath
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
     
     var body: some View {
         Button(action: {
-            // Navigate to exercise logging view
-            navigationPath.append(WorkoutNavigationDestination.logExercise(exercise, allExercises))
+            // Navigate to exercise logging view with index
+            navigationPath.append(WorkoutNavigationDestination.logExercise(exercise, allExercises, exerciseIndex))
         }) {
             HStack(spacing: 12) {
                 // Exercise thumbnail
@@ -2356,7 +2407,11 @@ struct NavigationBarSeparatorModifier: ViewModifier {
 
 #Preview {
     NavigationView {
-        LogWorkoutView(selectedTab: .constant(0), navigationPath: .constant(NavigationPath()))
+        LogWorkoutView(
+            selectedTab: .constant(0), 
+            navigationPath: .constant(NavigationPath()),
+            onExerciseReplacementCallbackSet: { _ in }
+        )
     }
 }
     

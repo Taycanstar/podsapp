@@ -34,6 +34,7 @@ struct ExerciseLoggingView: View {
     let isFromWorkoutInProgress: Bool // Track if we came from WorkoutInProgressView
     let initialCompletedSetsCount: Int? // Pass previously completed sets count
     let initialRIRValue: Double? // Pass previously set RIR value
+    let onExerciseReplaced: ((ExerciseData) -> Void)? // Callback to notify when exercise is replaced
     @Environment(\.dismiss) private var dismiss
     @State private var sets: [SetData] = []
     @FocusState private var focusedField: FocusedField?
@@ -53,16 +54,19 @@ struct ExerciseLoggingView: View {
     @State private var exerciseNotes: String = ""
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
+    @State private var currentExercise: TodayWorkoutExercise
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil) {
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil) {
         self.exercise = exercise
         self.allExercises = allExercises
         self.onSetLogged = onSetLogged
         self.isFromWorkoutInProgress = isFromWorkoutInProgress
         self.initialCompletedSetsCount = initialCompletedSetsCount
         self.initialRIRValue = initialRIRValue
+        self.onExerciseReplaced = onExerciseReplaced
         // If coming from WorkoutInProgressView, workout is already started
         self._workoutStarted = State(initialValue: isFromWorkoutInProgress)
+        self._currentExercise = State(initialValue: exercise)
     }
     
     enum FocusedField: Hashable {
@@ -224,12 +228,13 @@ struct ExerciseLoggingView: View {
         }
         .sheet(isPresented: $showingExerciseOptions) {
             ExerciseOptionsSheet(
-                exercise: exercise,
+                exercise: $currentExercise,
                 selectedUnit: $selectedUnit,
                 exerciseNotes: $exerciseNotes,
                 recommendMoreOften: $recommendMoreOften,
                 recommendLessOften: $recommendLessOften,
-                rirValue: rirValue
+                rirValue: rirValue,
+                onExerciseReplaced: onExerciseReplaced
             )
             // .presentationDetents([.fraction(0.75)])
             .presentationDragIndicator(.hidden)
@@ -279,7 +284,7 @@ struct ExerciseLoggingView: View {
     
     private var exerciseHeaderSection: some View {
         HStack {
-            Text(exercise.exercise.name)
+            Text(currentExercise.exercise.name)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
@@ -453,11 +458,11 @@ struct ExerciseLoggingView: View {
     // MARK: - Methods
     
     private func setupInitialSets() {
-        sets = Array(1...exercise.sets).map { setIndex in
+        sets = Array(1...currentExercise.sets).map { setIndex in
             let isCompleted = initialCompletedSetsCount != nil && setIndex <= (initialCompletedSetsCount ?? 0)
             return SetData(
-                reps: "\(exercise.reps)",
-                weight: exercise.exercise.equipment.lowercased() == "body weight" ? "" : "150",
+                reps: "\(currentExercise.reps)",
+                weight: currentExercise.exercise.equipment.lowercased() == "body weight" ? "" : "150",
                 isCompleted: isCompleted
             )
         }
@@ -467,7 +472,7 @@ struct ExerciseLoggingView: View {
             currentSetIndex = min(completedCount, sets.count - 1)
             
             // If all sets are completed, show RIR section and restore RIR value
-            if completedCount >= exercise.sets {
+            if completedCount >= currentExercise.sets {
                 showRIRSection = true
                 if let savedRIR = initialRIRValue {
                     rirValue = savedRIR
@@ -478,8 +483,8 @@ struct ExerciseLoggingView: View {
     
     private func addSet() {
         let newSet = SetData(
-            reps: "\(exercise.reps)",
-            weight: exercise.exercise.equipment.lowercased() == "body weight" ? "" : "150"
+            reps: "\(currentExercise.reps)",
+            weight: currentExercise.exercise.equipment.lowercased() == "body weight" ? "" : "150"
         )
         sets.append(newSet)
     }
@@ -1072,18 +1077,23 @@ struct FullscreenVideoView: View {
 // MARK: - Exercise Options Sheet
 
 struct ExerciseOptionsSheet: View {
-    let exercise: TodayWorkoutExercise
+    @Binding var exercise: TodayWorkoutExercise
     @Binding var selectedUnit: WeightUnit
     @Binding var exerciseNotes: String
     @Binding var recommendMoreOften: Bool
     @Binding var recommendLessOften: Bool
     let rirValue: Double
+    let onExerciseReplaced: ((ExerciseData) -> Void)?
     
     @Environment(\.dismiss) private var dismiss
     @State private var showingReplaceExercise = false
     @State private var showingDeleteConfirmation = false
     @State private var showingNotes = false
     @State private var restTimerEnabled = false
+    @State private var workingSetsTime = 60 // Default 1 minute in seconds
+    @State private var warmupSetsTime = 60 // Default 1 minute in seconds
+    @State private var showingWorkingSetsPicker = false
+    @State private var showingWarmupSetsPicker = false
     
     var body: some View {
         NavigationView {
@@ -1119,6 +1129,162 @@ struct ExerciseOptionsSheet: View {
                 }
                 .padding(.vertical, 16)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                
+                // Working Sets (shown only when Rest Timer is enabled)
+                if restTimerEnabled {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showingWorkingSetsPicker.toggle()
+                        }
+                    }) {
+                        HStack {
+                            // Empty space for indentation (no icon)
+                            Spacer()
+                                .frame(width: 28)
+                            Text("Working Sets")
+                                .font(.system(size: 16, weight: .regular))
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(formatTime(workingSetsTime))
+                                .font(.system(size: 16, weight: .regular))
+                                .foregroundColor(.secondary)
+                            Image(systemName: showingWorkingSetsPicker ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 16)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    
+                    // Working Sets Inline Picker
+                    if showingWorkingSetsPicker {
+                        HStack {
+                            Spacer()
+                            
+                            HStack(spacing: 0) {
+                                // Minutes picker
+                                Picker("Minutes", selection: Binding(
+                                    get: { workingSetsTime / 60 },
+                                    set: { workingSetsTime = $0 * 60 + (workingSetsTime % 60) }
+                                )) {
+                                    ForEach(0...10, id: \.self) { minute in
+                                        Text("\(minute)")
+                                            .tag(minute)
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(width: 80)
+                                .clipped()
+                                
+                                Text("min")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 8)
+                                
+                                // Seconds picker
+                                Picker("Seconds", selection: Binding(
+                                    get: { workingSetsTime % 60 },
+                                    set: { workingSetsTime = (workingSetsTime / 60) * 60 + $0 }
+                                )) {
+                                    ForEach(Array(stride(from: 0, through: 59, by: 5)), id: \.self) { second in
+                                        Text("\(second)")
+                                            .tag(second)
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(width: 80)
+                                .clipped()
+                                
+                                Text("sec")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 8)
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
+                        .listRowInsets(EdgeInsets())
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                    
+                    // Warm-up Sets (shown only when Rest Timer is enabled)
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showingWarmupSetsPicker.toggle()
+                        }
+                    }) {
+                        HStack {
+                            // Empty space for indentation (no icon)
+                            Spacer()
+                                .frame(width: 28)
+                            Text("Warm-up Sets")
+                                .font(.system(size: 16, weight: .regular))
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(formatTime(warmupSetsTime))
+                                .font(.system(size: 16, weight: .regular))
+                                .foregroundColor(.secondary)
+                            Image(systemName: showingWarmupSetsPicker ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 16)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    
+                    // Warm-up Sets Inline Picker
+                    if showingWarmupSetsPicker {
+                        HStack {
+                            Spacer()
+                            
+                            HStack(spacing: 0) {
+                                // Minutes picker
+                                Picker("Minutes", selection: Binding(
+                                    get: { warmupSetsTime / 60 },
+                                    set: { warmupSetsTime = $0 * 60 + (warmupSetsTime % 60) }
+                                )) {
+                                    ForEach(0...10, id: \.self) { minute in
+                                        Text("\(minute)")
+                                            .tag(minute)
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(width: 80)
+                                .clipped()
+                                
+                                Text("min")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 8)
+                                
+                                // Seconds picker
+                                Picker("Seconds", selection: Binding(
+                                    get: { warmupSetsTime % 60 },
+                                    set: { warmupSetsTime = (warmupSetsTime / 60) * 60 + $0 }
+                                )) {
+                                    ForEach(Array(stride(from: 0, through: 59, by: 5)), id: \.self) { second in
+                                        Text("\(second)")
+                                            .tag(second)
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(width: 80)
+                                .clipped()
+                                
+                                Text("sec")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 8)
+                            }
+                            
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
+                        .listRowInsets(EdgeInsets())
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
                 
                 // Replace
                 Button(action: {
@@ -1162,7 +1328,7 @@ struct ExerciseOptionsSheet: View {
                     print("Add warm-up set for \(exercise.exercise.name)")
                 }) {
                     HStack {
-                        Image(systemName: "w.circle")
+                        Image(systemName: "w.square.fill")
                             .font(.system(size: 20))
                             .foregroundColor(.primary)
                             .frame(width: 28)
@@ -1312,40 +1478,231 @@ struct ExerciseOptionsSheet: View {
             Text("Are you sure you want to remove \(exercise.exercise.name) from this workout?")
         }
         .sheet(isPresented: $showingReplaceExercise) {
-            ReplaceExerciseSheet(currentExercise: exercise)
+            ReplaceExerciseSheet(
+                currentExercise: $exercise,
+                onExerciseReplaced: onExerciseReplaced
+            )
         }
         .sheet(isPresented: $showingNotes) {
             // Notes sheet will be implemented when you provide specifications
             Text("Notes Sheet - To be implemented")
         }
     }
+    
+    // MARK: - Helper Functions
+    
+    private func formatTime(_ seconds: Int) -> String {
+        if seconds < 60 {
+            return "\(seconds)s"
+        } else {
+            let minutes = seconds / 60
+            let remainingSeconds = seconds % 60
+            if remainingSeconds == 0 {
+                return "\(minutes)m"
+            } else {
+                return "\(minutes)m \(remainingSeconds)s"
+            }
+        }
+    }
 }
 
-// MARK: - Placeholder sheet for Replace
+
+// MARK: - Replace Exercise Sheet
 
 struct ReplaceExerciseSheet: View {
-    let currentExercise: TodayWorkoutExercise
+    @Binding var currentExercise: TodayWorkoutExercise
+    let onExerciseReplaced: ((ExerciseData) -> Void)?
+    
     @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
+    @State private var equipmentFilter: EquipmentFilter = .userEquipment
+    @State private var sortOption: SortOption = .best
+    @State private var userEquipment: Set<String> = []
+    @State private var exerciseHistory: [Int: ExerciseHistoryInfo] = [:]
+    @State private var isLoadingHistory = false
+    
+    // Filter and Sort Options
+    enum EquipmentFilter: String, CaseIterable {
+        case userEquipment = "Your Equipment"
+        case noEquipment = "No Equipment"
+        case sameEquipment = "Same Equipment"
+        case differentEquipment = "Different Equipment"
+    }
+    
+    enum SortOption: String, CaseIterable {
+        case best = "Best Replacement"
+        case mostLogged = "Your Most Logged"
+        case leastLogged = "Your Least Logged"
+        case neverLogged = "Never Logged"
+    }
+    
+    struct ExerciseHistoryInfo {
+        let timesLogged: Int
+        let lastLoggedDate: Date?
+        let averageWeight: Double?
+    }
+    
+    init(currentExercise: Binding<TodayWorkoutExercise>, onExerciseReplaced: ((ExerciseData) -> Void)? = nil) {
+        self._currentExercise = currentExercise
+        self.onExerciseReplaced = onExerciseReplaced
+    }
     
     var body: some View {
         NavigationView {
-            VStack {
-                Text("Replace Exercise")
-                    .font(.title2)
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Large Title that scrolls with content
+
+                    
+                    // Search Bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                        
+                        TextField("Search exercises", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                        
+                        if !searchText.isEmpty {
+                            Button(action: { searchText = "" }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .padding(10)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    .padding(.bottom, 16)
+                    
+                    // Current Exercise Card
+                    HStack(spacing: 12) {
+                        // Exercise thumbnail
+                        let thumbnailName = String(format: "%04d", currentExercise.exercise.id)
+                        if let image = UIImage(named: thumbnailName) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 60, height: 60)
+                                .cornerRadius(8)
+                        } else {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: 60, height: 60)
+                                .overlay(
+                                    Image(systemName: "dumbbell")
+                                        .foregroundColor(.gray)
+                                        .font(.system(size: 20))
+                                )
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Current Exercise")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(currentExercise.exercise.name)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.primary)
+                        }
+                        
+                        Spacer()
+                    }
                     .padding()
-                
-                Text("Replace \(currentExercise.exercise.name) with:")
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Text("Exercise selection will be implemented here")
-                    .foregroundColor(.secondary)
-                
-                Spacer()
+                    .background(Color(.systemBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                    )
+                    .padding(.horizontal)
+                    .padding(.bottom, 16)
+                    
+                    // Filter Controls
+                    HStack {
+                        Spacer()
+                        
+                        // Filter Menu
+                        Menu {
+                            ForEach(EquipmentFilter.allCases, id: \.self) { filter in
+                                Button(action: { equipmentFilter = filter }) {
+                                    HStack {
+                                        Text(filter.rawValue)
+                                        if equipmentFilter == filter {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.primary)
+                                .frame(width: 28, height: 28)
+                                .background(Color.secondary.opacity(0.1))
+                                .clipShape(Circle())
+                        }
+                        
+                        // Sort Menu
+                        Menu {
+                            ForEach(SortOption.allCases, id: \.self) { option in
+                                Button(action: { sortOption = option }) {
+                                    HStack {
+                                        Text(option.rawValue)
+                                        if sortOption == option {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.primary)
+                                .frame(width: 28, height: 28)
+                                .background(Color.secondary.opacity(0.1))
+                                .clipShape(Circle())
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 12)
+                    
+                    // Exercise List
+                    if isLoadingHistory {
+                        ProgressView("Loading exercise history...")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 100)
+                    } else if filteredExercises.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 48))
+                                .foregroundColor(.secondary)
+                            Text("No exercises found")
+                                .font(.headline)
+                            Text("Try adjusting your filters or search terms")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 100)
+                    } else {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(filteredExercises.enumerated()), id: \.element.id) { index, exercise in
+                                if index > 0 {
+                                    Divider()
+                                        .padding(.leading, 88)
+                                }
+                                ExerciseReplacementRow(
+                                    exercise: exercise,
+                                    matchScore: calculateMatchScore(for: exercise),
+                                    userHistory: exerciseHistory[exercise.id],
+                                    onSelect: { replaceExercise(with: exercise) }
+                                )
+                            }
+                        }
+                    }
+                }
             }
-            .navigationTitle("Replace")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Replace Exercise")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
@@ -1354,6 +1711,264 @@ struct ReplaceExerciseSheet: View {
                 }
             }
         }
+        .task {
+            await loadUserEquipment()
+            await loadExerciseHistory()
+        }
+    }
+    
+    // MARK: - Computed Properties
+    
+    private var filteredExercises: [ExerciseData] {
+        let allExercises = ExerciseDatabase.getAllExercises()
+            .filter { $0.id != currentExercise.exercise.id } // Exclude current
+        
+        // First, filter by logical replaceability (muscle groups and movement patterns)
+        let logicallyRelevant = getLogicallyRelevantExercises(from: allExercises)
+        
+        // Apply search filter
+        let searchFiltered = searchText.isEmpty ? logicallyRelevant :
+            logicallyRelevant.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        
+        // Apply equipment filter
+        let equipmentFiltered = applyEquipmentFilter(to: searchFiltered)
+        
+        // Apply sorting
+        return applySorting(to: equipmentFiltered)
+    }
+    
+    private func getLogicallyRelevantExercises(from exercises: [ExerciseData]) -> [ExerciseData] {
+        let currentBodyPart = currentExercise.exercise.bodyPart
+        let currentTarget = currentExercise.exercise.target
+        let currentSynergists = Set(currentExercise.exercise.synergist.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+        
+        return exercises.filter { exercise in
+            // Primary criteria: Same body part
+            if exercise.bodyPart == currentBodyPart {
+                return true
+            }
+            
+            // Secondary criteria: Same target muscle
+            if exercise.target == currentTarget {
+                return true
+            }
+            
+            // Tertiary criteria: Significant synergist overlap (at least 2 common muscles)
+            let exerciseSynergists = Set(exercise.synergist.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+            let commonSynergists = currentSynergists.intersection(exerciseSynergists)
+            if commonSynergists.count >= 2 {
+                return true
+            }
+            
+            // Special case: Compound movements that work similar patterns
+            if isCompoundMovementMatch(current: currentExercise.exercise, candidate: exercise) {
+                return true
+            }
+            
+            return false
+        }
+    }
+    
+    private func isCompoundMovementMatch(current: ExerciseData, candidate: ExerciseData) -> Bool {
+        let currentName = current.name.lowercased()
+        let candidateName = candidate.name.lowercased()
+        
+        // Pressing movements
+        if (currentName.contains("press") || currentName.contains("push")) &&
+           (candidateName.contains("press") || candidateName.contains("push")) {
+            return true
+        }
+        
+        // Pulling movements
+        if (currentName.contains("pull") || currentName.contains("row") || currentName.contains("chin")) &&
+           (candidateName.contains("pull") || candidateName.contains("row") || candidateName.contains("chin")) {
+            return true
+        }
+        
+        // Squatting movements
+        if (currentName.contains("squat") || currentName.contains("lunge")) &&
+           (candidateName.contains("squat") || candidateName.contains("lunge")) {
+            return true
+        }
+        
+        // Deadlifting/hinge movements
+        if (currentName.contains("deadlift") || currentName.contains("romanian") || currentName.contains("rdl")) &&
+           (candidateName.contains("deadlift") || candidateName.contains("romanian") || candidateName.contains("rdl")) {
+            return true
+        }
+        
+        // Curling movements
+        if currentName.contains("curl") && candidateName.contains("curl") {
+            return true
+        }
+        
+        return false
+    }
+    
+    // MARK: - Methods
+    
+    private func calculateMatchScore(for exercise: ExerciseData) -> Double {
+        var score = 0.0
+        
+        // Same body part (highest priority for logical replacement)
+        if exercise.bodyPart == currentExercise.exercise.bodyPart {
+            score += 100.0
+        }
+        
+        // Same target muscle (very high priority)
+        if exercise.target == currentExercise.exercise.target {
+            score += 80.0
+        }
+        
+        // Compound movement pattern match
+        if isCompoundMovementMatch(current: currentExercise.exercise, candidate: exercise) {
+            score += 60.0
+        }
+        
+        // Synergist muscle overlap (good indicator of similar muscle activation)
+        let currentSynergists = Set(currentExercise.exercise.synergist.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+        let exerciseSynergists = Set(exercise.synergist.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+        let overlap = currentSynergists.intersection(exerciseSynergists)
+        score += Double(overlap.count) * 10.0
+        
+        // Equipment compatibility bonus
+        if equipmentFilter == .userEquipment && userEquipment.contains(exercise.equipment) {
+            score += 15.0
+        }
+        
+        // Same equipment type preference
+        if exercise.equipment == currentExercise.exercise.equipment {
+            score += 25.0
+        }
+        
+        // User history bonus (familiarity)
+        if let history = exerciseHistory[exercise.id] {
+            score += min(Double(history.timesLogged) * 3.0, 30.0)
+        }
+        
+        return score
+    }
+    
+    private func applyEquipmentFilter(to exercises: [ExerciseData]) -> [ExerciseData] {
+        switch equipmentFilter {
+        case .userEquipment:
+            return exercises.filter { userEquipment.contains($0.equipment) }
+        case .noEquipment:
+            return exercises.filter { $0.equipment == "Body weight" }
+        case .sameEquipment:
+            return exercises.filter { $0.equipment == currentExercise.exercise.equipment }
+        case .differentEquipment:
+            return exercises.filter { $0.equipment != currentExercise.exercise.equipment }
+        }
+    }
+    
+    private func applySorting(to exercises: [ExerciseData]) -> [ExerciseData] {
+        switch sortOption {
+        case .best:
+            return exercises.sorted {
+                calculateMatchScore(for: $0) > calculateMatchScore(for: $1)
+            }
+        case .mostLogged:
+            return exercises.sorted {
+                (exerciseHistory[$0.id]?.timesLogged ?? 0) >
+                (exerciseHistory[$1.id]?.timesLogged ?? 0)
+            }
+        case .leastLogged:
+            return exercises.sorted {
+                (exerciseHistory[$0.id]?.timesLogged ?? 0) <
+                (exerciseHistory[$1.id]?.timesLogged ?? 0)
+            }
+        case .neverLogged:
+            return exercises.filter { exerciseHistory[$0.id] == nil }
+        }
+    }
+    
+    private func loadUserEquipment() async {
+        // Load from UserDefaults or user profile
+        // For now, use common equipment as default
+        userEquipment = ["Dumbbell", "Barbell", "Cable", "Body weight", "Pull up Bar", "Flat Bench", "Incline Bench"]
+    }
+    
+    private func loadExerciseHistory() async {
+        isLoadingHistory = true
+        defer { isLoadingHistory = false }
+        
+        // For now, simulate with empty history
+        // TODO: Integrate with ExerciseHistoryDataService
+        exerciseHistory = [:]
+    }
+    
+    private func replaceExercise(with newExercise: ExerciseData) {
+        // Generate haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.prepare()
+        impactFeedback.impactOccurred()
+        
+        // Update the current exercise
+        currentExercise = TodayWorkoutExercise(
+            exercise: newExercise,
+            sets: currentExercise.sets,
+            reps: currentExercise.reps,
+            weight: currentExercise.weight,
+            restTime: currentExercise.restTime
+        )
+        
+        // Pass the new exercise back to parent view
+        onExerciseReplaced?(newExercise)
+        
+        // Dismiss the sheet
+        dismiss()
+    }
+}
+
+
+// MARK: - Exercise Replacement Row
+
+struct ExerciseReplacementRow: View {
+    let exercise: ExerciseData
+    let matchScore: Double
+    let userHistory: ReplaceExerciseSheet.ExerciseHistoryInfo?
+    let onSelect: () -> Void
+    
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 12) {
+                // Exercise thumbnail
+                let thumbnailName = String(format: "%04d", exercise.id)
+                if let image = UIImage(named: thumbnailName) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 60, height: 60)
+                        .cornerRadius(8)
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: 60, height: 60)
+                        .overlay(
+                            Image(systemName: "dumbbell")
+                                .foregroundColor(.gray)
+                                .font(.system(size: 20))
+                        )
+                }
+                
+                // Exercise name only
+                Text(exercise.name)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.leading)
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

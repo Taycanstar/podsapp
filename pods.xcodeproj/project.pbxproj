@@ -167,6 +167,7 @@
 		3698E4FC2C24968F0040AF60 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 3698E4FB2C24968F0040AF60 /* .gitignore */; };
 		36A8518F2E56708C004E5CED /* ExerciseChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A8518E2E567083004E5CED /* ExerciseChart.swift */; };
 		36A851912E57AECF004E5CED /* ExerciseHistoryDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851902E57AEBA004E5CED /* ExerciseHistoryDataService.swift */; };
+		36A851932E58B419004E5CED /* ReplaceExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851922E58B412004E5CED /* ReplaceExerciseView.swift */; };
 		36A85CD72DB182BA00DD4266 /* GenderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD62DB182BA00DD4266 /* GenderView.swift */; };
 		36A85CD92DB1CC4500DD4266 /* WorkoutDaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */; };
 		36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */; };
@@ -461,6 +462,7 @@
 		3698E4FB2C24968F0040AF60 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		36A8518E2E567083004E5CED /* ExerciseChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseChart.swift; sourceTree = "<group>"; };
 		36A851902E57AEBA004E5CED /* ExerciseHistoryDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseHistoryDataService.swift; sourceTree = "<group>"; };
+		36A851922E58B412004E5CED /* ReplaceExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplaceExerciseView.swift; sourceTree = "<group>"; };
 		36A85CD62DB182BA00DD4266 /* GenderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenderView.swift; sourceTree = "<group>"; };
 		36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDaysView.swift; sourceTree = "<group>"; };
 		36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightWeightView.swift; sourceTree = "<group>"; };
@@ -741,6 +743,7 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				36A851922E58B412004E5CED /* ReplaceExerciseView.swift */,
 				36A8518E2E567083004E5CED /* ExerciseChart.swift */,
 				36A91DC72E53725F00414543 /* ExerciseHistory.swift */,
 				36A91DC52E51320500414543 /* WorkoutInProgressView.swift */,
@@ -1389,6 +1392,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				36A851932E58B419004E5CED /* ReplaceExerciseView.swift in Sources */,
 				36ED35E32DDE52F300D174FB /* AddQuickLogDetailsView.swift in Sources */,
 				36CB03302D5B04DD006A74E9 /* FoodSearchModel.swift in Sources */,
 				36DBFBDD2C8BA7A200958BF4 /* AddWorkspaceView.swift in Sources */,

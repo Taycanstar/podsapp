@@ -17,7 +17,7 @@ struct DashboardView: View {
     @State private var showWaterLogSheet = false
     
     // ─── Streak state ─────────────────────────────────────────────────────
-    @StateObject private var streakManager = StreakManager.shared
+    @ObservedObject private var streakManager = StreakManager.shared
 
 
     @State private var selectedFoodLogId: String? = nil

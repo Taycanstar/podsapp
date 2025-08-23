@@ -66,7 +66,7 @@ struct ContentView: View {
     @State private var isTabBarVisible: Bool = true
     @State private var hasCheckedOnboarding = false
 
-    @StateObject private var versionManager = VersionManager.shared
+    @ObservedObject private var versionManager = VersionManager.shared
     @Environment(\.scenePhase) var scenePhase
 
     private func fetchInitialPods() {

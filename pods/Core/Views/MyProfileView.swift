@@ -61,7 +61,7 @@ struct MyProfileView: View {
     @State private var hasInitiallyLoaded = false
     
     // Streak state
-    @StateObject private var streakManager = StreakManager.shared
+    @ObservedObject private var streakManager = StreakManager.shared
     
     var body: some View {
         NavigationStack {

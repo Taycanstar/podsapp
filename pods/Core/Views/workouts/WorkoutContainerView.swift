@@ -10,10 +10,17 @@ import SwiftUI
 struct WorkoutContainerView: View {
     @Binding var selectedTab: Int
     @State private var navigationPath = NavigationPath()
+    @State private var exerciseReplacementCallback: ((Int, ExerciseData) -> Void)?
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            LogWorkoutView(selectedTab: $selectedTab, navigationPath: $navigationPath)
+            LogWorkoutView(
+                selectedTab: $selectedTab, 
+                navigationPath: $navigationPath,
+                onExerciseReplacementCallbackSet: { callback in
+                    exerciseReplacementCallback = callback
+                }
+            )
                 .navigationDestination(for: WorkoutNavigationDestination.self) { destination in
                     switch destination {
                     case .createWorkout:
@@ -29,8 +36,15 @@ struct WorkoutContainerView: View {
                         RecentlyAddedView()
                     case .startWorkout(let todayWorkout):
                         StartWorkoutView(todayWorkout: todayWorkout)
-                    case .logExercise(let exercise, let allExercises):
-                        ExerciseLoggingView(exercise: exercise, allExercises: allExercises)
+                    case .logExercise(let exercise, let allExercises, let index):
+                        ExerciseLoggingView(
+                            exercise: exercise, 
+                            allExercises: allExercises,
+                            onExerciseReplaced: { newExercise in
+                                // Call the stored callback to update the parent list
+                                exerciseReplacementCallback?(index, newExercise)
+                            }
+                        )
                     }
                 }
         }
@@ -44,7 +58,7 @@ enum WorkoutNavigationDestination: Hashable {
     case exerciseSelection
     case recentlyAdded
     case startWorkout(TodayWorkout)
-    case logExercise(TodayWorkoutExercise, [TodayWorkoutExercise])
+    case logExercise(TodayWorkoutExercise, [TodayWorkoutExercise], Int)
     
     // Implement Hashable conformance
     func hash(into hasher: inout Hasher) {
@@ -61,10 +75,11 @@ enum WorkoutNavigationDestination: Hashable {
         case .startWorkout(let todayWorkout):
             hasher.combine("startWorkout")
             hasher.combine(todayWorkout.id)
-        case .logExercise(let exercise, let allExercises):
+        case .logExercise(let exercise, let allExercises, let index):
             hasher.combine("logExercise")
             hasher.combine(exercise.exercise.id)
             hasher.combine(allExercises.count)
+            hasher.combine(index)
         }
     }
     
@@ -81,7 +96,7 @@ enum WorkoutNavigationDestination: Hashable {
             return true
         case (.startWorkout(let lhsTodayWorkout), .startWorkout(let rhsTodayWorkout)):
             return lhsTodayWorkout.id == rhsTodayWorkout.id
-        case (.logExercise(let lhsExercise, _), .logExercise(let rhsExercise, _)):
+        case (.logExercise(let lhsExercise, _, _), .logExercise(let rhsExercise, _, _)):
             return lhsExercise.exercise.id == rhsExercise.exercise.id
         default:
             return false

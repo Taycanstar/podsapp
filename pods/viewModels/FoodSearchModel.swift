@@ -28,7 +28,7 @@ struct BarcodeLookupResponse: Codable {
     }
     
     private enum CodingKeys: String, CodingKey {
-        case foodLogId
+        case foodLogId = "food_log_id"
         case food
     }
 }
@@ -281,6 +281,15 @@ struct LoggedFood: Codable, Identifiable {
     let mealType: String      // Changed from 'meal' to 'mealType'
     
     var id: Int { foodLogId }
+    
+    enum CodingKeys: String, CodingKey {
+        case status
+        case foodLogId = "food_log_id"
+        case calories
+        case message
+        case food
+        case mealType = "meal_type"
+    }
 }
 
 // Models for updating food logs
