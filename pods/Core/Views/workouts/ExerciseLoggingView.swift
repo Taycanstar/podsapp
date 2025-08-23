@@ -34,7 +34,7 @@ enum WeightUnit: String, CaseIterable {
 
 struct ExerciseLoggingView: View {
     let exercise: TodayWorkoutExercise
-    let allExercises: [TodayWorkoutExercise]? // Pass all exercises for the workout
+    @State private var allExercises: [TodayWorkoutExercise]? // Make it @State so we can update it
     let onSetLogged: ((Int, Double?) -> Void)? // Callback to notify when sets are logged with count and optional RIR
     let isFromWorkoutInProgress: Bool // Track if we came from WorkoutInProgressView
     let initialCompletedSetsCount: Int? // Pass previously completed sets count
@@ -66,7 +66,7 @@ struct ExerciseLoggingView: View {
     
     init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil, onWarmupSetsChanged: (([WarmupSetData]) -> Void)? = nil, onExerciseUpdated: ((TodayWorkoutExercise) -> Void)? = nil) {
         self.exercise = exercise
-        self.allExercises = allExercises
+        self._allExercises = State(initialValue: allExercises)
         self.onSetLogged = onSetLogged
         self.isFromWorkoutInProgress = isFromWorkoutInProgress
         self.initialCompletedSetsCount = initialCompletedSetsCount
@@ -682,6 +682,13 @@ struct ExerciseLoggingView: View {
         
         // Update the current exercise reference
         currentExercise = updatedExercise
+        
+        // Update the allExercises array if it exists (for WorkoutInProgressView)
+        if var exercises = allExercises,
+           let currentIndex = exercises.firstIndex(where: { $0.exercise.id == currentExercise.exercise.id }) {
+            exercises[currentIndex] = updatedExercise
+            allExercises = exercises
+        }
         
         // Save to parent via callback if available
         onExerciseUpdated?(updatedExercise)
