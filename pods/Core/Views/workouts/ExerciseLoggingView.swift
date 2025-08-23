@@ -71,8 +71,8 @@ struct ExerciseLoggingView: View {
     }
     
     enum FocusedField: Hashable {
-        case reps(Int)
-        case weight(Int)
+        case reps(UUID)
+        case weight(UUID)
     }
     
     struct SetData: Identifiable {
@@ -80,6 +80,7 @@ struct ExerciseLoggingView: View {
         var reps: String
         var weight: String
         var isCompleted: Bool = false
+        var isWarmupSet: Bool = false
     }
     
     var body: some View {
@@ -253,6 +254,13 @@ struct ExerciseLoggingView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         showingNotes = true
                     }
+                },
+                onWarmupSetRequested: {
+                    // Dismiss ExerciseOptionsSheet first, then add warmup set
+                    showingExerciseOptions = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        addWarmupSet()
+                    }
                 }
             )
             // .presentationDetents([.fraction(0.75)])
@@ -378,44 +386,63 @@ struct ExerciseLoggingView: View {
     
     private var setsInputSection: some View {
         VStack(spacing: 12) {
-            ForEach(Array(sets.enumerated()), id: \.offset) { index, set in
-                HStack(spacing: 12) {
-                    // Set number with completion indicator
-                    ZStack {
-                        Circle()
-                            .fill(sets[index].isCompleted ? Color.green : 
-                                  (workoutStarted && index == currentSetIndex) ? Color.blue.opacity(0.2) : Color.clear)
-                            .frame(width: 24, height: 24)
-                        
-                        if sets[index].isCompleted {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white)
-                        } else {
-                            Text("\(index + 1)")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(workoutStarted && index == currentSetIndex ? .blue : .primary)
+            List {
+                ForEach(Array(allSetsOrganized.enumerated()), id: \.element.id) { index, set in
+                    HStack(spacing: 12) {
+                        // Set number with completion indicator
+                        ZStack {
+                            Circle()
+                                .fill(set.isCompleted ? Color.green : 
+                                      (workoutStarted && index == currentSetIndex) ? 
+                                      (set.isWarmupSet ? Color.orange.opacity(0.2) : Color.blue.opacity(0.2)) : Color.clear)
+                                .frame(width: 24, height: 24)
+                            
+                            if set.isCompleted {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                            } else {
+                                Text(setDisplayNumber(for: set, at: index))
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(workoutStarted && index == currentSetIndex ? 
+                                                   (set.isWarmupSet ? .orange : .blue) : 
+                                                   (set.isWarmupSet ? .orange : .primary))
+                            }
                         }
+                        .frame(width: 24, alignment: .leading)
+                        
+                        TextField("8 reps", text: Binding(
+                            get: { set.reps },
+                            set: { 
+                                if let setIndex = sets.firstIndex(where: { $0.id == set.id }) {
+                                    sets[setIndex].reps = $0
+                                }
+                            }
+                        ))
+                        .focused($focusedField, equals: .reps(set.id))
+                        .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .reps(set.id)))
+                        .keyboardType(.numberPad)
+                        
+                        TextField("150 lbs", text: Binding(
+                            get: { set.weight },
+                            set: { 
+                                if let setIndex = sets.firstIndex(where: { $0.id == set.id }) {
+                                    sets[setIndex].weight = $0
+                                }
+                            }
+                        ))
+                        .focused($focusedField, equals: .weight(set.id))
+                        .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .weight(set.id)))
+                        .keyboardType(.decimalPad)
                     }
-                    .frame(width: 24, alignment: .leading)
-                    
-                    TextField("8 reps", text: Binding(
-                        get: { sets[index].reps },
-                        set: { sets[index].reps = $0 }
-                    ))
-                    .focused($focusedField, equals: .reps(index))
-                    .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .reps(index)))
-                    .keyboardType(.numberPad)
-                    
-                    TextField("150 lbs", text: Binding(
-                        get: { sets[index].weight },
-                        set: { sets[index].weight = $0 }
-                    ))
-                    .focused($focusedField, equals: .weight(index))
-                    .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .weight(index)))
-                    .keyboardType(.decimalPad)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .padding(.vertical, 6)
                 }
+                .onDelete(perform: deleteSet)
             }
+            .listStyle(PlainListStyle())
+            .frame(height: CGFloat(allSetsOrganized.count * 60)) // Dynamic height based on set count
             
             Button(action: addSet) {
                 HStack(spacing: 6) {
@@ -530,6 +557,30 @@ struct ExerciseLoggingView: View {
         !sets.isEmpty && sets.allSatisfy { $0.isCompleted }
     }
     
+    // MARK: - Set Organization
+    
+    private var warmupSets: [SetData] {
+        sets.filter { $0.isWarmupSet }
+    }
+    
+    private var regularSets: [SetData] {
+        sets.filter { !$0.isWarmupSet }
+    }
+    
+    private var allSetsOrganized: [SetData] {
+        warmupSets + regularSets
+    }
+    
+    private func setDisplayNumber(for set: SetData, at index: Int) -> String {
+        if set.isWarmupSet {
+            let warmupIndex = warmupSets.firstIndex(where: { $0.id == set.id }) ?? 0
+            return "W\(warmupIndex + 1)"
+        } else {
+            let regularIndex = regularSets.firstIndex(where: { $0.id == set.id }) ?? 0
+            return "\(regularIndex + 1)"
+        }
+    }
+    
     // MARK: - Methods
     
     private func setupInitialSets() {
@@ -562,6 +613,47 @@ struct ExerciseLoggingView: View {
             weight: currentExercise.exercise.equipment.lowercased() == "body weight" ? "" : "150"
         )
         sets.append(newSet)
+    }
+    
+    private func addWarmupSet() {
+        let newWarmupSet = SetData(
+            reps: "\(currentExercise.reps)",
+            weight: currentExercise.exercise.equipment.lowercased() == "body weight" ? "" : "50",
+            isWarmupSet: true
+        )
+        // Insert at the beginning of warmup sets
+        let warmupCount = warmupSets.count
+        sets.insert(newWarmupSet, at: warmupCount)
+        
+        // Generate haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.prepare()
+        impactFeedback.impactOccurred()
+    }
+    
+    private func deleteSet(at indexSet: IndexSet) {
+        // Ensure we don't delete all sets - maintain at least one regular set
+        if sets.count <= 1 {
+            // If trying to delete the last set, create a new regular set
+            let newSet = SetData(
+                reps: "\(currentExercise.reps)",
+                weight: currentExercise.exercise.equipment.lowercased() == "body weight" ? "" : "150"
+            )
+            sets = [newSet]
+            return
+        }
+        
+        sets.remove(atOffsets: indexSet)
+        
+        // Adjust currentSetIndex if needed
+        if let firstIndex = indexSet.first, currentSetIndex >= firstIndex {
+            currentSetIndex = max(0, currentSetIndex - indexSet.count)
+        }
+        
+        // Generate haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.prepare()
+        impactFeedback.impactOccurred()
     }
     
     private func startWorkout() {
@@ -641,13 +733,19 @@ struct ExerciseLoggingView: View {
         impactFeedback.impactOccurred()
         
         switch currentField {
-        case .reps(let index):
+        case .reps(let setId):
             // Move to weight field of same set
-            focusedField = .weight(index)
-        case .weight(let index):
-            // Move to reps field of next set, or dismiss if last
-            if index < sets.count - 1 {
-                focusedField = .reps(index + 1)
+            focusedField = .weight(setId)
+        case .weight(let setId):
+            // Find current set and move to next set's reps field, or dismiss if last
+            let organizedSets = allSetsOrganized
+            if let currentIndex = organizedSets.firstIndex(where: { $0.id == setId }) {
+                if currentIndex < organizedSets.count - 1 {
+                    let nextSet = organizedSets[currentIndex + 1]
+                    focusedField = .reps(nextSet.id)
+                } else {
+                    focusedField = nil
+                }
             } else {
                 focusedField = nil
             }
@@ -1160,6 +1258,7 @@ struct ExerciseOptionsSheet: View {
     let rirValue: Double
     let onExerciseReplaced: ((ExerciseData) -> Void)?
     let onNotesRequested: () -> Void
+    let onWarmupSetRequested: () -> Void
     
     @Environment(\.dismiss) private var dismiss
     @State private var showingReplaceExercise = false
@@ -1412,15 +1511,14 @@ struct ExerciseOptionsSheet: View {
                 
                 // Add Warm-up set
                 Button(action: {
-                    // Handle add warm-up set
-                    print("Add warm-up set for \(exercise.exercise.name)")
+                    onWarmupSetRequested()
                 }) {
                     HStack {
                         Image(systemName: "flame")
                             .font(.system(size: 20))
                             .foregroundColor(.primary)
                             .frame(width: 28)
-                        Text("Add Warm-up set")
+                        Text("Add warm-up set")
                             .font(.system(size: 16, weight: .regular))
                             .foregroundColor(.primary)
                         Spacer()
