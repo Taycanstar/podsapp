@@ -409,7 +409,7 @@ struct ExerciseLoggingView: View {
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.white)
                             } else if set.isWarmupSet {
-                                Image(systemName: "flame")
+                                Image(systemName: "flame.fill")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.primary)
                             } else {
@@ -1565,7 +1565,7 @@ struct ExerciseOptionsSheet: View {
                     onWarmupSetRequested()
                 }) {
                     HStack {
-                        Image(systemName: "flame")
+                        Image(systemName: "flame.fill")
                             .font(.system(size: 20))
                             .foregroundColor(.primary)
                             .frame(width: 28)
