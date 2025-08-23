@@ -1098,7 +1098,7 @@ private struct TodayWorkoutView: View {
                 repRange: 1...6,
                 repDurationSeconds: 4...6,
                 setsPerExercise: 4...6,
-                restBetweenSetsSeconds: 120...300,
+                restBetweenSetsSeconds: 90...120,  // Fixed: Time-efficient strength training (1.5-2 min)
                 compoundSetupSeconds: 20,
                 isolationSetupSeconds: 7,
                 transitionSeconds: 20
@@ -1146,7 +1146,7 @@ private struct TodayWorkoutView: View {
                 repRange: 1...3,
                 repDurationSeconds: 4...6,
                 setsPerExercise: 3...6,
-                restBetweenSetsSeconds: 180...420,
+                restBetweenSetsSeconds: 120...180,  // Fixed: App-friendly powerlifting rest (2-3 min)
                 compoundSetupSeconds: 25,
                 isolationSetupSeconds: 7,
                 transitionSeconds: 25
@@ -1173,13 +1173,13 @@ private struct TodayWorkoutView: View {
     private func adjustParametersForExperienceLevel(_ params: WorkoutParameters, experienceLevel: ExperienceLevel) -> WorkoutParameters {
         switch experienceLevel {
         case .beginner:
-            // Beginners: Lower intensity, fewer sets, longer rest
+            // Beginners: Lower intensity, fewer sets, minimal additional rest
             return WorkoutParameters(
                 percentageOneRM: adjustRange(params.percentageOneRM, by: -10...(-5)),
                 repRange: adjustRange(params.repRange, by: 2...4),
                 repDurationSeconds: params.repDurationSeconds,
                 setsPerExercise: adjustRange(params.setsPerExercise, by: -1...0),
-                restBetweenSetsSeconds: adjustRange(params.restBetweenSetsSeconds, by: 15...30),
+                restBetweenSetsSeconds: adjustRange(params.restBetweenSetsSeconds, by: 0...10),  // Reduced from 15...30 to 0...10
                 compoundSetupSeconds: params.compoundSetupSeconds + 10,
                 isolationSetupSeconds: params.isolationSetupSeconds + 5,
                 transitionSeconds: params.transitionSeconds + 10
@@ -1230,8 +1230,15 @@ private struct TodayWorkoutView: View {
         var exercises: [TodayWorkoutExercise] = []
         var totalExerciseTime = 0
         
-        // Start with 1 exercise per muscle group and build up
-        var exercisesPerMuscle = 1
+        // Calculate target exercise count based on workout duration and fitness goal
+        let targetExercisesPerMuscle = getTargetExercisesPerMuscle(
+            availableExerciseTimeMinutes: availableExerciseTime / 60,
+            muscleGroupCount: muscleGroups.count,
+            parameters: parameters
+        )
+        
+        // Start near the target and adjust up/down as needed
+        var exercisesPerMuscle = max(1, targetExercisesPerMuscle)
         let maxExercisesPerMuscle = 4
         
         while exercisesPerMuscle <= maxExercisesPerMuscle {
@@ -1240,19 +1247,23 @@ private struct TodayWorkoutView: View {
                 exercisesPerMuscle: exercisesPerMuscle,
                 parameters: parameters,
                 recommendationService: recommendationService,
-                customEquipment: customEquipment
+                customEquipment: customEquipment,
+                availableTimeMinutes: availableExerciseTime / 60
             )
             
             let testTime = calculateTotalExerciseTime(exercises: testExercises, parameters: parameters)
             
-            // Add 10-15% buffer for real-world variability
-            let bufferedTime = Int(Double(testTime) * 1.125)
+            // Add small buffer for real-world variability (reduced from 12.5% to 7.5%)
+            let bufferedTime = Int(Double(testTime) * 1.075)
+            
+            print("🔍 Testing \(exercisesPerMuscle) per muscle: \(testExercises.count) exercises, \(testTime)s (\(testTime/60)min) + buffer = \(bufferedTime)s vs \(availableExerciseTime)s available")
             
             if bufferedTime <= availableExerciseTime {
                 exercises = testExercises
                 totalExerciseTime = testTime
                 exercisesPerMuscle += 1
             } else {
+                print("💥 Hit time limit at \(exercisesPerMuscle) per muscle - stopping")
                 break
             }
         }
@@ -1263,12 +1274,13 @@ private struct TodayWorkoutView: View {
                 muscleGroups: muscleGroups,
                 parameters: parameters,
                 recommendationService: recommendationService,
-                customEquipment: customEquipment
+                customEquipment: customEquipment,
+                availableTimeMinutes: availableExerciseTime / 60
             )
             totalExerciseTime = calculateTotalExerciseTime(exercises: exercises, parameters: parameters)
         }
         
-        let bufferSeconds = Int(Double(totalExerciseTime) * 0.125)
+        let bufferSeconds = Int(Double(totalExerciseTime) * 0.05) // Reduced final buffer to 5%
         let actualTotalSeconds = warmupSeconds + totalExerciseTime + cooldownSeconds + bufferSeconds
         let actualDurationMinutes = (actualTotalSeconds + 59) / 60 // Round up
         
@@ -1292,10 +1304,43 @@ private struct TodayWorkoutView: View {
         )
     }
     
+    private func getTargetExercisesPerMuscle(availableExerciseTimeMinutes: Int, muscleGroupCount: Int, parameters: WorkoutParameters) -> Int {
+        // Use realistic time-efficient calculations instead of raw parameter ranges
+        let avgSetsPerExercise = (parameters.setsPerExercise.lowerBound + parameters.setsPerExercise.upperBound) / 2
+        let avgRepsPerSet = (parameters.repRange.lowerBound + parameters.repRange.upperBound) / 2
+        let avgRepDuration = (parameters.repDurationSeconds.lowerBound + parameters.repDurationSeconds.upperBound) / 2
+        
+        // Use optimized rest times instead of parameter ranges (time-efficient approach)
+        let restRange = parameters.restBetweenSetsSeconds
+        let rangeSpan = restRange.upperBound - restRange.lowerBound
+        let efficientRestTime = restRange.lowerBound + Int(Double(rangeSpan) * 0.5) // Use middle of range for estimation
+        
+        // Apply time scaling for constrained workouts (60min and below)
+        let scaledRestTime = availableExerciseTimeMinutes <= 46 ? 
+            max(restRange.lowerBound, Int(Double(efficientRestTime) * 0.85)) : efficientRestTime
+        
+        // Estimate time per exercise in minutes
+        let workingTimePerExercise = Double(avgSetsPerExercise * avgRepsPerSet * avgRepDuration) / 60.0 // minutes
+        let restTimePerExercise = Double((avgSetsPerExercise - 1) * scaledRestTime) / 60.0 // minutes  
+        let setupTransitionTime = Double(parameters.compoundSetupSeconds + parameters.transitionSeconds) / 60.0 // minutes
+        let totalTimePerExercise = workingTimePerExercise + restTimePerExercise + setupTransitionTime
+        
+        // Calculate target total exercises with proper floating-point division
+        let targetTotalExercises = max(4, min(12, Int(Double(availableExerciseTimeMinutes) / max(1.0, totalTimePerExercise))))
+        
+        // Distribute across muscle groups (aim for 6-10 exercises for 60min workout)
+        let targetPerMuscle = max(1, Int(ceil(Double(targetTotalExercises) / Double(max(1, muscleGroupCount)))))
+        
+        print("🎯 Target calculation: \(availableExerciseTimeMinutes)min ÷ \(String(format: "%.1f", totalTimePerExercise))min = \(targetTotalExercises) total, \(targetPerMuscle) per muscle")
+        
+        return min(4, targetPerMuscle) // Cap at 4 per muscle group
+    }
+    
     private func getWarmupDuration(for workoutMinutes: Int) -> Int {
         switch workoutMinutes {
         case 0..<30:   return 180  // 3 minutes for short workouts
-        case 30..<90:  return 300  // 5 minutes for medium workouts
+        case 30..<60:  return 300  // 5 minutes for medium workouts
+        case 60..<90:  return 420  // 7 minutes for hour-long workouts
         default:       return 600  // 10 minutes for long workouts
         }
     }
@@ -1305,7 +1350,8 @@ private struct TodayWorkoutView: View {
         exercisesPerMuscle: Int,
         parameters: WorkoutParameters,
         recommendationService: WorkoutRecommendationService,
-        customEquipment: [Equipment]?
+        customEquipment: [Equipment]?,
+        availableTimeMinutes: Int? = nil
     ) -> [TodayWorkoutExercise] {
         
         var exercises: [TodayWorkoutExercise] = []
@@ -1320,7 +1366,7 @@ private struct TodayWorkoutView: View {
             for exercise in recommendedExercises {
                 let sets = parameters.setsPerExercise.lowerBound + (exercisesPerMuscle > 2 ? 1 : 0)
                 let reps = getOptimalReps(for: exercise, parameters: parameters)
-                let restTime = getOptimalRestTime(for: exercise, parameters: parameters)
+                let restTime = getOptimalRestTime(for: exercise, parameters: parameters, availableTimeMinutes: availableTimeMinutes)
                 
                 exercises.append(TodayWorkoutExercise(
                     exercise: exercise,
@@ -1339,7 +1385,8 @@ private struct TodayWorkoutView: View {
         muscleGroups: [String],
         parameters: WorkoutParameters,
         recommendationService: WorkoutRecommendationService,
-        customEquipment: [Equipment]?
+        customEquipment: [Equipment]?,
+        availableTimeMinutes: Int? = nil
     ) -> [TodayWorkoutExercise] {
         
         var exercises: [TodayWorkoutExercise] = []
@@ -1448,15 +1495,43 @@ private struct TodayWorkoutView: View {
         return max(range.lowerBound, min(range.upperBound, closest))
     }
     
-    private func getOptimalRestTime(for exercise: ExerciseData, parameters: WorkoutParameters) -> Int {
-        // Compound exercises get longer rest, isolation exercises get shorter rest
+    private func getOptimalRestTime(for exercise: ExerciseData, parameters: WorkoutParameters, availableTimeMinutes: Int? = nil) -> Int {
+        // Use time-efficient rest periods that still maintain exercise effectiveness
         let isCompound = isCompoundExercise(exercise)
+        let restRange = parameters.restBetweenSetsSeconds
         
+        // Calculate efficient rest times (prioritize time efficiency for app workouts)
+        let rangeSpan = restRange.upperBound - restRange.lowerBound
+        var efficientMax = restRange.lowerBound + Int(Double(rangeSpan) * 0.50)  // Use middle of range for compounds
+        var isolationMax = restRange.lowerBound + Int(Double(rangeSpan) * 0.25)  // Use lower quarter for isolations
+        
+        // Apply time scaling if workout duration is constrained
+        if let availableMinutes = availableTimeMinutes {
+            let scalingFactor = getRestTimeScalingFactor(availableTimeMinutes: availableMinutes)
+            efficientMax = max(restRange.lowerBound, Int(Double(efficientMax) * scalingFactor))
+            isolationMax = max(restRange.lowerBound, Int(Double(isolationMax) * scalingFactor))
+        }
+        
+        let finalRestTime: Int
         if isCompound {
-            return parameters.restBetweenSetsSeconds.upperBound
+            // Compound exercises: Use efficient maximum
+            finalRestTime = efficientMax
         } else {
-            return parameters.restBetweenSetsSeconds.lowerBound + 
-                   (parameters.restBetweenSetsSeconds.upperBound - parameters.restBetweenSetsSeconds.lowerBound) / 2
+            // Isolation exercises: Use lower quarter of range  
+            finalRestTime = max(restRange.lowerBound, isolationMax)
+        }
+        
+        print("🔍 Rest time for \(exercise.name): range=\(restRange), compound=\(isCompound), final=\(finalRestTime)s")
+        return finalRestTime
+    }
+    
+    private func getRestTimeScalingFactor(availableTimeMinutes: Int) -> Double {
+        // Scale rest times down for shorter workouts to fit more exercises
+        switch availableTimeMinutes {
+        case 0..<35:    return 0.70  // 30% reduction for short workouts
+        case 35..<50:   return 0.85  // 15% reduction for medium workouts  
+        case 50..<65:   return 0.95  // 5% reduction for hour workouts
+        default:        return 1.0   // No reduction for longer workouts
         }
     }
     
