@@ -495,6 +495,7 @@ struct LogWorkoutView: View {
                     print("⚡ Setting session-only flexibility: Warm-Up \(warmUp), Cool-Down \(coolDown)")
                     let newPrefs = FlexibilityPreferences(warmUpEnabled: warmUp, coolDownEnabled: coolDown)
                     flexibilityPreferences = newPrefs
+                    print("🔄 Session flexibilityPreferences updated. Effective now: warmUp=\(effectiveFlexibilityPreferences.warmUpEnabled), coolDown=\(effectiveFlexibilityPreferences.coolDownEnabled)")
                     
                     // Save session flexibility preferences to UserDefaults for persistence
                     if let data = try? JSONEncoder().encode(newPrefs) {
@@ -530,14 +531,13 @@ struct LogWorkoutView: View {
         print("🔄 Regenerating workout with duration: \(effectiveDuration.minutes) minutes")
         shouldRegenerateWorkout = true
         
-        // Reset the flag and hide loading after realistic generation time
+        // Hide loading after realistic generation time
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            shouldRegenerateWorkout = false
-            
             withAnimation(.easeInOut(duration: 0.3)) {
                 isGeneratingWorkout = false
             }
         }
+        // Note: shouldRegenerateWorkout is reset by TodayWorkoutView after it triggers generation
     }
     
     private func clearSessionDuration() {
@@ -1140,8 +1140,7 @@ private struct TodayWorkoutView: View {
                         
                         // Show generation loading
                         if isGeneratingWorkout {
-                            WorkoutGenerationCard()
-                                .padding(.horizontal)
+                            ModernWorkoutLoadingView(message: "Creating your personalized workout...")
                                 .transition(.opacity)
                         }
                         
@@ -1293,6 +1292,7 @@ private struct TodayWorkoutView: View {
     
     private func generateTodayWorkout() {
         isGeneratingWorkout = true
+        print("🚀 TodayWorkoutView: Starting workout generation with flexibility: warmUp=\(effectiveFlexibilityPreferences.warmUpEnabled), coolDown=\(effectiveFlexibilityPreferences.coolDownEnabled)")
         
         // Simulate AI workout generation
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
