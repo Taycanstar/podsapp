@@ -91,60 +91,80 @@ struct ExerciseLoggingView: View {
         var isWarmupSet: Bool = false
     }
     
+    private var bottomPadding: CGFloat {
+        return focusedField != nil ? 10 : 20
+    }
+    
+    // MARK: - Computed Views
+    
+    @ViewBuilder
+    private var mainScrollContent: some View {
+        VStack(spacing: 16) {
+            // Video Header - now scrolls with content
+            if !isVideoHidden {
+                videoHeaderView
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
+            }
+            
+            // Exercise name with ellipsis
+            exerciseHeaderSection
+            
+            // Sets input section
+            setsInputSection
+            
+            // RIR Section (shown after Log All Sets)
+            if showRIRSection {
+                rirSection
+                    .padding(.top, 20)
+            }
+            
+            // Add bottom padding to ensure content isn't hidden behind floating button
+            Color.clear
+                .frame(height: 100)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+    }
+    
+    @ViewBuilder
+    private var floatingButtonStack: some View {
+        VStack {
+            Spacer()
+            floatingButtonContent
+        }
+    }
+    
+    @ViewBuilder
+    private var floatingButtonContent: some View {
+        Group {
+            if !workoutStarted {
+                startWorkoutButton
+            } else if showRIRSection {
+                doneButton
+            } else {
+                workoutActionButtons
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, bottomPadding)
+        .animation(.easeInOut(duration: 0.25), value: focusedField != nil)
+    }
+    
+    @ViewBuilder
+    private var scrollViewWithAnimation: some View {
+        ScrollView {
+            mainScrollContent
+        }
+        .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
+    }
+    
     var body: some View {
         ZStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    
-                    // Video Header - now scrolls with content
-                    if !isVideoHidden {
-                        videoHeaderView
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .top).combined(with: .opacity),
-                                removal: .move(edge: .top).combined(with: .opacity)
-                            ))
-                    }
-                    
-                    // Exercise name with ellipsis
-                    exerciseHeaderSection
-                    
-                    // Sets input section
-                    setsInputSection
-                    
-                    // RIR Section (shown after Log All Sets)
-                    if showRIRSection {
-                        rirSection
-                            .padding(.top, 20)
-                    }
-                    
-                    // Add bottom padding to ensure content isn't hidden behind floating button
-                    Color.clear
-                        .frame(height: 100)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-            }
-            .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
-            
-            // Floating Workout Buttons
-            VStack {
-                Spacer()
-                
-                if !workoutStarted {
-                    startWorkoutButton
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, focusedField != nil ? 10 : 20)
-                } else if showRIRSection {
-                    doneButton
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, focusedField != nil ? 10 : 20)
-                } else {
-                    workoutActionButtons
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, focusedField != nil ? 10 : 20)
-                }
-            }
-            .animation(.easeInOut(duration: 0.25), value: focusedField != nil)
+            scrollViewWithAnimation
+            floatingButtonStack
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
@@ -215,9 +235,21 @@ struct ExerciseLoggingView: View {
         }
         .fullScreenCover(isPresented: $showingWorkoutInProgress) {
             if let exercises = allExercises {
+                // Create a sample workout for the progress view
+                let sampleWorkout = TodayWorkout(
+                    id: UUID(),
+                    date: Date(),
+                    title: "Current Workout",
+                    exercises: exercises,
+                    estimatedDuration: exercises.count * 10, // Rough estimate
+                    fitnessGoal: .general,
+                    difficulty: 3,
+                    warmUpExercises: nil,
+                    coolDownExercises: nil
+                )
                 WorkoutInProgressView(
                     isPresented: $showingWorkoutInProgress,
-                    exercises: exercises
+                    workout: sampleWorkout
                 )
             }
         }

@@ -90,6 +90,11 @@ struct LogWorkoutView: View {
         return flexibilityPreferences ?? FlexibilityPreferences() // defaults to both OFF
     }
     
+    // Check if there are any session modifications
+    private var hasSessionModifications: Bool {
+        return sessionDuration != nil || customTargetMuscles != nil || customEquipment != nil || sessionFitnessGoal != nil || sessionFitnessLevel != nil || (flexibilityPreferences != nil && flexibilityPreferences!.isEnabled)
+    }
+    
     // Keys for UserDefaults
     private let sessionDurationKey = "currentWorkoutSessionDuration"
     private let sessionDateKey = "currentWorkoutSessionDate"
@@ -439,10 +444,10 @@ struct LogWorkoutView: View {
                     get: { currentWorkout != nil },
                     set: { if !$0 { currentWorkout = nil } }
                 ),
-                exercises: workout.exercises
+                workout: workout
             )
             .onAppear {
-                print("📱 FullScreenCover appeared with \(workout.exercises.count) exercises")
+                print("📱 FullScreenCover appeared with \(workout.exercises.count) exercises, \(workout.warmUpExercises?.count ?? 0) warm-up, \(workout.coolDownExercises?.count ?? 0) cool-down")
             }
         }
     }
@@ -613,7 +618,7 @@ struct LogWorkoutView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 // X button to reset all session options (only show when any session option is set) - positioned first
-                if sessionDuration != nil || customTargetMuscles != nil || customEquipment != nil || sessionFitnessGoal != nil || sessionFitnessLevel != nil {
+                if hasSessionModifications {
                     Button(action: {
                         // Reset to default duration
                         sessionDuration = nil
@@ -641,8 +646,11 @@ struct LogWorkoutView: View {
                         sessionFitnessLevel = nil
                         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
                         
+                        // Reset to default flexibility preferences
+                        clearSessionFlexibilityPreferences()
+                        
                         regenerateWorkoutWithNewDuration()
-                        print("🔄 Reset to default duration, muscle type, equipment, and fitness goal")
+                        print("🔄 Reset to default duration, muscle type, equipment, fitness goal, and flexibility")
                     }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 12, weight: .medium))
@@ -662,220 +670,267 @@ struct LogWorkoutView: View {
                     .buttonStyle(PlainButtonStyle())
                 }
                 
-                // Duration Control with session modification styling
-                Button(action: {
-                    showingDurationPicker = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundColor(.secondary)
-                        
-                        Text(effectiveDuration.displayValue)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                        
-                        // Always show chevron
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(sessionDuration != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    .overlay(
-                        // Add primary color overlay when session duration is set
-                        sessionDuration != nil ? 
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.primary.opacity(0.05)) : nil
-                    )
+                // Dynamically ordered buttons - modified buttons appear first, then unmodified
+                ForEach(orderedButtons, id: \.self) { button in
+                    buttonView(for: button)
                 }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Type Control with custom muscle selection styling
-                Button(action: {
-                    showingTargetMusclesPicker = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "figure.mixed.cardio")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundColor(.secondary)
-                        
-                        Text(selectedMuscleType)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                        
-                        // Always show chevron
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(customTargetMuscles != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    .overlay(
-                        // Add primary color overlay when custom muscles are set
-                        customTargetMuscles != nil ? 
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.primary.opacity(0.05)) : nil
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Equipment Control with custom equipment selection styling
-                Button(action: {
-                    showingEquipmentPicker = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "figure.strengthtraining.traditional")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundColor(.secondary)
-                        
-                        Text("Equipment")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                        
-                        // Always show chevron
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(customEquipment != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    .overlay(
-                        // Add primary color overlay when custom equipment is set
-                        customEquipment != nil ? 
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.primary.opacity(0.05)) : nil
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Fitness Goal Control with session modification styling
-                Button(action: {
-                    showingFitnessGoalPicker = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "target")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundColor(.secondary)
-                        
-                        Text(effectiveFitnessGoal.displayName)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                        
-                        // Always show chevron
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(sessionFitnessGoal != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    .overlay(
-                        // Add primary color overlay when session fitness goal is set
-                        sessionFitnessGoal != nil ? 
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.primary.opacity(0.05)) : nil
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Fitness Level Control with session modification styling
-                Button(action: {
-                    showingFitnessLevelPicker = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "aqi.medium")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundColor(.secondary)
-                        
-                        Text(selectedFitnessLevel.displayName)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                        
-                        // Always show chevron
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(sessionFitnessLevel != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    .overlay(
-                        // Add primary color overlay when session fitness level is set
-                        sessionFitnessLevel != nil ? 
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.primary.opacity(0.05)) : nil
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Flexibility Control with session modification styling
-                Button(action: {
-                    showingFlexibilityPicker = true
-                }) {
-                    HStack(spacing: 8) {
-                        // Show plus icon when nothing is selected, otherwise show flexibility icon
-                        Image(systemName: effectiveFlexibilityPreferences.showPlusIcon ? "plus" : "figure.flexibility")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundColor(.secondary)
-                        
-                        Text(flexibilityPreferences?.shortText ?? effectiveFlexibilityPreferences.shortText)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                        
-                        // Always show chevron
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke((flexibilityPreferences != nil && flexibilityPreferences!.isEnabled) ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    .overlay(
-                        // Add primary color overlay when session flexibility preferences are set
-                        (flexibilityPreferences != nil && flexibilityPreferences!.isEnabled) ? 
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.primary.opacity(0.05)) : nil
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
             }
             .padding(.horizontal)
             .padding(.vertical, 2) // Add vertical padding to prevent border cutoff
         }
+    }
+    
+    // MARK: - Button Ordering Logic
+    
+    private enum WorkoutButton: CaseIterable {
+        case duration, muscles, equipment, fitnessGoal, fitnessLevel, flexibility
+    }
+    
+    private func isButtonModified(_ button: WorkoutButton) -> Bool {
+        switch button {
+        case .duration:
+            return sessionDuration != nil
+        case .muscles:
+            return customTargetMuscles != nil
+        case .equipment:
+            return customEquipment != nil
+        case .fitnessGoal:
+            return sessionFitnessGoal != nil
+        case .fitnessLevel:
+            return sessionFitnessLevel != nil
+        case .flexibility:
+            return flexibilityPreferences != nil && flexibilityPreferences!.isEnabled
+        }
+    }
+    
+    private var orderedButtons: [WorkoutButton] {
+        let modifiedButtons = WorkoutButton.allCases.filter { isButtonModified($0) }
+        let unmodifiedButtons = WorkoutButton.allCases.filter { !isButtonModified($0) }
+        return modifiedButtons + unmodifiedButtons
+    }
+    
+    @ViewBuilder
+    private func buttonView(for button: WorkoutButton) -> some View {
+        switch button {
+        case .duration:
+            durationButton
+        case .muscles:
+            musclesButton
+        case .equipment:
+            equipmentButton
+        case .fitnessGoal:
+            fitnessGoalButton
+        case .fitnessLevel:
+            fitnessLevelButton
+        case .flexibility:
+            flexibilityButton
+        }
+    }
+    
+    // MARK: - Individual Button Views
+    
+    private var durationButton: some View {
+        Button(action: {
+            showingDurationPicker = true
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.secondary)
+                
+                Text(effectiveDuration.displayValue)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemBackground))
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(sessionDuration != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+            )
+            .overlay(
+                sessionDuration != nil ? 
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.primary.opacity(0.05)) : nil
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var musclesButton: some View {
+        Button(action: {
+            showingTargetMusclesPicker = true
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "figure.mixed.cardio")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.secondary)
+                
+                Text(selectedMuscleType)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemBackground))
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(customTargetMuscles != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+            )
+            .overlay(
+                customTargetMuscles != nil ? 
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.primary.opacity(0.05)) : nil
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var equipmentButton: some View {
+        Button(action: {
+            showingEquipmentPicker = true
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "figure.strengthtraining.traditional")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.secondary)
+                
+                Text("Equipment")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemBackground))
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(customEquipment != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+            )
+            .overlay(
+                customEquipment != nil ? 
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.primary.opacity(0.05)) : nil
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var fitnessGoalButton: some View {
+        Button(action: {
+            showingFitnessGoalPicker = true
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "target")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.secondary)
+                
+                Text(effectiveFitnessGoal.displayName)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemBackground))
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(sessionFitnessGoal != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+            )
+            .overlay(
+                sessionFitnessGoal != nil ? 
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.primary.opacity(0.05)) : nil
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var fitnessLevelButton: some View {
+        Button(action: {
+            showingFitnessLevelPicker = true
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "aqi.medium")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.secondary)
+                
+                Text(selectedFitnessLevel.displayName)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemBackground))
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(sessionFitnessLevel != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+            )
+            .overlay(
+                sessionFitnessLevel != nil ? 
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.primary.opacity(0.05)) : nil
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var flexibilityButton: some View {
+        Button(action: {
+            showingFlexibilityPicker = true
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: effectiveFlexibilityPreferences.showPlusIcon ? "plus" : "figure.flexibility")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.secondary)
+                
+                Text(flexibilityPreferences?.shortText ?? effectiveFlexibilityPreferences.shortText)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemBackground))
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke((flexibilityPreferences != nil && flexibilityPreferences!.isEnabled) ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+            )
+            .overlay(
+                (flexibilityPreferences != nil && flexibilityPreferences!.isEnabled) ? 
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.primary.opacity(0.05)) : nil
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
     
     private var mainContentView: some View {
@@ -1007,7 +1062,7 @@ private struct TodayWorkoutView: View {
                         
                         // Show today's workout if available
                         if let workout = todayWorkout {
-                            VStack(spacing: 8) {
+                            VStack(spacing: 4) {
                                 TodayWorkoutExerciseList(
                                     workout: workout,
                                     navigationPath: $navigationPath,
@@ -1926,7 +1981,7 @@ private struct TodayWorkoutExerciseList: View {
             
             // Add bottom spacer to prevent last exercise from being hidden by Add Exercise button
             Section {
-                Color.clear.frame(height: 20)
+                Color.clear.frame(height: 8)
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -2052,7 +2107,7 @@ private struct TodayWorkoutExerciseList: View {
         }
         
         // Bottom spacer to prevent content from being hidden under Add Exercise button
-        totalHeight += 20
+        totalHeight += 8
         
         return totalHeight
     }

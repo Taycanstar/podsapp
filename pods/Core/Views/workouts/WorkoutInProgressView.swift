@@ -10,7 +10,7 @@ import UIKit
 
 struct WorkoutInProgressView: View {
     @Binding var isPresented: Bool
-    @State private var exercises: [TodayWorkoutExercise]
+    @State private var workout: TodayWorkout
     @State private var isPaused = false
     @State private var elapsedTime: TimeInterval = 0
     @State private var timer: Timer?
@@ -25,9 +25,29 @@ struct WorkoutInProgressView: View {
     @State private var exerciseCompletionStatus: [Int: Int] = [:] // exerciseIndex: loggedSetsCount
     @State private var exerciseRIRValues: [Int: Double] = [:] // exerciseIndex: rirValue
     
-    init(isPresented: Binding<Bool>, exercises: [TodayWorkoutExercise]) {
+    init(isPresented: Binding<Bool>, workout: TodayWorkout) {
         self._isPresented = isPresented
-        self._exercises = State(initialValue: exercises)
+        self._workout = State(initialValue: workout)
+    }
+    
+    // Computed property for easy access to main exercises
+    private var exercises: [TodayWorkoutExercise] {
+        return workout.exercises
+    }
+    
+    // Pre-computed combined exercises array to avoid repeated concatenation
+    private var allCombinedExercises: [TodayWorkoutExercise] {
+        let warmUp = workout.warmUpExercises ?? []
+        let main = workout.exercises
+        let coolDown = workout.coolDownExercises ?? []
+        return warmUp + main + coolDown
+    }
+    
+    // Check if workout has any exercises
+    private var hasAnyExercises: Bool {
+        !(workout.warmUpExercises?.isEmpty ?? true) || 
+        !workout.exercises.isEmpty || 
+        !(workout.coolDownExercises?.isEmpty ?? true)
     }
     
     var body: some View {
@@ -44,32 +64,17 @@ struct WorkoutInProgressView: View {
                     // Exercise list
                     ScrollView {
                         VStack(spacing: 8) {
-                            if exercises.isEmpty {
-                                Text("No exercises loaded")
-                                    .foregroundColor(.secondary)
-                                    .padding(.top, 50)
+                            if hasAnyExercises {
+                                exerciseContentView
                             } else {
-                                ForEach(Array(exercises.enumerated()), id: \.offset) { index, exercise in
-                                    ExerciseRowInProgress(
-                                        exercise: exercise,
-                                        allExercises: exercises,
-                                        isCompleted: completedExercises.contains(index),
-                                        loggedSetsCount: exerciseCompletionStatus[index],
-                                        onToggle: {
-                                            toggleExerciseCompletion(index)
-                                        },
-                                        onExerciseTap: {
-                                            navigationPath.append(WorkoutNavigationDestination.logExercise(exercise, exercises, index))
-                                        }
-                                    )
-                                }
+                                emptyExercisesView
                             }
                             
                             // Bottom padding for floating buttons
                             Color.clear
                                 .frame(height: 100)
                         }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, 0)
                         .padding(.top, 16)
                     }
                 }
@@ -161,8 +166,20 @@ struct WorkoutInProgressView: View {
                         },
                         onExerciseUpdated: { updatedExercise in
                             // Update the exercise in the workout data
-                            if let exerciseIndex = exercises.firstIndex(where: { $0.exercise.id == updatedExercise.exercise.id }) {
-                                exercises[exerciseIndex] = updatedExercise
+                            var updatedExercises = workout.exercises
+                            if let exerciseIndex = updatedExercises.firstIndex(where: { $0.exercise.id == updatedExercise.exercise.id }) {
+                                updatedExercises[exerciseIndex] = updatedExercise
+                                workout = TodayWorkout(
+                                    id: workout.id,
+                                    date: workout.date,
+                                    title: workout.title,
+                                    exercises: updatedExercises,
+                                    estimatedDuration: workout.estimatedDuration,
+                                    fitnessGoal: workout.fitnessGoal,
+                                    difficulty: workout.difficulty,
+                                    warmUpExercises: workout.warmUpExercises,
+                                    coolDownExercises: workout.coolDownExercises
+                                )
                             }
                         }
                     )
@@ -173,9 +190,15 @@ struct WorkoutInProgressView: View {
         } // Closes NavigationStack
         .onAppear {
             startTimer()
-            print("🏋️ WorkoutInProgressView appeared with \(exercises.count) exercises")
-            for (index, exercise) in exercises.enumerated() {
-                print("🏋️ Exercise \(index): \(exercise.exercise.name)")
+            let totalExercises = (workout.warmUpExercises?.count ?? 0) + workout.exercises.count + (workout.coolDownExercises?.count ?? 0)
+            print("🏋️ WorkoutInProgressView appeared with \(totalExercises) exercises (\(workout.warmUpExercises?.count ?? 0) warm-up, \(workout.exercises.count) main, \(workout.coolDownExercises?.count ?? 0) cool-down)")
+            
+            let allExercises = (workout.warmUpExercises ?? []) + workout.exercises + (workout.coolDownExercises ?? [])
+            for (index, exercise) in allExercises.enumerated() {
+                let warmUpCount = workout.warmUpExercises?.count ?? 0
+                let section = index < warmUpCount ? "Warm-up" : 
+                             index < warmUpCount + workout.exercises.count ? "Main" : "Cool-down"
+                print("🏋️ Exercise \(index) (\(section)): \(exercise.exercise.name)")
             }
         }
         .onDisappear {
@@ -189,6 +212,114 @@ struct WorkoutInProgressView: View {
         } message: {
             Text("You have logged sets in this workout. Are you sure you want to discard this workout?")
         }
+    }
+    
+    // MARK: - Computed Views
+    
+    @ViewBuilder
+    private var emptyExercisesView: some View {
+        Text("No exercises loaded")
+            .foregroundColor(.secondary)
+            .padding(.top, 50)
+    }
+    
+    @ViewBuilder
+    private var exerciseContentView: some View {
+        warmUpSectionView
+        mainExercisesSectionView
+        coolDownSectionView
+    }
+    
+    @ViewBuilder
+    private var warmUpSectionView: some View {
+        if let warmUpExercises = workout.warmUpExercises, !warmUpExercises.isEmpty {
+            sectionHeader(title: "Warm-Up", color: .orange)
+            
+            ForEach(Array(warmUpExercises.enumerated()), id: \.offset) { index, exercise in
+                createExerciseRow(
+                    exercise: exercise,
+                    globalIndex: index,
+                    loggedSetsCount: exerciseCompletionStatus[index]
+                )
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var mainExercisesSectionView: some View {
+        if !workout.exercises.isEmpty {
+            let mainExercisesStartIndex = workout.warmUpExercises?.count ?? 0
+            let shouldShowHeader = !(workout.warmUpExercises?.isEmpty ?? true) || !(workout.coolDownExercises?.isEmpty ?? true)
+            
+            if shouldShowHeader {
+                sectionHeader(title: "Main Workout", color: .primary)
+            }
+            
+            ForEach(Array(workout.exercises.enumerated()), id: \.offset) { index, exercise in
+                let globalIndex = mainExercisesStartIndex + index
+                createExerciseRow(
+                    exercise: exercise,
+                    globalIndex: globalIndex,
+                    loggedSetsCount: exerciseCompletionStatus[globalIndex]
+                )
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var coolDownSectionView: some View {
+        if let coolDownExercises = workout.coolDownExercises, !coolDownExercises.isEmpty {
+            let coolDownStartIndex = (workout.warmUpExercises?.count ?? 0) + workout.exercises.count
+            
+            sectionHeader(title: "Cool-Down", color: .mint)
+            
+            ForEach(Array(coolDownExercises.enumerated()), id: \.offset) { index, exercise in
+                let globalIndex = coolDownStartIndex + index
+                createExerciseRow(
+                    exercise: exercise,
+                    globalIndex: globalIndex,
+                    loggedSetsCount: exerciseCompletionStatus[globalIndex]
+                )
+            }
+        }
+    }
+    
+    // MARK: - Helper Views
+    
+    @ViewBuilder
+    private func sectionHeader(title: String, color: Color) -> some View {
+        Text(title)
+            .font(.system(size: 18, weight: .semibold))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .foregroundColor(color)
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+    }
+    
+    @ViewBuilder
+    private func createExerciseRow(
+        exercise: TodayWorkoutExercise,
+        globalIndex: Int,
+        loggedSetsCount: Int?
+    ) -> some View {
+        ExerciseRowInProgress(
+            exercise: exercise,
+            allExercises: allCombinedExercises,
+            isCompleted: completedExercises.contains(globalIndex),
+            loggedSetsCount: loggedSetsCount,
+            onToggle: {
+                toggleExerciseCompletion(globalIndex)
+            },
+            onExerciseTap: {
+                navigationPath.append(
+                    WorkoutNavigationDestination.logExercise(
+                        exercise,
+                        allCombinedExercises,
+                        globalIndex
+                    )
+                )
+            }
+        )
     }
     
     private var headerSection: some View {
@@ -453,39 +584,49 @@ struct ExerciseRowInProgress: View {
 #Preview {
     WorkoutInProgressView(
         isPresented: .constant(true),
-        exercises: [
-            TodayWorkoutExercise(
-                exercise: ExerciseData(
-                    id: 1,
-                    name: "Barbell Bench Press",
-                    exerciseType: "Strength",
-                    bodyPart: "Chest",
-                    equipment: "Barbell",
-                    gender: "Both",
-                    target: "Pectorals",
-                    synergist: "Triceps, Anterior Deltoid"
+        workout: TodayWorkout(
+            id: UUID(),
+            date: Date(),
+            title: "Sample Workout",
+            exercises: [
+                TodayWorkoutExercise(
+                    exercise: ExerciseData(
+                        id: 1,
+                        name: "Barbell Bench Press",
+                        exerciseType: "Strength",
+                        bodyPart: "Chest",
+                        equipment: "Barbell",
+                        gender: "Both",
+                        target: "Pectorals",
+                        synergist: "Triceps, Anterior Deltoid"
+                    ),
+                    sets: 3,
+                    reps: 6,
+                    weight: 140,
+                    restTime: 90
                 ),
-                sets: 3,
-                reps: 6,
-                weight: 140,
-                restTime: 90
-            ),
-            TodayWorkoutExercise(
-                exercise: ExerciseData(
-                    id: 2,
-                    name: "Close-Grip Bench Press",
-                    exerciseType: "Strength",
-                    bodyPart: "Chest",
-                    equipment: "Barbell",
-                    gender: "Both",
-                    target: "Triceps",
-                    synergist: "Pectorals"
-                ),
-                sets: 3,
-                reps: 8,
-                weight: 100,
-                restTime: 90
-            )
-        ]
+                TodayWorkoutExercise(
+                    exercise: ExerciseData(
+                        id: 2,
+                        name: "Close-Grip Bench Press",
+                        exerciseType: "Strength",
+                        bodyPart: "Chest",
+                        equipment: "Barbell",
+                        gender: "Both",
+                        target: "Triceps",
+                        synergist: "Pectorals"
+                    ),
+                    sets: 3,
+                    reps: 8,
+                    weight: 100,
+                    restTime: 90
+                )
+            ],
+            estimatedDuration: 45,
+            fitnessGoal: .strength,
+            difficulty: 3,
+            warmUpExercises: [],
+            coolDownExercises: []
+        )
     )
 }
