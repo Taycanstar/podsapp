@@ -476,14 +476,29 @@ class WorkoutRecommendationService {
     func getWarmUpExercises(targetMuscles: [String], customEquipment: [Equipment]? = nil, count: Int = 3) -> [TodayWorkoutExercise] {
         let allExercises = ExerciseDatabase.getAllExercises()
         
-        // Filter for stretching exercises that are suitable for warm-up
+        // Filter for exercises that are suitable for warm-up
         let warmUpExercises = allExercises.filter { exercise in
             let exerciseType = exercise.exerciseType.lowercased()
             let exerciseName = exercise.name.lowercased()
             let bodyPart = exercise.bodyPart.lowercased()
             
-            // Must be stretching type
-            guard exerciseType == "stretching" else { return false }
+            // Look for bodyweight/mobility exercises suitable for warm-up
+            let isBodyweight = exercise.equipment.lowercased().contains("body weight") || exercise.equipment.lowercased().isEmpty
+            
+            // Look for warm-up suitable exercises by name patterns
+            let isWarmupSuitable = exerciseName.contains("stretch") ||
+                                  exerciseName.contains("mobility") ||
+                                  exerciseName.contains("activation") ||
+                                  exerciseName.contains("walk") ||
+                                  exerciseName.contains("march") ||
+                                  exerciseName.contains("swing") ||
+                                  exerciseName.contains("circle") ||
+                                  exerciseName.contains("rotation") ||
+                                  bodyPart.contains("cardio") ||
+                                  (isBodyweight && (bodyPart.contains("shoulder") || bodyPart.contains("hip")))
+            
+            // Must be suitable for warm-up
+            guard isWarmupSuitable else { return false }
             
             // Filter for dynamic/warm-up type stretches
             let isDynamic = exerciseName.contains("dynamic") ||
@@ -524,13 +539,29 @@ class WorkoutRecommendationService {
     func getCoolDownExercises(targetMuscles: [String], customEquipment: [Equipment]? = nil, count: Int = 3) -> [TodayWorkoutExercise] {
         let allExercises = ExerciseDatabase.getAllExercises()
         
-        // Filter for stretching exercises that are suitable for cool-down
+        // Filter for exercises that are suitable for cool-down
         let coolDownExercises = allExercises.filter { exercise in
             let exerciseType = exercise.exerciseType.lowercased()
             let exerciseName = exercise.name.lowercased()
+            let bodyPart = exercise.bodyPart.lowercased()
             
-            // Must be stretching type
-            guard exerciseType == "stretching" else { return false }
+            // Look for bodyweight/mobility exercises suitable for cool-down
+            let isBodyweight = exercise.equipment.lowercased().contains("body weight") || exercise.equipment.lowercased().isEmpty
+            
+            // Look for cool-down suitable exercises by name patterns
+            let isCooldownSuitable = exerciseName.contains("stretch") ||
+                                    exerciseName.contains("mobility") ||
+                                    exerciseName.contains("hold") ||
+                                    exerciseName.contains("recovery") ||
+                                    (isBodyweight && (exerciseName.contains("calf") || 
+                                                     exerciseName.contains("hamstring") ||
+                                                     exerciseName.contains("quad") ||
+                                                     exerciseName.contains("chest") ||
+                                                     exerciseName.contains("back") ||
+                                                     bodyPart.contains("waist")))
+            
+            // Must be suitable for cool-down
+            guard isCooldownSuitable else { return false }
             
             // Filter for static/cool-down type stretches (exclude dynamic ones)
             let isStatic = !exerciseName.contains("dynamic") &&

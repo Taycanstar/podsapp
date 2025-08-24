@@ -156,15 +156,9 @@ struct FlexibilityPickerView: View {
                 onSetDefault(tempWarmUpEnabled, tempCoolDownEnabled)
             }
             .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .background(Color.primary)
-            .cornerRadius(8)
+            .foregroundColor(.primary)
             
-            Rectangle()
-                .frame(width: 16)
-                .foregroundColor(.clear)
+            Spacer()
             
             Button("Set for this workout") {
                 warmUpEnabled = tempWarmUpEnabled
@@ -172,13 +166,11 @@ struct FlexibilityPickerView: View {
                 onSetForWorkout(tempWarmUpEnabled, tempCoolDownEnabled)
             }
             .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(.primary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.primary, lineWidth: 1)
-            )
+            .foregroundColor(Color(.systemBackground))
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.primary)
+            .cornerRadius(8)
         }
         .padding(.top, 24)
     }

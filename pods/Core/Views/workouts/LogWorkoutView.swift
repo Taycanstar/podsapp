@@ -69,11 +69,16 @@ struct LogWorkoutView: View {
     @State private var showingFitnessLevelPicker = false
     
     // Add flexibility preferences state variables
+    @State private var selectedFlexibilityPreferences: FlexibilityPreferences = FlexibilityPreferences() // Default preferences (both disabled by default)
     @State private var flexibilityPreferences: FlexibilityPreferences? = nil // Session-specific flexibility preferences
     @State private var showingFlexibilityPicker = false
     
     // Add state for showing workout in progress
     @State private var currentWorkout: TodayWorkout? = nil
+    
+    // Loading state for preferences and workout generation
+    @State private var isGeneratingWorkout = false
+    @State private var generationMessage = "Creating your workout..."
     
     // Computed property for the actual duration to use
     private var effectiveDuration: WorkoutDuration {
@@ -87,12 +92,22 @@ struct LogWorkoutView: View {
     
     // Computed property for the actual flexibility preferences to use
     private var effectiveFlexibilityPreferences: FlexibilityPreferences {
-        return flexibilityPreferences ?? FlexibilityPreferences() // defaults to both OFF
+        return flexibilityPreferences ?? selectedFlexibilityPreferences // Use session override or defaults
     }
     
     // Check if there are any session modifications
     private var hasSessionModifications: Bool {
         return sessionDuration != nil || customTargetMuscles != nil || customEquipment != nil || sessionFitnessGoal != nil || sessionFitnessLevel != nil || (flexibilityPreferences != nil && flexibilityPreferences!.isEnabled)
+    }
+    
+    // Loading state messages
+    private var loadingMessages: [String] {
+        [
+            "Selecting exercises...",
+            "Optimizing your workout...", 
+            "Calculating rest periods...",
+            "Finalizing recommendations..."
+        ]
     }
     
     // Keys for UserDefaults
@@ -185,6 +200,11 @@ struct LogWorkoutView: View {
                         switch result {
                         case .success(let preferences):
                             print("✅ Loaded flexibility defaults: warmUp=\(preferences.warmUpEnabled), coolDown=\(preferences.coolDownEnabled)")
+                            // Update the default flexibility preferences from backend
+                            selectedFlexibilityPreferences = FlexibilityPreferences(
+                                warmUpEnabled: preferences.warmUpEnabled, 
+                                coolDownEnabled: preferences.coolDownEnabled
+                            )
                         case .failure(let error):
                             print("⚠️ Could not load flexibility defaults from backend: \(error)")
                         }
@@ -454,6 +474,10 @@ struct LogWorkoutView: View {
                             DispatchQueue.main.async {
                                 switch result {
                                 case .success:
+                                    // Update the default flexibility preferences
+                                    selectedFlexibilityPreferences = FlexibilityPreferences(warmUpEnabled: warmUp, coolDownEnabled: coolDown)
+                                    print("✅ Updated selectedFlexibilityPreferences: warmUp=\(selectedFlexibilityPreferences.warmUpEnabled), coolDown=\(selectedFlexibilityPreferences.coolDownEnabled)")
+                                    
                                     // Clear session flexibility preferences since it's now the default
                                     flexibilityPreferences = nil
                                     UserDefaults.standard.removeObject(forKey: sessionFlexibilityKey)
@@ -497,12 +521,22 @@ struct LogWorkoutView: View {
     }
     
     private func regenerateWorkoutWithNewDuration() {
-        // Trigger workout regeneration
+        // Show loading animation
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isGeneratingWorkout = true
+            generationMessage = loadingMessages.randomElement() ?? "Creating your workout..."
+        }
+        
         print("🔄 Regenerating workout with duration: \(effectiveDuration.minutes) minutes")
         shouldRegenerateWorkout = true
-        // Reset the flag after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        
+        // Reset the flag and hide loading after realistic generation time
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             shouldRegenerateWorkout = false
+            
+            withAnimation(.easeInOut(duration: 0.3)) {
+                isGeneratingWorkout = false
+            }
         }
     }
     
@@ -981,22 +1015,29 @@ struct LogWorkoutView: View {
         Group {
             switch selectedWorkoutTab {
             case .today:
-                TodayWorkoutView(
-                    searchText: searchText,
-                    navigationPath: $navigationPath,
-                    workoutManager: workoutManager,
-                    userEmail: userEmail,
-                    selectedDuration: effectiveDuration,
-                    shouldRegenerate: $shouldRegenerateWorkout,
-                    customTargetMuscles: customTargetMuscles,
-                    customEquipment: customEquipment,
-                    effectiveFitnessGoal: effectiveFitnessGoal,
-                    effectiveFitnessLevel: sessionFitnessLevel ?? selectedFitnessLevel,
-                    onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
-                    onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
-                    currentWorkout: $currentWorkout,
-                    effectiveFlexibilityPreferences: effectiveFlexibilityPreferences
-                )
+                if isGeneratingWorkout {
+                    ModernWorkoutLoadingView(message: generationMessage)
+                        .transition(.opacity.combined(with: .scale))
+                        .id("loading") // Force view refresh
+                } else {
+                    TodayWorkoutView(
+                        searchText: searchText,
+                        navigationPath: $navigationPath,
+                        workoutManager: workoutManager,
+                        userEmail: userEmail,
+                        selectedDuration: effectiveDuration,
+                        shouldRegenerate: $shouldRegenerateWorkout,
+                        customTargetMuscles: customTargetMuscles,
+                        customEquipment: customEquipment,
+                        effectiveFitnessGoal: effectiveFitnessGoal,
+                        effectiveFitnessLevel: sessionFitnessLevel ?? selectedFitnessLevel,
+                        onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
+                        onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
+                        currentWorkout: $currentWorkout,
+                        effectiveFlexibilityPreferences: effectiveFlexibilityPreferences
+                    )
+                    .transition(.opacity.combined(with: .scale))
+                }
             case .workouts:
                 RoutinesWorkoutView(
                     searchText: searchText,
@@ -1216,6 +1257,10 @@ private struct TodayWorkoutView: View {
             print("🎯 Custom muscles changed to: \(newMuscles?.description ?? "nil") - regenerating workout")
             generateTodayWorkout()
         }
+        .onChange(of: effectiveFlexibilityPreferences) { _, newPreferences in
+            print("🧘 Flexibility preferences changed to: warmUp=\(newPreferences.warmUpEnabled), coolDown=\(newPreferences.coolDownEnabled) - regenerating workout")
+            generateTodayWorkout()
+        }
         .onChange(of: customEquipment) { _, newEquipment in
             print("⚙️ Custom equipment changed to: \(newEquipment?.description ?? "nil") - regenerating workout") 
             generateTodayWorkout()
@@ -1319,12 +1364,30 @@ private struct TodayWorkoutView: View {
             getWorkoutTitle(for: fitnessGoal)
         
         // Generate warm-up exercises if enabled
-        let warmUpExercises: [TodayWorkoutExercise]? = effectiveFlexibilityPreferences.warmUpEnabled ? 
-            recommendationService.getWarmUpExercises(targetMuscles: muscleGroups, customEquipment: customEquipment, count: 3) : nil
+        print("🔍 Creating workout with flexibility preferences: warmUp=\(effectiveFlexibilityPreferences.warmUpEnabled), coolDown=\(effectiveFlexibilityPreferences.coolDownEnabled)")
+        
+        let warmUpExercises: [TodayWorkoutExercise]?
+        if effectiveFlexibilityPreferences.warmUpEnabled {
+            let warmUpResult = recommendationService.getWarmUpExercises(targetMuscles: muscleGroups, customEquipment: customEquipment, count: 3)
+            warmUpExercises = warmUpResult
+            print("🔥 Warm-up generation: requested=true, received=\(warmUpResult.count) exercises")
+        } else {
+            warmUpExercises = nil
+            print("🔥 Warm-up generation: requested=false")
+        }
         
         // Generate cool-down exercises if enabled
-        let coolDownExercises: [TodayWorkoutExercise]? = effectiveFlexibilityPreferences.coolDownEnabled ? 
-            recommendationService.getCoolDownExercises(targetMuscles: muscleGroups, customEquipment: customEquipment, count: 3) : nil
+        let coolDownExercises: [TodayWorkoutExercise]?
+        if effectiveFlexibilityPreferences.coolDownEnabled {
+            let coolDownResult = recommendationService.getCoolDownExercises(targetMuscles: muscleGroups, customEquipment: customEquipment, count: 3)
+            coolDownExercises = coolDownResult
+            print("🧊 Cool-down generation: requested=true, received=\(coolDownResult.count) exercises")
+        } else {
+            coolDownExercises = nil
+            print("🧊 Cool-down generation: requested=false")
+        }
+            
+        print("🏋️ Generated warm-up exercises: \(warmUpExercises?.count ?? 0), cool-down exercises: \(coolDownExercises?.count ?? 0)")
         
         return TodayWorkout(
             id: UUID(),
@@ -2959,6 +3022,139 @@ struct NavigationBarSeparatorModifier: ViewModifier {
             onExerciseReplacementCallbackSet: { _ in },
             onExerciseUpdateCallbackSet: { _ in }
         )
+    }
+}
+
+// MARK: - Modern Loading View Component
+
+private struct ModernWorkoutLoadingView: View {
+    let message: String
+    @State private var shimmerOffset: CGFloat = -200
+    @State private var pulseScale: CGFloat = 1.0
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    
+    var body: some View {
+        if reduceMotion {
+            // Simple loading for reduced motion
+            VStack(spacing: 24) {
+                ProgressView()
+                    .scaleEffect(1.2)
+                    .tint(.accentColor)
+                
+                Text(message)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .accessibilityLabel("Loading workout. \(message)")
+        } else {
+            // Full animated loading
+            VStack(spacing: 32) {
+                // Add top spacing to avoid touching header
+                Color.clear.frame(height: 40)
+                // Elegant loading indicator
+                VStack(spacing: 16) {
+                    // Subtle pulsing dots
+                    HStack(spacing: 8) {
+                        ForEach(0..<3, id: \.self) { index in
+                            Circle()
+                                .fill(Color.accentColor)
+                                .frame(width: 8, height: 8)
+                                .scaleEffect(pulseScale)
+                                .animation(
+                                    .easeInOut(duration: 0.6)
+                                    .repeatForever()
+                                    .delay(Double(index) * 0.2),
+                                    value: pulseScale
+                                )
+                        }
+                    }
+                    
+                    // Status text
+                    Text(message)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .animation(.easeInOut(duration: 0.3), value: message)
+                }
+                
+                // Skeleton exercise cards
+                VStack(spacing: 12) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        skeletonExerciseCard
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+            .onAppear {
+                startAnimations()
+            }
+            .accessibilityLabel("Loading workout. \(message)")
+        }
+    }
+    
+    private var skeletonExerciseCard: some View {
+        HStack(spacing: 16) {
+            // Thumbnail skeleton
+            RoundedRectangle(cornerRadius: 8)
+                .fill(shimmerGradient)
+                .frame(width: 60, height: 60)
+            
+            // Content skeleton
+            VStack(alignment: .leading, spacing: 8) {
+                // Exercise name
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(shimmerGradient)
+                    .frame(height: 16)
+                
+                // Sets/reps info
+                HStack {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(shimmerGradient)
+                        .frame(width: 60, height: 12)
+                    
+                    Spacer()
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        )
+    }
+    
+    private var shimmerGradient: LinearGradient {
+        let baseColor = Color(.systemGray5)
+        let shimmerColor = Color(.systemGray4)
+        
+        return LinearGradient(
+            gradient: Gradient(stops: [
+                .init(color: baseColor, location: 0),
+                .init(color: shimmerColor, location: 0.5),
+                .init(color: baseColor, location: 1)
+            ]),
+            startPoint: .init(x: -0.3 + shimmerOffset/200, y: 0),
+            endPoint: .init(x: 0.3 + shimmerOffset/200, y: 0)
+        )
+    }
+    
+    private func startAnimations() {
+        // Pulsing dots animation
+        pulseScale = 1.2
+        
+        // Shimmer animation
+        withAnimation(
+            .linear(duration: 1.5)
+            .repeatForever(autoreverses: false)
+        ) {
+            shimmerOffset = 200
+        }
     }
 }
     
