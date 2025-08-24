@@ -72,8 +72,8 @@ class MealReminderService: ObservableObject {
         self.lunchTime = Calendar.current.date(from: DateComponents(hour: 12, minute: 0)) ?? Date()
         self.dinnerTime = Calendar.current.date(from: DateComponents(hour: 19, minute: 0)) ?? Date()
         
-        // Load saved preferences - but default to true if notifications are authorized
-        let shouldDefaultToEnabled = NotificationManager.shared.authorizationStatus == .authorized
+        // Load saved preferences - but ALWAYS default to true (meal reminders should always be on)
+        let shouldDefaultToEnabled = true // Always enable meal reminders - if permissions denied, they won't show anyway
         self.isBreakfastEnabled = UserDefaults.standard.object(forKey: breakfastEnabledKey) != nil ? UserDefaults.standard.bool(forKey: breakfastEnabledKey) : shouldDefaultToEnabled
         self.isLunchEnabled = UserDefaults.standard.object(forKey: lunchEnabledKey) != nil ? UserDefaults.standard.bool(forKey: lunchEnabledKey) : shouldDefaultToEnabled
         self.isDinnerEnabled = UserDefaults.standard.object(forKey: dinnerEnabledKey) != nil ? UserDefaults.standard.bool(forKey: dinnerEnabledKey) : shouldDefaultToEnabled

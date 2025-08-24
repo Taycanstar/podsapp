@@ -172,6 +172,9 @@
 		36A851972E5A106F004E5CED /* ExerciseNotesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851962E5A1064004E5CED /* ExerciseNotesSheet.swift */; };
 		36A8519B2E5A109A004E5CED /* ExerciseNotesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A8519A2E5A108F004E5CED /* ExerciseNotesService.swift */; };
 		36A8519D2E5A10A6004E5CED /* ExerciseNotesData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A8519C2E5A10A0004E5CED /* ExerciseNotesData.swift */; };
+		36A8519F2E5ABF53004E5CED /* FlexibilityPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A8519E2E5ABF4C004E5CED /* FlexibilityPreferences.swift */; };
+		36A851A12E5ABFBD004E5CED /* FlexibilityPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851A02E5ABFB6004E5CED /* FlexibilityPickerView.swift */; };
+		36A851A32E5AC0AE004E5CED /* CollapsibleSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851A22E5AC0A7004E5CED /* CollapsibleSection.swift */; };
 		36A85CD72DB182BA00DD4266 /* GenderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD62DB182BA00DD4266 /* GenderView.swift */; };
 		36A85CD92DB1CC4500DD4266 /* WorkoutDaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */; };
 		36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */; };
@@ -471,6 +474,9 @@
 		36A851962E5A1064004E5CED /* ExerciseNotesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseNotesSheet.swift; sourceTree = "<group>"; };
 		36A8519A2E5A108F004E5CED /* ExerciseNotesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseNotesService.swift; sourceTree = "<group>"; };
 		36A8519C2E5A10A0004E5CED /* ExerciseNotesData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseNotesData.swift; sourceTree = "<group>"; };
+		36A8519E2E5ABF4C004E5CED /* FlexibilityPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlexibilityPreferences.swift; sourceTree = "<group>"; };
+		36A851A02E5ABFB6004E5CED /* FlexibilityPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlexibilityPickerView.swift; sourceTree = "<group>"; };
+		36A851A22E5AC0A7004E5CED /* CollapsibleSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollapsibleSection.swift; sourceTree = "<group>"; };
 		36A85CD62DB182BA00DD4266 /* GenderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenderView.swift; sourceTree = "<group>"; };
 		36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDaysView.swift; sourceTree = "<group>"; };
 		36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightWeightView.swift; sourceTree = "<group>"; };
@@ -753,6 +759,7 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				36A8519E2E5ABF4C004E5CED /* FlexibilityPreferences.swift */,
 				36A851962E5A1064004E5CED /* ExerciseNotesSheet.swift */,
 				36A851942E5A1052004E5CED /* QuickNotesCaptureView.swift */,
 				36A851922E58B412004E5CED /* ReplaceExerciseView.swift */,
@@ -822,6 +829,8 @@
 		3682C86A2BBAED5B00B350E2 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				36A851A22E5AC0A7004E5CED /* CollapsibleSection.swift */,
+				36A851A02E5ABFB6004E5CED /* FlexibilityPickerView.swift */,
 				3637F0A52CE13F3F0010624A /* DatePickerWheel.swift */,
 				3682C86B2BBAED7100B350E2 /* CustomVideoPlayer.swift */,
 				3694744B2CB70EFA00CD197F /* SingleVideoPlayerView.swift */,
@@ -1454,6 +1463,8 @@
 				363AFA0F2D3C1A0900C91A14 /* ItemSummaryView.swift in Sources */,
 				363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */,
 				36ED35F12DDE536800D174FB /* DescribeFoodView.swift in Sources */,
+				36A851A32E5AC0AE004E5CED /* CollapsibleSection.swift in Sources */,
+				36A8519F2E5ABF53004E5CED /* FlexibilityPreferences.swift in Sources */,
 				361FF3412E288D9D00B7F68E /* MuscleRecoveryService.swift in Sources */,
 				361FF3392E23090000B7F68E /* StartWorkoutView.swift in Sources */,
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
@@ -1599,6 +1610,7 @@
 				363068CB2E0B571000F2D4EC /* CameraProgressView.swift in Sources */,
 				36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */,
 				36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */,
+				36A851A12E5ABFBD004E5CED /* FlexibilityPickerView.swift in Sources */,
 				361FF3132E1D999C00B7F68E /* CardioExercisesView.swift in Sources */,
 				36A8518F2E56708C004E5CED /* ExerciseChart.swift in Sources */,
 				362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */,

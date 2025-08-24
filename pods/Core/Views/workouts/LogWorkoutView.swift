@@ -68,6 +68,10 @@ struct LogWorkoutView: View {
     @State private var sessionFitnessLevel: ExperienceLevel? = nil // Session-specific level (doesn't affect defaults)
     @State private var showingFitnessLevelPicker = false
     
+    // Add flexibility preferences state variables
+    @State private var flexibilityPreferences: FlexibilityPreferences? = nil // Session-specific flexibility preferences
+    @State private var showingFlexibilityPicker = false
+    
     // Add state for showing workout in progress
     @State private var currentWorkout: TodayWorkout? = nil
     
@@ -81,6 +85,11 @@ struct LogWorkoutView: View {
         return sessionFitnessGoal ?? selectedFitnessGoal
     }
     
+    // Computed property for the actual flexibility preferences to use
+    private var effectiveFlexibilityPreferences: FlexibilityPreferences {
+        return flexibilityPreferences ?? FlexibilityPreferences() // defaults to both OFF
+    }
+    
     // Keys for UserDefaults
     private let sessionDurationKey = "currentWorkoutSessionDuration"
     private let sessionDateKey = "currentWorkoutSessionDate"
@@ -88,6 +97,9 @@ struct LogWorkoutView: View {
     
     // Add fitness goal session keys
     private let sessionFitnessGoalKey = "currentWorkoutSessionFitnessGoal"
+    
+    // Add flexibility preferences session key
+    private let sessionFlexibilityKey = "currentWorkoutSessionFlexibility"
     
     enum WorkoutTab: Hashable {
         case today, workouts
@@ -148,6 +160,9 @@ struct LogWorkoutView: View {
             if !userEmail.isEmpty {
                 workoutManager.initialize(userEmail: userEmail)
             }
+            
+            // Load session flexibility preferences
+            loadSessionFlexibilityPreferences()
             
             // No longer need notification listener
         }
@@ -380,6 +395,40 @@ struct LogWorkoutView: View {
                     UserDefaults.standard.set(newLevel.rawValue, forKey: "currentWorkoutSessionFitnessLevel")
                     
                     showingFitnessLevelPicker = false
+                    regenerateWorkoutWithNewDuration()
+                }
+            )
+        }
+        .sheet(isPresented: $showingFlexibilityPicker) {
+            FlexibilityPickerView(
+                warmUpEnabled: .constant(effectiveFlexibilityPreferences.warmUpEnabled),
+                coolDownEnabled: .constant(effectiveFlexibilityPreferences.coolDownEnabled),
+                onSetDefault: { warmUp, coolDown in
+                    // Save as default flexibility preferences - update UserProfileService 
+                    print("🔧 Setting as default flexibility: Warm-Up \(warmUp), Cool-Down \(coolDown)")
+                    
+                    // Clear session flexibility preferences since it's now the default
+                    flexibilityPreferences = nil
+                    UserDefaults.standard.removeObject(forKey: sessionFlexibilityKey)
+                    
+                    // Update global defaults via UserProfileService (would need to extend UserProfileService)
+                    // For now, just clear session preferences
+                    
+                    showingFlexibilityPicker = false
+                    regenerateWorkoutWithNewDuration()
+                },
+                onSetForWorkout: { warmUp, coolDown in
+                    // Apply to current workout session only
+                    print("⚡ Setting session-only flexibility: Warm-Up \(warmUp), Cool-Down \(coolDown)")
+                    let newPrefs = FlexibilityPreferences(warmUpEnabled: warmUp, coolDownEnabled: coolDown)
+                    flexibilityPreferences = newPrefs
+                    
+                    // Save session flexibility preferences to UserDefaults for persistence
+                    if let data = try? JSONEncoder().encode(newPrefs) {
+                        UserDefaults.standard.set(data, forKey: sessionFlexibilityKey)
+                    }
+                    
+                    showingFlexibilityPicker = false
                     regenerateWorkoutWithNewDuration()
                 }
             )
@@ -767,6 +816,36 @@ struct LogWorkoutView: View {
                     )
                 }
                 .buttonStyle(PlainButtonStyle())
+                
+                // Flexibility Control with session modification styling
+                Button(action: {
+                    showingFlexibilityPicker = true
+                }) {
+                    HStack(spacing: 4) {
+                        Text(flexibilityPreferences?.shortText ?? "Flexibility")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        Image(systemName: "figure.flexibility")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(flexibilityPreferences != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                    .overlay(
+                        // Add primary color overlay when session flexibility preferences are set
+                        flexibilityPreferences != nil ? 
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.primary.opacity(0.05)) : nil
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
             .padding(.horizontal)
             .padding(.vertical, 2) // Add vertical padding to prevent border cutoff
@@ -790,7 +869,8 @@ struct LogWorkoutView: View {
                     effectiveFitnessLevel: sessionFitnessLevel ?? selectedFitnessLevel,
                     onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
                     onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
-                    currentWorkout: $currentWorkout
+                    currentWorkout: $currentWorkout,
+                    effectiveFlexibilityPreferences: effectiveFlexibilityPreferences
                 )
             case .workouts:
                 RoutinesWorkoutView(
@@ -816,6 +896,20 @@ struct LogWorkoutView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Flexibility Preferences Methods
+    
+    private func loadSessionFlexibilityPreferences() {
+        if let data = UserDefaults.standard.data(forKey: sessionFlexibilityKey),
+           let preferences = try? JSONDecoder().decode(FlexibilityPreferences.self, from: data) {
+            flexibilityPreferences = preferences
+        }
+    }
+    
+    private func clearSessionFlexibilityPreferences() {
+        flexibilityPreferences = nil
+        UserDefaults.standard.removeObject(forKey: sessionFlexibilityKey)
     }
 }
 
@@ -863,6 +957,7 @@ private struct TodayWorkoutView: View {
     let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
     let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
     @Binding var currentWorkout: TodayWorkout?
+    let effectiveFlexibilityPreferences: FlexibilityPreferences // Added this parameter
     
     @State private var todayWorkout: TodayWorkout?
     @State private var isGeneratingWorkout = false
@@ -1090,13 +1185,22 @@ private struct TodayWorkoutView: View {
             muscleGroups: muscleGroups,
             parameters: workoutParams,
             recommendationService: recommendationService,
-            customEquipment: customEquipment
+            customEquipment: customEquipment,
+            flexibilityPreferences: effectiveFlexibilityPreferences
         )
         
         // Create dynamic title based on selected muscles
         let workoutTitle = muscleGroups.count >= 2 ? 
             "\(muscleGroups.prefix(2).joined(separator: " & ")) Focus" : 
             getWorkoutTitle(for: fitnessGoal)
+        
+        // Generate warm-up exercises if enabled
+        let warmUpExercises: [TodayWorkoutExercise]? = effectiveFlexibilityPreferences.warmUpEnabled ? 
+            recommendationService.getWarmUpExercises(targetMuscles: muscleGroups, customEquipment: customEquipment, count: 3) : nil
+        
+        // Generate cool-down exercises if enabled
+        let coolDownExercises: [TodayWorkoutExercise]? = effectiveFlexibilityPreferences.coolDownEnabled ? 
+            recommendationService.getCoolDownExercises(targetMuscles: muscleGroups, customEquipment: customEquipment, count: 3) : nil
         
         return TodayWorkout(
             id: UUID(),
@@ -1105,7 +1209,9 @@ private struct TodayWorkoutView: View {
             exercises: workoutPlan.exercises,
             estimatedDuration: workoutPlan.actualDurationMinutes,
             fitnessGoal: fitnessGoal,
-            difficulty: experienceLevel.workoutComplexity
+            difficulty: experienceLevel.workoutComplexity,
+            warmUpExercises: warmUpExercises,
+            coolDownExercises: coolDownExercises
         )
     }
     
@@ -1236,7 +1342,8 @@ private struct TodayWorkoutView: View {
         muscleGroups: [String],
         parameters: WorkoutParameters,
         recommendationService: WorkoutRecommendationService,
-        customEquipment: [Equipment]?
+        customEquipment: [Equipment]?,
+        flexibilityPreferences: FlexibilityPreferences
     ) -> WorkoutPlan {
         
         let targetDurationSeconds = targetDurationMinutes * 60
@@ -1381,7 +1488,8 @@ private struct TodayWorkoutView: View {
             let recommendedExercises = recommendationService.getRecommendedExercises(
                 for: muscleGroup, 
                 count: exercisesPerMuscle,
-                customEquipment: customEquipment
+                customEquipment: customEquipment,
+                flexibilityPreferences: effectiveFlexibilityPreferences
             )
             
             for exercise in recommendedExercises {
@@ -1417,7 +1525,8 @@ private struct TodayWorkoutView: View {
             let recommendedExercises = recommendationService.getRecommendedExercises(
                 for: muscleGroup, 
                 count: 1,
-                customEquipment: customEquipment
+                customEquipment: customEquipment,
+                flexibilityPreferences: effectiveFlexibilityPreferences
             )
             
             if let exercise = recommendedExercises.first {
@@ -1674,6 +1783,8 @@ private struct TodayWorkoutExerciseList: View {
     let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
     let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
     @State private var exercises: [TodayWorkoutExercise]
+    @State private var warmUpExpanded: Bool = true
+    @State private var coolDownExpanded: Bool = true
     
     init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>, onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void, onExerciseUpdateCallbackSet: @escaping (((Int, TodayWorkoutExercise) -> Void)?) -> Void) {
         self.workout = workout
@@ -1685,6 +1796,22 @@ private struct TodayWorkoutExerciseList: View {
     
     var body: some View {
         List {
+            // Warm-up section (if exercises exist)
+            if let warmUpExercises = workout.warmUpExercises, !warmUpExercises.isEmpty {
+                Section {
+                    CollapsibleSection(
+                        title: "Warm-Up",
+                        exercises: warmUpExercises,
+                        isExpanded: $warmUpExpanded,
+                        accentColor: .orange
+                    )
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+            }
+            
+            // Main exercises section
             ForEach(Array(exercises.enumerated()), id: \.element.exercise.id) { index, exercise in
                 ExerciseWorkoutCard(
                     exercise: exercise,
@@ -1701,6 +1828,21 @@ private struct TodayWorkoutExerciseList: View {
             }
             .onMove(perform: moveExercise)
             .onDelete(perform: deleteExercise)
+            
+            // Cool-down section (if exercises exist)
+            if let coolDownExercises = workout.coolDownExercises, !coolDownExercises.isEmpty {
+                Section {
+                    CollapsibleSection(
+                        title: "Cool-Down",
+                        exercises: coolDownExercises,
+                        isExpanded: $coolDownExpanded,
+                        accentColor: .mint
+                    )
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+            }
         }
         .listStyle(PlainListStyle())
         .scrollContentBackground(.hidden)
@@ -1750,7 +1892,9 @@ private struct TodayWorkoutExerciseList: View {
                 exercises: exercises,
                 estimatedDuration: workout.estimatedDuration,
                 fitnessGoal: workout.fitnessGoal,
-                difficulty: workout.difficulty
+                difficulty: workout.difficulty,
+                warmUpExercises: workout.warmUpExercises,
+                coolDownExercises: workout.coolDownExercises
             )
             
             if let encoded = try? JSONEncoder().encode(updatedWorkout) {
@@ -1785,7 +1929,9 @@ private struct TodayWorkoutExerciseList: View {
                 exercises: exercises,
                 estimatedDuration: workout.estimatedDuration,
                 fitnessGoal: workout.fitnessGoal,
-                difficulty: workout.difficulty
+                difficulty: workout.difficulty,
+                warmUpExercises: workout.warmUpExercises,
+                coolDownExercises: workout.coolDownExercises
             )
             
             if let encoded = try? JSONEncoder().encode(updatedWorkout) {
@@ -1977,6 +2123,21 @@ struct TodayWorkout: Codable, Hashable, Identifiable {
     let estimatedDuration: Int
     let fitnessGoal: FitnessGoal
     let difficulty: Int
+    let warmUpExercises: [TodayWorkoutExercise]?
+    let coolDownExercises: [TodayWorkoutExercise]?
+    
+    // Convenience initializer for backward compatibility
+    init(id: UUID = UUID(), date: Date = Date(), title: String, exercises: [TodayWorkoutExercise], estimatedDuration: Int, fitnessGoal: FitnessGoal, difficulty: Int, warmUpExercises: [TodayWorkoutExercise]? = nil, coolDownExercises: [TodayWorkoutExercise]? = nil) {
+        self.id = id
+        self.date = date
+        self.title = title
+        self.exercises = exercises
+        self.estimatedDuration = estimatedDuration
+        self.fitnessGoal = fitnessGoal
+        self.difficulty = difficulty
+        self.warmUpExercises = warmUpExercises
+        self.coolDownExercises = coolDownExercises
+    }
 }
 
 struct TodayWorkoutExercise: Codable, Hashable {

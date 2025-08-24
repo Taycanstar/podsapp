@@ -8,6 +8,7 @@ struct DashboardView: View {
     @EnvironmentObject private var foodMgr   : FoodManager
     @Environment(\.isTabBarVisible) private var isTabBarVisible
     @EnvironmentObject var vm: DayLogsViewModel
+    @EnvironmentObject private var mealReminderService: MealReminderService
     
     // ─── Health data state ───────────────────────────────────────────────────
     @StateObject private var healthViewModel = HealthKitViewModel()

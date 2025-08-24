@@ -1489,6 +1489,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
     let originalServings = food.numberOfServings ?? 1
     let userServings     = numberOfServings
     var updatedFood      = food
+    updatedFood.description = title  // Apply user's edited name
     updatedFood.numberOfServings = userServings
 
     // 3. Fire the real network call
