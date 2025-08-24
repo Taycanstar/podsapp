@@ -3343,6 +3343,164 @@ class NetworkManagerTwo {
         
         task.resume()
     }
+    
+    // MARK: - Flexibility Preferences
+    
+    struct FlexibilityPreferences: Codable {
+        let warmUpEnabled: Bool
+        let coolDownEnabled: Bool
+        let warmUpDuration: Int
+        let coolDownDuration: Int
+        
+        enum CodingKeys: String, CodingKey {
+            case warmUpEnabled = "default_warmup_enabled"
+            case coolDownEnabled = "default_cooldown_enabled"
+            case warmUpDuration = "default_warmup_duration"
+            case coolDownDuration = "default_cooldown_duration"
+        }
+    }
+    
+    struct FlexibilityPreferencesResponse: Codable {
+        let preferences: FlexibilityPreferences
+    }
+    
+    /// Update user's flexibility preferences on the server
+    func updateFlexibilityPreferences(email: String, warmUpEnabled: Bool, coolDownEnabled: Bool, warmUpDuration: Int = 5, coolDownDuration: Int = 5, completion: @escaping (Result<Bool, Error>) -> Void) {
+        print("🌐 NetworkManagerTwo: updateFlexibilityPreferences called with email: '\(email)' (isEmpty: \(email.isEmpty))")
+        
+        let urlString = "\(baseUrl)/update-workout-preferences/"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let parameters: [String: Any] = [
+            "email": email,
+            "default_warmup_enabled": warmUpEnabled,
+            "default_cooldown_enabled": coolDownEnabled,
+            "default_warmup_duration": warmUpDuration,
+            "default_cooldown_duration": coolDownDuration
+        ]
+        
+        print("🔧 NetworkManagerTwo: Sending parameters: \(parameters)")
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: parameters)
+            request.httpBody = jsonData
+            
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    print("❌ Network error in updateFlexibilityPreferences: \(error.localizedDescription)")
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let data = data else {
+                    print("❌ No data received from server")
+                    completion(.failure(NetworkError.invalidResponse))
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid HTTP response")
+                    completion(.failure(NetworkError.invalidResponse))
+                    return
+                }
+                
+                if httpResponse.statusCode == 200 {
+                    print("✅ Flexibility preferences updated successfully")
+                    completion(.success(true))
+                } else {
+                    print("❌ Flexibility preferences update failed with status: \(httpResponse.statusCode)")
+                    
+                    // Try to parse error message from response
+                    if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let errorMessage = errorJson["error"] as? String {
+                        completion(.failure(NetworkError.serverError(message: errorMessage)))
+                    } else {
+                        completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
+                    }
+                }
+            }
+            
+            task.resume()
+            
+        } catch {
+            print("❌ Failed to encode flexibility preferences request: \(error)")
+            completion(.failure(error))
+        }
+    }
+    
+    /// Get user's flexibility preferences from the server  
+    func getFlexibilityPreferences(email: String, completion: @escaping (Result<FlexibilityPreferences, Error>) -> Void) {
+        let urlString = "\(baseUrl)/get-workout-preferences/"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let parameters: [String: Any] = ["email": email]
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: parameters)
+            request.httpBody = jsonData
+            
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    print("❌ Network error in getFlexibilityPreferences: \(error.localizedDescription)")
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let data = data else {
+                    print("❌ No data received from server")
+                    completion(.failure(NetworkError.invalidResponse))
+                    return
+                }
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("❌ Invalid HTTP response")
+                    completion(.failure(NetworkError.invalidResponse))
+                    return
+                }
+                
+                if httpResponse.statusCode == 200 {
+                    do {
+                        let response = try JSONDecoder().decode(FlexibilityPreferencesResponse.self, from: data)
+                        print("✅ Flexibility preferences loaded successfully")
+                        completion(.success(response.preferences))
+                    } catch {
+                        print("❌ Failed to decode flexibility preferences response: \(error)")
+                        completion(.failure(NetworkError.decodingError))
+                    }
+                } else {
+                    print("❌ Get flexibility preferences failed with status: \(httpResponse.statusCode)")
+                    
+                    // Try to parse error message from response
+                    if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let errorMessage = errorJson["error"] as? String {
+                        completion(.failure(NetworkError.serverError(message: errorMessage)))
+                    } else {
+                        completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
+                    }
+                }
+            }
+            
+            task.resume()
+            
+        } catch {
+            print("❌ Failed to encode get flexibility preferences request: \(error)")
+            completion(.failure(error))
+        }
+    }
 
 }
 

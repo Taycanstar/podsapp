@@ -44,7 +44,7 @@ struct FlexibilityPickerView: View {
                 }
             }
             // .padding(.horizontal)
-            .padding(.top, 36)
+            .padding(.top, 42)
             .padding(.bottom, 16)
             
             Text("Flexibility")

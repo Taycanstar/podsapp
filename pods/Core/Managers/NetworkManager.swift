@@ -7994,4 +7994,5 @@ func analyzeNutritionLabel(image: UIImage, userEmail: String, mealType: String =
     task.resume()
 }
 
+
 }

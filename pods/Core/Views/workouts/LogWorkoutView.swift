@@ -44,7 +44,7 @@ struct LogWorkoutView: View {
     @StateObject private var workoutManager = WorkoutManager()
     
     // Add user email - you'll need to pass this in or get it from environment
-    @State private var userEmail: String = UserDefaults.standard.string(forKey: "user_email") ?? ""
+    @State private var userEmail: String = UserDefaults.standard.string(forKey: "userEmail") ?? ""
     
     // Workout controls state
     @State private var selectedDuration: WorkoutDuration = .oneHour
@@ -161,6 +161,9 @@ struct LogWorkoutView: View {
             )
         }
         .onAppear {
+            // Debug: Print userEmail value on appear
+            print("🚀 LogWorkoutView appeared. UserEmail: '\(userEmail)' (isEmpty: \(userEmail.isEmpty))")
+            
             // Initialize WorkoutManager when view appears
             if !userEmail.isEmpty {
                 workoutManager.initialize(userEmail: userEmail)
@@ -168,6 +171,26 @@ struct LogWorkoutView: View {
             
             // Load session flexibility preferences
             loadSessionFlexibilityPreferences()
+            
+            // Load default flexibility preferences from backend
+            let emailToUse = userEmail.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : userEmail
+            if !emailToUse.isEmpty {
+                // Update userEmail state if we had to fetch it fresh
+                if userEmail.isEmpty && !emailToUse.isEmpty {
+                    userEmail = emailToUse
+                }
+                
+                NetworkManagerTwo.shared.getFlexibilityPreferences(email: emailToUse) { result in
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .success(let preferences):
+                            print("✅ Loaded flexibility defaults: warmUp=\(preferences.warmUpEnabled), coolDown=\(preferences.coolDownEnabled)")
+                        case .failure(let error):
+                            print("⚠️ Could not load flexibility defaults from backend: \(error)")
+                        }
+                    }
+                }
+            }
             
             // No longer need notification listener
         }
@@ -409,18 +432,39 @@ struct LogWorkoutView: View {
                 warmUpEnabled: .constant(effectiveFlexibilityPreferences.warmUpEnabled),
                 coolDownEnabled: .constant(effectiveFlexibilityPreferences.coolDownEnabled),
                 onSetDefault: { warmUp, coolDown in
-                    // Save as default flexibility preferences - update UserProfileService 
+                    // Save as default flexibility preferences to backend
                     print("🔧 Setting as default flexibility: Warm-Up \(warmUp), Cool-Down \(coolDown)")
+                    print("📧 Using userEmail: '\(userEmail)' (isEmpty: \(userEmail.isEmpty))")
                     
-                    // Clear session flexibility preferences since it's now the default
-                    flexibilityPreferences = nil
-                    UserDefaults.standard.removeObject(forKey: sessionFlexibilityKey)
+                    // Get fresh email from UserDefaults if current one is empty
+                    let emailToUse = userEmail.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : userEmail
+                    print("📧 Final email to use: '\(emailToUse)' (isEmpty: \(emailToUse.isEmpty))")
                     
-                    // Update global defaults via UserProfileService (would need to extend UserProfileService)
-                    // For now, just clear session preferences
+                    if emailToUse.isEmpty {
+                        print("❌ No valid email found - cannot update flexibility preferences")
+                        return
+                    }
                     
-                    showingFlexibilityPicker = false
-                    regenerateWorkoutWithNewDuration()
+                    Task {
+                        NetworkManagerTwo.shared.updateFlexibilityPreferences(
+                            email: emailToUse,
+                            warmUpEnabled: warmUp,
+                            coolDownEnabled: coolDown
+                        ) { result in
+                            DispatchQueue.main.async {
+                                switch result {
+                                case .success:
+                                    // Clear session flexibility preferences since it's now the default
+                                    flexibilityPreferences = nil
+                                    UserDefaults.standard.removeObject(forKey: sessionFlexibilityKey)
+                                    showingFlexibilityPicker = false
+                                    regenerateWorkoutWithNewDuration()
+                                case .failure(let error):
+                                    print("❌ Failed to update flexibility preferences: \(error)")
+                                }
+                            }
+                        }
+                    }
                 },
                 onSetForWorkout: { warmUp, coolDown in
                     // Apply to current workout session only
@@ -905,7 +949,7 @@ struct LogWorkoutView: View {
         }) {
             HStack(spacing: 8) {
                 Image(systemName: effectiveFlexibilityPreferences.showPlusIcon ? "plus" : "figure.flexibility")
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: effectiveFlexibilityPreferences.showPlusIcon ? 20 : 17, weight: .bold))
                     .foregroundColor(.secondary)
                 
                 Text(flexibilityPreferences?.shortText ?? effectiveFlexibilityPreferences.shortText)

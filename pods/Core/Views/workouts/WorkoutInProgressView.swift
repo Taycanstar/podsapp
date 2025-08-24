@@ -74,7 +74,7 @@ struct WorkoutInProgressView: View {
                             Color.clear
                                 .frame(height: 100)
                         }
-                        .padding(.horizontal, 0)
+                        .padding(.horizontal, 16)
                         .padding(.top, 16)
                     }
                 }
@@ -233,7 +233,7 @@ struct WorkoutInProgressView: View {
     @ViewBuilder
     private var warmUpSectionView: some View {
         if let warmUpExercises = workout.warmUpExercises, !warmUpExercises.isEmpty {
-            sectionHeader(title: "Warm-Up", color: .orange)
+            sectionHeader(title: "Warm-Up", color: .primary)
             
             ForEach(Array(warmUpExercises.enumerated()), id: \.offset) { index, exercise in
                 createExerciseRow(
@@ -252,7 +252,7 @@ struct WorkoutInProgressView: View {
             let shouldShowHeader = !(workout.warmUpExercises?.isEmpty ?? true) || !(workout.coolDownExercises?.isEmpty ?? true)
             
             if shouldShowHeader {
-                sectionHeader(title: "Main Workout", color: .primary)
+                sectionHeader(title: "Main Sets", color: .primary)
             }
             
             ForEach(Array(workout.exercises.enumerated()), id: \.offset) { index, exercise in
@@ -271,7 +271,7 @@ struct WorkoutInProgressView: View {
         if let coolDownExercises = workout.coolDownExercises, !coolDownExercises.isEmpty {
             let coolDownStartIndex = (workout.warmUpExercises?.count ?? 0) + workout.exercises.count
             
-            sectionHeader(title: "Cool-Down", color: .mint)
+            sectionHeader(title: "Cool-Down", color: .primary)
             
             ForEach(Array(coolDownExercises.enumerated()), id: \.offset) { index, exercise in
                 let globalIndex = coolDownStartIndex + index
@@ -560,7 +560,7 @@ struct ExerciseRowInProgress: View {
                         .frame(width: 24, height: 24)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 0)
             .padding(.vertical, 12)
             .background(
                 isExerciseFullyLogged ? 
