@@ -1024,7 +1024,6 @@ private struct TodayWorkoutView: View {
                                     .foregroundColor(.primary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
-                                    .background(Color("tiktoknp"))
                                     .cornerRadius(12)
                                 }
                                 .padding(.horizontal)
@@ -1819,17 +1818,53 @@ private struct TodayWorkoutExerciseList: View {
         List {
             // Warm-up section (if exercises exist)
             if let warmUpExercises = workout.warmUpExercises, !warmUpExercises.isEmpty {
+                // Warm-Up Section Title
                 Section {
-                    CollapsibleSection(
-                        title: "Warm-Up",
-                        exercises: warmUpExercises,
-                        isExpanded: $warmUpExpanded,
-                        accentColor: .accentColor
-                    )
+                    Text("Warm-Up")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                
+                // Warm-up exercises
+                ForEach(Array(warmUpExercises.enumerated()), id: \.element.exercise.id) { index, exercise in
+                    ExerciseWorkoutCard(
+                        exercise: exercise,
+                        allExercises: warmUpExercises,
+                        exerciseIndex: index,
+                        onExerciseReplaced: { _, _ in 
+                            // Warm-up exercises can't be replaced for now
+                        },
+                        navigationPath: $navigationPath
+                    )
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                }
+            }
+            
+            // Main exercises section title (only if warm-up or cool-down exists)
+            if (workout.warmUpExercises?.isEmpty == false) || (workout.coolDownExercises?.isEmpty == false) {
+                Section {
+                    Text("Main Sets")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
             }
             
             // Main exercises section
@@ -1852,17 +1887,36 @@ private struct TodayWorkoutExerciseList: View {
             
             // Cool-down section (if exercises exist)
             if let coolDownExercises = workout.coolDownExercises, !coolDownExercises.isEmpty {
+                // Cool-Down Section Title
                 Section {
-                    CollapsibleSection(
-                        title: "Cool-Down",
-                        exercises: coolDownExercises,
-                        isExpanded: $coolDownExpanded,
-                        accentColor: .accentColor
-                    )
+                    Text("Cool-Down")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                
+                // Cool-down exercises
+                ForEach(Array(coolDownExercises.enumerated()), id: \.element.exercise.id) { index, exercise in
+                    ExerciseWorkoutCard(
+                        exercise: exercise,
+                        allExercises: coolDownExercises,
+                        exerciseIndex: index,
+                        onExerciseReplaced: { _, _ in 
+                            // Cool-down exercises can't be replaced for now
+                        },
+                        navigationPath: $navigationPath
+                    )
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                }
             }
             
             // Add bottom spacer to prevent last exercise from being hidden by Add Exercise button
@@ -1975,15 +2029,21 @@ private struct TodayWorkoutExerciseList: View {
         
         // Warm-up section height (if exists)
         if let warmUpExercises = workout.warmUpExercises, !warmUpExercises.isEmpty {
-            totalHeight += 120 // Estimated height for warm-up section with padding
+            totalHeight += 60 // Title height with padding
+            totalHeight += CGFloat(warmUpExercises.count * 96) // 96pt per exercise
         }
         
-        // Main exercises height
+        // Main exercises section
+        // Add title height if warm-up or cool-down exists
+        if (workout.warmUpExercises?.isEmpty == false) || (workout.coolDownExercises?.isEmpty == false) {
+            totalHeight += 60 // "Main Sets" title height with padding
+        }
         totalHeight += CGFloat(exercises.count * 96) // 96pt per exercise
         
-        // Cool-down section height (if exists)
+        // Cool-down section height (if exists)  
         if let coolDownExercises = workout.coolDownExercises, !coolDownExercises.isEmpty {
-            totalHeight += 120 // Estimated height for cool-down section with padding
+            totalHeight += 60 // Title height with padding
+            totalHeight += CGFloat(coolDownExercises.count * 96) // 96pt per exercise
         }
         
         // Bottom spacer to prevent content from being hidden under Add Exercise button
