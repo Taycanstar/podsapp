@@ -35,14 +35,19 @@ struct FlexibilityPreferences: Codable, Equatable {
     var shortText: String {
         switch (warmUpEnabled, coolDownEnabled) {
         case (true, true):
-            return "Both"
+            return "Warm-Up & Cool-Down"
         case (true, false):
             return "Warm-Up"
         case (false, true):
             return "Cool-Down"
         case (false, false):
-            return "None"
+            return "Warm-Up/Cool-Down"
         }
+    }
+    
+    // Check if we should show plus icon (when nothing is selected)
+    var showPlusIcon: Bool {
+        return !warmUpEnabled && !coolDownEnabled
     }
     
     // Check if any flexibility option is enabled

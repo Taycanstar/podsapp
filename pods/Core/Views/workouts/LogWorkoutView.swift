@@ -107,7 +107,7 @@ struct LogWorkoutView: View {
         var title: String {
             switch self {
             case .today: return "Today"
-            case .workouts: return "Workouts"
+            case .workouts: return "My Workouts"
             }
         }
         
@@ -666,14 +666,18 @@ struct LogWorkoutView: View {
                 Button(action: {
                     showingDurationPicker = true
                 }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundColor(.secondary)
+                        
                         Text(effectiveDuration.displayValue)
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.primary)
                         
                         // Always show chevron
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.secondary)
                     }
                     .padding(.horizontal, 16)
@@ -697,14 +701,18 @@ struct LogWorkoutView: View {
                 Button(action: {
                     showingTargetMusclesPicker = true
                 }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "figure.mixed.cardio")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundColor(.secondary)
+                        
                         Text(selectedMuscleType)
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.primary)
                         
                         // Always show chevron
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.secondary)
                     }
                     .padding(.horizontal, 16)
@@ -728,14 +736,18 @@ struct LogWorkoutView: View {
                 Button(action: {
                     showingEquipmentPicker = true
                 }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundColor(.secondary)
+                        
                         Text("Equipment")
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.primary)
                         
                         // Always show chevron
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.secondary)
                     }
                     .padding(.horizontal, 16)
@@ -759,14 +771,18 @@ struct LogWorkoutView: View {
                 Button(action: {
                     showingFitnessGoalPicker = true
                 }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "target")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundColor(.secondary)
+                        
                         Text(effectiveFitnessGoal.displayName)
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.primary)
                         
                         // Always show chevron
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.secondary)
                     }
                     .padding(.horizontal, 16)
@@ -790,14 +806,18 @@ struct LogWorkoutView: View {
                 Button(action: {
                     showingFitnessLevelPicker = true
                 }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "aqi.medium")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundColor(.secondary)
+                        
                         Text(selectedFitnessLevel.displayName)
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.primary)
                         
                         // Always show chevron
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.secondary)
                     }
                     .padding(.horizontal, 16)
@@ -821,14 +841,15 @@ struct LogWorkoutView: View {
                 Button(action: {
                     showingFlexibilityPicker = true
                 }) {
-                    HStack(spacing: 4) {
-                        Text(flexibilityPreferences?.shortText ?? "Flexibility")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.primary)
-                        
-                        Image(systemName: "figure.flexibility")
-                            .font(.system(size: 12, weight: .medium))
+                    HStack(spacing: 8) {
+                        // Show plus icon when nothing is selected, otherwise show flexibility icon
+                        Image(systemName: effectiveFlexibilityPreferences.showPlusIcon ? "plus" : "figure.flexibility")
+                            .font(.system(size: 17, weight: .bold))
                             .foregroundColor(.secondary)
+                        
+                        Text(flexibilityPreferences?.shortText ?? effectiveFlexibilityPreferences.shortText)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
@@ -1803,7 +1824,7 @@ private struct TodayWorkoutExerciseList: View {
                         title: "Warm-Up",
                         exercises: warmUpExercises,
                         isExpanded: $warmUpExpanded,
-                        accentColor: .orange
+                        accentColor: .accentColor
                     )
                 }
                 .listRowBackground(Color.clear)
@@ -1836,20 +1857,28 @@ private struct TodayWorkoutExerciseList: View {
                         title: "Cool-Down",
                         exercises: coolDownExercises,
                         isExpanded: $coolDownExpanded,
-                        accentColor: .mint
+                        accentColor: .accentColor
                     )
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
             }
+            
+            // Add bottom spacer to prevent last exercise from being hidden by Add Exercise button
+            Section {
+                Color.clear.frame(height: 80)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
         }
         .listStyle(PlainListStyle())
         .scrollContentBackground(.hidden)
         .scrollDisabled(true)
         .background(Color("bg"))
         .cornerRadius(12)
-        .frame(height: CGFloat(exercises.count * 96)) // Height calculation with 10pt spacing
+        .frame(height: calculateTotalHeight()) // Dynamic height calculation with all sections + bottom spacer
         .onAppear {
             // Register the exercise replacement callback with the navigation container
             onExerciseReplacementCallbackSet { index, newExercise in
@@ -1938,6 +1967,29 @@ private struct TodayWorkoutExerciseList: View {
                 UserDefaults.standard.set(encoded, forKey: "todayWorkout_\(userEmail)")
             }
         }
+    }
+    
+    // Calculate total height including all sections and spacing
+    private func calculateTotalHeight() -> CGFloat {
+        var totalHeight: CGFloat = 0
+        
+        // Warm-up section height (if exists)
+        if let warmUpExercises = workout.warmUpExercises, !warmUpExercises.isEmpty {
+            totalHeight += 120 // Estimated height for warm-up section with padding
+        }
+        
+        // Main exercises height
+        totalHeight += CGFloat(exercises.count * 96) // 96pt per exercise
+        
+        // Cool-down section height (if exists)
+        if let coolDownExercises = workout.coolDownExercises, !coolDownExercises.isEmpty {
+            totalHeight += 120 // Estimated height for cool-down section with padding
+        }
+        
+        // Bottom spacer to prevent content from being hidden under Add Exercise button
+        totalHeight += 80
+        
+        return totalHeight
     }
 }
 
@@ -2194,10 +2246,34 @@ struct WorkoutControlButton: View {
     let title: String
     let value: String
     let onTap: () -> Void
+    let icon: String? // Optional SF Symbol icon name
+    
+    // Convenience init for backward compatibility
+    init(title: String, value: String, onTap: @escaping () -> Void) {
+        self.title = title
+        self.value = value
+        self.onTap = onTap
+        self.icon = nil
+    }
+    
+    // Init with icon
+    init(title: String, value: String, icon: String? = nil, onTap: @escaping () -> Void) {
+        self.title = title
+        self.value = value
+        self.onTap = onTap
+        self.icon = icon
+    }
     
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 4) {
+            HStack(spacing: 8) {
+                // Leading icon if provided
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.accentColor)
+                }
+                
                 Text(title)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.primary)

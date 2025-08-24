@@ -43,8 +43,8 @@ struct FlexibilityPickerView: View {
                         .frame(width: 30, height: 30)
                 }
             }
-            .padding(.horizontal)
-            .padding(.top, 16)
+            // .padding(.horizontal)
+            .padding(.top, 36)
             .padding(.bottom, 16)
             
             Text("Flexibility")
@@ -64,7 +64,7 @@ struct FlexibilityPickerView: View {
                         HStack(spacing: 16) {
                             Image(systemName: "thermometer.sun")
                                 .font(.system(size: 20))
-                                .foregroundColor(.orange)
+                                .foregroundColor(.accentColor)
                                 .frame(width: 24)
                             
                             VStack(alignment: .leading, spacing: 4) {
@@ -84,7 +84,7 @@ struct FlexibilityPickerView: View {
                             // Toggle Switch
                             Toggle("", isOn: $tempWarmUpEnabled)
                                 .labelsHidden()
-                                .tint(.orange)
+                                .tint(.accentColor)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
@@ -103,7 +103,7 @@ struct FlexibilityPickerView: View {
                         HStack(spacing: 16) {
                             Image(systemName: "moon.zzz")
                                 .font(.system(size: 20))
-                                .foregroundColor(.mint)
+                                .foregroundColor(.accentColor)
                                 .frame(width: 24)
                             
                             VStack(alignment: .leading, spacing: 4) {
@@ -123,7 +123,7 @@ struct FlexibilityPickerView: View {
                             // Toggle Switch
                             Toggle("", isOn: $tempCoolDownEnabled)
                                 .labelsHidden()
-                                .tint(.mint)
+                                .tint(.accentColor)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
