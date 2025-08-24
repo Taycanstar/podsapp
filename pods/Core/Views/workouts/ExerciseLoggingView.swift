@@ -1685,12 +1685,6 @@ struct ExerciseOptionsSheet: View {
                 .padding(.vertical, 14)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                 
-                // Spacer
-                Color.clear
-                    .frame(height: 5)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
                 
                 // Delete from workout
                 Button(action: {

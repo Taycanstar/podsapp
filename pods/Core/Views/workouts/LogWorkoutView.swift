@@ -850,6 +850,11 @@ struct LogWorkoutView: View {
                         Text(flexibilityPreferences?.shortText ?? effectiveFlexibilityPreferences.shortText)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.primary)
+                        
+                        // Always show chevron
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
@@ -857,11 +862,11 @@ struct LogWorkoutView: View {
                     .cornerRadius(20)
                     .overlay(
                         RoundedRectangle(cornerRadius: 20)
-                            .stroke(flexibilityPreferences != nil ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+                            .stroke((flexibilityPreferences != nil && flexibilityPreferences!.isEnabled) ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
                     )
                     .overlay(
                         // Add primary color overlay when session flexibility preferences are set
-                        flexibilityPreferences != nil ? 
+                        (flexibilityPreferences != nil && flexibilityPreferences!.isEnabled) ? 
                         RoundedRectangle(cornerRadius: 20)
                             .fill(Color.primary.opacity(0.05)) : nil
                     )
@@ -1921,7 +1926,7 @@ private struct TodayWorkoutExerciseList: View {
             
             // Add bottom spacer to prevent last exercise from being hidden by Add Exercise button
             Section {
-                Color.clear.frame(height: 80)
+                Color.clear.frame(height: 20)
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -2047,7 +2052,7 @@ private struct TodayWorkoutExerciseList: View {
         }
         
         // Bottom spacer to prevent content from being hidden under Add Exercise button
-        totalHeight += 80
+        totalHeight += 20
         
         return totalHeight
     }
