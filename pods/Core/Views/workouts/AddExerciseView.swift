@@ -32,7 +32,7 @@ struct AddExerciseView: View {
     private let muscleGroups = [
         "Chest", "Abs", "Back", "Lower Back", "Trapezius", "Neck", 
         "Shoulders", "Biceps", "Triceps", "Forearms", "Glutes", 
-        "Quads", "Hamstrings", "Calves", "Abductors", "Adductors"
+        "Quadriceps", "Hamstrings", "Calves", "Abductors", "Adductors"
     ]
     
     // Mapping from display names to actual database bodyPart values

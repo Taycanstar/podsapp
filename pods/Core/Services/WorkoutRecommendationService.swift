@@ -79,7 +79,7 @@ class WorkoutRecommendationService {
             return ["Forearms"]
         case "Glutes":
             return ["Hips"]  // Glute exercises are categorized as "Hips"
-        case "Quads":
+        case "Quads", "Quadriceps":
             return ["Thighs"]  // Quad exercises are in "Thighs"
         case "Hamstrings":
             return ["Thighs"]  // Hamstring exercises are in "Thighs"
@@ -115,7 +115,7 @@ class WorkoutRecommendationService {
                            exercise.target.localizedCaseInsensitiveContains("Obliques")
         case "Glutes":
             targetMatches = exercise.target.localizedCaseInsensitiveContains("Gluteus")
-        case "Quads":
+        case "Quads", "Quadriceps":
             targetMatches = exercise.target.localizedCaseInsensitiveContains("Quadriceps")
         case "Hamstrings":
             targetMatches = exercise.target.localizedCaseInsensitiveContains("Hamstrings")
@@ -185,7 +185,7 @@ class WorkoutRecommendationService {
         print("🎯 Smart muscle filtering for '\(muscleGroup)': Found \(muscleExercises.count) exercises out of \(allExercises.count) total")
         
         // Filter by exercise type (exclude stretching for strength workouts by default)
-        let typeFilteredExercises = filterByExerciseType(exercises: muscleExercises, flexibilityPreferences: flexibilityPreferences)
+        let typeFilteredExercises = filterByExerciseType(exercises: muscleExercises, flexibilityPreferences: flexibilityPreferences, muscleGroup: muscleGroup)
         
         // Filter by available equipment (use custom equipment if provided)
         let availableExercises: [ExerciseData]
@@ -545,7 +545,13 @@ class WorkoutRecommendationService {
     // MARK: - Flexibility Exercise Filtering
     
     // Filter exercises by type based on flexibility preferences
-    private func filterByExerciseType(exercises: [ExerciseData], flexibilityPreferences: FlexibilityPreferences?) -> [ExerciseData] {
+    private func filterByExerciseType(exercises: [ExerciseData], flexibilityPreferences: FlexibilityPreferences?, muscleGroup: String? = nil) -> [ExerciseData] {
+        // For certain muscle groups, include stretching exercises as they are important
+        let muscleGroupsNeedingStretches = ["Neck", "Forearms", "Calves", "Hip Flexors"]
+        if let muscle = muscleGroup, muscleGroupsNeedingStretches.contains(muscle) {
+            return exercises // Include all exercise types for these muscle groups
+        }
+        
         // If no preferences specified, exclude stretching exercises by default
         guard let prefs = flexibilityPreferences else {
             return exercises.filter { $0.exerciseType.lowercased() != "stretching" }
