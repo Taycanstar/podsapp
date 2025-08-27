@@ -8,16 +8,28 @@ class UserProfile {
     var email: String
     var fitnessGoal: FitnessGoal
     var experienceLevel: ExperienceLevel
+    var gender: Gender
     var createdAt: Date
     var updatedAt: Date
     
-    init(email: String, fitnessGoal: FitnessGoal = .strength, experienceLevel: ExperienceLevel = .beginner) {
+    init(email: String, fitnessGoal: FitnessGoal = .strength, experienceLevel: ExperienceLevel = .beginner, gender: Gender = .male) {
         self.id = UUID()
         self.email = email
         self.fitnessGoal = fitnessGoal
         self.experienceLevel = experienceLevel
+        self.gender = gender
         self.createdAt = Date()
         self.updatedAt = Date()
+    }
+}
+
+enum Gender: String, CaseIterable, Codable {
+    case male = "Male"
+    case female = "Female"
+    case other = "Other"
+    
+    var displayName: String {
+        return self.rawValue
     }
 }
 

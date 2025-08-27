@@ -130,6 +130,8 @@ struct ProfileView: View {
                               }
                               .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                               
+                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                              
                           }
                         .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                         Section(header: Text("Support & About")) {
@@ -191,6 +193,7 @@ struct ProfileView: View {
     private var iconColor: Color {
         colorScheme == .dark ? .white : .black
     }
+    
     
     private var formBackgroundColor: Color {
            colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242)

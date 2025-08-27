@@ -154,6 +154,18 @@ class UserProfileService: ObservableObject {
         }
     }
     
+    var gender: Gender {
+        get {
+            // Try server data first (if gender is added to server profile later)
+            // For now, use existing userGender property
+            let genderString = userGender.capitalized
+            return Gender(rawValue: genderString) ?? .male
+        }
+        set {
+            userGender = newValue.rawValue.lowercased()
+        }
+    }
+    
     var workoutFrequency: WorkoutFrequency {
         get {
             // Try server data first

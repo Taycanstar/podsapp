@@ -35,6 +35,9 @@ struct podsApp: App {
     
     // Apple Health weight sync service
     @StateObject private var weightSyncService = WeightSyncService.shared
+    
+    // Global workout manager for state synchronization
+    @StateObject private var workoutManager = WorkoutManager.shared
       
 
     var body: some Scene {
@@ -57,6 +60,7 @@ struct podsApp: App {
                 .environmentObject(dataSyncService)
                 .environmentObject(notificationManager)
                 .environmentObject(mealReminderService)
+                .environmentObject(workoutManager)
                 .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
 //                .onChange(of: scenePhase) { newPhase in
 //                                   if newPhase == .active {

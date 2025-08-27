@@ -414,7 +414,12 @@ struct WorkoutInProgressView: View {
     }
     
     private func logWorkout() {
-        // TODO: Save workout data and dismiss
+        // Complete workout without feedback (simplified for now)
+        completeWorkout()
+    }
+    
+    private func completeWorkout() {
+        // TODO: Save workout data
         isPresented = false
     }
     

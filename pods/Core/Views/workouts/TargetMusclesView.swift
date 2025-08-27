@@ -14,6 +14,8 @@ struct TargetMusclesView: View {
     @State private var selectedMuscles: Set<String> = []
     
     let onSelectionChanged: ([String], String) -> Void // Updated to include muscle type
+    let currentCustomMuscles: [String]? // Current custom muscle selection
+    let currentMuscleType: String // Current muscle type
     
     enum MuscleSplitType: String, CaseIterable {
         case recoveredMuscles = "Recovered Muscles"
@@ -22,6 +24,7 @@ struct TargetMusclesView: View {
         case upperBody = "Upper Body"
         case lowerBody = "Lower Body"
         case fullBody = "Full Body"
+        case customMuscleGroup = "Custom Muscle Group"
         
         var muscleGroups: [String] {
             switch self {
@@ -38,6 +41,9 @@ struct TargetMusclesView: View {
                 return ["Quadriceps", "Hamstrings", "Glutes", "Calves"]
             case .fullBody:
                 return ["Chest", "Back", "Shoulders", "Quadriceps", "Hamstrings", "Glutes"]
+            case .customMuscleGroup:
+                // Custom muscles are handled separately - return empty array here
+                return []
             }
         }
     }
@@ -90,16 +96,21 @@ struct TargetMusclesView: View {
         }
         // .presentationDetents([.fraction(0.5)])
         .onAppear {
-            // Determine current selection based on saved muscle type
-            if let savedMuscleType = UserDefaults.standard.string(forKey: "currentWorkoutMuscleType"),
-               let splitType = MuscleSplitType(rawValue: savedMuscleType) {
+            // Determine current selection based on current muscle type
+            if let splitType = MuscleSplitType(rawValue: currentMuscleType) {
                 selectedSplit = splitType
+                if splitType == .customMuscleGroup, let customMuscles = currentCustomMuscles {
+                    // Restore custom muscle selection
+                    selectedMuscles = Set(customMuscles)
+                } else {
+                    // Use predefined split muscles
+                    selectedMuscles = Set(selectedSplit.muscleGroups)
+                }
             } else {
+                // Fallback to recovered muscles
                 selectedSplit = .recoveredMuscles
+                selectedMuscles = Set(selectedSplit.muscleGroups)
             }
-            
-            // Set muscles based on the selected split
-            selectedMuscles = Set(selectedSplit.muscleGroups)
         }
     }
     
@@ -289,8 +300,12 @@ struct MuscleSplitButton: View {
 }
 
 #Preview {
-    TargetMusclesView { muscles, type in
-        print("Selected muscles: \(muscles), type: \(type)")
-    }
+    TargetMusclesView(
+        onSelectionChanged: { muscles, type in
+            print("Selected muscles: \(muscles), type: \(type)")
+        },
+        currentCustomMuscles: nil,
+        currentMuscleType: "Recovered Muscles"
+    )
 }
 

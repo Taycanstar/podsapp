@@ -40,64 +40,100 @@ struct LogWorkoutView: View {
     // Tab management
     @State private var selectedWorkoutTab: WorkoutTab = .today
     
-    // Add WorkoutManager
-    @StateObject private var workoutManager = WorkoutManager()
+    // Use global WorkoutManager from environment
+    @EnvironmentObject var workoutManager: WorkoutManager
     
-    // Add user email - you'll need to pass this in or get it from environment
-    @State private var userEmail: String = UserDefaults.standard.string(forKey: "userEmail") ?? ""
-    
-    // Workout controls state
-    @State private var selectedDuration: WorkoutDuration = .oneHour
-    @State private var sessionDuration: WorkoutDuration? = nil // Session-specific duration (doesn't affect defaults)
+    // Local UI state
     @State private var showingDurationPicker = false
     @State private var shouldRegenerateWorkout = false
     @State private var showingTargetMusclesPicker = false
-    @State private var customTargetMuscles: [String]? = nil // Custom muscle selection for session
-    @State private var selectedMuscleType: String = "Recovered Muscles" // Track the muscle type selection
     @State private var showingEquipmentPicker = false
-    @State private var customEquipment: [Equipment]? = nil // Custom equipment selection for session
-    @State private var selectedEquipmentType: String = "Auto" // Track equipment type selection
-    
-    // Add fitness goal state variables
-    @State private var selectedFitnessGoal: FitnessGoal = .strength
-    @State private var sessionFitnessGoal: FitnessGoal? = nil // Session-specific goal (doesn't affect defaults)
     @State private var showingFitnessGoalPicker = false
-    
-    // Add fitness level state variables
-    @State private var selectedFitnessLevel: ExperienceLevel = .beginner
-    @State private var sessionFitnessLevel: ExperienceLevel? = nil // Session-specific level (doesn't affect defaults)
     @State private var showingFitnessLevelPicker = false
-    
-    // Add flexibility preferences state variables
-    @State private var selectedFlexibilityPreferences: FlexibilityPreferences = FlexibilityPreferences() // Default preferences (both disabled by default)
-    @State private var flexibilityPreferences: FlexibilityPreferences? = nil // Session-specific flexibility preferences
     @State private var showingFlexibilityPicker = false
+    @State private var showingWorkoutFeedback = false
     
-    // Add state for showing workout in progress
+    // Keep only essential UI-only state (not data state)
     @State private var currentWorkout: TodayWorkout? = nil
+    @State private var userEmail: String = UserDefaults.standard.string(forKey: "userEmail") ?? ""
     
-    // Loading state for preferences and workout generation
-    @State private var isGeneratingWorkout = false
-    @State private var generationMessage = "Creating your workout..."
+    // Properties that delegate to WorkoutManager but are accessed locally
+    private var isGeneratingWorkout: Bool {
+        workoutManager.isGeneratingWorkout
+    }
     
-    // Computed property for the actual duration to use
+    private var generationMessage: String {
+        workoutManager.generationMessage
+    }
+    
+    private var customTargetMuscles: [String]? {
+        workoutManager.customTargetMuscles
+    }
+    
+    private var customEquipment: [Equipment]? {
+        workoutManager.customEquipment
+    }
+    
+    private var selectedMuscleType: String {
+        workoutManager.selectedMuscleType
+    }
+    
+    // selectedEquipmentType is now a @State property above
+    
+    // Deprecated keys (still needed for cleanup)
+    private let sessionDurationKey = "currentWorkoutSessionDuration"
+    private let sessionDateKey = "currentWorkoutSessionDate"
+    private let customMusclesKey = "currentWorkoutCustomMuscles"
+    private let sessionFitnessGoalKey = "currentWorkoutSessionFitnessGoal"
+    private let sessionFlexibilityKey = "currentWorkoutSessionFlexibility"
+    
+    // Use WorkoutManager directly (single source of truth)
     private var effectiveDuration: WorkoutDuration {
-        return sessionDuration ?? selectedDuration
+        return workoutManager.effectiveDuration
     }
     
-    // Computed property for the actual fitness goal to use
     private var effectiveFitnessGoal: FitnessGoal {
-        return sessionFitnessGoal ?? selectedFitnessGoal
+        return workoutManager.effectiveFitnessGoal
     }
     
-    // Computed property for the actual flexibility preferences to use
     private var effectiveFlexibilityPreferences: FlexibilityPreferences {
-        return flexibilityPreferences ?? selectedFlexibilityPreferences // Use session override or defaults
+        return workoutManager.effectiveFlexibilityPreferences
     }
     
-    // Check if there are any session modifications
+    // Properties that reference WorkoutManager (single source of truth)
+    private var sessionDuration: WorkoutDuration? {
+        workoutManager.sessionDuration
+    }
+    
+    private var sessionFitnessGoal: FitnessGoal? {
+        workoutManager.sessionFitnessGoal
+    }
+    
+    private var sessionFitnessLevel: ExperienceLevel? {
+        workoutManager.sessionFitnessLevel
+    }
+    
+    private var flexibilityPreferences: FlexibilityPreferences? {
+        workoutManager.sessionFlexibilityPreferences
+    }
+    
     private var hasSessionModifications: Bool {
-        return sessionDuration != nil || customTargetMuscles != nil || customEquipment != nil || sessionFitnessGoal != nil || sessionFitnessLevel != nil || (flexibilityPreferences != nil && flexibilityPreferences!.isEnabled)
+        return workoutManager.sessionDuration != nil ||
+               workoutManager.sessionFitnessGoal != nil ||
+               workoutManager.sessionFitnessLevel != nil ||
+               workoutManager.sessionFlexibilityPreferences != nil ||
+               workoutManager.customTargetMuscles != nil ||
+               workoutManager.customEquipment != nil
+    }
+    
+    // Session phase indicator for dynamic programming
+    @ViewBuilder
+    private var sessionPhaseIndicator: some View {
+        EmptyView()
+    }
+    
+    private func getCurrentSessionNumber() -> Int {
+        return 1 // Simplified for now
     }
     
     // Loading state messages
@@ -109,17 +145,6 @@ struct LogWorkoutView: View {
             "Finalizing recommendations..."
         ]
     }
-    
-    // Keys for UserDefaults
-    private let sessionDurationKey = "currentWorkoutSessionDuration"
-    private let sessionDateKey = "currentWorkoutSessionDate"
-    private let customMusclesKey = "currentWorkoutCustomMuscles"
-    
-    // Add fitness goal session keys
-    private let sessionFitnessGoalKey = "currentWorkoutSessionFitnessGoal"
-    
-    // Add flexibility preferences session key
-    private let sessionFlexibilityKey = "currentWorkoutSessionFlexibility"
     
     enum WorkoutTab: Hashable {
         case today, workouts
@@ -142,422 +167,349 @@ struct LogWorkoutView: View {
     let workoutTabs: [WorkoutTab] = [.today, .workouts]
     
     var body: some View {
+        mainBody
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .navigationTitle(selectedWorkoutTab == .workouts ? "Workouts" : "Today's Workout")
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar { toolbarContent }
+            .if(selectedWorkoutTab == .workouts) { view in
+                view.searchable(
+                    text: $searchText,
+                    placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: selectedWorkoutTab.searchPrompt
+                )
+            }
+            .onAppear {
+                print("🚀 LogWorkoutView appeared - WorkoutManager is globally managed")
+            }
+            .onDisappear {
+                // Cleanup if needed - WorkoutManager handles persistence
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .workoutCompletedNeedsFeedback)) { _ in
+                showingWorkoutFeedback = true
+            }
+            .sheet(isPresented: $showingDurationPicker) {
+                durationPickerSheet
+            }
+            .sheet(isPresented: $showingTargetMusclesPicker) {
+                targetMusclesPickerSheet
+            }
+            .sheet(isPresented: $showingEquipmentPicker) {
+                equipmentPickerSheet
+            }
+            .sheet(isPresented: $showingFitnessGoalPicker) {
+                fitnessGoalPickerSheet
+            }
+            .sheet(isPresented: $showingFitnessLevelPicker) {
+                fitnessLevelPickerSheet
+            }
+            .sheet(isPresented: $showingFlexibilityPicker) {
+                flexibilityPickerSheet
+            }
+            .sheet(isPresented: $showingWorkoutFeedback) {
+                workoutFeedbackSheet
+            }
+            .fullScreenCover(item: $currentWorkout) { workout in
+                WorkoutInProgressView(
+                    isPresented: Binding(
+                        get: { currentWorkout != nil },
+                        set: { if !$0 { currentWorkout = nil } }
+                    ),
+                    workout: workout
+                )
+            }
+    }
+    
+    @ViewBuilder
+    private var mainBody: some View {
         ZStack(alignment: .bottom) {
-            // Background color for the entire view
-            Color("iosbg2").edgesIgnoringSafeArea(.all)
-            
-            VStack(spacing: 0) {
-                // Fixed non-transparent header
-                VStack(spacing: 0) {
-                    tabHeaderView
-                    Divider()
-                        .background(Color.gray.opacity(0.3))
-                }
-                .background(Color(.systemBackground))
-                .zIndex(1) // Keep header on top
-                
-                // Main content
-                mainContentView
-                
-                Spacer()
-            }
+            backgroundView
+            contentStack
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { toolbarContent }
-        .navigationBarBackButtonHidden(true)
-        .navigationTitle(selectedWorkoutTab == .workouts ? "Workouts" : "Today's Workout")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .if(selectedWorkoutTab == .workouts) { view in
-            view.searchable(
-                text: $searchText,
-                placement: .navigationBarDrawer(displayMode: .always),
-                prompt: selectedWorkoutTab.searchPrompt
-            )
+    }
+    
+    @ViewBuilder
+    private var backgroundView: some View {
+        Color("iosbg2").edgesIgnoringSafeArea(.all)
+    }
+    
+    @ViewBuilder
+    private var contentStack: some View {
+        VStack(spacing: 0) {
+            headerSection
+            sessionPhaseIndicator
+            mainContentView
+            Spacer()
         }
-        .onAppear {
-            // Debug: Print userEmail value on appear
-            print("🚀 LogWorkoutView appeared. UserEmail: '\(userEmail)' (isEmpty: \(userEmail.isEmpty))")
-            
-            // Initialize WorkoutManager when view appears
-            if !userEmail.isEmpty {
-                workoutManager.initialize(userEmail: userEmail)
-            }
-            
-            // Load session flexibility preferences
-            loadSessionFlexibilityPreferences()
-            
-            // Load default flexibility preferences from backend
-            let emailToUse = userEmail.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : userEmail
-            if !emailToUse.isEmpty {
-                // Update userEmail state if we had to fetch it fresh
-                if userEmail.isEmpty && !emailToUse.isEmpty {
-                    userEmail = emailToUse
-                }
-                
-                NetworkManagerTwo.shared.getFlexibilityPreferences(email: emailToUse) { result in
-                    DispatchQueue.main.async {
-                        switch result {
-                        case .success(let preferences):
-                            print("✅ Loaded flexibility defaults: warmUp=\(preferences.warmUpEnabled), coolDown=\(preferences.coolDownEnabled)")
-                            // Update the default flexibility preferences from backend
-                            selectedFlexibilityPreferences = FlexibilityPreferences(
-                                warmUpEnabled: preferences.warmUpEnabled, 
-                                coolDownEnabled: preferences.coolDownEnabled
-                            )
-                        case .failure(let error):
-                            print("⚠️ Could not load flexibility defaults from backend: \(error)")
+    }
+    
+    @ViewBuilder
+    private var headerSection: some View {
+        VStack(spacing: 0) {
+            tabHeaderView
+            Divider()
+                .background(Color.gray.opacity(0.3))
+        }
+        .background(Color(.systemBackground))
+        .zIndex(1) // Keep header on top
+    }
+    
+    // MARK: - Sheet Content Views
+    
+    @ViewBuilder
+    private var durationPickerSheet: some View {
+        WorkoutDurationPickerView(
+            selectedDuration: .constant(workoutManager.effectiveDuration),
+            onSetDefault: { newDuration in
+                    // Update WorkoutManager and UserProfileService
+                    workoutManager.setDefaultDuration(newDuration)
+                    
+                    // Update server
+                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
+                        updateServerWorkoutDuration(email: email, durationMinutes: newDuration.minutes)
+                    }
+                    
+                    showingDurationPicker = false
+                    
+                    // Regenerate workout with new duration (minimum 1.5s loader)
+                    Task {
+                        let startTime = Date()
+                        await workoutManager.generateTodayWorkout()
+                        
+                        // Ensure minimum 1.5 seconds of loading for smooth UX
+                        let elapsed = Date().timeIntervalSince(startTime)
+                        let remaining = max(0, 1.5 - elapsed)
+                        if remaining > 0 {
+                            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
                         }
                     }
-                }
-            }
-            
-            // No longer need notification listener
-        }
-        .onDisappear {
-            // Don't remove observer here as it might be needed
-            
-            // Load user's default workout duration preference
-            if let defaultDurationString = UserDefaults.standard.string(forKey: "defaultWorkoutDuration"),
-               let defaultDuration = WorkoutDuration(rawValue: defaultDurationString) {
-                selectedDuration = defaultDuration
-            } else {
-                // Fallback to UserProfileService preference
-                let availableTime = UserProfileService.shared.availableTime
-                selectedDuration = WorkoutDuration.fromMinutes(availableTime)
-            }
-            
-            // Load user's default fitness goal preference
-            selectedFitnessGoal = UserProfileService.shared.fitnessGoal
-            
-            // Load user's default fitness level preference
-            selectedFitnessLevel = UserProfileService.shared.experienceLevel
-            
-            // Load session fitness goal if it exists
-            if let savedGoalString = UserDefaults.standard.string(forKey: sessionFitnessGoalKey) {
-                sessionFitnessGoal = FitnessGoal(rawValue: savedGoalString)
-                print("📱 Restored session fitness goal: \(sessionFitnessGoal?.displayName ?? "nil")")
-            }
-            
-            // Load session fitness level if it exists
-            if let savedLevelString = UserDefaults.standard.string(forKey: "currentWorkoutSessionFitnessLevel") {
-                sessionFitnessLevel = ExperienceLevel(rawValue: savedLevelString)
-                print("📱 Restored session fitness level: \(sessionFitnessLevel?.displayName ?? "nil")")
-            }
-            
-            // Load session duration if it exists
-            if let savedDurationString = UserDefaults.standard.string(forKey: sessionDurationKey),
-               let savedDuration = WorkoutDuration(rawValue: savedDurationString) {
-                
-                // Check if session is from today (clear old sessions)
-                if let sessionDate = UserDefaults.standard.object(forKey: sessionDateKey) as? Date,
-                   Calendar.current.isDateInToday(sessionDate) {
-                    sessionDuration = savedDuration
-                    print("📱 Restored session duration: \(savedDuration.minutes) minutes from today")
-                } else {
-                    // Clear old session duration from previous days
-                    clearSessionDuration()
-                    print("🗑️ Cleared expired session duration from previous day")
-                }
-            }
-
-            // Load custom muscle selection if it exists
-            if let savedCustomMuscles = UserDefaults.standard.array(forKey: customMusclesKey) as? [String] {
-                customTargetMuscles = savedCustomMuscles
-                print("📱 Restored custom muscle selection: \(customTargetMuscles!)")
-            }
-            
-            // Load muscle type if it exists
-            if let savedMuscleType = UserDefaults.standard.string(forKey: "currentWorkoutMuscleType") {
-                selectedMuscleType = savedMuscleType
-                print("📱 Restored muscle type: \(savedMuscleType)")
-            }
-            
-            // Load custom equipment selection if it exists
-            if let savedEquipmentStrings = UserDefaults.standard.array(forKey: "currentWorkoutCustomEquipment") as? [String] {
-                customEquipment = savedEquipmentStrings.compactMap { Equipment(rawValue: $0) }
-                print("📱 Restored custom equipment: \(customEquipment!.map { $0.rawValue })")
-            }
-            
-            // Load equipment type if it exists
-            if let savedEquipmentType = UserDefaults.standard.string(forKey: "currentWorkoutEquipmentType") {
-                selectedEquipmentType = savedEquipmentType
-                print("📱 Restored equipment type: \(savedEquipmentType)")
-            } else {
-                // Default to showing user's workout location
-                let userProfile = UserProfileService.shared
-                selectedEquipmentType = userProfile.workoutLocationDisplay
-            }
-        }
-        .sheet(isPresented: $showingDurationPicker) {
-            WorkoutDurationPickerView(
-                selectedDuration: .constant(sessionDuration ?? selectedDuration),
-                onSetDefault: { newDuration in
-                    // Save as default duration - update both local and server
-                    let durationMinutes = newDuration.minutes
-                    
-                    print("🔧 Setting as default duration: \(durationMinutes) minutes")
-                    
-                    // 1. Update UserDefaults (for immediate use)
-                    UserDefaults.standard.set(durationMinutes, forKey: "availableTime")
-                    UserDefaults.standard.set(newDuration.rawValue, forKey: "defaultWorkoutDuration")
-                    
-                    // 2. Update UserProfileService 
-                    UserProfileService.shared.availableTime = durationMinutes
-                    
-                    // 3. Update the main selectedDuration to reflect the new default
-                    selectedDuration = newDuration
-                    
-                    // 4. Clear session duration since it's now the default
-                    sessionDuration = nil
-                    
-                    // 5. Clear session duration from UserDefaults
-                    UserDefaults.standard.removeObject(forKey: sessionDurationKey)
-                    UserDefaults.standard.removeObject(forKey: sessionDateKey)
-                    
-                    // 6. Update server data (if user email exists)
-                    if let email = UserDefaults.standard.string(forKey: "userEmail") {
-                        updateServerWorkoutDuration(email: email, durationMinutes: durationMinutes)
-                    }
-                    
-                    showingDurationPicker = false
+                    print("✅ Default duration set to \(newDuration.minutes) minutes")
                 },
                 onSetForWorkout: { newDuration in
-                    // Apply to current workout session only (no server or default updates)
-                    print("⚡ Setting session-only duration: \(newDuration.minutes) minutes (won't save to server)")
-                    sessionDuration = newDuration
-                    
-                    // Save session duration to UserDefaults for persistence across app restarts
-                    UserDefaults.standard.set(newDuration.rawValue, forKey: sessionDurationKey)
-                    UserDefaults.standard.set(Date(), forKey: sessionDateKey)
-                    
+                    // Update WorkoutManager session duration
+                    workoutManager.setSessionDuration(newDuration)
                     showingDurationPicker = false
-                    regenerateWorkoutWithNewDuration()
+                    
+                    // Regenerate with new duration (minimum 1.5s loader)
+                    Task {
+                        let startTime = Date()
+                        await workoutManager.generateTodayWorkout()
+                        
+                        // Ensure minimum 1.5 seconds of loading for smooth UX
+                        let elapsed = Date().timeIntervalSince(startTime)
+                        let remaining = max(0, 1.5 - elapsed)
+                        if remaining > 0 {
+                            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+                        }
+                    }
+                    print("✅ Session duration set to \(newDuration.minutes) minutes")
                 }
             )
-        }
-        .sheet(isPresented: $showingTargetMusclesPicker) {
-            TargetMusclesView(onSelectionChanged: { newMuscles, muscleType in
-                // Save custom muscle selection and type, regenerate workout
-                customTargetMuscles = newMuscles
-                selectedMuscleType = muscleType
-                
-                // Persist custom muscle selection to UserDefaults
-                UserDefaults.standard.set(newMuscles, forKey: customMusclesKey)
-                UserDefaults.standard.set(muscleType, forKey: "currentWorkoutMuscleType")
-                
-                print("🎯 Selected target muscles: \(newMuscles), type: \(muscleType)")
-                showingTargetMusclesPicker = false
-                regenerateWorkoutWithNewDuration()
-            })
-        }
-        .sheet(isPresented: $showingEquipmentPicker) {
-            EquipmentView(onSelectionChanged: { newEquipment, equipmentType in
+    }
+    
+    @ViewBuilder
+    private var targetMusclesPickerSheet: some View {
+        TargetMusclesView(
+                onSelectionChanged: { newMuscles, muscleType in
+                    // Save custom muscle selection and type, regenerate workout
+                    print("🎯 UI: Selected muscles: \(newMuscles), type: \(muscleType)")
+                    workoutManager.customTargetMuscles = newMuscles
+                    workoutManager.selectedMuscleType = muscleType
+                    
+                    // Persist to UserDefaults (WorkoutManager handles this)
+                    UserDefaults.standard.set(newMuscles, forKey: customMusclesKey)
+                    UserDefaults.standard.set(muscleType, forKey: "currentWorkoutMuscleType")
+                    
+                    print("🎯 Selected target muscles: \(newMuscles), type: \(muscleType)")
+                    showingTargetMusclesPicker = false
+                    
+                    // Regenerate workout
+                    Task {
+                        await workoutManager.generateTodayWorkout()
+                    }
+                },
+                currentCustomMuscles: customTargetMuscles,
+                currentMuscleType: selectedMuscleType
+            )
+    }
+    
+    @ViewBuilder
+    private var equipmentPickerSheet: some View {
+        EquipmentView(onSelectionChanged: { newEquipment, equipmentType in
                 // Save custom equipment selection and type, regenerate workout
-                customEquipment = newEquipment
-                selectedEquipmentType = equipmentType
+                workoutManager.customEquipment = newEquipment
+                workoutManager.selectedEquipmentType = equipmentType
                 
-                // Persist custom equipment selection to UserDefaults
+                // Persist to UserDefaults (WorkoutManager handles this)
                 let equipmentStrings = newEquipment.map { $0.rawValue }
                 UserDefaults.standard.set(equipmentStrings, forKey: "currentWorkoutCustomEquipment")
                 UserDefaults.standard.set(equipmentType, forKey: "currentWorkoutEquipmentType")
                 
                 print("⚙️ Selected equipment: \(newEquipment.map { $0.rawValue }), type: \(equipmentType)")
                 showingEquipmentPicker = false
-                regenerateWorkoutWithNewDuration()
+                
+                // Regenerate workout
+                Task {
+                    await workoutManager.generateTodayWorkout()
+                }
             })
-        }
-        .sheet(isPresented: $showingFitnessGoalPicker) {
-            FitnessGoalPickerView(
-                selectedFitnessGoal: .constant(sessionFitnessGoal ?? selectedFitnessGoal),
+    }
+    
+    @ViewBuilder
+    private var fitnessGoalPickerSheet: some View {
+        FitnessGoalPickerView(
+                selectedFitnessGoal: .constant(workoutManager.effectiveFitnessGoal),
                 onSetDefault: { newGoal in
-                    // Save as default fitness goal - update both local and server
-                    print("🔧 Setting as default fitness goal: \(newGoal.displayName)")
+                    workoutManager.setDefaultFitnessGoal(newGoal)
                     
-                    // 1. Update UserProfileService
-                    UserProfileService.shared.fitnessGoal = newGoal
-                    
-                    // 2. Update the main selectedFitnessGoal to reflect the new default
-                    selectedFitnessGoal = newGoal
-                    
-                    // 3. Clear session fitness goal since it's now the default
-                    sessionFitnessGoal = nil
-                    
-                    // 4. Clear session fitness goal from UserDefaults
-                    UserDefaults.standard.removeObject(forKey: sessionFitnessGoalKey)
-                    
-                    // 5. Update server data (if user email exists)
                     if let email = UserDefaults.standard.string(forKey: "userEmail") {
                         updateServerFitnessGoal(email: email, fitnessGoal: newGoal)
                     }
                     
                     showingFitnessGoalPicker = false
-                    regenerateWorkoutWithNewDuration()
+                    Task {
+                        await workoutManager.generateTodayWorkout()
+                    }
+                    print("✅ Default fitness goal set to \(newGoal.displayName)")
                 },
                 onSetForWorkout: { newGoal in
-                    // Apply to current workout session only (no server or default updates)
-                    print("⚡ Setting session-only fitness goal: \(newGoal.displayName) (won't save to server)")
-                    sessionFitnessGoal = newGoal
-                    
-                    // Save session fitness goal to UserDefaults for persistence across app restarts
-                    UserDefaults.standard.set(newGoal.rawValue, forKey: sessionFitnessGoalKey)
-                    
+                    workoutManager.setSessionFitnessGoal(newGoal)
                     showingFitnessGoalPicker = false
-                    regenerateWorkoutWithNewDuration()
+                    
+                    Task {
+                        await workoutManager.generateTodayWorkout()
+                    }
+                    print("✅ Session fitness goal set to \(newGoal.displayName)")
                 }
             )
-        }
-        .sheet(isPresented: $showingFitnessLevelPicker) {
-            FitnessLevelPickerView(
-                selectedFitnessLevel: .constant(sessionFitnessLevel ?? selectedFitnessLevel),
+    }
+    
+    @ViewBuilder
+    private var fitnessLevelPickerSheet: some View {
+        FitnessLevelPickerView(
+                selectedFitnessLevel: .constant(workoutManager.effectiveFitnessLevel),
                 onSetDefault: { newLevel in
-                    // Save as default fitness level - update both local and server
-                    print("🔧 Setting as default fitness level: \(newLevel.displayName)")
+                    workoutManager.setDefaultFitnessLevel(newLevel)
                     
-                    // 1. Update UserProfileService
-                    UserProfileService.shared.experienceLevel = newLevel
-                    
-                    // 2. Update the main selectedFitnessLevel to reflect the new default
-                    selectedFitnessLevel = newLevel
-                    
-                    // 3. Clear session fitness level since it's now the default
-                    sessionFitnessLevel = nil
-                    
-                    // 4. Clear session fitness level from UserDefaults
-                    UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
-                    
-                    // 5. Update server data (if user email exists)
                     if let email = UserDefaults.standard.string(forKey: "userEmail") {
                         updateServerFitnessLevel(email: email, fitnessLevel: newLevel)
                     }
                     
                     showingFitnessLevelPicker = false
-                    regenerateWorkoutWithNewDuration()
+                    Task {
+                        await workoutManager.generateTodayWorkout()
+                    }
+                    print("✅ Default fitness level set to \(newLevel.displayName)")
                 },
                 onSetForWorkout: { newLevel in
-                    // Apply to current workout session only (no server or default updates)
-                    print("⚡ Setting session-only fitness level: \(newLevel.displayName) (won't save to server)")
-                    sessionFitnessLevel = newLevel
-                    
-                    // Save session fitness level to UserDefaults for persistence across app restarts
-                    UserDefaults.standard.set(newLevel.rawValue, forKey: "currentWorkoutSessionFitnessLevel")
-                    
+                    workoutManager.setSessionFitnessLevel(newLevel)
                     showingFitnessLevelPicker = false
-                    regenerateWorkoutWithNewDuration()
+                    
+                    Task {
+                        await workoutManager.generateTodayWorkout()
+                    }
+                    print("✅ Session fitness level set to \(newLevel.displayName)")
                 }
             )
-        }
-        .sheet(isPresented: $showingFlexibilityPicker) {
-            FlexibilityPickerView(
+    }
+    
+    @ViewBuilder
+    private var flexibilityPickerSheet: some View {
+        FlexibilityPickerView(
                 warmUpEnabled: .constant(effectiveFlexibilityPreferences.warmUpEnabled),
                 coolDownEnabled: .constant(effectiveFlexibilityPreferences.coolDownEnabled),
                 onSetDefault: { warmUp, coolDown in
-                    // Save as default flexibility preferences to backend
-                    print("🔧 Setting as default flexibility: Warm-Up \(warmUp), Cool-Down \(coolDown)")
-                    print("📧 Using userEmail: '\(userEmail)' (isEmpty: \(userEmail.isEmpty))")
+                    let newPrefs = FlexibilityPreferences(warmUpEnabled: warmUp, coolDownEnabled: coolDown)
+                    workoutManager.setDefaultFlexibilityPreferences(newPrefs)
                     
-                    // Get fresh email from UserDefaults if current one is empty
+                    // Update server if email exists
                     let emailToUse = userEmail.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : userEmail
-                    print("📧 Final email to use: '\(emailToUse)' (isEmpty: \(emailToUse.isEmpty))")
                     
-                    if emailToUse.isEmpty {
-                        print("❌ No valid email found - cannot update flexibility preferences")
-                        return
-                    }
-                    
-                    Task {
-                        NetworkManagerTwo.shared.updateFlexibilityPreferences(
-                            email: emailToUse,
-                            warmUpEnabled: warmUp,
-                            coolDownEnabled: coolDown
-                        ) { result in
-                            DispatchQueue.main.async {
-                                switch result {
-                                case .success:
-                                    // Update the default flexibility preferences
-                                    selectedFlexibilityPreferences = FlexibilityPreferences(warmUpEnabled: warmUp, coolDownEnabled: coolDown)
-                                    print("✅ Updated selectedFlexibilityPreferences: warmUp=\(selectedFlexibilityPreferences.warmUpEnabled), coolDown=\(selectedFlexibilityPreferences.coolDownEnabled)")
-                                    
-                                    // Clear session flexibility preferences since it's now the default
-                                    flexibilityPreferences = nil
-                                    UserDefaults.standard.removeObject(forKey: sessionFlexibilityKey)
-                                    showingFlexibilityPicker = false
-                                    regenerateWorkoutWithNewDuration()
-                                case .failure(let error):
-                                    print("❌ Failed to update flexibility preferences: \(error)")
+                    if !emailToUse.isEmpty {
+                        Task {
+                            NetworkManagerTwo.shared.updateFlexibilityPreferences(
+                                email: emailToUse,
+                                warmUpEnabled: warmUp,
+                                coolDownEnabled: coolDown
+                            ) { result in
+                                DispatchQueue.main.async {
+                                    switch result {
+                                    case .success:
+                                        showingFlexibilityPicker = false
+                                        Task {
+                                            await workoutManager.generateTodayWorkout()
+                                        }
+                                        print("✅ Default flexibility preferences updated")
+                                    case .failure(let error):
+                                        print("❌ Failed to update flexibility preferences: \(error)")
+                                    }
                                 }
                             }
+                        }
+                    } else {
+                        showingFlexibilityPicker = false
+                        Task {
+                            await workoutManager.generateTodayWorkout()
                         }
                     }
                 },
                 onSetForWorkout: { warmUp, coolDown in
-                    // Apply to current workout session only
-                    print("⚡ Setting session-only flexibility: Warm-Up \(warmUp), Cool-Down \(coolDown)")
                     let newPrefs = FlexibilityPreferences(warmUpEnabled: warmUp, coolDownEnabled: coolDown)
-                    flexibilityPreferences = newPrefs
-                    print("🔄 Session flexibilityPreferences updated. Effective now: warmUp=\(effectiveFlexibilityPreferences.warmUpEnabled), coolDown=\(effectiveFlexibilityPreferences.coolDownEnabled)")
-                    
-                    // Save session flexibility preferences to UserDefaults for persistence
-                    if let data = try? JSONEncoder().encode(newPrefs) {
-                        UserDefaults.standard.set(data, forKey: sessionFlexibilityKey)
-                    }
+                    workoutManager.setSessionFlexibilityPreferences(newPrefs)
                     
                     showingFlexibilityPicker = false
-                    regenerateWorkoutWithNewDuration()
+                    Task {
+                        await workoutManager.generateTodayWorkout()
+                    }
+                    print("✅ Session flexibility preferences set")
+                }
+            )
+    }
+    
+    @ViewBuilder
+    private var workoutFeedbackSheet: some View {
+        if let workout = workoutManager.todayWorkout {
+            WorkoutFeedbackSheet(
+                workout: workout,
+                onFeedbackSubmitted: { feedback in
+                    // Submit feedback via PerformanceFeedbackService
+                    Task {
+                        await PerformanceFeedbackService.shared.submitFeedback(feedback)
+                    }
+                    
+                    // Advance session phase if needed
+                    handleFeedbackSubmitted()
+                },
+                onSkipped: {
+                    // Still advance session phase
+                    handleFeedbackSkipped()
                 }
             )
         }
-        .fullScreenCover(item: $currentWorkout) { workout in
-            WorkoutInProgressView(
-                isPresented: Binding(
-                    get: { currentWorkout != nil },
-                    set: { if !$0 { currentWorkout = nil } }
-                ),
-                workout: workout
-            )
-            .onAppear {
-                print("📱 FullScreenCover appeared with \(workout.exercises.count) exercises, \(workout.warmUpExercises?.count ?? 0) warm-up, \(workout.coolDownExercises?.count ?? 0) cool-down")
-            }
-        }
+    }
+    
+    private func handleFeedbackSubmitted() {
+        workoutManager.advanceSessionPhaseIfNeeded()
+        showingWorkoutFeedback = false
+    }
+    
+    private func handleFeedbackSkipped() {
+        workoutManager.advanceSessionPhaseIfNeeded()
+        showingWorkoutFeedback = false
     }
     
     private func regenerateWorkoutWithNewDuration() {
-        // Show loading animation
-        withAnimation(.easeInOut(duration: 0.3)) {
-            isGeneratingWorkout = true
-            generationMessage = loadingMessages.randomElement() ?? "Creating your workout..."
-        }
-        
-        print("🔄 Regenerating workout with duration: \(effectiveDuration.minutes) minutes")
-        shouldRegenerateWorkout = true
-        
-        // Hide loading after realistic generation time
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                isGeneratingWorkout = false
-            }
+        print("🔄 Regenerating workout with WorkoutManager")
+        Task {
+            await workoutManager.generateTodayWorkout()
         }
         // Note: shouldRegenerateWorkout is reset by TodayWorkoutView after it triggers generation
     }
     
     private func clearSessionDuration() {
-        sessionDuration = nil
-        UserDefaults.standard.removeObject(forKey: sessionDurationKey)
-        UserDefaults.standard.removeObject(forKey: sessionDateKey)
-        customTargetMuscles = nil
-        UserDefaults.standard.removeObject(forKey: customMusclesKey)
-        selectedMuscleType = "Recovered Muscles"
-        UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
-        customEquipment = nil
-        UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomEquipment")
-        let userProfile = UserProfileService.shared
-        selectedEquipmentType = userProfile.workoutLocationDisplay
-        UserDefaults.standard.removeObject(forKey: "currentWorkoutEquipmentType")
-        sessionFitnessGoal = nil
-        UserDefaults.standard.removeObject(forKey: sessionFitnessGoalKey)
-        sessionFitnessLevel = nil
-        UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
-        print("🗑️ Cleared session duration, custom muscles, custom equipment, and fitness preferences")
+        workoutManager.clearAllSessionOverrides()
+        print("🗑️ Cleared all session overrides via WorkoutManager")
     }
     
     // Static method to clear session duration from anywhere in the app
@@ -698,37 +650,14 @@ struct LogWorkoutView: View {
                 // X button to reset all session options (only show when any session option is set) - positioned first
                 if hasSessionModifications {
                     Button(action: {
-                        // Reset to default duration
-                        sessionDuration = nil
-                        UserDefaults.standard.removeObject(forKey: sessionDurationKey)
-                        UserDefaults.standard.removeObject(forKey: sessionDateKey)
+                        // Clear all session overrides via WorkoutManager
+                        workoutManager.clearAllSessionOverrides()
                         
-                        // Reset to default muscle type
-                        customTargetMuscles = nil
-                        UserDefaults.standard.removeObject(forKey: customMusclesKey)
-                        selectedMuscleType = "Recovered Muscles"
-                        UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
-                        
-                        // Reset to default equipment
-                        customEquipment = nil
-                        UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomEquipment")
-                        let userProfile = UserProfileService.shared
-                        selectedEquipmentType = userProfile.workoutLocationDisplay
-                        UserDefaults.standard.removeObject(forKey: "currentWorkoutEquipmentType")
-                        
-                        // Reset to default fitness goal
-                        sessionFitnessGoal = nil
-                        UserDefaults.standard.removeObject(forKey: sessionFitnessGoalKey)
-                        
-                        // Reset to default fitness level
-                        sessionFitnessLevel = nil
-                        UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
-                        
-                        // Reset to default flexibility preferences
-                        clearSessionFlexibilityPreferences()
-                        
-                        regenerateWorkoutWithNewDuration()
-                        print("🔄 Reset to default duration, muscle type, equipment, fitness goal, and flexibility")
+                        // Regenerate workout with defaults
+                        Task {
+                            await workoutManager.generateTodayWorkout()
+                        }
+                        print("🔄 Reset to default preferences")
                     }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 12, weight: .medium))
@@ -846,17 +775,27 @@ struct LogWorkoutView: View {
             showingTargetMusclesPicker = true
         }) {
             HStack(spacing: 8) {
-                Image(systemName: "figure.mixed.cardio")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(.secondary)
+                if isGeneratingWorkout && customTargetMuscles != nil {
+                    // Show loading animation when regenerating with custom muscles
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .progressViewStyle(CircularProgressViewStyle())
+                } else {
+                    Image(systemName: "figure.mixed.cardio")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(.secondary)
+                }
                 
-                Text(selectedMuscleType)
+                // Fix label logic: show "Custom Muscle Group" when custom muscles are selected
+                Text(customTargetMuscles != nil ? "Custom Muscle Group" : "Recovered Muscles")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.primary)
                 
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
+                if !isGeneratingWorkout {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -952,7 +891,7 @@ struct LogWorkoutView: View {
                     .font(.system(size: 17, weight: .bold))
                     .foregroundColor(.secondary)
                 
-                Text(selectedFitnessLevel.displayName)
+                Text(workoutManager.effectiveFitnessLevel.displayName)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.primary)
                 
@@ -1023,14 +962,13 @@ struct LogWorkoutView: View {
                     TodayWorkoutView(
                         searchText: searchText,
                         navigationPath: $navigationPath,
-                        workoutManager: workoutManager,
                         userEmail: userEmail,
                         selectedDuration: effectiveDuration,
                         shouldRegenerate: $shouldRegenerateWorkout,
                         customTargetMuscles: customTargetMuscles,
                         customEquipment: customEquipment,
                         effectiveFitnessGoal: effectiveFitnessGoal,
-                        effectiveFitnessLevel: sessionFitnessLevel ?? selectedFitnessLevel,
+                        effectiveFitnessLevel: workoutManager.effectiveFitnessLevel,
                         onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
                         onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
                         currentWorkout: $currentWorkout,
@@ -1066,17 +1004,9 @@ struct LogWorkoutView: View {
     
     // MARK: - Flexibility Preferences Methods
     
-    private func loadSessionFlexibilityPreferences() {
-        if let data = UserDefaults.standard.data(forKey: sessionFlexibilityKey),
-           let preferences = try? JSONDecoder().decode(FlexibilityPreferences.self, from: data) {
-            flexibilityPreferences = preferences
-        }
-    }
+    // loadSessionFlexibilityPreferences removed - now handled by WorkoutManager.loadSessionData()
     
-    private func clearSessionFlexibilityPreferences() {
-        flexibilityPreferences = nil
-        UserDefaults.standard.removeObject(forKey: sessionFlexibilityKey)
-    }
+    // clearSessionFlexibilityPreferences removed - now handled by WorkoutManager.clearAllSessionOverrides()
 }
 
 // MARK: - Tab Button
@@ -1112,7 +1042,7 @@ private struct TabButton: View {
 private struct TodayWorkoutView: View {
     let searchText: String
     @Binding var navigationPath: NavigationPath
-    @ObservedObject var workoutManager: WorkoutManager
+    @EnvironmentObject var workoutManager: WorkoutManager
     let userEmail: String
     let selectedDuration: WorkoutDuration  // Keep as let since we'll handle changes differently
     @Binding var shouldRegenerate: Bool
@@ -1125,8 +1055,6 @@ private struct TodayWorkoutView: View {
     @Binding var currentWorkout: TodayWorkout?
     let effectiveFlexibilityPreferences: FlexibilityPreferences // Added this parameter
     
-    @State private var todayWorkout: TodayWorkout?
-    @State private var isGeneratingWorkout = false
     @State private var userProfile = UserProfileService.shared
     
     var body: some View {
@@ -1139,14 +1067,23 @@ private struct TodayWorkoutView: View {
                         Color.clear.frame(height: 4)
                         
                         // Show generation loading
-                        if isGeneratingWorkout {
+                        if workoutManager.isGeneratingWorkout {
                             ModernWorkoutLoadingView(message: "Creating your personalized workout...")
                                 .transition(.opacity)
                         }
                         
                         // Show today's workout if available
-                        if let workout = todayWorkout {
-                            VStack(spacing: 4) {
+                        if let workout = workoutManager.todayWorkout {
+                            VStack(spacing: 12) {
+                                // Session phase header for dynamic workouts
+                                if let dynamicParams = workoutManager.dynamicParameters {
+                                    DynamicSessionPhaseView(
+                                        sessionPhase: dynamicParams.sessionPhase,
+                                        workoutCount: calculateWorkoutCountInPhase()
+                                    )
+                                    .padding(.horizontal)
+                                }
+                                
                                 TodayWorkoutExerciseList(
                                     workout: workout,
                                     navigationPath: $navigationPath,
@@ -1175,7 +1112,7 @@ private struct TodayWorkoutView: View {
                         }
                         
                         // Empty state when no workout and not generating
-                        if todayWorkout == nil && !isGeneratingWorkout {
+                        if workoutManager.todayWorkout == nil && !workoutManager.isGeneratingWorkout {
                             VStack(spacing: 16) {
                                 Image("blackex")
                                     .resizable()
@@ -1203,7 +1140,7 @@ private struct TodayWorkoutView: View {
                 .background(Color(.systemBackground))
                 
                 // Sticky Start Workout button at bottom
-                if let workout = todayWorkout {
+                if let workout = workoutManager.todayWorkout {
                     VStack {
                         Button(action: {
                             print("🚀 Starting workout with \(workout.exercises.count) exercises")
@@ -1281,7 +1218,7 @@ private struct TodayWorkoutView: View {
             
             // Check if the workout is from today
             if Calendar.current.isDateInToday(workout.date) {
-                todayWorkout = workout
+                workoutManager.setTodayWorkout(workout)
                 return
             }
         }
@@ -1291,17 +1228,9 @@ private struct TodayWorkoutView: View {
     }
     
     private func generateTodayWorkout() {
-        isGeneratingWorkout = true
-        print("🚀 TodayWorkoutView: Starting workout generation with flexibility: warmUp=\(effectiveFlexibilityPreferences.warmUpEnabled), coolDown=\(effectiveFlexibilityPreferences.coolDownEnabled)")
-        
-        // Simulate AI workout generation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            let generatedWorkout = createIntelligentWorkout()
-            todayWorkout = generatedWorkout
-            isGeneratingWorkout = false
-            
-            // Save today's workout
-            saveTodayWorkout(generatedWorkout)
+        print("🚀 TodayWorkoutView: Using WorkoutManager to generate workout")
+        Task {
+            await workoutManager.generateTodayWorkout()
         }
     }
     
@@ -1312,8 +1241,8 @@ private struct TodayWorkoutView: View {
         let fitnessGoal = effectiveFitnessGoal
         let experienceLevel = effectiveFitnessLevel
         
-        // Use selected duration instead of user's available time
-        let targetDuration = selectedDuration.minutes
+        // Use WorkoutManager's current effective duration (handles session overrides)
+        let targetDuration = workoutManager.effectiveDuration.minutes
         
         // Define muscle groups based on custom selection or recovery
         let muscleGroups: [String]
@@ -1531,92 +1460,75 @@ private struct TodayWorkoutView: View {
         recommendationService: WorkoutRecommendationService,
         customEquipment: [Equipment]?,
         flexibilityPreferences: FlexibilityPreferences
-    ) -> WorkoutPlan {
+    ) -> LogWorkoutPlan {
         
-        let targetDurationSeconds = targetDurationMinutes * 60
+        print("🏗️ LogWorkoutView: Using WorkoutGenerationService for robust workout generation")
         
-        // Calculate warmup and cooldown based on workout duration
-        let warmupSeconds = getWarmupDuration(for: targetDurationMinutes)
-        let cooldownSeconds = warmupSeconds // Same as warmup
+        // Convert parameters to WorkoutGenerationService types
+        let targetDuration = WorkoutDuration.fromMinutes(targetDurationMinutes)
         
-        // Available time for exercises (without warmup/cooldown)
-        let availableExerciseTime = targetDurationSeconds - warmupSeconds - cooldownSeconds
-        
-        var exercises: [TodayWorkoutExercise] = []
-        var totalExerciseTime = 0
-        
-        // Calculate target exercise count based on workout duration and fitness goal
-        let targetExercisesPerMuscle = getTargetExercisesPerMuscle(
-            availableExerciseTimeMinutes: availableExerciseTime / 60,
-            muscleGroupCount: muscleGroups.count,
-            parameters: parameters
-        )
-        
-        // Start near the target and adjust up/down as needed
-        var exercisesPerMuscle = max(1, targetExercisesPerMuscle)
-        let maxExercisesPerMuscle = 4
-        
-        while exercisesPerMuscle <= maxExercisesPerMuscle {
-            let testExercises = generateExercises(
-                muscleGroups: muscleGroups,
-                exercisesPerMuscle: exercisesPerMuscle,
-                parameters: parameters,
-                recommendationService: recommendationService,
-                customEquipment: customEquipment,
-                availableTimeMinutes: availableExerciseTime / 60
-            )
-            
-            let testTime = calculateTotalExerciseTime(exercises: testExercises, parameters: parameters)
-            
-            // Add small buffer for real-world variability (reduced from 12.5% to 7.5%)
-            let bufferedTime = Int(Double(testTime) * 1.075)
-            
-            print("🔍 Testing \(exercisesPerMuscle) per muscle: \(testExercises.count) exercises, \(testTime)s (\(testTime/60)min) + buffer = \(bufferedTime)s vs \(availableExerciseTime)s available")
-            
-            if bufferedTime <= availableExerciseTime {
-                exercises = testExercises
-                totalExerciseTime = testTime
-                exercisesPerMuscle += 1
-            } else {
-                print("💥 Hit time limit at \(exercisesPerMuscle) per muscle - stopping")
-                break
-            }
+        // Convert FitnessGoal from current session
+        let fitnessGoal: FitnessGoal
+        if let selectedGoal = workoutManager.sessionFitnessGoal {
+            fitnessGoal = selectedGoal
+        } else {
+            // Fallback to general fitness
+            fitnessGoal = .general
         }
         
-        // If no exercises fit, try with minimal sets
-        if exercises.isEmpty {
-            exercises = generateMinimalExercises(
-                muscleGroups: muscleGroups,
-                parameters: parameters,
-                recommendationService: recommendationService,
-                customEquipment: customEquipment,
-                availableTimeMinutes: availableExerciseTime / 60
-            )
-            totalExerciseTime = calculateTotalExerciseTime(exercises: exercises, parameters: parameters)
+        // Convert ExperienceLevel from current session  
+        let experienceLevel: ExperienceLevel
+        if let selectedLevel = workoutManager.sessionFitnessLevel {
+            experienceLevel = selectedLevel
+        } else {
+            experienceLevel = .intermediate
         }
         
-        let bufferSeconds = Int(Double(totalExerciseTime) * 0.05) // Reduced final buffer to 5%
-        let actualTotalSeconds = warmupSeconds + totalExerciseTime + cooldownSeconds + bufferSeconds
-        let actualDurationMinutes = (actualTotalSeconds + 59) / 60 // Round up
-        
-        let breakdown = WorkoutTimeBreakdown(
-            warmupSeconds: warmupSeconds,
-            exerciseTimeSeconds: totalExerciseTime,
-            cooldownSeconds: cooldownSeconds,
-            bufferSeconds: bufferSeconds,
-            totalSeconds: actualTotalSeconds
-        )
-        
-        print("🎯 Workout Plan Generated:")
-        print("   Target: \(targetDurationMinutes)m, Actual: \(actualDurationMinutes)m")
-        print("   Exercises: \(exercises.count) (\(exercisesPerMuscle-1) per muscle)")
-        print("   Breakdown: \(warmupSeconds/60)m warmup + \(totalExerciseTime/60)m exercises + \(cooldownSeconds/60)m cooldown + \(bufferSeconds)s buffer")
-        
-        return WorkoutPlan(
-            exercises: exercises,
-            actualDurationMinutes: actualDurationMinutes,
-            totalTimeBreakdown: breakdown
-        )
+        do {
+            // Use the robust WorkoutGenerationService instead of duplicate logic
+            let generatedPlan = try WorkoutGenerationService.shared.generateWorkoutPlan(
+                muscleGroups: muscleGroups,
+                targetDuration: targetDuration,
+                fitnessGoal: fitnessGoal,
+                experienceLevel: experienceLevel,
+                customEquipment: customEquipment,
+                flexibilityPreferences: flexibilityPreferences
+            )
+            
+            // Convert TimeBreakdown to WorkoutTimeBreakdown for LogWorkoutView compatibility
+            let breakdown = WorkoutTimeBreakdown(
+                warmupSeconds: generatedPlan.totalTimeBreakdown.warmupMinutes * 60,
+                exerciseTimeSeconds: generatedPlan.totalTimeBreakdown.exerciseMinutes * 60,
+                cooldownSeconds: generatedPlan.totalTimeBreakdown.cooldownMinutes * 60,
+                bufferSeconds: 0, // No additional buffer needed - already included in generation
+                totalSeconds: generatedPlan.totalTimeBreakdown.totalMinutes * 60
+            )
+            
+            print("✅ LogWorkoutView: Generated \(generatedPlan.exercises.count) exercises using research-based algorithm")
+            
+            return LogWorkoutPlan(
+                exercises: generatedPlan.exercises,
+                actualDurationMinutes: generatedPlan.actualDurationMinutes,
+                totalTimeBreakdown: breakdown
+            )
+            
+        } catch {
+            print("⚠️ LogWorkoutView: WorkoutGenerationService failed, error: \(error)")
+            // Fallback to empty workout rather than minimal exercises
+            let breakdown = WorkoutTimeBreakdown(
+                warmupSeconds: 0,
+                exerciseTimeSeconds: 0,
+                cooldownSeconds: 0,
+                bufferSeconds: 0,
+                totalSeconds: 0
+            )
+            
+            return LogWorkoutPlan(
+                exercises: [],
+                actualDurationMinutes: 0,
+                totalTimeBreakdown: breakdown
+            )
+        }
     }
     
     private func getTargetExercisesPerMuscle(availableExerciseTimeMinutes: Int, muscleGroupCount: Int, parameters: WorkoutParameters) -> Int {
@@ -1873,6 +1785,22 @@ private struct TodayWorkoutView: View {
         if let data = try? JSONEncoder().encode(workout) {
             UserDefaults.standard.set(data, forKey: "todayWorkout_\(userEmail)")
         }
+    }
+    
+    private func calculateWorkoutCountInPhase() -> Int {
+        // For now, return a simple count based on session phase
+        // In a full implementation, this would track workouts within the current phase
+        if let dynamicParams = workoutManager.dynamicParameters {
+            switch dynamicParams.sessionPhase {
+            case .strengthFocus:
+                return 1
+            case .volumeFocus:
+                return 2
+            case .conditioningFocus:
+                return 3
+            }
+        }
+        return 1
     }
 }
 
@@ -2228,8 +2156,41 @@ private struct ExerciseWorkoutCard: View {
     let exerciseIndex: Int
     let onExerciseReplaced: (Int, ExerciseData) -> Void
     @Binding var navigationPath: NavigationPath
+    @EnvironmentObject var workoutManager: WorkoutManager
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
+    
+    // Check if dynamic parameters are available
+    private var shouldShowDynamicView: Bool {
+        return workoutManager.dynamicParameters != nil
+    }
+    
+    // Convert static exercise to dynamic for display
+    private func convertToDynamicExercise(
+        _ staticExercise: TodayWorkoutExercise,
+        params: DynamicWorkoutParameters
+    ) -> DynamicWorkoutExercise? {
+        return DynamicParameterService.shared.generateDynamicExercise(
+            for: staticExercise.exercise,
+            parameters: params,
+            fitnessGoal: workoutManager.effectiveFitnessGoal
+        )
+    }
+    
+    // Computed property for dynamic rep display
+    private var setsAndRepsDisplay: String {
+        if let dynamicParams = workoutManager.dynamicParameters,
+           let dynamicExercise = convertToDynamicExercise(exercise, params: dynamicParams) {
+            let setsText = dynamicExercise.setCount == 1 ? "set" : "sets"
+            if dynamicExercise.repRange.lowerBound == dynamicExercise.repRange.upperBound {
+                return "\(dynamicExercise.setCount) \(setsText) • \(dynamicExercise.repRange.lowerBound) reps"
+            } else {
+                return "\(dynamicExercise.setCount) × \(dynamicExercise.repRange.lowerBound)-\(dynamicExercise.repRange.upperBound) reps"
+            }
+        } else {
+            return "\(exercise.sets) sets • \(exercise.reps) reps"
+        }
+    }
     
     var body: some View {
         Button(action: {
@@ -2264,7 +2225,7 @@ private struct ExerciseWorkoutCard: View {
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                     
-                    Text("\(exercise.sets) sets • \(exercise.reps) reps")
+                    Text(setsAndRepsDisplay)
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                 }
@@ -2442,18 +2403,10 @@ struct TodayWorkoutExercise: Codable, Hashable {
 
 // MARK: - Workout Parameters
 
-struct WorkoutParameters {
-    let percentageOneRM: ClosedRange<Int>  // e.g., 60...80
-    let repRange: ClosedRange<Int>         // e.g., 6...12
-    let repDurationSeconds: ClosedRange<Int> // e.g., 2...8
-    let setsPerExercise: ClosedRange<Int>  // e.g., 3...5
-    let restBetweenSetsSeconds: ClosedRange<Int> // e.g., 30...90
-    let compoundSetupSeconds: Int          // Setup time for compound exercises
-    let isolationSetupSeconds: Int         // Setup time for isolation exercises
-    let transitionSeconds: Int             // Time between exercises
-}
+// Using WorkoutParameters from WorkoutGenerationService
+// LogWorkoutView-specific structs that differ from WorkoutGenerationService
 
-struct WorkoutPlan {
+struct LogWorkoutPlan {
     let exercises: [TodayWorkoutExercise]
     let actualDurationMinutes: Int
     let totalTimeBreakdown: WorkoutTimeBreakdown
@@ -2522,43 +2475,7 @@ struct WorkoutControlButton: View {
     }
 }
 
-// MARK: - Workout Duration Enum
-
-enum WorkoutDuration: String, CaseIterable {
-    case fifteenMinutes = "15m"
-    case thirtyMinutes = "30m"
-    case fortyFiveMinutes = "45m"
-    case oneHour = "1h"
-    case oneAndHalfHours = "1.5h"
-    case twoHours = "2h"
-    
-    var displayValue: String {
-        return rawValue
-    }
-    
-    var minutes: Int {
-        switch self {
-        case .fifteenMinutes: return 15
-        case .thirtyMinutes: return 30
-        case .fortyFiveMinutes: return 45
-        case .oneHour: return 60
-        case .oneAndHalfHours: return 90
-        case .twoHours: return 120
-        }
-    }
-    
-    /// Create WorkoutDuration from minutes, choosing the closest match
-    static func fromMinutes(_ minutes: Int) -> WorkoutDuration {
-        switch minutes {
-        case 0..<23: return .fifteenMinutes
-        case 23..<38: return .thirtyMinutes
-        case 38..<53: return .fortyFiveMinutes
-        case 53..<75: return .oneHour
-        case 75..<105: return .oneAndHalfHours
-        default: return .twoHours
-        }
-    }
-}
+// MARK: - Workout Duration Enum (moved to WorkoutManager.swift)
 
 // MARK: - Workout Duration Picker View
 
@@ -3154,6 +3071,100 @@ private struct ModernWorkoutLoadingView: View {
             .repeatForever(autoreverses: false)
         ) {
             shimmerOffset = 200
+        }
+    }
+}
+
+// MARK: - Dynamic Session Phase View (Inline Definition)
+
+private struct DynamicSessionPhaseView: View {
+    let sessionPhase: SessionPhase
+    let workoutCount: Int
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Phase icon and name
+            HStack(spacing: 8) {
+                Image(systemName: phaseIconName)
+                    .font(.title2)
+                    .foregroundColor(phaseColor)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(phaseDisplayName)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text(phaseDescription)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            // Phase indicator dots
+            HStack(spacing: 6) {
+                ForEach([SessionPhase.strengthFocus, .volumeFocus, .conditioningFocus], id: \.self) { phase in
+                    Circle()
+                        .fill(phase == sessionPhase ? phaseColor : Color.gray.opacity(0.3))
+                        .frame(width: 8, height: 8)
+                        .animation(.easeInOut(duration: 0.3), value: sessionPhase)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(phaseColor.opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(phaseColor.opacity(0.2), lineWidth: 1)
+        )
+    }
+    
+    private var phaseIconName: String {
+        switch sessionPhase {
+        case .strengthFocus:
+            return "dumbbell.fill"
+        case .volumeFocus:
+            return "chart.bar.fill"
+        case .conditioningFocus:
+            return "figure.run"
+        }
+    }
+    
+    private var phaseColor: Color {
+        switch sessionPhase {
+        case .strengthFocus:
+            return .red
+        case .volumeFocus:
+            return .blue
+        case .conditioningFocus:
+            return .green
+        }
+    }
+    
+    private var phaseDisplayName: String {
+        switch sessionPhase {
+        case .strengthFocus:
+            return "Strength Focus"
+        case .volumeFocus:
+            return "Volume Focus"
+        case .conditioningFocus:
+            return "Conditioning Focus"
+        }
+    }
+    
+    private var phaseDescription: String {
+        switch sessionPhase {
+        case .strengthFocus:
+            return "Building maximal strength"
+        case .volumeFocus:
+            return "Increasing muscle size"
+        case .conditioningFocus:
+            return "Improving endurance"
         }
     }
 }
