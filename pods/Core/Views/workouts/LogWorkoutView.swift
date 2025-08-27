@@ -1056,6 +1056,7 @@ private struct TodayWorkoutView: View {
     let effectiveFlexibilityPreferences: FlexibilityPreferences // Added this parameter
     
     @State private var userProfile = UserProfileService.shared
+    @State private var showSessionPhaseCard = true // Toggle for session phase card
     
     var body: some View {
         GeometryReader { geometry in
@@ -1076,7 +1077,7 @@ private struct TodayWorkoutView: View {
                         if let workout = workoutManager.todayWorkout {
                             VStack(spacing: 12) {
                                 // Session phase header for dynamic workouts
-                                if let dynamicParams = workoutManager.dynamicParameters {
+                                if let dynamicParams = workoutManager.dynamicParameters, showSessionPhaseCard {
                                     DynamicSessionPhaseView(
                                         sessionPhase: dynamicParams.sessionPhase,
                                         workoutCount: calculateWorkoutCountInPhase()
@@ -3109,6 +3110,7 @@ private struct ModernWorkoutLoadingView: View {
 private struct DynamicSessionPhaseView: View {
     let sessionPhase: SessionPhase
     let workoutCount: Int
+    @EnvironmentObject var workoutManager: WorkoutManager
     
     var body: some View {
         HStack(spacing: 12) {
@@ -3176,14 +3178,8 @@ private struct DynamicSessionPhaseView: View {
     }
     
     private var phaseDisplayName: String {
-        switch sessionPhase {
-        case .strengthFocus:
-            return "Strength Focus"
-        case .volumeFocus:
-            return "Volume Focus"
-        case .conditioningFocus:
-            return "Conditioning Focus"
-        }
+        // Use contextual display name based on user's fitness goal
+        return sessionPhase.contextualDisplayName(for: workoutManager.effectiveFitnessGoal)
     }
     
     private var phaseDescription: String {

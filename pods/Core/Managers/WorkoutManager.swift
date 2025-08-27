@@ -200,14 +200,8 @@ class WorkoutManager: ObservableObject {
     
     /// Enhanced computed property with goal alignment
     var effectiveSessionPhase: SessionPhase {
-        // Get current stored phase
-        let storedPhase = sessionPhase
-        
-        // Get goal-aligned phase
-        let goalAlignedPhase = SessionPhase.alignedWith(fitnessGoal: effectiveFitnessGoal)
-        
-        // Use goal-aligned phase if stored phase doesn't match
-        return storedPhase == goalAlignedPhase ? storedPhase : goalAlignedPhase
+        // Always use goal-aligned phase
+        return SessionPhase.alignedWith(fitnessGoal: effectiveFitnessGoal)
     }
     
     /// Dynamic workout parameters for current session
@@ -278,10 +272,10 @@ class WorkoutManager: ObservableObject {
     
     // MARK: - Core Public Methods
     
-    /// Generate today's workout with dynamic programming (minimum 1.5s loading)
+    /// Generate today's workout with dynamic programming (1 second simple loading)
     func generateTodayWorkout() async {
         let startTime = Date()
-        await setGenerating(true, message: "Analyzing your recent performance...")
+        await setGenerating(true, message: "Generating workout")
         
         // Sync session phase with current fitness goal
         syncSessionPhaseWithGoal()
@@ -293,20 +287,16 @@ class WorkoutManager: ObservableObject {
                 lastFeedback: PerformanceFeedbackService.shared.feedbackHistory.last
             )
             
-            await setGenerating(true, message: "Optimizing rep ranges for your goals...")
-            
             // Generate base workout structure (reuse existing logic)
             let baseWorkout = try await generateBaseWorkout()
             
             // Apply dynamic programming
             let dynamicWorkout = await applyDynamicProgramming(to: baseWorkout, parameters: dynamicParams)
             
-            // Update state
+            // Update state (but DON'T override the synced session phase)
             self.dynamicParameters = dynamicParams
             self.todayWorkout = dynamicWorkout.legacyWorkout  // Backward compatibility
-            self.sessionPhase = dynamicParams.sessionPhase
-            
-            await setGenerating(true, message: "Finalizing your adaptive workout...")
+            // REMOVED: self.sessionPhase = dynamicParams.sessionPhase (this was overriding our sync!)
             
             saveTodayWorkout()
             generationError = nil
@@ -319,21 +309,20 @@ class WorkoutManager: ObservableObject {
             generationError = .generationFailed(error.localizedDescription)
         }
         
-        // Ensure minimum 1.5s loading time for smooth UX
+        // Simple 1-second minimum loading
         let elapsed = Date().timeIntervalSince(startTime)
-        if elapsed < 1.5 {
-            await setGenerating(true, message: "Finalizing your workout...")
-            let remainingTime = 1.5 - elapsed
+        if elapsed < 1.0 {
+            let remainingTime = 1.0 - elapsed
             try? await Task.sleep(nanoseconds: UInt64(remainingTime * 1_000_000_000))
         }
         
         await setGenerating(false)
     }
     
-    /// Generate static workout with current preferences (legacy method - minimum 1.5s loading)
+    /// Generate static workout with current preferences (1 second simple loading)
     func generateStaticWorkout() async {
         let startTime = Date()
-        await setGenerating(true, message: "Analyzing your preferences...")
+        await setGenerating(true, message: "Generating workout")
         
         do {
             let parameters = WorkoutGenerationParameters(
@@ -345,12 +334,8 @@ class WorkoutManager: ObservableObject {
                 customEquipment: customEquipment
             )
             
-            await setGenerating(true, message: "Selecting optimal exercises...")
-            
             // Perform heavy workout generation in background
             let workout = try await backgroundWorkoutGeneration(parameters)
-            
-            await setGenerating(true, message: "Finalizing your workout...")
             
             // Update on main thread
             todayWorkout = workout
@@ -363,11 +348,10 @@ class WorkoutManager: ObservableObject {
             generationError = .generationFailed(error.localizedDescription)
         }
         
-        // Ensure minimum 1.5s loading time for smooth UX
+        // Simple 1-second minimum loading
         let elapsed = Date().timeIntervalSince(startTime)
-        if elapsed < 1.5 {
-            await setGenerating(true, message: "Finalizing your workout...")
-            let remainingTime = 1.5 - elapsed
+        if elapsed < 1.0 {
+            let remainingTime = 1.0 - elapsed
             try? await Task.sleep(nanoseconds: UInt64(remainingTime * 1_000_000_000))
         }
         
@@ -885,10 +869,20 @@ class WorkoutManager: ObservableObject {
     
     /// Sync session phase with current fitness goal
     func syncSessionPhaseWithGoal() {
-        let alignedPhase = SessionPhase.alignedWith(fitnessGoal: effectiveFitnessGoal)
+        let currentGoal = effectiveFitnessGoal
+        let currentPhase = sessionPhase
+        let alignedPhase = SessionPhase.alignedWith(fitnessGoal: currentGoal)
+        
+        print("🔍 === SESSION PHASE SYNC DEBUG ===")
+        print("🔍 Current Fitness Goal: \(currentGoal) (\(currentGoal.displayName))")
+        print("🔍 Current Session Phase: \(currentPhase) (\(currentPhase.displayName))")
+        print("🔍 Expected Aligned Phase: \(alignedPhase) (\(alignedPhase.displayName))")
+        print("🔍 Contextual Display: \(alignedPhase.contextualDisplayName(for: currentGoal))")
+        
         if sessionPhase != alignedPhase {
             sessionPhase = alignedPhase
-            print("🔄 Synced session phase to \(alignedPhase.displayName) for \(effectiveFitnessGoal.displayName) goal")
+            print("🔄 PHASE CHANGED: \(currentPhase.displayName) → \(alignedPhase.displayName)")
+            print("🔄 Contextual Name: \(alignedPhase.contextualDisplayName(for: currentGoal))")
             
             // Update dynamic parameters if they exist
             if var params = dynamicParameters {
@@ -901,8 +895,15 @@ class WorkoutManager: ObservableObject {
                     timestamp: Date()
                 )
                 dynamicParameters = params
+                print("🔄 Updated dynamic parameters with new phase")
             }
+        } else {
+            print("✅ Phase already aligned - no change needed")
         }
+        
+        print("🔍 Final Session Phase: \(sessionPhase) (\(sessionPhase.displayName))")
+        print("🔍 Final Contextual Display: \(sessionPhase.contextualDisplayName(for: currentGoal))")
+        print("🔍 === END SYNC DEBUG ===")
     }
     
     // MARK: - Dynamic Programming (method declarations - implementations in WorkoutManager+DynamicProgramming.swift)
