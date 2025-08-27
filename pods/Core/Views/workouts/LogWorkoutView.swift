@@ -2159,6 +2159,7 @@ private struct ExerciseWorkoutCard: View {
     @EnvironmentObject var workoutManager: WorkoutManager
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
+    @State private var cachedDynamicExercise: DynamicWorkoutExercise?
     
     // Check if dynamic parameters are available
     private var shouldShowDynamicView: Bool {
@@ -2177,18 +2178,20 @@ private struct ExerciseWorkoutCard: View {
         )
     }
     
-    // Computed property for dynamic rep display
+    // Stable cached dynamic exercise (prevents UI flickering)
+    private var stableDynamicExercise: DynamicWorkoutExercise? {
+        return cachedDynamicExercise
+    }
+    
+    // Computed property for dynamic rep display (now stable)
     private var setsAndRepsDisplay: String {
-        if let dynamicParams = workoutManager.dynamicParameters,
-           let dynamicExercise = convertToDynamicExercise(exercise, params: dynamicParams) {
-            let setsText = dynamicExercise.setCount == 1 ? "set" : "sets"
-            if dynamicExercise.repRange.lowerBound == dynamicExercise.repRange.upperBound {
-                return "\(dynamicExercise.setCount) \(setsText) • \(dynamicExercise.repRange.lowerBound) reps"
-            } else {
-                return "\(dynamicExercise.setCount) × \(dynamicExercise.repRange.lowerBound)-\(dynamicExercise.repRange.upperBound) reps"
-            }
+        if let dynamicExercise = stableDynamicExercise {
+            // Use the new dailyTargetDisplay for specific daily targets
+            return dynamicExercise.dailyTargetDisplay
         } else {
-            return "\(exercise.sets) sets • \(exercise.reps) reps"
+            // Fallback to static display with consistent format
+            let setsText = exercise.sets == 1 ? "set" : "sets"
+            return "\(exercise.sets) \(setsText) • \(exercise.reps) reps"
         }
     }
     
@@ -2274,6 +2277,32 @@ private struct ExerciseWorkoutCard: View {
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
+        .onAppear {
+            // Cache the dynamic exercise on first appearance
+            updateCachedExercise()
+        }
+        .onChange(of: workoutManager.dynamicParameters) { _, _ in
+            // Recalculate when dynamic parameters change
+            updateCachedExercise()
+        }
+        .onChange(of: workoutManager.effectiveFitnessGoal) { _, _ in
+            // Recalculate when fitness goal changes  
+            updateCachedExercise()
+        }
+    }
+    
+    // Update cached exercise to prevent recomputation
+    private func updateCachedExercise() {
+        guard let dynamicParams = workoutManager.dynamicParameters else {
+            cachedDynamicExercise = nil
+            return
+        }
+        
+        cachedDynamicExercise = DynamicParameterService.shared.generateDynamicExercise(
+            for: exercise.exercise,
+            parameters: dynamicParams,
+            fitnessGoal: workoutManager.effectiveFitnessGoal
+        )
     }
     
     private var thumbnailImageName: String {

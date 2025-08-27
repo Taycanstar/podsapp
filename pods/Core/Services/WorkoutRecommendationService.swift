@@ -1512,6 +1512,7 @@ extension WorkoutRecommendationService {
             exercise: staticExercise.exercise,
             setCount: staticExercise.sets,
             repRange: staticExercise.reps...staticExercise.reps, // Fixed range for compatibility
+            targetReps: staticExercise.reps, // Use static reps as target
             targetIntensity: .hypertrophy, // Safe default
             suggestedWeight: staticExercise.weight,
             restTime: staticExercise.restTime,

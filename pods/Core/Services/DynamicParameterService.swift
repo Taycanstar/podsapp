@@ -51,7 +51,7 @@ class DynamicParameterService: ObservableObject {
         )
     }
     
-    /// Generate dynamic exercise with intelligent rep ranges
+    /// Generate dynamic exercise with intelligent rep ranges and daily targets
     func generateDynamicExercise(
         for exercise: ExerciseData,
         parameters: DynamicWorkoutParameters,
@@ -65,16 +65,22 @@ class DynamicParameterService: ObservableObject {
             fitnessGoal: fitnessGoal
         )
         
-        let repRange = calculateDynamicRepRange(
+        // Determine movement priority for per-exercise variability
+        let movementPriority = determineMovementPriority(exercise: exercise, exerciseType: exerciseType)
+        
+        // Calculate daily target and range using new method
+        let (targetReps, repRange) = calculateDynamicRepTarget(
             fitnessGoal: fitnessGoal,
             sessionPhase: parameters.sessionPhase,
             exerciseType: exerciseType,
             recoveryStatus: parameters.recoveryStatus[exercise.target] ?? .moderate,
-            lastFeedback: parameters.lastWorkoutFeedback
+            lastFeedback: parameters.lastWorkoutFeedback,
+            exercisePriority: movementPriority
         )
         
         let setCount = calculateDynamicSetCount(
             exerciseType: exerciseType,
+            movementPriority: movementPriority,
             sessionPhase: parameters.sessionPhase,
             fitnessGoal: fitnessGoal
         )
@@ -89,53 +95,160 @@ class DynamicParameterService: ObservableObject {
             exercise: exercise,
             setCount: setCount,
             repRange: repRange,
+            targetReps: targetReps,
             targetIntensity: baseIntensityZone,
             suggestedWeight: nil, // Let existing weight progression handle this
             restTime: restTime,
             sessionPhase: parameters.sessionPhase,
-            recoveryStatus: parameters.recoveryStatus[exercise.target] ?? .moderate
+            recoveryStatus: parameters.recoveryStatus[exercise.target] ?? .moderate,
+            movementPriority: movementPriority
         )
     }
     
     // MARK: - Rep Range Calculation (The Core Dynamic Algorithm)
     
-    /// Calculate intelligent rep ranges that replace static numbers for ALL fitness goals
-    private func calculateDynamicRepRange(
+    /// Calculate daily target rep with clean science-based lookup table
+    private func calculateDynamicRepTarget(
         fitnessGoal: FitnessGoal,
         sessionPhase: SessionPhase,
         exerciseType: MovementType,
         recoveryStatus: RecoveryStatus,
-        lastFeedback: WorkoutSessionFeedback?
+        lastFeedback: WorkoutSessionFeedback?,
+        exercisePriority: MovementPriority = .secondary
+    ) -> (target: Int, range: ClosedRange<Int>) {
+        
+        print("🧮 === Clean Rep Target Calculation ===")
+        print("🧮 Goal: \(fitnessGoal) | Phase: \(sessionPhase.displayName) | Type: \(exerciseType.displayName) | Priority: \(exercisePriority.displayName)")
+        
+        // Get optimal range from science-based lookup table (NO compounding adjustments)
+        let optimalRange = getOptimalRepRange(
+            goal: fitnessGoal,
+            priority: exercisePriority,
+            exerciseType: exerciseType
+        )
+        
+        // Select clean daily target (no arbitrary percentiles)
+        let cleanTarget = selectCleanTarget(
+            from: optimalRange,
+            sessionPhase: sessionPhase,
+            recoveryStatus: recoveryStatus,
+            feedback: lastFeedback
+        )
+        
+        print("🧮 Optimal range: \(optimalRange.lowerBound)-\(optimalRange.upperBound) | Clean target: \(cleanTarget)")
+        print("🧮 === End Clean Calculation ===")
+        
+        return (target: cleanTarget, range: optimalRange)
+    }
+    
+    /// Science-based lookup table for optimal rep ranges (replaces compounding adjustments)
+    private func getOptimalRepRange(
+        goal: FitnessGoal,
+        priority: MovementPriority,
+        exerciseType: MovementType
     ) -> ClosedRange<Int> {
         
-        print("🧮 === Dynamic Rep Range Calculation ===")
-        print("🧮 Fitness Goal: \(fitnessGoal)")
-        print("🧮 Session Phase: \(sessionPhase.displayName)")
-        print("🧮 Exercise Type: \(exerciseType.displayName)")
-        print("🧮 Recovery Status: \(recoveryStatus.displayName)")
+        // Clean lookup table based on exercise science principles
+        switch (goal, priority, exerciseType) {
+        // STRENGTH GOAL
+        case (.strength, .primary, .compound):    return 3...6   // Heavy compounds
+        case (.strength, .secondary, .compound):  return 4...8   // Supporting compounds  
+        case (.strength, .accessory, .isolation): return 6...10  // Strength accessories
+        case (.strength, _, .core):               return 8...15  // Core strength
+        case (.strength, _, .cardio):             return 10...20 // Strength conditioning
         
-        // Step 1: Get base rep range for fitness goal (replaces static numbers)
-        let baseRange = getBaseRepRangeForGoal(fitnessGoal)
-        print("🧮 Base range for \(fitnessGoal): \(baseRange.lowerBound)-\(baseRange.upperBound)")
+        // POWERLIFTING GOAL (similar to strength but more specific)
+        case (.powerlifting, .primary, .compound):    return 1...5   // Competition lifts
+        case (.powerlifting, .secondary, .compound):  return 3...6   // Supporting lifts
+        case (.powerlifting, .accessory, .isolation): return 6...10  // Powerlifting accessories
+        case (.powerlifting, _, .core):               return 8...15  // Core stability
+        case (.powerlifting, _, .cardio):             return 10...20 // Recovery work
         
-        // Step 2: Adjust range based on session phase (Fitbod's A-B-C cycling)
-        let phaseAdjustedRange = adjustRangeForSessionPhase(baseRange, sessionPhase: sessionPhase)
-        print("🧮 Phase adjusted (\(sessionPhase.displayName)): \(phaseAdjustedRange.lowerBound)-\(phaseAdjustedRange.upperBound)")
+        // HYPERTROPHY GOAL
+        case (.hypertrophy, .primary, .compound):    return 6...10  // Compound muscle builders
+        case (.hypertrophy, .secondary, .compound):  return 8...12  // Secondary compounds
+        case (.hypertrophy, .accessory, .isolation): return 10...15 // Isolation work
+        case (.hypertrophy, _, .core):               return 12...20 // Core hypertrophy
+        case (.hypertrophy, _, .cardio):             return 15...25 // Hypertrophy conditioning
         
-        // Step 3: Adjust for exercise type (compound vs isolation)
-        let typeAdjustedRange = adjustRangeForExerciseType(phaseAdjustedRange, exerciseType: exerciseType)
-        print("🧮 Exercise type adjusted (\(exerciseType.displayName)): \(typeAdjustedRange.lowerBound)-\(typeAdjustedRange.upperBound)")
+        // ENDURANCE GOAL
+        case (.endurance, .primary, .compound):    return 12...20 // Endurance compounds
+        case (.endurance, .secondary, .compound):  return 15...25 // Endurance supporting
+        case (.endurance, .accessory, .isolation): return 15...30 // Endurance isolation
+        case (.endurance, _, .core):               return 20...40 // Core endurance
+        case (.endurance, _, .cardio):             return 25...50 // Cardio endurance
         
-        // Step 4: Adjust for recovery status
-        let recoveryAdjustedRange = adjustRangeForRecovery(typeAdjustedRange, recoveryStatus: recoveryStatus)
-        print("🧮 Recovery adjusted (\(recoveryStatus.displayName)): \(recoveryAdjustedRange.lowerBound)-\(recoveryAdjustedRange.upperBound)")
+        // TONE GOAL (similar to endurance but moderate)
+        case (.tone, .primary, .compound):    return 10...15 // Toning compounds
+        case (.tone, .secondary, .compound):  return 12...18 // Toning supporting
+        case (.tone, .accessory, .isolation): return 12...20 // Toning isolation
+        case (.tone, _, .core):               return 15...25 // Core toning
+        case (.tone, _, .cardio):             return 20...30 // Cardio toning
         
-        // Step 5: Auto-regulation based on last workout feedback
-        let finalRange = adjustRangeForFeedback(recoveryAdjustedRange, feedback: lastFeedback)
-        print("🧮 Final dynamic range: \(finalRange.lowerBound)-\(finalRange.upperBound)")
-        print("🧮 === End Dynamic Calculation ===")
+        // GENERAL FITNESS (balanced approach)
+        case (.general, .primary, .compound):    return 8...12  // General compounds
+        case (.general, .secondary, .compound):  return 10...15 // General supporting
+        case (.general, .accessory, .isolation): return 10...15 // General isolation
+        case (.general, _, .core):               return 12...20 // General core
+        case (.general, _, .cardio):             return 15...25 // General cardio
         
-        return finalRange
+        // FALLBACK for any unhandled cases
+        default: return 8...12 // Safe default
+        }
+    }
+    
+    /// Select clean, user-friendly target from range (no arbitrary percentiles)
+    private func selectCleanTarget(
+        from range: ClosedRange<Int>,
+        sessionPhase: SessionPhase,
+        recoveryStatus: RecoveryStatus,
+        feedback: WorkoutSessionFeedback?
+    ) -> Int {
+        
+        // Clean target numbers that users expect (no 7, 11, 13, 17, etc.)
+        let cleanNumbers = [1, 3, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50]
+        let validTargets = cleanNumbers.filter { range.contains($0) }
+        
+        guard !validTargets.isEmpty else { 
+            return range.lowerBound // Fallback
+        }
+        
+        // Select based on session phase preference
+        let baseIndex: Int
+        switch sessionPhase {
+        case .strengthFocus:
+            baseIndex = 0 // Lower end for strength
+        case .volumeFocus:
+            baseIndex = validTargets.count / 2 // Middle for volume
+        case .conditioningFocus:
+            baseIndex = validTargets.count - 1 // Upper end for conditioning
+        }
+        
+        var targetIndex = baseIndex
+        
+        // Adjust for recovery status
+        switch recoveryStatus {
+        case .fresh:
+            targetIndex = max(0, targetIndex - 1) // Can handle slightly lower reps (higher intensity)
+        case .moderate:
+            break // Use base selection
+        case .fatigued:
+            targetIndex = min(validTargets.count - 1, targetIndex + 1) // Higher reps for recovery
+        }
+        
+        // Adjust for feedback
+        if let feedback = feedback {
+            switch feedback.difficultyRating {
+            case .tooEasy:
+                targetIndex = max(0, targetIndex - 1) // Lower reps = higher intensity
+            case .tooHard:
+                targetIndex = min(validTargets.count - 1, targetIndex + 1) // Higher reps = lower intensity  
+            case .justRight, .challenging:
+                break // Keep current selection
+            }
+        }
+        
+        return validTargets[targetIndex]
     }
     
     /// Base rep ranges for each fitness goal (replaces static 3x8, 3x10, etc.)
@@ -239,11 +352,80 @@ class DynamicParameterService: ObservableObject {
         }
     }
     
+    /// Adjust rep range based on movement priority (primary vs accessory)
+    private func adjustRangeForMovementPriority(_ range: ClosedRange<Int>, priority: MovementPriority, goal: FitnessGoal) -> ClosedRange<Int> {
+        switch priority {
+        case .primary:
+            // Primary movements: Lower reps for strength/power focus
+            let reduction = goal == .strength || goal == .powerlifting ? 2 : 1
+            return max(1, range.lowerBound - reduction)...max(range.lowerBound, range.upperBound - reduction)
+            
+        case .secondary:
+            // Secondary movements: Use base range
+            return range
+            
+        case .accessory:
+            // Accessory movements: Higher reps for volume
+            return (range.lowerBound + 2)...(range.upperBound + 4)
+            
+        case .core:
+            // Core exercises: Higher reps for endurance
+            return max(10, range.lowerBound + 5)...(range.upperBound + 10)
+            
+        case .cardio:
+            // Cardio-strength: Even higher reps
+            return max(12, range.lowerBound + 8)...(range.upperBound + 15)
+        }
+    }
+    
+    /// Calculate specific daily target from range using percentile-based selection
+    private func calculateDailyTargetFromRange(_ range: ClosedRange<Int>, sessionPhase: SessionPhase, feedback: WorkoutSessionFeedback?) -> Int {
+        let rangeSize = range.upperBound - range.lowerBound
+        
+        // If range is single value, return that value
+        if rangeSize == 0 {
+            return range.lowerBound
+        }
+        
+        // Percentile selection based on session phase (Fitbod approach)
+        let percentile: Double
+        switch sessionPhase {
+        case .strengthFocus:
+            percentile = 0.25  // Lower end for strength (higher intensity)
+        case .volumeFocus:
+            percentile = 0.70  // Higher end for volume
+        case .conditioningFocus:
+            percentile = 0.85  // Upper end for conditioning
+        }
+        
+        // Auto-regulation based on feedback
+        let adjustedPercentile: Double
+        if let feedback = feedback {
+            switch feedback.difficultyRating {
+            case .tooEasy:
+                adjustedPercentile = max(0.0, percentile - 0.2)  // Lower reps = higher intensity
+            case .justRight:
+                adjustedPercentile = percentile
+            case .challenging:
+                adjustedPercentile = min(1.0, percentile + 0.1)  // Slight increase
+            case .tooHard:
+                adjustedPercentile = min(1.0, percentile + 0.3)  // More reps = lower intensity
+            }
+        } else {
+            adjustedPercentile = percentile
+        }
+        
+        // Calculate target rep within range
+        let targetOffset = Int(Double(rangeSize) * adjustedPercentile)
+        return range.lowerBound + targetOffset
+    }
+    
     // MARK: - Set Count Calculation
     
-    /// Calculate dynamic set count (can also vary from static 3 sets)
+    /// Calculate dynamic set count with per-exercise variability
     private func calculateDynamicSetCount(
         exerciseType: MovementType,
+        movementPriority: MovementPriority,
         sessionPhase: SessionPhase,
         fitnessGoal: FitnessGoal
     ) -> Int {
@@ -262,14 +444,40 @@ class DynamicParameterService: ObservableObject {
         }
         
         // Adjust based on session phase
+        var adjustedSets: Int
         switch sessionPhase {
         case .strengthFocus:
-            return min(baseSets + 1, 5)  // More sets for strength focus
+            adjustedSets = min(baseSets + 1, 5)  // More sets for strength focus
         case .volumeFocus:
-            return baseSets              // Standard sets for volume
+            adjustedSets = baseSets               // Standard sets for volume
         case .conditioningFocus:
-            return max(baseSets - 1, 2)  // Fewer sets for conditioning
+            adjustedSets = max(baseSets - 1, 2)   // Fewer sets for conditioning
         }
+        
+        // Apply movement priority adjustments for per-exercise variability
+        switch movementPriority {
+        case .primary:
+            // Primary movements get more sets (they're the focus)
+            adjustedSets = min(adjustedSets + 1, 5)
+            
+        case .secondary:
+            // Secondary movements get standard sets
+            break  // No adjustment
+            
+        case .accessory:
+            // Accessory movements may get fewer sets
+            adjustedSets = max(adjustedSets - 1, 2)
+            
+        case .core:
+            // Core exercises often use higher sets with bodyweight
+            adjustedSets = min(adjustedSets + 1, 4)
+            
+        case .cardio:
+            // Cardio exercises typically use fewer "sets" (more like intervals)
+            adjustedSets = max(adjustedSets - 1, 2)
+        }
+        
+        return max(adjustedSets, 2)  // Ensure minimum of 2 sets
     }
     
     // MARK: - Supporting Methods
@@ -363,6 +571,50 @@ class DynamicParameterService: ObservableObject {
             return 0.5  // Moderate approach
         case .declining:
             return 0.3  // Conservative when struggling
+        }
+    }
+    
+    /// Determine movement priority for per-exercise variability
+    private func determineMovementPriority(exercise: ExerciseData, exerciseType: MovementType) -> MovementPriority {
+        // Primary movements (major compound exercises that should be prioritized)
+        let primaryMovementNames = [
+            "squat", "deadlift", "bench press", "overhead press", "barbell row", 
+            "pull-up", "chin-up", "dip", "clean", "snatch", "front squat"
+        ]
+        
+        // Core/accessory patterns
+        let corePatterns = ["plank", "crunch", "sit-up", "russian twist", "mountain climber", "leg raise"]
+        let cardioPatterns = ["burpee", "jumping jack", "high knees", "butt kicks", "jump rope"]
+        
+        let exerciseName = exercise.name.lowercased()
+        
+        // Check for primary movements first
+        if primaryMovementNames.contains(where: { exerciseName.contains($0) }) {
+            return .primary
+        }
+        
+        // Check for core exercises
+        if corePatterns.contains(where: { exerciseName.contains($0) }) {
+            return .core
+        }
+        
+        // Check for cardio exercises
+        if cardioPatterns.contains(where: { exerciseName.contains($0) }) {
+            return .cardio
+        }
+        
+        // Use exercise type to determine priority
+        switch exerciseType {
+        case .compound:
+            // Compound movements not in primary list are secondary
+            return .secondary
+        case .isolation:
+            // Isolation movements are typically accessory
+            return .accessory  
+        case .core:
+            return .core
+        case .cardio:
+            return .cardio
         }
     }
 }

@@ -91,6 +91,57 @@ enum SessionPhase: String, CaseIterable, Codable {
         case .conditioningFocus: return .strengthFocus
         }
     }
+    
+    /// Create phase that aligns with user's fitness goal
+    static func alignedWith(fitnessGoal: FitnessGoal) -> SessionPhase {
+        switch fitnessGoal {
+        case .strength, .powerlifting, .power:
+            return .strengthFocus
+        case .hypertrophy, .general:
+            return .volumeFocus  
+        case .endurance, .tone, .sport:
+            return .conditioningFocus
+        }
+    }
+    
+    /// Display name that matches fitness goal context
+    func contextualDisplayName(for goal: FitnessGoal) -> String {
+        switch (self, goal) {
+        case (.strengthFocus, .strength), (.strengthFocus, .powerlifting), (.strengthFocus, .power):
+            return "Strength Training"
+        case (.volumeFocus, .hypertrophy):
+            return "Muscle Building"  
+        case (.volumeFocus, .general):
+            return "General Fitness"
+        case (.conditioningFocus, .endurance):
+            return "Endurance Training"
+        case (.conditioningFocus, .tone):
+            return "Toning & Conditioning"
+        case (.conditioningFocus, .sport):
+            return "Sport Performance"
+        default:
+            return displayName  // Fallback to original
+        }
+    }
+}
+
+/// Movement priority determines exercise-specific parameters
+enum MovementPriority: String, CaseIterable, Codable {
+    case primary = "primary"         // Main compound movements (squat, deadlift, bench)
+    case secondary = "secondary"     // Supporting compounds (rows, overhead press)
+    case accessory = "accessory"     // Isolation movements (bicep curls, lateral raises)
+    case core = "core"              // Core-specific movements
+    case cardio = "cardio"          // Cardio-strength movements
+    
+    var displayName: String {
+        switch self {
+        case .primary: return "Primary"
+        case .secondary: return "Secondary"
+        case .accessory: return "Accessory"
+        case .core: return "Core"
+        case .cardio: return "Cardio"
+        }
+    }
 }
 
 /// Recovery status affects rep ranges and intensity
@@ -260,9 +311,10 @@ struct DynamicWorkoutExercise: Codable, Hashable, Identifiable {
     let id: UUID
     let exercise: ExerciseData
     
-    // DYNAMIC: Rep ranges instead of fixed numbers
+    // DYNAMIC: Rep ranges AND specific daily targets
     let setCount: Int
-    let repRange: ClosedRange<Int>  // e.g., 8...12 instead of fixed 10
+    let repRange: ClosedRange<Int>  // e.g., 8...12 for flexibility
+    let targetReps: Int             // e.g., 10 - the specific daily target
     let targetIntensity: IntensityZone
     let suggestedWeight: Double?
     let restTime: Int
@@ -270,6 +322,7 @@ struct DynamicWorkoutExercise: Codable, Hashable, Identifiable {
     // Additional dynamic properties
     let sessionPhase: SessionPhase
     let recoveryStatus: RecoveryStatus
+    let movementPriority: MovementPriority
     let notes: String?
     let warmupSets: [WarmupSetData]?
     
@@ -278,11 +331,13 @@ struct DynamicWorkoutExercise: Codable, Hashable, Identifiable {
         exercise: ExerciseData,
         setCount: Int,
         repRange: ClosedRange<Int>,
+        targetReps: Int,
         targetIntensity: IntensityZone,
         suggestedWeight: Double? = nil,
         restTime: Int,
         sessionPhase: SessionPhase = .volumeFocus,
         recoveryStatus: RecoveryStatus = .moderate,
+        movementPriority: MovementPriority = .secondary,
         notes: String? = nil,
         warmupSets: [WarmupSetData]? = nil
     ) {
@@ -290,11 +345,13 @@ struct DynamicWorkoutExercise: Codable, Hashable, Identifiable {
         self.exercise = exercise
         self.setCount = setCount
         self.repRange = repRange
+        self.targetReps = targetReps
         self.targetIntensity = targetIntensity
         self.suggestedWeight = suggestedWeight
         self.restTime = restTime
         self.sessionPhase = sessionPhase
         self.recoveryStatus = recoveryStatus
+        self.movementPriority = movementPriority
         self.notes = notes
         self.warmupSets = warmupSets
     }
@@ -306,6 +363,12 @@ struct DynamicWorkoutExercise: Codable, Hashable, Identifiable {
         } else {
             return "\(repRange.lowerBound)-\(repRange.upperBound)"  // "8-12" for ranges
         }
+    }
+    
+    /// Daily target display in "3 sets • 10 reps" format
+    var dailyTargetDisplay: String {
+        let setsText = setCount == 1 ? "set" : "sets"
+        return "\(setCount) \(setsText) • \(targetReps) reps"
     }
     
     var setsAndRepsDisplay: String {

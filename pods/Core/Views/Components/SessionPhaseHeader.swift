@@ -10,6 +10,15 @@ import SwiftUI
 struct SessionPhaseHeader: View {
     let sessionPhase: SessionPhase
     let workoutCount: Int // Number in current phase cycle
+    let fitnessGoal: FitnessGoal? // For contextual display names
+    
+    private var contextualDisplayName: String {
+        if let goal = fitnessGoal {
+            return sessionPhase.contextualDisplayName(for: goal)
+        } else {
+            return sessionPhase.displayName
+        }
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -20,7 +29,7 @@ struct SessionPhaseHeader: View {
                     .foregroundColor(sessionPhase.color)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(sessionPhase.displayName)
+                    Text(contextualDisplayName)
                         .font(.headline)
                         .foregroundColor(.primary)
                     
@@ -105,9 +114,9 @@ extension SessionPhase {
 
 #Preview {
     VStack(spacing: 16) {
-        SessionPhaseHeader(sessionPhase: .strengthFocus, workoutCount: 1)
-        SessionPhaseHeader(sessionPhase: .volumeFocus, workoutCount: 2)
-        SessionPhaseHeader(sessionPhase: .conditioningFocus, workoutCount: 3)
+        SessionPhaseHeader(sessionPhase: .strengthFocus, workoutCount: 1, fitnessGoal: .strength)
+        SessionPhaseHeader(sessionPhase: .volumeFocus, workoutCount: 2, fitnessGoal: .hypertrophy)
+        SessionPhaseHeader(sessionPhase: .conditioningFocus, workoutCount: 3, fitnessGoal: .tone)
     }
     .padding()
 }

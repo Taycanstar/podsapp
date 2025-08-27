@@ -11,10 +11,20 @@ import SwiftUI
 struct DynamicRepRangeView: View {
     let dynamicExercise: DynamicWorkoutExercise
     let compact: Bool
+    let fitnessGoal: FitnessGoal? // For contextual session phase names
     
-    init(_ dynamicExercise: DynamicWorkoutExercise, compact: Bool = false) {
+    init(_ dynamicExercise: DynamicWorkoutExercise, compact: Bool = false, fitnessGoal: FitnessGoal? = nil) {
         self.dynamicExercise = dynamicExercise
         self.compact = compact
+        self.fitnessGoal = fitnessGoal
+    }
+    
+    private var contextualSessionPhaseName: String {
+        if let goal = fitnessGoal {
+            return dynamicExercise.sessionPhase.contextualDisplayName(for: goal)
+        } else {
+            return dynamicExercise.sessionPhase.displayName
+        }
     }
     
     var body: some View {
@@ -105,7 +115,7 @@ struct DynamicRepRangeView: View {
                 .font(.caption2)
                 .foregroundColor(dynamicExercise.sessionPhase.color)
             
-            Text(dynamicExercise.sessionPhase.displayName)
+            Text(contextualSessionPhaseName)
                 .font(.caption2.weight(.medium))
                 .foregroundColor(dynamicExercise.sessionPhase.color)
         }

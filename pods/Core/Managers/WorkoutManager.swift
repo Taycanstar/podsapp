@@ -198,6 +198,18 @@ class WorkoutManager: ObservableObject {
         }
     }
     
+    /// Enhanced computed property with goal alignment
+    var effectiveSessionPhase: SessionPhase {
+        // Get current stored phase
+        let storedPhase = sessionPhase
+        
+        // Get goal-aligned phase
+        let goalAlignedPhase = SessionPhase.alignedWith(fitnessGoal: effectiveFitnessGoal)
+        
+        // Use goal-aligned phase if stored phase doesn't match
+        return storedPhase == goalAlignedPhase ? storedPhase : goalAlignedPhase
+    }
+    
     /// Dynamic workout parameters for current session
     var dynamicParameters: DynamicWorkoutParameters? {
         get {
@@ -266,14 +278,18 @@ class WorkoutManager: ObservableObject {
     
     // MARK: - Core Public Methods
     
-    /// Generate today's workout with dynamic programming
+    /// Generate today's workout with dynamic programming (minimum 1.5s loading)
     func generateTodayWorkout() async {
+        let startTime = Date()
         await setGenerating(true, message: "Analyzing your recent performance...")
         
+        // Sync session phase with current fitness goal
+        syncSessionPhaseWithGoal()
+        
         do {
-            // Calculate dynamic parameters
+            // Calculate dynamic parameters using synced phase
             let dynamicParams = await DynamicParameterService.shared.calculateDynamicParameters(
-                currentPhase: sessionPhase,
+                currentPhase: effectiveSessionPhase,
                 lastFeedback: PerformanceFeedbackService.shared.feedbackHistory.last
             )
             
@@ -303,11 +319,20 @@ class WorkoutManager: ObservableObject {
             generationError = .generationFailed(error.localizedDescription)
         }
         
+        // Ensure minimum 1.5s loading time for smooth UX
+        let elapsed = Date().timeIntervalSince(startTime)
+        if elapsed < 1.5 {
+            await setGenerating(true, message: "Finalizing your workout...")
+            let remainingTime = 1.5 - elapsed
+            try? await Task.sleep(nanoseconds: UInt64(remainingTime * 1_000_000_000))
+        }
+        
         await setGenerating(false)
     }
     
-    /// Generate static workout with current preferences (legacy method)
+    /// Generate static workout with current preferences (legacy method - minimum 1.5s loading)
     func generateStaticWorkout() async {
+        let startTime = Date()
         await setGenerating(true, message: "Analyzing your preferences...")
         
         do {
@@ -336,6 +361,14 @@ class WorkoutManager: ObservableObject {
             generationError = error
         } catch {
             generationError = .generationFailed(error.localizedDescription)
+        }
+        
+        // Ensure minimum 1.5s loading time for smooth UX
+        let elapsed = Date().timeIntervalSince(startTime)
+        if elapsed < 1.5 {
+            await setGenerating(true, message: "Finalizing your workout...")
+            let remainingTime = 1.5 - elapsed
+            try? await Task.sleep(nanoseconds: UInt64(remainingTime * 1_000_000_000))
         }
         
         await setGenerating(false)
@@ -848,6 +881,28 @@ class WorkoutManager: ObservableObject {
         }
         
         print("📊 Advanced session phase: \(currentPhase.displayName) → \(nextPhase.displayName)")
+    }
+    
+    /// Sync session phase with current fitness goal
+    func syncSessionPhaseWithGoal() {
+        let alignedPhase = SessionPhase.alignedWith(fitnessGoal: effectiveFitnessGoal)
+        if sessionPhase != alignedPhase {
+            sessionPhase = alignedPhase
+            print("🔄 Synced session phase to \(alignedPhase.displayName) for \(effectiveFitnessGoal.displayName) goal")
+            
+            // Update dynamic parameters if they exist
+            if var params = dynamicParameters {
+                params = DynamicWorkoutParameters(
+                    sessionPhase: alignedPhase,
+                    recoveryStatus: params.recoveryStatus,
+                    performanceHistory: params.performanceHistory,
+                    autoRegulationLevel: params.autoRegulationLevel,
+                    lastWorkoutFeedback: params.lastWorkoutFeedback,
+                    timestamp: Date()
+                )
+                dynamicParameters = params
+            }
+        }
     }
     
     // MARK: - Dynamic Programming (method declarations - implementations in WorkoutManager+DynamicProgramming.swift)
