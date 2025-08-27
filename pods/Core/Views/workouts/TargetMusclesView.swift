@@ -214,6 +214,7 @@ struct TargetMusclesView: View {
                     // Select Muscle Groups Navigation
                     Button(action: {
                         HapticFeedback.generate()
+                        selectedSplit = .customMuscleGroup
                         showingMuscleGroups = true
                     }) {
                         HStack {

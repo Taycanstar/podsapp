@@ -786,8 +786,8 @@ struct LogWorkoutView: View {
                         .foregroundColor(.secondary)
                 }
                 
-                // Fix label logic: show "Custom Muscle Group" when custom muscles are selected
-                Text(customTargetMuscles != nil ? "Custom Muscle Group" : "Recovered Muscles")
+                // Use selectedMuscleType as single source of truth for button display
+                Text(workoutManager.selectedMuscleType)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.primary)
                 
