@@ -184,24 +184,15 @@ class WorkoutManager: ObservableObject {
     
     // MARK: - Dynamic Programming Properties
     
-    /// Current session phase for periodization
+    /// Session phase computed directly from fitness goal (single source of truth)
     var sessionPhase: SessionPhase {
-        get {
-            if let phaseString = UserDefaults.standard.string(forKey: "currentSessionPhase"),
-               let phase = SessionPhase(rawValue: phaseString) {
-                return phase
-            }
-            return .volumeFocus  // Safe default
-        }
-        set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: "currentSessionPhase")
-        }
+        // Simple computed property - no storage, no syncing needed
+        return SessionPhase.alignedWith(fitnessGoal: effectiveFitnessGoal)
     }
     
-    /// Enhanced computed property with goal alignment
+    /// Alias for backward compatibility
     var effectiveSessionPhase: SessionPhase {
-        // Always use goal-aligned phase
-        return SessionPhase.alignedWith(fitnessGoal: effectiveFitnessGoal)
+        return sessionPhase
     }
     
     /// Dynamic workout parameters for current session
@@ -276,9 +267,6 @@ class WorkoutManager: ObservableObject {
     func generateTodayWorkout() async {
         let startTime = Date()
         await setGenerating(true, message: "Generating workout")
-        
-        // Sync session phase with current fitness goal
-        syncSessionPhaseWithGoal()
         
         do {
             // Calculate dynamic parameters using synced phase
@@ -868,43 +856,6 @@ class WorkoutManager: ObservableObject {
     }
     
     /// Sync session phase with current fitness goal
-    func syncSessionPhaseWithGoal() {
-        let currentGoal = effectiveFitnessGoal
-        let currentPhase = sessionPhase
-        let alignedPhase = SessionPhase.alignedWith(fitnessGoal: currentGoal)
-        
-        print("🔍 === SESSION PHASE SYNC DEBUG ===")
-        print("🔍 Current Fitness Goal: \(currentGoal) (\(currentGoal.displayName))")
-        print("🔍 Current Session Phase: \(currentPhase) (\(currentPhase.displayName))")
-        print("🔍 Expected Aligned Phase: \(alignedPhase) (\(alignedPhase.displayName))")
-        print("🔍 Contextual Display: \(alignedPhase.contextualDisplayName(for: currentGoal))")
-        
-        if sessionPhase != alignedPhase {
-            sessionPhase = alignedPhase
-            print("🔄 PHASE CHANGED: \(currentPhase.displayName) → \(alignedPhase.displayName)")
-            print("🔄 Contextual Name: \(alignedPhase.contextualDisplayName(for: currentGoal))")
-            
-            // Update dynamic parameters if they exist
-            if var params = dynamicParameters {
-                params = DynamicWorkoutParameters(
-                    sessionPhase: alignedPhase,
-                    recoveryStatus: params.recoveryStatus,
-                    performanceHistory: params.performanceHistory,
-                    autoRegulationLevel: params.autoRegulationLevel,
-                    lastWorkoutFeedback: params.lastWorkoutFeedback,
-                    timestamp: Date()
-                )
-                dynamicParameters = params
-                print("🔄 Updated dynamic parameters with new phase")
-            }
-        } else {
-            print("✅ Phase already aligned - no change needed")
-        }
-        
-        print("🔍 Final Session Phase: \(sessionPhase) (\(sessionPhase.displayName))")
-        print("🔍 Final Contextual Display: \(sessionPhase.contextualDisplayName(for: currentGoal))")
-        print("🔍 === END SYNC DEBUG ===")
-    }
     
     // MARK: - Dynamic Programming (method declarations - implementations in WorkoutManager+DynamicProgramming.swift)
     

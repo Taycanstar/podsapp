@@ -1056,7 +1056,7 @@ private struct TodayWorkoutView: View {
     let effectiveFlexibilityPreferences: FlexibilityPreferences // Added this parameter
     
     @State private var userProfile = UserProfileService.shared
-    @State private var showSessionPhaseCard = true // Toggle for session phase card
+    @State private var showSessionPhaseCard = false // Hidden due to sync issues
     
     var body: some View {
         GeometryReader { geometry in

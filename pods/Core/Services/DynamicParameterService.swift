@@ -172,16 +172,16 @@ class DynamicParameterService: ObservableObject {
         case (.hypertrophy, _, .cardio):             return 15...25 // Hypertrophy conditioning
         
         // ENDURANCE GOAL
-        case (.endurance, .primary, .compound):    return 12...20 // Endurance compounds
-        case (.endurance, .secondary, .compound):  return 15...25 // Endurance supporting
-        case (.endurance, .accessory, .isolation): return 15...30 // Endurance isolation
+        case (.endurance, .primary, .compound):    return 15...25 // Endurance compounds
+        case (.endurance, .secondary, .compound):  return 18...30 // Endurance supporting
+        case (.endurance, .accessory, .isolation): return 20...35 // Endurance isolation
         case (.endurance, _, .core):               return 20...40 // Core endurance
         case (.endurance, _, .cardio):             return 25...50 // Cardio endurance
         
         // TONE GOAL (similar to endurance but moderate)
-        case (.tone, .primary, .compound):    return 10...15 // Toning compounds
-        case (.tone, .secondary, .compound):  return 12...18 // Toning supporting
-        case (.tone, .accessory, .isolation): return 12...20 // Toning isolation
+        case (.tone, .primary, .compound):    return 12...20 // Toning compounds
+        case (.tone, .secondary, .compound):  return 15...22 // Toning supporting
+        case (.tone, .accessory, .isolation): return 15...25 // Toning isolation
         case (.tone, _, .core):               return 15...25 // Core toning
         case (.tone, _, .cardio):             return 20...30 // Cardio toning
         
@@ -206,7 +206,7 @@ class DynamicParameterService: ObservableObject {
     ) -> Int {
         
         // Clean target numbers that users expect (no 7, 11, 13, 17, etc.)
-        let cleanNumbers = [1, 3, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50]
+        let cleanNumbers = [1, 3, 5, 6, 8, 10, 12, 15, 18, 20, 22, 25, 30, 40, 50]
         let validTargets = cleanNumbers.filter { range.contains($0) }
         
         guard !validTargets.isEmpty else { 
@@ -261,11 +261,11 @@ class DynamicParameterService: ObservableObject {
         case .hypertrophy:
             return 6...15       // Instead of static "8"
         case .endurance:
-            return 15...25      // Instead of static "20"
+            return 15...30      // Instead of static "20"
         case .general:
             return 8...15       // Instead of static "10"
         case .tone:
-            return 10...18      // Instead of static "12"
+            return 12...22      // Instead of static "12"
         default:
             return 8...12       // Safe default range
         }
