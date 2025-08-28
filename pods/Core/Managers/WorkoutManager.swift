@@ -676,41 +676,21 @@ class WorkoutManager: ObservableObject {
     }
     
     private func generateWarmUpExercises(targetMuscles: [String], equipment: [Equipment]?) -> [TodayWorkoutExercise] {
-        // Get flexibility/stretching exercises for warm-up
-        let warmUpExercises = recommendationService.getFlexibilityExercises(
-            type: .warmUp,
+        // FITBOD-ALIGNED: Get warmup exercises using proper method
+        return recommendationService.getWarmUpExercises(
             targetMuscles: targetMuscles,
+            customEquipment: equipment,
             count: 3
         )
-        
-        return warmUpExercises.map { exercise in
-            TodayWorkoutExercise(
-                exercise: exercise,
-                sets: 1,
-                reps: 10,
-                weight: nil,
-                restTime: 30
-            )
-        }
     }
     
     private func generateCoolDownExercises(targetMuscles: [String], equipment: [Equipment]?) -> [TodayWorkoutExercise] {
-        // Get flexibility/stretching exercises for cool-down
-        let coolDownExercises = recommendationService.getFlexibilityExercises(
-            type: .coolDown,
+        // FITBOD-ALIGNED: Get cooldown exercises using proper method
+        return recommendationService.getCoolDownExercises(
             targetMuscles: targetMuscles,
+            customEquipment: equipment,
             count: 3
         )
-        
-        return coolDownExercises.map { exercise in
-            TodayWorkoutExercise(
-                exercise: exercise,
-                sets: 1,
-                reps: 8,
-                weight: nil,
-                restTime: 15
-            )
-        }
     }
     
     private func generateWorkoutTitle(_ muscleGroups: [String]) -> String {
@@ -903,14 +883,6 @@ extension MuscleRecoveryService {
         // For now, return common muscle groups
         let allMuscleGroups = ["Chest", "Back", "Shoulders", "Arms", "Legs", "Core"]
         return Array(allMuscleGroups.prefix(targetCount))
-    }
-}
-
-extension WorkoutRecommendationService {
-    func getFlexibilityExercises(type: FlexibilityExerciseType, targetMuscles: [String], count: Int) -> [ExerciseData] {
-        // This would need to be implemented in WorkoutRecommendationService
-        // For now, return empty array
-        return []
     }
 }
 

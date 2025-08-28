@@ -596,62 +596,71 @@ class WorkoutRecommendationService {
     // Get warm-up exercises (dynamic stretches and activation exercises)
     func getWarmUpExercises(targetMuscles: [String], customEquipment: [Equipment]? = nil, count: Int = 3) -> [TodayWorkoutExercise] {
         let allExercises = ExerciseDatabase.getAllExercises()
+        print("🔥 WARMUP DEBUG: Starting with \(allExercises.count) total exercises")
         
-        // Filter for exercises that are suitable for warm-up
+        // FITBOD-ALIGNED: Filter for warmup-appropriate exercises
         let warmUpExercises = allExercises.filter { exercise in
             let exerciseType = exercise.exerciseType.lowercased()
             let exerciseName = exercise.name.lowercased()
             let bodyPart = exercise.bodyPart.lowercased()
+            let equipment = exercise.equipment.lowercased()
             
-            // Look for bodyweight/mobility exercises suitable for warm-up
-            let isBodyweight = exercise.equipment.lowercased().contains("body weight") || exercise.equipment.lowercased().isEmpty
+            // PRIMARY: Include all stretching exercises (151 available!)
+            if exerciseType == "stretching" {
+                print("🎯 Including stretching exercise: \(exercise.name)")
+                return true
+            }
             
-            // Look for warm-up suitable exercises by name patterns
-            let isWarmupSuitable = exerciseName.contains("stretch") ||
-                                  exerciseName.contains("mobility") ||
-                                  exerciseName.contains("activation") ||
-                                  exerciseName.contains("walk") ||
-                                  exerciseName.contains("march") ||
-                                  exerciseName.contains("swing") ||
-                                  exerciseName.contains("circle") ||
-                                  exerciseName.contains("rotation") ||
-                                  bodyPart.contains("cardio") ||
-                                  (isBodyweight && (bodyPart.contains("shoulder") || bodyPart.contains("hip")))
-            
-            // Must be suitable for warm-up
-            guard isWarmupSuitable else { return false }
-            
-            // Filter for dynamic/warm-up type stretches
+            // SECONDARY: Dynamic movement patterns (Fitbod style)
             let isDynamic = exerciseName.contains("dynamic") ||
                            exerciseName.contains("swing") ||
                            exerciseName.contains("circle") ||
                            exerciseName.contains("rotation") ||
                            exerciseName.contains("walk") ||
                            exerciseName.contains("march") ||
-                           exerciseName.contains("activation")
+                           exerciseName.contains("activation") ||
+                           exerciseName.contains("mobility")
             
-            // Include general mobility exercises
-            let isMobilityPrep = exerciseName.contains("mobility") ||
-                                exerciseName.contains("prep") ||
-                                exerciseName.contains("warmup") ||
-                                exerciseName.contains("warm-up")
+            // TERTIARY: Light cardio for general warmup
+            let isCardioWarmup = bodyPart.contains("cardio") && equipment.contains("body weight")
             
-            return isDynamic || isMobilityPrep
+            // QUATERNARY: Bodyweight activation exercises
+            let isActivation = equipment.contains("body weight") && (
+                exerciseName.contains("bridge") ||
+                exerciseName.contains("squat") && exerciseName.contains("bodyweight") ||
+                exerciseName.contains("lunge") && equipment.contains("body weight") ||
+                exerciseName.contains("push-up") && exerciseName.contains("knee")
+            )
+            
+            if isDynamic || isCardioWarmup || isActivation {
+                print("🎯 Including dynamic/activation exercise: \(exercise.name)")
+                return true
+            }
+            
+            return false
         }
         
-        // Prioritize exercises that target the main workout muscles
-        let prioritized = prioritizeForTargetMuscles(warmUpExercises, targetMuscles: targetMuscles)
-        let selected = Array(prioritized.prefix(count))
+        print("🔥 WARMUP DEBUG: Filtered to \(warmUpExercises.count) warmup-suitable exercises")
         
-        // Convert to TodayWorkoutExercise with warm-up specific parameters
+        // FITBOD-ALIGNED: Target muscles from main workout
+        let targeted = targetExercisesForMuscles(warmUpExercises, targetMuscles: targetMuscles, exerciseType: .warmup)
+        let selected = Array(targeted.prefix(count))
+        
+        print("🔥 WARMUP DEBUG: Final selection: \(selected.count) exercises for muscles: \(targetMuscles.joined(separator: ", "))")
+        for exercise in selected {
+            print("   └── \(exercise.name) (\(exercise.exerciseType))")
+        }
+        
+        // Convert to TodayWorkoutExercise with FITBOD-ALIGNED warm-up parameters
         return selected.map { exercise in
-            TodayWorkoutExercise(
+            let (sets, reps, restTime) = getWarmupParameters(exercise)
+            return TodayWorkoutExercise(
                 exercise: exercise,
-                sets: 1,
-                reps: 10, // Dynamic warm-up reps
+                sets: sets,
+                reps: reps,
                 weight: nil,
-                restTime: 30, // Short rest for warm-up
-                notes: "Warm-up exercise"
+                restTime: restTime,
+                notes: "Warm-up: Prepare muscles for training"
             )
         }
     }
@@ -659,61 +668,67 @@ class WorkoutRecommendationService {
     // Get cool-down exercises (static stretches for recovery)
     func getCoolDownExercises(targetMuscles: [String], customEquipment: [Equipment]? = nil, count: Int = 3) -> [TodayWorkoutExercise] {
         let allExercises = ExerciseDatabase.getAllExercises()
+        print("🧊 COOLDOWN DEBUG: Starting with \(allExercises.count) total exercises")
         
-        // Filter for exercises that are suitable for cool-down
+        // FITBOD-ALIGNED: Filter for cooldown-appropriate exercises (static stretches)
         let coolDownExercises = allExercises.filter { exercise in
             let exerciseType = exercise.exerciseType.lowercased()
             let exerciseName = exercise.name.lowercased()
             let bodyPart = exercise.bodyPart.lowercased()
+            let equipment = exercise.equipment.lowercased()
             
-            // Look for bodyweight/mobility exercises suitable for cool-down
-            let isBodyweight = exercise.equipment.lowercased().contains("body weight") || exercise.equipment.lowercased().isEmpty
+            // PRIMARY: All stretching exercises (perfect for cooldown!)
+            if exerciseType == "stretching" {
+                // Exclude dynamic movements from cooldown (Fitbod principle)
+                let isDynamic = exerciseName.contains("dynamic") ||
+                               exerciseName.contains("swing") ||
+                               exerciseName.contains("circle") ||
+                               exerciseName.contains("rotation") ||
+                               exerciseName.contains("march") ||
+                               exerciseName.contains("walk")
+                
+                if !isDynamic {
+                    print("🎯 Including static stretch: \(exercise.name)")
+                    return true
+                }
+            }
             
-            // Look for cool-down suitable exercises by name patterns
-            let isCooldownSuitable = exerciseName.contains("stretch") ||
-                                    exerciseName.contains("mobility") ||
-                                    exerciseName.contains("hold") ||
-                                    exerciseName.contains("recovery") ||
-                                    (isBodyweight && (exerciseName.contains("calf") || 
-                                                     exerciseName.contains("hamstring") ||
-                                                     exerciseName.contains("quad") ||
-                                                     exerciseName.contains("chest") ||
-                                                     exerciseName.contains("back") ||
-                                                     bodyPart.contains("waist")))
-            
-            // Must be suitable for cool-down
-            guard isCooldownSuitable else { return false }
-            
-            // Filter for static/cool-down type stretches (exclude dynamic ones)
-            let isStatic = !exerciseName.contains("dynamic") &&
-                          !exerciseName.contains("swing") &&
-                          !exerciseName.contains("circle") &&
-                          !exerciseName.contains("rotation") &&
-                          !exerciseName.contains("march")
-            
-            // Include recovery-focused stretches
-            let isRecovery = exerciseName.contains("stretch") ||
-                            exerciseName.contains("hold") ||
+            // SECONDARY: Recovery-focused movements
+            let isRecovery = exerciseName.contains("recovery") ||
                             exerciseName.contains("cooldown") ||
                             exerciseName.contains("cool-down") ||
-                            exerciseName.contains("recovery")
+                            exerciseName.contains("hold") ||
+                            exerciseName.contains("relax")
             
-            return isStatic && isRecovery
+            if isRecovery {
+                print("🎯 Including recovery exercise: \(exercise.name)")
+                return true
+            }
+            
+            return false
         }
         
-        // Prioritize exercises that target the main workout muscles
-        let prioritized = prioritizeForTargetMuscles(coolDownExercises, targetMuscles: targetMuscles)
-        let selected = Array(prioritized.prefix(count))
+        print("🧊 COOLDOWN DEBUG: Filtered to \(coolDownExercises.count) cooldown-suitable exercises")
         
-        // Convert to TodayWorkoutExercise with cool-down specific parameters
+        // FITBOD-ALIGNED: Target muscles from main workout
+        let targeted = targetExercisesForMuscles(coolDownExercises, targetMuscles: targetMuscles, exerciseType: .cooldown)
+        let selected = Array(targeted.prefix(count))
+        
+        print("🧊 COOLDOWN DEBUG: Final selection: \(selected.count) exercises for muscles: \(targetMuscles.joined(separator: ", "))")
+        for exercise in selected {
+            print("   └── \(exercise.name) (\(exercise.exerciseType))")
+        }
+        
+        // Convert to TodayWorkoutExercise with FITBOD-ALIGNED cool-down parameters
         return selected.map { exercise in
-            TodayWorkoutExercise(
+            let (sets, reps, restTime) = getCooldownParameters(exercise)
+            return TodayWorkoutExercise(
                 exercise: exercise,
-                sets: 1,
-                reps: 1, // Hold stretches
+                sets: sets,
+                reps: reps,
                 weight: nil,
-                restTime: 15, // Short rest for cool-down
-                notes: "Hold for 20-30 seconds"
+                restTime: restTime,
+                notes: "Hold stretch for 20-30 seconds"
             )
         }
     }
@@ -1056,6 +1071,139 @@ class WorkoutRecommendationService {
     private func selectExercises(from exercises: [ExerciseData], percentage: Double) -> [ExerciseData] {
         let count = max(1, Int(Double(exercises.count) * percentage))
         return Array(exercises.shuffled().prefix(count))
+    }
+    
+    // MARK: - Fitbod-Aligned Warmup/Cooldown Helpers
+    
+    enum FlexibilityExerciseType {
+        case warmup
+        case cooldown
+    }
+    
+    /// Target exercises for specific muscles (Fitbod's approach)
+    private func targetExercisesForMuscles(_ exercises: [ExerciseData], targetMuscles: [String], exerciseType: FlexibilityExerciseType) -> [ExerciseData] {
+        var targeted: [ExerciseData] = []
+        var general: [ExerciseData] = []
+        
+        for exercise in exercises {
+            let bodyPart = exercise.bodyPart.lowercased()
+            let target = exercise.target.lowercased()
+            let synergist = exercise.synergist.lowercased()
+            let name = exercise.name.lowercased()
+            
+            var isTargeted = false
+            
+            // Check if exercise targets any of the main workout muscles
+            for muscle in targetMuscles {
+                let muscleKey = muscle.lowercased()
+                
+                if bodyPart.contains(muscleKey) ||
+                   target.contains(muscleKey) ||
+                   synergist.contains(muscleKey) ||
+                   name.contains(muscleKey) ||
+                   isRelatedMuscle(muscleKey: muscleKey, exercise: exercise) {
+                    isTargeted = true
+                    break
+                }
+            }
+            
+            if isTargeted {
+                targeted.append(exercise)
+            } else {
+                general.append(exercise)
+            }
+        }
+        
+        print("🎯 Muscle targeting: \(targeted.count) targeted, \(general.count) general exercises")
+        
+        // Return targeted exercises first, then general ones
+        return targeted + general
+    }
+    
+    /// Check if exercise targets related muscle groups
+    private func isRelatedMuscle(muscleKey: String, exercise: ExerciseData) -> Bool {
+        let name = exercise.name.lowercased()
+        let bodyPart = exercise.bodyPart.lowercased()
+        
+        // Muscle group relationships for better targeting
+        switch muscleKey {
+        case "chest", "pectoralis":
+            return name.contains("chest") || name.contains("pec") || bodyPart.contains("chest")
+        case "back", "latissimus":
+            return name.contains("back") || name.contains("lat") || name.contains("spine") || bodyPart.contains("back")
+        case "shoulders", "deltoid":
+            return name.contains("shoulder") || name.contains("deltoid") || bodyPart.contains("shoulder")
+        case "legs", "quadriceps", "hamstrings":
+            return name.contains("leg") || name.contains("quad") || name.contains("hamstring") || name.contains("thigh")
+        case "glutes":
+            return name.contains("glute") || name.contains("hip") || name.contains("butt")
+        case "arms", "biceps", "triceps":
+            return name.contains("arm") || name.contains("bicep") || name.contains("tricep") || bodyPart.contains("upper arms")
+        default:
+            return false
+        }
+    }
+    
+    // MARK: - Fitbod-Style Exercise Parameters
+    
+    /// Get warmup-specific sets, reps, and rest time (Fitbod approach)
+    private func getWarmupParameters(_ exercise: ExerciseData) -> (sets: Int, reps: Int, restTime: Int) {
+        let exerciseName = exercise.name.lowercased()
+        let exerciseType = exercise.exerciseType.lowercased()
+        
+        if exerciseType == "stretching" {
+            // Dynamic stretches: light movement preparation
+            if exerciseName.contains("dynamic") || exerciseName.contains("swing") || exerciseName.contains("circle") {
+                return (sets: 1, reps: 8, restTime: 15)  // Dynamic prep
+            } else {
+                return (sets: 1, reps: 2, restTime: 10)  // Brief static prep
+            }
+        } else if exerciseName.contains("activation") || exerciseName.contains("primer") {
+            // Muscle activation exercises
+            return (sets: 2, reps: 5, restTime: 20)
+        } else {
+            // General warmup movements
+            return (sets: 1, reps: 6, restTime: 15)
+        }
+    }
+    
+    /// Get cooldown-specific sets, reps, and rest time (Fitbod approach)
+    private func getCooldownParameters(_ exercise: ExerciseData) -> (sets: Int, reps: Int, restTime: Int) {
+        let exerciseName = exercise.name.lowercased()
+        let exerciseType = exercise.exerciseType.lowercased()
+        
+        if exerciseType == "stretching" {
+            // Static stretches: hold for recovery
+            if exerciseName.contains("hold") || exerciseName.contains("static") {
+                return (sets: 1, reps: 1, restTime: 5)   // Long hold stretches
+            } else {
+                return (sets: 1, reps: 1, restTime: 10)  // General static stretches
+            }
+        } else if exerciseName.contains("recovery") || exerciseName.contains("relax") {
+            // Recovery-focused movements
+            return (sets: 1, reps: 3, restTime: 15)
+        } else {
+            // General cooldown exercises
+            return (sets: 1, reps: 1, restTime: 10)
+        }
+    }
+    
+    // MARK: - Fitbod-Aligned Warmup/Cooldown Summary
+    
+    /// Log comprehensive warmup/cooldown generation summary
+    func logFlexibilitySystemSummary(warmupCount: Int, cooldownCount: Int, targetMuscles: [String]) {
+        print("🎆 ========== FITBOD-ALIGNED FLEXIBILITY SYSTEM ===========")
+        print("🎯 Target Muscles: \(targetMuscles.joined(separator: ", "))")
+        print("🔥 Warmup Exercises Generated: \(warmupCount)")
+        print("🧊 Cooldown Exercises Generated: \(cooldownCount)")
+        
+        if warmupCount > 0 || cooldownCount > 0 {
+            print("✅ SUCCESS: Flexibility sections will appear in workout!")
+        } else {
+            print("⚠️ WARNING: No flexibility exercises generated - sections won't appear")
+        }
+        
+        print("🎆 =================================================")
     }
     
     // MARK: - Helper Functions

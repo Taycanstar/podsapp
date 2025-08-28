@@ -1317,7 +1317,12 @@ private struct TodayWorkoutView: View {
             print("🧊 Cool-down generation: requested=false")
         }
             
-        print("🏋️ Generated warm-up exercises: \(warmUpExercises?.count ?? 0), cool-down exercises: \(coolDownExercises?.count ?? 0)")
+        // FITBOD-ALIGNED SYSTEM SUMMARY
+        recommendationService.logFlexibilitySystemSummary(
+            warmupCount: warmUpExercises?.count ?? 0,
+            cooldownCount: coolDownExercises?.count ?? 0,
+            targetMuscles: muscleGroups
+        )
         
         return TodayWorkout(
             id: UUID(),
