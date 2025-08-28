@@ -605,10 +605,25 @@ class WorkoutRecommendationService {
             let bodyPart = exercise.bodyPart.lowercased()
             let equipment = exercise.equipment.lowercased()
             
-            // PRIMARY: Include all stretching exercises (151 available!)
+            // WARMUP RULE: NO STATIC STRETCHES - only dynamic movements
             if exerciseType == "stretching" {
-                print("🎯 Including stretching exercise: \(exercise.name)")
-                return true
+                // Check if it's a dynamic stretch (good for warmup)
+                let isDynamicStretch = exerciseName.contains("dynamic") ||
+                                      exerciseName.contains("swing") ||
+                                      exerciseName.contains("circle") ||
+                                      exerciseName.contains("rotation") ||
+                                      exerciseName.contains("roll") ||
+                                      exerciseName.contains("walk")
+                
+                // Exclude static holds (save for cooldown)
+                let isStaticStretch = exerciseName.contains("static") ||
+                                     exerciseName.contains("hold") ||
+                                     exerciseName.contains("stretch") && !isDynamicStretch
+                
+                if isDynamicStretch && !isStaticStretch {
+                    print("🎯 Including DYNAMIC stretch for warmup: \(exercise.name)")
+                    return true
+                }
             }
             
             // SECONDARY: Dynamic movement patterns (Fitbod style)
@@ -624,16 +639,27 @@ class WorkoutRecommendationService {
             // TERTIARY: Light cardio for general warmup
             let isCardioWarmup = bodyPart.contains("cardio") && equipment.contains("body weight")
             
-            // QUATERNARY: Bodyweight activation exercises
+            // QUATERNARY: Bodyweight activation exercises (muscle primers)
             let isActivation = equipment.contains("body weight") && (
                 exerciseName.contains("bridge") ||
-                exerciseName.contains("squat") && exerciseName.contains("bodyweight") ||
-                exerciseName.contains("lunge") && equipment.contains("body weight") ||
-                exerciseName.contains("push-up") && exerciseName.contains("knee")
+                exerciseName.contains("activation") ||
+                exerciseName.contains("primer") ||
+                (exerciseName.contains("squat") && exerciseName.contains("bodyweight")) ||
+                (exerciseName.contains("lunge") && !exerciseName.contains("hold")) ||
+                (exerciseName.contains("push-up") && exerciseName.contains("knee")) ||
+                exerciseName.contains("bird dog") ||
+                exerciseName.contains("plank") && exerciseName.contains("knee") ||
+                exerciseName.contains("arm") && exerciseName.contains("raise")
             )
             
-            if isDynamic || isCardioWarmup || isActivation {
-                print("🎯 Including dynamic/activation exercise: \(exercise.name)")
+            if isDynamic {
+                print("🎯 Including DYNAMIC movement for warmup: \(exercise.name)")
+                return true
+            } else if isCardioWarmup {
+                print("🎯 Including CARDIO warmup: \(exercise.name)")
+                return true
+            } else if isActivation {
+                print("🎯 Including ACTIVATION exercise for warmup: \(exercise.name)")
                 return true
             }
             
@@ -670,38 +696,42 @@ class WorkoutRecommendationService {
         let allExercises = ExerciseDatabase.getAllExercises()
         print("🧊 COOLDOWN DEBUG: Starting with \(allExercises.count) total exercises")
         
-        // FITBOD-ALIGNED: Filter for cooldown-appropriate exercises (static stretches)
+        // FITBOD-ALIGNED: Filter for cooldown-appropriate exercises (STATIC STRETCHES ONLY)
         let coolDownExercises = allExercises.filter { exercise in
             let exerciseType = exercise.exerciseType.lowercased()
             let exerciseName = exercise.name.lowercased()
             let bodyPart = exercise.bodyPart.lowercased()
             let equipment = exercise.equipment.lowercased()
             
-            // PRIMARY: All stretching exercises (perfect for cooldown!)
+            // COOLDOWN RULE: ONLY STATIC STRETCHES - no dynamic movements
             if exerciseType == "stretching" {
-                // Exclude dynamic movements from cooldown (Fitbod principle)
+                // Exclude all dynamic movements from cooldown (Fitbod principle)
                 let isDynamic = exerciseName.contains("dynamic") ||
                                exerciseName.contains("swing") ||
                                exerciseName.contains("circle") ||
                                exerciseName.contains("rotation") ||
                                exerciseName.contains("march") ||
-                               exerciseName.contains("walk")
+                               exerciseName.contains("walk") ||
+                               exerciseName.contains("roll")
                 
+                // ONLY include static/holding stretches
                 if !isDynamic {
-                    print("🎯 Including static stretch: \(exercise.name)")
+                    print("🎯 Including STATIC stretch for cooldown: \(exercise.name)")
                     return true
                 }
             }
             
-            // SECONDARY: Recovery-focused movements
-            let isRecovery = exerciseName.contains("recovery") ||
-                            exerciseName.contains("cooldown") ||
-                            exerciseName.contains("cool-down") ||
-                            exerciseName.contains("hold") ||
-                            exerciseName.contains("relax")
+            // SECONDARY: Recovery-focused static movements only
+            let isStaticRecovery = (exerciseName.contains("recovery") ||
+                                   exerciseName.contains("cooldown") ||
+                                   exerciseName.contains("cool-down") ||
+                                   exerciseName.contains("hold") ||
+                                   exerciseName.contains("relax")) &&
+                                   !exerciseName.contains("dynamic") &&
+                                   !exerciseName.contains("swing")
             
-            if isRecovery {
-                print("🎯 Including recovery exercise: \(exercise.name)")
+            if isStaticRecovery {
+                print("🎯 Including STATIC recovery exercise: \(exercise.name)")
                 return true
             }
             
@@ -1152,18 +1182,21 @@ class WorkoutRecommendationService {
         let exerciseType = exercise.exerciseType.lowercased()
         
         if exerciseType == "stretching" {
-            // Dynamic stretches: light movement preparation
+            // Dynamic stretches: movement-based preparation
             if exerciseName.contains("dynamic") || exerciseName.contains("swing") || exerciseName.contains("circle") {
-                return (sets: 1, reps: 8, restTime: 15)  // Dynamic prep
+                return (sets: 2, reps: 10, restTime: 10)  // Multiple sets of movement
             } else {
-                return (sets: 1, reps: 2, restTime: 10)  // Brief static prep
+                return (sets: 1, reps: 6, restTime: 10)  // Light movement
             }
         } else if exerciseName.contains("activation") || exerciseName.contains("primer") {
-            // Muscle activation exercises
-            return (sets: 2, reps: 5, restTime: 20)
+            // Muscle activation exercises (key for warmup)
+            return (sets: 2, reps: 8, restTime: 15)
+        } else if exerciseName.contains("cardio") {
+            // Light cardio warmup
+            return (sets: 1, reps: 12, restTime: 30)
         } else {
             // General warmup movements
-            return (sets: 1, reps: 6, restTime: 15)
+            return (sets: 1, reps: 8, restTime: 15)
         }
     }
     
@@ -1173,18 +1206,18 @@ class WorkoutRecommendationService {
         let exerciseType = exercise.exerciseType.lowercased()
         
         if exerciseType == "stretching" {
-            // Static stretches: hold for recovery
+            // Static stretches: holds for deep relaxation and lengthening
             if exerciseName.contains("hold") || exerciseName.contains("static") {
-                return (sets: 1, reps: 1, restTime: 5)   // Long hold stretches
+                return (sets: 1, reps: 1, restTime: 20)   // Long hold with more rest
             } else {
-                return (sets: 1, reps: 1, restTime: 10)  // General static stretches
+                return (sets: 1, reps: 1, restTime: 15)  // Standard static stretch hold
             }
         } else if exerciseName.contains("recovery") || exerciseName.contains("relax") {
-            // Recovery-focused movements
-            return (sets: 1, reps: 3, restTime: 15)
+            // Recovery-focused gentle movements
+            return (sets: 1, reps: 2, restTime: 20)
         } else {
             // General cooldown exercises
-            return (sets: 1, reps: 1, restTime: 10)
+            return (sets: 1, reps: 1, restTime: 15)
         }
     }
     
@@ -1194,11 +1227,12 @@ class WorkoutRecommendationService {
     func logFlexibilitySystemSummary(warmupCount: Int, cooldownCount: Int, targetMuscles: [String]) {
         print("🎆 ========== FITBOD-ALIGNED FLEXIBILITY SYSTEM ===========")
         print("🎯 Target Muscles: \(targetMuscles.joined(separator: ", "))")
-        print("🔥 Warmup Exercises Generated: \(warmupCount)")
-        print("🧊 Cooldown Exercises Generated: \(cooldownCount)")
+        print("🔥 WARMUP: \(warmupCount) DYNAMIC exercises (movement prep, activation)")
+        print("🧊 COOLDOWN: \(cooldownCount) STATIC exercises (stretches, recovery holds)")
+        print("🎆 DIFFERENTIATION: Warmup = Movement, Cooldown = Holds")
         
         if warmupCount > 0 || cooldownCount > 0 {
-            print("✅ SUCCESS: Flexibility sections will appear in workout!")
+            print("✅ SUCCESS: Flexibility sections will appear with DIFFERENT exercises!")
         } else {
             print("⚠️ WARNING: No flexibility exercises generated - sections won't appear")
         }
