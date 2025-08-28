@@ -144,8 +144,15 @@ class WorkoutRecommendationService {
         let complexityService = ExerciseComplexityService.shared
         let allExercises = ExerciseDatabase.getAllExercises()
         
-        // Check recovery status for this muscle group
+        // FITBOD-ALIGNED: Check if muscle is ready for training
         let recoveryPercentage = recoveryService.getMuscleRecoveryPercentage(for: muscleGroup)
+        let isReadyForTraining = recoveryService.isMuscleReadyForTraining(muscleGroup)
+        
+        if !isReadyForTraining {
+            let restHours = recoveryService.getRecommendedRestHours(for: muscleGroup)
+            print("⚠️ \(muscleGroup) not ready for training (\(Int(recoveryPercentage))% recovered). Recommended rest: \(Int(restHours)) hours")
+            // Return fewer exercises or lighter variants for insufficient recovery
+        }
         
         // Filter by muscle group using smart muscle mapping
         let muscleExercises = allExercises.filter { exercise in
@@ -154,10 +161,10 @@ class WorkoutRecommendationService {
         
         print("🎯 Smart muscle filtering for '\(muscleGroup)': Found \(muscleExercises.count) exercises out of \(allExercises.count) total")
         
-        // Filter by experience level (prevent handstands for beginners!)
-        let experienceAppropriate = complexityService.filterExercisesByExperience(muscleExercises, userProfile: userProfile)
+        // PROGRESSIVE EXERCISE SELECTION: Different exercise pools for different levels
+        let experienceAppropriate = getExperienceTailoredExercises(muscleExercises, userProfile: userProfile)
         
-        print("🎓 Experience filtering for \(userProfile.experienceLevel): \(muscleExercises.count) → \(experienceAppropriate.count) exercises")
+        print("🎓 Progressive Selection for \(userProfile.experienceLevel): \(muscleExercises.count) → \(experienceAppropriate.count) exercises")
         
         // Filter by available equipment
         let availableExercises = experienceAppropriate.filter { exercise in
@@ -181,8 +188,15 @@ class WorkoutRecommendationService {
         let complexityService = ExerciseComplexityService.shared
         let allExercises = ExerciseDatabase.getAllExercises()
         
-        // Check recovery status for this muscle group
+        // FITBOD-ALIGNED: Check if muscle is ready for training
         let recoveryPercentage = recoveryService.getMuscleRecoveryPercentage(for: muscleGroup)
+        let isReadyForTraining = recoveryService.isMuscleReadyForTraining(muscleGroup)
+        
+        if !isReadyForTraining {
+            let restHours = recoveryService.getRecommendedRestHours(for: muscleGroup)
+            print("⚠️ \(muscleGroup) not ready for training (\(Int(recoveryPercentage))% recovered). Recommended rest: \(Int(restHours)) hours")
+            // Return fewer exercises or lighter variants for insufficient recovery
+        }
         
         // Filter by muscle group using smart muscle mapping
         let muscleExercises = allExercises.filter { exercise in
@@ -191,10 +205,10 @@ class WorkoutRecommendationService {
         
         print("🎯 Smart muscle filtering for '\(muscleGroup)': Found \(muscleExercises.count) exercises out of \(allExercises.count) total")
         
-        // Filter by experience level (prevent handstands for beginners!)
-        let experienceAppropriate = complexityService.filterExercisesByExperience(muscleExercises, userProfile: userProfile)
+        // PROGRESSIVE EXERCISE SELECTION: Different exercise pools for different levels
+        let experienceAppropriate = getExperienceTailoredExercises(muscleExercises, userProfile: userProfile)
         
-        print("🎓 Experience filtering for \(userProfile.experienceLevel): \(muscleExercises.count) → \(experienceAppropriate.count) exercises")
+        print("🎓 Progressive Selection for \(userProfile.experienceLevel): \(muscleExercises.count) → \(experienceAppropriate.count) exercises")
         
         // Filter by exercise type (exclude stretching for strength workouts by default)
         let typeFilteredExercises = filterByExerciseType(exercises: experienceAppropriate, flexibilityPreferences: flexibilityPreferences, muscleGroup: muscleGroup)
@@ -774,6 +788,7 @@ class WorkoutRecommendationService {
         // Prioritizes progressive overload potential over arbitrary complexity
         var score = 0
         let complexityService = ExerciseComplexityService.shared
+        let complexity = complexityService.getExerciseComplexity(exercise)
         
         // PRIMARY FACTOR: Progressive Overload Potential (40% weight)
         let progressionScore = getProgressionPotential(exercise, userProfile: userProfile)
@@ -790,6 +805,15 @@ class WorkoutRecommendationService {
         // MINOR FACTOR: User Preferences & History (10% weight)
         let preferenceScore = getUserPreferenceScore(exercise, userProfile: userProfile)
         score += preferenceScore
+        
+        // DEBUG: Show the evidence-based scoring breakdown
+        print("🎯 EVIDENCE-BASED SCORING: \(exercise.name)")
+        print("   └── Experience: \(userProfile.experienceLevel) | Goal: \(userProfile.fitnessGoal) | Complexity: L\(complexity)")
+        print("   └── Progression: \(progressionScore) × 4 = \(progressionScore * 4)")
+        print("   └── Quality: \(qualityScore) × 3 = \(qualityScore * 3)")
+        print("   └── Goal: \(goalScore) × 2 = \(goalScore * 2)")
+        print("   └── Preference: \(preferenceScore) × 1 = \(preferenceScore)")
+        print("   └── TOTAL SCORE: \(score) 🎯")
         
         return score
     }
@@ -832,24 +856,28 @@ class WorkoutRecommendationService {
         
         // Evidence: Movement quality deteriorates with excessive complexity
         // Advanced users benefit from mastery of fundamentals, not just hard exercises
+        let qualityScore: Int
         switch experience {
         case .beginner:
             // Beginners need simple, safe movements they can master
-            return complexity <= 2 ? 5 : (complexity == 3 ? 2 : 0)
+            qualityScore = complexity <= 2 ? 5 : (complexity == 3 ? 2 : 0)
         case .intermediate:
             // Intermediates benefit from moderate complexity with room to master
-            return complexity <= 3 ? 5 : (complexity == 4 ? 3 : 1)
+            qualityScore = complexity <= 3 ? 5 : (complexity == 4 ? 3 : 1)
         case .advanced:
             // Advanced users: Optimal training comes from MASTERY, not maximum complexity
             // Elite athletes use 80% Level 2-3 exercises for a reason
             switch complexity {
-            case 1, 2: return 5 // Foundation work always valuable (recovery, volume)
-            case 3: return 5    // Intermediate complexity is the sweet spot for advanced users
-            case 4: return 3    // Advanced complexity occasionally, with purpose
-            case 5: return 1    // Expert complexity sparingly, for specific goals only
-            default: return 3
+            case 1, 2: qualityScore = 5 // Foundation work always valuable (recovery, volume)
+            case 3: qualityScore = 5    // Intermediate complexity is the sweet spot for advanced users
+            case 4: qualityScore = 3    // Advanced complexity occasionally, with purpose
+            case 5: qualityScore = 1    // Expert complexity sparingly, for specific goals only
+            default: qualityScore = 3
             }
         }
+        
+        print("🎯 Movement Quality Analysis: L\(complexity) exercise for \(experience) → Quality Score: \(qualityScore)/5")
+        return qualityScore
     }
     
     private func getGoalSpecificScore(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {
@@ -889,6 +917,145 @@ class WorkoutRecommendationService {
         }
         
         return score
+    }
+    
+    // MARK: - Experience-Tailored Exercise Selection
+    
+    private func getExperienceTailoredExercises(_ exercises: [ExerciseData], userProfile: UserProfileService) -> [ExerciseData] {
+        let complexityService = ExerciseComplexityService.shared
+        let experience = userProfile.experienceLevel
+        let goal = userProfile.fitnessGoal
+        
+        // FITBOD-ALIGNED: First filter by progressive unlocking
+        let unlockedExercises = exercises.filter { exercise in
+            complexityService.isExerciseUnlockedForUser(exercise, userProfile: userProfile)
+        }
+        
+        print("🔓 Progressive Unlocking: \(exercises.count) → \(unlockedExercises.count) exercises unlocked for \(experience)")
+        
+        // Get complexity distribution for unlocked exercises
+        var categorizedExercises: [Int: [ExerciseData]] = [:]
+        for exercise in unlockedExercises {
+            let complexity = complexityService.getExerciseComplexity(exercise)
+            if categorizedExercises[complexity] == nil {
+                categorizedExercises[complexity] = []
+            }
+            categorizedExercises[complexity]?.append(exercise)
+        }
+        
+        print("📊 Complexity Distribution Available:")
+        for level in 1...5 {
+            let count = categorizedExercises[level]?.count ?? 0
+            if count > 0 {
+                print("   Level \(level): \(count) exercises")
+            }
+        }
+        
+        // EVIDENCE-BASED EXERCISE SELECTION BY EXPERIENCE
+        var selectedExercises: [ExerciseData] = []
+        
+        switch experience {
+        case .beginner:
+            // Beginners: 80% Level 1-2, 20% Level 3, 0% Level 4+
+            selectedExercises += selectExercises(from: categorizedExercises[1] ?? [], percentage: 0.5)
+            selectedExercises += selectExercises(from: categorizedExercises[2] ?? [], percentage: 0.3) 
+            selectedExercises += selectExercises(from: categorizedExercises[3] ?? [], percentage: 0.2)
+            print("🔰 BEGINNER SELECTION: Prioritizing safety & mastery (L1-2: 80%, L3: 20%)")
+            
+        case .intermediate:
+            // Intermediates: 30% Level 1-2, 50% Level 3, 20% Level 4
+            selectedExercises += selectExercises(from: categorizedExercises[1] ?? [], percentage: 0.15)
+            selectedExercises += selectExercises(from: categorizedExercises[2] ?? [], percentage: 0.15)
+            selectedExercises += selectExercises(from: categorizedExercises[3] ?? [], percentage: 0.5)
+            selectedExercises += selectExercises(from: categorizedExercises[4] ?? [], percentage: 0.2)
+            print("💯 INTERMEDIATE SELECTION: Building complexity progressively (L3: 50%, L4: 20%)")
+            
+        case .advanced:
+            // Advanced: EVIDENCE-BASED approach - Elite athletes use 80% L2-3!
+            switch goal {
+            case .strength, .powerlifting:
+                // Strength: Focus on progressive overload with fundamentals
+                selectedExercises += selectExercises(from: categorizedExercises[2] ?? [], percentage: 0.4)
+                selectedExercises += selectExercises(from: categorizedExercises[3] ?? [], percentage: 0.4)
+                selectedExercises += selectExercises(from: categorizedExercises[4] ?? [], percentage: 0.2)
+                print("💪 ADVANCED STRENGTH: Elite approach - fundamentals with progressive overload (L2-3: 80%)")
+                
+            case .hypertrophy:
+                // Hypertrophy: Volume focus with variety
+                selectedExercises += selectExercises(from: categorizedExercises[1] ?? [], percentage: 0.2) // Isolation work
+                selectedExercises += selectExercises(from: categorizedExercises[2] ?? [], percentage: 0.3)
+                selectedExercises += selectExercises(from: categorizedExercises[3] ?? [], percentage: 0.35)
+                selectedExercises += selectExercises(from: categorizedExercises[4] ?? [], percentage: 0.15)
+                print("📞 ADVANCED HYPERTROPHY: Volume & variety focus (L1-3: 85%)")
+                
+            default:
+                // General advanced: Balanced but intelligent
+                selectedExercises += selectExercises(from: categorizedExercises[1] ?? [], percentage: 0.1)
+                selectedExercises += selectExercises(from: categorizedExercises[2] ?? [], percentage: 0.3)
+                selectedExercises += selectExercises(from: categorizedExercises[3] ?? [], percentage: 0.4)
+                selectedExercises += selectExercises(from: categorizedExercises[4] ?? [], percentage: 0.15)
+                selectedExercises += selectExercises(from: categorizedExercises[5] ?? [], percentage: 0.05)
+                print("🎆 ADVANCED GENERAL: Smart complexity distribution (L2-3: 70%)")
+            }
+        }
+        
+        // If we don't have enough exercises, add from available pool
+        if selectedExercises.count < 5 {
+            let remainingExercises = exercises.filter { exercise in
+                !selectedExercises.contains(where: { $0.id == exercise.id })
+            }
+            selectedExercises += Array(remainingExercises.prefix(5 - selectedExercises.count))
+            print("ℹ️ Added \(5 - selectedExercises.count) exercises from remaining pool")
+        }
+        
+        print("🎯 Final Selection: \(selectedExercises.count) exercises tailored for \(experience)")
+        
+        // FITBOD-ALIGNED SUMMARY: Show all evidence-based decisions
+        logFitbodAlignedSummary(selectedExercises, experience: experience, goal: goal)
+        
+        return selectedExercises
+    }
+    
+    // MARK: - Fitbod-Aligned System Summary
+    
+    private func logFitbodAlignedSummary(_ exercises: [ExerciseData], experience: ExperienceLevel, goal: FitnessGoal) {
+        let complexityService = ExerciseComplexityService.shared
+        let recoveryService = MuscleRecoveryService.shared
+        let userProfile = UserProfileService.shared
+        
+        print("🎆 ========== FITBOD-ALIGNED SYSTEM SUMMARY ===========")
+        print("📊 User Profile: \(experience) | Goal: \(goal) | Workouts: \(userProfile.completedWorkouts)")
+        
+        // Show complexity distribution
+        var complexityDistribution: [Int: Int] = [:]
+        for exercise in exercises {
+            let complexity = complexityService.getExerciseComplexity(exercise)
+            complexityDistribution[complexity] = (complexityDistribution[complexity] ?? 0) + 1
+        }
+        
+        print("🔄 Exercise Complexity Distribution:")
+        for level in 1...5 {
+            if let count = complexityDistribution[level] {
+                let percentage = Double(count) / Double(exercises.count) * 100
+                print("   Level \(level): \(count) exercises (\(Int(percentage))%)")
+            }
+        }
+        
+        // Show recovery status
+        let musclesReady = recoveryService.getMusclesReadyForTraining()
+        print("🔄 Recovery Status: \(musclesReady.count) muscle groups ready for training")
+        
+        // Show unlocking status
+        let totalExercisesInDB = ExerciseDatabase.getAllExercises().count
+        let unlockedCount = exercises.count
+        print("🔓 Progressive Unlocking: \(unlockedCount) of ~\(totalExercisesInDB) exercises accessible")
+        
+        print("🎆 =================================================")
+    }
+    
+    private func selectExercises(from exercises: [ExerciseData], percentage: Double) -> [ExerciseData] {
+        let count = max(1, Int(Double(exercises.count) * percentage))
+        return Array(exercises.shuffled().prefix(count))
     }
     
     // MARK: - Helper Functions

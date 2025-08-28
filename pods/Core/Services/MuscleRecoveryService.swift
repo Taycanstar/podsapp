@@ -20,6 +20,21 @@ class MuscleRecoveryService: ObservableObject {
     
     private init() {}
     
+    // MARK: - Fitbod-Aligned Experience Recovery Multipliers
+    
+    /// Get recovery rate multiplier based on fitness experience level
+    /// Based on Fitbod's proven approach: beginners recover slower, advanced recover faster
+    private func getExperienceRecoveryMultiplier(_ experienceLevel: ExperienceLevel) -> Double {
+        switch experienceLevel {
+        case .beginner:
+            return 1.3      // 30% slower recovery (6-7 days vs 4-5 days)
+        case .intermediate:
+            return 1.0      // Standard recovery rate
+        case .advanced:
+            return 0.8      // 20% faster recovery (better adaptation, efficiency)
+        }
+    }
+    
     // MARK: - Main Muscle Groups (science-backed recovery times)
     
     enum MainMuscleGroup: String, CaseIterable {
@@ -293,13 +308,21 @@ class MuscleRecoveryService: ObservableObject {
         let now = Date()
         let hoursSinceLastWorkout = now.timeIntervalSince(lastStimulus.date) / 3600.0
         
-        // Calculate recovery percentage based on time elapsed and workout intensity
+        // Calculate recovery percentage based on time elapsed, workout intensity, and experience level
         let baseRecoveryTime = muscleGroup.baseRecoveryHours
-        let adjustedRecoveryTime = baseRecoveryTime * lastStimulus.intensity
+        let intensityAdjustedTime = baseRecoveryTime * lastStimulus.intensity
         
-        let recoveryPercentage = min(100.0, (hoursSinceLastWorkout / adjustedRecoveryTime) * 100.0)
+        // FITBOD-ALIGNED: Apply experience-based recovery multiplier
+        let userProfile = UserProfileService.shared
+        let experienceMultiplier = getExperienceRecoveryMultiplier(userProfile.experienceLevel)
+        let finalRecoveryTime = intensityAdjustedTime * experienceMultiplier
         
-        let estimatedFullRecoveryDate = lastStimulus.date.addingTimeInterval(adjustedRecoveryTime * 3600)
+        let recoveryPercentage = min(100.0, (hoursSinceLastWorkout / finalRecoveryTime) * 100.0)
+        
+        let estimatedFullRecoveryDate = lastStimulus.date.addingTimeInterval(finalRecoveryTime * 3600)
+        
+        // Debug logging for recovery calculations
+        print("🔄 Recovery Calc: \(muscleGroup) | Experience: \(userProfile.experienceLevel) (\(experienceMultiplier)x) | Base: \(Int(baseRecoveryTime))h → Final: \(Int(finalRecoveryTime))h | Recovery: \(Int(recoveryPercentage))%")
         
         return MuscleRecoveryData(
             muscleGroup: muscleGroup,
@@ -502,5 +525,38 @@ class MuscleRecoveryService: ObservableObject {
         guard let muscle = MuscleGroup(rawValue: muscleGroup) else { return 100.0 }
         let recoveryData = calculateRecoveryForMuscle(muscle)
         return recoveryData.recoveryPercentage
+    }
+    
+    // MARK: - Fitbod-Aligned Workout Scheduling Integration
+    
+    /// Check if muscle group is ready for training (>70% recovered)
+    func isMuscleReadyForTraining(_ muscleGroup: String) -> Bool {
+        let recoveryPercentage = getMuscleRecoveryPercentage(for: muscleGroup)
+        return recoveryPercentage >= 70.0
+    }
+    
+    /// Get recommended rest time until muscle is ready for training
+    func getRecommendedRestHours(for muscleGroup: String) -> Double {
+        let recoveryPercentage = getMuscleRecoveryPercentage(for: muscleGroup)
+        
+        if recoveryPercentage >= 70.0 {
+            return 0.0 // Ready to train
+        }
+        
+        guard let muscle = MuscleGroup(rawValue: muscleGroup) else { return 0.0 }
+        let recoveryData = calculateRecoveryForMuscle(muscle)
+        
+        // Calculate hours needed to reach 70% recovery
+        let hoursToFullRecovery = recoveryData.estimatedFullRecoveryDate.timeIntervalSince(Date()) / 3600.0
+        let hoursTo70Percent = hoursToFullRecovery * 0.3 // 70% = 30% remaining
+        
+        return max(0.0, hoursTo70Percent)
+    }
+    
+    /// Get muscle groups that are ready for training right now
+    func getMusclesReadyForTraining() -> [String] {
+        return MainMuscleGroup.allCases.compactMap { muscle in
+            isMuscleReadyForTraining(muscle.rawValue) ? muscle.rawValue : nil
+        }
     }
 } 

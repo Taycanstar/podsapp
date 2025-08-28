@@ -32,7 +32,7 @@ class ExerciseComplexityService {
         }
     }
     
-    // MARK: - Experience Level Filtering
+    // MARK: - Fitbod-Aligned Progressive Exercise Unlocking
     
     /// Get maximum allowed complexity for a given experience level
     func getMaxComplexityForExperience(_ experience: ExperienceLevel) -> Int {
@@ -43,6 +43,49 @@ class ExerciseComplexityService {
             return ComplexityLevel.intermediate.rawValue // Level 1-3 exercises
         case .advanced:
             return ComplexityLevel.expert.rawValue // All levels (1-5)
+        }
+    }
+    
+    /// Check if exercise requires higher experience level (progressive unlocking)
+    func getExerciseExperienceRequirement(_ exercise: ExerciseData) -> ExperienceLevel {
+        let complexity = getExerciseComplexity(exercise)
+        let name = exercise.name.lowercased()
+        
+        // Level 5 exercises require advanced experience
+        if complexity >= 5 {
+            return .advanced
+        }
+        
+        // Level 4 exercises require intermediate+ experience  
+        if complexity >= 4 {
+            return .intermediate
+        }
+        
+        // Special cases: Some exercises need more experience despite lower complexity
+        if containsAny(name, ["olympic", "clean", "snatch", "jerk"]) {
+            return .advanced // Olympic lifts always need advanced
+        }
+        
+        if containsAny(name, ["deficit", "single-arm", "unilateral", "bulgarian"]) {
+            return .intermediate // Complex unilateral work needs intermediate+
+        }
+        
+        // Level 1-3 exercises are accessible to beginners
+        return .beginner
+    }
+    
+    /// Check if exercise is unlocked for user's current experience level
+    func isExerciseUnlockedForUser(_ exercise: ExerciseData, userProfile: UserProfileService? = nil) -> Bool {
+        let profile = userProfile ?? UserProfileService.shared
+        let requiredLevel = getExerciseExperienceRequirement(exercise)
+        
+        switch profile.experienceLevel {
+        case .beginner:
+            return requiredLevel == .beginner
+        case .intermediate:
+            return requiredLevel == .beginner || requiredLevel == .intermediate
+        case .advanced:
+            return true // Advanced users have access to all exercises
         }
     }
     

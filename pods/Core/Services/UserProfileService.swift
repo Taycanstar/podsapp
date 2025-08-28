@@ -16,6 +16,50 @@ class UserProfileService: ObservableObject {
     @Published var isLoading = false
     @Published var lastUpdated: Date?
     
+    // MARK: - Fitbod-Aligned Progressive Milestone Tracking
+    
+    /// Track workout milestones for progressive exercise unlocking
+    private var workoutMilestones: [String: Int] {
+        get {
+            UserDefaults.standard.dictionary(forKey: "workout_milestones") as? [String: Int] ?? [:]
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "workout_milestones")
+        }
+    }
+    
+    /// Get total completed workouts for milestone tracking
+    var completedWorkouts: Int {
+        workoutMilestones["total_workouts"] ?? 0
+    }
+    
+    /// Check if user has earned intermediate level (20+ workouts)
+    var hasEarnedIntermediate: Bool {
+        completedWorkouts >= 20
+    }
+    
+    /// Check if user has earned advanced level (50+ workouts)
+    var hasEarnedAdvanced: Bool {
+        completedWorkouts >= 50
+    }
+    
+    /// Record workout completion for milestone tracking
+    func recordWorkoutCompletion() {
+        var milestones = workoutMilestones
+        milestones["total_workouts"] = (milestones["total_workouts"] ?? 0) + 1
+        workoutMilestones = milestones
+        
+        let totalWorkouts = milestones["total_workouts"] ?? 0
+        print("🏃‍♂️ Workout #\(totalWorkouts) completed! Milestones: Intermediate(\(hasEarnedIntermediate)) Advanced(\(hasEarnedAdvanced))")
+        
+        // Suggest level progression if milestones reached
+        if totalWorkouts == 20 && experienceLevel == .beginner {
+            print("🎉 MILESTONE REACHED: 20 workouts completed! Consider upgrading to Intermediate level.")
+        } else if totalWorkouts == 50 && experienceLevel == .intermediate {
+            print("🚀 MILESTONE REACHED: 50 workouts completed! Consider upgrading to Advanced level.")
+        }
+    }
+    
     private init() {
         // Try to load cached profile data on initialization
         loadCachedProfileData()
