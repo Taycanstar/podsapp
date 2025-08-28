@@ -141,6 +141,7 @@ class WorkoutRecommendationService {
     func getRecommendedExercises(for muscleGroup: String, count: Int = 5) -> [ExerciseData] {
         let userProfile = UserProfileService.shared
         let recoveryService = MuscleRecoveryService.shared
+        let complexityService = ExerciseComplexityService.shared
         let allExercises = ExerciseDatabase.getAllExercises()
         
         // Check recovery status for this muscle group
@@ -153,8 +154,13 @@ class WorkoutRecommendationService {
         
         print("🎯 Smart muscle filtering for '\(muscleGroup)': Found \(muscleExercises.count) exercises out of \(allExercises.count) total")
         
+        // Filter by experience level (prevent handstands for beginners!)
+        let experienceAppropriate = complexityService.filterExercisesByExperience(muscleExercises, userProfile: userProfile)
+        
+        print("🎓 Experience filtering for \(userProfile.experienceLevel): \(muscleExercises.count) → \(experienceAppropriate.count) exercises")
+        
         // Filter by available equipment
-        let availableExercises = muscleExercises.filter { exercise in
+        let availableExercises = experienceAppropriate.filter { exercise in
             userProfile.canPerformExercise(exercise)
         }
         
@@ -172,6 +178,7 @@ class WorkoutRecommendationService {
     func getRecommendedExercises(for muscleGroup: String, count: Int = 5, customEquipment: [Equipment]?, flexibilityPreferences: FlexibilityPreferences? = nil) -> [ExerciseData] {
         let userProfile = UserProfileService.shared
         let recoveryService = MuscleRecoveryService.shared
+        let complexityService = ExerciseComplexityService.shared
         let allExercises = ExerciseDatabase.getAllExercises()
         
         // Check recovery status for this muscle group
@@ -184,8 +191,13 @@ class WorkoutRecommendationService {
         
         print("🎯 Smart muscle filtering for '\(muscleGroup)': Found \(muscleExercises.count) exercises out of \(allExercises.count) total")
         
+        // Filter by experience level (prevent handstands for beginners!)
+        let experienceAppropriate = complexityService.filterExercisesByExperience(muscleExercises, userProfile: userProfile)
+        
+        print("🎓 Experience filtering for \(userProfile.experienceLevel): \(muscleExercises.count) → \(experienceAppropriate.count) exercises")
+        
         // Filter by exercise type (exclude stretching for strength workouts by default)
-        let typeFilteredExercises = filterByExerciseType(exercises: muscleExercises, flexibilityPreferences: flexibilityPreferences, muscleGroup: muscleGroup)
+        let typeFilteredExercises = filterByExerciseType(exercises: experienceAppropriate, flexibilityPreferences: flexibilityPreferences, muscleGroup: muscleGroup)
         
         // Filter by available equipment (use custom equipment if provided)
         let availableExercises: [ExerciseData]
@@ -758,31 +770,137 @@ class WorkoutRecommendationService {
     }
     
     private func getExerciseScore(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {
+        // Evidence-based Training Stimulus Scoring System
+        // Prioritizes progressive overload potential over arbitrary complexity
+        var score = 0
+        let complexityService = ExerciseComplexityService.shared
+        
+        // PRIMARY FACTOR: Progressive Overload Potential (40% weight)
+        let progressionScore = getProgressionPotential(exercise, userProfile: userProfile)
+        score += progressionScore * 4
+        
+        // SECONDARY FACTOR: Movement Quality & Safety (30% weight)
+        let qualityScore = getMovementQuality(exercise, userProfile: userProfile)
+        score += qualityScore * 3
+        
+        // TERTIARY FACTOR: Goal-Specific Optimization (20% weight)
+        let goalScore = getGoalSpecificScore(exercise, userProfile: userProfile)
+        score += goalScore * 2
+        
+        // MINOR FACTOR: User Preferences & History (10% weight)
+        let preferenceScore = getUserPreferenceScore(exercise, userProfile: userProfile)
+        score += preferenceScore
+        
+        return score
+    }
+    
+    // MARK: - Evidence-Based Scoring Components
+    
+    private func getProgressionPotential(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {
+        let equipment = exercise.equipment.lowercased()
+        let name = exercise.name.lowercased()
+        
+        // Highest progression: External load exercises (infinite scalability)
+        if equipment.contains("barbell") || equipment.contains("dumbbell") || equipment.contains("machine") {
+            // Compound movements with external load = maximum progression potential
+            if getExerciseCategory(exercise) == .compound {
+                return 5 // Squats, deadlifts, presses with weight
+            }
+            return 4 // Isolation with weight still has good progression
+        }
+        
+        // Moderate progression: Bodyweight with progression options
+        if equipment.contains("body") || equipment.contains("bodyweight") {
+            // Check if exercise has clear progression path
+            if containsProgressionKeywords(name) {
+                return 3 // Push-ups (can add weight), pull-ups (can add weight)
+            }
+            return 2 // Basic bodyweight (limited progression)
+        }
+        
+        // Low progression: Fixed resistance or complex skills
+        if containsFixedComplexityKeywords(name) {
+            return 1 // Handstands, pistol squats (limited progression options)
+        }
+        
+        return 3 // Default moderate progression
+    }
+    
+    private func getMovementQuality(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {
+        let complexity = ExerciseComplexityService.shared.getExerciseComplexity(exercise)
+        let experience = userProfile.experienceLevel
+        
+        // Evidence: Movement quality deteriorates with excessive complexity
+        // Advanced users benefit from mastery of fundamentals, not just hard exercises
+        switch experience {
+        case .beginner:
+            // Beginners need simple, safe movements they can master
+            return complexity <= 2 ? 5 : (complexity == 3 ? 2 : 0)
+        case .intermediate:
+            // Intermediates benefit from moderate complexity with room to master
+            return complexity <= 3 ? 5 : (complexity == 4 ? 3 : 1)
+        case .advanced:
+            // Advanced users: Optimal training comes from MASTERY, not maximum complexity
+            // Elite athletes use 80% Level 2-3 exercises for a reason
+            switch complexity {
+            case 1, 2: return 5 // Foundation work always valuable (recovery, volume)
+            case 3: return 5    // Intermediate complexity is the sweet spot for advanced users
+            case 4: return 3    // Advanced complexity occasionally, with purpose
+            case 5: return 1    // Expert complexity sparingly, for specific goals only
+            default: return 3
+            }
+        }
+    }
+    
+    private func getGoalSpecificScore(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {
+        let category = getExerciseCategory(exercise)
+        let goal = userProfile.fitnessGoal
+        
+        switch goal {
+        case .strength, .powerlifting:
+            // Strength goals: Prioritize progressive overload with compounds
+            return category == .compound ? 5 : 2
+        case .hypertrophy:
+            // Hypertrophy: Balance compounds and isolation, volume focus
+            return category == .isolation ? 5 : 4
+        case .endurance:
+            // Endurance: Higher rep ranges, time efficiency
+            return 4 // Most exercises work for endurance with proper programming
+        case .general:
+            // General fitness: Balanced approach, sustainability focus
+            return category == .compound ? 4 : 3
+        default:
+            return 3
+        }
+    }
+    
+    private func getUserPreferenceScore(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {
         var score = 0
         
-        // Prefer compound movements for beginners and strength goals
-        if getExerciseCategory(exercise) == .compound {
-            score += (userProfile.experienceLevel == .beginner) ? 3 : 2
-            score += (userProfile.fitnessGoal == .strength || userProfile.fitnessGoal == .powerlifting) ? 2 : 0
+        // Historical performance (proven exercises)
+        if userProfile.getExercisePerformance(exerciseId: exercise.id) != nil {
+            score += 2 // Experience with exercise is valuable
         }
         
-        // Prefer isolation for hypertrophy goals
-        if getExerciseCategory(exercise) == .isolation && userProfile.fitnessGoal == .hypertrophy {
-            score += 2
-        }
-        
-        // Boost score for preferred exercise types
+        // User preferences
         let exerciseType = getExerciseType(exercise)
         if userProfile.preferredExerciseTypes.contains(exerciseType) {
             score += 1
         }
         
-        // Consider historical performance (exercises user has done before get slight boost)
-        if userProfile.getExercisePerformance(exerciseId: exercise.id) != nil {
-            score += 1
-        }
-        
         return score
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func containsProgressionKeywords(_ name: String) -> Bool {
+        let progressionKeywords = ["push-up", "pull-up", "squat", "lunge", "dip", "row", "press"]
+        return progressionKeywords.contains { name.contains($0) }
+    }
+    
+    private func containsFixedComplexityKeywords(_ name: String) -> Bool {
+        let fixedKeywords = ["handstand", "pistol", "muscle-up", "planche", "human flag", "one-arm"]
+        return fixedKeywords.contains { name.contains($0) }
     }
     
     private func getExerciseType(_ exercise: ExerciseData) -> ExerciseType {

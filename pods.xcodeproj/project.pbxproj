@@ -180,6 +180,7 @@
 		36A851A92E5E27DA004E5CED /* PerformanceFeedbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851A82E5E27D1004E5CED /* PerformanceFeedbackService.swift */; };
 		36A851AB2E5E3339004E5CED /* DynamicWorkoutModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851AA2E5E3334004E5CED /* DynamicWorkoutModels.swift */; };
 		36A851AD2E5E9292004E5CED /* WorkoutFeedbackSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851AC2E5E928B004E5CED /* WorkoutFeedbackSheet.swift */; };
+		36A851B12E5FD728004E5CED /* ExerciseComplexityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851B02E5FD71F004E5CED /* ExerciseComplexityService.swift */; };
 		36A85CD72DB182BA00DD4266 /* GenderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD62DB182BA00DD4266 /* GenderView.swift */; };
 		36A85CD92DB1CC4500DD4266 /* WorkoutDaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */; };
 		36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */; };
@@ -487,6 +488,7 @@
 		36A851A82E5E27D1004E5CED /* PerformanceFeedbackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceFeedbackService.swift; sourceTree = "<group>"; };
 		36A851AA2E5E3334004E5CED /* DynamicWorkoutModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicWorkoutModels.swift; sourceTree = "<group>"; };
 		36A851AC2E5E928B004E5CED /* WorkoutFeedbackSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutFeedbackSheet.swift; sourceTree = "<group>"; };
+		36A851B02E5FD71F004E5CED /* ExerciseComplexityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseComplexityService.swift; sourceTree = "<group>"; };
 		36A85CD62DB182BA00DD4266 /* GenderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenderView.swift; sourceTree = "<group>"; };
 		36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDaysView.swift; sourceTree = "<group>"; };
 		36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightWeightView.swift; sourceTree = "<group>"; };
@@ -650,6 +652,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				36A851B02E5FD71F004E5CED /* ExerciseComplexityService.swift */,
 				36A851A82E5E27D1004E5CED /* PerformanceFeedbackService.swift */,
 				36A851A62E5E2707004E5CED /* DynamicParameterService.swift */,
 				36A8519A2E5A108F004E5CED /* ExerciseNotesService.swift */,
@@ -1565,6 +1568,7 @@
 				36CB03392D5E4B2A006A74E9 /* FoodManager.swift in Sources */,
 				364A83C82DA7738B009D2620 /* CreateFoodView.swift in Sources */,
 				363068E62E1B3FC700F2D4EC /* EditProfilePhotoView.swift in Sources */,
+				36A851B12E5FD728004E5CED /* ExerciseComplexityService.swift in Sources */,
 				361FF3272E20722500B7F68E /* UserProfileService.swift in Sources */,
 				36A8519D2E5A10A6004E5CED /* ExerciseNotesData.swift in Sources */,
 				36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */,

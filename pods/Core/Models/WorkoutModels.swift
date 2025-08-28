@@ -20,6 +20,20 @@ struct ExerciseData: Identifiable, Hashable, Codable {
     let gender: String
     let target: String
     let synergist: String
+    let complexityRating: Int? // 1-5 scale: 1=Beginner, 5=Expert (optional for backward compatibility)
+    
+    // Initializer with optional complexity rating for backward compatibility
+    init(id: Int, name: String, exerciseType: String, bodyPart: String, equipment: String, gender: String, target: String, synergist: String, complexityRating: Int? = nil) {
+        self.id = id
+        self.name = name
+        self.exerciseType = exerciseType
+        self.bodyPart = bodyPart
+        self.equipment = equipment
+        self.gender = gender
+        self.target = target
+        self.synergist = synergist
+        self.complexityRating = complexityRating
+    }
     
     // Computed properties for compatibility
     var muscle: String { bodyPart }
