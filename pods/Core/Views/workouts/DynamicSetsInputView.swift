@@ -1,0 +1,218 @@
+//
+//  DynamicSetsInputView.swift
+//  pods
+//
+//  Created by Claude on 8/28/25.
+//
+
+import SwiftUI
+
+/// Dynamic sets input view that adapts to different exercise tracking types
+struct DynamicSetsInputView: View {
+    @Binding var sets: [FlexibleSetData]
+    let exercise: ExerciseData
+    let trackingType: ExerciseTrackingType
+    let onSetCompleted: ((Int) -> Void)?
+    let onAddSet: (() -> Void)?
+    let onRemoveSet: ((Int) -> Void)?
+    let onDurationChanged: ((TimeInterval) -> Void)?
+    
+    @State private var showingAddSetOptions = false
+    @FocusState private var focusedSetIndex: Int?
+    
+    init(
+        sets: Binding<[FlexibleSetData]>,
+        exercise: ExerciseData,
+        trackingType: ExerciseTrackingType,
+        onSetCompleted: ((Int) -> Void)? = nil,
+        onAddSet: (() -> Void)? = nil,
+        onRemoveSet: ((Int) -> Void)? = nil,
+        onDurationChanged: ((TimeInterval) -> Void)? = nil
+    ) {
+        self._sets = sets
+        self.exercise = exercise
+        self.trackingType = trackingType
+        self.onSetCompleted = onSetCompleted
+        self.onAddSet = onAddSet
+        self.onRemoveSet = onRemoveSet
+        self.onDurationChanged = onDurationChanged
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            List {
+                // Sets section with swipe-to-delete
+                ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
+                    DynamicSetRowView(
+                        set: binding(for: index),
+                        setNumber: index + 1,
+                        exercise: exercise,
+                        onDurationChanged: onDurationChanged
+                    )
+                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            deleteSet(at: index)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                }
+                
+                // Add Set/Interval button as List row
+                Section {
+                    addSetButton
+                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }
+            }
+            .listStyle(.plain)
+            .scrollDisabled(true) // KEY: Let parent ScrollView handle scrolling
+            .frame(height: calculateListHeight()) // KEY: Give List explicit height
+        }
+        .onAppear {
+            initializeSetsIfNeeded()
+        }
+    }
+    
+    // MARK: - Helper Views and Methods
+    
+    @ViewBuilder
+    private var addSetButton: some View {
+        if trackingType == .repsWeight || trackingType == .repsOnly {
+            Button(action: addSet) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Add Set")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color(.systemGray6))
+                .cornerRadius(8)
+            }
+        } else {
+            Button(action: addSet) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Add Interval")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            }
+        }
+    }
+    
+    // CRITICAL: Calculate height for List content to prevent disappearing
+    private func calculateListHeight() -> CGFloat {
+        let baseRowHeight: CGFloat = 60 // Base height of DynamicSetRowView
+        let pickerHeight: CGFloat = 180 // Height of inline time picker
+        let buttonHeight: CGFloat = 52 // Height of add set button
+        let spacing: CGFloat = 8 // Spacing between rows
+        
+        // Check if any set might have an expanded picker (duration-based exercises)
+        let hasExpandableContent = trackingType == .timeDistance || trackingType == .timeOnly || 
+                                 trackingType == .holdTime || trackingType == .rounds
+        
+        // Base calculation for all sets
+        let setsHeight = CGFloat(sets.count) * baseRowHeight + CGFloat(max(0, sets.count - 1)) * spacing
+        
+        // Add extra height for potential picker expansion on duration-based exercises
+        let extraPickerSpace: CGFloat = hasExpandableContent ? pickerHeight + 20 : 0
+        
+        let totalHeight = setsHeight + buttonHeight + extraPickerSpace + 16 // Extra padding
+        
+        return totalHeight
+    }
+    
+    private func initializeSetsIfNeeded() {
+        if sets.isEmpty {
+            // Add default number of sets based on tracking type
+            let defaultSets = defaultSetCount(for: trackingType)
+            for _ in 0..<defaultSets {
+                sets.append(FlexibleSetData(trackingType: trackingType))
+            }
+        }
+    }
+    
+    private func defaultSetCount(for type: ExerciseTrackingType) -> Int {
+        switch type {
+        case .repsWeight, .repsOnly:
+            return 3 // Traditional 3 sets
+        case .timeDistance, .timeOnly, .holdTime, .rounds:
+            return 1 // Time-based exercises only need 1 set
+        }
+    }
+    
+    private func addSet() {
+        let newSet = FlexibleSetData(trackingType: trackingType)
+        sets.append(newSet)
+        onAddSet?()
+    }
+    
+    private func deleteSet(at indexSet: IndexSet) {
+        guard sets.count > 1 else { return } // Don't allow deleting the last set
+        sets.remove(atOffsets: indexSet)
+        if let firstIndex = indexSet.first {
+            onRemoveSet?(firstIndex)
+        }
+    }
+    
+    private func deleteSet(at index: Int) {
+        guard sets.count > 1 else { return } // Don't allow deleting the last set
+        guard index >= 0 && index < sets.count else { return }
+        sets.remove(at: index)
+        onRemoveSet?(index)
+    }
+    
+    private func binding(for index: Int) -> Binding<FlexibleSetData> {
+        return Binding(
+            get: { sets[index] },
+            set: { 
+                sets[index] = $0
+                if $0.isCompleted {
+                    onSetCompleted?(index)
+                }
+            }
+        )
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    ScrollView {
+        VStack(spacing: 20) {
+            // Strength exercise preview
+            DynamicSetsInputView(
+                sets: .constant([
+                    FlexibleSetData(trackingType: .repsWeight),
+                    FlexibleSetData(trackingType: .repsWeight),
+                    FlexibleSetData(trackingType: .repsWeight)
+                ]),
+                exercise: ExerciseData(id: 1, name: "Barbell Bench Press", exerciseType: "Strength", bodyPart: "Chest", equipment: "Barbell", gender: "Male", target: "Pectoralis Major", synergist: "Deltoid Anterior, Triceps"),
+                trackingType: .repsWeight
+            )
+            
+            Divider()
+            
+            // Cardio exercise preview
+            DynamicSetsInputView(
+                sets: .constant([
+                    FlexibleSetData(trackingType: .timeDistance)
+                ]),
+                exercise: ExerciseData(id: 2, name: "Running", exerciseType: "Aerobic", bodyPart: "Cardio", equipment: "Body weight", gender: "Male", target: "Cardiovascular System", synergist: ""),
+                trackingType: .timeDistance
+            )
+        }
+        .padding()
+    }
+}

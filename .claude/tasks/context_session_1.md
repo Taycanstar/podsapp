@@ -63,7 +63,7 @@ Implement a fitness level filtering system to prevent inappropriate exercises fr
 - Full planche (id: 6834)
 - Handstand Hold on Wall (id: 10884)
 
-## Session Progress
+## Session Progress - Fitness Level Filtering
 - ✅ Analyzing current codebase structure completed
 - ✅ Designing SwiftUI-appropriate architecture completed  
 - ✅ Creating comprehensive implementation plan completed
@@ -73,11 +73,57 @@ Implement a fitness level filtering system to prevent inappropriate exercises fr
 - **Approach**: Progressive enhancement with backward compatibility
 - **Key Components**: ExerciseComplexityService, enhanced ExerciseData model, integrated filtering
 
-## Next Steps for Implementation Team
-1. Review the comprehensive implementation plan
-2. Start with Phase 1: Core Infrastructure (ExerciseComplexityService)
-3. Follow the 4-phase implementation sequence
-4. Test thoroughly with different experience levels
+---
+
+## NEW CRITICAL ISSUE: SwiftUI List Navigation & Swipe Actions
+
+### Problem Statement
+- User reports critical issue: swipe-to-delete functionality completely lost in `DynamicSetsInputView`
+- Current implementation uses `LazyVStack` instead of `List`, removing native swipe actions
+- User explicitly states: "This is bad" and demands: "Go back to List and fix it the way it is"
+- Content disappearing when List is embedded in parent ScrollView
+
+### Current Broken Implementation
+```swift
+// In DynamicSetsInputView.swift - BROKEN (no swipe actions)
+LazyVStack(spacing: 8) {
+    ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
+        DynamicSetRowView(...)
+        .padding(.vertical, 4)
+    }
+}
+```
+
+### Parent Context Analysis
+- `DynamicSetsInputView` is used inside `ExerciseLoggingView`
+- Parent uses `ScrollView` with `mainScrollContent`
+- Nested scrolling issue: List inside ScrollView causes display problems
+- Swipe-to-delete is essential for workout UX - users need to delete sets
+
+### Requirements for Fix
+1. **Must use List** - not LazyVStack or alternatives
+2. **Swipe-to-delete must work** - native `.swipeActions` required
+3. **Content must be visible** - no disappearing content in ScrollView
+4. **Parent ScrollView integration** - proper sizing and scrolling behavior
+5. **No nested scrolling conflicts** - List should size to content, parent handles scrolling
+
+### SwiftUI Architect Solution Created
+- ✅ **Analysis Complete**: Identified root cause - List height calculation and scrolling conflicts
+- ✅ **Architecture Design**: Proper List configuration for parent ScrollView integration
+- ✅ **Implementation Plan**: Complete step-by-step solution with code examples
+- **Location**: `/Users/dimi/Documents/dimi/podsapp/pods/.claude/doc/swiftui_list_scrollview_fix_implementation.md`
+
+### Key Technical Solutions
+1. **Height Calculation**: Explicit `.frame(height: calculateListHeight())` for List sizing
+2. **Scroll Disabling**: `.scrollDisabled(true)` to let parent ScrollView handle scrolling
+3. **Swipe Actions Restoration**: Native `.swipeActions` with proper delete integration
+4. **List Configuration**: `.listStyle(.plain)`, `.listRowSeparator(.hidden)` for clean integration
+
+### Critical Implementation Points
+- Replace `LazyVStack` with properly configured `List`
+- Add `calculateListHeight()` method for dynamic sizing
+- Configure List modifiers: `.scrollDisabled(true)`, `.listStyle(.plain)`
+- Restore `.swipeActions(edge: .trailing)` for delete functionality
 
 ## Architecture Decisions Made
 - **Service Pattern**: Create dedicated ExerciseComplexityService for centralized logic

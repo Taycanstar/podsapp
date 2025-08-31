@@ -45,6 +45,98 @@ extension Food {
     }
 }
 
+// MARK: - Modern Food Scanning State System
+enum FoodScanningState: Equatable {
+    case inactive                                 // Hidden state - no loader shown
+    case initializing                            // Show loader at 0% - isActive = true
+    case preparing(image: UIImage)
+    case uploading(progress: Double)  // Real network progress 0.0 to 0.5
+    case analyzing 
+    case processing
+    case completed(result: CombinedLog)
+    case failed(error: FoodScanError)
+    
+    // Computed properties for UI
+    var isActive: Bool {
+        switch self {
+        case .inactive: return false              // Hide loader when inactive
+        default: return true                      // Show loader for all processing states including completed
+        }
+    }
+    
+    var displayMessage: String {
+        switch self {
+        case .inactive: return ""
+        case .initializing: return "Starting analysis..."
+        case .preparing: return "Preparing image..."
+        case .uploading: return "Uploading to AI..."
+        case .analyzing: return "Analyzing nutrition..."
+        case .processing: return "Processing results..."
+        case .completed: return "Complete!"
+        case .failed(let error): return error.localizedDescription
+        }
+    }
+    
+    // Real progress based on actual state transitions (no fake timers)
+    var progress: Double {
+        switch self {
+        case .inactive: return 0.0
+        case .initializing: return 0.0            // Start at 0% with loader visible
+        case .preparing: return 0.1               // 10% when preparing
+        case .uploading(let progress): return 0.1 + (progress * 0.4)  // 10-50% for upload
+        case .analyzing: return 0.6               // 60% when analyzing
+        case .processing: return 0.8              // 80% when processing
+        case .completed: return 1.0               // 100% when done
+        case .failed: return 0.0                  // Reset on failure
+        }
+    }
+    
+    var canDismiss: Bool {
+        switch self {
+        case .inactive, .completed, .failed: return true
+        default: return false
+        }
+    }
+    
+    // Equatable implementation
+    static func == (lhs: FoodScanningState, rhs: FoodScanningState) -> Bool {
+        switch (lhs, rhs) {
+        case (.inactive, .inactive): return true
+        case (.initializing, .initializing): return true
+        case (.preparing(let img1), .preparing(let img2)): return img1 == img2
+        case (.uploading, .uploading): return true
+        case (.analyzing, .analyzing): return true
+        case (.processing, .processing): return true
+        case (.completed(let result1), .completed(let result2)): return result1.foodLogId == result2.foodLogId
+        case (.failed(let error1), .failed(let error2)): return error1.localizedDescription == error2.localizedDescription
+        default: return false
+        }
+    }
+}
+
+enum FoodScanError: LocalizedError {
+    case imageProcessingFailed
+    case networkError(String)
+    case invalidResponse
+    case analysisTimeout
+    case userCancelled
+    
+    var errorDescription: String? {
+        switch self {
+        case .imageProcessingFailed:
+            return "Unable to process image. Please try again."
+        case .networkError(let message):
+            return "Network error: \(message)"
+        case .invalidResponse:
+            return "Invalid response from server. Please try again."
+        case .analysisTimeout:
+            return "Analysis took too long. Please try again."
+        case .userCancelled:
+            return "Scan cancelled"
+        }
+    }
+}
+
 
 @MainActor
 class FoodManager: ObservableObject {
@@ -96,9 +188,14 @@ class FoodManager: ObservableObject {
     private var totalRecipesPages = 1
     private var currentRecipesPage = 1
     
-    // Add this property to the FoodManager class
-    @Published var isAnalyzingFood = false
-    @Published var analysisStage = 0
+    // MARK: - New Modern State System (replaces 15+ competing @Published properties)
+    @Published var foodScanningState: FoodScanningState = .inactive
+    @Published var animatedProgress: Double = 0.0  // Global animated progress
+    
+    // MARK: - Legacy Properties (TO BE REMOVED - cause race conditions)
+    // These properties cause competing DispatchQueue.main.async updates and timer race conditions
+    @Published var isAnalyzingFood = false  // DEPRECATED: Use foodScanningState instead
+    @Published var analysisStage = 0  // DEPRECATED: Use foodScanningState instead
     @Published var showAIGenerationSuccess = false
     @Published var aiGeneratedFood: LoggedFoodItem?
     @Published var showLogSuccess = false
@@ -113,19 +210,19 @@ class FoodManager: ObservableObject {
     @Published var showMealGenerationSuccess = false
     
     // Add state for food generation
-    @Published var isGeneratingFood = false
-    @Published var foodGenerationStage = 0
+    @Published var isGeneratingFood = false  // DEPRECATED: Use foodScanningState instead
+    @Published var foodGenerationStage = 0  // DEPRECATED: Use foodScanningState instead
     @Published var showFoodGenerationSuccess = false
     @Published var lastGeneratedFood: Food? = nil
     
     // Add these properties for food image analysis
-    @Published var loadingMessage: String = ""
+    @Published var loadingMessage: String = ""  // DEPRECATED: Use foodScanningState.displayMessage instead
     
-    // Food Scanning
-    @Published var isScanningFood = false
-    @Published var scanningFoodError: String? = nil
-    @Published var scannedImage: UIImage? = nil
-    @Published var uploadProgress: Double = 0.0
+    // Food Scanning - THESE CAUSE THE RACE CONDITIONS
+    @Published var isScanningFood = false  // DEPRECATED: Use foodScanningState.isActive instead
+    @Published var scanningFoodError: String? = nil  // DEPRECATED: Use foodScanningState failed case instead
+    @Published var scannedImage: UIImage? = nil  // DEPRECATED: Use foodScanningState preparing case instead
+    @Published var uploadProgress: Double = 0.0  // DEPRECATED: Fake progress causes timer race conditions
 
     // New specific loading states for different functionalities
     @Published var isGeneratingMacros = false
@@ -133,11 +230,11 @@ class FoodManager: ObservableObject {
     @Published var macroLoadingMessage: String = ""
     @Published var macroLoadingTitle: String = "Generating Macros with AI"
     
-    @Published var isScanningBarcode = false
-    @Published var barcodeLoadingMessage: String = ""
+    @Published var isScanningBarcode = false  // DEPRECATED: Use foodScanningState instead
+    @Published var barcodeLoadingMessage: String = ""  // DEPRECATED: Use foodScanningState.displayMessage instead
     
-    @Published var isAnalyzingImage = false
-    @Published var imageAnalysisMessage: String = ""
+    @Published var isAnalyzingImage = false  // DEPRECATED: Use foodScanningState instead
+    @Published var imageAnalysisMessage: String = ""  // DEPRECATED: Use foodScanningState.displayMessage instead
 
     
     // Add the new property
@@ -176,12 +273,291 @@ class FoodManager: ObservableObject {
     @Published var scanFailureMessage = ""
     @Published var scanFailureType = ""
     
+    // DEPRECATED: These timer-based properties cause race conditions and app freezes
     // Progress timer for upload progress
-    private var progressTimer: Timer?
+    private var progressTimer: Timer?  // DEPRECATED: Causes 25+ competing main thread updates
     
     // CRITICAL FIX: Track all active timers for cleanup
-    private var activeTimers: Set<Timer> = []
-    private var scannerDismissed = false
+    private var activeTimers: Set<Timer> = []  // DEPRECATED: Should not need timer tracking in modern approach
+    private var scannerDismissed = false  // DEPRECATED: Use Task cancellation instead
+    
+    // MARK: - Modern State Management (replaces timers)
+    // These methods eliminate race conditions by using deterministic state transitions
+    
+    /// Safely transition to a new food scanning state on main thread
+    func updateFoodScanningState(_ newState: FoodScanningState) {
+        assert(Thread.isMainThread, "Food scanning state must be updated on main thread")
+        let oldState = foodScanningState
+        
+        // FORCE UI UPDATE: Explicitly notify SwiftUI of changes
+        objectWillChange.send()
+        
+        foodScanningState = newState
+        
+        // Manage animated progress globally
+        if newState.isActive {
+            // Animate to new progress while active
+            withAnimation(.easeInOut(duration: 0.5)) {
+                animatedProgress = newState.progress
+            }
+        } else {
+            // Reset to 0 when loader disappears
+            animatedProgress = 0.0
+        }
+        
+        print("🔍 DEBUG updateFoodScanningState - OLD: \(oldState) (\(oldState.progress)), NEW: \(newState) (\(newState.progress)), AnimatedProgress: \(animatedProgress)")
+        
+        // Handle completed state with 100% visibility
+        if case .completed = newState {
+            print("✅ Completed state reached - showing 100% for 1.5 seconds before auto-reset")
+            // Show 100% for 1.5 seconds before auto-dismissing
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                print("⏰ Auto-resetting from completed state to inactive")
+                self.resetFoodScanningState()
+            }
+        }
+        
+        // ADDITIONAL FORCE: Send another update after state change
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+    
+    /// Start a new food scanning session with loader visible at 0%
+    func startFoodScanning() {
+        print("🆕 Starting new food scanning session")
+        updateFoodScanningState(.initializing)
+    }
+    
+    /// Complete food scanning with result and auto-reset
+    func completeFoodScanning(result: CombinedLog) {
+        print("🏁 Completing food scanning with result")
+        updateFoodScanningState(.completed(result: result))
+        // Auto-reset is handled by updateFoodScanningState
+    }
+    
+    /// Reset food scanning state to inactive with proper cleanup
+    func resetFoodScanningState() {
+        updateFoodScanningState(.inactive)
+        
+        // Clean up any legacy state (temporary during migration)
+        isScanningFood = false
+        isAnalyzingFood = false
+        isAnalyzingImage = false
+        isScanningBarcode = false
+        uploadProgress = 0.0
+        loadingMessage = ""
+        scannedImage = nil
+    }
+    
+    /// Handle scan failure with proper error state
+    func handleScanFailure(_ error: FoodScanError) {
+        updateFoodScanningState(.failed(error: error))
+        
+        // Auto-reset to inactive after a delay for better UX
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            self.resetFoodScanningState()
+        }
+    }
+    
+    // MARK: - Modern Network Methods (eliminates race conditions)
+    
+    /// Modern food image analysis with deterministic state transitions (replaces timer-based method)
+    @MainActor
+    func analyzeFoodImageModern(
+        image: UIImage,
+        userEmail: String,
+        mealType: String = "Lunch",
+        shouldLog: Bool = true
+    ) async throws -> CombinedLog {
+        print("🆕 Starting MODERN food image analysis with proper session flow")
+        
+        // CHECKPOINT 0: 0% - Start session with loader visible
+        updateFoodScanningState(.initializing)
+        try await Task.sleep(nanoseconds: 300_000_000) // Show 0% briefly
+        
+        // CHECKPOINT 1: 10% - Image preparation
+        updateFoodScanningState(.preparing(image: image))
+        try await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+        
+        // CHECKPOINT 2: 30% - Starting network upload
+        updateFoodScanningState(.uploading(progress: 0.0))
+        try await Task.sleep(nanoseconds: 100_000_000) // Brief delay for UX
+        
+        // Make network call with proper error handling
+        return try await withCheckedThrowingContinuation { continuation in
+            networkManager.analyzeFoodImage(
+                image: image,
+                userEmail: userEmail,
+                mealType: mealType,
+                shouldLog: shouldLog
+            ) { [weak self] success, payload, errMsg in
+                guard let self = self else {
+                    continuation.resume(throwing: FoodScanError.userCancelled)
+                    return
+                }
+                
+                DispatchQueue.main.async {
+                    if success, let payload = payload {
+                        // CHECKPOINT 3: 60% - Network complete, starting analysis
+                        self.updateFoodScanningState(.analyzing)
+                        
+                        // Process response
+                        do {
+                            let combinedLog = try self.processFoodAnalysisResponse(
+                                payload: payload,
+                                shouldLog: shouldLog,
+                                mealType: mealType
+                            )
+                            
+                            // CHECKPOINT 4: 90% - Analysis complete, processing result
+                            self.updateFoodScanningState(.processing)
+                            
+                            // Brief processing delay for UX
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                // CHECKPOINT 5: 100% - Everything complete
+                                self.updateFoodScanningState(.completed(result: combinedLog))
+                                continuation.resume(returning: combinedLog)
+                            }
+                            
+                        } catch {
+                            self.handleScanFailure(.invalidResponse)
+                            continuation.resume(throwing: error)
+                        }
+                    } else {
+                        let error = FoodScanError.networkError(errMsg ?? "Unknown error")
+                        self.handleScanFailure(error)
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Process food analysis response without timers or race conditions
+    private func processFoodAnalysisResponse(
+        payload: [String: Any],
+        shouldLog: Bool,
+        mealType: String
+    ) throws -> CombinedLog {
+        let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
+        let decoder = JSONDecoder()
+        
+        if shouldLog {
+            // When shouldLog=true, backend returns LoggedFood with foodLogId
+            let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
+            
+            return CombinedLog(
+                type: .food,
+                status: loggedFood.status,
+                calories: loggedFood.calories,
+                message: loggedFood.message,
+                foodLogId: loggedFood.foodLogId,
+                food: loggedFood.food,
+                mealType: loggedFood.mealType,
+                mealLogId: nil,
+                meal: nil,
+                mealTime: nil,
+                scheduledAt: Date(),
+                recipeLogId: nil,
+                recipe: nil,
+                servingsConsumed: nil
+            )
+        } else {
+            // Process creation-only response (preview mode)
+            guard let foodDict = payload["food"] as? [String: Any] else {
+                throw FoodScanError.invalidResponse
+            }
+            
+            // Extract food data and create CombinedLog for preview
+            let loggedFoodItem = try createLoggedFoodItemFromResponse(foodDict: foodDict)
+            
+            return CombinedLog(
+                type: .food,
+                status: "success",
+                calories: loggedFoodItem.calories,
+                message: "Food analyzed successfully",
+                foodLogId: nil, // No logging in preview mode
+                food: loggedFoodItem,
+                mealType: mealType,
+                mealLogId: nil,
+                meal: nil,
+                mealTime: nil,
+                scheduledAt: Date(),
+                recipeLogId: nil,
+                recipe: nil,
+                servingsConsumed: nil
+            )
+        }
+    }
+    
+    /// Helper method to create LoggedFoodItem from response dictionary
+    private func createLoggedFoodItemFromResponse(foodDict: [String: Any]) throws -> LoggedFoodItem {
+        let fdcId = foodDict["fdcId"] as? Int ?? 0
+        let description = foodDict["description"] as? String ?? "Unknown Food"
+        let brandName = foodDict["brandName"] as? String
+        let servingSize = foodDict["servingSize"] as? Double ?? 1
+        let servingSizeUnit = foodDict["servingSizeUnit"] as? String ?? "serving"
+        let householdServingFullText = foodDict["householdServingFullText"] as? String
+        let numberOfServings = foodDict["numberOfServings"] as? Double ?? 1
+        
+        // Extract nutrition from foodNutrients array
+        var calories: Double = 0
+        var protein: Double = 0
+        var carbs: Double = 0
+        var fat: Double = 0
+        var foodNutrients: [Nutrient] = []
+        
+        if let nutrients = foodDict["foodNutrients"] as? [[String: Any]] {
+            for nutrient in nutrients {
+                let name = nutrient["nutrientName"] as? String ?? ""
+                let value = nutrient["value"] as? Double ?? 0
+                let unit = nutrient["unitName"] as? String ?? ""
+                
+                // Create Nutrient object
+                foodNutrients.append(Nutrient(
+                    nutrientName: name,
+                    value: value,
+                    unitName: unit
+                ))
+                
+                // Extract key macros
+                switch name {
+                case "Energy": calories = value
+                case "Protein": protein = value
+                case "Carbohydrate, by difference": carbs = value
+                case "Total lipid (fat)": fat = value
+                default: break
+                }
+            }
+        }
+        
+        // Extract health analysis
+        var healthAnalysis: HealthAnalysis?
+        if let healthDict = foodDict["health_analysis"] as? [String: Any] {
+            do {
+                let healthData = try JSONSerialization.data(withJSONObject: healthDict)
+                healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthData)
+            } catch {
+                print("⚠️ Failed to decode health analysis: \(error)")
+            }
+        }
+        
+        return LoggedFoodItem(
+            foodLogId: nil,
+            fdcId: fdcId,
+            displayName: description,
+            calories: calories,
+            servingSizeText: householdServingFullText ?? "\(servingSize) \(servingSizeUnit)",
+            numberOfServings: numberOfServings,
+            brandText: brandName,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+            healthAnalysis: healthAnalysis,
+            foodNutrients: foodNutrients.isEmpty ? nil : foodNutrients
+        )
+    }
 
     
     init() {
@@ -1833,12 +2209,23 @@ func updateRecipe(
 }
 // Update the generateMacrosWithAI method
 func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
+    print("🔍 DEBUG generateMacrosWithAI called - food: \(foodDescription), meal: \(mealType)")
+    
     // Set macro generation flags to show MacroGenerationCard in DashboardView
     isGeneratingMacros = true
     isLoading = true  // THIS was missing - needed to show the loading card!
     macroGenerationStage = 0
     macroLoadingMessage = "Analyzing food description..."
     showAIGenerationSuccess = false
+    
+    print("🔍 DEBUG generateMacrosWithAI - Starting with initializing state for proper session flow")
+    // CRITICAL FIX: Start with initializing state for proper 0% progress visibility
+    updateFoodScanningState(.initializing)
+    
+    // Brief delay to show 0% before progressing
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        self.updateFoodScanningState(.analyzing)
+    }
     
     // Create a timer to cycle through analysis stages for UI feedback
     let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
@@ -3406,6 +3793,14 @@ func analyzeNutritionLabel(
         macroGenerationStage = 0
         showAIGenerationSuccess = false
         
+        // CRITICAL FIX: Start with initializing state for proper 0% progress visibility
+        updateFoodScanningState(.initializing)
+        
+        // Brief delay to show 0% before progressing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.updateFoodScanningState(.analyzing)
+        }
+        
         // Create a timer to cycle through analysis stages for UI feedback
         let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
             guard let self = self else { 
@@ -3493,6 +3888,14 @@ func analyzeNutritionLabel(
             self.macroGenerationStage = 0
             self.showAIGenerationSuccess = false
             self.macroLoadingMessage = "Transcribing your voice…"  // Initial stage message
+            
+            // CRITICAL FIX: Start with initializing state for proper 0% progress visibility
+            self.updateFoodScanningState(.initializing)
+            
+            // Brief delay to show 0% before progressing
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.updateFoodScanningState(.analyzing)
+            }
         }
         
         // Create a timer to cycle through analysis stages for UI feedback

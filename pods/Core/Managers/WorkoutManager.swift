@@ -117,6 +117,9 @@ class WorkoutManager: ObservableObject {
     @Published var selectedMuscleType: String = "Recovered Muscles"
     @Published var selectedEquipmentType: String = "Auto"
     
+    // MARK: - Debug Flags
+    @Published var debugForceIncludeDurationExercise = true // Debug: Always include a duration-based exercise
+    
     // MARK: - Workout History State (for routines view)
     @Published private(set) var hasWorkouts: Bool = false
     @Published private(set) var isLoadingWorkouts: Bool = false
@@ -644,7 +647,7 @@ class WorkoutManager: ObservableObject {
         }
         
         // Delegate to sophisticated WorkoutGenerationService
-        let workoutPlan = try workoutGenerationService.generateWorkoutPlan(
+        var workoutPlan = try workoutGenerationService.generateWorkoutPlan(
             muscleGroups: muscleGroups,
             targetDuration: parameters.duration,
             fitnessGoal: parameters.fitnessGoal,
@@ -652,6 +655,11 @@ class WorkoutManager: ObservableObject {
             customEquipment: parameters.customEquipment,
             flexibilityPreferences: parameters.flexibilityPreferences
         )
+        
+        // Debug: Force include a duration exercise if flag is enabled
+        if debugForceIncludeDurationExercise {
+            workoutPlan = try forceDurationExerciseInWorkout(workoutPlan, parameters: parameters)
+        }
         
         print("✅ WorkoutManager: Generated \(workoutPlan.exercises.count) exercises, actual duration: \(workoutPlan.actualDurationMinutes) minutes")
         
@@ -690,6 +698,108 @@ class WorkoutManager: ObservableObject {
             targetMuscles: targetMuscles,
             customEquipment: equipment,
             count: 3
+        )
+    }
+    
+    // MARK: - Debug Helper Functions
+    
+    /// Debug function to force inclusion of a duration-based exercise in the workout
+    private func forceDurationExerciseInWorkout(_ workoutPlan: WorkoutPlan, parameters: WorkoutGenerationParameters) throws -> WorkoutPlan {
+        print("🔧 DEBUG: Forcing duration exercise inclusion in workout")
+        
+        // Check if we already have a duration-based exercise
+        let hasDurationExercise = workoutPlan.exercises.contains { exercise in
+            let trackingType = ExerciseClassificationService.determineTrackingType(for: exercise.exercise)
+            return trackingType == .timeOnly || trackingType == .timeDistance || trackingType == .holdTime
+        }
+        
+        if hasDurationExercise {
+            print("🔧 DEBUG: Workout already contains a duration exercise, no changes needed")
+            return workoutPlan
+        }
+        
+        // Find a suitable duration exercise from the actual database
+        let durationExercise = getDurationExerciseFromDatabase()
+        
+        let durationWorkoutExercise = TodayWorkoutExercise(
+            exercise: durationExercise,
+            sets: 3,
+            reps: 1, // For duration exercises, reps doesn't matter much
+            weight: nil,
+            restTime: 60,
+            notes: "DEBUG: Forced duration exercise for testing"
+        )
+        
+        // Replace the last exercise with our duration exercise to keep workout length reasonable
+        var modifiedExercises = workoutPlan.exercises
+        if !modifiedExercises.isEmpty {
+            modifiedExercises[modifiedExercises.count - 1] = durationWorkoutExercise
+            print("🔧 DEBUG: Replaced last exercise with Plank Hold for duration testing")
+        } else {
+            modifiedExercises.append(durationWorkoutExercise)
+            print("🔧 DEBUG: Added Plank Hold as first exercise for duration testing")
+        }
+        
+        return WorkoutPlan(
+            exercises: modifiedExercises,
+            actualDurationMinutes: workoutPlan.actualDurationMinutes, // Keep same duration estimate
+            totalTimeBreakdown: workoutPlan.totalTimeBreakdown
+        )
+    }
+    
+    /// Get a duration-based exercise from the actual exercise database
+    private func getDurationExerciseFromDatabase() -> ExerciseData {
+        let allExercises = ExerciseDatabase.getAllExercises()
+        
+        // Look for duration-based exercises (exercises that are typically time-based)
+        let durationExerciseNames = [
+            "Plank", "Hold", "Mountain Climber", "Burpee", "Bear Crawl",
+            "Spider Plank", "Side Plank", "Front Plank", "Body Saw Plank",
+            "Plank Jack", "Iron Cross Plank", "Stability Ball Front Plank"
+        ]
+        
+        // Find exercises that match duration exercise patterns
+        let durationExercises = allExercises.filter { exercise in
+            // Check if exercise name contains any duration exercise keywords
+            let exerciseName = exercise.name.lowercased()
+            return durationExerciseNames.contains { keyword in
+                exerciseName.contains(keyword.lowercased())
+            } ||
+            // Also look for exercises classified as Aerobic (often time-based)
+            exercise.exerciseType == "Aerobic" ||
+            // Or exercises with "Cardio" body part
+            exercise.bodyPart == "Cardio" ||
+            // Or stretching exercises (often held for time)
+            exercise.exerciseType == "Stretching"
+        }
+        
+        // Prefer core/plank exercises for consistency with user's testing scenario
+        let plankExercises = durationExercises.filter { exercise in
+            exercise.name.lowercased().contains("plank")
+        }
+        
+        if let plankExercise = plankExercises.first {
+            print("🔧 DEBUG: Selected plank exercise for duration testing: \(plankExercise.name)")
+            return plankExercise
+        }
+        
+        // Fallback to any duration exercise
+        if let durationExercise = durationExercises.first {
+            print("🔧 DEBUG: Selected duration exercise for testing: \(durationExercise.name)")
+            return durationExercise
+        }
+        
+        // Final fallback - use Mountain Climber if nothing else found
+        print("🔧 DEBUG: No duration exercises found, using fallback Mountain Climber")
+        return ExerciseData(
+            id: 630,
+            name: "Mountain Climber",
+            exerciseType: "Aerobic",
+            bodyPart: "Cardio",
+            equipment: "Body weight",
+            gender: "Male",
+            target: "",
+            synergist: ""
         )
     }
     

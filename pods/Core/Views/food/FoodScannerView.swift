@@ -387,31 +387,31 @@ private func analyzeImage(_ image: UIImage) {
         let userEmail = UserDefaults.standard.string(forKey: "userEmail")
   else { return }
 
-  isPresented                  = false
-  foodManager.scannedImage     = image
-  foodManager.isScanningFood   = true
-  foodManager.loadingMessage   = "Analyzing image..."
-  foodManager.uploadProgress   = 0.1
+  // MODERN: Clean analysis with new state system (eliminates timer race conditions)
+  isPresented = false
+  print("🆕 Starting MODERN pure food image analysis with meal: \(selectedMeal)")
 
-  print("🔍 Starting pure food image analysis via server with meal: \(selectedMeal)")
-
-  foodManager.analyzeFoodImage(image: image,
-                               userEmail: userEmail,
-                               mealType: selectedMeal,
-                               shouldLog: false) { result in
-    switch result {
-    case .success(let combinedLog):
-        // Pure analysis function - always show preview (used by gallery when preview is enabled)
-        print("📸 Pure image analysis complete - showing preview")
-        if let food = combinedLog.food?.asFood {
-          DispatchQueue.main.async {
-            // Use the callback to trigger ConfirmLogView sheet in ContentView
-            self.onFoodScanned?(food, combinedLog.foodLogId)
-          }
-        }
-
-    case .failure(let error):
-      print("❌ pure scan failed:", error.localizedDescription)
+  // Use modern async method that eliminates race conditions
+  Task { @MainActor in
+    do {
+      let combinedLog = try await foodManager.analyzeFoodImageModern(
+        image: image,
+        userEmail: userEmail,
+        mealType: selectedMeal,
+        shouldLog: false
+      )
+      
+      // Pure analysis function - always show preview
+      print("📸 MODERN: Pure image analysis complete - showing preview")
+      
+      if let food = combinedLog.food?.asFood {
+        // Use the callback to trigger ConfirmLogView sheet in ContentView
+        self.onFoodScanned?(food, combinedLog.foodLogId)
+      }
+      
+    } catch {
+      print("❌ MODERN: Pure scan failed:", error.localizedDescription)
+      // Error handling is already done in analyzeFoodImageModern via handleScanFailure
     }
   }
 }
@@ -543,50 +543,46 @@ private func analyzeImageForPreview(_ image: UIImage) {
         let userEmail = UserDefaults.standard.string(forKey: "userEmail")
   else { return }
 
-  isPresented                  = false
-  foodManager.scannedImage     = image
-  foodManager.isScanningFood   = true
-  foodManager.loadingMessage   = "Analyzing image..."
-  foodManager.uploadProgress   = 0.1
+  // MODERN: Clean scanner dismissal with new state system
+  isPresented = false
+  print("🆕 Starting MODERN food image analysis for preview with meal: \(selectedMeal)")
 
-  print("🔍 Starting food image analysis for preview with meal: \(selectedMeal)")
-
-  foodManager.analyzeFoodImage(image: image,
-                               userEmail: userEmail,
-                               mealType: selectedMeal,
-                               shouldLog: false) { result in
-    switch result {
-    case .success(let combinedLog):
-        // Always show confirmation view for preview mode
-        print("📸 Image analysis complete - showing preview")
-        print("🔍 DEBUG: combinedLog.food = \(String(describing: combinedLog.food))")
-        if let food = combinedLog.food?.asFood {
-          print("🔍 DEBUG: Converted to Food object: \(food.description), fdcId: \(food.fdcId)")
-          print("🔍 DEBUG: Using NotificationCenter instead of callback (like barcode scanning)")
-          DispatchQueue.main.async {
-            // Use the same NotificationCenter mechanism as barcode scanning
-            NotificationCenter.default.post(
-                name: NSNotification.Name("ShowFoodConfirmation"),
-                object: nil,
-                userInfo: [
-                    "food": food,
-                    "foodLogId": combinedLog.foodLogId ?? NSNull()
-                ]
-            )
-            print("🔍 DEBUG: Posted ShowFoodConfirmation notification for food: \(food.description)")
-          }
-        } else {
-          print("❌ DEBUG: Failed to convert combinedLog.food to Food object")
-          print("❌ DEBUG: combinedLog.food is nil: \(combinedLog.food == nil)")
-        }
-
-    case .failure(let error):
-      print("❌ preview scan failed:", error.localizedDescription)
-      // Show user-friendly error message for photo scan failures
-      foodManager.showScanFailure(
-        type: "No Food Detected",
-        message: "Try scanning again."
+  // Use new async method that eliminates race conditions
+  Task { @MainActor in
+    do {
+      let combinedLog = try await foodManager.analyzeFoodImageModern(
+        image: image,
+        userEmail: userEmail,
+        mealType: selectedMeal,
+        shouldLog: false
       )
+      
+      // Handle success - show preview
+      print("📸 MODERN: Image analysis complete - showing preview")
+      print("🔍 DEBUG: combinedLog.food = \(String(describing: combinedLog.food))")
+      
+      if let food = combinedLog.food?.asFood {
+        print("🔍 DEBUG: Converted to Food object: \(food.description), fdcId: \(food.fdcId)")
+        
+        // Use NotificationCenter for clean communication
+        NotificationCenter.default.post(
+          name: NSNotification.Name("ShowFoodConfirmation"),
+          object: nil,
+          userInfo: [
+            "food": food,
+            "foodLogId": combinedLog.foodLogId ?? NSNull()
+          ]
+        )
+        print("🔍 DEBUG: Posted ShowFoodConfirmation notification for food: \(food.description)")
+        
+      } else {
+        print("❌ DEBUG: Failed to convert combinedLog.food to Food object")
+        print("❌ DEBUG: combinedLog.food is nil: \(combinedLog.food == nil)")
+      }
+      
+    } catch {
+      print("❌ MODERN preview scan failed:", error.localizedDescription)
+      // Error handling is already done in analyzeFoodImageModern via handleScanFailure
     }
   }
 }
@@ -596,34 +592,34 @@ private func analyzeImageDirectly(_ image: UIImage) {
         let userEmail = UserDefaults.standard.string(forKey: "userEmail")
   else { return }
 
-  isPresented                  = false
-  foodManager.scannedImage     = image
-  foodManager.isScanningFood   = true
-  foodManager.loadingMessage   = "Analyzing image..."
-  foodManager.uploadProgress   = 0.1
+  // MODERN: Clean one-tap analysis with new state system
+  isPresented = false
+  print("🆕 Starting MODERN direct food image analysis (one-tap) with meal: \(selectedMeal)")
 
-  print("🔍 Starting direct food image analysis (one-tap) with meal: \(selectedMeal)")
-
-  foodManager.analyzeFoodImage(image: image,
-                               userEmail: userEmail,
-                               mealType: selectedMeal) { result in
-    switch result {
-    case .success(let combinedLog):
-        // Always do instant optimistic insert for direct analysis (one-tap logging)
-        print("📸 Image analysis complete - one-tap logging")
-        
-        DispatchQueue.main.async {
-            dayLogsVM.addPending(combinedLog)
-            // 1) see if there's an existing entry with that foodLogId
-            if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
-                foodManager.combinedLogs.remove(at: idx)
-            }
-            // 2) prepend the fresh log
-            foodManager.combinedLogs.insert(combinedLog, at: 0)
-        }
-
-    case .failure(let error):
-      print("❌ direct scan failed:", error.localizedDescription)
+  // Use new async method for one-tap logging
+  Task { @MainActor in
+    do {
+      let combinedLog = try await foodManager.analyzeFoodImageModern(
+        image: image,
+        userEmail: userEmail,
+        mealType: selectedMeal,
+        shouldLog: true  // Direct logging
+      )
+      
+      // Handle success - instant optimistic insert
+      print("📸 MODERN: One-tap analysis complete - logging")
+      
+      dayLogsVM.addPending(combinedLog)
+      
+      // Update combined logs
+      if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+        foodManager.combinedLogs.remove(at: idx)
+      }
+      foodManager.combinedLogs.insert(combinedLog, at: 0)
+      
+    } catch {
+      print("❌ MODERN direct scan failed:", error.localizedDescription)
+      // Error handling is already done in analyzeFoodImageModern via handleScanFailure
     }
   }
 }

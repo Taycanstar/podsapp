@@ -50,6 +50,10 @@
 		362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362170AE2B90EF0C00DA93EE /* ItemView.swift */; };
 		362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516642C6E5D26009CA5B0 /* PodColumnsView.swift */; };
 		362516672C6E8EB2009CA5B0 /* ItemOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362516662C6E8EB2009CA5B0 /* ItemOptionsView.swift */; };
+		3625329B2E629481003C3B8D /* TimeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3625329A2E62947C003C3B8D /* TimeManager.swift */; };
+		3625329D2E629512003C3B8D /* DurationExerciseTimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3625329C2E629508003C3B8D /* DurationExerciseTimerSheet.swift */; };
+		3625329F2E629D1A003C3B8D /* CircularProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3625329E2E629D12003C3B8D /* CircularProgressView.swift */; };
+		362532A12E63805D003C3B8D /* ModernFoodLoadingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */; };
 		36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36291B7F2B8166F9000B5F38 /* CarouselView.swift */; };
 		362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362969B02D0D3E4700DF0B26 /* ActivityLogView.swift */; };
 		362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362969B12D0D3E4700DF0B26 /* EditActivityView.swift */; };
@@ -181,6 +185,8 @@
 		36A851AB2E5E3339004E5CED /* DynamicWorkoutModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851AA2E5E3334004E5CED /* DynamicWorkoutModels.swift */; };
 		36A851AD2E5E9292004E5CED /* WorkoutFeedbackSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851AC2E5E928B004E5CED /* WorkoutFeedbackSheet.swift */; };
 		36A851B12E5FD728004E5CED /* ExerciseComplexityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851B02E5FD71F004E5CED /* ExerciseComplexityService.swift */; };
+		36A851B32E60CF1B004E5CED /* DynamicSetsInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851B22E60CF12004E5CED /* DynamicSetsInputView.swift */; };
+		36A851B52E60CF54004E5CED /* FlexibleExerciseInputs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851B42E60CF4C004E5CED /* FlexibleExerciseInputs.swift */; };
 		36A85CD72DB182BA00DD4266 /* GenderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD62DB182BA00DD4266 /* GenderView.swift */; };
 		36A85CD92DB1CC4500DD4266 /* WorkoutDaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */; };
 		36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */; };
@@ -362,6 +368,10 @@
 		362170AE2B90EF0C00DA93EE /* ItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemView.swift; sourceTree = "<group>"; };
 		362516642C6E5D26009CA5B0 /* PodColumnsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodColumnsView.swift; sourceTree = "<group>"; };
 		362516662C6E8EB2009CA5B0 /* ItemOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemOptionsView.swift; sourceTree = "<group>"; };
+		3625329A2E62947C003C3B8D /* TimeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeManager.swift; sourceTree = "<group>"; };
+		3625329C2E629508003C3B8D /* DurationExerciseTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DurationExerciseTimerSheet.swift; sourceTree = "<group>"; };
+		3625329E2E629D12003C3B8D /* CircularProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircularProgressView.swift; sourceTree = "<group>"; };
+		362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModernFoodLoadingCard.swift; sourceTree = "<group>"; };
 		36291B7F2B8166F9000B5F38 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
 		362969B02D0D3E4700DF0B26 /* ActivityLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogView.swift; sourceTree = "<group>"; };
 		362969B12D0D3E4700DF0B26 /* EditActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditActivityView.swift; sourceTree = "<group>"; };
@@ -489,6 +499,8 @@
 		36A851AA2E5E3334004E5CED /* DynamicWorkoutModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicWorkoutModels.swift; sourceTree = "<group>"; };
 		36A851AC2E5E928B004E5CED /* WorkoutFeedbackSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutFeedbackSheet.swift; sourceTree = "<group>"; };
 		36A851B02E5FD71F004E5CED /* ExerciseComplexityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseComplexityService.swift; sourceTree = "<group>"; };
+		36A851B22E60CF12004E5CED /* DynamicSetsInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicSetsInputView.swift; sourceTree = "<group>"; };
+		36A851B42E60CF4C004E5CED /* FlexibleExerciseInputs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlexibleExerciseInputs.swift; sourceTree = "<group>"; };
 		36A85CD62DB182BA00DD4266 /* GenderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenderView.swift; sourceTree = "<group>"; };
 		36A85CD82DB1CC4500DD4266 /* WorkoutDaysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDaysView.swift; sourceTree = "<group>"; };
 		36A85CDA2DB2BC0C00DD4266 /* HeightWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightWeightView.swift; sourceTree = "<group>"; };
@@ -728,6 +740,7 @@
 		363AF9F32D1125F600C91A14 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				3625329A2E62947C003C3B8D /* TimeManager.swift */,
 				36A91DBE2E419A6700414543 /* NotificationManager.swift */,
 				36A91DBC2E411BC700414543 /* ReviewManager.swift */,
 				361FF33E2E26EF5A00B7F68E /* StreakManager.swift */,
@@ -776,6 +789,8 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				3625329C2E629508003C3B8D /* DurationExerciseTimerSheet.swift */,
+				36A851B22E60CF12004E5CED /* DynamicSetsInputView.swift */,
 				36A851AC2E5E928B004E5CED /* WorkoutFeedbackSheet.swift */,
 				36A8519E2E5ABF4C004E5CED /* FlexibilityPreferences.swift */,
 				36A851962E5A1064004E5CED /* ExerciseNotesSheet.swift */,
@@ -847,6 +862,9 @@
 		3682C86A2BBAED5B00B350E2 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */,
+				3625329E2E629D12003C3B8D /* CircularProgressView.swift */,
+				36A851B42E60CF4C004E5CED /* FlexibleExerciseInputs.swift */,
 				36A851A22E5AC0A7004E5CED /* CollapsibleSection.swift */,
 				36A851A02E5ABFB6004E5CED /* FlexibilityPickerView.swift */,
 				3637F0A52CE13F3F0010624A /* DatePickerWheel.swift */,
@@ -1444,6 +1462,7 @@
 				36A85CED2DB4246000DD4266 /* SpecificDietView.swift in Sources */,
 				36A91DC82E53726500414543 /* ExerciseHistory.swift in Sources */,
 				363AF9F52D11261D00C91A14 /* ActivityLogManager.swift in Sources */,
+				36A851B32E60CF1B004E5CED /* DynamicSetsInputView.swift in Sources */,
 				36A85CF72DB46B1100DD4266 /* RolloverView.swift in Sources */,
 				36ED35A72DD5294300D174FB /* HealthDataCard.swift in Sources */,
 				361FF3352E22E54C00B7F68E /* DataSyncService.swift in Sources */,
@@ -1463,6 +1482,7 @@
 				36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */,
 				3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */,
 				361FF30F2E1D96F900B7F68E /* WeightedExercisesView.swift in Sources */,
+				36A851B52E60CF54004E5CED /* FlexibleExerciseInputs.swift in Sources */,
 				36A91DB92E39B37500414543 /* MealLogDetails.swift in Sources */,
 				363068C92E089EF800F2D4EC /* ByEquipmentView.swift in Sources */,
 				36C458E42B7457580060355F /* HomeView.swift in Sources */,
@@ -1471,6 +1491,7 @@
 				36ED35992DCFDE5400D174FB /* ConfirmFoodView.swift in Sources */,
 				363AFA1B2D474FB400C91A14 /* PodsViewModel.swift in Sources */,
 				36ED35C02DDBB0C100D174FB /* GoalProgress.swift in Sources */,
+				3625329B2E629481003C3B8D /* TimeManager.swift in Sources */,
 				363068D72E1078F900F2D4EC /* AddFoodWithScan.swift in Sources */,
 				36A851A52E5D2DD7004E5CED /* WorkoutGenerationService.swift in Sources */,
 				36ED35D92DDE527600D174FB /* TapPlusView.swift in Sources */,
@@ -1482,6 +1503,7 @@
 				363AFA0F2D3C1A0900C91A14 /* ItemSummaryView.swift in Sources */,
 				363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */,
 				36ED35F12DDE536800D174FB /* DescribeFoodView.swift in Sources */,
+				3625329D2E629512003C3B8D /* DurationExerciseTimerSheet.swift in Sources */,
 				36A851A32E5AC0AE004E5CED /* CollapsibleSection.swift in Sources */,
 				36A8519F2E5ABF53004E5CED /* FlexibilityPreferences.swift in Sources */,
 				361FF3412E288D9D00B7F68E /* MuscleRecoveryService.swift in Sources */,
@@ -1542,6 +1564,7 @@
 				361FF3112E1D998F00B7F68E /* BodyweightWithEquipment.swift in Sources */,
 				3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */,
 				361FF3212E2061C200B7F68E /* WorkoutSession.swift in Sources */,
+				3625329F2E629D1A003C3B8D /* CircularProgressView.swift in Sources */,
 				36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */,
 				361FF3152E1D99AA00B7F68E /* StretchMobilityView.swift in Sources */,
 				36A85D072DC3020000DD4266 /* SportSelectionView.swift in Sources */,
@@ -1673,6 +1696,7 @@
 				36A85CE12DB2C24A00DD4266 /* DesiredWeightView.swift in Sources */,
 				364A83CA2DAB0F82009D2620 /* FoodScannerView.swift in Sources */,
 				36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */,
+				362532A12E63805D003C3B8D /* ModernFoodLoadingCard.swift in Sources */,
 				363068D52E1078EB00F2D4EC /* AddFoodWithVoice.swift in Sources */,
 				36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */,
 				36ED35DF2DDE52B400D174FB /* GenerateLogView.swift in Sources */,

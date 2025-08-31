@@ -57,6 +57,7 @@ struct LogWorkoutView: View {
     @State private var currentWorkout: TodayWorkout? = nil
     @State private var userEmail: String = UserDefaults.standard.string(forKey: "userEmail") ?? ""
     
+    
     // Properties that delegate to WorkoutManager but are accessed locally
     private var isGeneratingWorkout: Bool {
         workoutManager.isGeneratingWorkout
@@ -999,6 +1000,7 @@ struct LogWorkoutView: View {
                         .foregroundColor(.accentColor)
                 }
             }
+            
         }
     }
     
@@ -1007,6 +1009,7 @@ struct LogWorkoutView: View {
     // loadSessionFlexibilityPreferences removed - now handled by WorkoutManager.loadSessionData()
     
     // clearSessionFlexibilityPreferences removed - now handled by WorkoutManager.clearAllSessionOverrides()
+    
 }
 
 // MARK: - Tab Button
@@ -1055,8 +1058,14 @@ private struct TodayWorkoutView: View {
     @Binding var currentWorkout: TodayWorkout?
     let effectiveFlexibilityPreferences: FlexibilityPreferences // Added this parameter
     
+    
     @State private var userProfile = UserProfileService.shared
     @State private var showSessionPhaseCard = false // Hidden due to sync issues
+    
+    // Get the workout to display
+    private var workoutToShow: TodayWorkout? {
+        return workoutManager.todayWorkout
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -1074,7 +1083,7 @@ private struct TodayWorkoutView: View {
                         }
                         
                         // Show today's workout if available
-                        if let workout = workoutManager.todayWorkout {
+                        if let workout = workoutToShow {
                             VStack(spacing: 12) {
                                 // Session phase header for dynamic workouts
                                 if let dynamicParams = workoutManager.dynamicParameters, showSessionPhaseCard {
@@ -1113,7 +1122,7 @@ private struct TodayWorkoutView: View {
                         }
                         
                         // Empty state when no workout and not generating
-                        if workoutManager.todayWorkout == nil && !workoutManager.isGeneratingWorkout {
+                        if workoutToShow == nil && !workoutManager.isGeneratingWorkout {
                             VStack(spacing: 16) {
                                 Image("blackex")
                                     .resizable()

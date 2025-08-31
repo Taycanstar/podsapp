@@ -1,0 +1,1026 @@
+//
+//  FlexibleExerciseInputs.swift
+//  pods
+//
+//  Created by Claude on 8/28/25.
+//
+
+import SwiftUI
+import Foundation
+
+// MARK: - Dynamic Set Row View
+
+/// Dynamic set row that adapts its input interface based on the exercise tracking type
+/// Uses legacy visual style with simple List/HStack layout
+struct DynamicSetRowView: View {
+    @Binding var set: FlexibleSetData
+    let setNumber: Int
+    let exercise: ExerciseData
+    let onDurationChanged: ((TimeInterval) -> Void)?
+    @FocusState private var focusedField: FocusedField?
+    @State private var showTimePicker: Bool = false
+    
+    enum FocusedField: Hashable {
+        case firstInput, secondInput
+    }
+    
+    var body: some View {
+        // Dynamic input based on tracking type (using legacy TextField style)
+        dynamicInputView
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
+            .padding(.vertical, 6)
+    }
+    
+    private var setNumberIndicator: some View {
+        ZStack {
+            // Background rounded rectangle (matches input style)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(set.isCompleted ? Color.accentColor : Color(.systemBackground))
+                .frame(width: 44, height: 44)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(set.isCompleted ? Color.accentColor : Color(.systemGray4), lineWidth: set.isCompleted ? 0 : 1)
+                )
+            
+            // Content (number or checkmark)
+            if set.isCompleted {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+            } else {
+                Text("\(setNumber)")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundColor(.primary)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var dynamicInputView: some View {
+        switch set.trackingType {
+        case .repsWeight:
+            legacyRepsWeightInput
+        case .timeDistance:
+            legacyTimeDistanceInput
+        // Map other types to the two main interfaces
+        case .repsOnly:
+            legacyRepsWeightInput // Show as reps/weight but without weight input
+        case .timeOnly, .holdTime:
+            legacyTimeDistanceInput // Show as time/distance but without distance input
+        case .rounds:
+            legacyRepsWeightInput // Show as reps/weight for rounds
+        }
+    }
+    
+    // MARK: - Legacy-Style Input Views
+    
+    private var legacyRepsWeightInput: some View {
+        HStack(spacing: 12) {
+            // Set indicator for reps-based exercises
+            setNumberIndicator
+            
+            TextField("8", text: Binding(
+                get: { set.reps ?? "" },
+                set: { set.reps = $0 }
+            ))
+            .focused($focusedField, equals: .firstInput)
+            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "reps"))
+            .keyboardType(.numberPad)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    if focusedField == .firstInput {
+                        Button("Done") {
+                            focusedField = nil
+                        }
+                        
+                        Button("Clear") {
+                            set.reps = ""
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Next") {
+                            focusedField = .secondInput
+                        }
+                    }
+                }
+            }
+            
+            // Only show weight field for reps+weight exercises
+            if set.trackingType == .repsWeight {
+                TextField("150", text: Binding(
+                    get: { set.weight ?? "" },
+                    set: { set.weight = $0 }
+                ))
+                .focused($focusedField, equals: .secondInput)
+                .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "lbs"))
+                .keyboardType(.decimalPad)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        if focusedField == .secondInput {
+                            Button("Done") {
+                                focusedField = nil
+                            }
+                            
+                            Button("Clear") {
+                                set.weight = ""
+                            }
+                            
+                            Spacer()
+                            
+                            Button("Next") {
+                                focusedField = .firstInput
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private var legacyRepsOnlyInput: some View {
+        HStack(spacing: 12) {
+            // Set indicator for reps-based exercises
+            setNumberIndicator
+            
+            TextField("12", text: Binding(
+                get: { set.reps ?? "" },
+                set: { set.reps = $0 }
+            ))
+            .focused($focusedField, equals: .firstInput)
+            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "reps"))
+            .keyboardType(.numberPad)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    if focusedField == .firstInput {
+                        Button("Done") {
+                            focusedField = nil
+                        }
+                        
+                        Button("Clear") {
+                            set.reps = ""
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Next") {
+                            focusedField = .secondInput
+                        }
+                    }
+                }
+            }
+            
+            TextField("150", text: Binding(
+                get: { set.weight ?? "" },
+                set: { set.weight = $0 }
+            ))
+            .focused($focusedField, equals: .secondInput)
+            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "lbs"))
+            .keyboardType(.decimalPad)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    if focusedField == .secondInput {
+                        Button("Done") {
+                            focusedField = nil
+                        }
+                        
+                        Button("Clear") {
+                            set.weight = ""
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Next") {
+                            focusedField = .firstInput
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private var legacyTimeDistanceInput: some View {
+        VStack(spacing: 12) {
+            // Duration and distance input row with set indicator aligned
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    // Set indicator aligned with duration input
+                    setNumberIndicator
+                    
+                    // Duration input button
+                    Button(action: {
+                        showTimePicker.toggle()
+                        if showTimePicker {
+                            focusedField = nil // Clear any text field focus
+                        }
+                    }) {
+                        HStack {
+                            Text(formatTimeInput(set.duration ?? 0))
+                                .foregroundColor(showTimePicker ? .blue : .primary)
+                                .font(.system(size: 16, weight: .medium))
+                            
+                            Spacer()
+                            
+                            if showTimePicker {
+                                Text("Duration")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
+                        .background(Color(.systemBackground))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(showTimePicker ? Color.blue : Color(.systemGray4), lineWidth: showTimePicker ? 2 : 1)
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            if showTimePicker {
+                                Button("Clear") {
+                                    set.duration = 0
+                                    onDurationChanged?(0)
+                                }
+                                
+                                Spacer()
+                                
+                                Button("Done") {
+                                    showTimePicker = false
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Only show distance field for time+distance exercises
+                    if set.trackingType == .timeDistance {
+                        // Distance input horizontally aligned with duration
+                        TextField("Distance", text: Binding(
+                            get: { 
+                                if let distance = set.distance {
+                                    return "\(Int(distance))"
+                                }
+                                return ""
+                            },
+                            set: { value in
+                                if let distance = Double(value) {
+                                    set.distance = distance
+                                    set.distanceUnit = .miles
+                                }
+                            }
+                        ))
+                        .focused($focusedField, equals: .secondInput)
+                        .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "mi"))
+                        .keyboardType(.numberPad)
+                        .toolbar {
+                            ToolbarItemGroup(placement: .keyboard) {
+                                if focusedField == .secondInput {
+                                    Button("Clear") {
+                                        set.distance = nil
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Button("Done") {
+                                        focusedField = nil
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // iOS native inline time picker for duration
+                if showTimePicker {
+                    HStack(spacing: 0) {
+                        // Hours
+                        Picker("Hours", selection: Binding(
+                            get: { Int((set.duration ?? 0) / 3600) },
+                            set: { newHours in
+                                let currentMinutes = Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60)
+                                let currentSeconds = Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60))
+                                let newDuration = TimeInterval(newHours * 3600 + currentMinutes * 60 + currentSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...23, id: \.self) { hour in
+                                Text("\(hour) hr").tag(hour)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                        
+                        // Minutes
+                        Picker("Minutes", selection: Binding(
+                            get: { Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60) },
+                            set: { newMinutes in
+                                let currentHours = Int((set.duration ?? 0) / 3600)
+                                let currentSeconds = Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60))
+                                let newDuration = TimeInterval(currentHours * 3600 + newMinutes * 60 + currentSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...59, id: \.self) { minute in
+                                Text("\(minute) min").tag(minute)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                        
+                        // Seconds
+                        Picker("Seconds", selection: Binding(
+                            get: { Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60)) },
+                            set: { newSeconds in
+                                let currentHours = Int((set.duration ?? 0) / 3600)
+                                let currentMinutes = Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60)
+                                let newDuration = TimeInterval(currentHours * 3600 + currentMinutes * 60 + newSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...59, id: \.self) { second in
+                                Text("\(second) sec").tag(second)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .frame(height: 180)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+        }
+        .onTapGesture {
+            showTimePicker = false // Hide time picker when other inputs are tapped
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
+    }
+    
+    private var legacyTimeOnlyInput: some View {
+        VStack(spacing: 12) {
+            // Duration input row with set indicator aligned
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    // Set indicator aligned with duration input
+                    setNumberIndicator
+                    
+                    // Duration input button
+                    Button(action: {
+                        showTimePicker.toggle()
+                        if showTimePicker {
+                            focusedField = nil // Clear any text field focus
+                        }
+                    }) {
+                        HStack {
+                            Text(formatTimeInput(set.duration ?? 0))
+                                .foregroundColor(showTimePicker ? .blue : .primary)
+                                .font(.system(size: 16, weight: .medium))
+                            
+                            Spacer()
+                            
+                            if showTimePicker {
+                                Text("Duration")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
+                        .background(Color(.systemBackground))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(showTimePicker ? Color.blue : Color(.systemGray4), lineWidth: showTimePicker ? 2 : 1)
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            if showTimePicker {
+                                Button("Clear") {
+                                    set.duration = 0
+                                    onDurationChanged?(0)
+                                }
+                                
+                                Spacer()
+                                
+                                Button("Done") {
+                                    showTimePicker = false
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // iOS native inline time picker for duration
+                if showTimePicker {
+                    HStack(spacing: 0) {
+                        // Hours
+                        Picker("Hours", selection: Binding(
+                            get: { Int((set.duration ?? 0) / 3600) },
+                            set: { newHours in
+                                let currentMinutes = Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60)
+                                let currentSeconds = Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60))
+                                let newDuration = TimeInterval(newHours * 3600 + currentMinutes * 60 + currentSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...23, id: \.self) { hour in
+                                Text("\(hour) hr").tag(hour)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                        
+                        // Minutes
+                        Picker("Minutes", selection: Binding(
+                            get: { Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60) },
+                            set: { newMinutes in
+                                let currentHours = Int((set.duration ?? 0) / 3600)
+                                let currentSeconds = Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60))
+                                let newDuration = TimeInterval(currentHours * 3600 + newMinutes * 60 + currentSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...59, id: \.self) { minute in
+                                Text("\(minute) min").tag(minute)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                        
+                        // Seconds
+                        Picker("Seconds", selection: Binding(
+                            get: { Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60)) },
+                            set: { newSeconds in
+                                let currentHours = Int((set.duration ?? 0) / 3600)
+                                let currentMinutes = Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60)
+                                let newDuration = TimeInterval(currentHours * 3600 + currentMinutes * 60 + newSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...59, id: \.self) { second in
+                                Text("\(second) sec").tag(second)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .frame(height: 180)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            
+            // Intensity input row (no set indicator)
+            TextField("8", text: Binding(
+                get: { 
+                    if let intensity = set.intensity {
+                        return "\(intensity)"
+                    }
+                    return ""
+                },
+                set: { newValue in
+                    set.intensity = Int(newValue)
+                }
+            ))
+            .focused($focusedField, equals: .secondInput)
+            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "intensity"))
+            .keyboardType(.numberPad)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    if focusedField == .secondInput {
+                        Button("Done") {
+                            focusedField = nil
+                        }
+                        
+                        Button("Clear") {
+                            set.intensity = nil
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Next") {
+                            focusedField = nil
+                        }
+                    }
+                }
+            }
+            .onTapGesture {
+                showTimePicker = false // Hide time picker when other inputs are tapped
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
+    }
+    
+    private var legacyHoldTimeInput: some View {
+        VStack(spacing: 12) {
+            // Duration input row with set indicator aligned
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    // Set indicator aligned with duration input
+                    setNumberIndicator
+                    
+                    // Duration input button
+                    Button(action: {
+                        showTimePicker.toggle()
+                        if showTimePicker {
+                            focusedField = nil // Clear any text field focus
+                        }
+                    }) {
+                        HStack {
+                            Text(formatTimeInput(set.duration ?? 0))
+                                .foregroundColor(showTimePicker ? .blue : .primary)
+                                .font(.system(size: 16, weight: .medium))
+                            
+                            Spacer()
+                            
+                            if showTimePicker {
+                                Text("Duration")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
+                        .background(Color(.systemBackground))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(showTimePicker ? Color.blue : Color(.systemGray4), lineWidth: showTimePicker ? 2 : 1)
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            if showTimePicker {
+                                Button("Clear") {
+                                    set.duration = 0
+                                    onDurationChanged?(0)
+                                }
+                                
+                                Spacer()
+                                
+                                Button("Done") {
+                                    showTimePicker = false
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // iOS native inline time picker for duration
+                if showTimePicker {
+                    HStack(spacing: 0) {
+                        // Hours
+                        Picker("Hours", selection: Binding(
+                            get: { Int((set.duration ?? 0) / 3600) },
+                            set: { newHours in
+                                let currentMinutes = Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60)
+                                let currentSeconds = Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60))
+                                let newDuration = TimeInterval(newHours * 3600 + currentMinutes * 60 + currentSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...23, id: \.self) { hour in
+                                Text("\(hour) hr").tag(hour)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                        
+                        // Minutes
+                        Picker("Minutes", selection: Binding(
+                            get: { Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60) },
+                            set: { newMinutes in
+                                let currentHours = Int((set.duration ?? 0) / 3600)
+                                let currentSeconds = Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60))
+                                let newDuration = TimeInterval(currentHours * 3600 + newMinutes * 60 + currentSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...59, id: \.self) { minute in
+                                Text("\(minute) min").tag(minute)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                        
+                        // Seconds
+                        Picker("Seconds", selection: Binding(
+                            get: { Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60)) },
+                            set: { newSeconds in
+                                let currentHours = Int((set.duration ?? 0) / 3600)
+                                let currentMinutes = Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60)
+                                let newDuration = TimeInterval(currentHours * 3600 + currentMinutes * 60 + newSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...59, id: \.self) { second in
+                                Text("\(second) sec").tag(second)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .frame(height: 180)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            
+            
+            // Weight input row (no set indicator)
+            TextField("150", text: Binding(
+                get: { set.weight ?? "" },
+                set: { set.weight = $0 }
+            ))
+            .focused($focusedField, equals: .secondInput)
+            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "lbs"))
+            .keyboardType(.decimalPad)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    if focusedField == .secondInput {
+                        Button("Done") {
+                            focusedField = nil
+                        }
+                        
+                        Button("Clear") {
+                            set.weight = ""
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Next") {
+                            focusedField = .firstInput
+                        }
+                    }
+                }
+            }
+            .onTapGesture {
+                showTimePicker = false // Hide time picker when other inputs are tapped
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
+    }
+    
+    private var legacyRoundsInput: some View {
+        VStack(spacing: 12) {
+            // Rounds input row
+            TextField("5", text: Binding(
+                get: { 
+                    if let rounds = set.rounds {
+                        return "\(rounds)"
+                    }
+                    return ""
+                },
+                set: { newValue in
+                    set.rounds = Int(newValue)
+                }
+            ))
+            .focused($focusedField, equals: .firstInput)
+            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "rounds"))
+            .keyboardType(.numberPad)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    if focusedField == .firstInput {
+                        Button("Done") {
+                            focusedField = nil
+                        }
+                        
+                        Button("Clear") {
+                            set.rounds = nil
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Next") {
+                            focusedField = nil
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                showTimePicker = true
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Duration input - full width row
+            VStack(spacing: 8) {
+                Button(action: {
+                    showTimePicker.toggle()
+                    if showTimePicker {
+                        focusedField = nil // Clear any text field focus
+                    }
+                }) {
+                    HStack {
+                        Text(formatTimeInput(set.duration ?? 0))
+                            .foregroundColor(showTimePicker ? .blue : .primary)
+                            .font(.system(size: 16, weight: .medium))
+                        
+                        Spacer()
+                        
+                        if showTimePicker {
+                            Text("each")
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12)
+                    .background(Color(.systemBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(showTimePicker ? Color.blue : Color(.systemGray4), lineWidth: showTimePicker ? 2 : 1)
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        if showTimePicker {
+                            Button("Clear") {
+                                set.duration = 0
+                            }
+                            
+                            Spacer()
+                            
+                            Button("Done") {
+                                showTimePicker = false
+                            }
+                        }
+                    }
+                }
+                
+                // iOS native inline time picker for duration
+                if showTimePicker {
+                    HStack(spacing: 0) {
+                        // Hours
+                        Picker("Hours", selection: Binding(
+                            get: { Int((set.duration ?? 0) / 3600) },
+                            set: { newHours in
+                                let currentMinutes = Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60)
+                                let currentSeconds = Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60))
+                                let newDuration = TimeInterval(newHours * 3600 + currentMinutes * 60 + currentSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...23, id: \.self) { hour in
+                                Text("\(hour) hr").tag(hour)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                        
+                        // Minutes
+                        Picker("Minutes", selection: Binding(
+                            get: { Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60) },
+                            set: { newMinutes in
+                                let currentHours = Int((set.duration ?? 0) / 3600)
+                                let currentSeconds = Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60))
+                                let newDuration = TimeInterval(currentHours * 3600 + newMinutes * 60 + currentSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...59, id: \.self) { minute in
+                                Text("\(minute) min").tag(minute)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                        
+                        // Seconds
+                        Picker("Seconds", selection: Binding(
+                            get: { Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60)) },
+                            set: { newSeconds in
+                                let currentHours = Int((set.duration ?? 0) / 3600)
+                                let currentMinutes = Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60)
+                                let newDuration = TimeInterval(currentHours * 3600 + currentMinutes * 60 + newSeconds)
+                                set.duration = newDuration
+                                onDurationChanged?(newDuration)
+                            }
+                        )) {
+                            ForEach(0...59, id: \.self) { second in
+                                Text("\(second) sec").tag(second)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .frame(height: 180)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+        }
+        .onTapGesture {
+            showTimePicker = false // Hide time picker when rounds input is tapped
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
+    }
+    
+    // MARK: - Native Time Picker
+    
+    private var nativeTimePicker: some View {
+        HStack(spacing: 8) {
+            // Hours picker
+            HStack(spacing: 4) {
+                Picker("Hours", selection: Binding(
+                    get: { Int((set.duration ?? 0) / 3600) },
+                    set: { newHours in
+                        let currentMinutes = Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60)
+                        let currentSeconds = Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60))
+                        set.duration = TimeInterval(newHours * 3600 + currentMinutes * 60 + currentSeconds)
+                    }
+                )) {
+                    ForEach(0...23, id: \.self) { hour in
+                        Text("\(hour)").tag(hour)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 60, height: 120)
+                .clipped()
+                
+                Text("hr")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+            
+            // Minutes picker
+            HStack(spacing: 4) {
+                Picker("Minutes", selection: Binding(
+                    get: { Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60) },
+                    set: { newMinutes in
+                        let currentHours = Int((set.duration ?? 0) / 3600)
+                        let currentSeconds = Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60))
+                        set.duration = TimeInterval(currentHours * 3600 + newMinutes * 60 + currentSeconds)
+                    }
+                )) {
+                    ForEach(0...59, id: \.self) { minute in
+                        Text("\(minute)").tag(minute)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 60, height: 120)
+                .clipped()
+                
+                Text("min")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+            
+            // Seconds picker
+            HStack(spacing: 4) {
+                Picker("Seconds", selection: Binding(
+                    get: { Int((set.duration ?? 0).truncatingRemainder(dividingBy: 60)) },
+                    set: { newSeconds in
+                        let currentHours = Int((set.duration ?? 0) / 3600)
+                        let currentMinutes = Int(((set.duration ?? 0).truncatingRemainder(dividingBy: 3600)) / 60)
+                        set.duration = TimeInterval(currentHours * 3600 + currentMinutes * 60 + newSeconds)
+                    }
+                )) {
+                    ForEach(0...59, id: \.self) { second in
+                        Text("\(second)").tag(second)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 60, height: 120)
+                .clipped()
+                
+                Text("sec")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(.systemBackground))
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(.systemGray4), lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let minutes = Int(seconds) / 60
+        let remainingSeconds = Int(seconds) % 60
+        return String(format: "%d:%02d", minutes, remainingSeconds)
+    }
+    
+    private func parseDuration(_ timeString: String) -> TimeInterval {
+        let components = timeString.split(separator: ":")
+        guard components.count == 2,
+              let minutes = Int(components[0]),
+              let seconds = Int(components[1]) else {
+            return 0
+        }
+        return TimeInterval(minutes * 60 + seconds)
+    }
+    
+    // MARK: - Time Input Formatting
+    
+    private func formatTimeInput(_ seconds: TimeInterval) -> String {
+        let totalSeconds = Int(seconds)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let secs = totalSeconds % 60
+        
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        } else {
+            return String(format: "%d:%02d", minutes, secs)
+        }
+    }
+    
+    private func parseTimeInput(_ timeString: String) -> TimeInterval {
+        // Remove all non-digit characters to get just the numbers
+        let digitsOnly = timeString.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+        
+        // If empty, return 0
+        guard !digitsOnly.isEmpty else { return 0 }
+        
+        // Take only the last 6 digits to prevent overflow, and pad to ensure we have enough digits
+        let trimmedDigits = String(digitsOnly.suffix(6))
+        let digitCount = trimmedDigits.count
+        
+        // Parse based on number of digits - treat as right-aligned entry
+        if digitCount == 1 {
+            // 1 digit: 5 -> 0:05 (5 seconds)
+            let seconds = Int(trimmedDigits) ?? 0
+            return TimeInterval(seconds)
+        } else if digitCount == 2 {
+            // 2 digits: 55 -> 0:55 (55 seconds)
+            let seconds = Int(trimmedDigits) ?? 0
+            return TimeInterval(seconds)
+        } else if digitCount == 3 {
+            // 3 digits: 555 -> 5:55 (5 minutes 55 seconds)
+            let minutes = Int(String(trimmedDigits.prefix(1))) ?? 0
+            let seconds = Int(String(trimmedDigits.suffix(2))) ?? 0
+            return TimeInterval(minutes * 60 + seconds)
+        } else if digitCount == 4 {
+            // 4 digits: 5555 -> 55:55 (55 minutes 55 seconds)
+            let minutes = Int(String(trimmedDigits.prefix(2))) ?? 0
+            let seconds = Int(String(trimmedDigits.suffix(2))) ?? 0
+            return TimeInterval(minutes * 60 + seconds)
+        } else if digitCount == 5 {
+            // 5 digits: 55555 -> 5:55:55 (5 hours 55 minutes 55 seconds)
+            let hours = Int(String(trimmedDigits.prefix(1))) ?? 0
+            let minutes = Int(String(trimmedDigits.dropFirst().prefix(2))) ?? 0
+            let seconds = Int(String(trimmedDigits.suffix(2))) ?? 0
+            return TimeInterval(hours * 3600 + minutes * 60 + seconds)
+        } else {
+            // 6 digits: 555555 -> 55:55:55 (55 hours 55 minutes 55 seconds)
+            let hours = Int(String(trimmedDigits.prefix(2))) ?? 0
+            let minutes = Int(String(trimmedDigits.dropFirst(2).prefix(2))) ?? 0
+            let seconds = Int(String(trimmedDigits.suffix(2))) ?? 0
+            return TimeInterval(hours * 3600 + minutes * 60 + seconds)
+        }
+    }
+}
+
+// MARK: - Legacy TextField Style
+
+struct LegacyTextFieldStyle: TextFieldStyle {
+    let isFocused: Bool
+    let unit: String?
+    
+    init(isFocused: Bool, unit: String? = nil) {
+        self.isFocused = isFocused
+        self.unit = unit
+    }
+    
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        HStack(spacing: 0) {
+            configuration
+                .foregroundColor(isFocused ? .blue : .primary)
+                .font(.system(size: 16, weight: .medium))
+            
+            if isFocused, let unit = unit {
+                Text(unit)
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(Color(.systemBackground))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isFocused ? Color.blue : Color(.systemGray4), lineWidth: isFocused ? 2 : 1)
+        )
+    }
+}
+
+

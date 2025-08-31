@@ -239,27 +239,30 @@ struct TextLogView: View {
             self.isPresented = false
         }
         
-        // Show loading card while processing - use the macro generation states for consistency
+        // MODERN: Use new state system instead of timers (eliminates race conditions)
+        print("🆕 Starting MODERN text analysis with state system - OPTION 1")
+        
+        // OPTION 1: Show loader at 0% FIRST, then progress through all states
+        // Step 1: Make loader visible immediately at 0%
         foodManager.isGeneratingMacros = true
         foodManager.isLoading = true
-        foodManager.macroGenerationStage = 0
         foodManager.macroLoadingMessage = "Analyzing description..."
         foodManager.macroLoadingTitle = "Generating with AI"
+        foodManager.updateFoodScanningState(.initializing)  // Start at 0% with loader visible
         
-        // Generic loading messages that work for both food and activities
-        let genericMessages = [
-            "Analyzing description...",
-            "Determining content type...",
-            "Processing information...",
-            "Creating log entry..."
-        ]
+        // Step 2: Progress to preparing (0% → 10%)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            foodManager.updateFoodScanningState(.preparing(image: UIImage()))
+        }
         
-        // Create a timer to cycle through loading messages for better UX
-        let loadingTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { timer in
-            DispatchQueue.main.async {
-                foodManager.macroGenerationStage = (foodManager.macroGenerationStage + 1) % 4
-                foodManager.macroLoadingMessage = genericMessages[foodManager.macroGenerationStage]
-            }
+        // Step 3: Progress to uploading (10% → 30%)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            foodManager.updateFoodScanningState(.uploading(progress: 0.5))
+        }
+        
+        // Step 4: Progress to analyzing (30% → 60%)  
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+            foodManager.updateFoodScanningState(.analyzing)
         }
         
         // Use the new unified endpoint to analyze meal or activity
@@ -271,16 +274,22 @@ struct TextLogView: View {
             case .success(let responseData):
                 print("✅ Successfully analyzed meal or activity")
                 
+                // Step 4: Move to processing state (80% progress)
+                DispatchQueue.main.async {
+                    self.foodManager.updateFoodScanningState(.processing)
+                }
+                
                 // Check what type of entry this is
                 if let entryType = responseData["entry_type"] as? String {
                     
-                    // Update loading message and title based on detected type
+                    // MODERN: Update state based on detected type
                     DispatchQueue.main.async {
-                        loadingTimer.invalidate() // Stop generic cycling
                         if entryType == "food" {
+                            // Already in processing state
                             self.foodManager.macroLoadingTitle = "Generating Macros with AI"
                             self.foodManager.macroLoadingMessage = "Calculating nutritional data..."
                         } else if entryType == "activity" {
+                            // Keep analyzing state for activities (or create activity state later)
                             self.foodManager.macroLoadingTitle = "Logging Activity with AI"
                             self.foodManager.macroLoadingMessage = "Calculating calories burned..."
                         }
@@ -296,21 +305,16 @@ struct TextLogView: View {
                     }
                 }
                 
-                // Stop loading timer and hide loading card after success
-                loadingTimer.invalidate()
-                DispatchQueue.main.async {
-                    self.foodManager.isGeneratingMacros = false
-                    self.foodManager.isLoading = false
-                    self.foodManager.macroLoadingMessage = ""
-                    self.foodManager.macroLoadingTitle = "Generating Macros with AI" // Reset to default
-                }
+                // REMOVED: Don't reset immediately - let handleFoodResponse show 100% completion first
                 
             case .failure(let error):
                 print("❌ Failed to analyze meal or activity: \(error)")
                 
-                // Stop loading timer and hide loading card after failure
-                loadingTimer.invalidate()
+                // MODERN: Handle failure with proper error state
                 DispatchQueue.main.async {
+                    self.foodManager.handleScanFailure(.networkError(error.localizedDescription))
+                    
+                    // Legacy cleanup during migration
                     self.foodManager.isGeneratingMacros = false
                     self.foodManager.isLoading = false
                     self.foodManager.macroLoadingMessage = ""
@@ -321,14 +325,18 @@ struct TextLogView: View {
     }
     
     private func handleFoodResponse(_ responseData: [String: Any]) {
-        // Convert response back to LoggedFood format for compatibility
-        guard let foodLogId = responseData["foodLogId"] as? Int,
+        // FIXED: Use correct case mapping between backend (snake_case) and frontend
+        guard let foodLogId = responseData["food_log_id"] as? Int,  // ✅ FIXED: snake_case
               let foodData = responseData["food"] as? [String: Any],
-              let displayName = foodData["displayName"] as? String,
+              let displayName = foodData["displayName"] as? String,  // Keep camelCase (food object uses camelCase)
               let calories = responseData["calories"] as? Int,
               let message = responseData["message"] as? String,
-              let mealType = responseData["meal_type"] as? String else {
+              let mealType = responseData["meal_type"] as? String else {  // ✅ FIXED: snake_case
             print("❌ Failed to parse food response data")
+            print("❌ DEBUG: Available keys at top level: \(responseData.keys)")
+            if let foodData = responseData["food"] as? [String: Any] {
+                print("❌ DEBUG: Available keys in food object: \(foodData.keys)")
+            }
             return
         }
         
@@ -441,6 +449,20 @@ struct TextLogView: View {
             // Track meal timing for smart reminders
             MealReminderService.shared.mealWasLogged(mealType: mealType)
             
+            // MODERN: Update state to completed
+            self.foodManager.updateFoodScanningState(.completed(result: combinedLog))
+            
+            // Reset after brief delay to show 100% completion
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.foodManager.resetFoodScanningState()
+                
+                // Legacy cleanup after showing completion
+                self.foodManager.isGeneratingMacros = false
+                self.foodManager.isLoading = false
+                self.foodManager.macroLoadingMessage = ""
+                self.foodManager.macroLoadingTitle = "Generating Macros with AI"
+            }
+            
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 self.foodManager.showLogSuccess = false
             }
@@ -492,6 +514,20 @@ struct TextLogView: View {
             // Show success feedback for activity
             self.foodManager.lastLoggedItem = (name: activityName, calories: Double(caloriesBurned))
             self.foodManager.showLogSuccess = true
+            
+            // MODERN: Update state to completed for activities too
+            self.foodManager.updateFoodScanningState(.completed(result: combinedLog))
+            
+            // Reset after brief delay to show 100% completion
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.foodManager.resetFoodScanningState()
+                
+                // Legacy cleanup after showing completion
+                self.foodManager.isGeneratingMacros = false
+                self.foodManager.isLoading = false
+                self.foodManager.macroLoadingMessage = ""
+                self.foodManager.macroLoadingTitle = "Generating Macros with AI"
+            }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 self.foodManager.showLogSuccess = false

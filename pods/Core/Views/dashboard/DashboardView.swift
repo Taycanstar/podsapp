@@ -146,6 +146,8 @@ private var remainingCal: Double { vm.remainingCalories }
     // ────────────────────────────────────────────────────────────────────────
 
     var body: some View {
+        let _ = print("🔍 DEBUG Dashboard BODY rendered at \(Date()) - foodScanningState: \(foodMgr.foodScanningState)")
+        
         NavigationView {
             ZStack {
                 Color("iosbg2").ignoresSafeArea()
@@ -160,22 +162,22 @@ private var remainingCal: Double { vm.remainingCalories }
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        if foodMgr.isGeneratingMacros {
-                            MacroGenerationCard()
+                        // DEBUG: Check which loading states are active
+                        let _ = print("🔍 DEBUG Dashboard - foodScanningState: \(foodMgr.foodScanningState), isActive: \(foodMgr.foodScanningState.isActive)")
+                        let _ = print("🔍 DEBUG Dashboard - isGeneratingMacros: \(foodMgr.isGeneratingMacros), isLoading: \(foodMgr.isLoading)")
+                        let _ = print("🔍 DEBUG Dashboard - FoodManager instance: \(ObjectIdentifier(foodMgr))")
+                        
+                        // UNIFIED: Single modern loader with dynamic progress (legacy states now synchronized)
+                        if foodMgr.foodScanningState.isActive {
+                            let _ = print("🔍 DEBUG Dashboard - Using MODERN STATE with progress: \(foodMgr.foodScanningState.progress)")
+                            ModernFoodLoadingCard(state: foodMgr.foodScanningState)
                                 .padding(.horizontal)
-                                .transition(.opacity)
+                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
                                 .listRowInsets(EdgeInsets())
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
-                        }
-
-                        if foodMgr.isAnalyzingImage || foodMgr.isScanningBarcode || foodMgr.isScanningFood || foodMgr.isGeneratingFood {
-                            FoodGenerationCard()
-                                .padding(.horizontal)
-                                .transition(.opacity)
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
+                        } else {
+                            let _ = print("🔍 DEBUG Dashboard - Modern state NOT active, no loader shown")
                         }
                     }
                     
@@ -452,6 +454,9 @@ private var remainingCal: Double { vm.remainingCalories }
                 
                 // Update health data for the selected date
                 healthViewModel.reloadHealthData(for: newDate)
+            }
+            .onChange(of: foodMgr.foodScanningState) { oldState, newState in
+                print("🔍 DEBUG Dashboard detected foodScanningState change: \(oldState) (\(oldState.progress)) → \(newState) (\(newState.progress))")
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("WaterLoggedNotification"))) { _ in
                 print("💧 DashboardView received WaterLoggedNotification - refreshing logs for \(vm.selectedDate)")
