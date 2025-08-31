@@ -41,6 +41,19 @@ struct ModernFoodLoadingCard: View {
                     .foregroundColor(.primary)
                 
                 Spacer()
+                
+                // Show thumbnail for image analysis
+                if let thumbnailImage = extractThumbnailImage() {
+                    Image(uiImage: thumbnailImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 30, height: 30)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.black.opacity(0.35))
+                        )
+                }
             }
             
             // Animated progress bar with smooth transitions
@@ -136,6 +149,15 @@ struct ModernFoodLoadingCard: View {
     
     private func stopShimmerAnimation() {
         shimmerOffset = -200 // Reset position
+    }
+    
+    /// Extract thumbnail image from current scanning state
+    private func extractThumbnailImage() -> UIImage? {
+        // Only show thumbnail during image scanning
+        guard foodManager.isImageScanning else { return nil }
+        
+        // Use persistent image property
+        return foodManager.currentScanningImage
     }
 }
 

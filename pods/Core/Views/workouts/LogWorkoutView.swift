@@ -232,7 +232,7 @@ struct LogWorkoutView: View {
     
     @ViewBuilder
     private var backgroundView: some View {
-        Color("iosbg2").edgesIgnoringSafeArea(.all)
+        Color("primarybg").edgesIgnoringSafeArea(.all)
     }
     
     @ViewBuilder
@@ -1173,9 +1173,9 @@ private struct TodayWorkoutView: View {
                     .background(
                         LinearGradient(
                             gradient: Gradient(colors: [
-                                Color("iosbg2").opacity(0),
-                                Color("iosbg2").opacity(0.95),
-                                Color("iosbg2")
+                                Color("primarybg").opacity(0),
+                                Color("primarybg").opacity(0.95),
+                                Color("primarybg")
                             ]),
                             startPoint: .top,
                             endPoint: .bottom
@@ -1901,7 +1901,7 @@ private struct RoutinesWorkoutView: View {
             Spacer()
         }
         .padding(.bottom, 16)
-        .background(Color("iosbg2"))
+        .background(Color("primarybg"))
     }
 }
 
@@ -2288,7 +2288,7 @@ private struct ExerciseWorkoutCard: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color("tiktoknp"))
+            .background(Color("containerbg"))
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())

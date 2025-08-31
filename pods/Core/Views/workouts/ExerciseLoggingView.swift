@@ -55,9 +55,8 @@ struct ExerciseLoggingView: View {
     @State private var flexibleSets: [FlexibleSetData] = []
     private let useFlexibleTracking = true // Always use enhanced tracking system
     
-    // SIMPLIFIED: Single source of truth for timer duration - eliminates race conditions  
-    @State private var exerciseDuration: TimeInterval = 60 // Default 1 minute
     @State private var showTimerSheet = false
+    @State private var timerDuration: TimeInterval = 60 // Duration for the current timer session
     // Removed complex focus tracking - not needed for basic duration functionality
     
     
@@ -183,7 +182,7 @@ struct ExerciseLoggingView: View {
         .sheet(isPresented: $showTimerSheet) {
             DurationExerciseTimerSheet(
                 exerciseName: currentExercise.exercise.name,
-                duration: exerciseDuration, // Direct access to single source of truth
+                duration: timerDuration, // Use set-specific timer duration
                 onTimerComplete: {
                     // Simple set completion
                     onSetLogged?(1, nil)
@@ -455,7 +454,7 @@ struct ExerciseLoggingView: View {
             
             // SIMPLIFIED: For duration-based exercises, use existing perfect style with direct binding
             if isDurationBasedExercise {
-                // Keep the existing perfect duration input style, just bind directly to exerciseDuration
+                // Keep the existing perfect duration input style with set-specific durations
                 DynamicSetsInputView(
                     sets: $flexibleSets,
                     exercise: currentExercise.exercise,
@@ -470,9 +469,8 @@ struct ExerciseLoggingView: View {
                         // Handle set removal if needed  
                     },
                     onDurationChanged: { duration in
-                        // SIMPLIFIED: Update single source of truth directly
-                        exerciseDuration = duration
-                        print("🔧 DEBUG: Duration updated to: \(duration)")
+                        // Set-specific duration update - no global variable
+                        print("🔧 DEBUG: Duration updated to: \(duration) for current set")
                         saveDurationToPersistence(duration)
                         saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
                     }
@@ -496,8 +494,8 @@ struct ExerciseLoggingView: View {
                         // Handle set removal if needed  
                     },
                     onDurationChanged: { duration in
-                        print("🔧 DEBUG: Duration changed to: \(duration)")
-                        exerciseDuration = duration // FIX: Update timer duration!
+                        // Set-specific duration update - no global variable
+                        print("🔧 DEBUG: Duration changed to: \(duration) for current set")
                         saveDurationToPersistence(duration)
                         saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
                     }
@@ -730,13 +728,18 @@ struct ExerciseLoggingView: View {
     
     // MARK: - Timer Functions
     
-    // SIMPLIFIED: Direct timer start - exerciseDuration is already updated by onDurationChanged
+    // SIMPLIFIED: Direct timer start using set-specific duration
     private func startTimer() {
-        guard exerciseDuration > 0 else { 
-            print("🔧 ERROR: Cannot start timer with duration: \(exerciseDuration)")
+        // Get duration from the first set that has a duration (set-specific)
+        let setDuration = flexibleSets.first(where: { $0.duration != nil })?.duration ?? defaultDurationForExerciseType()
+        
+        guard setDuration > 0 else { 
+            print("🔧 ERROR: Cannot start timer with duration: \(setDuration)")
             return 
         }
-        print("🔧 DEBUG: Starting timer with duration: \(exerciseDuration)")
+        
+        timerDuration = setDuration
+        print("🔧 DEBUG: Starting timer with set-specific duration: \(setDuration)")
         showTimerSheet = true
     }
     
@@ -758,9 +761,10 @@ struct ExerciseLoggingView: View {
         if let index = flexibleSets.firstIndex(where: { !$0.isCompleted }) {
             flexibleSets[index].isCompleted = true
             
-            // Save the timer duration to this set
-            flexibleSets[index].duration = exerciseDuration
-            flexibleSets[index].durationString = formatDuration(exerciseDuration)
+            // Save the timer duration to this set - use the duration from the set itself
+            if let setDuration = flexibleSets[index].duration {
+                flexibleSets[index].durationString = formatDuration(setDuration)
+            }
             
             // Update parent exercise if callback exists
             updateParentExerciseWithFlexibleSets()
@@ -1052,11 +1056,11 @@ struct ExerciseLoggingView: View {
                 print("🔧 DURATION: Restoring \(savedFlexibleSets.count) flexible sets from TodayWorkoutExercise")
                 flexibleSets = savedFlexibleSets
                 
-                // Update exerciseDuration from first duration-based set
+                // Update timerDuration from first duration-based set
                 if let durationSet = savedFlexibleSets.first(where: { $0.duration != nil }),
                    let duration = durationSet.duration {
-                    exerciseDuration = duration
-                    print("🔧 DURATION: Restored exerciseDuration to \(duration)s from saved flexible sets")
+                    timerDuration = duration
+                    print("🔧 DURATION: Restored timerDuration to \(duration)s from saved flexible sets")
                 }
                 return
             }

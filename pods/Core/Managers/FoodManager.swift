@@ -187,6 +187,8 @@ class FoodManager: ObservableObject {
     // MARK: - New Modern State System (replaces 15+ competing @Published properties)
     @Published var foodScanningState: FoodScanningState = .inactive
     @Published var animatedProgress: Double = 0.0  // Global animated progress
+    @Published var currentScanningImage: UIImage? = nil  // Persistent image during scanning
+    @Published var isImageScanning: Bool = false  // Flag to determine scanning type
     
     // MARK: - Legacy Properties (TO BE REMOVED - cause race conditions)
     // These properties cause competing DispatchQueue.main.async updates and timer race conditions
@@ -336,6 +338,10 @@ class FoodManager: ObservableObject {
     func resetFoodScanningState() {
         updateFoodScanningState(.inactive)
         
+        // Clean up new state system
+        isImageScanning = false
+        currentScanningImage = nil
+        
         // Clean up any legacy state (temporary during migration)
         isScanningFood = false
         isAnalyzingFood = false
@@ -368,6 +374,10 @@ class FoodManager: ObservableObject {
     ) async throws -> CombinedLog {
         print("🆕 Starting MODERN food image analysis with proper session flow")
         
+        // Set image scanning flag and store image
+        isImageScanning = true
+        currentScanningImage = image
+        
         // CHECKPOINT 0: 0% - Start session with loader visible
         updateFoodScanningState(.initializing)
         try await Task.sleep(nanoseconds: 300_000_000) // Show 0% briefly
@@ -378,7 +388,11 @@ class FoodManager: ObservableObject {
         
         // CHECKPOINT 2: 30% - Starting network upload
         updateFoodScanningState(.uploading(progress: 0.0))
-        try await Task.sleep(nanoseconds: 100_000_000) // Brief delay for UX
+        try await Task.sleep(nanoseconds: 200_000_000) // Brief delay for UX
+        
+        // CHECKPOINT 2.5: 35% - Upload progress
+        updateFoodScanningState(.uploading(progress: 0.5))
+        try await Task.sleep(nanoseconds: 100_000_000)
         
         // Make network call with proper error handling
         return try await withCheckedThrowingContinuation { continuation in
@@ -406,11 +420,13 @@ class FoodManager: ObservableObject {
                                 mealType: mealType
                             )
                             
-                            // CHECKPOINT 4: 90% - Analysis complete, processing result
+                            // CHECKPOINT 4: 80% - Analysis complete, processing result
                             self.updateFoodScanningState(.processing)
                             
-                            // Brief processing delay for UX
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            // Brief processing delay for UX with intermediate progress
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                // Show 90% during processing
+                                // Note: .processing returns 0.8 (80%), but we can't easily show 90% without new state
                                 // CHECKPOINT 5: 100% - Everything complete
                                 self.updateFoodScanningState(.completed(result: combinedLog))
                                 continuation.resume(returning: combinedLog)
@@ -2218,9 +2234,17 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
     // CRITICAL FIX: Start with initializing state for proper 0% progress visibility
     updateFoodScanningState(.initializing)
     
-    // Brief delay to show 0% before progressing
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-        self.updateFoodScanningState(.analyzing)
+    // Add proper state progression to match image analysis
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        self.updateFoodScanningState(.uploading(progress: 0.0)) // 10%
+    }
+    
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        self.updateFoodScanningState(.uploading(progress: 0.8)) // 42%
+    }
+    
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+        self.updateFoodScanningState(.analyzing) // 60%
     }
     
     // Create a timer to cycle through analysis stages for UI feedback
@@ -3792,9 +3816,17 @@ func analyzeNutritionLabel(
         // CRITICAL FIX: Start with initializing state for proper 0% progress visibility
         updateFoodScanningState(.initializing)
         
-        // Brief delay to show 0% before progressing
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.updateFoodScanningState(.analyzing)
+        // Add proper state progression to match image analysis
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            self.updateFoodScanningState(.uploading(progress: 0.0)) // 10%
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.updateFoodScanningState(.uploading(progress: 0.8)) // 42%
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            self.updateFoodScanningState(.analyzing) // 60%
         }
         
         // Create a timer to cycle through analysis stages for UI feedback
@@ -3888,9 +3920,17 @@ func analyzeNutritionLabel(
             // CRITICAL FIX: Start with initializing state for proper 0% progress visibility
             self.updateFoodScanningState(.initializing)
             
-            // Brief delay to show 0% before progressing
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.updateFoodScanningState(.analyzing)
+            // Add proper state progression to match image analysis
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self.updateFoodScanningState(.uploading(progress: 0.0)) // 10%
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.updateFoodScanningState(.uploading(progress: 0.8)) // 42%
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                self.updateFoodScanningState(.analyzing) // 60%
             }
         }
         
