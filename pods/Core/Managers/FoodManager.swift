@@ -67,11 +67,7 @@ enum FoodScanningState: Equatable {
     var displayMessage: String {
         switch self {
         case .inactive: return ""
-        case .initializing: return "Starting analysis..."
-        case .preparing: return "Preparing image..."
-        case .uploading: return "Uploading to AI..."
-        case .analyzing: return "Analyzing nutrition..."
-        case .processing: return "Processing results..."
+        case .initializing, .preparing, .uploading, .analyzing, .processing: return "Finishing up..."
         case .completed: return "Complete!"
         case .failed(let error): return error.localizedDescription
         }
