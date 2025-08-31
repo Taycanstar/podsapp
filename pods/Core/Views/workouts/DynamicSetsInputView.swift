@@ -16,6 +16,7 @@ struct DynamicSetsInputView: View {
     let onAddSet: (() -> Void)?
     let onRemoveSet: ((Int) -> Void)?
     let onDurationChanged: ((TimeInterval) -> Void)?
+    let onSetFocused: ((Int?) -> Void)? // Callback when a set gains/loses focus
     
     @State private var showingAddSetOptions = false
     @FocusState private var focusedSetIndex: Int?
@@ -27,7 +28,8 @@ struct DynamicSetsInputView: View {
         onSetCompleted: ((Int) -> Void)? = nil,
         onAddSet: (() -> Void)? = nil,
         onRemoveSet: ((Int) -> Void)? = nil,
-        onDurationChanged: ((TimeInterval) -> Void)? = nil
+        onDurationChanged: ((TimeInterval) -> Void)? = nil,
+        onSetFocused: ((Int?) -> Void)? = nil
     ) {
         self._sets = sets
         self.exercise = exercise
@@ -36,6 +38,7 @@ struct DynamicSetsInputView: View {
         self.onAddSet = onAddSet
         self.onRemoveSet = onRemoveSet
         self.onDurationChanged = onDurationChanged
+        self.onSetFocused = onSetFocused
     }
     
     var body: some View {
@@ -47,7 +50,15 @@ struct DynamicSetsInputView: View {
                         set: binding(for: index),
                         setNumber: index + 1,
                         exercise: exercise,
-                        onDurationChanged: onDurationChanged
+                        onDurationChanged: onDurationChanged,
+                        isActive: index == focusedSetIndex,
+                        onFocusChanged: { focused in
+                            if focused {
+                                focusedSetIndex = index
+                            } else if focusedSetIndex == index {
+                                focusedSetIndex = nil
+                            }
+                        }
                     )
                     .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
                     .listRowSeparator(.hidden)
@@ -76,9 +87,16 @@ struct DynamicSetsInputView: View {
         .onAppear {
             initializeSetsIfNeeded()
         }
+        .onChange(of: focusedSetIndex) { _, newValue in
+            handleFocusChange(newValue)
+        }
     }
     
     // MARK: - Helper Views and Methods
+    
+    private func handleFocusChange(_ newValue: Int?) {
+        onSetFocused?(newValue)
+    }
     
     @ViewBuilder
     private var addSetButton: some View {

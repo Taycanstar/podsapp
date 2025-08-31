@@ -17,6 +17,8 @@ struct DynamicSetRowView: View {
     let setNumber: Int
     let exercise: ExerciseData
     let onDurationChanged: ((TimeInterval) -> Void)?
+    let isActive: Bool // Whether this set is currently active
+    let onFocusChanged: ((Bool) -> Void)? // Callback when this row gains/loses focus
     @FocusState private var focusedField: FocusedField?
     @State private var showTimePicker: Bool = false
     
@@ -30,6 +32,10 @@ struct DynamicSetRowView: View {
             .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden)
             .padding(.vertical, 6)
+            .onChange(of: focusedField) { oldValue, newValue in
+                // When any field in this row gains focus, make this row the active set
+                onFocusChanged?(newValue != nil)
+            }
     }
     
     private var setNumberIndicator: some View {
@@ -40,7 +46,18 @@ struct DynamicSetRowView: View {
                 .frame(width: 44, height: 44)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(set.isCompleted ? Color.accentColor : Color(.systemGray4), lineWidth: set.isCompleted ? 0 : 1)
+                        .stroke(
+                            set.isCompleted ? Color.accentColor : 
+                            isActive ? Color.clear : Color(.systemGray4), 
+                            lineWidth: set.isCompleted ? 0 : 1
+                        )
+                )
+                // Modern glow effect for active sets - MORE VISIBLE
+                .shadow(
+                    color: isActive && !set.isCompleted ? Color.accentColor.opacity(0.8) : Color.clear,
+                    radius: isActive && !set.isCompleted ? 12 : 0,
+                    x: 0,
+                    y: 0
                 )
             
             // Content (number or checkmark)
@@ -85,7 +102,7 @@ struct DynamicSetRowView: View {
                 set: { set.reps = $0 }
             ))
             .focused($focusedField, equals: .firstInput)
-            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "reps"))
+            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
             .keyboardType(.numberPad)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
@@ -114,7 +131,7 @@ struct DynamicSetRowView: View {
                     set: { set.weight = $0 }
                 ))
                 .focused($focusedField, equals: .secondInput)
-                .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "lbs"))
+                .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "lbs", isActive: isActive))
                 .keyboardType(.decimalPad)
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
@@ -149,7 +166,7 @@ struct DynamicSetRowView: View {
                 set: { set.reps = $0 }
             ))
             .focused($focusedField, equals: .firstInput)
-            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "reps"))
+            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
             .keyboardType(.numberPad)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
@@ -273,7 +290,7 @@ struct DynamicSetRowView: View {
                             }
                         ))
                         .focused($focusedField, equals: .secondInput)
-                        .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "mi"))
+                        .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "mi", isActive: isActive))
                         .keyboardType(.numberPad)
                         .toolbar {
                             ToolbarItemGroup(placement: .keyboard) {
@@ -492,7 +509,7 @@ struct DynamicSetRowView: View {
                 }
             ))
             .focused($focusedField, equals: .secondInput)
-            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "intensity"))
+            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "intensity", isActive: isActive))
             .keyboardType(.numberPad)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
@@ -688,7 +705,7 @@ struct DynamicSetRowView: View {
                 }
             ))
             .focused($focusedField, equals: .firstInput)
-            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "rounds"))
+            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "rounds", isActive: isActive))
             .keyboardType(.numberPad)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
@@ -995,10 +1012,12 @@ struct DynamicSetRowView: View {
 struct LegacyTextFieldStyle: TextFieldStyle {
     let isFocused: Bool
     let unit: String?
+    let isActive: Bool // Whether the parent set is active
     
-    init(isFocused: Bool, unit: String? = nil) {
+    init(isFocused: Bool, unit: String? = nil, isActive: Bool = false) {
         self.isFocused = isFocused
         self.unit = unit
+        self.isActive = isActive
     }
     
     func _body(configuration: TextField<Self._Label>) -> some View {
@@ -1018,8 +1037,21 @@ struct LegacyTextFieldStyle: TextFieldStyle {
         .background(Color(.systemBackground))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isFocused ? Color.blue : Color(.systemGray4), lineWidth: isFocused ? 2 : 1)
+                .stroke(
+                    isFocused ? Color.blue : 
+                    isActive ? Color.clear : Color(.systemGray4), 
+                    lineWidth: isFocused ? 2 : 1
+                )
         )
+        // Modern glow effect for active inputs - MORE VISIBLE
+        .shadow(
+            color: isActive && !isFocused ? Color.accentColor.opacity(0.8) : Color.clear,
+            radius: isActive && !isFocused ? 10 : 0,
+            x: 0,
+            y: 0
+        )
+        // Add padding to prevent glow cutoff
+        .padding(.horizontal, isActive ? 6 : 0)
     }
 }
 

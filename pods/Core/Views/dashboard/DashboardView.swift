@@ -150,7 +150,7 @@ private var remainingCal: Double { vm.remainingCalories }
         
         NavigationView {
             ZStack {
-                Color("iosbg2").ignoresSafeArea()
+                Color("primarybg").ignoresSafeArea()
 
                 // Single List containing everything for smooth scrolling
                 List {
@@ -937,7 +937,7 @@ private extension DashboardView {
         .frame(height: 85) // Reduced height
         .padding(.vertical, 12) // Slightly reduced vertical padding
         .padding(.horizontal)
-        .background(Color("iosnp"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle()) // Remove button styling
@@ -953,7 +953,7 @@ private extension DashboardView {
                     right: ("Fat",       vm.totalFat,      "drop.fill",     .pink))
         }
         .padding()
-        .background(Color("iosnp"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle()) // Remove button styling
@@ -989,7 +989,7 @@ private extension DashboardView {
         .frame(height: 85) // Reduced height
         .padding(.vertical, 12) // Slightly reduced vertical padding
         .padding(.horizontal)
-        .background(Color("iosnp"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
     }
 
@@ -1059,7 +1059,7 @@ private extension DashboardView {
             }
         }
         .padding()
-        .background(Color("iosnp"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
     }
 
@@ -1125,7 +1125,7 @@ private extension DashboardView {
         // .frame(height: 100)
         .padding(.vertical, 12) // Match macroCirclesCard padding
         .padding(.horizontal)
-        .background(Color("iosnp"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
     }
 
@@ -1342,7 +1342,7 @@ private extension DashboardView {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color("iosnp"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
     }
 
@@ -1397,7 +1397,7 @@ private extension DashboardView {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color("iosnp"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
     }
 }
@@ -1624,7 +1624,7 @@ struct DatePickerSheet: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
-                    .background(Color(.systemBackground))
+                    .background(Color("containerbg"))
                 }
             }
             .navigationTitle("Choose Date")
@@ -1785,7 +1785,7 @@ struct LogRow: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill( Color("iosnp"))
+                .fill(Color("containerbg"))
                 .shadow(color: Color(.black).opacity(0.04), radius: 4, x: 0, y: 2)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
@@ -1898,7 +1898,7 @@ struct MacroGenerationCard: View {
   
         }
         .padding()
-        .background(Color("iosnp"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
     }
 }
@@ -1968,7 +1968,7 @@ struct FoodGenerationCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color("containerbg"))
         .cornerRadius(12)
         .onAppear {
             startAnimation()
@@ -2078,7 +2078,7 @@ private extension DashboardView {
             }
         }
         .padding()
-        .background(Color("iosnp"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
     }
 

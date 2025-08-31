@@ -2397,53 +2397,7 @@ private struct ProgressBarWorkout: View {
     }
 }
 
-// MARK: - Data Models
-
-struct TodayWorkout: Codable, Hashable, Identifiable {
-    let id: UUID
-    let date: Date
-    let title: String
-    let exercises: [TodayWorkoutExercise]
-    let estimatedDuration: Int
-    let fitnessGoal: FitnessGoal
-    let difficulty: Int
-    let warmUpExercises: [TodayWorkoutExercise]?
-    let coolDownExercises: [TodayWorkoutExercise]?
-    
-    // Convenience initializer for backward compatibility
-    init(id: UUID = UUID(), date: Date = Date(), title: String, exercises: [TodayWorkoutExercise], estimatedDuration: Int, fitnessGoal: FitnessGoal, difficulty: Int, warmUpExercises: [TodayWorkoutExercise]? = nil, coolDownExercises: [TodayWorkoutExercise]? = nil) {
-        self.id = id
-        self.date = date
-        self.title = title
-        self.exercises = exercises
-        self.estimatedDuration = estimatedDuration
-        self.fitnessGoal = fitnessGoal
-        self.difficulty = difficulty
-        self.warmUpExercises = warmUpExercises
-        self.coolDownExercises = coolDownExercises
-    }
-}
-
-struct TodayWorkoutExercise: Codable, Hashable {
-    let exercise: ExerciseData
-    let sets: Int
-    let reps: Int
-    let weight: Double?
-    let restTime: Int // in seconds
-    let notes: String? // Exercise-specific notes
-    let warmupSets: [WarmupSetData]? // Warm-up sets data for persistence
-    
-    // Convenience initializer for backward compatibility
-    init(exercise: ExerciseData, sets: Int, reps: Int, weight: Double?, restTime: Int, notes: String? = nil, warmupSets: [WarmupSetData]? = nil) {
-        self.exercise = exercise
-        self.sets = sets
-        self.reps = reps
-        self.weight = weight
-        self.restTime = restTime
-        self.notes = notes
-        self.warmupSets = warmupSets
-    }
-}
+// TodayWorkoutExercise is now defined in WorkoutModels.swift - removed duplicate definition
 
 // MARK: - Workout Parameters
 

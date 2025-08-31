@@ -131,3 +131,34 @@ LazyVStack(spacing: 8) {
 - **Experience Mapping**: Beginner(1-2), Intermediate(1-3), Advanced(1-5) 
 - **Integration**: Leverage existing UserProfileService.experienceLevel
 - **Performance**: Use computed properties and caching for filtering
+
+---
+
+## NEW ISSUE: SwiftUI Shimmer Animation Not Continuous
+
+### Problem Statement
+- ModernFoodLoadingCard.swift has broken shimmer animation
+- Shimmer only makes one pass instead of being continuous
+- Working reference exists in ModernWorkoutLoadingView (LogWorkoutView.swift)
+
+### Root Cause Analysis
+- Animation timing and lifecycle issues
+- Missing proper animation start triggers
+- Shimmer offset calculation problems
+
+### Technical Investigation
+1. **Current Implementation Issues**:
+   - `startShimmerAnimation()` called only on `.onAppear`
+   - No animation state tracking
+   - Potential animation cancellation on view updates
+
+2. **Working Reference Pattern**:
+   - ModernWorkoutLoadingView uses proper animation lifecycle
+   - Continuous animation with `.repeatForever(autoreverses: false)`
+   - Better shimmer gradient calculation
+
+### Solution Strategy
+- Fix animation lifecycle management
+- Improve shimmer gradient calculation
+- Add proper animation state tracking
+- Ensure continuous animation through view updates

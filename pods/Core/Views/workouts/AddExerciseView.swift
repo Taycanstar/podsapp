@@ -596,30 +596,7 @@ struct ExerciseRow: View {
     }
 }
 
-// MARK: - Exercise Data Model
-struct ExerciseData: Identifiable, Hashable, Codable {
-    let id: Int
-    let name: String
-    let exerciseType: String
-    let bodyPart: String
-    let equipment: String
-    let gender: String
-    let target: String
-    let synergist: String
-    
-    // Computed properties for compatibility
-    var muscle: String { bodyPart }
-    var category: String { equipment }
-    var instructions: String? { target.isEmpty ? nil : target }
-    
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-    
-    static func == (lhs: ExerciseData, rhs: ExerciseData) -> Bool {
-        lhs.id == rhs.id
-    }
-}
+
 
 // MARK: - Section Index Titles (Letter Wheel)
 struct SectionIndexTitles: View {

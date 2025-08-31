@@ -18,236 +18,6 @@ import AVFoundation
 import UIKit
 import CryptoKit
 
-struct WarmupSetData: Codable, Hashable {
-    let reps: String
-    let weight: String
-}
-
-// MARK: - Enhanced Exercise Tracking Types
-
-enum ExerciseTrackingType: String, Codable, CaseIterable {
-    case repsWeight = "reps_weight"           // Traditional strength: 3×8 @ 150lbs
-    case repsOnly = "reps_only"               // Bodyweight: 3×12 push-ups
-    case timeDistance = "time_distance"       // Cardio: 30min @ 5km
-    case timeOnly = "time_only"               // Intervals: 45s work, 15s rest  
-    case holdTime = "hold_time"               // Stretching: 30s hold × 3
-    case rounds = "rounds"                    // Circuit: 5 rounds × 3min
-    
-    var displayName: String {
-        switch self {
-        case .repsWeight: return "Reps & Weight"
-        case .repsOnly: return "Reps Only"
-        case .timeDistance: return "Time & Distance"
-        case .timeOnly: return "Time Only"
-        case .holdTime: return "Hold Time"
-        case .rounds: return "Rounds"
-        }
-    }
-    
-    /// Description for users to understand each type
-    var description: String {
-        switch self {
-        case .repsWeight:
-            return "Track sets, reps, and weight - perfect for traditional strength training"
-        case .repsOnly:
-            return "Track sets and reps without weight - ideal for bodyweight exercises"
-        case .timeDistance:
-            return "Track duration and distance - great for running, cycling, rowing"
-        case .timeOnly:
-            return "Track time-based activities - perfect for intervals, holds, cardio"
-        case .holdTime:
-            return "Track hold duration - designed for stretching and isometric exercises"
-        case .rounds:
-            return "Track rounds and time - ideal for circuit training and boxing"
-        }
-    }
-}
-
-enum DistanceUnit: String, CaseIterable, Codable {
-    case kilometers = "km"
-    case miles = "mi" 
-    case meters = "m"
-    
-    var symbol: String {
-        return rawValue
-    }
-}
-
-struct FlexibleSetData: Identifiable, Codable, Hashable {
-    let id: UUID
-    var trackingType: ExerciseTrackingType
-    
-    // Traditional strength training fields
-    var reps: String?
-    var weight: String?
-    
-    // Time-based tracking fields
-    var duration: TimeInterval?
-    var durationString: String?
-    
-    // Distance tracking fields
-    var distance: Double?
-    var distanceUnit: DistanceUnit?
-    
-    // Additional tracking metrics
-    var intensity: Int?
-    var rounds: Int?
-    var restTime: Int?
-    
-    // Set completion tracking
-    var isCompleted: Bool
-    var isWarmupSet: Bool
-    var notes: String?
-    
-    init(trackingType: ExerciseTrackingType) {
-        self.id = UUID()
-        self.trackingType = trackingType
-        self.isCompleted = false
-        self.isWarmupSet = false
-        
-        // Initialize appropriate default values based on tracking type
-        switch trackingType {
-        case .repsWeight:
-            self.reps = ""
-            self.weight = ""
-        case .repsOnly:
-            self.reps = ""
-        case .timeDistance:
-            self.duration = nil
-            self.distance = nil
-            self.distanceUnit = .kilometers
-        case .timeOnly:
-            self.duration = nil
-            self.intensity = 5
-        case .holdTime:
-            self.duration = nil
-        case .rounds:
-            self.rounds = nil
-            self.duration = nil
-        }
-    }
-    
-    var displayValue: String {
-        switch trackingType {
-        case .repsWeight:
-            let repsText = reps ?? "0"
-            let weightText = weight ?? "0"
-            return "\(repsText) reps @ \(weightText) lbs"
-        case .repsOnly:
-            let repsText = reps ?? "0"
-            return "\(repsText) reps"
-        case .timeDistance:
-            let timeText = durationString ?? formatDuration(duration ?? 0)
-            let distanceText = distance ?? 0
-            let unitText = distanceUnit?.symbol ?? "km"
-            return "\(timeText) @ \(String(format: "%.1f", distanceText))\(unitText)"
-        case .timeOnly:
-            let timeText = durationString ?? formatDuration(duration ?? 0)
-            let intensityText = intensity != nil ? " @ Zone \(intensity!)" : ""
-            return "\(timeText)\(intensityText)"
-        case .holdTime:
-            let timeText = durationString ?? formatDuration(duration ?? 0)
-            return "Hold \(timeText)"
-        case .rounds:
-            let roundsText = rounds ?? 0
-            let timeText = duration != nil ? " @ \(formatDuration(duration!))" : ""
-            return "\(roundsText) rounds\(timeText)"
-        }
-    }
-    
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        let minutes = Int(seconds) / 60
-        let remainingSeconds = Int(seconds) % 60
-        return String(format: "%d:%02d", minutes, remainingSeconds)
-    }
-}
-
-struct ExerciseClassificationService {
-    static func determineTrackingType(for exercise: ExerciseData) -> ExerciseTrackingType {
-        let name = exercise.name.lowercased()
-        let exerciseType = exercise.exerciseType.lowercased()
-        let equipment = exercise.equipment.lowercased()
-        
-        // Handle aerobic exercises
-        if exerciseType.contains("aerobic") {
-            return determineCardioType(for: exercise)
-        }
-        
-        // Handle stretching exercises
-        if exerciseType.contains("stretching") {
-            return .holdTime
-        }
-        
-        // Handle bodyweight exercises
-        if equipment.contains("body weight") {
-            return determineBodyweightType(for: exercise)
-        }
-        
-        // Handle strength exercises with equipment
-        if exerciseType.contains("strength") {
-            return .repsWeight
-        }
-        
-        // Default fallback based on exercise name patterns
-        return inferFromExerciseName(exercise)
-    }
-    
-    private static func determineCardioType(for exercise: ExerciseData) -> ExerciseTrackingType {
-        let name = exercise.name.lowercased()
-        
-        // Distance-based exercises
-        if name.contains("run") || name.contains("cycle") || name.contains("row") || 
-           name.contains("walk") || name.contains("jog") || name.contains("sprint") {
-            return .timeDistance
-        }
-        
-        // Time-based exercises
-        return .timeOnly
-    }
-    
-    private static func determineBodyweightType(for exercise: ExerciseData) -> ExerciseTrackingType {
-        let name = exercise.name.lowercased()
-        
-        // Hold-based exercises
-        if name.contains("plank") || name.contains("hold") || name.contains("wall sit") {
-            return .holdTime
-        }
-        
-        // Most bodyweight exercises are reps-only
-        return .repsOnly
-    }
-    
-    private static func inferFromExerciseName(_ exercise: ExerciseData) -> ExerciseTrackingType {
-        let name = exercise.name.lowercased()
-        
-        // Time-based patterns
-        if name.contains("plank") || name.contains("hold") {
-            return .holdTime
-        }
-        
-        // Cardio patterns
-        if name.contains("run") || name.contains("bike") || name.contains("elliptical") {
-            return .timeDistance
-        }
-        
-        // Circuit/rounds patterns
-        if name.contains("circuit") || name.contains("hiit") || name.contains("interval") {
-            return .rounds
-        }
-        
-        // Default to reps + weight for strength exercises
-        return .repsWeight
-    }
-}
-
-enum WeightUnit: String, CaseIterable {
-    case kg = "kg"
-    case lbs = "lbs"
-    
-    var displayName: String {
-        return rawValue
-    }
-}
 
 struct ExerciseLoggingView: View {
     let exercise: TodayWorkoutExercise
@@ -285,9 +55,10 @@ struct ExerciseLoggingView: View {
     @State private var flexibleSets: [FlexibleSetData] = []
     private let useFlexibleTracking = true // Always use enhanced tracking system
     
-    // SIMPLIFIED: Single source of truth for timer duration - eliminates race conditions
+    // SIMPLIFIED: Single source of truth for timer duration - eliminates race conditions  
     @State private var exerciseDuration: TimeInterval = 60 // Default 1 minute
     @State private var showTimerSheet = false
+    // Removed complex focus tracking - not needed for basic duration functionality
     
     
     init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil, onWarmupSetsChanged: (([WarmupSetData]) -> Void)? = nil, onExerciseUpdated: ((TodayWorkoutExercise) -> Void)? = nil) {
@@ -702,6 +473,8 @@ struct ExerciseLoggingView: View {
                         // SIMPLIFIED: Update single source of truth directly
                         exerciseDuration = duration
                         print("🔧 DEBUG: Duration updated to: \(duration)")
+                        saveDurationToPersistence(duration)
+                        saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
                     }
                 )
                 .transition(.opacity.combined(with: .scale))
@@ -724,7 +497,9 @@ struct ExerciseLoggingView: View {
                     },
                     onDurationChanged: { duration in
                         print("🔧 DEBUG: Duration changed to: \(duration)")
+                        exerciseDuration = duration // FIX: Update timer duration!
                         saveDurationToPersistence(duration)
+                        saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
                     }
                 )
                 .transition(.opacity.combined(with: .scale))
@@ -955,7 +730,7 @@ struct ExerciseLoggingView: View {
     
     // MARK: - Timer Functions
     
-    // SIMPLIFIED: Direct timer start with single source of truth - no race conditions
+    // SIMPLIFIED: Direct timer start - exerciseDuration is already updated by onDurationChanged
     private func startTimer() {
         guard exerciseDuration > 0 else { 
             print("🔧 ERROR: Cannot start timer with duration: \(exerciseDuration)")
@@ -1271,7 +1046,22 @@ struct ExerciseLoggingView: View {
     /// Initialize flexible sets for enhanced tracking
     private func initializeFlexibleSetsIfNeeded() {
         if flexibleSets.isEmpty {
-            // PRIORITY 1: Convert existing legacy sets to flexible sets
+            
+            // PRIORITY 1: Restore from TodayWorkoutExercise if available ✅
+            if let savedFlexibleSets = currentExercise.flexibleSets, !savedFlexibleSets.isEmpty {
+                print("🔧 DURATION: Restoring \(savedFlexibleSets.count) flexible sets from TodayWorkoutExercise")
+                flexibleSets = savedFlexibleSets
+                
+                // Update exerciseDuration from first duration-based set
+                if let durationSet = savedFlexibleSets.first(where: { $0.duration != nil }),
+                   let duration = durationSet.duration {
+                    exerciseDuration = duration
+                    print("🔧 DURATION: Restored exerciseDuration to \(duration)s from saved flexible sets")
+                }
+                return
+            }
+            
+            // PRIORITY 2: Convert existing legacy sets to flexible sets
             if !sets.isEmpty {
                 flexibleSets = sets.map { legacySet in
                     var flexibleSet = FlexibleSetData(trackingType: trackingType)
@@ -1294,14 +1084,14 @@ struct ExerciseLoggingView: View {
                     return flexibleSet
                 }
             } else {
-                // Create default flexible sets based on tracking type
+                // PRIORITY 3: Create default flexible sets based on tracking type
                 let defaultCount = defaultSetCount(for: trackingType)
                 for _ in 0..<defaultCount {
                     flexibleSets.append(FlexibleSetData(trackingType: trackingType))
                 }
             }
             
-            // PRIORITY 2: Apply persisted durations AFTER flexible sets are created
+            // PRIORITY 4: Apply persisted durations AFTER flexible sets are created
             loadPersistedDurationSettings()
         }
     }
@@ -1376,6 +1166,27 @@ struct ExerciseLoggingView: View {
         }
         
         UserDefaults.standard.synchronize()
+    }
+    
+    /// Save flexible sets to workout model - CRITICAL for duration persistence
+    private func saveFlexibleSetsToExercise() {
+        let updatedExercise = TodayWorkoutExercise(
+            exercise: currentExercise.exercise,
+            sets: currentExercise.sets,
+            reps: currentExercise.reps,
+            weight: currentExercise.weight,
+            restTime: currentExercise.restTime,
+            notes: currentExercise.notes,
+            warmupSets: currentExercise.warmupSets,
+            flexibleSets: flexibleSets.isEmpty ? nil : flexibleSets, // ✅ SAVE DURATION
+            trackingType: trackingType // ✅ SAVE TRACKING TYPE
+        )
+        
+        currentExercise = updatedExercise
+        print("🔧 DURATION: Saved \(flexibleSets.count) flexible sets to workout model")
+        
+        // Update parent workout if needed
+        onExerciseUpdated?(updatedExercise)
     }
     
     /// Check if the tracking type is duration-based

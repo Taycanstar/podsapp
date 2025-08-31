@@ -66,7 +66,7 @@ struct MyProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("iosbg2")
+                Color("primarybg")
                     .ignoresSafeArea()
                 
                 if onboarding.isLoadingProfile && !hasInitiallyLoaded {
@@ -215,7 +215,7 @@ struct MyProfileView: View {
             }
         }
         .padding()
-        .background(Color("iosnp"))
+        .background(Color("containerbg"))
         .cornerRadius(16)
     }
     
@@ -282,7 +282,7 @@ struct MyProfileView: View {
                         .foregroundColor(.primary)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 8)
-                        .background(Color("iosfit"))
+                        .background(Color("containerbg"))
                         .clipShape(Capsule())
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -317,7 +317,7 @@ struct MyProfileView: View {
             }
         }
         .padding(.vertical, 16)
-        .background(Color("iosfit"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
     }
     
@@ -367,7 +367,7 @@ struct MyProfileView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
-            .background(Color("iosfit"))
+            .background(Color("containerbg"))
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
@@ -534,7 +534,7 @@ struct MyProfileView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
-        .background(Color("iosfit"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
         .onAppear {
             // Debug: Print weight data
@@ -597,7 +597,7 @@ struct MyProfileView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
-        .background(Color("iosfit"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
     }
     
@@ -644,7 +644,7 @@ struct MyProfileView: View {
                 )
                 .symbol(.circle)
                 .symbolSize(CGSize(width: 10, height: 10))        // larger background
-                .foregroundStyle(Color("iosfit"))  // same as card background
+                .foregroundStyle(Color("containerbg"))  // same as card background
 
                 // Outlined hollow point
                 PointMark(
@@ -797,7 +797,7 @@ struct MyProfileView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
-        .background(Color("iosfit"))
+        .background(Color("containerbg"))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -1577,7 +1577,7 @@ struct MacroSplitCardView: View {
                                 }
                             }
                             .padding(8)
-                            .background(Color("iosfit"))
+                            .background(Color("containerbg"))
                             .cornerRadius(8)
                             .shadow(radius: 2)
                         }
@@ -1673,7 +1673,7 @@ struct MacroSplitCardView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
-        .background(Color("iosfit"))
+        .background(Color("containerbg"))
         .cornerRadius(16)
     }
 }

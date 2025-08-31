@@ -76,13 +76,32 @@ struct ProfileView: View {
                         
                         Section(header: Text("Preferences")) {
                               
-                              NavigationLink(destination: ColorThemeView().environmentObject(themeManager)) {
-                                  HStack {
-                                      Label("Theme", systemImage: "paintbrush")
-                                          .foregroundColor(iconColor)
-                                      Spacer()
-                                      Text(themeManager.currentTheme.rawValue)
-                                          .foregroundColor(.secondary)
+                              HStack {
+                                  Label("Theme", systemImage: "paintbrush")
+                                      .foregroundColor(iconColor)
+                                  Spacer()
+                                  
+                                  Menu {
+                                      ForEach(ThemeOption.allCases, id: \.self) { theme in
+                                          Button(action: {
+                                              themeManager.setTheme(theme)
+                                          }) {
+                                              HStack {
+                                                  Text(theme.rawValue)
+                                                  if themeManager.currentTheme == theme {
+                                                      Image(systemName: "checkmark")
+                                                  }
+                                              }
+                                          }
+                                      }
+                                  } label: {
+                                      HStack {
+                                          Text(themeManager.currentTheme.rawValue)
+                                              .foregroundColor(.secondary)
+                                          Image(systemName: "chevron.up.chevron.down")
+                                              .font(.caption2)
+                                              .foregroundColor(.secondary)
+                                      }
                                   }
                               }
                               .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
