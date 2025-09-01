@@ -3959,11 +3959,7 @@ func analyzeNutritionLabel(
         showAIGenerationSuccess = false
         macroLoadingMessage = "Transcribing your voice…"  // Initial stage message
         
-        // CRITICAL FIX: Start with initializing state for proper 0% progress visibility (like generateMacrosWithAI)
-        updateFoodScanningState(.initializing)
-        
-        // Move directly to analyzing state without artificial timers to prevent shimmer glitches
-        updateFoodScanningState(.analyzing)
+        // Let existing timer system handle progress - don't interfere with competing state updates
         
         // Create a timer to cycle through analysis stages for UI feedback
         let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
@@ -4040,17 +4036,14 @@ func analyzeNutritionLabel(
                            (loggedFood.food.calories == 0 && loggedFood.food.protein == 0 && 
                             loggedFood.food.carbs == 0 && loggedFood.food.fat == 0) {
                             
+                            // Use proper error handling with auto-reset
+                            self.handleScanFailure(.networkError("Food not identified. Please try again."))
+                            
                             // Manual flag reset like generateMacrosWithAI failure case
                             self.isGeneratingMacros = false
                             self.isLoading = false
                             self.macroGenerationStage = 0
                             self.macroLoadingMessage = ""
-                            
-                            // Reset scanning state to inactive for next scan
-                            self.updateFoodScanningState(.inactive)
-                            
-                            // Set error message for user notification
-                            self.scanningFoodError = "Food not identified. Please try again."
                             print("⚠️ Voice log returned Unknown food with no nutrition data")
                             return
                         }
@@ -4073,15 +4066,15 @@ func analyzeNutritionLabel(
                             servingsConsumed: nil
                         )
                         
-                        // Manual flag reset like generateMacrosWithAI (NOT .completed() call)
+                        // Use proper completion state with auto-reset (like working image analysis)
+                        self.updateFoodScanningState(.completed(result: combinedLog))
+                        
+                        // Manual flag reset like generateMacrosWithAI
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             self.isGeneratingMacros = false
                             self.isLoading = false
                             self.macroGenerationStage = 0
                             self.macroLoadingMessage = ""
-                            
-                            // Reset scanning state to inactive for next scan
-                            self.updateFoodScanningState(.inactive)
                             
                             // Show success toast
                             self.showAIGenerationSuccess = true
@@ -4127,21 +4120,20 @@ func analyzeNutritionLabel(
                         }
                         
                     case .failure(let error):
+                        // Use proper error handling with auto-reset
+                        let scanError: FoodScanError
+                        if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                            scanError = .networkError(message)
+                        } else {
+                            scanError = .networkError("Failed to process voice input: \(error.localizedDescription)")
+                        }
+                        self.handleScanFailure(scanError)
+                        
                         // Manual flag reset like generateMacrosWithAI failure case
                         self.isGeneratingMacros = false
                         self.isLoading = false
                         self.macroGenerationStage = 0
                         self.macroLoadingMessage = ""
-                        
-                        // Reset scanning state to inactive for next scan
-                        self.updateFoodScanningState(.inactive)
-                        
-                        // Set error message for user notification
-                        if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
-                            self.scanningFoodError = message
-                        } else {
-                            self.scanningFoodError = "Failed to process voice input: \(error.localizedDescription)"
-                        }
                         
                         print("❌ Failed to generate macros from voice input: \(error.localizedDescription)")
                     }
@@ -4151,21 +4143,20 @@ func analyzeNutritionLabel(
                 // Stop the timer and reset macro generation state
                 timer.invalidate()
                 
+                // Use proper error handling with auto-reset
+                let scanError: FoodScanError
+                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                    scanError = .networkError(message)
+                } else {
+                    scanError = .networkError("Failed to transcribe voice input: \(error.localizedDescription)")
+                }
+                handleScanFailure(scanError)
+                
                 // Manual flag reset like generateMacrosWithAI failure case
                 isGeneratingMacros = false
                 isLoading = false
                 macroGenerationStage = 0
                 macroLoadingMessage = ""
-                
-                // Reset scanning state to inactive for next scan
-                updateFoodScanningState(.inactive)
-                
-                // Set error message for user notification
-                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
-                    scanningFoodError = message
-                } else {
-                    scanningFoodError = "Failed to transcribe voice input: \(error.localizedDescription)"
-                }
                 
                 print("❌ Voice transcription failed: \(error.localizedDescription)")
             }

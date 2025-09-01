@@ -69,22 +69,22 @@ struct DynamicSetRowView: View {
     private var dynamicInputView: some View {
         switch set.trackingType {
         case .repsWeight:
-            legacyRepsWeightInput
+            repsWeightInput
         case .timeDistance:
-            legacyTimeDistanceInput
+            durationDistanceInput
         // Map other types to the appropriate interfaces
         case .repsOnly:
-            legacyRepsOnlyInput // Use the dedicated reps-only input
+            repsOnlyInput // Use the dedicated reps-only input
         case .timeOnly, .holdTime:
-            legacyTimeOnlyInput // Use the dedicated time-only input
+            durationOnlyInput // Use the dedicated time-only input
         case .rounds:
-            legacyRoundsInput // Use the dedicated rounds input
+            roundsInput // Use the dedicated rounds input
         }
     }
     
-    // MARK: - Legacy-Style Input Views
+    // MARK: - Exercise Input Views
     
-    private var legacyRepsWeightInput: some View {
+    private var repsWeightInput: some View {
         HStack(spacing: 16) {
             // Set indicator for reps-based exercises
             setNumberIndicator
@@ -94,8 +94,8 @@ struct DynamicSetRowView: View {
                 set: { set.reps = $0 }
             ))
             .focused($focusedField, equals: .firstInput)
-            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
-            .keyboardType(.numberPad)
+            .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
+            .keyboardType(.numbersAndPunctuation)
             .submitLabel(.next)
             .onSubmit {
                 focusedField = .secondInput
@@ -108,8 +108,8 @@ struct DynamicSetRowView: View {
                     set: { set.weight = $0 }
                 ))
                 .focused($focusedField, equals: .secondInput)
-                .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "lbs", isActive: isActive))
-                .keyboardType(.decimalPad)
+                .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "lbs", isActive: isActive))
+                .keyboardType(.numbersAndPunctuation)
                 .submitLabel(.done)
                 .onSubmit {
                     focusedField = nil
@@ -118,7 +118,7 @@ struct DynamicSetRowView: View {
         }
     }
     
-    private var legacyRepsOnlyInput: some View {
+    private var repsOnlyInput: some View {
         HStack(spacing: 16) {
             // Set indicator for reps-based exercises
             setNumberIndicator
@@ -128,8 +128,8 @@ struct DynamicSetRowView: View {
                 set: { set.reps = $0 }
             ))
             .focused($focusedField, equals: .firstInput)
-            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
-            .keyboardType(.numberPad)
+            .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
+            .keyboardType(.numbersAndPunctuation)
             .submitLabel(.done)
             .onSubmit {
                 focusedField = nil
@@ -137,7 +137,7 @@ struct DynamicSetRowView: View {
         }
     }
     
-    private var legacyTimeDistanceInput: some View {
+    private var durationDistanceInput: some View {
         VStack(spacing: 12) {
             // Duration and distance input row with set indicator aligned
             VStack(spacing: 8) {
@@ -194,8 +194,8 @@ struct DynamicSetRowView: View {
                             }
                         ))
                         .focused($focusedField, equals: .secondInput)
-                        .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "mi", isActive: isActive))
-                        .keyboardType(.decimalPad)
+                        .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "mi", isActive: isActive))
+                        .keyboardType(.numbersAndPunctuation)
                         .submitLabel(.done)
                         .onSubmit {
                             focusedField = nil
@@ -265,13 +265,10 @@ struct DynamicSetRowView: View {
                 }
             }
         }
-        .onTapGesture {
-            showTimePicker = false // Hide time picker when other inputs are tapped
-        }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
     }
     
-    private var legacyTimeOnlyInput: some View {
+    private var durationOnlyInput: some View {
         VStack(spacing: 12) {
             // Duration input row with set indicator aligned
             VStack(spacing: 8) {
@@ -372,34 +369,11 @@ struct DynamicSetRowView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
-            
-            // Intensity input row (no set indicator)
-            TextField("8", text: Binding(
-                get: { 
-                    if let intensity = set.intensity {
-                        return "\(intensity)"
-                    }
-                    return ""
-                },
-                set: { newValue in
-                    set.intensity = Int(newValue)
-                }
-            ))
-            .focused($focusedField, equals: .secondInput)
-            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "intensity", isActive: isActive))
-            .keyboardType(.numberPad)
-            .submitLabel(.done)
-            .onSubmit {
-                focusedField = nil
-            }
-            .onTapGesture {
-                showTimePicker = false // Hide time picker when other inputs are tapped
-            }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
     }
     
-    private var legacyHoldTimeInput: some View {
+    private var holdTimeInput: some View {
         VStack(spacing: 12) {
             // Duration input row with set indicator aligned
             VStack(spacing: 8) {
@@ -508,20 +482,17 @@ struct DynamicSetRowView: View {
                 set: { set.weight = $0 }
             ))
             .focused($focusedField, equals: .secondInput)
-            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "lbs"))
-            .keyboardType(.decimalPad)
+            .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "lbs"))
+            .keyboardType(.numbersAndPunctuation)
             .submitLabel(.done)
             .onSubmit {
                 focusedField = nil
-            }
-            .onTapGesture {
-                showTimePicker = false // Hide time picker when other inputs are tapped
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
     }
     
-    private var legacyRoundsInput: some View {
+    private var roundsInput: some View {
         VStack(spacing: 12) {
             // Rounds input row
             TextField("5", text: Binding(
@@ -536,8 +507,8 @@ struct DynamicSetRowView: View {
                 }
             ))
             .focused($focusedField, equals: .firstInput)
-            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "rounds", isActive: isActive))
-            .keyboardType(.numberPad)
+            .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "rounds", isActive: isActive))
+            .keyboardType(.numbersAndPunctuation)
             .submitLabel(.done)
             .onSubmit {
                 focusedField = nil
@@ -639,9 +610,6 @@ struct DynamicSetRowView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
-        }
-        .onTapGesture {
-            showTimePicker = false // Hide time picker when rounds input is tapped
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
     }
@@ -807,9 +775,9 @@ struct DynamicSetRowView: View {
     }
 }
 
-// MARK: - Legacy TextField Style
+// MARK: - Custom TextField Style
 
-struct LegacyTextFieldStyle: TextFieldStyle {
+struct CustomTextFieldStyleWorkout: TextFieldStyle {
     let isFocused: Bool
     let unit: String?
     let isActive: Bool // Whether the parent set is active

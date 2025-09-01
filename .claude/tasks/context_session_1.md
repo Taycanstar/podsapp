@@ -641,3 +641,61 @@ After the initial voice logging fix, multiple issues emerged:
 - ✅ No race conditions - single timer system drives progress, single completion call
 
 **The Lesson**: When user asks for "simple fix" - make the minimal change needed. Don't redesign working systems.
+
+---
+
+## FINAL FIX: Root Cause Resolution - SwiftUI State Management
+
+### Problem Analysis (SwiftUI Architect Consultation)
+The voice logging state reset issue had **3 specific root causes**:
+
+1. **Race Condition in State Transitions**: 
+   - Calling `updateFoodScanningState(.initializing)` then immediately `updateFoodScanningState(.analyzing)`
+   - SwiftUI batches these updates - only renders final state (60%), never shows 0%
+   - Result: First voice log starts at 60% instead of 0%
+
+2. **Bypassed Auto-Reset Mechanism**:
+   - Manual `updateFoodScanningState(.inactive)` calls bypassed built-in auto-reset
+   - System has auto-reset: `.completed(result:)` → 1.5s delay → `.inactive`
+   - But direct `.inactive` calls skip this, leaving stale animation state
+   - Result: Second voice log starts at 100% (previous state persisted)
+
+3. **Wrong Completion Pattern**:
+   - `generateMacrosWithAI` (working) doesn't call completion states - just resets flags
+   - Voice method was mixing patterns from image analysis (uses `.completed()`) and text generation
+
+### Targeted Fix Applied ✅
+
+**File Modified**: `/Users/dimi/Documents/dimi/podsapp/pods/Polls/Core/Managers/FoodManager.swift`
+
+**Changes Made** (`processVoiceRecording()` line 3951):
+
+**Phase 1: Removed Race Conditions**
+- **Removed**: `updateFoodScanningState(.initializing)` 
+- **Removed**: `updateFoodScanningState(.analyzing)`
+- **Result**: Let existing timer system handle progress without interference
+
+**Phase 2: Fixed Completion State**
+- **Replaced**: Manual `updateFoodScanningState(.inactive)` 
+- **With**: `updateFoodScanningState(.completed(result: combinedLog))`
+- **Result**: Triggers built-in 1.5s auto-reset to `.inactive`
+
+**Phase 3: Fixed Error States**
+- **Replaced**: All manual `.inactive` calls in error cases
+- **With**: `handleScanFailure(FoodScanError.networkError(message))`  
+- **Result**: Triggers built-in 3s auto-reset to `.inactive`
+
+### Key SwiftUI Architecture Insights
+1. **No Rapid State Changes**: SwiftUI batches updates - rapid transitions get skipped
+2. **Use Built-in Auto-Reset**: `.completed()` and `handleScanFailure()` have proper cleanup
+3. **Don't Interfere with Working Systems**: The timer-based progress was already working
+4. **Single Source of Truth**: Let `foodScanningState` be the only progress authority
+
+### Results Expected ✅
+- ✅ Voice logging starts at 0% (no race condition skipping initial state)
+- ✅ Smooth progress animation (timer works without state interference)  
+- ✅ Proper auto-reset after completion (1.5s) and errors (3s)
+- ✅ Next voice logging always starts fresh at 0%
+- ✅ Matches exact behavior of working scanning methods
+
+**Final Insight**: SwiftUI state management requires understanding of batching, auto-reset mechanisms, and avoiding competing update sources. The fix aligns voice logging with proven patterns.
