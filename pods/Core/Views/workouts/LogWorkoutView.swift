@@ -2936,8 +2936,8 @@ struct NavigationBarSeparatorModifier: ViewModifier {
                 // Hide navigation bar separator
                 let appearance = UINavigationBarAppearance()
                 appearance.configureWithOpaqueBackground()
-                // appearance.backgroundColor = UIColor.systemBackground
-                appearance.backgroundColor = Color("primarybg")
+                 appearance.backgroundColor = UIColor.systemBackground
+        
                 appearance.shadowColor = .clear // This removes the separator line
                 
                 UINavigationBar.appearance().standardAppearance = appearance

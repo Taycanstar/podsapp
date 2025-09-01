@@ -72,13 +72,13 @@ struct DynamicSetRowView: View {
             legacyRepsWeightInput
         case .timeDistance:
             legacyTimeDistanceInput
-        // Map other types to the two main interfaces
+        // Map other types to the appropriate interfaces
         case .repsOnly:
-            legacyRepsWeightInput // Show as reps/weight but without weight input
+            legacyRepsOnlyInput // Use the dedicated reps-only input
         case .timeOnly, .holdTime:
-            legacyTimeDistanceInput // Show as time/distance but without distance input
+            legacyTimeOnlyInput // Use the dedicated time-only input
         case .rounds:
-            legacyRepsWeightInput // Show as reps/weight for rounds
+            legacyRoundsInput // Use the dedicated rounds input
         }
     }
     
@@ -130,18 +130,6 @@ struct DynamicSetRowView: View {
             .focused($focusedField, equals: .firstInput)
             .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
             .keyboardType(.numberPad)
-            .submitLabel(.done)
-            .onSubmit {
-                focusedField = nil
-            }
-            
-            TextField("150", text: Binding(
-                get: { set.weight ?? "" },
-                set: { set.weight = $0 }
-            ))
-            .focused($focusedField, equals: .secondInput)
-            .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "lbs"))
-            .keyboardType(.decimalPad)
             .submitLabel(.done)
             .onSubmit {
                 focusedField = nil
