@@ -453,7 +453,7 @@ struct ExerciseLoggingView: View {
                 let _ = print("🔍 DEBUG UI: Using DURATION-BASED system (isDurationBasedExercise=true, trackingType=\(trackingType), flexibleSets.count=\(flexibleSets.count))")
                 DynamicSetsInputView(
                     sets: $flexibleSets,
-                    exercise: currentExercise.exercise,
+                    workoutExercise: currentExercise,
                     trackingType: trackingType,
                     onSetCompleted: { setIndex in
                         handleFlexibleSetCompletion(at: setIndex)
@@ -478,7 +478,7 @@ struct ExerciseLoggingView: View {
                 // Flexible tracking system for all exercises
                 DynamicSetsInputView(
                     sets: $flexibleSets,
-                    exercise: currentExercise.exercise,
+                    workoutExercise: currentExercise,
                     trackingType: trackingType,
                     onSetCompleted: { setIndex in
                         handleFlexibleSetCompletion(at: setIndex)
@@ -893,10 +893,20 @@ struct ExerciseLoggingView: View {
                 return
             }
             
-            // PRIORITY 2: Create default flexible sets based on tracking type
-            let defaultCount = defaultSetCount(for: trackingType)
-            for _ in 0..<defaultCount {
-                flexibleSets.append(FlexibleSetData(trackingType: trackingType))
+            // PRIORITY 2: Create flexible sets based on workout's recommended sets
+            let setCount = currentExercise.sets
+            for _ in 0..<setCount {
+                var newSet = FlexibleSetData(trackingType: trackingType)
+                // Pre-populate with workout's recommended values
+                if trackingType == .repsWeight {
+                    newSet.reps = "\(currentExercise.reps)"
+                    if let weight = currentExercise.weight, weight > 0 {
+                        newSet.weight = "\(Int(weight))"
+                    }
+                } else if trackingType == .repsOnly {
+                    newSet.reps = "\(currentExercise.reps)"
+                }
+                flexibleSets.append(newSet)
             }
             
             // PRIORITY 3: Apply persisted durations AFTER flexible sets are created

@@ -10,7 +10,7 @@ import SwiftUI
 /// Dynamic sets input view that adapts to different exercise tracking types
 struct DynamicSetsInputView: View {
     @Binding var sets: [FlexibleSetData]
-    let exercise: ExerciseData
+    let workoutExercise: TodayWorkoutExercise
     let trackingType: ExerciseTrackingType
     let onSetCompleted: ((Int) -> Void)?
     let onAddSet: (() -> Void)?
@@ -23,7 +23,7 @@ struct DynamicSetsInputView: View {
     
     init(
         sets: Binding<[FlexibleSetData]>,
-        exercise: ExerciseData,
+        workoutExercise: TodayWorkoutExercise,
         trackingType: ExerciseTrackingType,
         onSetCompleted: ((Int) -> Void)? = nil,
         onAddSet: (() -> Void)? = nil,
@@ -32,7 +32,7 @@ struct DynamicSetsInputView: View {
         onSetFocused: ((Int?) -> Void)? = nil
     ) {
         self._sets = sets
-        self.exercise = exercise
+        self.workoutExercise = workoutExercise
         self.trackingType = trackingType
         self.onSetCompleted = onSetCompleted
         self.onAddSet = onAddSet
@@ -49,7 +49,7 @@ struct DynamicSetsInputView: View {
                     DynamicSetRowView(
                         set: binding(for: index),
                         setNumber: index + 1,
-                        exercise: exercise,
+                        workoutExercise: workoutExercise,
                         onDurationChanged: onDurationChanged,
                         isActive: index == focusedSetIndex,
                         onFocusChanged: { focused in
@@ -223,7 +223,10 @@ struct DynamicSetsInputView: View {
                     FlexibleSetData(trackingType: .repsWeight),
                     FlexibleSetData(trackingType: .repsWeight)
                 ]),
-                exercise: ExerciseData(id: 1, name: "Barbell Bench Press", exerciseType: "Strength", bodyPart: "Chest", equipment: "Barbell", gender: "Male", target: "Pectoralis Major", synergist: "Deltoid Anterior, Triceps"),
+                workoutExercise: TodayWorkoutExercise(
+                    exercise: ExerciseData(id: 1, name: "Barbell Bench Press", exerciseType: "Strength", bodyPart: "Chest", equipment: "Barbell", gender: "Male", target: "Pectoralis Major", synergist: "Deltoid Anterior, Triceps"),
+                    sets: 3, reps: 8, weight: 135, restTime: 90, notes: nil, warmupSets: nil
+                ),
                 trackingType: .repsWeight
             )
             
@@ -234,7 +237,10 @@ struct DynamicSetsInputView: View {
                 sets: .constant([
                     FlexibleSetData(trackingType: .timeDistance)
                 ]),
-                exercise: ExerciseData(id: 2, name: "Running", exerciseType: "Aerobic", bodyPart: "Cardio", equipment: "Body weight", gender: "Male", target: "Cardiovascular System", synergist: ""),
+                workoutExercise: TodayWorkoutExercise(
+                    exercise: ExerciseData(id: 2, name: "Running", exerciseType: "Aerobic", bodyPart: "Cardio", equipment: "Body weight", gender: "Male", target: "Cardiovascular System", synergist: ""),
+                    sets: 1, reps: 1, weight: 0, restTime: 60, notes: nil, warmupSets: nil
+                ),
                 trackingType: .timeDistance
             )
         }

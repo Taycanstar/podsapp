@@ -15,7 +15,7 @@ import Foundation
 struct DynamicSetRowView: View {
     @Binding var set: FlexibleSetData
     let setNumber: Int
-    let exercise: ExerciseData
+    let workoutExercise: TodayWorkoutExercise
     let onDurationChanged: ((TimeInterval) -> Void)?
     let isActive: Bool // Whether this set is currently active
     let onFocusChanged: ((Bool) -> Void)? // Callback when this row gains/loses focus
@@ -45,15 +45,15 @@ struct DynamicSetRowView: View {
         ZStack {
             // Background rounded rectangle (matches input style)
             RoundedRectangle(cornerRadius: 16)
-                .fill((set.isCompleted || set.isActuallyCompleted) ? Color.accentColor : Color("containerbg"))
+                .fill(set.isCompleted ? Color.accentColor : Color("containerbg"))
                 .strokeBorder(
-                    (set.isCompleted || set.isActuallyCompleted) ? Color.accentColor :Color(.systemGray4), 
-                    lineWidth: (set.isCompleted || set.isActuallyCompleted) ? 0 : 0.5
+                    set.isCompleted ? Color.accentColor : Color(.systemGray4), 
+                    lineWidth: set.isCompleted ? 0 : 0.5
                 )
                 .frame(width: 44, height: 44)
             
             // Content (number or checkmark)
-            if set.isCompleted || set.isActuallyCompleted {
+            if set.isCompleted {
                 Image(systemName: "checkmark")
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
@@ -91,7 +91,7 @@ struct DynamicSetRowView: View {
             // Set indicator for reps-based exercises
             setNumberIndicator
             
-            TextField("8", text: Binding(
+            TextField("\(workoutExercise.reps)", text: Binding(
                 get: { set.reps ?? "" },
                 set: { set.reps = $0 }
             ))
@@ -99,13 +99,17 @@ struct DynamicSetRowView: View {
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
             .keyboardType(.numberPad)
             .submitLabel(.next)
+            .onTapGesture {
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
+            }
             .onSubmit {
                 focusedField = .secondInput
             }
             
             // Only show weight field for reps+weight exercises
             if set.trackingType == .repsWeight {
-                TextField("150", text: Binding(
+                TextField((workoutExercise.weight ?? 0) > 0 ? "\(Int(workoutExercise.weight ?? 0))" : "150", text: Binding(
                     get: { set.weight ?? "" },
                     set: { set.weight = $0 }
                 ))
@@ -113,6 +117,10 @@ struct DynamicSetRowView: View {
                 .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "lbs", isActive: isActive))
                 .keyboardType(.decimalPad)
                 .submitLabel(.done)
+                .onTapGesture {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                    impactFeedback.impactOccurred()
+                }
                 .onSubmit {
                     focusedField = nil
                 }
@@ -125,7 +133,7 @@ struct DynamicSetRowView: View {
             // Set indicator for reps-based exercises
             setNumberIndicator
             
-            TextField("12", text: Binding(
+            TextField("\(workoutExercise.reps)", text: Binding(
                 get: { set.reps ?? "" },
                 set: { set.reps = $0 }
             ))
@@ -133,6 +141,10 @@ struct DynamicSetRowView: View {
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
             .keyboardType(.numberPad)
             .submitLabel(.done)
+            .onTapGesture {
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
+            }
             .onSubmit {
                 focusedField = nil
             }
@@ -479,7 +491,7 @@ struct DynamicSetRowView: View {
             
             
             // Weight input row (no set indicator)
-            TextField("150", text: Binding(
+            TextField((workoutExercise.weight ?? 0) > 0 ? "\(Int(workoutExercise.weight ?? 0))" : "150", text: Binding(
                 get: { set.weight ?? "" },
                 set: { set.weight = $0 }
             ))
@@ -487,6 +499,10 @@ struct DynamicSetRowView: View {
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "lbs"))
             .keyboardType(.decimalPad)
             .submitLabel(.done)
+            .onTapGesture {
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
+            }
             .onSubmit {
                 focusedField = nil
             }
@@ -512,6 +528,10 @@ struct DynamicSetRowView: View {
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "rounds", isActive: isActive))
             .keyboardType(.numberPad)
             .submitLabel(.done)
+            .onTapGesture {
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
+            }
             .onSubmit {
                 focusedField = nil
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {

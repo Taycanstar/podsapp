@@ -3989,6 +3989,8 @@ func analyzeNutritionLabel(
     @MainActor
     func processVoiceRecording(audioData: Data, mealType: String = "Lunch", dayLogsVM: DayLogsViewModel) {
         print("🍽️ FoodManager.processVoiceRecording called with mealType: \(mealType)")
+        // Ensure any prior stage timer is stopped before starting a new session
+        stopVoiceTimer()
         
         // Set macro generation flags for proper UI display 
         isGeneratingMacros = true  // This triggers MacroGenerationCard
