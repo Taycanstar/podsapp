@@ -460,6 +460,7 @@ struct ExerciseLoggingView: View {
             // SIMPLIFIED: For duration-based exercises, use existing perfect style with direct binding
             if isDurationBasedExercise {
                 // Keep the existing perfect duration input style with set-specific durations
+                let _ = print("🔍 DEBUG UI: Using DURATION-BASED system (isDurationBasedExercise=true, trackingType=\(trackingType), flexibleSets.count=\(flexibleSets.count))")
                 DynamicSetsInputView(
                     sets: $flexibleSets,
                     exercise: currentExercise.exercise,
@@ -485,6 +486,7 @@ struct ExerciseLoggingView: View {
             // For non-duration exercises, use existing flexible tracking system
             else if !flexibleSets.isEmpty {
                 // New flexible tracking system
+                let _ = print("🔍 DEBUG UI: Using FLEXIBLE system (isDurationBasedExercise=false, flexibleSets.isEmpty=false, flexibleSets.count=\(flexibleSets.count))")
                 DynamicSetsInputView(
                     sets: $flexibleSets,
                     exercise: currentExercise.exercise,
@@ -508,6 +510,7 @@ struct ExerciseLoggingView: View {
                 .transition(.opacity.combined(with: .scale))
             } else {
                 // Legacy tracking system (original interface)
+                let _ = print("🔍 DEBUG UI: Using LEGACY system (isDurationBasedExercise=false, flexibleSets.isEmpty=true, flexibleSets.count=\(flexibleSets.count), sets.count=\(sets.count))")
                 legacySetsInputView
                     .transition(.opacity.combined(with: .scale))
             }
@@ -715,11 +718,21 @@ struct ExerciseLoggingView: View {
     // MARK: - Computed Properties
     
     private var completedSetsCount: Int {
-        sets.filter { $0.isCompleted }.count
+        // Return count from whichever system is currently active
+        if isDurationBasedExercise || !flexibleSets.isEmpty {
+            return flexibleSets.filter { $0.isCompleted }.count
+        } else {
+            return sets.filter { $0.isCompleted }.count
+        }
     }
     
     private var isExerciseFullyCompleted: Bool {
-        !sets.isEmpty && sets.allSatisfy { $0.isCompleted }
+        // Check completion from whichever system is currently active
+        if isDurationBasedExercise || !flexibleSets.isEmpty {
+            return !flexibleSets.isEmpty && flexibleSets.allSatisfy { $0.isCompleted }
+        } else {
+            return !sets.isEmpty && sets.allSatisfy { $0.isCompleted }
+        }
     }
     
     private var isDurationBasedExercise: Bool {
@@ -969,36 +982,86 @@ struct ExerciseLoggingView: View {
     }
     
     private func logCurrentSet() {
-        guard currentSetIndex < sets.count else { return }
+        // DEBUG: Log current state to understand what's happening
+        print("🔍 DEBUG logCurrentSet - isDurationBasedExercise: \(isDurationBasedExercise), flexibleSets.isEmpty: \(flexibleSets.isEmpty), flexibleSets.count: \(flexibleSets.count), sets.count: \(sets.count), currentSetIndex: \(currentSetIndex)")
         
-        // Mark current set as completed
-        sets[currentSetIndex].isCompleted = true
-        
-        // Move to next set
-        currentSetIndex += 1
-        
-        // Notify parent with current completed sets count (no RIR for individual sets)
-        onSetLogged?(completedSetsCount, nil)
+        // Determine which system is currently active and update the correct array
+        if isDurationBasedExercise || !flexibleSets.isEmpty {
+            // Use flexible system - this is what the UI is showing
+            print("🔍 DEBUG: Using FLEXIBLE system")
+            guard currentSetIndex < flexibleSets.count else { 
+                print("❌ ERROR: currentSetIndex \(currentSetIndex) >= flexibleSets.count \(flexibleSets.count)")
+                return 
+            }
+            
+            // Mark current flexible set as completed
+            flexibleSets[currentSetIndex].isCompleted = true
+            print("🔍 DEBUG: Marked flexibleSets[\(currentSetIndex)].isCompleted = true")
+            
+            // Move to next set
+            let previousSetIndex = currentSetIndex
+            currentSetIndex += 1
+            
+            // Handle completion callback for flexible system
+            handleFlexibleSetCompletion(at: previousSetIndex)
+            
+            print("🏋️ ✅ FIXED: Logged flexible set \(previousSetIndex + 1) of \(flexibleSets.count) - Total completed: \(flexibleSets.filter { $0.isCompleted }.count)")
+        } else {
+            // Use legacy system - fallback for when flexibleSets is empty
+            print("🔍 DEBUG: Using LEGACY system")
+            guard currentSetIndex < sets.count else { 
+                print("❌ ERROR: currentSetIndex \(currentSetIndex) >= sets.count \(sets.count)")
+                return 
+            }
+            
+            // Mark current legacy set as completed
+            sets[currentSetIndex].isCompleted = true
+            print("🔍 DEBUG: Marked sets[\(currentSetIndex)].isCompleted = true")
+            
+            // Move to next set
+            currentSetIndex += 1
+            
+            // Notify parent with current completed sets count (no RIR for individual sets)
+            onSetLogged?(completedSetsCount, nil)
+            
+            print("🏋️ ✅ FIXED: Logged legacy set \(currentSetIndex) of \(sets.count) - Total completed: \(completedSetsCount)")
+        }
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
-        
-        print("🏋️ Logged set \(currentSetIndex) of \(sets.count) - Total completed: \(completedSetsCount)")
     }
     
     private func logAllSets() {
-        // Mark all sets as completed
-        for index in sets.indices {
-            sets[index].isCompleted = true
+        // Determine which system is currently active and mark all sets as completed
+        if isDurationBasedExercise || !flexibleSets.isEmpty {
+            // Use flexible system - mark all flexible sets as completed
+            for index in flexibleSets.indices {
+                flexibleSets[index].isCompleted = true
+            }
+            
+            // Show RIR section
+            showRIRSection = true
+            
+            // Notify parent with completed sets count using unified property
+            onSetLogged?(completedSetsCount, nil)
+            
+            print("🏋️ Logged all flexible sets: \(completedSetsCount)/\(flexibleSets.count)")
+        } else {
+            // Use legacy system - mark all legacy sets as completed
+            for index in sets.indices {
+                sets[index].isCompleted = true
+            }
+            
+            // Show RIR section
+            showRIRSection = true
+            
+            // Notify parent with completed sets count using legacy system count
+            onSetLogged?(completedSetsCount, nil)
+            
+            print("🏋️ Logged all legacy sets: \(completedSetsCount)/\(sets.count)")
         }
-        
-        // Show RIR section
-        showRIRSection = true
-        
-        // Notify parent with completed sets count (should be all sets now, no RIR yet)
-        onSetLogged?(completedSetsCount, nil)
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -1055,6 +1118,8 @@ struct ExerciseLoggingView: View {
     
     /// Initialize flexible sets for enhanced tracking
     private func initializeFlexibleSetsIfNeeded() {
+        print("🔍 DEBUG INIT: flexibleSets.isEmpty=\(flexibleSets.isEmpty), flexibleSets.count=\(flexibleSets.count), sets.count=\(sets.count), trackingType=\(trackingType)")
+        
         if flexibleSets.isEmpty {
             
             // PRIORITY 1: Restore from TodayWorkoutExercise if available ✅
@@ -1073,6 +1138,7 @@ struct ExerciseLoggingView: View {
             
             // PRIORITY 2: Convert existing legacy sets to flexible sets
             if !sets.isEmpty {
+                print("🔍 DEBUG INIT: Converting \(sets.count) legacy sets to flexible sets")
                 flexibleSets = sets.map { legacySet in
                     var flexibleSet = FlexibleSetData(trackingType: trackingType)
                     
@@ -1093,12 +1159,15 @@ struct ExerciseLoggingView: View {
                     
                     return flexibleSet
                 }
+                print("🔍 DEBUG INIT: Successfully converted to \(flexibleSets.count) flexible sets")
             } else {
                 // PRIORITY 3: Create default flexible sets based on tracking type
                 let defaultCount = defaultSetCount(for: trackingType)
+                print("🔍 DEBUG INIT: Creating \(defaultCount) default flexible sets")
                 for _ in 0..<defaultCount {
                     flexibleSets.append(FlexibleSetData(trackingType: trackingType))
                 }
+                print("🔍 DEBUG INIT: Successfully created \(flexibleSets.count) default flexible sets")
             }
             
             // PRIORITY 4: Apply persisted durations AFTER flexible sets are created

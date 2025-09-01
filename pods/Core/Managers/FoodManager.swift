@@ -297,6 +297,9 @@ class FoodManager: ObservableObject {
     private var activeTimers: Set<Timer> = []  // DEPRECATED: Should not need timer tracking in modern approach
     private var scannerDismissed = false  // DEPRECATED: Use Task cancellation instead
     
+    // Auto-reset work item for completed state (cancellable)
+    private var stateAutoResetWorkItem: DispatchWorkItem? = nil
+    
     // MARK: - Modern State Management (replaces timers)
     // These methods eliminate race conditions by using deterministic state transitions
     
@@ -304,10 +307,16 @@ class FoodManager: ObservableObject {
     func updateFoodScanningState(_ newState: FoodScanningState) {
         assert(Thread.isMainThread, "Food scanning state must be updated on main thread")
         let oldState = foodScanningState
-        
+
         // FORCE UI UPDATE: Explicitly notify SwiftUI of changes
         objectWillChange.send()
-        
+
+        // Cancel any pending auto-reset from a previous session when moving to an active state
+        if newState.isActive {
+            stateAutoResetWorkItem?.cancel()
+            stateAutoResetWorkItem = nil
+        }
+
         foodScanningState = newState
         
         // Manage animated progress globally
@@ -326,11 +335,15 @@ class FoodManager: ObservableObject {
         // Handle completed state with 100% visibility
         if case .completed = newState {
             print("✅ Completed state reached - showing 100% for 1.5 seconds before auto-reset")
-            // Show 100% for 1.5 seconds before auto-dismissing
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            // Use a cancellable work item so a new session doesn't get clobbered by a stale reset
+            let work = DispatchWorkItem { [weak self] in
+                guard let self = self else { return }
                 print("⏰ Auto-resetting from completed state to inactive")
                 self.resetFoodScanningState()
             }
+            stateAutoResetWorkItem?.cancel()
+            stateAutoResetWorkItem = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: work)
         }
         
         // ADDITIONAL FORCE: Send another update after state change
@@ -355,7 +368,7 @@ class FoodManager: ObservableObject {
     /// Reset food scanning state to inactive with proper cleanup
     func resetFoodScanningState() {
         updateFoodScanningState(.inactive)
-        
+
         // Clean up new state system
         isImageScanning = false
         currentScanningImage = nil
@@ -371,6 +384,10 @@ class FoodManager: ObservableObject {
         
         // 🔧 CRITICAL FIX: Reset voice logging state too
         resetVoiceLoggingState()
+
+        // Cancel any pending auto-reset work
+        stateAutoResetWorkItem?.cancel()
+        stateAutoResetWorkItem = nil
     }
     
     /// Handle scan failure with proper error state
@@ -3984,6 +4001,16 @@ func analyzeNutritionLabel(
         // CRITICAL: Start with initializing state for proper 0% progress visibility
         updateFoodScanningState(.initializing)  // Shows 0%
         
+        // Smooth staged progression similar to image/barcode flows
+        // Step 1: Show upload start while transcription is underway
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            guard let self = self else { return }
+            // Only apply if we haven't advanced beyond early stage
+            if self.foodScanningState.progress < 0.3 {
+                self.updateFoodScanningState(.uploading(progress: 0.0)) // ~10-30%
+            }
+        }
+        
         // Create a timer to cycle through analysis stages for UI feedback
         voiceStageTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
@@ -4012,10 +4039,14 @@ func analyzeNutritionLabel(
             switch result {
             case .success(let text):
                 print("✅ Voice transcription successful: \(text)")
+                // Show mid-upload progress to give smooth fill while moving to analysis
+                self.updateFoodScanningState(.uploading(progress: 0.5))
                 
-                // Second step: Generate AI macros from the transcribed text
-                print("🍽️ Calling generateMacrosWithAI with mealType: \(mealType)")
-                self.generateMacrosWithAI(foodDescription: text, mealType: mealType) { result in
+                // Second step: Generate AI macros from the transcribed text (call network directly)
+                print("🍽️ Calling networkManager.generateMacrosWithAI with mealType: \(mealType)")
+                // Move to analyzing state during macro generation
+                self.updateFoodScanningState(.analyzing)
+                self.networkManager.generateMacrosWithAI(foodDescription: text, mealType: mealType) { result in
                 
                     
                     switch result {
@@ -4086,10 +4117,19 @@ func analyzeNutritionLabel(
                         self.lastLoggedFoodId = loggedFood.food.fdcId
                         self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
                         
-                        // EXACT analyzeFoodImageModern pattern - immediate state progression, no artificial delays
-                        self.updateFoodScanningState(.analyzing)      // 60%
-                        self.updateFoodScanningState(.processing)     // 80%
-                        self.updateFoodScanningState(.completed(result: combinedLog))  // 100% + auto-reset
+                        // Move through final states with smooth progress
+                        self.updateFoodScanningState(.processing) // 80%
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            self.completeFoodScanning(result: combinedLog) // 100% then auto-reset (cancellable)
+                        }
+                        
+                        // Reset flags after a short delay to let UI settle
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            self.isGeneratingMacros = false
+                            self.isLoading = false
+                            self.macroGenerationStage = 0
+                            self.macroLoadingMessage = ""
+                        }
                         
                         // CRITICAL: Add to DayLogsViewModel so it appears in dashboard
                         dayLogsVM.addPending(combinedLog)
@@ -5211,4 +5251,3 @@ func analyzeNutritionLabel(
         return isHighPressure
     }
 }
-

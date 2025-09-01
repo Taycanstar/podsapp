@@ -20,7 +20,7 @@ struct DynamicSetRowView: View {
     let isActive: Bool // Whether this set is currently active
     let onFocusChanged: ((Bool) -> Void)? // Callback when this row gains/loses focus
     @FocusState private var focusedField: FocusedField?
-    @Environment(\.colorScheme) private var colorScheme
+
     @State private var showTimePicker: Bool = false
     
     enum FocusedField: Hashable {
@@ -45,15 +45,15 @@ struct DynamicSetRowView: View {
         ZStack {
             // Background rounded rectangle (matches input style)
             RoundedRectangle(cornerRadius: 16)
-                .fill(set.isActuallyCompleted ? Color.accentColor : Color("containerbg"))
+                .fill((set.isCompleted || set.isActuallyCompleted) ? Color.accentColor : Color("containerbg"))
                 .strokeBorder(
-                    set.isActuallyCompleted ? Color.accentColor : (colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4)), 
-                    lineWidth: set.isActuallyCompleted ? 0 : 0.5
+                    (set.isCompleted || set.isActuallyCompleted) ? Color.accentColor :Color(.systemGray4), 
+                    lineWidth: (set.isCompleted || set.isActuallyCompleted) ? 0 : 0.5
                 )
                 .frame(width: 44, height: 44)
             
             // Content (number or checkmark)
-            if set.isActuallyCompleted {
+            if set.isCompleted || set.isActuallyCompleted {
                 Image(systemName: "checkmark")
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
@@ -173,7 +173,7 @@ struct DynamicSetRowView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color("containerbg"))
-                                .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
+                                .strokeBorder(Color(.systemGray4), lineWidth: 0.5)
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -304,7 +304,7 @@ struct DynamicSetRowView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color("containerbg"))
-                                .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
+                                .strokeBorder(Color(.systemGray4), lineWidth: 0.5)
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -409,7 +409,7 @@ struct DynamicSetRowView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color("containerbg"))
-                                .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
+                                .strokeBorder(Color(.systemGray4), lineWidth: 0.5)
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -546,7 +546,7 @@ struct DynamicSetRowView: View {
                     .background(
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color("containerbg"))
-                            .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
+                            .strokeBorder(Color(.systemGray4), lineWidth: 0.5)
                     )
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -694,7 +694,7 @@ struct DynamicSetRowView: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color("containerbg"))
-                .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
+                .strokeBorder(Color(.systemGray4), lineWidth: 0.5)
         )
     }
     
@@ -791,7 +791,7 @@ struct CustomTextFieldStyleWorkout: TextFieldStyle {
     }
     
     func _body(configuration: TextField<Self._Label>) -> some View {
-        @Environment(\.colorScheme) var colorScheme
+
         
         HStack(spacing: 0) {
             configuration
@@ -809,7 +809,7 @@ struct CustomTextFieldStyleWorkout: TextFieldStyle {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color("containerbg"))
-                .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
+                .strokeBorder(Color(.systemGray4), lineWidth: 0.5)
         )
     }
 }
