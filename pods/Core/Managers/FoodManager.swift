@@ -4069,19 +4069,10 @@ func analyzeNutritionLabel(
                         self.lastLoggedFoodId = loggedFood.food.fdcId
                         self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
                         
-                        // Wait for log to finish completely, THEN progress to 100% and reset
-                        // First: analyzing state (60%)
-                        self.updateFoodScanningState(.analyzing)
-                        
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            // Second: processing state (80%)
-                            self.updateFoodScanningState(.processing)
-                            
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                // Third: completion (100%) then auto-reset
-                                self.updateFoodScanningState(.completed(result: combinedLog))
-                            }
-                        }
+                        // EXACT analyzeFoodImageModern pattern - immediate state progression, no artificial delays
+                        self.updateFoodScanningState(.analyzing)      // 60%
+                        self.updateFoodScanningState(.processing)     // 80%
+                        self.updateFoodScanningState(.completed(result: combinedLog))  // 100% + auto-reset
                         
                         // CRITICAL: Add to DayLogsViewModel so it appears in dashboard
                         dayLogsVM.addPending(combinedLog)
