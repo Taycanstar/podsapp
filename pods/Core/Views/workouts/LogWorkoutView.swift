@@ -252,7 +252,8 @@ struct LogWorkoutView: View {
             Divider()
                 .background(Color.gray.opacity(0.3))
         }
-        .background(Color(.systemBackground))
+        // .background(Color(.systemBackground))
+          .background(Color("primarybg"))
         .zIndex(1) // Keep header on top
     }
     
@@ -664,7 +665,8 @@ struct LogWorkoutView: View {
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.primary)
                             .frame(width: 30, height: 30)
-                            .background(Color(.systemBackground))
+                            // .background(Color(.systemBackground))
+                             .background(Color("primarybg"))
                             .cornerRadius(17.5)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 17.5)
@@ -756,7 +758,8 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(.systemBackground))
+            // .background(Color(.systemBackground))
+            .background(Color("primarybg"))
             .cornerRadius(20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
@@ -800,7 +803,8 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(.systemBackground))
+            // .background(Color(.systemBackground))
+            .background(Color("primarybg"))
             .cornerRadius(20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
@@ -834,7 +838,8 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(.systemBackground))
+            // .background(Color(.systemBackground))
+            .background(Color("primarybg"))
             .cornerRadius(20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
@@ -868,7 +873,8 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(.systemBackground))
+            // .background(Color(.systemBackground))
+            .background(Color("primarybg"))
             .cornerRadius(20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
@@ -902,7 +908,8 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(.systemBackground))
+            // .background(Color(.systemBackground))
+            .background(Color("primarybg"))
             .cornerRadius(20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
@@ -936,7 +943,8 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(.systemBackground))
+            // .background(Color(.systemBackground))
+            .background(Color("primarybg"))
             .cornerRadius(20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
@@ -1147,7 +1155,8 @@ private struct TodayWorkoutView: View {
                     }
                     .padding(.bottom, 16)
                 }
-                .background(Color(.systemBackground))
+                // .background(Color(.systemBackground))
+                .background(Color("primarybg"))
                 
                 // Sticky Start Workout button at bottom
                 if let workout = workoutManager.todayWorkout {
@@ -2354,7 +2363,8 @@ private struct WorkoutGenerationCard: View {
                 .padding(.top, 10)
         }
         .padding()
-        .background(Color(.systemBackground))
+        // .background(Color(.systemBackground))
+        .background(Color("primarybg"))
         .cornerRadius(12)
         .onAppear {
             startAnimation()
@@ -2462,7 +2472,8 @@ struct WorkoutControlButton: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(.systemBackground))
+            // .background(Color(.systemBackground))
+            .background(Color("primarybg"))
             .cornerRadius(20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
@@ -2533,7 +2544,8 @@ struct WorkoutDurationPickerView: View {
             .padding(.bottom, 30)
         }
         .padding(.horizontal, 10)
-        .background(Color(.systemBackground))
+        // .background(Color(.systemBackground))
+        .background(Color("primarybg"))
         .cornerRadius(16)
         .presentationDetents([.fraction(0.33)])
         .presentationDragIndicator(.visible)
@@ -2717,7 +2729,8 @@ struct FitnessGoalPickerView: View {
                             }
                                                             .padding(.horizontal, 12)
                                 .padding(.vertical, 12)
-                            .background(Color(.systemBackground))
+                            // .background(Color(.systemBackground))
+                            .background(Color("primarybg"))
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -2738,7 +2751,8 @@ struct FitnessGoalPickerView: View {
             .padding(.bottom, 30)
         }
         .padding(.horizontal, 10)
-        .background(Color(.systemBackground))
+        // .background(Color(.systemBackground))
+        .background(Color("primarybg"))
         .cornerRadius(16)
         .presentationDetents([.fraction(0.6)])
         .presentationDragIndicator(.visible)
@@ -2837,7 +2851,8 @@ struct FitnessLevelPickerView: View {
                             }
                                                             .padding(.horizontal, 12)
                                 .padding(.vertical, 12)
-                            .background(Color(.systemBackground))
+                            // .background(Color(.systemBackground))
+                            .background(Color("primarybg"))
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -2858,7 +2873,8 @@ struct FitnessLevelPickerView: View {
             .padding(.bottom, 30)
         }
         .padding(.horizontal, 10)
-        .background(Color(.systemBackground))
+        // .background(Color(.systemBackground))
+        .background(Color("primarybg"))
         .cornerRadius(16)
         .presentationDetents([.fraction(0.4)])
         .presentationDragIndicator(.visible)
@@ -2920,7 +2936,8 @@ struct NavigationBarSeparatorModifier: ViewModifier {
                 // Hide navigation bar separator
                 let appearance = UINavigationBarAppearance()
                 appearance.configureWithOpaqueBackground()
-                appearance.backgroundColor = UIColor.systemBackground
+                // appearance.backgroundColor = UIColor.systemBackground
+                appearance.backgroundColor = Color("primarybg")
                 appearance.shadowColor = .clear // This removes the separator line
                 
                 UINavigationBar.appearance().standardAppearance = appearance
