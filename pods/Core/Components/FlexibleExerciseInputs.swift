@@ -19,6 +19,7 @@ struct DynamicSetRowView: View {
     let onDurationChanged: ((TimeInterval) -> Void)?
     let isActive: Bool // Whether this set is currently active
     let onFocusChanged: ((Bool) -> Void)? // Callback when this row gains/loses focus
+    let onSetChanged: (() -> Void)? // Callback when set data changes
     @FocusState private var focusedField: FocusedField?
 
     @State private var showTimePicker: Bool = false
@@ -38,6 +39,12 @@ struct DynamicSetRowView: View {
             .onChange(of: focusedField) { oldValue, newValue in
                 // When any field in this row gains focus, make this row the active set
                 onFocusChanged?(newValue != nil)
+                
+                // Add haptic feedback when field gains focus
+                if oldValue == nil && newValue != nil {
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                    impactFeedback.impactOccurred()
+                }
             }
     }
     
@@ -93,16 +100,15 @@ struct DynamicSetRowView: View {
             
             TextField("\(workoutExercise.reps)", text: Binding(
                 get: { set.reps ?? "" },
-                set: { set.reps = $0 }
+                set: { 
+                    set.reps = $0
+                    onSetChanged?()
+                }
             ))
             .focused($focusedField, equals: .firstInput)
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
             .keyboardType(.numberPad)
             .submitLabel(.next)
-            .onTapGesture {
-                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                impactFeedback.impactOccurred()
-            }
             .onSubmit {
                 focusedField = .secondInput
             }
@@ -111,7 +117,10 @@ struct DynamicSetRowView: View {
             if set.trackingType == .repsWeight {
                 TextField((workoutExercise.weight ?? 0) > 0 ? "\(Int(workoutExercise.weight ?? 0))" : "150", text: Binding(
                     get: { set.weight ?? "" },
-                    set: { set.weight = $0 }
+                    set: { 
+                        set.weight = $0
+                        onSetChanged?()
+                    }
                 ))
                 .focused($focusedField, equals: .secondInput)
                 .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "lbs", isActive: isActive))
@@ -135,16 +144,15 @@ struct DynamicSetRowView: View {
             
             TextField("\(workoutExercise.reps)", text: Binding(
                 get: { set.reps ?? "" },
-                set: { set.reps = $0 }
+                set: { 
+                    set.reps = $0
+                    onSetChanged?()
+                }
             ))
             .focused($focusedField, equals: .firstInput)
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
             .keyboardType(.numberPad)
             .submitLabel(.done)
-            .onTapGesture {
-                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                impactFeedback.impactOccurred()
-            }
             .onSubmit {
                 focusedField = nil
             }
@@ -161,9 +169,12 @@ struct DynamicSetRowView: View {
                     
                     // Duration input button
                     Button(action: {
-                        showTimePicker.toggle()
-                        if showTimePicker {
-                            focusedField = nil // Clear any text field focus
+                        // Clear text field focus first to avoid conflicts
+                        focusedField = nil
+                        
+                        // Add small delay to ensure focus is cleared before showing picker
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            showTimePicker.toggle()
                         }
                     }) {
                         HStack {
@@ -205,6 +216,7 @@ struct DynamicSetRowView: View {
                                     set.distance = distance
                                     set.distanceUnit = .miles
                                 }
+                                onSetChanged?()
                             }
                         ))
                         .focused($focusedField, equals: .secondInput)
@@ -229,6 +241,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(newHours * 3600 + currentMinutes * 60 + currentSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...23, id: \.self) { hour in
@@ -247,6 +260,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(currentHours * 3600 + newMinutes * 60 + currentSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...59, id: \.self) { minute in
@@ -265,6 +279,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(currentHours * 3600 + currentMinutes * 60 + newSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...59, id: \.self) { second in
@@ -292,9 +307,12 @@ struct DynamicSetRowView: View {
                     
                     // Duration input button
                     Button(action: {
-                        showTimePicker.toggle()
-                        if showTimePicker {
-                            focusedField = nil // Clear any text field focus
+                        // Clear text field focus first to avoid conflicts
+                        focusedField = nil
+                        
+                        // Add small delay to ensure focus is cleared before showing picker
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            showTimePicker.toggle()
                         }
                     }) {
                         HStack {
@@ -334,6 +352,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(newHours * 3600 + currentMinutes * 60 + currentSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...23, id: \.self) { hour in
@@ -352,6 +371,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(currentHours * 3600 + newMinutes * 60 + currentSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...59, id: \.self) { minute in
@@ -370,6 +390,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(currentHours * 3600 + currentMinutes * 60 + newSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...59, id: \.self) { second in
@@ -397,9 +418,12 @@ struct DynamicSetRowView: View {
                     
                     // Duration input button
                     Button(action: {
-                        showTimePicker.toggle()
-                        if showTimePicker {
-                            focusedField = nil // Clear any text field focus
+                        // Clear text field focus first to avoid conflicts
+                        focusedField = nil
+                        
+                        // Add small delay to ensure focus is cleared before showing picker
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            showTimePicker.toggle()
                         }
                     }) {
                         HStack {
@@ -439,6 +463,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(newHours * 3600 + currentMinutes * 60 + currentSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...23, id: \.self) { hour in
@@ -457,6 +482,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(currentHours * 3600 + newMinutes * 60 + currentSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...59, id: \.self) { minute in
@@ -475,6 +501,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(currentHours * 3600 + currentMinutes * 60 + newSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...59, id: \.self) { second in
@@ -493,16 +520,15 @@ struct DynamicSetRowView: View {
             // Weight input row (no set indicator)
             TextField((workoutExercise.weight ?? 0) > 0 ? "\(Int(workoutExercise.weight ?? 0))" : "150", text: Binding(
                 get: { set.weight ?? "" },
-                set: { set.weight = $0 }
+                set: { 
+                    set.weight = $0
+                    onSetChanged?()
+                }
             ))
             .focused($focusedField, equals: .secondInput)
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "lbs"))
             .keyboardType(.decimalPad)
             .submitLabel(.done)
-            .onTapGesture {
-                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                impactFeedback.impactOccurred()
-            }
             .onSubmit {
                 focusedField = nil
             }
@@ -522,16 +548,13 @@ struct DynamicSetRowView: View {
                 },
                 set: { newValue in
                     set.rounds = Int(newValue)
+                    onSetChanged?()
                 }
             ))
             .focused($focusedField, equals: .firstInput)
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "rounds", isActive: isActive))
             .keyboardType(.numberPad)
             .submitLabel(.done)
-            .onTapGesture {
-                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                impactFeedback.impactOccurred()
-            }
             .onSubmit {
                 focusedField = nil
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -583,6 +606,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(newHours * 3600 + currentMinutes * 60 + currentSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...23, id: \.self) { hour in
@@ -601,6 +625,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(currentHours * 3600 + newMinutes * 60 + currentSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...59, id: \.self) { minute in
@@ -619,6 +644,7 @@ struct DynamicSetRowView: View {
                                 let newDuration = TimeInterval(currentHours * 3600 + currentMinutes * 60 + newSeconds)
                                 set.duration = newDuration
                                 onDurationChanged?(newDuration)
+                                onSetChanged?()
                             }
                         )) {
                             ForEach(0...59, id: \.self) { second in

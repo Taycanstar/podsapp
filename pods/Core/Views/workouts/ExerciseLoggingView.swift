@@ -494,6 +494,9 @@ struct ExerciseLoggingView: View {
                         print("🔧 DEBUG: Duration changed to: \(duration) for current set")
                         saveDurationToPersistence(duration)
                         saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
+                    },
+                    onSetDataChanged: {
+                        saveFlexibleSetsToExercise() // Save when any set data changes
                     }
                 )
                 .transition(.opacity.combined(with: .scale))
@@ -548,13 +551,14 @@ struct ExerciseLoggingView: View {
         Button(action: completeWorkout) {
             Text("Done")
                 .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
         }
-        .foregroundColor(.white)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
         .background(Color.accentColor)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+        .contentShape(Rectangle())
     }
     
     // MARK: - Duration Exercise Timer Buttons

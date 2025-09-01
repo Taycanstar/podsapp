@@ -17,6 +17,7 @@ struct DynamicSetsInputView: View {
     let onRemoveSet: ((Int) -> Void)?
     let onDurationChanged: ((TimeInterval) -> Void)?
     let onSetFocused: ((Int?) -> Void)? // Callback when a set gains/loses focus
+    let onSetDataChanged: (() -> Void)? // Callback when set data changes
     
     @State private var showingAddSetOptions = false
     @FocusState private var focusedSetIndex: Int?
@@ -29,7 +30,8 @@ struct DynamicSetsInputView: View {
         onAddSet: (() -> Void)? = nil,
         onRemoveSet: ((Int) -> Void)? = nil,
         onDurationChanged: ((TimeInterval) -> Void)? = nil,
-        onSetFocused: ((Int?) -> Void)? = nil
+        onSetFocused: ((Int?) -> Void)? = nil,
+        onSetDataChanged: (() -> Void)? = nil
     ) {
         self._sets = sets
         self.workoutExercise = workoutExercise
@@ -39,46 +41,14 @@ struct DynamicSetsInputView: View {
         self.onRemoveSet = onRemoveSet
         self.onDurationChanged = onDurationChanged
         self.onSetFocused = onSetFocused
+        self.onSetDataChanged = onSetDataChanged
     }
     
     var body: some View {
         VStack(spacing: 0) {
             List {
-                // Sets section with swipe-to-delete
-                ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
-                    DynamicSetRowView(
-                        set: binding(for: index),
-                        setNumber: index + 1,
-                        workoutExercise: workoutExercise,
-                        onDurationChanged: onDurationChanged,
-                        isActive: index == focusedSetIndex,
-                        onFocusChanged: { focused in
-                            if focused {
-                                focusedSetIndex = index
-                            } else if focusedSetIndex == index {
-                                focusedSetIndex = nil
-                            }
-                        }
-                    )
-                    .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            deleteSet(at: index)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
-                }
-                
-                // Add Set/Interval button as List row
-                Section {
-                    addSetButton
-                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                }
+                setsForEachView
+                addSetButtonSection
             }
             .listStyle(.plain)
             .scrollDisabled(true) // KEY: Let parent ScrollView handle scrolling
@@ -93,6 +63,49 @@ struct DynamicSetsInputView: View {
     }
     
     // MARK: - Helper Views and Methods
+    
+    @ViewBuilder
+    private var setsForEachView: some View {
+        // Sets section with swipe-to-delete
+        ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
+            DynamicSetRowView(
+                set: binding(for: index),
+                setNumber: index + 1,
+                workoutExercise: workoutExercise,
+                onDurationChanged: onDurationChanged,
+                isActive: index == focusedSetIndex,
+                onFocusChanged: { focused in
+                    if focused {
+                        focusedSetIndex = index
+                    } else if focusedSetIndex == index {
+                        focusedSetIndex = nil
+                    }
+                },
+                onSetChanged: onSetDataChanged
+            )
+            .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+            .swipeActions(edge: .trailing) {
+                Button(role: .destructive) {
+                    deleteSet(at: index)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var addSetButtonSection: some View {
+        // Add Set/Interval button as List row
+        Section {
+            addSetButton
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+        }
+    }
     
     private func handleFocusChange(_ newValue: Int?) {
         onSetFocused?(newValue)
