@@ -3949,7 +3949,7 @@ func analyzeNutritionLabel(
     // Add a new method to process voice recordings directly in FoodManager
     // This ensures the processing continues even if the view disappears
     @MainActor
-    func processVoiceRecording(audioData: Data, mealType: String = "Lunch") {
+    func processVoiceRecording(audioData: Data, mealType: String = "Lunch", dayLogsVM: DayLogsViewModel) {
         print("🍽️ FoodManager.processVoiceRecording called with mealType: \(mealType)")
         
         // Set macro generation flags for proper UI display 
@@ -4004,6 +4004,9 @@ func analyzeNutritionLabel(
                     switch result {
                     case .success(let loggedFood):
                         print("✅ Voice log successfully processed: \(loggedFood.food.displayName)")
+                        
+                        // CRITICAL: Stop the timer to prevent interference with auto-reset
+                        timer.invalidate()
                         
                         // Track voice logging in Mixpanel
                         Mixpanel.mainInstance().track(event: "Voice Log", properties: [
@@ -4080,6 +4083,16 @@ func analyzeNutritionLabel(
                             }
                         }
                         
+                        // CRITICAL: Add to DayLogsViewModel so it appears in dashboard
+                        dayLogsVM.addPending(combinedLog)
+                        
+                        // CRITICAL: Add to foodManager.combinedLogs (like all other methods do)
+                        // Update global combinedLogs so dashboard's "All" feed updates
+                        if let idx = self.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                            self.combinedLogs.remove(at: idx)
+                        }
+                        self.combinedLogs.insert(combinedLog, at: 0)
+                        
                         // Set success data and show toast (like image analysis) - MUST be on main thread
                         DispatchQueue.main.async {
                             self.showLogSuccess = true
@@ -4100,6 +4113,9 @@ func analyzeNutritionLabel(
                         }
                         
                     case .failure(let error):
+                        // CRITICAL: Stop the timer to prevent interference 
+                        timer.invalidate()
+                        
                         // Use proper error handling with auto-reset (like image analysis)
                         let scanError: FoodScanError
                         if let networkError = error as? NetworkError, case .serverError(let message) = networkError {

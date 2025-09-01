@@ -753,3 +753,114 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
 - ✅ Consistent behavior across all scanning methods (image, text, barcode, nutrition, voice)
 
 **Final Status**: Voice logging functionality now works identically to all other logging methods with proper 0-100% progress animation and auto-reset behavior. Issue completely resolved.
+
+---
+
+## FINAL ISSUES RESOLVED: Dashboard Integration & Progress Reset ✅
+
+### Problem Statement
+After fixing the 0-100% progress animation, two critical issues remained:
+
+**Issue 1**: Voice logs weren't appearing in DashboardView
+- **Root Cause**: Voice method created `CombinedLog` but never called `dayLogsVM.addPending(combinedLog)` 
+- **Impact**: Logs processed successfully but never displayed to user
+
+**Issue 2**: Progress bar didn't reset between sessions (100% → 0%)
+- **Root Cause**: Timer interference - 1.5s repeating timer kept running after completion, competing with auto-reset mechanism
+- **Impact**: Next voice session started at 100% instead of 0%
+
+### Root Cause Analysis
+**Why other methods work**:
+- Call `dayLogsVM.addPending(combinedLog)` AND update `foodManager.combinedLogs`
+- Stop timers before completion states
+- Use proper auto-reset mechanism
+
+**Why voice method was broken**:
+- Missing `dayLogsVM.addPending()` call → logs never appeared
+- Timer not stopped on success/failure → interfered with auto-reset
+- `FoodManager.processVoiceRecording()` had no access to `dayLogsVM`
+
+### Implementation Completed ✅
+
+**Phase 1: Added DayLogsViewModel Integration**
+**Files Modified**: 
+- `/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Managers/FoodManager.swift`
+- `/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Views/food/VoiceLogView.swift`
+
+**Changes Made**:
+1. **Modified method signature**:
+   ```swift
+   func processVoiceRecording(audioData: Data, mealType: String = "Lunch", dayLogsVM: DayLogsViewModel)
+   ```
+
+2. **Added DayLogsViewModel to VoiceLogView**:
+   ```swift
+   @EnvironmentObject var dayLogsVM: DayLogsViewModel
+   ```
+
+3. **Added dayLogsVM property to AudioRecorder**:
+   ```swift
+   var dayLogsVM: DayLogsViewModel?
+   ```
+
+4. **Updated injection in VoiceLogView.onAppear**:
+   ```swift
+   audioRecorder.dayLogsVM = dayLogsVM
+   ```
+
+5. **Updated processVoiceRecording call**:
+   ```swift
+   foodManager.processVoiceRecording(audioData: audioData, mealType: selectedMeal, dayLogsVM: dayLogsVM)
+   ```
+
+**Phase 2: Added Dashboard Integration**
+**Location**: `processVoiceRecording()` success handler
+
+**Changes Made**:
+```swift
+// CRITICAL: Add to DayLogsViewModel so it appears in dashboard
+dayLogsVM.addPending(combinedLog)
+
+// CRITICAL: Add to foodManager.combinedLogs (like all other methods do)
+// Update global combinedLogs so dashboard's "All" feed updates
+if let idx = self.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+    self.combinedLogs.remove(at: idx)
+}
+self.combinedLogs.insert(combinedLog, at: 0)
+```
+
+**Phase 3: Fixed Progress Reset Issue** 
+**Root Cause**: Timer interference with auto-reset mechanism
+
+**Changes Made**:
+1. **Stop timer on SUCCESS** (line 4009):
+   ```swift
+   // CRITICAL: Stop the timer to prevent interference with auto-reset
+   timer.invalidate()
+   ```
+
+2. **Stop timer on FAILURE** (line 4117):
+   ```swift
+   // CRITICAL: Stop the timer to prevent interference 
+   timer.invalidate()
+   ```
+
+3. **Stop timer on TRANSCRIPTION FAILURE** (already existed at line 4139)
+
+### Complete Data Flow Now ✅
+1. **Voice recording completes** → Network processing starts at 0%
+2. **Network/AI processing finishes** → Timer stops, progress animation starts  
+3. **60% (analyzing)** → 0.3s delay → **80% (processing)** → 0.3s delay → **100% (completed)**
+4. **`dayLogsVM.addPending(combinedLog)`** → **Log appears in DashboardView**
+5. **`combinedLogs.insert(combinedLog, at: 0)`** → **Log appears in "All" feed**
+6. **Show 100% completion for 1.5s** → **Auto-reset to 0%** → **Next session starts fresh**
+
+### Results Achieved ✅
+- ✅ Voice logs now appear in DashboardView immediately after completion
+- ✅ Voice logs appear in both daily view and "All" feed  
+- ✅ Progress bar properly resets from 100% → 0% between sessions
+- ✅ No timer interference with auto-reset mechanism
+- ✅ Consistent behavior with all other logging methods (image, text, barcode, nutrition, voice)
+- ✅ Complete 0% → 100% → disappear → reset cycle working perfectly
+
+**Final Status**: Voice logging now has complete feature parity with all other logging methods. Dashboard integration working, progress reset working, UX identical across all scanning types.

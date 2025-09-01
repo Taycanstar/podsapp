@@ -114,6 +114,7 @@ struct VoiceLogView: View {
     @StateObject private var audioRecorder = AudioRecorder()
     @State private var allowDismissal = false
     @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     
     // Simplified body for cleaner look
     var body: some View {
@@ -229,8 +230,9 @@ struct VoiceLogView: View {
             
             // Setup without showing a loading screen
             DispatchQueue.main.async {
-                // Inject the FoodManager and selectedMeal
+                // Inject the FoodManager, DayLogsViewModel, and selectedMeal
                 audioRecorder.foodManager = foodManager
+                audioRecorder.dayLogsVM = dayLogsVM
                 audioRecorder.selectedMeal = selectedMeal
                 print("🍽️ AudioRecorder.selectedMeal set to: \(audioRecorder.selectedMeal)")
                 
@@ -348,8 +350,9 @@ class AudioRecorder: NSObject, ObservableObject {
     @Published var isProcessing: Bool = false
     @Published var foodData: Food?
     
-    // The FoodManager instance passed from VoiceLogView
+    // The FoodManager and DayLogsViewModel instances passed from VoiceLogView
     var foodManager: FoodManager?
+    var dayLogsVM: DayLogsViewModel?
     var selectedMeal: String = "Lunch" 
     
     private var audioRecorder: AVAudioRecorder?
@@ -429,14 +432,14 @@ class AudioRecorder: NSObject, ObservableObject {
             
             // Pass the audio data to FoodManager to process instead of handling it ourselves
             // This ensures processing continues even after VoiceLogView is dismissed
-            if let foodManager = foodManager {
+            if let foodManager = foodManager, let dayLogsVM = dayLogsVM {
                 print("🎤 Passing audio data to FoodManager for processing with meal: \(selectedMeal)")
                 print("🍽️ AudioRecorder.selectedMeal value: \(selectedMeal)")
                 Task { @MainActor in
-                    foodManager.processVoiceRecording(audioData: audioData, mealType: selectedMeal)
+                    foodManager.processVoiceRecording(audioData: audioData, mealType: selectedMeal, dayLogsVM: dayLogsVM)
                 }
             } else {
-                print("⚠️ No FoodManager available to process audio")
+                print("⚠️ No FoodManager or DayLogsViewModel available to process audio")
             }
         } catch {
             print("Error reading audio file: \(error.localizedDescription)")
