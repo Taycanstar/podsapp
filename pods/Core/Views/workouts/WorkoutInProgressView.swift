@@ -136,26 +136,35 @@ struct WorkoutInProgressView: View {
                         allExercises: allExercises, 
                         onSetLogged: { completedSetsCount, rirValue in
                             hasLoggedSets = true
-                            // Find the exercise index and update completion status with actual count and RIR
-                            if let exerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
-                                exerciseCompletionStatus[exerciseIndex] = completedSetsCount
+                            // 🐛 FIX: Use globalIndex from allCombinedExercises, NOT exerciseIndex from main exercises only
+                            if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                                // DEBUG: Show what the old buggy system would have done
+                                let oldExerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) ?? -1
+                                print("🔍 DEBUG INDEX MAPPING:")
+                                print("   Exercise: \(exercise.exercise.name)")
+                                print("   ❌ OLD BUGGY exerciseIndex: \(oldExerciseIndex) (would update wrong exercise!)")
+                                print("   ✅ FIXED globalIndex: \(globalIndex) (updates correct exercise)")
+                                print("   allCombinedExercises[\(globalIndex)]: \(allCombinedExercises[globalIndex].exercise.name)")
+                                
+                                exerciseCompletionStatus[globalIndex] = completedSetsCount
                                 if let rir = rirValue {
-                                    exerciseRIRValues[exerciseIndex] = rir
+                                    exerciseRIRValues[globalIndex] = rir
                                 }
+                                print("🏋️ ✅ FIXED CONTAMINATION: Updated completion for globalIndex \(globalIndex) - \(completedSetsCount) sets completed")
                             }
                         },
                         isFromWorkoutInProgress: true,  // Pass this flag to show Log Set/Log All Sets buttons immediately
                         initialCompletedSetsCount: {
-                            // Pass the current completed sets count for this exercise
-                            if let exerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
-                                return exerciseCompletionStatus[exerciseIndex]
+                            // 🐛 FIX: Use globalIndex from allCombinedExercises for consistency
+                            if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                                return exerciseCompletionStatus[globalIndex]
                             }
                             return nil
                         }(),
                         initialRIRValue: {
-                            // Pass the current RIR value for this exercise
-                            if let exerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
-                                return exerciseRIRValues[exerciseIndex]
+                            // 🐛 FIX: Use globalIndex from allCombinedExercises for consistency
+                            if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                                return exerciseRIRValues[globalIndex]
                             }
                             return nil
                         }(),

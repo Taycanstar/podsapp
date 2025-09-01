@@ -30,7 +30,6 @@ struct ExerciseLoggingView: View {
     let onWarmupSetsChanged: (([WarmupSetData]) -> Void)? // Callback to notify when warm-up sets change
     let onExerciseUpdated: ((TodayWorkoutExercise) -> Void)? // Callback to notify when exercise is updated (sets added/removed)
     @Environment(\.dismiss) private var dismiss
-    @State private var sets: [SetData] = []
     @FocusState private var focusedField: FocusedField?
     @State private var showingFullscreenVideo = false
     @State private var isVideoHidden = false
@@ -53,7 +52,6 @@ struct ExerciseLoggingView: View {
     // Enhanced tracking system state
     @State private var trackingType: ExerciseTrackingType = .repsWeight
     @State private var flexibleSets: [FlexibleSetData] = []
-    private let useFlexibleTracking = true // Always use enhanced tracking system
     
     @State private var showTimerSheet = false
     @State private var timerDuration: TimeInterval = 60 // Duration for the current timer session
@@ -85,13 +83,6 @@ struct ExerciseLoggingView: View {
         case weight(UUID)
     }
     
-    struct SetData: Identifiable {
-        let id = UUID()
-        var reps: String
-        var weight: String
-        var isCompleted: Bool = false
-        var isWarmupSet: Bool = false
-    }
     
     private var bottomPadding: CGFloat {
         return focusedField != nil ? 10 : 20
@@ -226,7 +217,6 @@ struct ExerciseLoggingView: View {
             }
         }
         .onAppear {
-            setupInitialSets()
             // Load existing notes for this exercise
             Task {
                 exerciseNotes = await ExerciseNotesService.shared.loadNotes(for: currentExercise.exercise.id)
@@ -299,7 +289,7 @@ struct ExerciseLoggingView: View {
                     // Dismiss ExerciseOptionsSheet first, then add warmup set
                     showingExerciseOptions = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        addWarmupSet()
+                        addNewWarmupSet()
                     }
                 }
             )
@@ -469,7 +459,7 @@ struct ExerciseLoggingView: View {
                         handleFlexibleSetCompletion(at: setIndex)
                     },
                     onAddSet: {
-                        // Handle set addition if needed
+                        addNewSet()
                     },
                     onRemoveSet: { setIndex in
                         // Handle set removal if needed  
@@ -483,10 +473,9 @@ struct ExerciseLoggingView: View {
                 )
                 .transition(.opacity.combined(with: .scale))
             }
-            // For non-duration exercises, use existing flexible tracking system
-            else if !flexibleSets.isEmpty {
-                // New flexible tracking system
-                let _ = print("🔍 DEBUG UI: Using FLEXIBLE system (isDurationBasedExercise=false, flexibleSets.isEmpty=false, flexibleSets.count=\(flexibleSets.count))")
+            // For non-duration exercises, always use flexible tracking system
+            else {
+                // Flexible tracking system for all exercises
                 DynamicSetsInputView(
                     sets: $flexibleSets,
                     exercise: currentExercise.exercise,
@@ -495,7 +484,7 @@ struct ExerciseLoggingView: View {
                         handleFlexibleSetCompletion(at: setIndex)
                     },
                     onAddSet: {
-                        // Handle set addition if needed
+                        addNewSet()
                     },
                     onRemoveSet: { setIndex in
                         // Handle set removal if needed  
@@ -508,11 +497,6 @@ struct ExerciseLoggingView: View {
                     }
                 )
                 .transition(.opacity.combined(with: .scale))
-            } else {
-                // Legacy tracking system (original interface)
-                let _ = print("🔍 DEBUG UI: Using LEGACY system (isDurationBasedExercise=false, flexibleSets.isEmpty=true, flexibleSets.count=\(flexibleSets.count), sets.count=\(sets.count))")
-                legacySetsInputView
-                    .transition(.opacity.combined(with: .scale))
             }
         }
         .onAppear {
@@ -520,81 +504,6 @@ struct ExerciseLoggingView: View {
         }
     }
     
-    private var legacySetsInputView: some View {
-        VStack(spacing: 12) {
-            List {
-                ForEach(Array(allSetsOrganized.enumerated()), id: \.element.id) { index, set in
-                    HStack(spacing: 12) {
-                        // Set number with completion indicator
-                        ZStack {
-                            Circle()
-                                .fill(set.isCompleted ? Color.accentColor : 
-                                      (workoutStarted && index == currentSetIndex && !set.isWarmupSet) ? 
-                                      Color.blue.opacity(0.2) : Color.clear)
-                                .frame(width: 24, height: 24)
-                            
-                            if set.isCompleted {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.white)
-                            } else if set.isWarmupSet {
-                                Image(systemName: "flame.fill")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.primary)
-                            } else {
-                                Text(setDisplayNumber(for: set, at: index))
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(workoutStarted && index == currentSetIndex ? .blue : .primary)
-                            }
-                        }
-                        .frame(width: 24, alignment: .leading)
-                        
-                        TextField("8 reps", text: Binding(
-                            get: { set.reps },
-                            set: { 
-                                if let setIndex = sets.firstIndex(where: { $0.id == set.id }) {
-                                    sets[setIndex].reps = $0
-                                }
-                            }
-                        ))
-                        .focused($focusedField, equals: .reps(set.id))
-                        .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .reps(set.id)))
-                        .keyboardType(.numberPad)
-                        
-                        TextField("150 lbs", text: Binding(
-                            get: { set.weight },
-                            set: { 
-                                if let setIndex = sets.firstIndex(where: { $0.id == set.id }) {
-                                    sets[setIndex].weight = $0
-                                }
-                            }
-                        ))
-                        .focused($focusedField, equals: .weight(set.id))
-                        .textFieldStyle(CustomTextFieldStyle2(isFocused: focusedField == .weight(set.id)))
-                        .keyboardType(.decimalPad)
-                    }
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
-                    .padding(.vertical, 6)
-                }
-                .onDelete(perform: deleteSet)
-            }
-            .listStyle(PlainListStyle())
-            .frame(height: CGFloat(allSetsOrganized.count * 60)) // Dynamic height based on set count
-            
-            Button(action: addSet) {
-                HStack(spacing: 6) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .medium))
-                    Text("Add Set")
-                        .font(.system(size: 16, weight: .medium))
-                }
-                .foregroundColor(.primary)
-                .padding(.top, 8)
-                // No background styling
-            }
-        }
-    }
     
     private var startWorkoutButton: some View {
         Button(action: startWorkout) {
@@ -718,21 +627,11 @@ struct ExerciseLoggingView: View {
     // MARK: - Computed Properties
     
     private var completedSetsCount: Int {
-        // Return count from whichever system is currently active
-        if isDurationBasedExercise || !flexibleSets.isEmpty {
-            return flexibleSets.filter { $0.isCompleted }.count
-        } else {
-            return sets.filter { $0.isCompleted }.count
-        }
+        return flexibleSets.filter { $0.isCompleted }.count
     }
     
     private var isExerciseFullyCompleted: Bool {
-        // Check completion from whichever system is currently active
-        if isDurationBasedExercise || !flexibleSets.isEmpty {
-            return !flexibleSets.isEmpty && flexibleSets.allSatisfy { $0.isCompleted }
-        } else {
-            return !sets.isEmpty && sets.allSatisfy { $0.isCompleted }
-        }
+        return !flexibleSets.isEmpty && flexibleSets.allSatisfy { $0.isCompleted }
     }
     
     private var isDurationBasedExercise: Bool {
@@ -786,7 +685,7 @@ struct ExerciseLoggingView: View {
             }
             
             // Update parent exercise if callback exists
-            updateParentExerciseWithFlexibleSets()
+            saveFlexibleSetsToExercise()
         }
     }
     
@@ -796,126 +695,31 @@ struct ExerciseLoggingView: View {
         return String(format: "%d:%02d", minutes, remainingSeconds)
     }
     
-    private func updateParentExerciseWithFlexibleSets() {
-        // Convert flexible sets back to regular sets for compatibility
-        let convertedSets = flexibleSets.map { flexibleSet in
-            var setData = SetData(reps: "", weight: "")
-            setData.isCompleted = flexibleSet.isCompleted
-            // Add other conversions as needed based on tracking type
-            return setData
-        }
-        
-        // Notify parent about exercise update
-        var updatedExercise = currentExercise
-        // Update exercise with new sets data if needed
-        onExerciseUpdated?(updatedExercise)
-    }
     
     // MARK: - Set Organization
     
-    private var warmupSets: [SetData] {
-        sets.filter { $0.isWarmupSet }
-    }
     
-    private var regularSets: [SetData] {
-        sets.filter { !$0.isWarmupSet }
-    }
-    
-    private var allSetsOrganized: [SetData] {
-        warmupSets + regularSets
-    }
-    
-    private func setDisplayNumber(for set: SetData, at index: Int) -> String {
-        // Only used for regular sets now, warm-up sets use flame icon
-        let regularIndex = regularSets.firstIndex(where: { $0.id == set.id }) ?? 0
-        return "\(regularIndex + 1)"
-    }
     
     // MARK: - Methods
     
-    private func setupInitialSets() {
-        var allSets: [SetData] = []
-        
-        // First, add warm-up sets if they exist
-        if let warmupSets = currentExercise.warmupSets {
-            for warmupSet in warmupSets {
-                allSets.append(SetData(
-                    reps: warmupSet.reps,
-                    weight: warmupSet.weight,
-                    isCompleted: false,
-                    isWarmupSet: true
-                ))
-            }
-        }
-        
-        // Then add regular sets
-        let regularSets = Array(1...currentExercise.sets).map { setIndex in
-            let isCompleted = initialCompletedSetsCount != nil && setIndex <= (initialCompletedSetsCount ?? 0)
-            return SetData(
-                reps: "\(currentExercise.reps)",
-                weight: currentExercise.exercise.equipment.lowercased() == "body weight" ? "" : "150",
-                isCompleted: isCompleted
-            )
-        }
-        
-        allSets.append(contentsOf: regularSets)
-        sets = allSets
-        
-        // Set currentSetIndex to the next incomplete set
-        if let completedCount = initialCompletedSetsCount {
-            currentSetIndex = min(completedCount, sets.count - 1)
-            
-            // If all sets are completed, show RIR section and restore RIR value
-            if completedCount >= currentExercise.sets {
-                showRIRSection = true
-                if let savedRIR = initialRIRValue {
-                    rirValue = savedRIR
-                }
-            }
-        }
-    }
     
-    private func addSet() {
-        let newSet = SetData(
-            reps: "\(currentExercise.reps)",
-            weight: currentExercise.exercise.equipment.lowercased() == "body weight" ? "" : "150"
-        )
-        sets.append(newSet)
-        
-        // Persist the updated exercise with new set count
-        saveWarmupSetsToExercise()
-    }
     
-    private func addWarmupSet() {
-        let newWarmupSet = SetData(
-            reps: "\(currentExercise.reps)",
-            weight: currentExercise.exercise.equipment.lowercased() == "body weight" ? "" : "50",
-            isWarmupSet: true
-        )
-        // Insert at the beginning of warmup sets
-        let warmupCount = warmupSets.count
-        sets.insert(newWarmupSet, at: warmupCount)
-        
-        // Persist warm-up sets to the exercise data
-        saveWarmupSetsToExercise()
-        
-        // Generate haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.prepare()
-        impactFeedback.impactOccurred()
-    }
     
     private func saveWarmupSetsToExercise() {
-        // Convert current warm-up sets to WarmupSetData for persistence
-        let warmupSetData = warmupSets.map { WarmupSetData(reps: $0.reps, weight: $0.weight) }
+        // Extract warmup sets from flexible sets
+        let warmupFlexibleSets = flexibleSets.filter { $0.isWarmupSet }
+        let warmupSetData = warmupFlexibleSets.compactMap { flexibleSet -> WarmupSetData? in
+            guard let reps = flexibleSet.reps, let weight = flexibleSet.weight else { return nil }
+            return WarmupSetData(reps: reps, weight: weight)
+        }
         
         // Count the actual number of regular sets (non-warmup)
-        let regularSetCount = regularSets.count
+        let regularSetCount = flexibleSets.filter { !$0.isWarmupSet }.count
         
         // Create updated exercise with warm-up sets and updated regular set count
         let updatedExercise = TodayWorkoutExercise(
             exercise: currentExercise.exercise,
-            sets: regularSetCount, // Update the set count to match actual regular sets
+            sets: regularSetCount,
             reps: currentExercise.reps,
             weight: currentExercise.weight,
             restTime: currentExercise.restTime,
@@ -936,37 +740,10 @@ struct ExerciseLoggingView: View {
         // Save to parent via callback if available
         onExerciseUpdated?(updatedExercise)
         
-        // Also call the legacy callback for compatibility
+        // Call the callback for compatibility
         onWarmupSetsChanged?(warmupSetData)
     }
     
-    private func deleteSet(at indexSet: IndexSet) {
-        // Ensure we don't delete all sets - maintain at least one regular set
-        if sets.count <= 1 {
-            // If trying to delete the last set, create a new regular set
-            let newSet = SetData(
-                reps: "\(currentExercise.reps)",
-                weight: currentExercise.exercise.equipment.lowercased() == "body weight" ? "" : "150"
-            )
-            sets = [newSet]
-            return
-        }
-        
-        sets.remove(atOffsets: indexSet)
-        
-        // Adjust currentSetIndex if needed
-        if let firstIndex = indexSet.first, currentSetIndex >= firstIndex {
-            currentSetIndex = max(0, currentSetIndex - indexSet.count)
-        }
-        
-        // Persist changes if warm-up sets were affected
-        saveWarmupSetsToExercise()
-        
-        // Generate haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-        impactFeedback.prepare()
-        impactFeedback.impactOccurred()
-    }
     
     private func startWorkout() {
         // Show the workout in progress view immediately
@@ -982,50 +759,20 @@ struct ExerciseLoggingView: View {
     }
     
     private func logCurrentSet() {
-        // DEBUG: Log current state to understand what's happening
-        print("🔍 DEBUG logCurrentSet - isDurationBasedExercise: \(isDurationBasedExercise), flexibleSets.isEmpty: \(flexibleSets.isEmpty), flexibleSets.count: \(flexibleSets.count), sets.count: \(sets.count), currentSetIndex: \(currentSetIndex)")
-        
-        // Determine which system is currently active and update the correct array
-        if isDurationBasedExercise || !flexibleSets.isEmpty {
-            // Use flexible system - this is what the UI is showing
-            print("🔍 DEBUG: Using FLEXIBLE system")
-            guard currentSetIndex < flexibleSets.count else { 
-                print("❌ ERROR: currentSetIndex \(currentSetIndex) >= flexibleSets.count \(flexibleSets.count)")
-                return 
-            }
-            
-            // Mark current flexible set as completed
-            flexibleSets[currentSetIndex].isCompleted = true
-            print("🔍 DEBUG: Marked flexibleSets[\(currentSetIndex)].isCompleted = true")
-            
-            // Move to next set
-            let previousSetIndex = currentSetIndex
-            currentSetIndex += 1
-            
-            // Handle completion callback for flexible system
-            handleFlexibleSetCompletion(at: previousSetIndex)
-            
-            print("🏋️ ✅ FIXED: Logged flexible set \(previousSetIndex + 1) of \(flexibleSets.count) - Total completed: \(flexibleSets.filter { $0.isCompleted }.count)")
-        } else {
-            // Use legacy system - fallback for when flexibleSets is empty
-            print("🔍 DEBUG: Using LEGACY system")
-            guard currentSetIndex < sets.count else { 
-                print("❌ ERROR: currentSetIndex \(currentSetIndex) >= sets.count \(sets.count)")
-                return 
-            }
-            
-            // Mark current legacy set as completed
-            sets[currentSetIndex].isCompleted = true
-            print("🔍 DEBUG: Marked sets[\(currentSetIndex)].isCompleted = true")
-            
-            // Move to next set
-            currentSetIndex += 1
-            
-            // Notify parent with current completed sets count (no RIR for individual sets)
-            onSetLogged?(completedSetsCount, nil)
-            
-            print("🏋️ ✅ FIXED: Logged legacy set \(currentSetIndex) of \(sets.count) - Total completed: \(completedSetsCount)")
+        guard currentSetIndex < flexibleSets.count else { 
+            print("❌ ERROR: currentSetIndex \(currentSetIndex) >= flexibleSets.count \(flexibleSets.count)")
+            return 
         }
+        
+        // Mark current flexible set as completed
+        flexibleSets[currentSetIndex].isCompleted = true
+        
+        // Move to next set
+        let previousSetIndex = currentSetIndex
+        currentSetIndex += 1
+        
+        // Handle completion callback for flexible system
+        handleFlexibleSetCompletion(at: previousSetIndex)
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
@@ -1034,41 +781,21 @@ struct ExerciseLoggingView: View {
     }
     
     private func logAllSets() {
-        // Determine which system is currently active and mark all sets as completed
-        if isDurationBasedExercise || !flexibleSets.isEmpty {
-            // Use flexible system - mark all flexible sets as completed
-            for index in flexibleSets.indices {
-                flexibleSets[index].isCompleted = true
-            }
-            
-            // Show RIR section
-            showRIRSection = true
-            
-            // Notify parent with completed sets count using unified property
-            onSetLogged?(completedSetsCount, nil)
-            
-            print("🏋️ Logged all flexible sets: \(completedSetsCount)/\(flexibleSets.count)")
-        } else {
-            // Use legacy system - mark all legacy sets as completed
-            for index in sets.indices {
-                sets[index].isCompleted = true
-            }
-            
-            // Show RIR section
-            showRIRSection = true
-            
-            // Notify parent with completed sets count using legacy system count
-            onSetLogged?(completedSetsCount, nil)
-            
-            print("🏋️ Logged all legacy sets: \(completedSetsCount)/\(sets.count)")
+        // Mark all flexible sets as completed
+        for index in flexibleSets.indices {
+            flexibleSets[index].isCompleted = true
         }
+        
+        // Show RIR section
+        showRIRSection = true
+        
+        // Notify parent with completed sets count
+        onSetLogged?(completedSetsCount, nil)
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
-        
-        print("🏋️ All sets logged, showing RIR section - Total completed: \(completedSetsCount)")
     }
     
     private func completeWorkout() {
@@ -1086,6 +813,42 @@ struct ExerciseLoggingView: View {
         impactFeedback.impactOccurred()
     }
     
+    private func addNewSet() {
+        let newSet = FlexibleSetData(trackingType: trackingType)
+        flexibleSets.append(newSet)
+        
+        // Save to parent exercise data
+        saveFlexibleSetsToExercise()
+        
+        // Generate haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.prepare()
+        impactFeedback.impactOccurred()
+    }
+    
+    private func addNewWarmupSet() {
+        var newWarmupSet = FlexibleSetData(trackingType: trackingType)
+        newWarmupSet.isWarmupSet = true
+        
+        // For warmup sets, use lighter weights if applicable
+        if trackingType == .repsWeight {
+            newWarmupSet.reps = "\(currentExercise.reps)"
+            newWarmupSet.weight = currentExercise.exercise.equipment.lowercased() == "body weight" ? nil : "50"
+        }
+        
+        // Insert at the beginning (warmup sets come first)
+        let warmupCount = flexibleSets.filter { $0.isWarmupSet }.count
+        flexibleSets.insert(newWarmupSet, at: warmupCount)
+        
+        // Save to parent exercise data
+        saveWarmupSetsToExercise()
+        
+        // Generate haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.prepare()
+        impactFeedback.impactOccurred()
+    }
+    
     private func moveToNextField() {
         guard let currentField = focusedField else { return }
         
@@ -1099,11 +862,10 @@ struct ExerciseLoggingView: View {
             // Move to weight field of same set
             focusedField = .weight(setId)
         case .weight(let setId):
-            // Find current set and move to next set's reps field, or dismiss if last
-            let organizedSets = allSetsOrganized
-            if let currentIndex = organizedSets.firstIndex(where: { $0.id == setId }) {
-                if currentIndex < organizedSets.count - 1 {
-                    let nextSet = organizedSets[currentIndex + 1]
+            // Find current set in flexible sets and move to next set's reps field, or dismiss if last
+            if let currentIndex = flexibleSets.firstIndex(where: { $0.id.uuidString == setId.uuidString }) {
+                if currentIndex < flexibleSets.count - 1 {
+                    let nextSet = flexibleSets[currentIndex + 1]
                     focusedField = .reps(nextSet.id)
                 } else {
                     focusedField = nil
@@ -1118,59 +880,26 @@ struct ExerciseLoggingView: View {
     
     /// Initialize flexible sets for enhanced tracking
     private func initializeFlexibleSetsIfNeeded() {
-        print("🔍 DEBUG INIT: flexibleSets.isEmpty=\(flexibleSets.isEmpty), flexibleSets.count=\(flexibleSets.count), sets.count=\(sets.count), trackingType=\(trackingType)")
-        
         if flexibleSets.isEmpty {
-            
-            // PRIORITY 1: Restore from TodayWorkoutExercise if available ✅
+            // PRIORITY 1: Restore from TodayWorkoutExercise if available
             if let savedFlexibleSets = currentExercise.flexibleSets, !savedFlexibleSets.isEmpty {
-                print("🔧 DURATION: Restoring \(savedFlexibleSets.count) flexible sets from TodayWorkoutExercise")
                 flexibleSets = savedFlexibleSets
                 
                 // Update timerDuration from first duration-based set
                 if let durationSet = savedFlexibleSets.first(where: { $0.duration != nil }),
                    let duration = durationSet.duration {
                     timerDuration = duration
-                    print("🔧 DURATION: Restored timerDuration to \(duration)s from saved flexible sets")
                 }
                 return
             }
             
-            // PRIORITY 2: Convert existing legacy sets to flexible sets
-            if !sets.isEmpty {
-                print("🔍 DEBUG INIT: Converting \(sets.count) legacy sets to flexible sets")
-                flexibleSets = sets.map { legacySet in
-                    var flexibleSet = FlexibleSetData(trackingType: trackingType)
-                    
-                    // Map legacy data to appropriate fields based on tracking type
-                    switch trackingType {
-                    case .repsWeight:
-                        flexibleSet.reps = legacySet.reps.isEmpty ? nil : legacySet.reps
-                        flexibleSet.weight = legacySet.weight.isEmpty ? nil : legacySet.weight
-                    case .repsOnly:
-                        flexibleSet.reps = legacySet.reps.isEmpty ? nil : legacySet.reps
-                    default:
-                        // For non-reps based exercises, initialize with defaults
-                        break
-                    }
-                    
-                    flexibleSet.isCompleted = legacySet.isCompleted
-                    flexibleSet.isWarmupSet = legacySet.isWarmupSet
-                    
-                    return flexibleSet
-                }
-                print("🔍 DEBUG INIT: Successfully converted to \(flexibleSets.count) flexible sets")
-            } else {
-                // PRIORITY 3: Create default flexible sets based on tracking type
-                let defaultCount = defaultSetCount(for: trackingType)
-                print("🔍 DEBUG INIT: Creating \(defaultCount) default flexible sets")
-                for _ in 0..<defaultCount {
-                    flexibleSets.append(FlexibleSetData(trackingType: trackingType))
-                }
-                print("🔍 DEBUG INIT: Successfully created \(flexibleSets.count) default flexible sets")
+            // PRIORITY 2: Create default flexible sets based on tracking type
+            let defaultCount = defaultSetCount(for: trackingType)
+            for _ in 0..<defaultCount {
+                flexibleSets.append(FlexibleSetData(trackingType: trackingType))
             }
             
-            // PRIORITY 4: Apply persisted durations AFTER flexible sets are created
+            // PRIORITY 3: Apply persisted durations AFTER flexible sets are created
             loadPersistedDurationSettings()
         }
     }
