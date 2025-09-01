@@ -3984,11 +3984,6 @@ func analyzeNutritionLabel(
         // CRITICAL: Start with initializing state for proper 0% progress visibility
         updateFoodScanningState(.initializing)  // Shows 0%
         
-        // Ensure 0% is visible briefly before processing starts (like analyzeFoodImageModern)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.updateFoodScanningState(.analyzing)  // Move to 60% during network processing
-        }
-        
         // Create a timer to cycle through analysis stages for UI feedback
         voiceStageTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
