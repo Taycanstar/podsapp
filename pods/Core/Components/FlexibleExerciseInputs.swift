@@ -45,9 +45,9 @@ struct DynamicSetRowView: View {
         ZStack {
             // Background rounded rectangle (matches input style)
             RoundedRectangle(cornerRadius: 16)
-                .fill(set.isCompleted ? Color.green : Color("containerbg"))
+                .fill(set.isCompleted ? Color.accentColor : Color("containerbg"))
                 .strokeBorder(
-                    set.isCompleted ? Color.green : (colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4)), 
+                    set.isCompleted ? Color.accentColor : (colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4)), 
                     lineWidth: set.isCompleted ? 0 : 0.5
                 )
                 .frame(width: 44, height: 44)
@@ -550,7 +550,7 @@ struct DynamicSetRowView: View {
             .focused($focusedField, equals: .firstInput)
             .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "rounds", isActive: isActive))
             .keyboardType(.numberPad)
-            .submitLabel(.next)
+            .submitLabel(.done)
             .onSubmit {
                 focusedField = nil
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {

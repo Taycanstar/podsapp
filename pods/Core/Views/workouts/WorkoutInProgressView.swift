@@ -504,7 +504,7 @@ struct ExerciseRowInProgress: View {
                     // Completion checkmark overlay
                     if isExerciseFullyLogged {
                         Circle()
-                            .fill(Color.green)
+                            .fill(Color.accentColor)
                             .frame(width: 24, height: 24)
                             .overlay(
                                 Image(systemName: "checkmark")
@@ -528,7 +528,7 @@ struct ExerciseRowInProgress: View {
                         if let loggedCount = loggedSetsCount {
                             Text("\(loggedCount)/\(exercise.sets) logged")
                                 .font(.system(size: 14, weight: isExerciseFullyLogged ? .semibold : .regular))
-                                .foregroundColor(isExerciseFullyLogged ? .green : .orange)
+                                .foregroundColor(isExerciseFullyLogged ? .accentColor : .orange)
                         } else {
                             Text("\(exercise.sets) sets • \(exercise.reps) reps")
                                 .font(.system(size: 14))
@@ -575,7 +575,7 @@ struct ExerciseRowInProgress: View {
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isExerciseFullyLogged ? Color.green.opacity(0.3) : Color.clear, lineWidth: 1)
+                    .stroke(isExerciseFullyLogged ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())

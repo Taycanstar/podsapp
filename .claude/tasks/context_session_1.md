@@ -596,3 +596,48 @@ This fix resolves the critical crash by ensuring all modern state system methods
 3. `.completed(result: combinedLog)` or `.failed(error: message)` → auto-hide
 
 This completes the integration of voice logging with the modern FoodScanningState system, ensuring all scanning methods behave consistently.
+
+---
+
+## CRITICAL FIX: Race Condition Resolution & State Reset Issues
+
+### Problem Statement  
+After the initial voice logging fix, multiple issues emerged:
+1. **Race Conditions**: Voice logging went to 60%, then back down, then completed (competing state updates)
+2. **No State Reset**: Subsequent scans didn't start from 0% (failed states not auto-resetting)  
+3. **Broken Image Analysis**: Other scanning methods also stopped starting from 0%
+4. **Complex Overlapping Updates**: Multiple timers and state calls competing
+
+### Root Cause Analysis
+**The Issue**: I over-engineered the voice fix by adding competing state transitions:
+- Added `updateFoodScanningState(.initializing)` 
+- Added `DispatchQueue.main.asyncAfter` call for `.analyzing`
+- Added `updateFoodScanningState(.completed(result: combinedLog))`
+- **BUT** the existing timer system was still running and updating progress
+- **Result**: Multiple overlapping state updates created race conditions
+
+**Failed State Issue**: Direct `.failed()` calls bypassed the existing `handleScanFailure()` method that has proper auto-reset logic (3-second delay before reset to `.inactive`)
+
+### Minimal Fix Applied ✅
+
+**File Modified**: `/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Managers/FoodManager.swift`
+
+**Changes Made** (`processVoiceRecording()` line 3951):
+1. **Kept**: `@MainActor` annotation (needed for thread safety)
+2. **Kept**: `updateFoodScanningState(.completed(result: combinedLog))` (needed for auto-hide) 
+3. **Removed**: All competing state transition calls (`.initializing`, `.analyzing` with delays)
+4. **Replaced**: All direct `.failed()` calls with `handleScanFailure(error)` for proper auto-reset
+
+**Key Insight**: The existing timer-based progress system was already working. I only needed to:
+- Add thread safety (`@MainActor`)
+- Add completion state for auto-hide
+- Use proper error handling with auto-reset
+
+### Results Expected ✅
+- ✅ Voice logging starts from 0% and progresses smoothly (no more 60% jump back)  
+- ✅ Voice logging disappears after completion (auto-hide after 1.5s)
+- ✅ Failed voice scans auto-reset after 3s, next scan starts from 0%
+- ✅ Image analysis and other methods unaffected, still work properly
+- ✅ No race conditions - single timer system drives progress, single completion call
+
+**The Lesson**: When user asks for "simple fix" - make the minimal change needed. Don't redesign working systems.
