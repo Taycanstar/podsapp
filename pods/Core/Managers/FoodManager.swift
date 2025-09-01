@@ -3948,24 +3948,24 @@ func analyzeNutritionLabel(
     }
     // Add a new method to process voice recordings directly in FoodManager
     // This ensures the processing continues even if the view disappears
+    @MainActor
     func processVoiceRecording(audioData: Data, mealType: String = "Lunch") {
         print("🍽️ FoodManager.processVoiceRecording called with mealType: \(mealType)")
         
-        // Set macro generation flags for proper UI display (on main thread)
-        DispatchQueue.main.async {
-            self.isGeneratingMacros = true  // This triggers MacroGenerationCard
-            self.isLoading = true  // This is what makes the loading card visible in DashboardView
-            self.macroGenerationStage = 0
-            self.showAIGenerationSuccess = false
-            self.macroLoadingMessage = "Transcribing your voice…"  // Initial stage message
-            
-            // CRITICAL FIX: Start with initializing state for proper 0% progress visibility
-            self.updateFoodScanningState(.initializing)
-            
-            // Move directly to analyzing state without artificial timers to prevent shimmer glitches
-            // The network response will drive real progress updates
+        // MODERN: Use modern FoodScanningState system with proper state progression
+        updateFoodScanningState(.initializing)
+        
+        // Smooth transition to analyzing state after a brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             self.updateFoodScanningState(.analyzing)
         }
+        
+        // Set macro generation flags for proper UI display 
+        isGeneratingMacros = true  // This triggers MacroGenerationCard
+        isLoading = true  // This is what makes the loading card visible in DashboardView
+        macroGenerationStage = 0
+        showAIGenerationSuccess = false
+        macroLoadingMessage = "Transcribing your voice…"  // Initial stage message
         
         // Create a timer to cycle through analysis stages for UI feedback
         let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
@@ -4042,10 +4042,8 @@ func analyzeNutritionLabel(
                            (loggedFood.food.calories == 0 && loggedFood.food.protein == 0 && 
                             loggedFood.food.carbs == 0 && loggedFood.food.fat == 0) {
                             
-                            // Set error for user notification (on main thread)
-                            DispatchQueue.main.async {
-                                self.scanningFoodError = "Food not identified. Please try again."
-                            }
+                            // MODERN: Set failed state for auto-hide behavior  
+                            self.updateFoodScanningState(.failed(error: .networkError("Food not identified. Please try again.")))
                             print("⚠️ Voice log returned Unknown food with no nutrition data")
                             return
                         }
@@ -4067,6 +4065,9 @@ func analyzeNutritionLabel(
                             recipe: nil,
                             servingsConsumed: nil
                         )
+                        
+                        // MODERN: Complete scanning with result for auto-hide behavior
+                        self.updateFoodScanningState(.completed(result: combinedLog))
                         
                         // Add to DayLogsViewModel to update the UI (must be on main thread)
                         DispatchQueue.main.async {
@@ -4105,14 +4106,14 @@ func analyzeNutritionLabel(
                         }
                         
                     case .failure(let error):
-                        // Set error message for user notification in DashboardView (on main thread)
-                        DispatchQueue.main.async {
-                            if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
-                                self.scanningFoodError = message
-                            } else {
-                                self.scanningFoodError = "Failed to process voice input: \(error.localizedDescription)"
-                            }
+                        // MODERN: Set failed state for auto-hide behavior
+                        let scanError: FoodScanError
+                        if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                            scanError = .networkError(message)
+                        } else {
+                            scanError = .networkError("Failed to process voice input: \(error.localizedDescription)")
                         }
+                        self.updateFoodScanningState(.failed(error: scanError))
                         
                         print("❌ Failed to generate macros from voice input: \(error.localizedDescription)")
                     }
@@ -4121,19 +4122,20 @@ func analyzeNutritionLabel(
             case .failure(let error):
                 // Stop the timer and reset macro generation state (on main thread)
                 timer.invalidate()
-                DispatchQueue.main.async {
-                    self.isGeneratingMacros = false
-                    self.isLoading = false
-                    self.macroGenerationStage = 0
-                    self.macroLoadingMessage = ""
-                    
-                    // Set error message for user notification in DashboardView
-                    if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
-                        self.scanningFoodError = message
-                    } else {
-                        self.scanningFoodError = "Failed to transcribe voice input: \(error.localizedDescription)"
-                    }
+                
+                // MODERN: Set failed state for auto-hide behavior
+                let scanError: FoodScanError
+                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                    scanError = .networkError(message)
+                } else {
+                    scanError = .networkError("Failed to transcribe voice input: \(error.localizedDescription)")
                 }
+                self.updateFoodScanningState(.failed(error: scanError))
+                
+                isGeneratingMacros = false
+                isLoading = false
+                macroGenerationStage = 0
+                macroLoadingMessage = ""
                 
                 print("❌ Voice transcription failed: \(error.localizedDescription)")
             }

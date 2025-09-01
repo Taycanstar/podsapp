@@ -168,6 +168,7 @@ struct ExerciseLoggingView: View {
         ScrollView {
             mainScrollContent
         }
+        .scrollDismissesKeyboard(.interactively)
         .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
     }
     
@@ -175,6 +176,10 @@ struct ExerciseLoggingView: View {
         ZStack {
             scrollViewWithAnimation
             floatingButtonStack
+        }
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside input fields
+            hideKeyboard()
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
@@ -1197,6 +1202,12 @@ struct ExerciseLoggingView: View {
     /// Check if the tracking type is duration-based
     private func isDurationBasedTrackingType(_ trackingType: ExerciseTrackingType) -> Bool {
         return trackingType == .timeOnly || trackingType == .timeDistance || trackingType == .holdTime
+    }
+    
+    /// Hide keyboard when tapping outside input fields
+    private func hideKeyboard() {
+        focusedField = nil
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

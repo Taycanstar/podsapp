@@ -539,3 +539,60 @@ func analyzeNutritionLabel(..., completion: @escaping (Result<CombinedLog, Error
 - Matches SwiftUI's threading requirements perfectly
 
 This fix resolves the critical crash by ensuring all modern state system methods follow the same safe threading pattern as the working image analysis method.
+
+---
+
+## FINAL ISSUE: VoiceLogView Integration with Modern State System
+
+### Problem Statement
+- **Issue 1**: VoiceLogView doesn't start from 0% progress - jumps directly to processing state
+- **Issue 2**: VoiceLogView doesn't disappear after completion like other scanning methods
+- **Root Cause**: `processVoiceRecording()` method not updated to modern state system
+
+### Analysis of Current State
+**Working Methods Pattern (Reference)**:
+1. **@MainActor annotation** for thread safety
+2. **Modern state transitions**:
+   - `updateFoodScanningState(.initializing)` → 0% progress
+   - `DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` → Smooth transition 
+   - `updateFoodScanningState(.analyzing)` → Progress animation
+   - `updateFoodScanningState(.completed(result: combinedLog))` → Auto-hide
+
+**Current Voice Method Issues** (`processVoiceRecording()` line 3951):
+1. **Missing @MainActor** - Thread safety risk
+2. **Wrong state calls**:
+   - Calls `updateFoodScanningState(.initializing)` then immediately `updateFoodScanningState(.analyzing)`
+   - No progressive transition delay for smooth animation
+3. **No completion state** - Doesn't call `.completed(result: combinedLog)` for auto-hide
+
+### Implementation Completed ✅
+
+**File Modified**: `/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Managers/FoodManager.swift`
+
+**Changes Applied** (line 3951):
+1. **Added `@MainActor` annotation** for thread safety
+2. **Fixed state transition pattern**:
+   - `updateFoodScanningState(.initializing)` → Shows 0% progress
+   - `DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` → Smooth 0.3s delay
+   - `updateFoodScanningState(.analyzing)` → Shows progress animation
+3. **Added proper completion states**:
+   - Success: `updateFoodScanningState(.completed(result: combinedLog))` → Auto-hide after 1.5s
+   - Unknown food error: `updateFoodScanningState(.failed(error: "Food not identified"))` → Auto-hide
+   - Macro generation error: `updateFoodScanningState(.failed(error: errorMessage))` → Auto-hide
+   - Transcription error: `updateFoodScanningState(.failed(error: errorMessage))` → Auto-hide
+4. **Removed duplicate DispatchQueue.main.async wrapping** (now handled by @MainActor)
+
+### Results Expected ✅
+- ✅ VoiceLogView now starts from 0% progress (shows .initializing state)
+- ✅ Smooth transition to progress animation after 0.3s delay
+- ✅ VoiceLogView automatically disappears after completion/failure
+- ✅ Consistent behavior with all other scanning methods (barcode, nutrition, image, text)
+- ✅ Thread-safe operations with @MainActor annotation
+- ✅ Proper error handling with auto-hide behavior
+
+**Pattern Now Consistent**: Voice logging follows the exact same modern state pattern as all working methods:
+1. `@MainActor` for thread safety
+2. `.initializing` → `.analyzing` (with 0.3s smooth transition)
+3. `.completed(result: combinedLog)` or `.failed(error: message)` → auto-hide
+
+This completes the integration of voice logging with the modern FoodScanningState system, ensuring all scanning methods behave consistently.

@@ -96,24 +96,9 @@ struct DynamicSetRowView: View {
             .focused($focusedField, equals: .firstInput)
             .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
             .keyboardType(.numberPad)
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    if focusedField == .firstInput {
-                        Button("Done") {
-                            focusedField = nil
-                        }
-                        Spacer()
-                        Button("Clear") {
-                            set.reps = ""
-                        }
-                        
-                        Spacer()
-                        
-                        Button("Next") {
-                            focusedField = .secondInput
-                        }
-                    }
-                }
+            .submitLabel(.next)
+            .onSubmit {
+                focusedField = .secondInput
             }
             
             // Only show weight field for reps+weight exercises
@@ -125,24 +110,9 @@ struct DynamicSetRowView: View {
                 .focused($focusedField, equals: .secondInput)
                 .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "lbs", isActive: isActive))
                 .keyboardType(.decimalPad)
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        if focusedField == .secondInput {
-                            Button("Done") {
-                                focusedField = nil
-                            }
-                            Spacer()
-                            Button("Clear") {
-                                set.weight = ""
-                            }
-                            
-                            Spacer()
-                            
-                            Button("Next") {
-                                focusedField = .firstInput
-                            }
-                        }
-                    }
+                .submitLabel(.done)
+                .onSubmit {
+                    focusedField = nil
                 }
             }
         }
@@ -160,24 +130,9 @@ struct DynamicSetRowView: View {
             .focused($focusedField, equals: .firstInput)
             .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
             .keyboardType(.numberPad)
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    if focusedField == .firstInput {
-                        Button("Done") {
-                            focusedField = nil
-                        }
-                        Spacer()
-                        Button("Clear") {
-                            set.reps = ""
-                        }
-                        
-                        Spacer()
-                        
-                        Button("Next") {
-                            focusedField = .secondInput
-                        }
-                    }
-                }
+            .submitLabel(.done)
+            .onSubmit {
+                focusedField = nil
             }
             
             TextField("150", text: Binding(
@@ -187,24 +142,9 @@ struct DynamicSetRowView: View {
             .focused($focusedField, equals: .secondInput)
             .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "lbs"))
             .keyboardType(.decimalPad)
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    if focusedField == .secondInput {
-                        Button("Done") {
-                            focusedField = nil
-                        }
-                        Spacer()
-                        Button("Clear") {
-                            set.weight = ""
-                        }
-                        
-                        Spacer()
-                        
-                        Button("Next") {
-                            focusedField = .firstInput
-                        }
-                    }
-                }
+            .submitLabel(.done)
+            .onSubmit {
+                focusedField = nil
             }
         }
     }
@@ -247,22 +187,6 @@ struct DynamicSetRowView: View {
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .toolbar {
-                        ToolbarItemGroup(placement: .keyboard) {
-                            if showTimePicker {
-                                Button("Clear") {
-                                    set.duration = 0
-                                    onDurationChanged?(0)
-                                }
-                                
-                                Spacer()
-                                
-                                Button("Done") {
-                                    showTimePicker = false
-                                }
-                            }
-                        }
-                    }
                     
                     // Only show distance field for time+distance exercises
                     if set.trackingType == .timeDistance {
@@ -283,21 +207,10 @@ struct DynamicSetRowView: View {
                         ))
                         .focused($focusedField, equals: .secondInput)
                         .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "mi", isActive: isActive))
-                        .keyboardType(.numberPad)
-                        .toolbar {
-                            ToolbarItemGroup(placement: .keyboard) {
-                                if focusedField == .secondInput {
-                                    Button("Clear") {
-                                        set.distance = nil
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Button("Done") {
-                                        focusedField = nil
-                                    }
-                                }
-                            }
+                        .keyboardType(.decimalPad)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            focusedField = nil
                         }
                     }
                 }
@@ -408,22 +321,6 @@ struct DynamicSetRowView: View {
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .toolbar {
-                        ToolbarItemGroup(placement: .keyboard) {
-                            if showTimePicker {
-                                Button("Clear") {
-                                    set.duration = 0
-                                    onDurationChanged?(0)
-                                }
-                                
-                                Spacer()
-                                
-                                Button("Done") {
-                                    showTimePicker = false
-                                }
-                            }
-                        }
-                    }
                 }
                 
                 // iOS native inline time picker for duration
@@ -503,24 +400,9 @@ struct DynamicSetRowView: View {
             .focused($focusedField, equals: .secondInput)
             .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "intensity", isActive: isActive))
             .keyboardType(.numberPad)
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    if focusedField == .secondInput {
-                        Button("Done") {
-                            focusedField = nil
-                        }
-                        Spacer()
-                        Button("Clear") {
-                            set.intensity = nil
-                        }
-                        
-                        Spacer()
-                        
-                        Button("Next") {
-                            focusedField = nil
-                        }
-                    }
-                }
+            .submitLabel(.done)
+            .onSubmit {
+                focusedField = nil
             }
             .onTapGesture {
                 showTimePicker = false // Hide time picker when other inputs are tapped
@@ -567,22 +449,6 @@ struct DynamicSetRowView: View {
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .toolbar {
-                        ToolbarItemGroup(placement: .keyboard) {
-                            if showTimePicker {
-                                Button("Clear") {
-                                    set.duration = 0
-                                    onDurationChanged?(0)
-                                }
-                                
-                                Spacer()
-                                
-                                Button("Done") {
-                                    showTimePicker = false
-                                }
-                            }
-                        }
-                    }
                 }
                 
                 // iOS native inline time picker for duration
@@ -656,24 +522,9 @@ struct DynamicSetRowView: View {
             .focused($focusedField, equals: .secondInput)
             .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .secondInput, unit: "lbs"))
             .keyboardType(.decimalPad)
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    if focusedField == .secondInput {
-                        Button("Done") {
-                            focusedField = nil
-                        }
-                        Spacer()
-                        Button("Clear") {
-                            set.weight = ""
-                        }
-                        
-                        Spacer()
-                        
-                        Button("Next") {
-                            focusedField = .firstInput
-                        }
-                    }
-                }
+            .submitLabel(.done)
+            .onSubmit {
+                focusedField = nil
             }
             .onTapGesture {
                 showTimePicker = false // Hide time picker when other inputs are tapped
@@ -699,26 +550,11 @@ struct DynamicSetRowView: View {
             .focused($focusedField, equals: .firstInput)
             .textFieldStyle(LegacyTextFieldStyle(isFocused: focusedField == .firstInput, unit: "rounds", isActive: isActive))
             .keyboardType(.numberPad)
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    if focusedField == .firstInput {
-                        Button("Done") {
-                            focusedField = nil
-                        }
-                        Spacer()
-                        Button("Clear") {
-                            set.rounds = nil
-                        }
-                        
-                        Spacer()
-                        
-                        Button("Next") {
-                            focusedField = nil
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                showTimePicker = true
-                            }
-                        }
-                    }
+            .submitLabel(.next)
+            .onSubmit {
+                focusedField = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    showTimePicker = true
                 }
             }
             
@@ -753,21 +589,6 @@ struct DynamicSetRowView: View {
                     )
                 }
                 .buttonStyle(PlainButtonStyle())
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        if showTimePicker {
-                            Button("Clear") {
-                                set.duration = 0
-                            }
-                            
-                            Spacer()
-                            
-                            Button("Done") {
-                                showTimePicker = false
-                            }
-                        }
-                    }
-                }
                 
                 // iOS native inline time picker for duration
                 if showTimePicker {
