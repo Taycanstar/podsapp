@@ -1130,14 +1130,17 @@ struct ExerciseLoggingView: View {
     /// Get default set count based on tracking type
     private func defaultSetCount(for type: ExerciseTrackingType) -> Int {
         switch type {
-        case .repsWeight, .repsOnly:
+        case .repsWeight:
             return 3 // Traditional 3 sets for strength
         case .timeDistance, .timeOnly:
-            return 1 // Usually one session for cardio
+            return 1 // Usually one session for cardio/aerobic
+        // Handle legacy types that might still exist in saved data
+        case .repsOnly:
+            return 3 // Treat as strength exercise
         case .holdTime:
-            return 3 // 3 holds for stretching
+            return 1 // Treat as duration exercise
         case .rounds:
-            return 1 // One circuit session
+            return 1 // Treat as duration exercise
         }
     }
     

@@ -904,36 +904,36 @@ struct ExerciseClassificationService {
         return .timeOnly
     }
     
-    /// Determine bodyweight exercise type
+    /// Determine bodyweight exercise type - ALL should have weight tracking capability
     private static func determineBodyweightType(for exercise: ExerciseData) -> ExerciseTrackingType {
         let name = exercise.name.lowercased()
         
-        // Hold-based exercises
+        // Hold-based exercises should be duration-only
         if name.contains("plank") || name.contains("hold") || name.contains("wall sit") {
-            return .holdTime
+            return .timeOnly
         }
         
-        // Most bodyweight exercises are reps-only
-        return .repsOnly
+        // ALL other bodyweight exercises should have reps+weight (user can add weight later)
+        return .repsWeight
     }
     
     /// Infer tracking type from exercise name when type/equipment is unclear
     private static func inferFromExerciseName(_ exercise: ExerciseData) -> ExerciseTrackingType {
         let name = exercise.name.lowercased()
         
-        // Time-based patterns
+        // Time-based patterns (duration only)
         if name.contains("plank") || name.contains("hold") {
-            return .holdTime
+            return .timeOnly
         }
         
-        // Cardio patterns
+        // Cardio patterns (duration + distance)
         if name.contains("run") || name.contains("bike") || name.contains("elliptical") {
             return .timeDistance
         }
         
-        // Circuit/rounds patterns
+        // Circuit/interval patterns should be duration-only
         if name.contains("circuit") || name.contains("hiit") || name.contains("interval") {
-            return .rounds
+            return .timeOnly
         }
         
         // Default to reps + weight for strength exercises

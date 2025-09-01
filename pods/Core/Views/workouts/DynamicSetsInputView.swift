@@ -100,7 +100,7 @@ struct DynamicSetsInputView: View {
     
     @ViewBuilder
     private var addSetButton: some View {
-        if trackingType == .repsWeight || trackingType == .repsOnly {
+        if trackingType == .repsWeight {
             Button(action: addSet) {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
@@ -143,10 +143,12 @@ struct DynamicSetsInputView: View {
         // Base calculation for all sets
         let setsHeight = CGFloat(sets.count) * baseRowHeight + CGFloat(max(0, sets.count - 1)) * spacing
         
-        // Add extra height for potential picker expansion on duration-based exercises
-        let extraPickerSpace: CGFloat = hasExpandableContent ? pickerHeight + 20 : 0
+        // For duration exercises: allow reasonable space for potential picker expansion
+        // Allow for 2 expanded pickers max to avoid excessive height
+        let maxExpandedPickers = min(sets.count, 2)
+        let extraPickerSpace: CGFloat = hasExpandableContent ? CGFloat(maxExpandedPickers) * (pickerHeight + 20) : 0
         
-        let totalHeight = setsHeight + buttonHeight + extraPickerSpace + 16 // Extra padding
+        let totalHeight = setsHeight + buttonHeight + extraPickerSpace + 32 // Extra padding
         
         return totalHeight
     }
@@ -163,10 +165,15 @@ struct DynamicSetsInputView: View {
     
     private func defaultSetCount(for type: ExerciseTrackingType) -> Int {
         switch type {
-        case .repsWeight, .repsOnly:
-            return 3 // Traditional 3 sets
-        case .timeDistance, .timeOnly, .holdTime, .rounds:
-            return 1 // Time-based exercises only need 1 set
+        case .repsWeight:
+            return 3 // Traditional 3 sets for strength
+        case .timeDistance, .timeOnly:
+            return 1 // Cardio/aerobic exercises typically 1 session
+        // Handle legacy types that might still exist in saved data
+        case .repsOnly:
+            return 3 // Treat as strength exercise
+        case .holdTime, .rounds:
+            return 1 // Treat as duration exercises
         }
     }
     

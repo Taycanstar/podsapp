@@ -27,6 +27,9 @@ struct ModernFoodLoadingCard: View {
         // DEBUG: Print current state and progress
         let _ = print("🔍 DEBUG ModernFoodLoadingCard - State: \(state), Progress: \(state.progress)")
         
+        // Safe environment access inside view body
+        let shimmerColor = colorScheme == .dark ? shimmerColorDark : shimmerColorLight
+        
         // Perplexity-style loading panel
         VStack(spacing: 16) {
             // Header with Humuli logo and title
@@ -105,7 +108,7 @@ struct ModernFoodLoadingCard: View {
                 .overlay(
                     // Shimmer light effect
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(shimmerGradient)
+                        .fill(shimmerGradient(shimmerColor: shimmerColor))
                         .opacity(shimmerOpacity)
                 )
                 .overlay(
@@ -116,9 +119,8 @@ struct ModernFoodLoadingCard: View {
         .accessibilityLabel("Humuli analysis in progress. Finishing up...")
     }
     
-    private var shimmerGradient: LinearGradient {
+    private func shimmerGradient(shimmerColor: Color) -> LinearGradient {
         let baseColor = Color.clear
-        let shimmerColor = colorScheme == .dark ? shimmerColorDark : shimmerColorLight
         
         return LinearGradient(
             gradient: Gradient(stops: [

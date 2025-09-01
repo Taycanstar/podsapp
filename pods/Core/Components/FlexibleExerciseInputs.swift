@@ -42,27 +42,32 @@ struct DynamicSetRowView: View {
     }
     
     private var setNumberIndicator: some View {
-        ZStack {
-            // Background rounded rectangle (matches input style)
-            RoundedRectangle(cornerRadius: 16)
-                .fill(set.isCompleted ? Color.accentColor : Color("containerbg"))
-                .strokeBorder(
-                    set.isCompleted ? Color.accentColor : (colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4)), 
-                    lineWidth: set.isCompleted ? 0 : 0.5
-                )
-                .frame(width: 44, height: 44)
-            
-            // Content (number or checkmark)
-            if set.isCompleted {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-            } else {
-                Text("\(setNumber)")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.primary)
+        Button(action: {
+            set.isCompleted.toggle()
+        }) {
+            ZStack {
+                // Background rounded rectangle (matches input style)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(set.isCompleted ? Color.accentColor : Color("containerbg"))
+                    .strokeBorder(
+                        set.isCompleted ? Color.accentColor : (colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4)), 
+                        lineWidth: set.isCompleted ? 0 : 0.5
+                    )
+                    .frame(width: 44, height: 44)
+                
+                // Content (number or checkmark)
+                if set.isCompleted {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                } else {
+                    Text("\(setNumber)")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundColor(.primary)
+                }
             }
         }
+        .buttonStyle(PlainButtonStyle())
     }
     
     @ViewBuilder
@@ -72,13 +77,15 @@ struct DynamicSetRowView: View {
             repsWeightInput
         case .timeDistance:
             durationDistanceInput
-        // Map other types to the appropriate interfaces
+        case .timeOnly:
+            durationOnlyInput // Duration-only exercises
+        // Handle legacy types that might still exist in saved data
         case .repsOnly:
-            repsOnlyInput // Use the dedicated reps-only input
-        case .timeOnly, .holdTime:
-            durationOnlyInput // Use the dedicated time-only input
+            repsWeightInput // Treat as reps+weight
+        case .holdTime:
+            durationOnlyInput // Treat as duration-only
         case .rounds:
-            roundsInput // Use the dedicated rounds input
+            durationOnlyInput // Treat as duration-only
         }
     }
     
@@ -95,7 +102,7 @@ struct DynamicSetRowView: View {
             ))
             .focused($focusedField, equals: .firstInput)
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
-            .keyboardType(.numbersAndPunctuation)
+            .keyboardType(.numberPad)
             .submitLabel(.next)
             .onSubmit {
                 focusedField = .secondInput
@@ -109,7 +116,7 @@ struct DynamicSetRowView: View {
                 ))
                 .focused($focusedField, equals: .secondInput)
                 .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "lbs", isActive: isActive))
-                .keyboardType(.numbersAndPunctuation)
+                .keyboardType(.decimalPad)
                 .submitLabel(.done)
                 .onSubmit {
                     focusedField = nil
@@ -129,7 +136,7 @@ struct DynamicSetRowView: View {
             ))
             .focused($focusedField, equals: .firstInput)
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "reps", isActive: isActive))
-            .keyboardType(.numbersAndPunctuation)
+            .keyboardType(.numberPad)
             .submitLabel(.done)
             .onSubmit {
                 focusedField = nil
@@ -195,7 +202,7 @@ struct DynamicSetRowView: View {
                         ))
                         .focused($focusedField, equals: .secondInput)
                         .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "mi", isActive: isActive))
-                        .keyboardType(.numbersAndPunctuation)
+                        .keyboardType(.decimalPad)
                         .submitLabel(.done)
                         .onSubmit {
                             focusedField = nil
@@ -483,7 +490,7 @@ struct DynamicSetRowView: View {
             ))
             .focused($focusedField, equals: .secondInput)
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "lbs"))
-            .keyboardType(.numbersAndPunctuation)
+            .keyboardType(.decimalPad)
             .submitLabel(.done)
             .onSubmit {
                 focusedField = nil
@@ -508,7 +515,7 @@ struct DynamicSetRowView: View {
             ))
             .focused($focusedField, equals: .firstInput)
             .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .firstInput, unit: "rounds", isActive: isActive))
-            .keyboardType(.numbersAndPunctuation)
+            .keyboardType(.numberPad)
             .submitLabel(.done)
             .onSubmit {
                 focusedField = nil
