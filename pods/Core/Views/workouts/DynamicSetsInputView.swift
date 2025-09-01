@@ -60,7 +60,7 @@ struct DynamicSetsInputView: View {
                             }
                         }
                     )
-                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .swipeActions(edge: .trailing) {
@@ -111,7 +111,7 @@ struct DynamicSetsInputView: View {
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(Color(.systemGray6))
+                .background(Color.clear)
                 .cornerRadius(8)
             }
         } else {

@@ -82,7 +82,8 @@ struct CustomTabBar: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(Color("chatbar"))
+                        // .background(Color("chatbar"))
+                           .background(Color("primarybg"))
                         .overlay(
                             RoundedRectangle(cornerRadius: 25)
                                 .stroke(Color(.systemGray4), lineWidth: 1)

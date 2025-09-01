@@ -2220,6 +2220,7 @@ func updateRecipe(
     }
 }
 // Update the generateMacrosWithAI method
+@MainActor
 func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
     print("🔍 DEBUG generateMacrosWithAI called - food: \(foodDescription), meal: \(mealType)")
     
@@ -2234,18 +2235,9 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
     // CRITICAL FIX: Start with initializing state for proper 0% progress visibility
     updateFoodScanningState(.initializing)
     
-    // Add proper state progression to match image analysis
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-        self.updateFoodScanningState(.uploading(progress: 0.0)) // 10%
-    }
-    
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-        self.updateFoodScanningState(.uploading(progress: 0.8)) // 42%
-    }
-    
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-        self.updateFoodScanningState(.analyzing) // 60%
-    }
+    // Move directly to analyzing state without artificial timers to prevent shimmer glitches
+    // The network response will drive real progress updates
+    updateFoodScanningState(.analyzing)
     
     // Create a timer to cycle through analysis stages for UI feedback
     let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
@@ -3074,12 +3066,20 @@ func analyzeNutritionLabel(
   print("📊 [DEBUG] About to call NetworkManager.analyzeNutritionLabel with shouldLog=\(shouldLog)")
   
   // ─── 1) UI state ─────────────────────────────
+  // MODERN: Use modern FoodScanningState system with image thumbnail
+  updateFoodScanningState(.preparing(image: image))
+  self.isImageScanning = true
+  self.currentScanningImage = image
+  
+  // Legacy state for backward compatibility (will be removed later)
   isAnalyzingImage = true
   isLoading        = true
   imageAnalysisMessage = "Reading nutrition label…"
   uploadProgress   = 0
 
-  // ─── 2) Fake progress ticker ─────────────────
+  // ─── 2) MODERN: Let network progress drive state updates (no artificial timers)
+  
+  // Legacy progress ticker for backward compatibility (will be removed later)
   uploadProgress = 0
   var progressTimer: Timer?
   progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
@@ -3106,6 +3106,11 @@ func analyzeNutritionLabel(
         self.uploadProgress = 1.0
       }
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        // MODERN: Cleanup only - don't reset state (handled by .completed auto-reset)
+        self.isImageScanning = false
+        self.currentScanningImage = nil
+        
+        // Legacy state cleanup for backward compatibility (will be removed later)
         self.isAnalyzingImage = false
         self.isLoading        = false
         self.imageAnalysisMessage = ""
@@ -3126,8 +3131,12 @@ func analyzeNutritionLabel(
       let msg = errMsg ?? "Unknown error"
       print("🔴 [analyzeNutritionLabel] error: \(msg)")
       
-      // Show user-friendly error message for nutrition label failures
+      // MODERN: Update to failed state immediately (triggers auto-reset)
       DispatchQueue.main.async {
+        self.updateFoodScanningState(.failed(error: .networkError("No nutrition label detected")))
+        self.isImageScanning = false
+        self.currentScanningImage = nil
+        
         self.showScanFailure(
           type: "No Nutrition Label Detected",
           message: "Try scanning again."
@@ -3311,6 +3320,9 @@ func analyzeNutritionLabel(
         )
       }
 
+       // MODERN: Update to completed state with result BEFORE calling completion
+       updateFoodScanningState(.completed(result: combinedLog))
+       
        completion(.success(combinedLog))
        
        // Set success data and show toast (same as analyzeFoodImage) - MUST be on main thread
@@ -3357,6 +3369,12 @@ func analyzeNutritionLabel(
          let str     = String(data: rawJSON, encoding: .utf8) {
         print("❌ [analyzeNutritionLabel] payload was:\n\(str)")
       }
+      
+      // MODERN: Update to failed state for decoding errors (triggers auto-reset)  
+      updateFoodScanningState(.failed(error: .networkError("Failed to process nutrition label")))
+      isImageScanning = false
+      currentScanningImage = nil
+      
       completion(.failure(error))
     }
   }
@@ -3520,16 +3538,25 @@ func analyzeNutritionLabel(
         }
     }
     // MARK: - Direct Barcode Logging (no preview)
+    @MainActor
     func lookupFoodByBarcodeDirect(barcode: String, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, String?) -> Void) {
         print("🔍 Starting direct barcode lookup for: \(barcode)")
         
-        // Set barcode scanning states for UI feedback
+        // MODERN: Use modern FoodScanningState system with proper state progression
+        updateFoodScanningState(.initializing)
+        
+        // Smooth transition to analyzing state after a brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.updateFoodScanningState(.analyzing)
+        }
+        
+        // Legacy state for backward compatibility (will be removed later)
         isScanningBarcode = true
         isLoading = true
         barcodeLoadingMessage = "Looking up barcode..."
         uploadProgress = 0.2
         
-        // Create a timer to cycle through analysis stages for UI feedback
+        // Legacy timer for backward compatibility (will be removed later)
         let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
             guard let self = self else { 
                 timer.invalidate()
@@ -3613,7 +3640,10 @@ func analyzeNutritionLabel(
                         self.lastLoggedItem = (name: food.displayName, calories: food.calories ?? 0)
                         self.showLogSuccess = true
                         
-                        // Reset barcode scanning states
+                        // MODERN: Update to completed state with result
+                        self.updateFoodScanningState(.completed(result: combinedLog))
+                        
+                        // Reset legacy barcode scanning states (backward compatibility)
                         self.isScanningBarcode = false
                         self.isLoading = false
                         self.barcodeLoadingMessage = ""
@@ -3636,7 +3666,10 @@ func analyzeNutritionLabel(
                 print("❌ Direct barcode lookup failed: \(error)")
                 
                 DispatchQueue.main.async {
-                    // Reset barcode scanning states
+                    // MODERN: Update to failed state
+                    self.updateFoodScanningState(.failed(error: .networkError("Barcode lookup failed")))
+                    
+                    // Reset legacy barcode scanning states (backward compatibility)
                     self.isScanningBarcode = false
                     self.isLoading = false
                     self.barcodeLoadingMessage = ""
@@ -3658,15 +3691,25 @@ func analyzeNutritionLabel(
     }
     
     // MARK: - Enhanced Barcode Lookup
+    @MainActor
     func lookupFoodByBarcodeEnhanced(barcode: String, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, String?) -> Void) {
         print("🔍 Starting enhanced barcode lookup for: \(barcode)")
         
-        // Set barcode scanning states for UI feedback
+        // MODERN: Use modern FoodScanningState system with proper state progression
+        updateFoodScanningState(.initializing)
+        
+        // Smooth transition to analyzing state after a brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.updateFoodScanningState(.analyzing)
+        }
+        
+        // Legacy state for backward compatibility (will be removed later)
         isScanningBarcode = true  // This triggers BarcodeAnalysisCard in DashboardView
         isLoading = true
         barcodeLoadingMessage = "Looking up barcode..."
         uploadProgress = 0.2
         
+        // Legacy timer for backward compatibility (will be removed later)
         // Create a timer to cycle through analysis stages for UI feedback
         let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
             guard let self = self else { 
@@ -3733,7 +3776,10 @@ func analyzeNutritionLabel(
                 self.aiGeneratedFood = food.asLoggedFoodItem
                 self.lastLoggedFoodId = food.fdcId
                 
-                // Reset barcode scanning states
+                // MODERN: Update to completed state with result (enhanced shows preview)
+                
+                
+                // Reset legacy barcode scanning states (backward compatibility)
                 self.isScanningBarcode = false
                 self.isLoading = false
                 self.barcodeLoadingMessage = ""
@@ -3755,6 +3801,7 @@ func analyzeNutritionLabel(
                     recipe: nil,
                     servingsConsumed: nil
                 )
+                self.updateFoodScanningState(.completed(result: combinedLog))
                 
                 // Show success message briefly
                 self.lastLoggedItem = (name: food.displayName, calories: food.calories ?? 0)
@@ -3786,6 +3833,10 @@ func analyzeNutritionLabel(
                 
                 // CRITICAL FIX: Reset barcode scanning states on main thread
                 DispatchQueue.main.async {
+                    // MODERN: Update to failed state
+                    self.updateFoodScanningState(.failed(error: .networkError("Barcode lookup failed")))
+                    
+                    // Reset legacy states (backward compatibility)
                     self.isScanningBarcode = false
                     self.isLoading = false
                     self.barcodeLoadingMessage = ""
@@ -3816,18 +3867,9 @@ func analyzeNutritionLabel(
         // CRITICAL FIX: Start with initializing state for proper 0% progress visibility
         updateFoodScanningState(.initializing)
         
-        // Add proper state progression to match image analysis
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            self.updateFoodScanningState(.uploading(progress: 0.0)) // 10%
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.updateFoodScanningState(.uploading(progress: 0.8)) // 42%
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            self.updateFoodScanningState(.analyzing) // 60%
-        }
+        // Move directly to analyzing state without artificial timers to prevent shimmer glitches
+        // The network response will drive real progress updates
+        updateFoodScanningState(.analyzing)
         
         // Create a timer to cycle through analysis stages for UI feedback
         let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
@@ -3920,18 +3962,9 @@ func analyzeNutritionLabel(
             // CRITICAL FIX: Start with initializing state for proper 0% progress visibility
             self.updateFoodScanningState(.initializing)
             
-            // Add proper state progression to match image analysis
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                self.updateFoodScanningState(.uploading(progress: 0.0)) // 10%
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.updateFoodScanningState(.uploading(progress: 0.8)) // 42%
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                self.updateFoodScanningState(.analyzing) // 60%
-            }
+            // Move directly to analyzing state without artificial timers to prevent shimmer glitches
+            // The network response will drive real progress updates
+            self.updateFoodScanningState(.analyzing)
         }
         
         // Create a timer to cycle through analysis stages for UI feedback
@@ -4902,6 +4935,7 @@ func analyzeNutritionLabel(
                 guard success, let payload = payload else {
                     let msg = errMsg ?? "Unknown error"
                     print("🔴 [analyzeNutritionLabelForCreation] error: \(msg)")
+                    
                     completion(.failure(NSError(
                         domain: "FoodManager",
                         code: -1,
@@ -4980,6 +5014,7 @@ func analyzeNutritionLabel(
                     }
                 } catch {
                     print("❌ [analyzeNutritionLabelForCreation] decoding error:", error)
+                    
                     completion(.failure(error))
                 }
             }

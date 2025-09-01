@@ -2040,7 +2040,7 @@ private struct TodayWorkoutExerciseList: View {
         .listStyle(PlainListStyle())
         .scrollContentBackground(.hidden)
         .scrollDisabled(true)
-        .background(Color("bg"))
+        .background(Color("primarybg"))
         .cornerRadius(12)
         .frame(height: calculateTotalHeight()) // Dynamic height calculation with all sections + bottom spacer
         .onAppear {

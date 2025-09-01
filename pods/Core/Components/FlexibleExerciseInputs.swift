@@ -20,6 +20,7 @@ struct DynamicSetRowView: View {
     let isActive: Bool // Whether this set is currently active
     let onFocusChanged: ((Bool) -> Void)? // Callback when this row gains/loses focus
     @FocusState private var focusedField: FocusedField?
+    @Environment(\.colorScheme) private var colorScheme
     @State private var showTimePicker: Bool = false
     
     enum FocusedField: Hashable {
@@ -32,6 +33,8 @@ struct DynamicSetRowView: View {
             .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden)
             .padding(.vertical, 6)
+            .padding(.horizontal, 2) // Extra padding for border rendering
+            .contentShape(Rectangle()) // Prevent shape clipping
             .onChange(of: focusedField) { oldValue, newValue in
                 // When any field in this row gains focus, make this row the active set
                 onFocusChanged?(newValue != nil)
@@ -41,24 +44,13 @@ struct DynamicSetRowView: View {
     private var setNumberIndicator: some View {
         ZStack {
             // Background rounded rectangle (matches input style)
-            RoundedRectangle(cornerRadius: 8)
-                .fill(set.isCompleted ? Color.accentColor : Color(.systemBackground))
+            RoundedRectangle(cornerRadius: 16)
+                .fill(set.isCompleted ? Color.green : Color("containerbg"))
+                .strokeBorder(
+                    set.isCompleted ? Color.green : (colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4)), 
+                    lineWidth: set.isCompleted ? 0 : 0.5
+                )
                 .frame(width: 44, height: 44)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(
-                            set.isCompleted ? Color.accentColor : 
-                            isActive ? Color.clear : Color(.systemGray4), 
-                            lineWidth: set.isCompleted ? 0 : 1
-                        )
-                )
-                // Modern glow effect for active sets - MORE VISIBLE
-                .shadow(
-                    color: isActive && !set.isCompleted ? Color.accentColor.opacity(0.8) : Color.clear,
-                    radius: isActive && !set.isCompleted ? 12 : 0,
-                    x: 0,
-                    y: 0
-                )
             
             // Content (number or checkmark)
             if set.isCompleted {
@@ -93,7 +85,7 @@ struct DynamicSetRowView: View {
     // MARK: - Legacy-Style Input Views
     
     private var legacyRepsWeightInput: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             // Set indicator for reps-based exercises
             setNumberIndicator
             
@@ -110,7 +102,7 @@ struct DynamicSetRowView: View {
                         Button("Done") {
                             focusedField = nil
                         }
-                        
+                        Spacer()
                         Button("Clear") {
                             set.reps = ""
                         }
@@ -139,7 +131,7 @@ struct DynamicSetRowView: View {
                             Button("Done") {
                                 focusedField = nil
                             }
-                            
+                            Spacer()
                             Button("Clear") {
                                 set.weight = ""
                             }
@@ -157,7 +149,7 @@ struct DynamicSetRowView: View {
     }
     
     private var legacyRepsOnlyInput: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             // Set indicator for reps-based exercises
             setNumberIndicator
             
@@ -174,7 +166,7 @@ struct DynamicSetRowView: View {
                         Button("Done") {
                             focusedField = nil
                         }
-                        
+                        Spacer()
                         Button("Clear") {
                             set.reps = ""
                         }
@@ -201,7 +193,7 @@ struct DynamicSetRowView: View {
                         Button("Done") {
                             focusedField = nil
                         }
-                        
+                        Spacer()
                         Button("Clear") {
                             set.weight = ""
                         }
@@ -221,7 +213,7 @@ struct DynamicSetRowView: View {
         VStack(spacing: 12) {
             // Duration and distance input row with set indicator aligned
             VStack(spacing: 8) {
-                HStack(spacing: 12) {
+                HStack(spacing: 16) {
                     // Set indicator aligned with duration input
                     setNumberIndicator
                     
@@ -248,10 +240,10 @@ struct DynamicSetRowView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
-                        .background(Color(.systemBackground))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(showTimePicker ? Color.blue : Color(.systemGray4), lineWidth: showTimePicker ? 2 : 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color("containerbg"))
+                                .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -382,7 +374,7 @@ struct DynamicSetRowView: View {
         VStack(spacing: 12) {
             // Duration input row with set indicator aligned
             VStack(spacing: 8) {
-                HStack(spacing: 12) {
+                HStack(spacing: 16) {
                     // Set indicator aligned with duration input
                     setNumberIndicator
                     
@@ -409,10 +401,10 @@ struct DynamicSetRowView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
-                        .background(Color(.systemBackground))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(showTimePicker ? Color.blue : Color(.systemGray4), lineWidth: showTimePicker ? 2 : 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color("containerbg"))
+                                .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -517,7 +509,7 @@ struct DynamicSetRowView: View {
                         Button("Done") {
                             focusedField = nil
                         }
-                        
+                        Spacer()
                         Button("Clear") {
                             set.intensity = nil
                         }
@@ -541,7 +533,7 @@ struct DynamicSetRowView: View {
         VStack(spacing: 12) {
             // Duration input row with set indicator aligned
             VStack(spacing: 8) {
-                HStack(spacing: 12) {
+                HStack(spacing: 16) {
                     // Set indicator aligned with duration input
                     setNumberIndicator
                     
@@ -568,10 +560,10 @@ struct DynamicSetRowView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
-                        .background(Color(.systemBackground))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(showTimePicker ? Color.blue : Color(.systemGray4), lineWidth: showTimePicker ? 2 : 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color("containerbg"))
+                                .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -670,7 +662,7 @@ struct DynamicSetRowView: View {
                         Button("Done") {
                             focusedField = nil
                         }
-                        
+                        Spacer()
                         Button("Clear") {
                             set.weight = ""
                         }
@@ -713,7 +705,7 @@ struct DynamicSetRowView: View {
                         Button("Done") {
                             focusedField = nil
                         }
-                        
+                        Spacer()
                         Button("Clear") {
                             set.rounds = nil
                         }
@@ -740,7 +732,7 @@ struct DynamicSetRowView: View {
                 }) {
                     HStack {
                         Text(formatTimeInput(set.duration ?? 0))
-                            .foregroundColor(showTimePicker ? .blue : .primary)
+                            .foregroundColor(.primary)
                             .font(.system(size: 16, weight: .medium))
                         
                         Spacer()
@@ -754,10 +746,10 @@ struct DynamicSetRowView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 12)
-                    .background(Color(.systemBackground))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(showTimePicker ? Color.blue : Color(.systemGray4), lineWidth: showTimePicker ? 2 : 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color("containerbg"))
+                            .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
                     )
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -920,11 +912,10 @@ struct DynamicSetRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color(.systemBackground))
-        .cornerRadius(8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(.systemGray4), lineWidth: 1)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color("containerbg"))
+                .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
         )
     }
     
@@ -1021,9 +1012,11 @@ struct LegacyTextFieldStyle: TextFieldStyle {
     }
     
     func _body(configuration: TextField<Self._Label>) -> some View {
+        @Environment(\.colorScheme) var colorScheme
+        
         HStack(spacing: 0) {
             configuration
-                .foregroundColor(isFocused ? .blue : .primary)
+                .foregroundColor(.primary)
                 .font(.system(size: 16, weight: .medium))
             
             if isFocused, let unit = unit {
@@ -1034,24 +1027,11 @@ struct LegacyTextFieldStyle: TextFieldStyle {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
-        .background(Color(.systemBackground))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(
-                    isFocused ? Color.blue : 
-                    isActive ? Color.clear : Color(.systemGray4), 
-                    lineWidth: isFocused ? 2 : 1
-                )
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color("containerbg"))
+                .strokeBorder(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
         )
-        // Modern glow effect for active inputs - MORE VISIBLE
-        .shadow(
-            color: isActive && !isFocused ? Color.accentColor.opacity(0.8) : Color.clear,
-            radius: isActive && !isFocused ? 10 : 0,
-            x: 0,
-            y: 0
-        )
-        // Add padding to prevent glow cutoff
-        .padding(.horizontal, isActive ? 6 : 0)
     }
 }
 

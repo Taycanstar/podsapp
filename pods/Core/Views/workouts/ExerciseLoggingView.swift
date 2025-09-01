@@ -728,10 +728,11 @@ struct ExerciseLoggingView: View {
     
     // MARK: - Timer Functions
     
-    // SIMPLIFIED: Direct timer start using set-specific duration
+    // FIXED: Use current active set's duration, not first set
     private func startTimer() {
-        // Get duration from the first set that has a duration (set-specific)
-        let setDuration = flexibleSets.first(where: { $0.duration != nil })?.duration ?? defaultDurationForExerciseType()
+        // Get the current active set's duration
+        let currentSet = flexibleSets.indices.contains(currentSetIndex) ? flexibleSets[currentSetIndex] : nil
+        let setDuration = currentSet?.duration ?? defaultDurationForExerciseType()
         
         guard setDuration > 0 else { 
             print("🔧 ERROR: Cannot start timer with duration: \(setDuration)")
@@ -739,7 +740,7 @@ struct ExerciseLoggingView: View {
         }
         
         timerDuration = setDuration
-        print("🔧 DEBUG: Starting timer with set-specific duration: \(setDuration)")
+        print("🔧 DEBUG: Starting timer for set \(currentSetIndex + 1) with duration: \(setDuration)s")
         showTimerSheet = true
     }
     
