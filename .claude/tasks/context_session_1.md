@@ -941,3 +941,76 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
 **Architecture Pattern**: Voice logging uses text analysis completion pattern (flag reset) rather than image analysis pattern (`.completed()` state), ensuring clean progress reset without timer interference.
 
 Voice logging functionality is now COMPLETELY RESOLVED with full feature parity across all scanning methods.
+
+---
+
+## CRITICAL ROOT CAUSE IDENTIFIED: Dual State Machine Bug ✅
+
+### ChatGPT-5's Superior Analysis
+**ChatGPT-5 identified the EXACT root cause that I missed**: Voice logging uses **two competing state systems** and the reset mechanism only clears one.
+
+**The Real Problem:**
+- **Modern State**: `foodScanningState` (what I was fixing)
+- **Legacy State**: `isGeneratingMacros`, `isLoading`, `macroGenerationStage` (what I ignored)
+- **Bug**: `resetFoodScanningState()` only resets modern flags, leaving legacy voice flags stuck
+
+### Why Claude Failed vs ChatGPT-5
+1. **I focused on wrong layer** - Obsessed over progress animation, missed architectural state management
+2. **Incomplete code reading** - Didn't trace what `resetFoodScanningState()` actually resets
+3. **Assumption-based debugging** - Assumed auto-reset handled everything without verification
+4. **Missing system thinking** - Didn't recognize dual state machine architecture
+
+### ChatGPT-5's Fix Implemented ✅
+
+**Files Modified**: `/Users/dimi/Documents/dimi/podsapp/pods/Pods/Core/Managers/FoodManager.swift`
+
+**Phase 1: Added Voice Timer Management**
+```swift
+// MARK: - Voice Logging Timer Management
+private var voiceStageTimer: Timer?
+
+private func stopVoiceTimer() {
+    voiceStageTimer?.invalidate()
+    voiceStageTimer = nil
+}
+
+private func resetVoiceLoggingState() {
+    stopVoiceTimer()
+    isGeneratingMacros = false
+    isLoading = false
+    macroGenerationStage = 0
+    macroLoadingMessage = ""
+    showAIGenerationSuccess = false
+    aiGeneratedFood = nil
+}
+```
+
+**Phase 2: Fixed Reset Function**
+```swift
+func resetFoodScanningState() {
+    // ... existing modern state reset ...
+    
+    // 🔧 CRITICAL FIX: Reset voice logging state too
+    resetVoiceLoggingState()
+}
+```
+
+**Phase 3: Fixed Timer Management**
+```swift
+// Before: Local timer variable (easy to miss cleanup)
+let timer = Timer.scheduledTimer(...)
+
+// After: Instance property with proper cleanup
+voiceStageTimer = Timer.scheduledTimer(...)
+// All calls: timer.invalidate() → self.stopVoiceTimer()
+```
+
+### Results Expected ✅
+- ✅ **Dual state consistency**: Both modern and legacy flags reset together
+- ✅ **No zombie timers**: Proper timer cleanup on all paths
+- ✅ **Clean session boundaries**: Next voice session starts fresh
+- ✅ **Progress reset working**: 100% → 0% without stale state interference
+
+**Architecture Insight**: The bug was in state management layers, not UI animation logic. ChatGPT-5's systematic architectural analysis identified the root cause that my UI-focused debugging missed.
+
+**Conclusion**: ChatGPT-5's superior analysis comes from systematic architectural thinking vs my assumption-based debugging. The fix addresses the fundamental dual state machine issue rather than symptoms.

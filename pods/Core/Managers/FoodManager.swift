@@ -197,6 +197,24 @@ class FoodManager: ObservableObject {
     @Published var showAIGenerationSuccess = false
     @Published var aiGeneratedFood: LoggedFoodItem?
     @Published var showLogSuccess = false
+    
+    // MARK: - Voice Logging Timer Management
+    private var voiceStageTimer: Timer?
+    
+    private func stopVoiceTimer() {
+        voiceStageTimer?.invalidate()
+        voiceStageTimer = nil
+    }
+    
+    private func resetVoiceLoggingState() {
+        stopVoiceTimer()
+        isGeneratingMacros = false
+        isLoading = false
+        macroGenerationStage = 0
+        macroLoadingMessage = ""
+        showAIGenerationSuccess = false
+        aiGeneratedFood = nil
+    }
     @Published var lastLoggedItem: (name: String, calories: Double)?
     
     // Add these properties for meal generation with AI
@@ -350,6 +368,9 @@ class FoodManager: ObservableObject {
         uploadProgress = 0.0
         loadingMessage = ""
         scannedImage = nil
+        
+        // 🔧 CRITICAL FIX: Reset voice logging state too
+        resetVoiceLoggingState()
     }
     
     /// Handle scan failure with proper error state
@@ -3962,14 +3983,15 @@ func analyzeNutritionLabel(
         
         // CRITICAL: Start with initializing state for proper 0% progress visibility
         updateFoodScanningState(.initializing)  // Shows 0%
-        // Let the timer system handle natural progression
+        
+        // Ensure 0% is visible briefly before processing starts (like analyzeFoodImageModern)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.updateFoodScanningState(.analyzing)  // Move to 60% during network processing
+        }
         
         // Create a timer to cycle through analysis stages for UI feedback
-        let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
-            guard let self = self else { 
-                timer.invalidate()
-                return 
-            }
+        voiceStageTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
             
             // Cycle through macro generation stages (on main thread)
             DispatchQueue.main.async {
@@ -3988,7 +4010,7 @@ func analyzeNutritionLabel(
         // First step: Transcribe the audio
         NetworkManagerTwo.shared.transcribeAudioForFoodLogging(from: audioData) { [weak self] result in
             guard let self = self else {
-                timer.invalidate()
+                self?.stopVoiceTimer()
                 return
             }
             
@@ -4006,7 +4028,7 @@ func analyzeNutritionLabel(
                         print("✅ Voice log successfully processed: \(loggedFood.food.displayName)")
                         
                         // CRITICAL: Stop the timer to prevent interference with auto-reset
-                        timer.invalidate()
+                        self.stopVoiceTimer()
                         
                         // Track voice logging in Mixpanel
                         Mixpanel.mainInstance().track(event: "Voice Log", properties: [
@@ -4105,7 +4127,7 @@ func analyzeNutritionLabel(
                         
                     case .failure(let error):
                         // CRITICAL: Stop the timer to prevent interference 
-                        timer.invalidate()
+                        self.stopVoiceTimer()
                         
                         // Use proper error handling with auto-reset (like image analysis)
                         let scanError: FoodScanError
@@ -4128,7 +4150,7 @@ func analyzeNutritionLabel(
                 
             case .failure(let error):
                 // Stop the timer and reset macro generation state
-                timer.invalidate()
+                self.stopVoiceTimer()
                 
                 // Use proper error handling with auto-reset (like image analysis)
                 let scanError: FoodScanError
