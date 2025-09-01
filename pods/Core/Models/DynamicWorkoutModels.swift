@@ -785,6 +785,32 @@ struct FlexibleSetData: Identifiable, Codable, Hashable {
     var isWarmupSet: Bool
     var notes: String?
     
+    /// Computed property to determine if set is actually completed based on entered data
+    var isActuallyCompleted: Bool {
+        switch trackingType {
+        case .repsWeight:
+            // Both reps and weight must be filled and valid
+            guard let repsStr = reps, !repsStr.isEmpty,
+                  let weightStr = weight, !weightStr.isEmpty else { return false }
+            return Int(repsStr) != nil && Int(repsStr)! > 0 &&
+                   Double(weightStr) != nil && Double(weightStr)! > 0
+        case .timeDistance:
+            // Both duration and distance must be set
+            return duration != nil && duration! > 0 && distance != nil && distance! > 0
+        case .timeOnly:
+            // Duration must be set
+            return duration != nil && duration! > 0
+        // Handle legacy types that might still exist
+        case .repsOnly:
+            guard let repsStr = reps, !repsStr.isEmpty else { return false }
+            return Int(repsStr) != nil && Int(repsStr)! > 0
+        case .holdTime:
+            return duration != nil && duration! > 0
+        case .rounds:
+            return rounds != nil && rounds! > 0
+        }
+    }
+    
     init(trackingType: ExerciseTrackingType) {
         self.id = UUID()
         self.trackingType = trackingType

@@ -42,32 +42,27 @@ struct DynamicSetRowView: View {
     }
     
     private var setNumberIndicator: some View {
-        Button(action: {
-            set.isCompleted.toggle()
-        }) {
-            ZStack {
-                // Background rounded rectangle (matches input style)
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(set.isCompleted ? Color.accentColor : Color("containerbg"))
-                    .strokeBorder(
-                        set.isCompleted ? Color.accentColor : (colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4)), 
-                        lineWidth: set.isCompleted ? 0 : 0.5
-                    )
-                    .frame(width: 44, height: 44)
-                
-                // Content (number or checkmark)
-                if set.isCompleted {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                } else {
-                    Text("\(setNumber)")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundColor(.primary)
-                }
+        ZStack {
+            // Background rounded rectangle (matches input style)
+            RoundedRectangle(cornerRadius: 16)
+                .fill(set.isActuallyCompleted ? Color.accentColor : Color("containerbg"))
+                .strokeBorder(
+                    set.isActuallyCompleted ? Color.accentColor : (colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4)), 
+                    lineWidth: set.isActuallyCompleted ? 0 : 0.5
+                )
+                .frame(width: 44, height: 44)
+            
+            // Content (number or checkmark)
+            if set.isActuallyCompleted {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+            } else {
+                Text("\(setNumber)")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundColor(.primary)
             }
         }
-        .buttonStyle(PlainButtonStyle())
     }
     
     @ViewBuilder

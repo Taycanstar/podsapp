@@ -3962,7 +3962,7 @@ func analyzeNutritionLabel(
         
         // CRITICAL: Start with initializing state for proper 0% progress visibility
         updateFoodScanningState(.initializing)  // Shows 0%
-        // Let timer system handle natural progression to .analyzing state
+        // Let the timer system handle natural progression
         
         // Create a timer to cycle through analysis stages for UI feedback
         let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
@@ -4004,7 +4004,8 @@ func analyzeNutritionLabel(
                     switch result {
                     case .success(let loggedFood):
                         print("✅ Voice log successfully processed: \(loggedFood.food.displayName)")
-                               // Track voice logging in Mixpanel
+                        
+                        // Track voice logging in Mixpanel
                         Mixpanel.mainInstance().track(event: "Voice Log", properties: [
                             "food_name": loggedFood.food.displayName,
                             "meal_type": loggedFood.mealType,
@@ -4027,14 +4028,14 @@ func analyzeNutritionLabel(
                            (loggedFood.food.calories == 0 && loggedFood.food.protein == 0 && 
                             loggedFood.food.carbs == 0 && loggedFood.food.fat == 0) {
                             
-                            // Simple flag reset like generateMacrosWithAI failure case
+                            // Use proper error handling with auto-reset (like image analysis)
+                            self.updateFoodScanningState(.failed(error: .networkError("Food not identified. Please try again.")))
+                            
+                            // Reset flags
                             self.isGeneratingMacros = false
                             self.isLoading = false
                             self.macroGenerationStage = 0
                             self.macroLoadingMessage = ""
-                            
-                            // Reset state to inactive so card disappears
-                            self.updateFoodScanningState(.inactive)
                             print("⚠️ Voice log returned Unknown food with no nutrition data")
                             return
                         }
@@ -4065,20 +4066,26 @@ func analyzeNutritionLabel(
                         self.lastLoggedFoodId = loggedFood.food.fdcId
                         self.trackRecentlyAdded(foodId: loggedFood.food.fdcId)
                         
-                        // Reset macro generation state and show success toast in dashboard (EXACT same timing as generateMacrosWithAI)
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            self.isGeneratingMacros = false
-                            self.isLoading = false  // Clear the loading flag
-                            self.macroGenerationStage = 0
-                            self.macroLoadingMessage = ""
+                        // Wait for log to finish completely, THEN progress to 100% and reset
+                        // First: analyzing state (60%)
+                        self.updateFoodScanningState(.analyzing)
+                        
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            // Second: processing state (80%)
+                            self.updateFoodScanningState(.processing)
                             
-                            // CRITICAL: Reset state to inactive so card disappears
-                            self.updateFoodScanningState(.inactive)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                // Third: completion (100%) then auto-reset
+                                self.updateFoodScanningState(.completed(result: combinedLog))
+                            }
+                        }
+                        
+                        // Set success data and show toast (like image analysis) - MUST be on main thread
+                        DispatchQueue.main.async {
+                            self.showLogSuccess = true
                             
-                            // Show success toast (SINGLE instance)
-                            self.showAIGenerationSuccess = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                self.showAIGenerationSuccess = false
+                                self.showLogSuccess = false
                             }
                         }
                         
@@ -4093,14 +4100,20 @@ func analyzeNutritionLabel(
                         }
                         
                     case .failure(let error):
-                        // Simple flag reset like generateMacrosWithAI failure case
+                        // Use proper error handling with auto-reset (like image analysis)
+                        let scanError: FoodScanError
+                        if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                            scanError = .networkError(message)
+                        } else {
+                            scanError = .networkError("Failed to process voice input: \(error.localizedDescription)")
+                        }
+                        self.updateFoodScanningState(.failed(error: scanError))
+                        
+                        // Reset flags
                         self.isGeneratingMacros = false
                         self.isLoading = false
                         self.macroGenerationStage = 0
                         self.macroLoadingMessage = ""
-                        
-                        // Reset state to inactive so card disappears
-                        self.updateFoodScanningState(.inactive)
                         
                         print("❌ Failed to generate macros from voice input: \(error.localizedDescription)")
                     }
@@ -4110,14 +4123,20 @@ func analyzeNutritionLabel(
                 // Stop the timer and reset macro generation state
                 timer.invalidate()
                 
-                // Simple flag reset like generateMacrosWithAI failure case
+                // Use proper error handling with auto-reset (like image analysis)
+                let scanError: FoodScanError
+                if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
+                    scanError = .networkError(message)
+                } else {
+                    scanError = .networkError("Failed to transcribe voice input: \(error.localizedDescription)")
+                }
+                updateFoodScanningState(.failed(error: scanError))
+                
+                // Reset flags
                 isGeneratingMacros = false
                 isLoading = false
                 macroGenerationStage = 0
                 macroLoadingMessage = ""
-                
-                // Reset state to inactive so card disappears
-                updateFoodScanningState(.inactive)
                 
                 print("❌ Voice transcription failed: \(error.localizedDescription)")
             }
