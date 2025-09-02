@@ -2376,8 +2376,12 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             
       
   
+            // UNIFIED: Show completion at 100% progress first using existing combinedLog (auto-resets to inactive after 1.5s)
+            self.foodScanningState = .completed(result: combinedLog)
+            
             // Reset macro generation state and show success toast in dashboard
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // UNIFIED: Only reset legacy states - foodScanningState auto-resets from completed
                 self.isGeneratingMacros = false
                 self.isLoading = false  // Clear the loading flag
                 self.macroGenerationStage = 0
@@ -2404,11 +2408,17 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             completion(.success(loggedFood))
             
         case .failure(let error):
-            // Reset macro generation state
-            self.isGeneratingMacros = false
-            self.isLoading = false  // Clear the loading flag
-            self.macroGenerationStage = 0
-            self.macroLoadingMessage = ""
+            // UNIFIED: Show failure state then reset
+            self.foodScanningState = .failed(error: .networkError(error.localizedDescription))
+            
+            // Reset macro generation state after brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.foodScanningState = .inactive
+                self.isGeneratingMacros = false
+                self.isLoading = false  // Clear the loading flag
+                self.macroGenerationStage = 0
+                self.macroLoadingMessage = ""
+            }
             
             // Handle error and pass it along
             completion(.failure(error))
@@ -4106,15 +4116,17 @@ func analyzeNutritionLabel(
                            (loggedFood.food.calories == 0 && loggedFood.food.protein == 0 && 
                             loggedFood.food.carbs == 0 && loggedFood.food.fat == 0) {
                             
-                            // Use proper error handling with auto-reset (like image analysis)
+                            // UNIFIED: Show failure state then reset after delay
                             self.updateFoodScanningState(.failed(error: .networkError("Food not identified. Please try again.")))
                             
-                            // UNIFIED: Reset to inactive state (keeping legacy for backward compatibility)
-                            self.foodScanningState = .inactive
-                            self.isGeneratingMacros = false
-                            self.isLoading = false
-                            self.macroGenerationStage = 0
-                            self.macroLoadingMessage = ""
+                            // Reset after showing error for a moment
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                self.foodScanningState = .inactive
+                                self.isGeneratingMacros = false
+                                self.isLoading = false
+                                self.macroGenerationStage = 0
+                                self.macroLoadingMessage = ""
+                            }
                             print("⚠️ Voice log returned Unknown food with no nutrition data")
                             return
                         }

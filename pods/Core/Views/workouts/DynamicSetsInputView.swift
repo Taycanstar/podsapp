@@ -238,7 +238,7 @@ struct DynamicSetsInputView: View {
     // MARK: - Height Calculation
     
     private func calculateListHeight() -> CGFloat {
-        let baseRowHeight: CGFloat = 48 // Tighter height for collapsed DynamicSetRowView
+        let baseRowHeight: CGFloat = 64 // Proper height for reps/weight inputs (no cropping)
         let spacing: CGFloat = 8 // Minimal spacing between rows
         let padding: CGFloat = 4 // Minimal top/bottom padding
         
