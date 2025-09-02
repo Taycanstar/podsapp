@@ -302,9 +302,9 @@ struct DynamicSetRowView: View {
     }
     
     private var durationOnlyInput: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 0) {
             // Duration input row with set indicator aligned
-            VStack(spacing: 8) {
+            VStack(spacing: 0) {
                 HStack(spacing: 16) {
                     // Set indicator aligned with duration input
                     setNumberIndicator
