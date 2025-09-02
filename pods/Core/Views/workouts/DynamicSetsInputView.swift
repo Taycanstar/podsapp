@@ -242,9 +242,9 @@ struct DynamicSetsInputView: View {
     // MARK: - Height Calculation
     
     private func calculateListHeight() -> CGFloat {
-        let baseRowHeight: CGFloat = 72 // Proper height to prevent input cropping
-        let spacing: CGFloat = 4 // Adequate spacing between rows
-        let containerPadding: CGFloat = 16 // Proper container padding
+        let baseRowHeight: CGFloat = 54 // Proper height to prevent input cropping
+        let spacing: CGFloat = 8 // Adequate spacing between rows
+        let containerPadding: CGFloat = 0 // Proper container padding
         
         // Base calculation for all sets - much more conservative
         let totalHeight = CGFloat(sets.count) * baseRowHeight + CGFloat(max(0, sets.count - 1)) * spacing + containerPadding
@@ -255,7 +255,7 @@ struct DynamicSetsInputView: View {
         print("🔵 - Calculated total height: \(totalHeight)")
         
         // Add buffer for proper rendering
-        let finalHeight = totalHeight + 20
+        let finalHeight = totalHeight 
         
         print("🔵 - Final height returned: \(finalHeight)")
         
