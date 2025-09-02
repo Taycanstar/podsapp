@@ -160,9 +160,8 @@ struct LogFood: View {
                                         // Show confirmation sheet by setting lastGeneratedFood
                                         print("🏷️ Food label preview enabled - showing confirmation")
                                         self.foodManager.lastGeneratedFood = food
-                                        // Clear loader states since food data is ready
-                                        self.foodManager.isScanningFood = false
-                                        self.foodManager.isGeneratingFood = false
+                                        // UNIFIED: Food data is ready - can reset to inactive
+                                        self.foodManager.foodScanningState = .inactive
                                     } else {
                                         // Create food directly without confirmation
                                         print("🏷️ Food label preview disabled - creating food directly")
@@ -464,9 +463,8 @@ private struct FoodListView: View {
     @Binding var showCreateFoodWithVoice: Bool
     @Binding var showCreateFoodWithScan: Bool
     
-    // Add states for AI generation
-    @State private var isGeneratingMacros = false
-    @State private var isGeneratingFood = false
+    // UNIFIED: Legacy states removed - now using foodManager.foodScanningState
+    @State private var isGeneratingMacros = false  // TODO: Can be removed when macro generation uses unified state
     @State private var showAIErrorAlert = false
     @State private var aiErrorMessage = ""
     @State private var showFoodCreatedToast = false
@@ -486,7 +484,7 @@ private struct FoodListView: View {
 
           
             // Show Create Food dropdown in Foods tab when there's no search text and not generating food
-            if searchText.isEmpty && selectedFoodTab == .foods && !foodManager.isGeneratingFood {
+            if searchText.isEmpty && selectedFoodTab == .foods && !foodManager.foodScanningState.isActive {
                 Menu {
                     Button(action: {
                         print("Tapped Manual Create Food")
@@ -546,7 +544,7 @@ private struct FoodListView: View {
                 .padding(.top, 0)
             }
             // Show Quick Log button when there's no search text in .all tab and not generating food
-            else if searchText.isEmpty && selectedFoodTab == .all && !foodManager.isGeneratingFood {
+            else if searchText.isEmpty && selectedFoodTab == .all && !foodManager.foodScanningState.isActive {
                 // Quick Log Button
                 Button(action: {
                     print("Tapped quick Log")
@@ -657,13 +655,13 @@ private struct FoodListView: View {
                     // Dismiss keyboard
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     
-                    // Set loading state
-                    isGeneratingFood = true
+                    // UNIFIED: Set modern scanning state
+                    foodManager.foodScanningState = .generatingFood
                     
                     // Generate food with AI - skip confirmation for text search
                     foodManager.generateFoodWithAI(foodDescription: searchText, skipConfirmation: true) { result in
-                        // Set loading state to false
-                        isGeneratingFood = false
+                        // UNIFIED: Reset to inactive state
+                        foodManager.foodScanningState = .inactive
                         
                         switch result {
                         case .success(let generated):
@@ -729,14 +727,14 @@ private struct FoodListView: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 0)
-                .disabled(isGeneratingFood) // Disable button while loading
+                .disabled(foodManager.foodScanningState.isActive) // UNIFIED: Disable button while any scanning is active
             }
             
-            // Show food generation loading card if generating food
-            if isGeneratingFood || foodManager.isGeneratingFood {
-                FoodGenerationCard()
+            // UNIFIED: Single modern loader for all food generation scenarios
+            if foodManager.foodScanningState.isActive {
+                ModernFoodLoadingCard(state: foodManager.foodScanningState)
                     .padding(.horizontal)
-                    .transition(.opacity)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
             
             // Main content card
@@ -1265,12 +1263,7 @@ private struct MealListView: View {
                 .padding(.bottom, 4)
             }
             
-            // Show meal generation card if analysis is in progress
-            if foodManager.isGeneratingMeal {
-                MealGenerationCard()
-                    .padding(.horizontal)
-                    .transition(.opacity)
-            }
+            // UNIFIED: Modern loader already handled above - removed duplicate meal loader
             
             // Meals Card - Single unified card for all meals
             if !foodManager.meals.isEmpty {
@@ -2643,9 +2636,8 @@ struct SheetModifiers: ViewModifier {
             }
             .sheet(isPresented: $showConfirmFoodView, onDismiss: {
                 foodManager.lastGeneratedFood = nil
-                // Clear loader states when confirmation sheet is dismissed
-                foodManager.isScanningFood = false
-                foodManager.isGeneratingFood = false
+                // UNIFIED: Reset to inactive state when confirmation sheet is dismissed
+                foodManager.foodScanningState = .inactive
             }) {
                 if let food = foodManager.lastGeneratedFood {
                     NavigationView {

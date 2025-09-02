@@ -56,6 +56,11 @@ enum FoodScanningState: Equatable {
     case completed(result: CombinedLog)
     case failed(error: FoodScanError)
     
+    // UNIFIED: New states for macro and meal generation (replacing legacy states)
+    case generatingMacros                        // AI macro generation
+    case generatingMeal                          // AI meal generation from image
+    case generatingFood                          // AI food generation from text/voice
+    
     // Computed properties for UI
     var isActive: Bool {
         switch self {
@@ -68,6 +73,9 @@ enum FoodScanningState: Equatable {
         switch self {
         case .inactive: return ""
         case .initializing, .preparing, .uploading, .analyzing, .processing: return "Finishing up..."
+        case .generatingMacros: return "Generating macros..."
+        case .generatingMeal: return "Analyzing meal..."
+        case .generatingFood: return "Creating food..."
         case .completed: return "Complete!"
         case .failed(let error): return error.localizedDescription
         }
@@ -82,6 +90,9 @@ enum FoodScanningState: Equatable {
         case .uploading(let progress): return 0.1 + (progress * 0.4)  // 10-50% for upload
         case .analyzing: return 0.6               // 60% when analyzing
         case .processing: return 0.8              // 80% when processing
+        case .generatingMacros: return 0.5        // 50% for macro generation
+        case .generatingMeal: return 0.7          // 70% for meal generation
+        case .generatingFood: return 0.6          // 60% for food generation
         case .completed: return 1.0               // 100% when done
         case .failed: return 0.0                  // Reset on failure
         }
@@ -103,6 +114,9 @@ enum FoodScanningState: Equatable {
         case (.uploading, .uploading): return true
         case (.analyzing, .analyzing): return true
         case (.processing, .processing): return true
+        case (.generatingMacros, .generatingMacros): return true
+        case (.generatingMeal, .generatingMeal): return true
+        case (.generatingFood, .generatingFood): return true
         case (.completed(let result1), .completed(let result2)): return result1.foodLogId == result2.foodLogId
         case (.failed(let error1), .failed(let error2)): return error1.localizedDescription == error2.localizedDescription
         default: return false
@@ -208,6 +222,8 @@ class FoodManager: ObservableObject {
     
     private func resetVoiceLoggingState() {
         stopVoiceTimer()
+        // UNIFIED: Reset to inactive state (keeping legacy for backward compatibility)
+        foodScanningState = .inactive
         isGeneratingMacros = false
         isLoading = false
         macroGenerationStage = 0
@@ -2262,7 +2278,8 @@ func updateRecipe(
 func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
     print("🔍 DEBUG generateMacrosWithAI called - food: \(foodDescription), meal: \(mealType)")
     
-    // Set macro generation flags to show MacroGenerationCard in DashboardView
+    // UNIFIED: Set modern state for macro generation (keeping legacy for backward compatibility)
+    foodScanningState = .generatingMacros
     isGeneratingMacros = true
     isLoading = true  // THIS was missing - needed to show the loading card!
     macroGenerationStage = 0
@@ -2407,7 +2424,8 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
         return
     }
     
-    // Set generating meal flag and reset stage
+    // UNIFIED: Set modern state for meal generation (keeping legacy for backward compatibility)
+    foodScanningState = .generatingMeal
     isGeneratingMeal = true
     mealGenerationStage = 0
     
@@ -2435,8 +2453,9 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
         // Stop the stage cycling timer
         timer.invalidate()
         
-        // Reset generating meal flag
+        // UNIFIED: Reset to inactive state (keeping legacy for backward compatibility)
         DispatchQueue.main.async {
+            self.foodScanningState = .inactive
             self.isGeneratingMeal = false
             
             switch result {
@@ -2472,7 +2491,8 @@ func generateFoodWithAI(
     skipConfirmation: Bool = false,
     completion: @escaping (Result<Food, Error>) -> Void
 ) {
-    // Set generating food flag and reset stage
+    // UNIFIED: Set modern state for food generation (keeping legacy for backward compatibility)
+    foodScanningState = .generatingFood
     isGeneratingFood = true
     foodGenerationStage = 0
     showFoodGenerationSuccess = false
@@ -2501,8 +2521,9 @@ func generateFoodWithAI(
         // Stop the stage cycling timer
         timer.invalidate()
         
-        // Reset generating food flag
+        // UNIFIED: Reset to inactive state (keeping legacy for backward compatibility)
         DispatchQueue.main.async {
+            self.foodScanningState = .inactive
             self.isGeneratingFood = false
             
             switch result {
@@ -2532,7 +2553,8 @@ func generateFoodWithAI(
 // Add the createManualFood function after the generateFoodWithAI function
 // This is around line 1879 after the last function in the file
 func createManualFood(food: Food, showPreview: Bool = true, completion: @escaping (Result<Food, Error>) -> Void) {
-    // Set generating food flag
+    // UNIFIED: Set modern state for manual food creation (keeping legacy for backward compatibility) 
+    foodScanningState = .generatingFood
     isGeneratingFood = true
     showFoodGenerationSuccess = false
     
@@ -2547,8 +2569,9 @@ func createManualFood(food: Food, showPreview: Bool = true, completion: @escapin
             return
         }
         
-        // Reset generating food flag
+        // UNIFIED: Reset to inactive state (keeping legacy for backward compatibility)
         DispatchQueue.main.async {
+            self.foodScanningState = .inactive
             self.isGeneratingFood = false
             
             switch result {
@@ -3897,7 +3920,8 @@ func analyzeNutritionLabel(
 
     // MARK: - Voice Input Processing
     func processVoiceInput(audioData: Data) {
-        // Set macro generation flag - same as when generating macros with AI
+        // UNIFIED: Set modern state for voice macro generation (keeping legacy for backward compatibility)
+        foodScanningState = .generatingMacros
         isGeneratingMacros = true
         macroGenerationStage = 0
         showAIGenerationSuccess = false
@@ -3992,7 +4016,8 @@ func analyzeNutritionLabel(
         // Ensure any prior stage timer is stopped before starting a new session
         stopVoiceTimer()
         
-        // Set macro generation flags for proper UI display 
+        // UNIFIED: Set modern state for macro generation with voice (keeping legacy for backward compatibility)
+        foodScanningState = .generatingMacros  
         isGeneratingMacros = true  // This triggers MacroGenerationCard
         isLoading = true  // This is what makes the loading card visible in DashboardView
         macroGenerationStage = 0
@@ -4084,7 +4109,8 @@ func analyzeNutritionLabel(
                             // Use proper error handling with auto-reset (like image analysis)
                             self.updateFoodScanningState(.failed(error: .networkError("Food not identified. Please try again.")))
                             
-                            // Reset flags
+                            // UNIFIED: Reset to inactive state (keeping legacy for backward compatibility)
+                            self.foodScanningState = .inactive
                             self.isGeneratingMacros = false
                             self.isLoading = false
                             self.macroGenerationStage = 0
@@ -4198,7 +4224,8 @@ func analyzeNutritionLabel(
                 }
                 updateFoodScanningState(.failed(error: scanError))
                 
-                // Reset flags
+                // UNIFIED: Reset to inactive state (keeping legacy for backward compatibility)
+                foodScanningState = .inactive
                 isGeneratingMacros = false
                 isLoading = false
                 macroGenerationStage = 0
@@ -4640,7 +4667,8 @@ func analyzeNutritionLabel(
         showNutritionNameInputForCreation = false
         pendingNutritionDataForCreation = [:]
         pendingMealTypeForCreation = "Lunch"
-        // Clear loader states when user cancels name input
+        // UNIFIED: Reset to inactive state when user cancels name input
+        foodScanningState = .inactive
         isScanningFood = false
         isGeneratingFood = false
     }
@@ -4649,7 +4677,8 @@ func analyzeNutritionLabel(
         showNutritionNameInputForRecipe = false
         pendingNutritionDataForRecipe = [:]
         pendingMealTypeForRecipe = "Lunch"
-        // Clear loader states when user cancels name input
+        // UNIFIED: Reset to inactive state when user cancels name input
+        foodScanningState = .inactive
         isScanningFood = false
         isGeneratingFood = false
     }
@@ -5155,7 +5184,8 @@ func analyzeNutritionLabel(
             self.isScanningBarcode = false
             self.barcodeLoadingMessage = ""
             
-            // Reset generation states
+            // UNIFIED: Reset to inactive state  
+            self.foodScanningState = .inactive
             self.isGeneratingFood = false
             self.isGeneratingMacros = false
             self.isGeneratingMeal = false

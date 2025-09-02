@@ -346,11 +346,8 @@ struct CreateFoodWithVoice: View {
     private func generateFoodFromTranscription() {
         guard !audioRecorder.transcribedText.isEmpty else { return }
         
-        // Set scanning state to show loader card
-        foodManager.isScanningFood = true
-        foodManager.isGeneratingFood = true
-        foodManager.loadingMessage = "Creating food from voice..."
-        foodManager.uploadProgress = 0.3
+        // UNIFIED: Set modern scanning state for voice generation
+        foodManager.foodScanningState = .generatingFood
         
         // Use FoodManager to generate food with AI with skipConfirmation=true to prevent sheet
         foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText, skipConfirmation: true) { result in
@@ -369,9 +366,8 @@ struct CreateFoodWithVoice: View {
                                 // Track as recently added
                                 self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
                                 
-                                // Clear scanning states
-                                self.foodManager.isScanningFood = false
-                                self.foodManager.isGeneratingFood = false
+                                // UNIFIED: Reset to inactive state
+                                self.foodManager.foodScanningState = .inactive
                                 
                                 // Show success toast
                                 self.foodManager.lastLoggedItem = (name: savedFood.displayName, calories: savedFood.calories ?? 0)
@@ -385,9 +381,8 @@ struct CreateFoodWithVoice: View {
                             case .failure(let error):
                                 print("❌ Failed to create food from voice: \(error)")
                                 
-                                // Clear scanning states
-                                self.foodManager.isScanningFood = false
-                                self.foodManager.isGeneratingFood = false
+                                // UNIFIED: Reset to inactive state
+                                self.foodManager.foodScanningState = .inactive
                             }
                         }
                     }
@@ -395,9 +390,8 @@ struct CreateFoodWithVoice: View {
                 case .failure(let error):
                     print("❌ Failed to analyze food from voice: \(error)")
                     
-                    // Clear scanning states
-                    self.foodManager.isScanningFood = false
-                    self.foodManager.isGeneratingFood = false
+                    // UNIFIED: Reset to inactive state
+                    self.foodManager.foodScanningState = .inactive
                 }
             }
         }

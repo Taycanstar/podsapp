@@ -323,12 +323,9 @@ struct CreateFoodWithScan: View {
         
         isAnalyzingPhoto = true
         
-        // Set scanning state to show loader card in LogFood
-        foodManager.isScanningFood = true
-        foodManager.isGeneratingFood = true
+        // UNIFIED: Set modern scanning state
+        foodManager.foodScanningState = .preparing(image: image)
         foodManager.scannedImage = image
-        foodManager.loadingMessage = "Analyzing food image..."
-        foodManager.uploadProgress = 0.1
         
         // Use FoodManager to analyze the image for creation (without logging)
         foodManager.analyzeFoodImageForCreation(
@@ -380,9 +377,8 @@ struct CreateFoodWithScan: View {
                     )
                 }
                 
-                // Reset scanning states
-                self.foodManager.isScanningFood = false
-                self.foodManager.isGeneratingFood = false
+                // UNIFIED: Reset to inactive state
+                self.foodManager.foodScanningState = .inactive
                 self.foodManager.scannedImage = nil
                 // Reset analyzing flag
                 self.isAnalyzingPhoto = false
@@ -399,12 +395,9 @@ struct CreateFoodWithScan: View {
         
         isAnalyzingLabel = true
         
-        // Set scanning state to show loader card in LogFood
-        foodManager.isScanningFood = true
-        foodManager.isGeneratingFood = true
+        // UNIFIED: Set modern scanning state for nutrition label
+        foodManager.foodScanningState = .analyzing
         foodManager.scannedImage = image
-        foodManager.loadingMessage = "Reading nutrition label..."
-        foodManager.uploadProgress = 0.1
         
         // Use FoodManager to analyze the nutrition label for creation (without logging)
         foodManager.analyzeNutritionLabelForCreation(
@@ -478,9 +471,8 @@ struct CreateFoodWithScan: View {
                     dismiss()
                 }
                 
-                // Reset scanning states
-                self.foodManager.isScanningFood = false
-                self.foodManager.isGeneratingFood = false
+                // UNIFIED: Reset to inactive state
+                self.foodManager.foodScanningState = .inactive
                 self.foodManager.scannedImage = nil
                 // Reset analyzing flag
                 self.isAnalyzingLabel = false
@@ -489,11 +481,8 @@ struct CreateFoodWithScan: View {
     }
     
     func processBarcodeForCreation(_ barcode: String) {
-        // Set scanning state to show loader card in LogFood
-        foodManager.isScanningFood = true
-        foodManager.isGeneratingFood = true
-        foodManager.loadingMessage = "Looking up barcode..."
-        foodManager.uploadProgress = 0.2
+        // UNIFIED: Set modern scanning state for barcode lookup
+        foodManager.foodScanningState = .processing
         
         // Use NetworkManagerTwo to lookup barcode for creation (not logging)
         NetworkManagerTwo.shared.lookupFoodByBarcode(
@@ -568,12 +557,9 @@ struct CreateFoodWithScan: View {
         
         isAnalyzingGallery = true
         
-        // Set scanning state to show loader card in LogFood
-        foodManager.isScanningFood = true
-        foodManager.isGeneratingFood = true
+        // UNIFIED: Set modern scanning state for gallery analysis
+        foodManager.foodScanningState = .preparing(image: image)
         foodManager.scannedImage = image
-        foodManager.loadingMessage = "Analyzing image from gallery..."
-        foodManager.uploadProgress = 0.1
         
         // Use FoodManager to analyze the image for creation (without logging)
         foodManager.analyzeFoodImageForCreation(
@@ -625,9 +611,8 @@ struct CreateFoodWithScan: View {
                     )
                 }
                 
-                // Reset scanning states
-                self.foodManager.isScanningFood = false
-                self.foodManager.isGeneratingFood = false
+                // UNIFIED: Reset to inactive state
+                self.foodManager.foodScanningState = .inactive
                 self.foodManager.scannedImage = nil
                 // Reset analyzing flag
                 self.isAnalyzingGallery = false

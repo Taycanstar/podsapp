@@ -20,6 +20,7 @@ struct DynamicSetRowView: View {
     let isActive: Bool // Whether this set is currently active
     let onFocusChanged: ((Bool) -> Void)? // Callback when this row gains/loses focus
     let onSetChanged: (() -> Void)? // Callback when set data changes
+    let onPickerStateChanged: ((Bool) -> Void)? // Callback when time picker state changes
     @FocusState private var focusedField: FocusedField?
 
     @State private var showTimePicker: Bool = false
@@ -45,6 +46,10 @@ struct DynamicSetRowView: View {
                     let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                     impactFeedback.impactOccurred()
                 }
+            }
+            .onChange(of: showTimePicker) { _, newValue in
+                // Notify parent when time picker state changes for dynamic height
+                onPickerStateChanged?(newValue)
             }
     }
     

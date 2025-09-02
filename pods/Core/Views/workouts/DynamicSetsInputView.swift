@@ -21,6 +21,7 @@ struct DynamicSetsInputView: View {
     
     @State private var showingAddSetOptions = false
     @FocusState private var focusedSetIndex: Int?
+    @State private var hasExpandedPicker = false
     
     init(
         sets: Binding<[FlexibleSetData]>,
@@ -45,7 +46,7 @@ struct DynamicSetsInputView: View {
     }
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 4) {
             // DEBUG: Print rendering details
             let _ = print("🔴 DEBUG DynamicSetsInputView rendering:")
             let _ = print("🔴 - Exercise: \(workoutExercise.exercise.name)")
@@ -59,9 +60,10 @@ struct DynamicSetsInputView: View {
             List {
                 setsForEachView
             }
-            .frame(height: calculatedHeight)
+            .frame(height: hasExpandedPicker ? calculatedHeight + 180 : calculatedHeight)
             .listStyle(.plain)
             .scrollDisabled(true)
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: hasExpandedPicker)
             
             // Add button OUTSIDE the list
             let _ = print("🔴 - Rendering add button for trackingType: \(trackingType)")
@@ -99,7 +101,12 @@ struct DynamicSetsInputView: View {
                         focusedSetIndex = nil
                     }
                 },
-                onSetChanged: onSetDataChanged
+                onSetChanged: onSetDataChanged,
+                onPickerStateChanged: { isExpanded in
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        hasExpandedPicker = isExpanded
+                    }
+                }
             )
             .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
             .listRowSeparator(.hidden)
@@ -133,7 +140,7 @@ struct DynamicSetsInputView: View {
             .foregroundColor(.primary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(Color.gray.opacity(0.1))
+            .background(Color.clear)
             .cornerRadius(8)
             .contentShape(Rectangle())
             .onTapGesture {
@@ -151,7 +158,7 @@ struct DynamicSetsInputView: View {
             .foregroundColor(.primary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(Color.gray.opacity(0.1))
+            .background(Color.clear)
             .cornerRadius(8)
             .contentShape(Rectangle())
             .onTapGesture {
@@ -231,9 +238,9 @@ struct DynamicSetsInputView: View {
     // MARK: - Height Calculation
     
     private func calculateListHeight() -> CGFloat {
-        let baseRowHeight: CGFloat = 56 // Actual height of collapsed DynamicSetRowView
-        let spacing: CGFloat = 12 // Spacing between rows
-        let padding: CGFloat = 8 // Minimal top/bottom padding
+        let baseRowHeight: CGFloat = 48 // Tighter height for collapsed DynamicSetRowView
+        let spacing: CGFloat = 8 // Minimal spacing between rows
+        let padding: CGFloat = 4 // Minimal top/bottom padding
         
         // Base calculation for all sets - much more conservative
         let totalHeight = CGFloat(sets.count) * baseRowHeight + CGFloat(max(0, sets.count - 1)) * spacing + padding
