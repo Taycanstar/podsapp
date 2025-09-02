@@ -46,13 +46,18 @@ struct DynamicSetsInputView: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            // List for the sets only
             List {
                 setsForEachView
-                addSetButtonSection
             }
             .listStyle(.plain)
             .scrollDisabled(true) // KEY: Let parent ScrollView handle scrolling
-            .frame(height: calculateListHeight()) // KEY: Give List explicit height
+            .frame(height: calculateListHeightForSetsOnly()) // Adjusted height calculation
+            
+            // Add button OUTSIDE the list
+            addSetButton
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
         }
         .onAppear {
             initializeSetsIfNeeded()
@@ -96,16 +101,6 @@ struct DynamicSetsInputView: View {
         }
     }
     
-    @ViewBuilder
-    private var addSetButtonSection: some View {
-        // Add Set/Interval button as List row
-        Section {
-            addSetButton
-                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
-        }
-    }
     
     private func handleFocusChange(_ newValue: Int?) {
         onSetFocused?(newValue)
@@ -114,39 +109,46 @@ struct DynamicSetsInputView: View {
     @ViewBuilder
     private var addSetButton: some View {
         if trackingType == .repsWeight {
-            Button(action: addSet) {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("Add Set")
-                        .font(.system(size: 16, weight: .semibold))
-                }
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Color.clear)
-                .cornerRadius(8)
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Add Set")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(.primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(8)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                print("🔧 DEBUG: Add Set tapped directly")
+                addSet()
             }
         } else {
-            Button(action: addSet) {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("Add Interval")
-                        .font(.system(size: 16, weight: .semibold))
-                }
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Add Interval")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(.primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(8)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                print("🔧 DEBUG: Add Interval tapped directly")
+                addSet()
             }
         }
     }
     
-    // CRITICAL: Calculate height for List content to prevent disappearing
-    private func calculateListHeight() -> CGFloat {
+    // CRITICAL: Calculate height for List content to prevent disappearing (sets only)
+    private func calculateListHeightForSetsOnly() -> CGFloat {
         let baseRowHeight: CGFloat = 60 // Base height of DynamicSetRowView
         let pickerHeight: CGFloat = 180 // Height of inline time picker
-        let buttonHeight: CGFloat = 52 // Height of add set button
         let spacing: CGFloat = 8 // Spacing between rows
         
         // Check if any set might have an expanded picker (duration-based exercises)
@@ -161,7 +163,7 @@ struct DynamicSetsInputView: View {
         let maxExpandedPickers = min(sets.count, 2)
         let extraPickerSpace: CGFloat = hasExpandableContent ? CGFloat(maxExpandedPickers) * (pickerHeight + 20) : 0
         
-        let totalHeight = setsHeight + buttonHeight + extraPickerSpace + 32 // Extra padding
+        let totalHeight = setsHeight + extraPickerSpace + 16 // Extra padding (no button height)
         
         return totalHeight
     }
@@ -192,11 +194,23 @@ struct DynamicSetsInputView: View {
     
     private func addSet() {
         print("🔧 DEBUG: DynamicSetsInputView.addSet() called - Current sets count: \(sets.count)")
+        print("🔧 DEBUG: DynamicSetsInputView - trackingType: \(trackingType)")
+        
+        // Add haptic feedback to confirm button tap
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
         let newSet = FlexibleSetData(trackingType: trackingType)
         sets.append(newSet)
         print("🔧 DEBUG: DynamicSetsInputView - After adding new set, count: \(sets.count)")
+        print("🔧 DEBUG: DynamicSetsInputView - New set ID: \(newSet.id)")
         print("🔧 DEBUG: DynamicSetsInputView - Calling onAddSet callback")
         onAddSet?()
+        
+        // Force UI refresh
+        DispatchQueue.main.async {
+            print("🔧 DEBUG: DynamicSetsInputView - Force refresh, final count: \(self.sets.count)")
+        }
     }
     
     private func deleteSet(at indexSet: IndexSet) {
