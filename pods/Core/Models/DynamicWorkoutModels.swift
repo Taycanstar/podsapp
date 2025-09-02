@@ -892,6 +892,11 @@ struct ExerciseClassificationService {
         let exerciseType = exercise.exerciseType.lowercased()
         let equipment = exercise.equipment.lowercased()
         
+        // PRIORITY 1: Check exercise name patterns first (overrides everything)
+        if name.contains("plank") || name.contains("hold") || name.contains("wall sit") {
+            return .timeOnly  // Use timeOnly for plank/hold exercises (duration-only tracking)
+        }
+        
         // Handle aerobic exercises
         if exerciseType.contains("aerobic") {
             return determineCardioType(for: exercise)
@@ -899,7 +904,7 @@ struct ExerciseClassificationService {
         
         // Handle stretching exercises
         if exerciseType.contains("stretching") {
-            return .holdTime
+            return .timeOnly  // Use timeOnly for stretching (duration-only tracking)
         }
         
         // Handle bodyweight exercises

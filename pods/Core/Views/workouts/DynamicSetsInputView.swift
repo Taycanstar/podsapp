@@ -118,7 +118,7 @@ struct DynamicSetsInputView: View {
             .foregroundColor(.primary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(Color.clear)
+            .background(Color.gray.opacity(0.1))
             .cornerRadius(8)
             .contentShape(Rectangle())
             .onTapGesture {
@@ -135,7 +135,7 @@ struct DynamicSetsInputView: View {
             .foregroundColor(.primary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(Color.clear)
+            .background(Color.gray.opacity(0.1))
             .cornerRadius(8)
             .contentShape(Rectangle())
             .onTapGesture {
