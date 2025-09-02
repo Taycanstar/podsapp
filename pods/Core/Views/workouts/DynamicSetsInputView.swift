@@ -191,8 +191,11 @@ struct DynamicSetsInputView: View {
     }
     
     private func addSet() {
+        print("🔧 DEBUG: DynamicSetsInputView.addSet() called - Current sets count: \(sets.count)")
         let newSet = FlexibleSetData(trackingType: trackingType)
         sets.append(newSet)
+        print("🔧 DEBUG: DynamicSetsInputView - After adding new set, count: \(sets.count)")
+        print("🔧 DEBUG: DynamicSetsInputView - Calling onAddSet callback")
         onAddSet?()
     }
     

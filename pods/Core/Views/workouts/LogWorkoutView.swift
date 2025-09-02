@@ -2080,10 +2080,16 @@ private struct TodayWorkoutExerciseList: View {
     }
     
     private func updateExercise(at index: Int, with updatedExercise: TodayWorkoutExercise) {
-        guard index < exercises.count else { return }
+        print("🔧 DEBUG: updateExercise called for index \(index), exercise: \(updatedExercise.exercise.name)")
+        print("🔧 DEBUG: Updated exercise has \(updatedExercise.flexibleSets?.count ?? 0) flexible sets")
+        guard index < exercises.count else { 
+            print("🔧 DEBUG: ERROR - Index \(index) out of bounds for exercises array (count: \(exercises.count))")
+            return 
+        }
         
         // Replace the exercise with the updated one (including warm-up sets and new set count)
         exercises[index] = updatedExercise
+        print("🔧 DEBUG: Successfully updated exercise at index \(index)")
         
         // Save to UserDefaults if needed
         if let userEmail = UserDefaults.standard.string(forKey: "userEmail") {

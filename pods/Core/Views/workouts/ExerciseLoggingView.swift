@@ -469,6 +469,9 @@ struct ExerciseLoggingView: View {
                         print("🔧 DEBUG: Duration updated to: \(duration) for current set")
                         saveDurationToPersistence(duration)
                         saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
+                    },
+                    onSetDataChanged: {
+                        saveFlexibleSetsToExercise() // Save when any set data changes
                     }
                 )
                 .transition(.opacity.combined(with: .scale))
@@ -818,8 +821,10 @@ struct ExerciseLoggingView: View {
     }
     
     private func addNewSet() {
+        print("🔧 DEBUG: addNewSet() called - Current flexibleSets count: \(flexibleSets.count)")
         let newSet = FlexibleSetData(trackingType: trackingType)
         flexibleSets.append(newSet)
+        print("🔧 DEBUG: After adding new set - flexibleSets count: \(flexibleSets.count)")
         
         // Save to parent exercise data
         saveFlexibleSetsToExercise()
@@ -995,6 +1000,7 @@ struct ExerciseLoggingView: View {
     
     /// Save flexible sets to workout model - CRITICAL for duration persistence
     private func saveFlexibleSetsToExercise() {
+        print("🔧 DEBUG: saveFlexibleSetsToExercise() called with \(flexibleSets.count) flexible sets")
         let updatedExercise = TodayWorkoutExercise(
             exercise: currentExercise.exercise,
             sets: currentExercise.sets,
@@ -1008,9 +1014,10 @@ struct ExerciseLoggingView: View {
         )
         
         currentExercise = updatedExercise
-        print("🔧 DURATION: Saved \(flexibleSets.count) flexible sets to workout model")
+        print("🔧 DEBUG: Updated currentExercise with \(flexibleSets.count) flexible sets")
         
         // Update parent workout if needed
+        print("🔧 DEBUG: Calling onExerciseUpdated callback for exercise: \(updatedExercise.exercise.name)")
         onExerciseUpdated?(updatedExercise)
     }
     
