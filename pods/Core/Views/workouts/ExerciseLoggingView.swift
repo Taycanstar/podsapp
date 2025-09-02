@@ -76,6 +76,15 @@ struct ExerciseLoggingView: View {
         // Initialize enhanced tracking system
         let detectedTrackingType = ExerciseClassificationService.determineTrackingType(for: exercise.exercise)
         self._trackingType = State(initialValue: detectedTrackingType)
+        
+        // DEBUG: Print exercise details
+        print("🔴 DEBUG: ExerciseLoggingView initialized for exercise:")
+        print("🔴 Name: \(exercise.exercise.name)")
+        print("🔴 ID: \(exercise.exercise.id)")
+        print("🔴 Type: \(exercise.exercise.exerciseType)")
+        print("🔴 Equipment: \(exercise.exercise.equipment)")
+        print("🔴 Detected Tracking Type: \(detectedTrackingType)")
+        print("🔴 Sets: \(exercise.sets), Reps: \(exercise.reps), Weight: \(exercise.weight ?? 0)")
     }
     
     enum FocusedField: Hashable {
@@ -446,6 +455,11 @@ struct ExerciseLoggingView: View {
     
     private var setsInputSection: some View {
         VStack(spacing: 12) {
+            
+            // DEBUG: Print which branch we're taking
+            let _ = print("🔴 DEBUG setsInputSection: isDurationBasedExercise = \(isDurationBasedExercise)")
+            let _ = print("🔴 DEBUG setsInputSection: trackingType = \(trackingType)")
+            let _ = print("🔴 DEBUG setsInputSection: flexibleSets.count = \(flexibleSets.count)")
             
             // SIMPLIFIED: For duration-based exercises, use existing perfect style with direct binding
             if isDurationBasedExercise {

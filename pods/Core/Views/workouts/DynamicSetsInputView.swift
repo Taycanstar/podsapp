@@ -45,21 +45,32 @@ struct DynamicSetsInputView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // List for the sets only
+        VStack(spacing: 8) {
+            // DEBUG: Print rendering details
+            let _ = print("🔴 DEBUG DynamicSetsInputView rendering:")
+            let _ = print("🔴 - Exercise: \(workoutExercise.exercise.name)")
+            let _ = print("🔴 - TrackingType: \(trackingType)")
+            let _ = print("🔴 - Sets count: \(sets.count)")
+            
+            // List with proper height calculation for parent ScrollView integration
+            let calculatedHeight = calculateListHeight()
+            let _ = print("🔵 About to render List with height: \(calculatedHeight)")
+            
             List {
                 setsForEachView
             }
+            .frame(height: calculatedHeight)
             .listStyle(.plain)
-            .scrollDisabled(true) // KEY: Let parent ScrollView handle scrolling
-            .frame(height: calculateListHeightForSetsOnly()) // Adjusted height calculation
+            .scrollDisabled(true)
             
             // Add button OUTSIDE the list
+            let _ = print("🔴 - Rendering add button for trackingType: \(trackingType)")
             addSetButton
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
         }
         .onAppear {
+            print("🔴 DEBUG DynamicSetsInputView.onAppear called")
             initializeSetsIfNeeded()
         }
         .onChange(of: focusedSetIndex) { _, newValue in
@@ -72,7 +83,9 @@ struct DynamicSetsInputView: View {
     @ViewBuilder
     private var setsForEachView: some View {
         // Sets section with swipe-to-delete
+        let _ = print("🟢 DEBUG setsForEachView: About to render \(sets.count) sets")
         ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
+            let _ = print("🟢 - Rendering set \(index + 1): \(set)")
             DynamicSetRowView(
                 set: binding(for: index),
                 setNumber: index + 1,
@@ -108,7 +121,9 @@ struct DynamicSetsInputView: View {
     
     @ViewBuilder
     private var addSetButton: some View {
+        let _ = print("🔴 DEBUG addSetButton: trackingType = \(trackingType)")
         if trackingType == .repsWeight {
+            let _ = print("🔴 DEBUG addSetButton: Creating 'Add Set' button")
             HStack(spacing: 8) {
                 Image(systemName: "plus")
                     .font(.system(size: 16, weight: .semibold))
@@ -126,6 +141,7 @@ struct DynamicSetsInputView: View {
                 addSet()
             }
         } else {
+            let _ = print("🔴 DEBUG addSetButton: Creating 'Add Interval' button")
             HStack(spacing: 8) {
                 Image(systemName: "plus")
                     .font(.system(size: 16, weight: .semibold))
@@ -145,28 +161,6 @@ struct DynamicSetsInputView: View {
         }
     }
     
-    // CRITICAL: Calculate height for List content to prevent disappearing (sets only)
-    private func calculateListHeightForSetsOnly() -> CGFloat {
-        let baseRowHeight: CGFloat = 60 // Base height of DynamicSetRowView
-        let pickerHeight: CGFloat = 180 // Height of inline time picker
-        let spacing: CGFloat = 8 // Spacing between rows
-        
-        // Check if any set might have an expanded picker (duration-based exercises)
-        let hasExpandableContent = trackingType == .timeDistance || trackingType == .timeOnly || 
-                                 trackingType == .holdTime || trackingType == .rounds
-        
-        // Base calculation for all sets
-        let setsHeight = CGFloat(sets.count) * baseRowHeight + CGFloat(max(0, sets.count - 1)) * spacing
-        
-        // For duration exercises: allow reasonable space for potential picker expansion
-        // Allow for 2 expanded pickers max to avoid excessive height
-        let maxExpandedPickers = min(sets.count, 2)
-        let extraPickerSpace: CGFloat = hasExpandableContent ? CGFloat(maxExpandedPickers) * (pickerHeight + 20) : 0
-        
-        let totalHeight = setsHeight + extraPickerSpace + 16 // Extra padding (no button height)
-        
-        return totalHeight
-    }
     
     private func initializeSetsIfNeeded() {
         if sets.isEmpty {
@@ -232,6 +226,29 @@ struct DynamicSetsInputView: View {
                 }
             }
         )
+    }
+    
+    // MARK: - Height Calculation
+    
+    private func calculateListHeight() -> CGFloat {
+        let baseRowHeight: CGFloat = 56 // Actual height of collapsed DynamicSetRowView
+        let spacing: CGFloat = 12 // Spacing between rows
+        let padding: CGFloat = 8 // Minimal top/bottom padding
+        
+        // Base calculation for all sets - much more conservative
+        let totalHeight = CGFloat(sets.count) * baseRowHeight + CGFloat(max(0, sets.count - 1)) * spacing + padding
+        
+        print("🔵 DEBUG calculateListHeight:")
+        print("🔵 - Sets count: \(sets.count)")
+        print("🔵 - Base height per row: \(baseRowHeight)")
+        print("🔵 - Calculated total height: \(totalHeight)")
+        
+        // Minimal height - let List size naturally
+        let finalHeight = totalHeight
+        
+        print("🔵 - Final height returned: \(finalHeight)")
+        
+        return finalHeight
     }
 }
 
