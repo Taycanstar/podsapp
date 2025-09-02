@@ -165,7 +165,7 @@ struct DynamicSetRowView: View {
     }
     
     private var durationDistanceInput: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 4) {
             // Duration and distance input row with set indicator aligned
             VStack(spacing: 8) {
                 HStack(spacing: 16) {
@@ -299,11 +299,10 @@ struct DynamicSetRowView: View {
                 }
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
     }
     
     private var durationOnlyInput: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 4) {
             // Duration input row with set indicator aligned
             VStack(spacing: 8) {
                 HStack(spacing: 16) {
@@ -410,11 +409,10 @@ struct DynamicSetRowView: View {
                 }
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
     }
     
     private var holdTimeInput: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 4) {
             // Duration input row with set indicator aligned
             VStack(spacing: 8) {
                 HStack(spacing: 16) {
@@ -538,11 +536,10 @@ struct DynamicSetRowView: View {
                 focusedField = nil
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
     }
     
     private var roundsInput: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 4) {
             // Rounds input row
             TextField("5", text: Binding(
                 get: { 
@@ -664,7 +661,6 @@ struct DynamicSetRowView: View {
                 }
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showTimePicker)
     }
     
     // MARK: - Native Time Picker

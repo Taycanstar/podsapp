@@ -46,7 +46,7 @@ struct DynamicSetsInputView: View {
     }
     
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             // DEBUG: Print rendering details
             let _ = print("🔴 DEBUG DynamicSetsInputView rendering:")
             let _ = print("🔴 - Exercise: \(workoutExercise.exercise.name)")
@@ -57,13 +57,18 @@ struct DynamicSetsInputView: View {
             let calculatedHeight = calculateListHeight()
             let _ = print("🔵 About to render List with height: \(calculatedHeight)")
             
-            List {
-                setsForEachView
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 8) {
+                    setsForEachView
+                }
+                .padding(.vertical, 8)
             }
-            .frame(height: hasExpandedPicker ? calculatedHeight + 180 : calculatedHeight)
-            .listStyle(.plain)
-            .scrollDisabled(true)
+            .frame(height: hasExpandedPicker ? calculatedHeight + 200 : calculatedHeight)
             .animation(.spring(response: 0.3, dampingFraction: 0.8), value: hasExpandedPicker)
+            .onChange(of: hasExpandedPicker) { oldValue, newValue in
+                print("🟢 DEBUG: hasExpandedPicker changed from \(oldValue) to \(newValue)")
+                print("🟢 DEBUG: Height will be \(newValue ? calculatedHeight + 200 : calculatedHeight)")
+            }
             
             // Add button OUTSIDE the list
             let _ = print("🔴 - Rendering add button for trackingType: \(trackingType)")
@@ -108,9 +113,8 @@ struct DynamicSetsInputView: View {
                     }
                 }
             )
-            .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 8)
             .swipeActions(edge: .trailing) {
                 Button(role: .destructive) {
                     deleteSet(at: index)
@@ -238,20 +242,20 @@ struct DynamicSetsInputView: View {
     // MARK: - Height Calculation
     
     private func calculateListHeight() -> CGFloat {
-        let baseRowHeight: CGFloat = 64 // Proper height for reps/weight inputs (no cropping)
-        let spacing: CGFloat = 8 // Minimal spacing between rows
-        let padding: CGFloat = 4 // Minimal top/bottom padding
+        let baseRowHeight: CGFloat = 72 // Proper height to prevent input cropping
+        let spacing: CGFloat = 8 // Adequate spacing between rows
+        let containerPadding: CGFloat = 16 // Proper container padding
         
         // Base calculation for all sets - much more conservative
-        let totalHeight = CGFloat(sets.count) * baseRowHeight + CGFloat(max(0, sets.count - 1)) * spacing + padding
+        let totalHeight = CGFloat(sets.count) * baseRowHeight + CGFloat(max(0, sets.count - 1)) * spacing + containerPadding
         
         print("🔵 DEBUG calculateListHeight:")
         print("🔵 - Sets count: \(sets.count)")
         print("🔵 - Base height per row: \(baseRowHeight)")
         print("🔵 - Calculated total height: \(totalHeight)")
         
-        // Minimal height - let List size naturally
-        let finalHeight = totalHeight
+        // Add buffer for proper rendering
+        let finalHeight = totalHeight + 20
         
         print("🔵 - Final height returned: \(finalHeight)")
         

@@ -2278,11 +2278,16 @@ func updateRecipe(
 func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
     print("🔍 DEBUG generateMacrosWithAI called - food: \(foodDescription), meal: \(mealType)")
     
-    // UNIFIED: Set modern state for macro generation (keeping legacy for backward compatibility)
-    foodScanningState = .generatingMacros
+    // UNIFIED: Start with proper 0% progress, then animate to macro generation state
+    foodScanningState = .initializing  // Start at 0%
     isGeneratingMacros = true
     isLoading = true  // THIS was missing - needed to show the loading card!
     macroGenerationStage = 0
+    
+    // Animate to macro generation state after brief delay
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        self.foodScanningState = .generatingMacros  // Animate to 50%
+    }
     macroLoadingMessage = "Analyzing food description..."
     showAIGenerationSuccess = false
     
@@ -2376,8 +2381,8 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             
       
   
-            // UNIFIED: Show completion at 100% progress first using existing combinedLog (auto-resets to inactive after 1.5s)
-            self.foodScanningState = .completed(result: combinedLog)
+            // UNIFIED: Use proper updateFoodScanningState for smooth animation and auto-reset
+            self.updateFoodScanningState(.completed(result: combinedLog))
             
             // Reset macro generation state and show success toast in dashboard
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -2408,12 +2413,12 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
             completion(.success(loggedFood))
             
         case .failure(let error):
-            // UNIFIED: Show failure state then reset
-            self.foodScanningState = .failed(error: .networkError(error.localizedDescription))
+            // UNIFIED: Use proper updateFoodScanningState for failure handling
+            self.updateFoodScanningState(.failed(error: .networkError(error.localizedDescription)))
             
-            // Reset macro generation state after brief delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.foodScanningState = .inactive
+            // Reset both unified and legacy states after brief delay for failures
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                self.resetFoodScanningState()  // Reset unified state
                 self.isGeneratingMacros = false
                 self.isLoading = false  // Clear the loading flag
                 self.macroGenerationStage = 0
