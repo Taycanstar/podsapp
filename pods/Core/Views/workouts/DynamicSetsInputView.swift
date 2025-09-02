@@ -21,7 +21,7 @@ struct DynamicSetsInputView: View {
     
     @State private var showingAddSetOptions = false
     @FocusState private var focusedSetIndex: Int?
-    @State private var hasExpandedPicker = false
+    @State private var expandedPickerIndex: Int? = nil
     
     init(
         sets: Binding<[FlexibleSetData]>,
@@ -62,11 +62,11 @@ struct DynamicSetsInputView: View {
             }
             .listStyle(.plain)
             .scrollDisabled(true)
-            .frame(height: hasExpandedPicker ? calculatedHeight + 200 : calculatedHeight)
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: hasExpandedPicker)
-            .onChange(of: hasExpandedPicker) { oldValue, newValue in
-                print("🟢 DEBUG: hasExpandedPicker changed from \(oldValue) to \(newValue)")
-                print("🟢 DEBUG: Height will be \(newValue ? calculatedHeight + 200 : calculatedHeight)")
+            .frame(height: expandedPickerIndex != nil ? calculatedHeight + 200 : calculatedHeight)
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: expandedPickerIndex)
+            .onChange(of: expandedPickerIndex) { oldValue, newValue in
+                print("🟢 DEBUG: expandedPickerIndex changed from \(String(describing: oldValue)) to \(String(describing: newValue))")
+                print("🟢 DEBUG: Height will be \(newValue != nil ? calculatedHeight + 200 : calculatedHeight)")
             }
             
             // Add button OUTSIDE the list
@@ -108,7 +108,7 @@ struct DynamicSetsInputView: View {
                 onSetChanged: onSetDataChanged,
                 onPickerStateChanged: { isExpanded in
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        hasExpandedPicker = isExpanded
+                        expandedPickerIndex = isExpanded ? index : nil
                     }
                 }
             )
