@@ -118,7 +118,7 @@ struct DynamicSetsInputView: View {
             .foregroundColor(.primary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(Color.gray.opacity(0.1))
+            .background(Color.clear)
             .cornerRadius(8)
             .contentShape(Rectangle())
             .onTapGesture {
@@ -193,6 +193,7 @@ struct DynamicSetsInputView: View {
     }
     
     private func addSet() {
+        print("🔧 DEBUG: ========== addSet() CALLED ==========")
         print("🔧 DEBUG: DynamicSetsInputView.addSet() called - Current sets count: \(sets.count)")
         print("🔧 DEBUG: DynamicSetsInputView - trackingType: \(trackingType)")
         
@@ -200,17 +201,10 @@ struct DynamicSetsInputView: View {
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
         
-        let newSet = FlexibleSetData(trackingType: trackingType)
-        sets.append(newSet)
-        print("🔧 DEBUG: DynamicSetsInputView - After adding new set, count: \(sets.count)")
-        print("🔧 DEBUG: DynamicSetsInputView - New set ID: \(newSet.id)")
-        print("🔧 DEBUG: DynamicSetsInputView - Calling onAddSet callback")
+        // DON'T add the set here - let the parent handle it via callback
+        print("🔧 DEBUG: DynamicSetsInputView - Calling onAddSet callback (parent will add the set)")
         onAddSet?()
-        
-        // Force UI refresh
-        DispatchQueue.main.async {
-            print("🔧 DEBUG: DynamicSetsInputView - Force refresh, final count: \(self.sets.count)")
-        }
+        print("🔧 DEBUG: ========== addSet() FINISHED ==========")
     }
     
     private func deleteSet(at indexSet: IndexSet) {
