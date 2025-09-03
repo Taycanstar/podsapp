@@ -604,6 +604,13 @@ class WorkoutRecommendationService {
             let exerciseName = exercise.name.lowercased()
             let bodyPart = exercise.bodyPart.lowercased()
             let equipment = exercise.equipment.lowercased()
+
+            // Exclude heavy loaded strength patterns from warm-up (especially when not targeting those muscles)
+            let isHeavyLoaded = equipment.contains("barbell") || equipment.contains("dumbbell") || equipment.contains("kettlebell") || exerciseName.contains("smith") || exerciseName.contains("trap")
+            let isHeavyLowerBodyPattern = exerciseName.contains("lunge") || exerciseName.contains("squat") || exerciseName.contains("deadlift")
+            if isHeavyLoaded && isHeavyLowerBodyPattern {
+                return false
+            }
             
             // WARMUP RULE: NO STATIC STRETCHES - only dynamic movements
             if exerciseType == "stretching" {
@@ -635,6 +642,13 @@ class WorkoutRecommendationService {
                            exerciseName.contains("march") ||
                            exerciseName.contains("activation") ||
                            exerciseName.contains("mobility")
+
+            // Only accept dynamic movements when they are bodyweight/cardio/stretching (avoid loaded patterns like barbell walking lunge)
+            let dynamicIsAppropriate = isDynamic && (
+                equipment.contains("body weight") ||
+                bodyPart.contains("cardio") ||
+                exerciseType == "stretching"
+            )
             
             // TERTIARY: Light cardio for general warmup
             let isCardioWarmup = bodyPart.contains("cardio") && equipment.contains("body weight")
@@ -652,7 +666,7 @@ class WorkoutRecommendationService {
                 exerciseName.contains("arm") && exerciseName.contains("raise")
             )
             
-            if isDynamic {
+            if dynamicIsAppropriate {
                 print("🎯 Including DYNAMIC movement for warmup: \(exercise.name)")
                 return true
             } else if isCardioWarmup {
@@ -668,26 +682,54 @@ class WorkoutRecommendationService {
         
         print("🔥 WARMUP DEBUG: Filtered to \(warmUpExercises.count) warmup-suitable exercises")
         
-        // FITBOD-ALIGNED: Target muscles from main workout
+        // FITBOD-ALIGNED: Start from muscle-targeted candidates
         let targeted = targetExercisesForMuscles(warmUpExercises, targetMuscles: targetMuscles, exerciseType: .warmup)
-        let selected = Array(targeted.prefix(count))
+        // Select ensuring coverage across target muscles (no pure random)
+        let selected = selectExercisesCoveringTargetMuscles(targeted, targetMuscles: targetMuscles, maxCount: count)
         
         print("🔥 WARMUP DEBUG: Final selection: \(selected.count) exercises for muscles: \(targetMuscles.joined(separator: ", "))")
         for exercise in selected {
             print("   └── \(exercise.name) (\(exercise.exerciseType))")
         }
         
-        // Convert to TodayWorkoutExercise with FITBOD-ALIGNED warm-up parameters
+        // Convert to TodayWorkoutExercise with proper tracking for warm-up
         return selected.map { exercise in
             let (sets, reps, restTime) = getWarmupParameters(exercise)
-            return TodayWorkoutExercise(
-                exercise: exercise,
-                sets: sets,
-                reps: reps,
-                weight: nil,
-                restTime: restTime,
-                notes: "Warm-up: Prepare muscles for training"
-            )
+            let tracking = ExerciseClassificationService.determineTrackingType(for: exercise)
+            switch tracking {
+            case .timeOnly, .timeDistance, .holdTime:
+                // Use duration-based warmups: 2 short intervals by default
+                let intervalCount = max(2, sets)
+                let perInterval: TimeInterval = tracking == .timeDistance ? 60 : 20
+                var flex: [FlexibleSetData] = []
+                for _ in 0..<intervalCount {
+                    var set = FlexibleSetData(trackingType: tracking == .holdTime ? .holdTime : .timeOnly)
+                    set.duration = perInterval
+                    set.durationString = String(format: "%d:%02d", Int(perInterval) / 60, Int(perInterval) % 60)
+                    flex.append(set)
+                }
+                return TodayWorkoutExercise(
+                    exercise: exercise,
+                    sets: intervalCount,
+                    reps: 1,
+                    weight: nil,
+                    restTime: restTime,
+                    notes: "Warm-up: Prepare muscles for training",
+                    warmupSets: nil,
+                    flexibleSets: flex,
+                    trackingType: flex.first?.trackingType
+                )
+            default:
+                // Keep reps-based for activation moves
+                return TodayWorkoutExercise(
+                    exercise: exercise,
+                    sets: sets,
+                    reps: reps,
+                    weight: nil,
+                    restTime: restTime,
+                    notes: "Warm-up: Prepare muscles for training"
+                )
+            }
         }
     }
     
@@ -740,25 +782,38 @@ class WorkoutRecommendationService {
         
         print("🧊 COOLDOWN DEBUG: Filtered to \(coolDownExercises.count) cooldown-suitable exercises")
         
-        // FITBOD-ALIGNED: Target muscles from main workout
+        // FITBOD-ALIGNED: Start from muscle-targeted candidates
         let targeted = targetExercisesForMuscles(coolDownExercises, targetMuscles: targetMuscles, exerciseType: .cooldown)
-        let selected = Array(targeted.prefix(count))
+        // Select ensuring coverage across target muscles (no pure random)
+        let selected = selectExercisesCoveringTargetMuscles(targeted, targetMuscles: targetMuscles, maxCount: count)
         
         print("🧊 COOLDOWN DEBUG: Final selection: \(selected.count) exercises for muscles: \(targetMuscles.joined(separator: ", "))")
         for exercise in selected {
             print("   └── \(exercise.name) (\(exercise.exerciseType))")
         }
         
-        // Convert to TodayWorkoutExercise with FITBOD-ALIGNED cool-down parameters
+        // Convert to TodayWorkoutExercise with proper hold-time tracking for cooldown
         return selected.map { exercise in
-            let (sets, reps, restTime) = getCooldownParameters(exercise)
+            let (sets, _, restTime) = getCooldownParameters(exercise)
+            let holdDuration: TimeInterval = 30
+            let intervalCount = max(2, sets)
+            var flex: [FlexibleSetData] = []
+            for _ in 0..<intervalCount {
+                var set = FlexibleSetData(trackingType: .holdTime)
+                set.duration = holdDuration
+                set.durationString = String(format: "%d:%02d", Int(holdDuration) / 60, Int(holdDuration) % 60)
+                flex.append(set)
+            }
             return TodayWorkoutExercise(
                 exercise: exercise,
-                sets: sets,
-                reps: reps,
+                sets: intervalCount,
+                reps: 1,
                 weight: nil,
                 restTime: restTime,
-                notes: "Hold stretch for 20-30 seconds"
+                notes: "Hold stretch for 20-30 seconds",
+                warmupSets: nil,
+                flexibleSets: flex,
+                trackingType: .holdTime
             )
         }
     }
@@ -790,6 +845,61 @@ class WorkoutRecommendationService {
         }
         
         return score
+    }
+
+    /// Select exercises ensuring coverage of target muscles first, then fill remaining by overall priority.
+    private func selectExercisesCoveringTargetMuscles(
+        _ candidates: [ExerciseData],
+        targetMuscles: [String],
+        maxCount: Int
+    ) -> [ExerciseData] {
+        if maxCount <= 0 || candidates.isEmpty { return [] }
+        let lowerTargets = targetMuscles.map { $0.lowercased() }
+        var selected: [ExerciseData] = []
+        var usedIds = Set<Int>()
+
+        // Deterministic day offset to rotate within top options without randomness
+        let dayOffset = (Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0) % 3
+
+        // 1) Coverage pass: try to pick one per target muscle
+        for muscle in lowerTargets {
+            guard selected.count < maxCount else { break }
+            let muscleMatches = candidates.filter { ex in
+                let bp = ex.bodyPart.lowercased()
+                let tg = ex.target.lowercased()
+                return bp.contains(muscle) || tg.contains(muscle)
+            }
+            if muscleMatches.isEmpty { continue }
+
+            // Sort matches by evidence-based priority
+            let prioritized = prioritizeExercises(muscleMatches)
+
+            // Rotate pick within top 3 by dayOffset (stable variety)
+            let pickIndex = min(dayOffset, max(0, prioritized.count - 1))
+            let pick = prioritized[pickIndex]
+            if !usedIds.contains(pick.id) {
+                selected.append(pick)
+                usedIds.insert(pick.id)
+            }
+        }
+
+        // 2) Fill remaining slots by overall priority
+        if selected.count < maxCount {
+            let prioritizedAll = prioritizeExercises(candidates)
+            for ex in prioritizedAll {
+                if selected.count >= maxCount { break }
+                if !usedIds.contains(ex.id) {
+                    selected.append(ex)
+                    usedIds.insert(ex.id)
+                }
+            }
+        }
+
+        // Truncate to maxCount
+        if selected.count > maxCount {
+            selected = Array(selected.prefix(maxCount))
+        }
+        return selected
     }
     
     // New method to get recovery-optimized workout recommendations
