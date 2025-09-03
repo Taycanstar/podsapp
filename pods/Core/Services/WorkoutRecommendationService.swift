@@ -744,10 +744,14 @@ class WorkoutRecommendationService {
             let exerciseName = exercise.name.lowercased()
             let bodyPart = exercise.bodyPart.lowercased()
             let equipment = exercise.equipment.lowercased()
-            
+
+            // Exclude heavy loaded strength patterns from cooldown
+            let isHeavyLoaded = equipment.contains("barbell") || equipment.contains("dumbbell") || equipment.contains("kettlebell") || exerciseName.contains("smith") || exerciseName.contains("trap")
+            if isHeavyLoaded { return false }
+
             // COOLDOWN RULE: ONLY STATIC STRETCHES - no dynamic movements
             if exerciseType == "stretching" {
-                // Exclude all dynamic movements from cooldown (Fitbod principle)
+                // Exclude dynamic
                 let isDynamic = exerciseName.contains("dynamic") ||
                                exerciseName.contains("swing") ||
                                exerciseName.contains("circle") ||
@@ -755,28 +759,25 @@ class WorkoutRecommendationService {
                                exerciseName.contains("march") ||
                                exerciseName.contains("walk") ||
                                exerciseName.contains("roll")
-                
-                // ONLY include static/holding stretches
                 if !isDynamic {
                     print("🎯 Including STATIC stretch for cooldown: \(exercise.name)")
                     return true
                 }
             }
-            
-            // SECONDARY: Recovery-focused static movements only
-            let isStaticRecovery = (exerciseName.contains("recovery") ||
-                                   exerciseName.contains("cooldown") ||
-                                   exerciseName.contains("cool-down") ||
-                                   exerciseName.contains("hold") ||
-                                   exerciseName.contains("relax")) &&
-                                   !exerciseName.contains("dynamic") &&
-                                   !exerciseName.contains("swing")
-            
-            if isStaticRecovery {
+
+            // SECONDARY: Recovery-focused static movements only; restrict "hold" to stretching/bodyweight context
+            let isStaticRecoveryName = (exerciseName.contains("recovery") ||
+                                       exerciseName.contains("cooldown") ||
+                                       exerciseName.contains("cool-down") ||
+                                       exerciseName.contains("relax")) &&
+                                       !exerciseName.contains("dynamic") &&
+                                       !exerciseName.contains("swing")
+            let isBodyweightOrBand = equipment.contains("body weight") || equipment.contains("band") || equipment.contains("strap")
+            if isStaticRecoveryName && isBodyweightOrBand {
                 print("🎯 Including STATIC recovery exercise: \(exercise.name)")
                 return true
             }
-            
+
             return false
         }
         

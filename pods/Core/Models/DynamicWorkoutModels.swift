@@ -916,8 +916,10 @@ struct ExerciseClassificationService {
         let equipment = exercise.equipment.lowercased()
         
         // PRIORITY 1: Check exercise name patterns first (overrides everything)
-        if name.contains("plank") || name.contains("hold") || name.contains("wall sit") {
-            return .timeOnly  // Use timeOnly for plank/hold exercises (duration-only tracking)
+        if name.contains("plank") || name.contains("wall sit") ||
+           (name.contains("isometric") || (name.contains("hold") && exerciseType == "stretching")) {
+            // Only classify generic "hold" as duration when it's explicitly stretching or isometric
+            return .timeOnly
         }
         
         // Handle aerobic exercises
@@ -925,7 +927,7 @@ struct ExerciseClassificationService {
             return determineCardioType(for: exercise)
         }
         
-        // Handle stretching exercises
+        // Handle stretching exercises (duration-based holds)
         if exerciseType.contains("stretching") {
             return .timeOnly  // Use timeOnly for stretching (duration-only tracking)
         }
@@ -963,7 +965,7 @@ struct ExerciseClassificationService {
         let name = exercise.name.lowercased()
         
         // Hold-based exercises should be duration-only
-        if name.contains("plank") || name.contains("hold") || name.contains("wall sit") {
+        if name.contains("plank") || name.contains("wall sit") || name.contains("isometric") {
             return .timeOnly
         }
         
@@ -976,7 +978,7 @@ struct ExerciseClassificationService {
         let name = exercise.name.lowercased()
         
         // Time-based patterns (duration only)
-        if name.contains("plank") || name.contains("hold") {
+        if name.contains("plank") || name.contains("wall sit") || name.contains("isometric") {
             return .timeOnly
         }
         
