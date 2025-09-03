@@ -183,7 +183,7 @@ struct ExerciseLoggingView: View {
             // Inline sets section
             setsListRows
             .padding(.horizontal)
-            // .padding(.vertical, )
+            .padding(.vertical, 2)
 
             if showRIRSection {
                 rirSection
@@ -1114,12 +1114,16 @@ struct ExerciseLoggingView: View {
         UserDefaults.standard.synchronize()
     }
     
-    /// Save flexible sets to workout model - CRITICAL for duration persistence
+    /// Save flexible sets to workout model - CRITICAL for duration/session consistency
     private func saveFlexibleSetsToExercise() {
         print("🔧 DEBUG: saveFlexibleSetsToExercise() called with \(flexibleSets.count) flexible sets")
+
+        // Keep TodayWorkoutExercise.sets in sync with non-warmup flexible sets
+        let regularSetCount = flexibleSets.filter { !$0.isWarmupSet }.count
+
         let updatedExercise = TodayWorkoutExercise(
             exercise: currentExercise.exercise,
-            sets: currentExercise.sets,
+            sets: max(regularSetCount, 1),
             reps: currentExercise.reps,
             weight: currentExercise.weight,
             restTime: currentExercise.restTime,
@@ -1130,7 +1134,15 @@ struct ExerciseLoggingView: View {
         )
         
         currentExercise = updatedExercise
-        print("🔧 DEBUG: Updated currentExercise with \(flexibleSets.count) flexible sets")
+        print("🔧 DEBUG: Updated currentExercise with \(flexibleSets.count) flexible sets, sets=\(regularSetCount)")
+
+        // Update local allExercises snapshot when present (keeps in-view flows consistent)
+        if var exercises = allExercises,
+           let idx = exercises.firstIndex(where: { $0.exercise.id == updatedExercise.exercise.id }) {
+            exercises[idx] = updatedExercise
+            allExercises = exercises
+            print("🔧 DEBUG: Updated local allExercises[\(idx)] for ExerciseLoggingView")
+        }
         
         // Update parent workout if needed
         print("🔧 DEBUG: Calling onExerciseUpdated callback for exercise: \(updatedExercise.exercise.name)")

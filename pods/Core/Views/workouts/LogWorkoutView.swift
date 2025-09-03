@@ -1921,6 +1921,7 @@ private struct TodayWorkoutExerciseList: View {
     @Binding var navigationPath: NavigationPath
     let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
     let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
+    @EnvironmentObject var workoutManager: WorkoutManager
     @State private var exercises: [TodayWorkoutExercise]
     @State private var warmUpExpanded: Bool = true
     @State private var coolDownExpanded: Bool = true
@@ -2090,8 +2091,11 @@ private struct TodayWorkoutExerciseList: View {
         // Replace the exercise with the updated one (including warm-up sets and new set count)
         exercises[index] = updatedExercise
         print("🔧 DEBUG: Successfully updated exercise at index \(index)")
-        
-        // Save to UserDefaults if needed
+
+        // Persist to WorkoutManager (single source of truth) so other views see changes immediately
+        workoutManager.updateExercise(at: index, with: updatedExercise)
+
+        // Also save to UserDefaults for session persistence across app restarts
         if let userEmail = UserDefaults.standard.string(forKey: "userEmail") {
             let updatedWorkout = TodayWorkout(
                 id: workout.id,
