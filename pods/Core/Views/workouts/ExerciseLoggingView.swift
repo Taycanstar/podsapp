@@ -183,7 +183,7 @@ struct ExerciseLoggingView: View {
             // Inline sets section
             setsListRows
             .padding(.horizontal)
-            .padding(.vertical, 2)
+            // .padding(.vertical, 2)
 
             if showRIRSection {
                 rirSection
