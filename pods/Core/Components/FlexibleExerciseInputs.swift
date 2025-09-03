@@ -197,7 +197,7 @@ struct DynamicSetRowView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 12)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color("containerbg"))
@@ -334,7 +334,7 @@ struct DynamicSetRowView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 12)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color("containerbg"))
@@ -444,7 +444,7 @@ struct DynamicSetRowView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 12)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color("containerbg"))
