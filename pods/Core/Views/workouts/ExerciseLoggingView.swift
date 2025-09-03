@@ -302,6 +302,44 @@ struct ExerciseLoggingView: View {
                         .clipped()
                 }
 
+                // Thumbnails bar positioned just above the sheet
+                if let exs = allExercises, !exs.isEmpty {
+                    let barHeight: CGFloat = 64
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(Array(exs.enumerated()), id: \.element.exercise.id) { idx, ex in
+                                Button(action: {
+                                    // Haptic feedback
+                                    let impact = UIImpactFeedbackGenerator(style: .light)
+                                    impact.impactOccurred()
+                                    selectExercise(ex)
+                                }) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .fill(Color("primarybg"))
+                                            .frame(width: 64, height: 64)
+
+                                        thumbnailImage(for: ex)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(width: 60, height: 60)
+                                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    }
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .stroke(ex.exercise.id == currentExercise.exercise.id ? Color.accentColor : Color.clear, lineWidth: 2)
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                    }
+                    .frame(height: barHeight)
+                    // Position the bar just above the sheet top with a small gap
+                    .position(x: geo.size.width/2, y: max(barHeight/2 + 8, sheetTop - barHeight/2 - 8))
+                }
+
                 // Draggable content sheet
                 VStack(spacing: 0) {
                     // Drag handle
@@ -516,6 +554,34 @@ struct ExerciseLoggingView: View {
                 }
                 isDraggingSheet = false
             }
+    }
+
+    // MARK: - Thumbnail Helpers
+    private func thumbnailImage(for exercise: TodayWorkoutExercise) -> Image {
+        let imageName = String(format: "%04d", exercise.exercise.id)
+        if let ui = UIImage(named: imageName) {
+            return Image(uiImage: ui)
+        }
+        return Image(systemName: "dumbbell")
+            .renderingMode(.template)
+    }
+
+    private func selectExercise(_ exercise: TodayWorkoutExercise) {
+        // Update current exercise and tracking
+        currentExercise = exercise
+        let detected = ExerciseClassificationService.determineTrackingType(for: exercise.exercise)
+        trackingType = detected
+
+        // Load flexible sets when available, otherwise initialize fresh
+        if let flex = exercise.flexibleSets, !flex.isEmpty {
+            flexibleSets = flex
+        } else {
+            flexibleSets = []
+            initializeFlexibleSetsIfNeeded()
+        }
+
+        // Force the video to refresh
+        videoPlayerID = UUID()
     }
     
     private var videoHeaderView: some View {
