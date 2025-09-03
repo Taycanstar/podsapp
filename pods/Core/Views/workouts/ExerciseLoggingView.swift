@@ -32,7 +32,7 @@ struct ExerciseLoggingView: View {
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: FocusedField?
     @State private var showingFullscreenVideo = false
-    @State private var isVideoHidden = false
+    @State private var isVideoHidden = false // Deprecated toggle; kept for backward compatibility
     @State private var showKeyboardToolbar = false
     @State private var showingWorkoutInProgress = false
     @State private var workoutStarted: Bool
@@ -168,22 +168,12 @@ struct ExerciseLoggingView: View {
     @ViewBuilder
     private var mainListView: some View {
         List {
-            if !isVideoHidden {
-                videoHeaderView
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .top).combined(with: .opacity),
-                        removal: .move(edge: .top).combined(with: .opacity)
-                    ))
-            }
-
             exerciseHeaderSection
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
 
             // Inline sets section
             setsListRows
             .padding(.horizontal)
-            // .padding(.vertical, 2)
 
             if showRIRSection {
                 rirSection
@@ -199,7 +189,7 @@ struct ExerciseLoggingView: View {
         }
         .listStyle(.plain)
         .scrollDismissesKeyboard(.interactively)
-        .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
+        .scrollDisabled(isDraggingSheet)
     }
 
     // Inline sets rows for the List
@@ -281,15 +271,66 @@ struct ExerciseLoggingView: View {
     }
     
     var body: some View {
-        ZStack {
-            mainListView
-            floatingButtonStack
+        GeometryReader { geo in
+            let height = geo.size.height
+            let safeTop = geo.safeAreaInsets.top
+            // Anchors for the draggable sheet (slightly lower by default)
+            let expandedTop = max(safeTop + 40, height * 0.15)
+            let collapsedTop = max(expandedTop + 140, height * 0.62)
+
+            ZStack(alignment: .top) {
+                // Video background area
+                // Color("containerbg")
+                Color(.systemGray5)
+                    .ignoresSafeArea()
+
+                // Adaptive video height based on sheet position
+                let sheetTop = sheetCurrentTop ?? expandedTop
+                // Ensure video is fully visible and not covered by the sheet
+                // Use the sheet's top offset directly (ZStack is aligned to full screen coordinates)
+                let videoPadding: CGFloat = 12
+                // Allow the video to get smaller when the sheet is fully expanded
+                let videoH = max(120, sheetTop - videoPadding)
+                
+                if let videoURL = videoURL {
+                    CustomExerciseVideoPlayer(videoURL: videoURL)
+                        .id(videoPlayerID)
+                        .frame(maxWidth: .infinity, minHeight: videoH, maxHeight: videoH, alignment: .center)
+                        .clipped()
+                }
+
+                // Draggable content sheet
+                VStack(spacing: 0) {
+                    // Drag handle
+                    Capsule()
+                        .fill(Color.secondary.opacity(0.35))
+                        .frame(width: 40, height: 5)
+                        .padding(.top, 8)
+                        .padding(.bottom, 8)
+                        .contentShape(Rectangle())
+
+                    // Main content
+                    mainListView
+                        .background(Color.clear)
+                }
+                .background(Color("primarybg"))
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .offset(y: sheetTop)
+                // Make the whole sheet draggable (not only the grabber)
+                .highPriorityGesture(sheetDragGesture(expandedTop: expandedTop, collapsedTop: collapsedTop))
+            }
+            .onAppear {
+                // Start expanded (highest) by default
+                if sheetCurrentTop == nil { sheetCurrentTop = expandedTop }
+            }
         }
+        .overlay(
+            // Restore floating controls overlayed at bottom
+            floatingButtonStack
+                .ignoresSafeArea(.keyboard)
+        )
         // Make background tap dismiss the keyboard without stealing button taps
-        // .onTapGesture {
-        .simultaneousGesture(TapGesture().onEnded {
-            hideKeyboard()
-        })
+        .simultaneousGesture(TapGesture().onEnded { hideKeyboard() })
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
         .navigationBarBackButtonHidden(true)
@@ -352,13 +393,7 @@ struct ExerciseLoggingView: View {
                 impactFeedback.impactOccurred()
             }
         }
-        .onChange(of: isVideoHidden) { oldValue, newValue in
-            // When video becomes visible again, refresh the video player
-            if oldValue == true && newValue == false {
-                print("🎬 Video becoming visible again, refreshing player")
-                videoPlayerID = UUID()
-            }
-        }
+        // Removed isVideoHidden toggling; video size now follows sheet position
         .onChange(of: currentExercise.exercise.id) { oldId, newId in
             // When exercise is replaced, refresh the video player to load the new exercise video
             if oldId != newId {
@@ -455,6 +490,30 @@ struct ExerciseLoggingView: View {
             }
         }
     }
+
+    // MARK: - Sheet Drag State
+    @State private var sheetCurrentTop: CGFloat? = nil
+    @State private var dragStartTop: CGFloat = 0
+    @State private var isDraggingSheet: Bool = false
+
+    private func sheetDragGesture(expandedTop: CGFloat, collapsedTop: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 3, coordinateSpace: .global)
+            .onChanged { value in
+                if !isDraggingSheet {
+                    isDraggingSheet = true
+                    dragStartTop = sheetCurrentTop ?? collapsedTop
+                }
+                let proposed = dragStartTop + value.translation.height
+                sheetCurrentTop = max(expandedTop, min(collapsedTop, proposed))
+            }
+            .onEnded { value in
+                let mid = (expandedTop + collapsedTop) / 2
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    sheetCurrentTop = (sheetCurrentTop ?? mid) < mid ? expandedTop : collapsedTop
+                }
+                isDraggingSheet = false
+            }
+    }
     
     private var videoHeaderView: some View {
         Group {
@@ -510,48 +569,23 @@ struct ExerciseLoggingView: View {
                 
                 Spacer()
                 
-                HStack(spacing: 12) {
-                    // Airplay button (video visibility toggle)
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            isVideoHidden.toggle()
-                        }
-                        
-                        // Generate haptic feedback
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                        impactFeedback.prepare()
-                        impactFeedback.impactOccurred()
-                    }) {
-                        Image(systemName: "airplayvideo")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(isVideoHidden ? .accentColor : .white)
-                            .frame(width: 28, height: 28)
-                            .background(
-                                Circle()
-                                    .fill(isVideoHidden ? Color(.systemGray5) : Color.accentColor)
-                            )
-                    }
-                    .accessibilityLabel(isVideoHidden ? "Show video" : "Hide video")
-                    .accessibilityHint(isVideoHidden ? "Tap to show exercise video" : "Tap to hide exercise video")
-                    
-                    // Ellipsis button (exercise options)
-                    Button(action: {
-                        print("🔧 DEBUG: Ellipsis button tapped - showing exercise options")
-                        showingExerciseOptions = true
-                    }) {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.accentColor)
-                            .frame(width: 28, height: 28)
-                            .background(
-                                Circle()
-                                    .fill(Color(.systemGray5))
-                            )
-                            .contentShape(Circle()) // Make entire circle tappable
-                    }
-                    .buttonStyle(PlainButtonStyle()) // Ensure proper button interaction
-                    .accessibilityLabel("Exercise options")
+                // Ellipsis button (exercise options)
+                Button(action: {
+                    print("🔧 DEBUG: Ellipsis button tapped - showing exercise options")
+                    showingExerciseOptions = true
+                }) {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.accentColor)
+                        .frame(width: 28, height: 28)
+                        .background(
+                            Circle()
+                                .fill(Color(.systemGray5))
+                        )
+                        .contentShape(Circle()) // Make entire circle tappable
                 }
+                .buttonStyle(PlainButtonStyle()) // Ensure proper button interaction
+                .accessibilityLabel("Exercise options")
             }
             
             // Always display notes when they exist
