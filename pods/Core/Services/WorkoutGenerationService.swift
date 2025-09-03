@@ -300,8 +300,16 @@ class WorkoutGenerationService {
             var set = FlexibleSetData(trackingType: .timeDistance)
             set.duration = durationSeconds
             set.durationString = formatDuration(durationSeconds)
-            set.distance = 1.0
-            set.distanceUnit = .miles
+            // Use meters for loaded carries, miles for typical cardio
+            let lname = exercise.name.lowercased()
+            let isCarry = lname.contains("carry") || lname.contains("farmer") || lname.contains("suitcase") || lname.contains("yoke")
+            if isCarry {
+                set.distance = 40 // default 40 meters carry
+                set.distanceUnit = .meters
+            } else {
+                set.distance = 1.0
+                set.distanceUnit = .miles
+            }
             let flexible = [set]
             return TodayWorkoutExercise(
                 exercise: exercise,

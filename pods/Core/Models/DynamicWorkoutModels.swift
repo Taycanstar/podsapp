@@ -949,10 +949,12 @@ struct ExerciseClassificationService {
     /// Determine specific cardio tracking type
     private static func determineCardioType(for exercise: ExerciseData) -> ExerciseTrackingType {
         let name = exercise.name.lowercased()
-        
+        // Exclude strength patterns that contain walking but are not cardio (e.g. walking lunge/step)
+        let isWalkingStrengthPattern = (name.contains("walk") && (name.contains("lunge") || name.contains("step")))
+
         // Distance-based exercises
-        if name.contains("run") || name.contains("cycle") || name.contains("row") || 
-           name.contains("walk") || name.contains("jog") || name.contains("sprint") {
+        if (name.contains("run") || name.contains("cycle") || name.contains("row") ||
+            name.contains("walk") || name.contains("jog") || name.contains("sprint")) && !isWalkingStrengthPattern {
             return .timeDistance
         }
         
@@ -983,13 +985,16 @@ struct ExerciseClassificationService {
         }
         
         // Cardio patterns (duration + distance)
-        if name.contains("run") || name.contains("bike") || name.contains("elliptical") ||
-           name.contains("walk") || name.contains("farmer") || name.contains("carry") {
+        let isWalkingStrengthPattern = (name.contains("walk") && (name.contains("lunge") || name.contains("step")))
+        if (name.contains("run") || name.contains("bike") || name.contains("elliptical") ||
+            name.contains("row") || name.contains("jog") || name.contains("sprint") ||
+            (name.contains("walk") && !isWalkingStrengthPattern) ||
+            name.contains("farmer") || name.contains("suitcase") || name.contains("carry")) {
             return .timeDistance
         }
         
         // Circuit/interval patterns should be duration-only
-        if name.contains("circuit") || name.contains("hiit") || name.contains("interval") {
+        if name.contains("circuit") || name.contains("hiit") || name.contains("interval") || name.contains("emom") || name.contains("tabata") {
             return .timeOnly
         }
         

@@ -244,7 +244,7 @@ struct ExerciseLoggingView: View {
             HStack(spacing: 8) {
                 Image(systemName: "plus")
                     .font(.system(size: 16, weight: .semibold))
-                Text(trackingType == .repsWeight ? "Add Set" : "Add Interval")
+                Text(addActionTitle)
                     .font(.system(size: 16, weight: .semibold))
             }
             .foregroundColor(.primary)
@@ -256,6 +256,28 @@ struct ExerciseLoggingView: View {
         .buttonStyle(PlainButtonStyle())
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
+    }
+
+    // MARK: - Add Button Title Logic
+    private var addActionTitle: String {
+        switch trackingType {
+        case .repsWeight, .repsOnly:
+            return "Add Set"
+        case .holdTime:
+            // Static holds behave like sets
+            return "Add Set"
+        case .rounds:
+            return "Add Round"
+        case .timeDistance:
+            // Carries feel like sets; cardio intervals feel like intervals
+            let name = currentExercise.exercise.name.lowercased()
+            if name.contains("carry") || name.contains("farmer") || name.contains("suitcase") || name.contains("yoke") {
+                return "Add Set"
+            }
+            return "Add Interval"
+        case .timeOnly:
+            return "Add Interval"
+        }
     }
     
     var body: some View {
