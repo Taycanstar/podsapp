@@ -163,14 +163,6 @@ struct ExerciseLoggingView: View {
         .animation(.easeInOut(duration: 0.25), value: focusedField != nil)
     }
     
-    @ViewBuilder
-    private var scrollViewWithAnimation: some View {
-        ScrollView {
-            mainScrollContent
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
-    }
 
     // New: Single List to avoid nested List-in-ScrollView while preserving swipe actions
     @ViewBuilder
@@ -190,6 +182,8 @@ struct ExerciseLoggingView: View {
 
             // Inline sets section
             setsListRows
+            .padding(.horizontal)
+            // .padding(.vertical, )
 
             if showRIRSection {
                 rirSection
@@ -374,6 +368,7 @@ struct ExerciseLoggingView: View {
             }
         }
         .sheet(isPresented: $showingExerciseOptions) {
+            let _ = print("🔧 DEBUG: ExerciseOptionsSheet is being presented")
             ExerciseOptionsSheet(
                 exercise: $currentExercise,
                 selectedUnit: $selectedUnit,
@@ -517,6 +512,7 @@ struct ExerciseLoggingView: View {
                     
                     // Ellipsis button (exercise options)
                     Button(action: {
+                        print("🔧 DEBUG: Ellipsis button tapped - showing exercise options")
                         showingExerciseOptions = true
                     }) {
                         Image(systemName: "ellipsis")
@@ -527,7 +523,9 @@ struct ExerciseLoggingView: View {
                                 Circle()
                                     .fill(Color(.systemGray5))
                             )
+                            .contentShape(Circle()) // Make entire circle tappable
                     }
+                    .buttonStyle(PlainButtonStyle()) // Ensure proper button interaction
                     .accessibilityLabel("Exercise options")
                 }
             }
