@@ -346,8 +346,13 @@ struct CreateFoodWithVoice: View {
     private func generateFoodFromTranscription() {
         guard !audioRecorder.transcribedText.isEmpty else { return }
         
-        // UNIFIED: Set modern scanning state for voice generation
-        foodManager.foodScanningState = .generatingFood
+        // UNIFIED: Start with proper 0% progress, then animate with smooth transitions
+        foodManager.updateFoodScanningState(.initializing)  // Start at 0% with animation
+        
+        // Animate to food generation state after brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            foodManager.updateFoodScanningState(.generatingFood)  // Smooth animate to 60%
+        }
         
         // Use FoodManager to generate food with AI with skipConfirmation=true to prevent sheet
         foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText, skipConfirmation: true) { result in
@@ -366,8 +371,15 @@ struct CreateFoodWithVoice: View {
                                 // Track as recently added
                                 self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
                                 
-                                // UNIFIED: Reset to inactive state
-                                self.foodManager.foodScanningState = .inactive
+                                // UNIFIED: Show completion with proper animation and auto-reset
+                                let completionLog = CombinedLog(
+                                    type: .food,
+                                    status: "success",
+                                    calories: savedFood.calories ?? 0,
+                                    message: "Created \(savedFood.displayName)",
+                                    foodLogId: nil
+                                )
+                                self.foodManager.updateFoodScanningState(.completed(result: completionLog))
                                 
                                 // Show success toast
                                 self.foodManager.lastLoggedItem = (name: savedFood.displayName, calories: savedFood.calories ?? 0)
@@ -381,8 +393,13 @@ struct CreateFoodWithVoice: View {
                             case .failure(let error):
                                 print("❌ Failed to create food from voice: \(error)")
                                 
-                                // UNIFIED: Reset to inactive state
-                                self.foodManager.foodScanningState = .inactive
+                                // UNIFIED: Show error state then reset
+                                self.foodManager.updateFoodScanningState(.failed(error: .networkError(error.localizedDescription)))
+                                
+                                // Reset after showing error for a moment
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                    self.foodManager.resetFoodScanningState()
+                                }
                             }
                         }
                     }
@@ -390,8 +407,13 @@ struct CreateFoodWithVoice: View {
                 case .failure(let error):
                     print("❌ Failed to analyze food from voice: \(error)")
                     
-                    // UNIFIED: Reset to inactive state
-                    self.foodManager.foodScanningState = .inactive
+                    // UNIFIED: Show error state then reset
+                    self.foodManager.updateFoodScanningState(.failed(error: .networkError(error.localizedDescription)))
+                    
+                    // Reset after showing error for a moment
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        self.foodManager.resetFoodScanningState()
+                    }
                 }
             }
         }

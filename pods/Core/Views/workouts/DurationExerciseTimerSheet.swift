@@ -38,37 +38,44 @@ struct DurationExerciseTimerSheet: View {
                     // Clean, minimal countdown text - shows correct time immediately
                     Text(formatTime(timeRemaining))
                         .font(.system(size: 48, weight: .bold, design: .default))
-                        .fontDesign(.monospaced)
-                        .foregroundColor(timeRemaining <= 10 ? .red : .primary)
+                        // .fontDesign(.monospaced)
+                        .foregroundColor(.primary)
                         .scaleEffect(showingCompletionAnimation ? 1.1 : 1.0)
                         .animation(.easeInOut(duration: 0.3), value: showingCompletionAnimation)
                     
-                    if !isRunning && timeRemaining > 0 {
-                        Text("PAUSED")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.orange)
-                            .opacity(0.8)
-                    }
+                
                 }
                 .frame(maxHeight: .infinity)
                 .padding(.horizontal, 20)
                 
                 // Control buttons at bottom
                 if timeRemaining > 0 {
-                    HStack(spacing: 40) {
-                        // Pause/Resume button
+                    HStack(spacing: 32) {
+                        // Pause/Resume button with custom circular container
                         Button(action: toggleTimer) {
-                            Image(systemName: isRunning ? "pause.circle.fill" : "play.circle.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.accentColor)
+                            ZStack {
+                                Circle()
+                                    .fill(Color.orange.opacity(0.15))
+                                    .frame(width: 64, height: 64)
+                                Image(systemName: isRunning ? "pause" : "play.fill")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(.orange)
+                            }
                         }
+                        .buttonStyle(PlainButtonStyle())
                         
-                        // Stop button
+                        // Stop button with xmark and neutral circular background
                         Button(action: stopTimer) {
-                            Image(systemName: "stop.circle.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.red)
+                            ZStack {
+                                Circle()
+                                    .fill(Color(.systemGray5))
+                                    .frame(width: 64, height: 64)
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.primary)
+                            }
                         }
+                        .buttonStyle(PlainButtonStyle())
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 16)

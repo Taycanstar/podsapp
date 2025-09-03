@@ -376,7 +376,7 @@ struct WorkoutInProgressView: View {
                         .frame(width: 8, height: 8)
                     
                     Text(timeString(from: elapsedTime))
-                        .font(.system(size: 42, weight: .bold, design: .monospaced))
+                        .font(.system(size: 42, weight: .bold))
                         .foregroundColor(.primary)
                 }
                 

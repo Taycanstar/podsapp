@@ -276,8 +276,10 @@ struct ExerciseLoggingView: View {
                 exerciseName: currentExercise.exercise.name,
                 duration: timerDuration, // Use set-specific timer duration
                 onTimerComplete: {
-                    // Simple set completion
-                    onSetLogged?(1, nil)
+                    // Auto-log the set tied to this timer
+                    autoLogSetFromTimer()
+                    // Notify parent with up-to-date completed count
+                    onSetLogged?(completedSetsCount, nil)
                 }
             )
         }
@@ -798,18 +800,24 @@ struct ExerciseLoggingView: View {
     }
     
     private func autoLogSetFromTimer() {
-        // Find the first incomplete set and mark it as completed
-        if let index = flexibleSets.firstIndex(where: { !$0.isCompleted }) {
-            flexibleSets[index].isCompleted = true
-            
-            // Save the timer duration to this set - use the duration from the set itself
-            if let setDuration = flexibleSets[index].duration {
-                flexibleSets[index].durationString = formatDuration(setDuration)
+        // Prefer the currently active set if valid; otherwise first incomplete
+        let targetIndex: Int? = {
+            if flexibleSets.indices.contains(currentSetIndex) && !flexibleSets[currentSetIndex].isCompleted {
+                return currentSetIndex
             }
-            
-            // Update parent exercise if callback exists
-            saveFlexibleSetsToExercise()
+            return flexibleSets.firstIndex(where: { !$0.isCompleted })
+        }()
+
+        guard let index = targetIndex else { return }
+        flexibleSets[index].isCompleted = true
+
+        // Save/format duration for this set (using its own duration)
+        if let setDuration = flexibleSets[index].duration {
+            flexibleSets[index].durationString = formatDuration(setDuration)
         }
+
+        // Persist to workout model and notify parent
+        saveFlexibleSetsToExercise()
     }
     
     private func formatDuration(_ seconds: TimeInterval) -> String {
