@@ -52,26 +52,25 @@ struct DynamicSetsInputView: View {
             let _ = print("🔴 - Exercise: \(workoutExercise.exercise.name)")
             let _ = print("🔴 - TrackingType: \(trackingType)")
             let _ = print("🔴 - Sets count: \(sets.count)")
+            let _ = print("🔴 - onAddSet callback exists: \(onAddSet != nil)")
             
             // List with proper height calculation for parent ScrollView integration
             let calculatedHeight = calculateListHeight()
             let _ = print("🔵 About to render List with height: \(calculatedHeight)")
             
             List {
+                let _ = print("🔴 DEBUG: About to render setsForEachView which includes addSetButtonRow")
                 setsForEachView
             }
             .listStyle(.plain)
-            .scrollDisabled(true)
-            .frame(height: expandedPickerIndex != nil ? calculatedHeight + 200 : calculatedHeight)
+            .scrollDisabled(true) // Allow scrolling when content exceeds available space
+            .frame(height: min(expandedPickerIndex != nil ? calculatedHeight + 200 : calculatedHeight, 600)) // Cap max height to ensure usability
             .animation(.spring(response: 0.3, dampingFraction: 0.8), value: expandedPickerIndex)
             .onChange(of: expandedPickerIndex) { oldValue, newValue in
                 print("🟢 DEBUG: expandedPickerIndex changed from \(String(describing: oldValue)) to \(String(describing: newValue))")
                 print("🟢 DEBUG: Height will be \(newValue != nil ? calculatedHeight + 200 : calculatedHeight)")
             }
             
-            // Add button OUTSIDE the list
-            let _ = print("🔴 - Rendering add button for trackingType: \(trackingType)")
-            addSetButton
              
                 // .padding(.vertical, 8)
         }
@@ -123,6 +122,9 @@ struct DynamicSetsInputView: View {
                 }
             }
         }
+        
+        // Add button as final row in List
+        addSetButtonRow
     }
     
     
@@ -131,44 +133,53 @@ struct DynamicSetsInputView: View {
     }
     
     @ViewBuilder
-    private var addSetButton: some View {
-        let _ = print("🔴 DEBUG addSetButton: trackingType = \(trackingType)")
+    private var addSetButtonRow: some View {
+        let _ = print("🔴 DEBUG addSetButtonRow: RENDERING! trackingType = \(trackingType)")
+        let _ = print("🔴 DEBUG addSetButtonRow: onAddSet callback exists = \(onAddSet != nil)")
         if trackingType == .repsWeight {
-            let _ = print("🔴 DEBUG addSetButton: Creating 'Add Set' button")
-            HStack(spacing: 8) {
-                Image(systemName: "plus")
-                    .font(.system(size: 16, weight: .semibold))
-                Text("Add Set")
-                    .font(.system(size: 16, weight: .semibold))
-            }
-            .foregroundColor(.primary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Color.clear)
-            .cornerRadius(8)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                print("🔧 DEBUG: Add Set tapped directly")
+            let _ = print("🔴 DEBUG addSetButtonRow: Creating 'Add Set' button")
+            Button(action: {
+                print("🔧 DEBUG: Add Set button tapped")
                 addSet()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Add Set")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.clear)
+                .cornerRadius(8)
             }
+            .buttonStyle(PlainButtonStyle()) // Ensure button styling works in List
+            .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
         } else {
-            let _ = print("🔴 DEBUG addSetButton: Creating 'Add Interval' button")
-            HStack(spacing: 8) {
-                Image(systemName: "plus")
-                    .font(.system(size: 16, weight: .semibold))
-                Text("Add Interval")
-                    .font(.system(size: 16, weight: .semibold))
-            }
-            .foregroundColor(.primary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Color.clear)
-            .cornerRadius(8)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                print("🔧 DEBUG: Add Interval tapped directly")
+            let _ = print("🔴 DEBUG addSetButtonRow: Creating 'Add Interval' button")
+            Button(action: {
+                print("🔧 DEBUG: Add Interval button tapped")
                 addSet()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Add Interval")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.clear)
+                .cornerRadius(8)
             }
+            .buttonStyle(PlainButtonStyle()) // Ensure button styling works in List
+            .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
         }
     }
     
@@ -206,9 +217,15 @@ struct DynamicSetsInputView: View {
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
         
-        // DON'T add the set here - let the parent handle it via callback
-        print("🔧 DEBUG: DynamicSetsInputView - Calling onAddSet callback (parent will add the set)")
-        onAddSet?()
+        // Prefer parent callback; fallback to local append if not provided (e.g., in Previews)
+        if let onAddSet {
+            print("🔧 DEBUG: DynamicSetsInputView - Calling onAddSet callback (parent will add the set)")
+            onAddSet()
+        } else {
+            print("🔧 DEBUG: DynamicSetsInputView - No onAddSet callback found; appending set locally")
+            sets.append(FlexibleSetData(trackingType: trackingType))
+            onSetDataChanged?()
+        }
         print("🔧 DEBUG: ========== addSet() FINISHED ==========")
     }
     
@@ -242,24 +259,21 @@ struct DynamicSetsInputView: View {
     // MARK: - Height Calculation
     
     private func calculateListHeight() -> CGFloat {
-        let baseRowHeight: CGFloat = 54 // Proper height to prevent input cropping
-        let spacing: CGFloat = 8 // Adequate spacing between rows
-        let containerPadding: CGFloat = 0 // Proper container padding
+        let baseRowHeight: CGFloat = 54 // Height per row including set rows and add button
+        let spacing: CGFloat = 8 // Spacing between rows
+        let containerPadding: CGFloat = 0 // Container padding
         
-        // Base calculation for all sets - much more conservative
-        let totalHeight = CGFloat(sets.count) * baseRowHeight + CGFloat(max(0, sets.count - 1)) * spacing + containerPadding
+        // Calculate for all sets PLUS the add button row (sets.count + 1)
+        let totalRows = sets.count + 1 // Include add button as a row
+        let totalHeight = CGFloat(totalRows) * baseRowHeight + CGFloat(max(0, totalRows - 1)) * spacing + containerPadding
         
         print("🔵 DEBUG calculateListHeight:")
         print("🔵 - Sets count: \(sets.count)")
+        print("🔵 - Total rows (including add button): \(totalRows)")
         print("🔵 - Base height per row: \(baseRowHeight)")
         print("🔵 - Calculated total height: \(totalHeight)")
         
-        // Add buffer for proper rendering
-        let finalHeight = totalHeight 
-        
-        print("🔵 - Final height returned: \(finalHeight)")
-        
-        return finalHeight
+        return totalHeight
     }
 }
 

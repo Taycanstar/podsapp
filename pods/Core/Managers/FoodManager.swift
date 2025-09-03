@@ -2278,15 +2278,15 @@ func updateRecipe(
 func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
     print("🔍 DEBUG generateMacrosWithAI called - food: \(foodDescription), meal: \(mealType)")
     
-    // UNIFIED: Start with proper 0% progress, then animate to macro generation state
-    foodScanningState = .initializing  // Start at 0%
+    // UNIFIED: Start with proper 0% progress, then animate with smooth transitions
+    updateFoodScanningState(.initializing)  // Start at 0% with animation
     isGeneratingMacros = true
     isLoading = true  // THIS was missing - needed to show the loading card!
     macroGenerationStage = 0
     
     // Animate to macro generation state after brief delay
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        self.foodScanningState = .generatingMacros  // Animate to 50%
+        self.updateFoodScanningState(.generatingMacros)  // Smooth animate to 50%
     }
     macroLoadingMessage = "Analyzing food description..."
     showAIGenerationSuccess = false

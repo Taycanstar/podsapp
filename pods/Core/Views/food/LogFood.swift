@@ -655,16 +655,31 @@ private struct FoodListView: View {
                     // Dismiss keyboard
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     
-                    // UNIFIED: Set modern scanning state
-                    foodManager.foodScanningState = .generatingFood
+                    // UNIFIED: Start with proper 0% progress, then animate with smooth transitions
+                    foodManager.updateFoodScanningState(.initializing)  // Start at 0% with animation
+                    
+                    // Animate to food generation state after brief delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        foodManager.updateFoodScanningState(.generatingFood)  // Smooth animate to 60%
+                    }
                     
                     // Generate food with AI - skip confirmation for text search
                     foodManager.generateFoodWithAI(foodDescription: searchText, skipConfirmation: true) { result in
-                        // UNIFIED: Reset to inactive state
-                        foodManager.foodScanningState = .inactive
+                        // UNIFIED: Show completion with proper animation and auto-reset (like macro generation)
+                        // Need to create a CombinedLog for the completion state
                         
                         switch result {
                         case .success(let generated):
+                            // UNIFIED: Show completion before proceeding
+                            let completionLog = CombinedLog(
+                                type: .food,
+                                status: "success",
+                                calories: generated.calories ?? 0,
+                                message: "Generated \(generated.displayName)",
+                                foodLogId: nil
+                            )
+                            foodManager.updateFoodScanningState(.completed(result: completionLog))
+                            
                             // Create the food in the database
                             foodManager.createManualFood(food: generated, showPreview: false) { createResult in
                                 DispatchQueue.main.async {
@@ -698,6 +713,14 @@ private struct FoodListView: View {
                             }
                             
                         case .failure(let error):
+                            // UNIFIED: Show error state then reset
+                            foodManager.updateFoodScanningState(.failed(error: .networkError(error.localizedDescription)))
+                            
+                            // Reset after showing error for a moment
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                foodManager.resetFoodScanningState()
+                            }
+                            
                             // Show error alert
                             if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
                                 aiErrorMessage = message

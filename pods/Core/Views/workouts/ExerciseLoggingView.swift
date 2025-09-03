@@ -171,16 +171,109 @@ struct ExerciseLoggingView: View {
         .scrollDismissesKeyboard(.interactively)
         .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
     }
+
+    // New: Single List to avoid nested List-in-ScrollView while preserving swipe actions
+    @ViewBuilder
+    private var mainListView: some View {
+        List {
+            if !isVideoHidden {
+                videoHeaderView
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
+            }
+
+            exerciseHeaderSection
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+
+            // Inline sets section
+            setsListRows
+
+            if showRIRSection {
+                rirSection
+                    .listRowInsets(EdgeInsets(top: 20, leading: 16, bottom: 0, trailing: 16))
+            }
+
+            // Bottom spacer so content isn't hidden behind floating buttons
+            Color.clear
+                .frame(height: 80)
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+        }
+        .listStyle(.plain)
+        .scrollDismissesKeyboard(.interactively)
+        .animation(.easeInOut(duration: 0.3), value: isVideoHidden)
+    }
+
+    // Inline sets rows for the List
+    @ViewBuilder
+    private var setsListRows: some View {
+        let _ = print("🔴 DEBUG setsListRows: trackingType = \(trackingType), flexibleSets.count = \(flexibleSets.count)")
+
+        ForEach(Array(flexibleSets.enumerated()), id: \.element.id) { index, _ in
+            DynamicSetRowView(
+                set: $flexibleSets[index],
+                setNumber: index + 1,
+                workoutExercise: currentExercise,
+                onDurationChanged: { duration in
+                    print("🔧 DEBUG: Duration updated to: \(duration) for set #\(index + 1)")
+                    saveDurationToPersistence(duration)
+                    saveFlexibleSetsToExercise()
+                },
+                isActive: index == currentSetIndex,
+                onFocusChanged: { focused in
+                    if focused { currentSetIndex = index }
+                },
+                onSetChanged: {
+                    saveFlexibleSetsToExercise()
+                },
+                onPickerStateChanged: { _ in }
+            )
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+            .swipeActions(edge: .trailing) {
+                Button(role: .destructive) {
+                    deleteFlexibleSet(at: index)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+
+        Button(action: {
+            print("🔧 DEBUG: Add button tapped in setsListRows")
+            addNewSet()
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+                Text(trackingType == .repsWeight ? "Add Set" : "Add Interval")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(.primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Color.clear)
+            .cornerRadius(8)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+    }
     
     var body: some View {
         ZStack {
-            scrollViewWithAnimation
+            mainListView
             floatingButtonStack
         }
-        .onTapGesture {
-            // Dismiss keyboard when tapping outside input fields
+        // Make background tap dismiss the keyboard without stealing button taps
+        // .onTapGesture {
+        .simultaneousGesture(TapGesture().onEnded {
             hideKeyboard()
-        }
+        })
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
         .navigationBarBackButtonHidden(true)
@@ -230,6 +323,8 @@ struct ExerciseLoggingView: View {
             Task {
                 exerciseNotes = await ExerciseNotesService.shared.loadNotes(for: currentExercise.exercise.id)
             }
+            // Ensure sets are initialized for inline List
+            initializeFlexibleSetsIfNeeded()
         }
         .onChange(of: focusedField) { oldValue, newValue in
             if newValue != nil && oldValue != newValue {
@@ -680,6 +775,15 @@ struct ExerciseLoggingView: View {
         timerDuration = setDuration
         print("🔧 DEBUG: Starting timer for set \(currentSetIndex + 1) with duration: \(setDuration)s")
         showTimerSheet = true
+    }
+
+    // MARK: - Set Helpers (List Inline)
+
+    private func deleteFlexibleSet(at index: Int) {
+        guard index >= 0 && index < flexibleSets.count else { return }
+        guard flexibleSets.count > 1 else { return }
+        flexibleSets.remove(at: index)
+        saveFlexibleSetsToExercise()
     }
     
     private func defaultDurationForExerciseType() -> TimeInterval {
