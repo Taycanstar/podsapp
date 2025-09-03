@@ -4948,12 +4948,25 @@ func analyzeNutritionLabel(
         imageAnalysisMessage = "Analyzing image for creation…"
         uploadProgress   = 0
         
+        // UNIFIED: Progress through scanning states during analysis
+        // Start uploading animation (0% → 50%)
+        updateFoodScanningState(.uploading(progress: 0.0))
+        
         // ─── 2) Progress ticker ─────────────────────
         progressTimer?.invalidate()
         progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
             DispatchQueue.main.async {
                 if self.uploadProgress < 0.9 {
                     self.uploadProgress += 0.02
+                    // UNIFIED: Update scanning state with upload progress (up to 50%)
+                    if self.uploadProgress < 0.5 {
+                        self.updateFoodScanningState(.uploading(progress: Double(self.uploadProgress)))
+                    } else if self.uploadProgress < 0.9 {
+                        // UNIFIED: Switch to analyzing state (50% → 90%)
+                        if self.foodScanningState != .analyzing {
+                            self.updateFoodScanningState(.analyzing)
+                        }
+                    }
                 }
             }
         }
@@ -4967,21 +4980,28 @@ func analyzeNutritionLabel(
                 withAnimation {
                     self.uploadProgress = 1.0
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    self.isAnalyzingImage = false
-                    self.isLoading = false
-                    // Reset other scanning states
-                    self.isScanningFood = false
-                    self.isGeneratingFood = false
-                    self.scannedImage = nil
-                    self.uploadProgress = 0
-                    self.loadingMessage = ""
-                }
                 
                 // failure path
                 guard success, let payload = payload else {
                     let msg = errMsg ?? "Unknown error"
                     print("🔴 [analyzeFoodImageForCreation] error: \(msg)")
+                    
+                    // UNIFIED: Show error state then reset
+                    self.updateFoodScanningState(.failed(error: .networkError(msg)))
+                    
+                    // Reset after showing error for a moment
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        self.resetFoodScanningState()
+                        self.isAnalyzingImage = false
+                        self.isLoading = false
+                        // Reset other scanning states
+                        self.isScanningFood = false
+                        self.isGeneratingFood = false
+                        self.scannedImage = nil
+                        self.uploadProgress = 0
+                        self.loadingMessage = ""
+                    }
+                    
                     completion(.failure(NSError(
                         domain: "FoodScan", code: -1,
                         userInfo: [NSLocalizedDescriptionKey: msg])))
@@ -5010,14 +5030,68 @@ func analyzeNutritionLabel(
                             print("🩺 [DEBUG] Health analysis score (analyzeFoodImageForCreation): \(healthAnalysis.score)")
                         }
                         
+                        // UNIFIED: Show completion with proper animation
+                        let completionLog = CombinedLog(
+                            type: .food,
+                            status: "success",
+                            calories: food.calories ?? 0,
+                            message: "Analyzed \(food.displayName)",
+                            foodLogId: nil
+                        )
+                        self.updateFoodScanningState(.completed(result: completionLog))
+                        
+                        // Auto-reset after showing completion
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            self.resetFoodScanningState()
+                            self.isAnalyzingImage = false
+                            self.isLoading = false
+                            // Reset other scanning states
+                            self.isScanningFood = false
+                            self.isGeneratingFood = false
+                            self.scannedImage = nil
+                            self.uploadProgress = 0
+                            self.loadingMessage = ""
+                        }
+                        
                         completion(.success(food))
                     } else {
+                        // UNIFIED: Show error state for invalid response
+                        self.updateFoodScanningState(.failed(error: .networkError("Invalid response format")))
+                        
+                        // Reset after showing error
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            self.resetFoodScanningState()
+                            self.isAnalyzingImage = false
+                            self.isLoading = false
+                            self.isScanningFood = false
+                            self.isGeneratingFood = false
+                            self.scannedImage = nil
+                            self.uploadProgress = 0
+                            self.loadingMessage = ""
+                        }
+                        
                         completion(.failure(NSError(
                             domain: "FoodManager", code: -1,
                             userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])))
                     }
                 } catch {
                     print("❌ [analyzeFoodImageForCreation] decoding error:", error)
+                    
+                    // UNIFIED: Show error state for decoding error
+                    self.updateFoodScanningState(.failed(error: .networkError(error.localizedDescription)))
+                    
+                    // Reset after showing error
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        self.resetFoodScanningState()
+                        self.isAnalyzingImage = false
+                        self.isLoading = false
+                        self.isScanningFood = false
+                        self.isGeneratingFood = false
+                        self.scannedImage = nil
+                        self.uploadProgress = 0
+                        self.loadingMessage = ""
+                    }
+                    
                     completion(.failure(error))
                 }
             }
@@ -5036,12 +5110,25 @@ func analyzeNutritionLabel(
         imageAnalysisMessage = "Reading nutrition label for creation…"
         uploadProgress   = 0
         
+        // UNIFIED: Progress through scanning states during analysis
+        // Start uploading animation (0% → 50%)
+        updateFoodScanningState(.uploading(progress: 0.0))
+        
         // ─── 2) Progress ticker ─────────────────────
         progressTimer?.invalidate()
         progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
             DispatchQueue.main.async {
                 if self.uploadProgress < 0.9 {
                     self.uploadProgress += 0.02
+                    // UNIFIED: Update scanning state with upload progress (up to 50%)
+                    if self.uploadProgress < 0.5 {
+                        self.updateFoodScanningState(.uploading(progress: Double(self.uploadProgress)))
+                    } else if self.uploadProgress < 0.9 {
+                        // UNIFIED: Switch to analyzing state (50% → 90%)
+                        if self.foodScanningState != .analyzing {
+                            self.updateFoodScanningState(.analyzing)
+                        }
+                    }
                 }
             }
         }
@@ -5056,21 +5143,27 @@ func analyzeNutritionLabel(
                 withAnimation {
                     self.uploadProgress = 1.0
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    self.isAnalyzingImage = false
-                    self.isLoading = false
-                    // Reset other scanning states
-                    self.isScanningFood = false
-                    self.isGeneratingFood = false
-                    self.scannedImage = nil
-                    self.uploadProgress = 0
-                    self.loadingMessage = ""
-                }
                 
                 // failure path
                 guard success, let payload = payload else {
                     let msg = errMsg ?? "Unknown error"
                     print("🔴 [analyzeNutritionLabelForCreation] error: \(msg)")
+                    
+                    // UNIFIED: Show error state then reset
+                    self.updateFoodScanningState(.failed(error: .networkError(msg)))
+                    
+                    // Reset after showing error for a moment
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        self.resetFoodScanningState()
+                        self.isAnalyzingImage = false
+                        self.isLoading = false
+                        // Reset other scanning states
+                        self.isScanningFood = false
+                        self.isGeneratingFood = false
+                        self.scannedImage = nil
+                        self.uploadProgress = 0
+                        self.loadingMessage = ""
+                    }
                     
                     completion(.failure(NSError(
                         domain: "FoodManager",
@@ -5084,6 +5177,21 @@ func analyzeNutritionLabel(
                 if let status = payload["status"] as? String, status == "name_required" {
                     // Product name not found - we need user input
                     print("🏷️ [analyzeNutritionLabelForCreation] Product name not found, user input required")
+                    
+                    // UNIFIED: Show error state for name required then reset
+                    self.updateFoodScanningState(.failed(error: .networkError("Product name not found on label")))
+                    
+                    // Reset after showing error
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        self.resetFoodScanningState()
+                        self.isAnalyzingImage = false
+                        self.isLoading = false
+                        self.isScanningFood = false
+                        self.isGeneratingFood = false
+                        self.scannedImage = nil
+                        self.uploadProgress = 0
+                        self.loadingMessage = ""
+                    }
                     
                     // For creation context, we still need to handle name input
                     // This would need UI handling similar to the logging version
@@ -5142,14 +5250,67 @@ func analyzeNutritionLabel(
                             print("🩺 [DEBUG] Health analysis score (analyzeNutritionLabelForCreation): \(healthAnalysis.score)")
                         }
                         
+                        // UNIFIED: Show completion with proper animation
+                        let completionLog = CombinedLog(
+                            type: .food,
+                            status: "success",
+                            calories: food.calories ?? 0,
+                            message: "Analyzed \(food.displayName)",
+                            foodLogId: nil
+                        )
+                        self.updateFoodScanningState(.completed(result: completionLog))
+                        
+                        // Auto-reset after showing completion
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            self.resetFoodScanningState()
+                            self.isAnalyzingImage = false
+                            self.isLoading = false
+                            // Reset other scanning states
+                            self.isScanningFood = false
+                            self.isGeneratingFood = false
+                            self.scannedImage = nil
+                            self.uploadProgress = 0
+                            self.loadingMessage = ""
+                        }
+                        
                         completion(.success(food))
                     } else {
+                        // UNIFIED: Show error state for invalid response
+                        self.updateFoodScanningState(.failed(error: .networkError("Invalid response format")))
+                        
+                        // Reset after showing error
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            self.resetFoodScanningState()
+                            self.isAnalyzingImage = false
+                            self.isLoading = false
+                            self.isScanningFood = false
+                            self.isGeneratingFood = false
+                            self.scannedImage = nil
+                            self.uploadProgress = 0
+                            self.loadingMessage = ""
+                        }
+                        
                         completion(.failure(NSError(
                             domain: "FoodManager", code: -1,
                             userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])))
                     }
                 } catch {
                     print("❌ [analyzeNutritionLabelForCreation] decoding error:", error)
+                    
+                    // UNIFIED: Show error state for decoding error
+                    self.updateFoodScanningState(.failed(error: .networkError(error.localizedDescription)))
+                    
+                    // Reset after showing error
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        self.resetFoodScanningState()
+                        self.isAnalyzingImage = false
+                        self.isLoading = false
+                        self.isScanningFood = false
+                        self.isGeneratingFood = false
+                        self.scannedImage = nil
+                        self.uploadProgress = 0
+                        self.loadingMessage = ""
+                    }
                     
                     completion(.failure(error))
                 }
