@@ -522,13 +522,36 @@ struct DynamicTodayWorkout: Codable, Identifiable {
     
     /// Backward compatibility with existing UI
     var legacyWorkout: TodayWorkout {
-        let legacyExercises = dynamicExercises.map(\.legacyExercise)
-        
+        // Merge dynamic reps-based guidance with base workout while preserving
+        // duration-based tracking (flexibleSets/trackingType) from the base.
+        let mergedExercises: [TodayWorkoutExercise] = {
+            let base = baseWorkout.exercises
+            // Build a lookup of dynamic exercises by exercise.id to avoid index mismatches
+            let dynById: [Int: DynamicWorkoutExercise] = Dictionary(uniqueKeysWithValues: dynamicExercises.map { ($0.exercise.id, $0) })
+            var result: [TodayWorkoutExercise] = []
+            result.reserveCapacity(base.count)
+            for baseEx in base {
+                let tracking = baseEx.trackingType ?? ExerciseClassificationService.determineTrackingType(for: baseEx.exercise)
+                switch tracking {
+                case .timeOnly, .timeDistance, .holdTime, .rounds:
+                    // Keep base (preserve flexibleSets/trackingType)
+                    result.append(baseEx)
+                default:
+                    if let dynEx = dynById[baseEx.exercise.id] {
+                        result.append(dynEx.legacyExercise)
+                    } else {
+                        result.append(baseEx)
+                    }
+                }
+            }
+            return result
+        }()
+
         return TodayWorkout(
             id: baseWorkout.id,
             date: baseWorkout.date,
             title: "\(sessionPhase.emoji) \(sessionPhase.displayName): \(baseWorkout.title)",
-            exercises: legacyExercises,
+            exercises: mergedExercises,
             estimatedDuration: baseWorkout.estimatedDuration,
             fitnessGoal: baseWorkout.fitnessGoal,
             difficulty: baseWorkout.difficulty,
@@ -958,7 +981,8 @@ struct ExerciseClassificationService {
         }
         
         // Cardio patterns (duration + distance)
-        if name.contains("run") || name.contains("bike") || name.contains("elliptical") {
+        if name.contains("run") || name.contains("bike") || name.contains("elliptical") ||
+           name.contains("walk") || name.contains("farmer") || name.contains("carry") {
             return .timeDistance
         }
         

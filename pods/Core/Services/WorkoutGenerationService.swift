@@ -126,21 +126,13 @@ class WorkoutGenerationService {
             print("🎯 \(muscle): requested \(countForThisMuscle), got \(recommended.count) exercises")
             
             for exercise in recommended {
-                let recommendation = recommendationService.getSmartRecommendation(for: exercise, fitnessGoal: fitnessGoal)
-                
-                // Use research-based rest times instead of arbitrary values
-                let optimalRest = getResearchBasedRestTime(
-                    fitnessGoal: fitnessGoal,
-                    isCompound: isCompoundExercise(exercise)
+                // Build exercise with correct tracking (reps/weight vs duration-based)
+                let built = makeWorkoutExercise(
+                    for: exercise,
+                    targetDuration: targetDuration,
+                    fitnessGoal: fitnessGoal
                 )
-                
-                exercises.append(TodayWorkoutExercise(
-                    exercise: exercise,
-                    sets: recommendation.sets,
-                    reps: recommendation.reps,
-                    weight: recommendation.weight,
-                    restTime: optimalRest
-                ))
+                exercises.append(built)
             }
             
             print("📊 Running total after \(muscle): \(exercises.count) exercises")
@@ -178,21 +170,12 @@ class WorkoutGenerationService {
             print("🎯 \(muscle): requested \(exercisesPerMuscle), got \(recommended.count) exercises")
             
             for exercise in recommended {
-                let recommendation = recommendationService.getSmartRecommendation(for: exercise, fitnessGoal: fitnessGoal)
-                
-                // Use research-based rest times instead of arbitrary values
-                let optimalRest = getResearchBasedRestTime(
-                    fitnessGoal: fitnessGoal,
-                    isCompound: isCompoundExercise(exercise)
+                let built = makeWorkoutExercise(
+                    for: exercise,
+                    targetDuration: targetDuration,
+                    fitnessGoal: fitnessGoal
                 )
-                
-                exercises.append(TodayWorkoutExercise(
-                    exercise: exercise,
-                    sets: recommendation.sets,
-                    reps: recommendation.reps,
-                    weight: recommendation.weight,
-                    restTime: optimalRest
-                ))
+                exercises.append(built)
             }
             
             print("📊 Running total after \(muscle): \(exercises.count) exercises")
@@ -226,14 +209,40 @@ class WorkoutGenerationService {
         var totalSeconds = 0
         
         for exercise in exercises {
-            // Research-based rep duration
-            let repDuration = getRepDurationForGoal(fitnessGoal)
-            
-            // Calculate components
-            let workingTime = exercise.sets * exercise.reps * repDuration
-            let restTime = (exercise.sets - 1) * exercise.restTime
             let setupTime = isCompoundExercise(exercise.exercise) ? 25 : 15
             let transitionTime = 15
+            var workingTime = 0
+            var restTime = 0
+
+            if let flex = exercise.flexibleSets, !flex.isEmpty, let type = exercise.trackingType {
+                switch type {
+                case .timeOnly, .timeDistance, .holdTime:
+                    // Sum durations across sets
+                    let totalDur = flex.compactMap { $0.duration }.reduce(0, +)
+                    workingTime = Int(totalDur)
+                    // Rest between sets (use exercise.restTime)
+                    restTime = max(0, (flex.count - 1) * exercise.restTime)
+                case .rounds:
+                    // rounds × duration
+                    if let rounds = flex.first?.rounds {
+                        let perRound = Int(flex.first?.duration ?? 180)
+                        workingTime = rounds * perRound
+                        restTime = max(0, (rounds - 1) * exercise.restTime)
+                    } else {
+                        workingTime = Int(flex.first?.duration ?? 180)
+                    }
+                default:
+                    // Fall back to reps calc below
+                    break
+                }
+            }
+            
+            if workingTime == 0 {
+                // Reps-based fallback using research-based rep duration
+                let repDuration = getRepDurationForGoal(fitnessGoal)
+                workingTime = exercise.sets * exercise.reps * repDuration
+                restTime = max(0, (exercise.sets - 1) * exercise.restTime)
+            }
             
             totalSeconds += workingTime + restTime + setupTime + transitionTime
         }
@@ -253,6 +262,143 @@ class WorkoutGenerationService {
         default:
             return 3  // General fitness
         }
+    }
+    
+    // MARK: - Builders for Correct Tracking Types
+    
+    /// Build a TodayWorkoutExercise with appropriate tracking and defaults
+    private func makeWorkoutExercise(
+        for exercise: ExerciseData,
+        targetDuration: WorkoutDuration,
+        fitnessGoal: FitnessGoal
+    ) -> TodayWorkoutExercise {
+        let trackingType = ExerciseClassificationService.determineTrackingType(for: exercise)
+        
+        // Common rest time based on goal and movement type
+        let optimalRest = getResearchBasedRestTime(
+            fitnessGoal: fitnessGoal,
+            isCompound: isCompoundExercise(exercise)
+        )
+        
+        switch trackingType {
+        case .repsWeight, .repsOnly:
+            let rec = recommendationService.getSmartRecommendation(for: exercise, fitnessGoal: fitnessGoal)
+            return TodayWorkoutExercise(
+                exercise: exercise,
+                sets: rec.sets,
+                reps: rec.reps,
+                weight: rec.weight,
+                restTime: optimalRest,
+                notes: nil,
+                warmupSets: nil,
+                flexibleSets: nil,
+                trackingType: .repsWeight
+            )
+        case .timeDistance:
+            // One session with recommended duration and default distance
+            let durationSeconds = defaultDuration(for: .timeDistance, goal: fitnessGoal)
+            var set = FlexibleSetData(trackingType: .timeDistance)
+            set.duration = durationSeconds
+            set.durationString = formatDuration(durationSeconds)
+            set.distance = 1.0
+            set.distanceUnit = .miles
+            let flexible = [set]
+            return TodayWorkoutExercise(
+                exercise: exercise,
+                sets: flexible.count,
+                reps: 1,
+                weight: nil,
+                restTime: 45,
+                notes: nil,
+                warmupSets: nil,
+                flexibleSets: flexible,
+                trackingType: .timeDistance
+            )
+        case .timeOnly:
+            // Interval-style or hold-based – use 3 intervals by default
+            let perInterval = defaultDuration(for: .timeOnly, goal: fitnessGoal)
+            let intervals = 3
+            let flexible: [FlexibleSetData] = (0..<intervals).map { _ in
+                var set = FlexibleSetData(trackingType: .timeOnly)
+                set.duration = perInterval
+                set.durationString = formatDuration(perInterval)
+                return set
+            }
+            return TodayWorkoutExercise(
+                exercise: exercise,
+                sets: intervals,
+                reps: 1,
+                weight: nil,
+                restTime: 30,
+                notes: nil,
+                warmupSets: nil,
+                flexibleSets: flexible,
+                trackingType: .timeOnly
+            )
+        case .holdTime:
+            // Holds for stretching/core: 3 × 30–45s
+            let hold = defaultDuration(for: .holdTime, goal: fitnessGoal)
+            let flexible: [FlexibleSetData] = (0..<3).map { _ in
+                var set = FlexibleSetData(trackingType: .holdTime)
+                set.duration = hold
+                set.durationString = formatDuration(hold)
+                return set
+            }
+            return TodayWorkoutExercise(
+                exercise: exercise,
+                sets: 3,
+                reps: 1,
+                weight: nil,
+                restTime: 30,
+                notes: nil,
+                warmupSets: nil,
+                flexibleSets: flexible,
+                trackingType: .holdTime
+            )
+        case .rounds:
+            // Rounds with default 3 × 3:00
+            let roundDuration = defaultDuration(for: .rounds, goal: fitnessGoal)
+            let rounds = 3
+            var set = FlexibleSetData(trackingType: .rounds)
+            set.rounds = rounds
+            set.duration = roundDuration
+            set.durationString = formatDuration(roundDuration)
+            let flexible = [set]
+            return TodayWorkoutExercise(
+                exercise: exercise,
+                sets: rounds,
+                reps: 1,
+                weight: nil,
+                restTime: 45,
+                notes: nil,
+                warmupSets: nil,
+                flexibleSets: flexible,
+                trackingType: .rounds
+            )
+        }
+    }
+    
+    private func defaultDuration(for type: ExerciseTrackingType, goal: FitnessGoal) -> TimeInterval {
+        switch type {
+        case .timeDistance:
+            // Endurance favors longer steady-state
+            return goal == .endurance ? 900 : 600 // 15m else 10m
+        case .timeOnly:
+            // Work-interval length; adjust slightly for endurance
+            return goal == .endurance ? 60 : 45
+        case .holdTime:
+            return 30
+        case .rounds:
+            return 180
+        default:
+            return 60
+        }
+    }
+    
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let minutes = Int(seconds) / 60
+        let remaining = Int(seconds) % 60
+        return String(format: "%d:%02d", minutes, remaining)
     }
     
     /// Determine if exercise is a compound movement

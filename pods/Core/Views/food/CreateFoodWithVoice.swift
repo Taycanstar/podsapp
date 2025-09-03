@@ -361,6 +361,8 @@ struct CreateFoodWithVoice: View {
                 case .success(let food):
                     print("✅ Successfully analyzed food from voice for creation: \(food.displayName)")
                     
+                    // UNIFIED: createManualFood now detects active scanning flow and won't interfere
+                    
                     // Create food directly without confirmation (like barcode with preview disabled)
                     self.foodManager.createManualFood(food: food, showPreview: false) { result in
                         DispatchQueue.main.async {

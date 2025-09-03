@@ -2217,16 +2217,37 @@ private struct ExerciseWorkoutCard: View {
         return cachedDynamicExercise
     }
     
-    // Computed property for dynamic rep display (now stable)
+    // Computed display that respects tracking type
     private var setsAndRepsDisplay: String {
-        if let dynamicExercise = stableDynamicExercise {
-            // Use the new dailyTargetDisplay for specific daily targets
-            return dynamicExercise.dailyTargetDisplay
-        } else {
-            // Fallback to static display with consistent format
-            let setsText = exercise.sets == 1 ? "set" : "sets"
-            return "\(exercise.sets) \(setsText) • \(exercise.reps) reps"
+        if let tracking = exercise.trackingType, let flex = exercise.flexibleSets, !flex.isEmpty {
+            switch tracking {
+            case .timeOnly:
+                // For duration exercises, only show count of sets/intervals
+                return "\(flex.count) \(flex.count == 1 ? "set" : "sets")"
+            case .holdTime:
+                return "\(flex.count) \(flex.count == 1 ? "set" : "sets")"
+            case .timeDistance:
+                return "\(flex.count) \(flex.count == 1 ? "set" : "sets")"
+            case .rounds:
+                let rounds = flex.first?.rounds ?? exercise.sets
+                return "\(rounds) \(rounds == 1 ? "round" : "rounds")"
+            default:
+                break // fall through to reps-based below
+            }
         }
+
+        // Reps-based formatting (optionally use dynamic target when available)
+        if let dynamicExercise = stableDynamicExercise {
+            return dynamicExercise.dailyTargetDisplay
+        }
+        let setsText = exercise.sets == 1 ? "set" : "sets"
+        return "\(exercise.sets) \(setsText) • \(exercise.reps) reps"
+    }
+
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let minutes = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return String(format: "%d:%02d", minutes, secs)
     }
     
     var body: some View {

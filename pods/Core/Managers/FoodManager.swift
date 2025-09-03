@@ -2568,10 +2568,16 @@ func generateFoodWithAI(
 // Add the createManualFood function after the generateFoodWithAI function
 // This is around line 1879 after the last function in the file
 func createManualFood(food: Food, showPreview: Bool = true, completion: @escaping (Result<Food, Error>) -> Void) {
-    // UNIFIED: Set modern state for manual food creation (keeping legacy for backward compatibility) 
-    foodScanningState = .generatingFood
-    isGeneratingFood = true
-    showFoodGenerationSuccess = false
+    // UNIFIED: Only set scanning state if not already in an active scanning flow
+    let wasAlreadyScanning = foodScanningState.isActive
+    if !wasAlreadyScanning {
+        updateFoodScanningState(.initializing)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.updateFoodScanningState(.generatingFood)
+        }
+        isGeneratingFood = true
+        showFoodGenerationSuccess = false
+    }
     
     guard let email = userEmail else {
         completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
@@ -2584,10 +2590,13 @@ func createManualFood(food: Food, showPreview: Bool = true, completion: @escapin
             return
         }
         
-        // UNIFIED: Reset to inactive state (keeping legacy for backward compatibility)
+        // UNIFIED: Only reset state if we were the ones who set it
         DispatchQueue.main.async {
-            self.foodScanningState = .inactive
-            self.isGeneratingFood = false
+            if !wasAlreadyScanning {
+                // We started the scanning, so we should complete it properly
+                self.isGeneratingFood = false
+            }
+            // If wasAlreadyScanning, don't interfere with the existing scanning flow
             
             switch result {
             case .success(let food):
@@ -2603,6 +2612,18 @@ func createManualFood(food: Food, showPreview: Bool = true, completion: @escapin
                 
                 // Clear the userFoods cache to force refresh from server next time
                 self.clearUserFoodsCache()
+                
+                // UNIFIED: Show completion if we started the scanning flow
+                if !wasAlreadyScanning {
+                    let completionLog = CombinedLog(
+                        type: .food,
+                        status: "success",
+                        calories: food.calories ?? 0,
+                        message: "Created \(food.displayName)",
+                        foodLogId: nil
+                    )
+                    self.updateFoodScanningState(.completed(result: completionLog))
+                }
                 
                 // Show success toast
                 self.showFoodGenerationSuccess = true

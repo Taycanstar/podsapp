@@ -721,13 +721,25 @@ class WorkoutManager: ObservableObject {
         // Find a suitable duration exercise from the actual database
         let durationExercise = getDurationExerciseFromDatabase()
         
+        // Build a proper duration-based exercise (3 × 30s) to preserve tracking
+        let intervalCount = 3
+        var flexSets: [FlexibleSetData] = []
+        for _ in 0..<intervalCount {
+            var set = FlexibleSetData(trackingType: .timeOnly)
+            set.duration = 30
+            set.durationString = String(format: "%d:%02d", 0, 30)
+            flexSets.append(set)
+        }
         let durationWorkoutExercise = TodayWorkoutExercise(
             exercise: durationExercise,
-            sets: 3,
-            reps: 1, // For duration exercises, reps doesn't matter much
+            sets: intervalCount,
+            reps: 1,
             weight: nil,
             restTime: 60,
-            notes: "DEBUG: Forced duration exercise for testing"
+            notes: "DEBUG: Forced duration exercise for testing",
+            warmupSets: nil,
+            flexibleSets: flexSets,
+            trackingType: .timeOnly
         )
         
         // Replace the last exercise with our duration exercise to keep workout length reasonable
