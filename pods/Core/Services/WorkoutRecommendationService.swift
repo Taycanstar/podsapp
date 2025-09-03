@@ -572,25 +572,9 @@ class WorkoutRecommendationService {
     
     // Filter exercises by type based on flexibility preferences
     private func filterByExerciseType(exercises: [ExerciseData], flexibilityPreferences: FlexibilityPreferences?, muscleGroup: String? = nil) -> [ExerciseData] {
-        // For certain muscle groups, include stretching exercises as they are important
-        let muscleGroupsNeedingStretches = ["Neck", "Forearms", "Calves", "Hip Flexors"]
-        if let muscle = muscleGroup, muscleGroupsNeedingStretches.contains(muscle) {
-            return exercises // Include all exercise types for these muscle groups
-        }
-        
-        // If no preferences specified, exclude stretching exercises by default
-        guard let prefs = flexibilityPreferences else {
-            return exercises.filter { $0.exerciseType.lowercased() != "stretching" }
-        }
-        
-        // If flexibility is completely disabled, exclude all stretching
-        if !prefs.isEnabled {
-            return exercises.filter { $0.exerciseType.lowercased() != "stretching" }
-        }
-        
-        // If flexibility is enabled, allow both strength and stretching exercises
-        // The actual warm-up/cool-down exercises will be handled separately
-        return exercises
+        // Stretching should NOT appear in the main exercise list; warm-up/cool-down handle those separately.
+        // Always exclude stretching regardless of flexibility preferences.
+        return exercises.filter { $0.exerciseType.lowercased() != "stretching" }
     }
     
     // Get warm-up exercises (dynamic stretches and activation exercises)

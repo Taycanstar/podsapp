@@ -113,6 +113,7 @@ struct ExerciseLoggingView: View {
             
             // Exercise name with ellipsis
             exerciseHeaderSection
+            .background(Color("primarybg"))
             
             // Sets input section
             setsInputSection
@@ -170,6 +171,7 @@ struct ExerciseLoggingView: View {
         List {
             exerciseHeaderSection
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                .listRowBackground(Color("primarybg"))
 
             // Inline sets section
             setsListRows
@@ -274,9 +276,10 @@ struct ExerciseLoggingView: View {
         GeometryReader { geo in
             let height = geo.size.height
             let safeTop = geo.safeAreaInsets.top
-            // Anchors for the draggable sheet (slightly lower by default)
+            // Anchors for the draggable sheet
+            // Keep expanded top as requested; raise the bottom (collapsed) higher
             let expandedTop = max(safeTop + 40, height * 0.15)
-            let collapsedTop = max(expandedTop + 140, height * 0.62)
+            let collapsedTop = max(expandedTop + 140, height * 0.45)
 
             ZStack(alignment: .top) {
                 // Video background area
@@ -580,7 +583,7 @@ struct ExerciseLoggingView: View {
                         .frame(width: 28, height: 28)
                         .background(
                             Circle()
-                                .fill(Color(.systemGray5))
+                                .fill(Color("containerbg"))
                         )
                         .contentShape(Circle()) // Make entire circle tappable
                 }
@@ -602,6 +605,7 @@ struct ExerciseLoggingView: View {
                     }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     
     private var setsInputSection: some View {
