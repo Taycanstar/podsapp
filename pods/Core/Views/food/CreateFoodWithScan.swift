@@ -323,9 +323,14 @@ struct CreateFoodWithScan: View {
         
         isAnalyzingPhoto = true
         
-        // UNIFIED: Set modern scanning state
-        foodManager.foodScanningState = .preparing(image: image)
+        // UNIFIED: Start with proper 0% progress, then animate with smooth transitions
+        foodManager.updateFoodScanningState(.initializing)  // Start at 0% with animation
         foodManager.scannedImage = image
+        
+        // Animate to preparing state after brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            foodManager.updateFoodScanningState(.preparing(image: image))  // Smooth animate to 10%
+        }
         
         // Use FoodManager to analyze the image for creation (without logging)
         foodManager.analyzeFoodImageForCreation(
@@ -395,9 +400,14 @@ struct CreateFoodWithScan: View {
         
         isAnalyzingLabel = true
         
-        // UNIFIED: Set modern scanning state for nutrition label
-        foodManager.foodScanningState = .analyzing
+        // UNIFIED: Start with proper 0% progress, then animate with smooth transitions
+        foodManager.updateFoodScanningState(.initializing)  // Start at 0% with animation
         foodManager.scannedImage = image
+        
+        // Animate to analyzing state after brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.foodManager.updateFoodScanningState(.analyzing)  // Smooth animate to analyzing%
+        }
         
         // Use FoodManager to analyze the nutrition label for creation (without logging)
         foodManager.analyzeNutritionLabelForCreation(
@@ -481,8 +491,13 @@ struct CreateFoodWithScan: View {
     }
     
     func processBarcodeForCreation(_ barcode: String) {
-        // UNIFIED: Set modern scanning state for barcode lookup
-        foodManager.foodScanningState = .processing
+        // UNIFIED: Start with proper 0% progress, then animate with smooth transitions
+        foodManager.updateFoodScanningState(.initializing)  // Start at 0% with animation
+        
+        // Animate to processing state after brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.foodManager.updateFoodScanningState(.processing)  // Smooth animate to processing%
+        }
         
         // Use NetworkManagerTwo to lookup barcode for creation (not logging)
         NetworkManagerTwo.shared.lookupFoodByBarcode(
@@ -557,9 +572,14 @@ struct CreateFoodWithScan: View {
         
         isAnalyzingGallery = true
         
-        // UNIFIED: Set modern scanning state for gallery analysis
-        foodManager.foodScanningState = .preparing(image: image)
+        // UNIFIED: Start with proper 0% progress, then animate with smooth transitions
+        foodManager.updateFoodScanningState(.initializing)  // Start at 0% with animation
         foodManager.scannedImage = image
+        
+        // Animate to preparing state after brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.foodManager.updateFoodScanningState(.preparing(image: image))  // Smooth animate to 10%
+        }
         
         // Use FoodManager to analyze the image for creation (without logging)
         foodManager.analyzeFoodImageForCreation(
