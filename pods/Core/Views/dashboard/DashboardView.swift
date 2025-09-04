@@ -2316,7 +2316,7 @@ private struct DashboardLoadingView: View {
             .overlay(
                 ShimmerView(
                     highlightColor: (colorScheme == .dark
-                                      ? UIColor(white: 1.0, alpha: 0.45)
+                                      ? UIColor(white: 1.0, alpha: 0.15)
                                       : UIColor(white: 1.0, alpha: 0.9)),
                     duration: 1.6
                 )
