@@ -72,6 +72,7 @@ enum Equipment: String, CaseIterable {
     case abCrunchMachine = "Ab Crunch Machine"
     case preacherCurlMachine = "Preacher Curl Machine"
     case pvc = "PVC"
+    case rings = "Rings"
     
     var category: EquipmentCategory {
         switch self {
@@ -83,7 +84,7 @@ enum Equipment: String, CaseIterable {
             return .bodyweight
         case .resistanceBands, .stabilityBall, .medicineBalls, .bosuBalanceTrainer, .pvc:
             return .accessories
-        case .battleRopes, .sled, .squatRack, .box, .platforms:
+        case .battleRopes, .sled, .squatRack, .box, .platforms, .rings:
             return .specialty
         }
     }

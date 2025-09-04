@@ -527,7 +527,10 @@ struct DynamicTodayWorkout: Codable, Identifiable {
         let mergedExercises: [TodayWorkoutExercise] = {
             let base = baseWorkout.exercises
             // Build a lookup of dynamic exercises by exercise.id to avoid index mismatches
-            let dynById: [Int: DynamicWorkoutExercise] = Dictionary(uniqueKeysWithValues: dynamicExercises.map { ($0.exercise.id, $0) })
+            // Use last-wins to safely handle duplicate ids (can occur when the same exercise appears twice)
+            let dynById: [Int: DynamicWorkoutExercise] = dynamicExercises.reduce(into: [:]) { acc, ex in
+                acc[ex.exercise.id] = ex
+            }
             var result: [TodayWorkoutExercise] = []
             result.reserveCapacity(base.count)
             for baseEx in base {

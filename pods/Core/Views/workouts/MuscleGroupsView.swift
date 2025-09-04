@@ -203,6 +203,24 @@ struct MuscleGroupButton: View {
     }
 }
 
+// MARK: - Utilities
+
+private extension Array {
+    // Chunk into subarrays of given size. Last chunk may be smaller.
+    func chunked(into size: Int) -> [[Element]] {
+        guard size > 0 else { return [self] }
+        var result: [[Element]] = []
+        result.reserveCapacity((count + size - 1) / size)
+        var index = 0
+        while index < count {
+            let end = Swift.min(index + size, count)
+            result.append(Array(self[index..<end]))
+            index = end
+        }
+        return result
+    }
+}
+
 
 
 #Preview {

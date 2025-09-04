@@ -33,7 +33,7 @@ struct EquipmentView: View {
                     .hackSquatMachine, .shoulderPressMachine, .tricepsExtensionMachine,
                     .bicepsCurlMachine, .abCrunchMachine, .preacherCurlBench, .resistanceBands,
                     .stabilityBall, .medicineBalls, .battleRopes, .box, .platforms, .pvc,
-                    .bosuBalanceTrainer, .sled, .preacherCurlMachine
+                    .bosuBalanceTrainer, .sled, .preacherCurlMachine, .rings
                 ]
             case .smallGym:
                 return [
@@ -47,7 +47,7 @@ struct EquipmentView: View {
                 return [
                     .dumbbells, .barbells, .squatRack, .flatBench, .inclineBench,
                     .pullupBar, .dipBar, .kettlebells, .resistanceBands, .box,
-                    .medicineBalls, .ezBar, .pvc
+                    .medicineBalls, .ezBar, .pvc, .rings
                 ]
             case .atHome:
                 return [
@@ -224,35 +224,27 @@ struct EquipmentView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
             
-            // Equipment grid - 3 per row
+            // Equipment grid - 3 per row using LazyVGrid
             let allEquipment = Equipment.allCases.filter { $0 != .bodyWeight } // Exclude bodyweight from selection
-            let rows = allEquipment.chunked(into: 3)
+            let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
             
-            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
-                HStack(spacing: 8) {
-                    ForEach(row, id: \.self) { equipment in
-                        EquipmentSelectionButton(
-                            equipment: equipment,
-                            isSelected: selectedEquipment.contains(equipment),
-                            onTap: {
-                                HapticFeedback.generate()
-                                if selectedEquipment.contains(equipment) {
-                                    selectedEquipment.remove(equipment)
-                                } else {
-                                    selectedEquipment.insert(equipment)
-                                }
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(allEquipment, id: \.self) { equipment in
+                    EquipmentSelectionButton(
+                        equipment: equipment,
+                        isSelected: selectedEquipment.contains(equipment),
+                        onTap: {
+                            HapticFeedback.generate()
+                            if selectedEquipment.contains(equipment) {
+                                selectedEquipment.remove(equipment)
+                            } else {
+                                selectedEquipment.insert(equipment)
                             }
-                        )
-                    }
-                    
-                    // Add empty spacers if row has fewer than 3 items
-                    ForEach(0..<(3 - row.count), id: \.self) { _ in
-                        Spacer()
-                            .frame(maxWidth: .infinity)
-                    }
+                        }
+                    )
                 }
-                .padding(.horizontal)
             }
+            .padding(.horizontal)
         }
     }
     
@@ -443,6 +435,7 @@ struct EquipmentSelectionButton: View {
         case .abCrunchMachine: return "abcrunch"
         case .preacherCurlBench, .preacherCurlMachine: return "preachercurlmachine"
         case .pvc: return "pvc"
+        case .rings: return "rrings"
         default: return "dumbbell" // fallback
         }
     }
@@ -491,14 +484,6 @@ struct EquipmentSelectionButton: View {
     }
 }
 
-// Extension to chunk arrays (if not already available)
-extension Array {
-    func chunked(into size: Int) -> [[Element]] {
-        return stride(from: 0, to: count, by: size).map {
-            Array(self[$0..<Swift.min($0 + size, count)])
-        }
-    }
-}
 
 #Preview {
     EquipmentView { equipment, type in

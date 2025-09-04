@@ -98,6 +98,7 @@ class WorkoutGenerationService {
         flexibilityPreferences: FlexibilityPreferences
     ) -> [TodayWorkoutExercise] {
         var exercises: [TodayWorkoutExercise] = []
+        var usedIds = Set<Int>() // Avoid duplicate exercises across muscle groups
         
         print("🏗️ Starting smart distribution: \(totalExercises) total exercises across \(muscleGroups.count) muscles")
         
@@ -126,13 +127,14 @@ class WorkoutGenerationService {
             print("🎯 \(muscle): requested \(countForThisMuscle), got \(recommended.count) exercises")
             
             for exercise in recommended {
-                // Build exercise with correct tracking (reps/weight vs duration-based)
+                guard !usedIds.contains(exercise.id) else { continue }
                 let built = makeWorkoutExercise(
                     for: exercise,
                     targetDuration: targetDuration,
                     fitnessGoal: fitnessGoal
                 )
                 exercises.append(built)
+                usedIds.insert(exercise.id)
             }
             
             print("📊 Running total after \(muscle): \(exercises.count) exercises")
@@ -153,6 +155,7 @@ class WorkoutGenerationService {
         flexibilityPreferences: FlexibilityPreferences
     ) -> [TodayWorkoutExercise] {
         var exercises: [TodayWorkoutExercise] = []
+        var usedIds = Set<Int>() // Avoid duplicate exercises across muscle groups
         
         print("🏗️ Starting exercise generation: \(muscleGroups.count) muscles × \(exercisesPerMuscle) exercises = \(muscleGroups.count * exercisesPerMuscle) target")
         
@@ -170,12 +173,14 @@ class WorkoutGenerationService {
             print("🎯 \(muscle): requested \(exercisesPerMuscle), got \(recommended.count) exercises")
             
             for exercise in recommended {
+                guard !usedIds.contains(exercise.id) else { continue }
                 let built = makeWorkoutExercise(
                     for: exercise,
                     targetDuration: targetDuration,
                     fitnessGoal: fitnessGoal
                 )
                 exercises.append(built)
+                usedIds.insert(exercise.id)
             }
             
             print("📊 Running total after \(muscle): \(exercises.count) exercises")

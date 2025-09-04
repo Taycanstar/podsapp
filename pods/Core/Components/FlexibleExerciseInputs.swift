@@ -72,7 +72,7 @@ struct DynamicSetRowView: View {
             } else if set.isWarmupSet {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.orange)
+                    .foregroundColor(.primary)
             } else {
                 Text("\(setNumber)")
                     .font(.system(size: 16, weight: .medium, design: .rounded))

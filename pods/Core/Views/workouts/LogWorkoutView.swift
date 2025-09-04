@@ -1606,6 +1606,7 @@ private struct TodayWorkoutView: View {
     ) -> [TodayWorkoutExercise] {
         
         var exercises: [TodayWorkoutExercise] = []
+        var usedIds = Set<Int>()
         
         for muscleGroup in muscleGroups.prefix(4) { // Limit to 4 muscle groups
             let recommendedExercises = recommendationService.getRecommendedExercises(
@@ -1616,6 +1617,7 @@ private struct TodayWorkoutView: View {
             )
             
             for exercise in recommendedExercises {
+                guard !usedIds.contains(exercise.id) else { continue }
                 let sets = parameters.setsPerExercise.lowerBound + (exercisesPerMuscle > 2 ? 1 : 0)
                 let reps = getOptimalReps(for: exercise, parameters: parameters)
                 let restTime = getOptimalRestTime(for: exercise, parameters: parameters, availableTimeMinutes: availableTimeMinutes)
@@ -1627,6 +1629,7 @@ private struct TodayWorkoutView: View {
                     weight: nil, // Will be determined during workout
                     restTime: restTime
                 ))
+                usedIds.insert(exercise.id)
             }
         }
         
@@ -1642,6 +1645,7 @@ private struct TodayWorkoutView: View {
     ) -> [TodayWorkoutExercise] {
         
         var exercises: [TodayWorkoutExercise] = []
+        var usedIds = Set<Int>()
         
         // Generate 1 compound exercise per muscle group with minimal sets
         for muscleGroup in muscleGroups.prefix(3) { // Limit to 3 muscle groups for time
@@ -1652,7 +1656,7 @@ private struct TodayWorkoutView: View {
                 flexibilityPreferences: effectiveFlexibilityPreferences
             )
             
-            if let exercise = recommendedExercises.first {
+            if let exercise = recommendedExercises.first, !usedIds.contains(exercise.id) {
                 exercises.append(TodayWorkoutExercise(
                     exercise: exercise,
                     sets: parameters.setsPerExercise.lowerBound,
@@ -1660,6 +1664,7 @@ private struct TodayWorkoutView: View {
                     weight: nil,
                     restTime: parameters.restBetweenSetsSeconds.lowerBound
                 ))
+                usedIds.insert(exercise.id)
             }
         }
         
