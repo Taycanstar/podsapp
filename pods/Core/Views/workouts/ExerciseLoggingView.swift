@@ -305,40 +305,45 @@ struct ExerciseLoggingView: View {
                 // Thumbnails bar positioned just above the sheet
                 if let exs = allExercises, !exs.isEmpty {
                     let barHeight: CGFloat = 64
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(Array(exs.enumerated()), id: \.element.exercise.id) { idx, ex in
-                                Button(action: {
-                                    // Haptic feedback
-                                    let impact = UIImpactFeedbackGenerator(style: .light)
-                                    impact.impactOccurred()
-                                    selectExercise(ex)
-                                }) {
-                                    ZStack {
-                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                            .fill(Color("primarybg"))
-                                            .frame(width: 64, height: 64)
+                    // Only show thumbnails when the sheet is near its collapsed position
+                    let showThumbnails = sheetTop >= (collapsedTop - 20)
+                    if showThumbnails {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(Array(exs.enumerated()), id: \.element.exercise.id) { idx, ex in
+                                    Button(action: {
+                                        // Haptic feedback
+                                        let impact = UIImpactFeedbackGenerator(style: .light)
+                                        impact.impactOccurred()
+                                        selectExercise(ex)
+                                    }) {
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                .fill(Color("primarybg"))
+                                                .frame(width: 64, height: 64)
 
-                                        thumbnailImage(for: ex)
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fit)
-                                            .frame(width: 60, height: 60)
-                                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                            thumbnailImage(for: ex)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fit)
+                                                .frame(width: 60, height: 60)
+                                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        }
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                .stroke(ex.exercise.id == currentExercise.exercise.id ? Color.accentColor : Color.clear, lineWidth: 2)
+                                        )
+                                        .padding(2) // Add padding to accommodate the 2pt stroke
                                     }
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                            .stroke(ex.exercise.id == currentExercise.exercise.id ? Color.accentColor : Color.clear, lineWidth: 2)
-                                    )
-                                    .padding(2) // Add padding to accommodate the 2pt stroke
+                                    .buttonStyle(PlainButtonStyle())
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
+                            .padding(.horizontal, 12)
                         }
-                        .padding(.horizontal, 12)
+                        .frame(height: barHeight)
+                        // Position the bar just above the sheet top with a small gap
+                        .position(x: geo.size.width/2, y: max(barHeight/2 + 8, sheetTop - barHeight/2 - 8))
+                        .transition(.opacity)
                     }
-                    .frame(height: barHeight)
-                    // Position the bar just above the sheet top with a small gap
-                    .position(x: geo.size.width/2, y: max(barHeight/2 + 8, sheetTop - barHeight/2 - 8))
                 }
 
                 // Draggable content sheet
@@ -1409,6 +1414,13 @@ func setupPlayerIfReady() {
     let item = AVPlayerItem(url: url)
     let p = AVPlayer(playerItem: item)
     p.isMuted = true
+    p.volume = 0
+    // Ensure this playback never interrupts other audio
+    do {
+        try AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
+    } catch {
+        print("AudioSession category set error: \(error)")
+    }
     p.automaticallyWaitsToMinimizeStalling = true
     self.player = p
 
@@ -1495,8 +1507,15 @@ func withTimeout<T>(seconds: TimeInterval, _ op: @escaping () async throws -> T)
     private func setupPlayer(with item: AVPlayerItem) {
         playerItem = item
 
-        let p = AVPlayer(playerItem: item)
-        p.isMuted = true
+    let p = AVPlayer(playerItem: item)
+    p.isMuted = true
+    p.volume = 0
+    // Ensure this playback never interrupts other audio
+    do {
+        try AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
+    } catch {
+        print("AudioSession category set error: \(error)")
+    }
         p.automaticallyWaitsToMinimizeStalling = false
         player = p
 
