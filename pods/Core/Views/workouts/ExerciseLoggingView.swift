@@ -359,6 +359,8 @@ struct ExerciseLoggingView: View {
                 .background(Color("primarybg"))
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .offset(y: sheetTop)
+                // Allow dragging anywhere on the sheet (vertical-only) so it feels natural
+                .simultaneousGesture(sheetDragGesture(expandedTop: expandedTop, collapsedTop: collapsedTop))
             }
             .onAppear {
                 // Start expanded (highest) by default
@@ -538,16 +540,21 @@ struct ExerciseLoggingView: View {
     @State private var isDraggingSheet: Bool = false
 
     private func sheetDragGesture(expandedTop: CGFloat, collapsedTop: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 3, coordinateSpace: .global)
+        DragGesture(minimumDistance: 8, coordinateSpace: .global)
             .onChanged { value in
+                let dx = value.translation.width
+                let dy = value.translation.height
+                // Only treat predominantly vertical drags as sheet drags
+                guard abs(dy) > abs(dx) else { return }
                 if !isDraggingSheet {
                     isDraggingSheet = true
                     dragStartTop = sheetCurrentTop ?? collapsedTop
                 }
-                let proposed = dragStartTop + value.translation.height
+                let proposed = dragStartTop + dy
                 sheetCurrentTop = max(expandedTop, min(collapsedTop, proposed))
             }
-            .onEnded { value in
+            .onEnded { _ in
+                guard isDraggingSheet else { return }
                 let mid = (expandedTop + collapsedTop) / 2
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                     sheetCurrentTop = (sheetCurrentTop ?? mid) < mid ? expandedTop : collapsedTop
