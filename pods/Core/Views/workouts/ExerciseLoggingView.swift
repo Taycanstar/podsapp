@@ -325,7 +325,7 @@ struct ExerciseLoggingView: View {
                                             thumbnailImage(for: ex)
                                                 .resizable()
                                                 .aspectRatio(contentMode: .fit)
-                                                .frame(width: 60, height: 60)
+                                                .frame(width: 64, height: 64)
                                                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                                         }
                                         .overlay(
