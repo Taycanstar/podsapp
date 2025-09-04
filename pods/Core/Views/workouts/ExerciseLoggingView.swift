@@ -343,13 +343,14 @@ struct ExerciseLoggingView: View {
 
                 // Draggable content sheet
                 VStack(spacing: 0) {
-                    // Drag handle
+                    // Drag handle (only this area drags the sheet)
                     Capsule()
                         .fill(Color.secondary.opacity(0.35))
                         .frame(width: 40, height: 5)
                         .padding(.top, 8)
                         .padding(.bottom, 8)
                         .contentShape(Rectangle())
+                        .gesture(sheetDragGesture(expandedTop: expandedTop, collapsedTop: collapsedTop))
 
                     // Main content
                     mainListView
@@ -358,8 +359,6 @@ struct ExerciseLoggingView: View {
                 .background(Color("primarybg"))
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .offset(y: sheetTop)
-                // Make the whole sheet draggable (not only the grabber)
-                .highPriorityGesture(sheetDragGesture(expandedTop: expandedTop, collapsedTop: collapsedTop))
             }
             .onAppear {
                 // Start expanded (highest) by default
