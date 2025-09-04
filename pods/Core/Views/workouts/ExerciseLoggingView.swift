@@ -988,15 +988,17 @@ struct ExerciseLoggingView: View {
         // Count the actual number of regular sets (non-warmup)
         let regularSetCount = flexibleSets.filter { !$0.isWarmupSet }.count
         
-        // Create updated exercise with warm-up sets and updated regular set count
+        // Create updated exercise preserving flexible sets + tracking type
         let updatedExercise = TodayWorkoutExercise(
             exercise: currentExercise.exercise,
-            sets: regularSetCount,
+            sets: max(regularSetCount, 1),
             reps: currentExercise.reps,
             weight: currentExercise.weight,
             restTime: currentExercise.restTime,
             notes: currentExercise.notes,
-            warmupSets: warmupSetData.isEmpty ? nil : warmupSetData
+            warmupSets: warmupSetData.isEmpty ? nil : warmupSetData,
+            flexibleSets: flexibleSets.isEmpty ? nil : flexibleSets,
+            trackingType: trackingType
         )
         
         // Update the current exercise reference

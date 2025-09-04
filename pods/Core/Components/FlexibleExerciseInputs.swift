@@ -69,6 +69,10 @@ struct DynamicSetRowView: View {
                 Image(systemName: "checkmark")
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
+            } else if set.isWarmupSet {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.orange)
             } else {
                 Text("\(setNumber)")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
@@ -860,5 +864,4 @@ struct CustomTextFieldStyleWorkout: TextFieldStyle {
         )
     }
 }
-
 
