@@ -2314,10 +2314,10 @@ private struct DashboardLoadingView: View {
         // Apply shimmer by masking the highlight over the skeleton shapes
         return skeleton
             .overlay(
-                ShimmerView(
+                CALShimmerOverlay(
                     highlightColor: (colorScheme == .dark
                                       ? UIColor(white: 1.0, alpha: 0.15)
-                                      : UIColor(white: 1.0, alpha: 0.9)),
+                                      : UIColor(white: 1.0, alpha: 0.15)),
                     duration: 1.6
                 )
             )
