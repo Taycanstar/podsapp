@@ -134,14 +134,15 @@ struct WorkoutInProgressView: View {
                     ExerciseLoggingView(
                         exercise: exercise, 
                         allExercises: allExercises, 
-                        onSetLogged: { completedSetsCount, rirValue in
+                        onSetLogged: { activeExercise, completedSetsCount, rirValue in
                             hasLoggedSets = true
-                            // 🐛 FIX: Use globalIndex from allCombinedExercises, NOT exerciseIndex from main exercises only
-                            if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                            // Use the exercise actually being logged (may differ from initially tapped)
+                            if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == activeExercise.exercise.id }) {
                                 // DEBUG: Show what the old buggy system would have done
                                 let oldExerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) ?? -1
                                 print("🔍 DEBUG INDEX MAPPING:")
-                                print("   Exercise: \(exercise.exercise.name)")
+                                print("   Initially tapped: \(exercise.exercise.name)")
+                                print("   Actually logged: \(activeExercise.exercise.name)")
                                 print("   ❌ OLD BUGGY exerciseIndex: \(oldExerciseIndex) (would update wrong exercise!)")
                                 print("   ✅ FIXED globalIndex: \(globalIndex) (updates correct exercise)")
                                 print("   allCombinedExercises[\(globalIndex)]: \(allCombinedExercises[globalIndex].exercise.name)")

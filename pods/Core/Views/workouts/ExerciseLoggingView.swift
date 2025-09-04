@@ -22,7 +22,7 @@ import CryptoKit
 struct ExerciseLoggingView: View {
     let exercise: TodayWorkoutExercise
     @State private var allExercises: [TodayWorkoutExercise]? // Make it @State so we can update it
-    let onSetLogged: ((Int, Double?) -> Void)? // Callback to notify when sets are logged with count and optional RIR
+    let onSetLogged: ((TodayWorkoutExercise, Int, Double?) -> Void)? // Callback to notify when sets are logged with the active exercise, count and optional RIR
     let isFromWorkoutInProgress: Bool // Track if we came from WorkoutInProgressView
     let initialCompletedSetsCount: Int? // Pass previously completed sets count
     let initialRIRValue: Double? // Pass previously set RIR value
@@ -58,7 +58,7 @@ struct ExerciseLoggingView: View {
     // Removed complex focus tracking - not needed for basic duration functionality
     
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil, onWarmupSetsChanged: (([WarmupSetData]) -> Void)? = nil, onExerciseUpdated: ((TodayWorkoutExercise) -> Void)? = nil) {
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((TodayWorkoutExercise, Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil, onWarmupSetsChanged: (([WarmupSetData]) -> Void)? = nil, onExerciseUpdated: ((TodayWorkoutExercise) -> Void)? = nil) {
         self.exercise = exercise
         self._allExercises = State(initialValue: allExercises)
         self.onSetLogged = onSetLogged
@@ -306,7 +306,7 @@ struct ExerciseLoggingView: View {
                 if let exs = allExercises, !exs.isEmpty {
                     let barHeight: CGFloat = 64
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             ForEach(Array(exs.enumerated()), id: \.element.exercise.id) { idx, ex in
                                 Button(action: {
                                     // Haptic feedback
@@ -329,6 +329,7 @@ struct ExerciseLoggingView: View {
                                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                                             .stroke(ex.exercise.id == currentExercise.exercise.id ? Color.accentColor : Color.clear, lineWidth: 2)
                                     )
+                                    .padding(2) // Add padding to accommodate the 2pt stroke
                                 }
                                 .buttonStyle(PlainButtonStyle())
                             }
@@ -383,7 +384,7 @@ struct ExerciseLoggingView: View {
                     // Auto-log the set tied to this timer
                     autoLogSetFromTimer()
                     // Notify parent with up-to-date completed count
-                    onSetLogged?(completedSetsCount, nil)
+                    onSetLogged?(currentExercise, completedSetsCount, nil)
                 }
             )
         }
@@ -844,7 +845,7 @@ struct ExerciseLoggingView: View {
                 .frame(height: 80)
                 .onChange(of: rirValue) { oldValue, newValue in
                     // Notify parent whenever RIR value changes for real-time saving
-                    onSetLogged?(completedSetsCount, newValue)
+                    onSetLogged?(currentExercise, completedSetsCount, newValue)
                 }
         }
         .padding()
@@ -1047,7 +1048,7 @@ struct ExerciseLoggingView: View {
         showRIRSection = true
         
         // Notify parent with completed sets count
-        onSetLogged?(completedSetsCount, nil)
+        onSetLogged?(currentExercise, completedSetsCount, nil)
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -1057,7 +1058,7 @@ struct ExerciseLoggingView: View {
     
     private func completeWorkout() {
         // Notify parent with final completed sets count and RIR value
-        onSetLogged?(completedSetsCount, rirValue)
+        onSetLogged?(currentExercise, completedSetsCount, rirValue)
         
         print("🏋️ Exercise completed with RIR: \(rirValue)")
         
@@ -1186,7 +1187,7 @@ struct ExerciseLoggingView: View {
         let completedSetsCount = flexibleSets.filter { $0.isCompleted }.count
         
         // Notify parent about set completion
-        onSetLogged?(completedSetsCount, rirValue > 0 ? rirValue : nil)
+        onSetLogged?(currentExercise, completedSetsCount, rirValue > 0 ? rirValue : nil)
         
         // Show RIR section if all sets are completed
         if completedSetsCount == flexibleSets.count {
