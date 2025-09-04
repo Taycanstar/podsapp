@@ -1131,12 +1131,7 @@ private extension DashboardView {
 
     // ② Loading / error / empty / list --------------------------------------
     var loadingState: some View {
-        VStack(spacing: 20) {
-            ProgressView()
-            Text("Loading logs…").foregroundColor(.secondary)
-        }
-        .padding(.top, 40)
-        .frame(maxWidth: .infinity)
+        DashboardLoadingView()
     }
 
     func errorState(_ err: Error) -> some View {
@@ -2243,3 +2238,95 @@ private extension DashboardView {
     }
 }
 
+// MARK: - Dashboard Loading View (Shimmer Cards)
+private struct DashboardLoadingView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var startTime = Date()
+
+    var body: some View {
+        Group {
+            if reduceMotion {
+                // Accessible fallback
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(1.1)
+                        .tint(.accentColor)
+                    Text("Loading your logs…")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+            } else {
+                LazyVStack(spacing: 14) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        skeletonCard
+                            .padding(.horizontal)
+                    }
+                }
+                .padding(.top, 16)
+                .onAppear { startTime = Date() }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Loading your logs")
+        .accessibilityHint("Please wait while recent entries load")
+    }
+
+    private var skeletonCard: some View {
+        let skeleton = HStack(spacing: 16) {
+            // Icon
+            RoundedRectangle(cornerRadius: 10)
+                .fill(skeletonBase)
+                .frame(width: 44, height: 44)
+
+            // Content
+            VStack(alignment: .leading, spacing: 10) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(skeletonBase)
+                    .frame(height: 16)
+
+                HStack {
+                    HStack(spacing: 8) {
+                        Circle().fill(skeletonBase).frame(width: 14, height: 14)
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(skeletonBase)
+                            .frame(width: 56, height: 12)
+                    }
+                    Spacer()
+                    HStack(spacing: 14) {
+                        RoundedRectangle(cornerRadius: 6).fill(skeletonBase).frame(width: 46, height: 12)
+                        RoundedRectangle(cornerRadius: 6).fill(skeletonBase).frame(width: 46, height: 12)
+                        RoundedRectangle(cornerRadius: 6).fill(skeletonBase).frame(width: 38, height: 12)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color("containerbg"))
+                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.05), radius: 8, x: 0, y: 3)
+        )
+
+        // Apply shimmer by masking the highlight over the skeleton shapes
+        return skeleton
+            .overlay(
+                ShimmerView(
+                    highlightColor: (colorScheme == .dark
+                                      ? UIColor(white: 1.0, alpha: 0.45)
+                                      : UIColor(white: 1.0, alpha: 0.9)),
+                    duration: 1.6
+                )
+            )
+            .mask(skeleton)
+    }
+
+    private var skeletonBase: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.08)
+    }
+
+    // Replaced by CALayer-driven ShimmerView to ensure reliability inside Lists
+}

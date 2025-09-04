@@ -180,6 +180,7 @@ struct ExerciseLoggingView: View {
             if showRIRSection {
                 rirSection
                     .listRowInsets(EdgeInsets(top: 20, leading: 16, bottom: 0, trailing: 16))
+                     .listRowBackground(Color("primarybg"))
             }
 
             // Bottom spacer so content isn't hidden behind floating buttons
@@ -291,7 +292,10 @@ struct ExerciseLoggingView: View {
                 let sheetTop = sheetCurrentTop ?? expandedTop
                 // Ensure video is fully visible and not covered by the sheet
                 // Use the sheet's top offset directly (ZStack is aligned to full screen coordinates)
-                let videoPadding: CGFloat = 12
+                // Increase the gap between video bottom and sheet when collapsed so video sits a bit higher
+                let isCollapsed = sheetTop >= (collapsedTop - 20)
+                let extraGapWhenCollapsed: CGFloat = 16
+                let videoPadding: CGFloat = isCollapsed ? (12 + extraGapWhenCollapsed) : 12
                 // Allow the video to get smaller when the sheet is fully expanded
                 let videoH = max(120, sheetTop - videoPadding)
                 
@@ -373,9 +377,8 @@ struct ExerciseLoggingView: View {
             }
         }
         .overlay(
-            // Restore floating controls overlayed at bottom
+            // Floating controls overlayed at bottom; respects keyboard so buttons float above it
             floatingButtonStack
-                .ignoresSafeArea(.keyboard)
         )
         // Make background tap dismiss the keyboard without stealing button taps
         .simultaneousGesture(TapGesture().onEnded { hideKeyboard() })

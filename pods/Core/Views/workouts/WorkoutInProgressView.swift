@@ -575,7 +575,7 @@ struct ExerciseRowInProgress: View {
                         .frame(width: 24, height: 24)
                 }
             }
-            .padding(.horizontal, 0)
+            .padding(.horizontal, 12)
             .padding(.vertical, 12)
             .background(
                 isExerciseFullyLogged ? 
