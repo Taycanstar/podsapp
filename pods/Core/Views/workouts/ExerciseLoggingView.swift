@@ -20,6 +20,7 @@ import CryptoKit
 
 
 struct ExerciseLoggingView: View {
+    @EnvironmentObject var workoutManager: WorkoutManager
     let exercise: TodayWorkoutExercise
     @State private var allExercises: [TodayWorkoutExercise]? // Make it @State so we can update it
     let onSetLogged: ((TodayWorkoutExercise, Int, Double?) -> Void)? // Callback to notify when sets are logged with the active exercise, count and optional RIR
@@ -579,6 +580,22 @@ struct ExerciseLoggingView: View {
                         allExercises = [currentExercise, newTW]
                     } else {
                         allExercises?.append(newTW)
+                    }
+
+                    // Also append to the main workout so it appears in LogWorkoutView main sets
+                    if let current = workoutManager.todayWorkout {
+                        let updated = TodayWorkout(
+                            id: current.id,
+                            date: current.date,
+                            title: current.title,
+                            exercises: current.exercises + [newTW],
+                            estimatedDuration: current.estimatedDuration,
+                            fitnessGoal: current.fitnessGoal,
+                            difficulty: current.difficulty,
+                            warmUpExercises: current.warmUpExercises,
+                            coolDownExercises: current.coolDownExercises
+                        )
+                        workoutManager.setTodayWorkout(updated)
                     }
 
                     selectExercise(newTW)
