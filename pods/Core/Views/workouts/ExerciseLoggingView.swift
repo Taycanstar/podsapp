@@ -48,6 +48,7 @@ struct ExerciseLoggingView: View {
     @State private var recommendLessOften = false
     @State private var currentExercise: TodayWorkoutExercise
     @State private var showingNotes = false
+    @State private var showAddExerciseSheet = false
     
     // Enhanced tracking system state
     @State private var trackingType: ExerciseTrackingType = .repsWeight
@@ -340,6 +341,23 @@ struct ExerciseLoggingView: View {
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                 }
+                                // Plus button to add an exercise
+                                Button(action: {
+                                    let impact = UIImpactFeedbackGenerator(style: .light)
+                                    impact.impactOccurred()
+                                    showAddExerciseSheet = true
+                                }) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .fill(Color("primarybg"))
+                                            .frame(width: 64, height: 64)
+                                        Image(systemName: "plus")
+                                            .font(.system(size: 22, weight: .bold))
+                                            .foregroundColor(.accentColor)
+                                    }
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .padding(2)
                             }
                             .padding(.horizontal, 12)
                         }
@@ -538,6 +556,34 @@ struct ExerciseLoggingView: View {
             // Save notes when changed
             Task {
                 await ExerciseNotesService.shared.saveNotes(newValue, for: currentExercise.exercise.id)
+            }
+        }
+        .sheet(isPresented: $showAddExerciseSheet) {
+            NavigationView {
+                AddExerciseView { selected in
+                    guard let first = selected.first else { return }
+                    let rec = WorkoutRecommendationService.shared.getSmartRecommendation(for: first)
+                    let newTW = TodayWorkoutExercise(
+                        exercise: first,
+                        sets: rec.sets,
+                        reps: rec.reps,
+                        weight: rec.weight,
+                        restTime: currentExercise.restTime,
+                        notes: nil,
+                        warmupSets: nil,
+                        flexibleSets: nil,
+                        trackingType: ExerciseClassificationService.determineTrackingType(for: first)
+                    )
+
+                    if allExercises == nil {
+                        allExercises = [currentExercise, newTW]
+                    } else {
+                        allExercises?.append(newTW)
+                    }
+
+                    selectExercise(newTW)
+                    showAddExerciseSheet = false
+                }
             }
         }
     }
