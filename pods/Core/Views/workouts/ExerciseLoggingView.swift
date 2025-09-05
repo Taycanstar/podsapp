@@ -562,33 +562,38 @@ struct ExerciseLoggingView: View {
         .sheet(isPresented: $showAddExerciseSheet) {
             NavigationView {
                 AddExerciseView { selected in
-                    guard let first = selected.first else { return }
-                    let rec = WorkoutRecommendationService.shared.getSmartRecommendation(for: first)
-                    let newTW = TodayWorkoutExercise(
-                        exercise: first,
-                        sets: rec.sets,
-                        reps: rec.reps,
-                        weight: rec.weight,
-                        restTime: currentExercise.restTime,
-                        notes: nil,
-                        warmupSets: nil,
-                        flexibleSets: nil,
-                        trackingType: ExerciseClassificationService.determineTrackingType(for: first)
-                    )
+                    guard !selected.isEmpty else { return }
 
-                    if allExercises == nil {
-                        allExercises = [currentExercise, newTW]
-                    } else {
-                        allExercises?.append(newTW)
+                    // Build TodayWorkoutExercise items for ALL selected exercises
+                    let newItems: [TodayWorkoutExercise] = selected.map { ex in
+                        let rec = WorkoutRecommendationService.shared.getSmartRecommendation(for: ex)
+                        return TodayWorkoutExercise(
+                            exercise: ex,
+                            sets: rec.sets,
+                            reps: rec.reps,
+                            weight: rec.weight,
+                            restTime: currentExercise.restTime,
+                            notes: nil,
+                            warmupSets: nil,
+                            flexibleSets: nil,
+                            trackingType: ExerciseClassificationService.determineTrackingType(for: ex)
+                        )
                     }
 
-                    // Also append to the main workout so it appears in LogWorkoutView main sets
+                    // Update local thumbnails list
+                    if allExercises == nil {
+                        allExercises = [currentExercise] + newItems
+                    } else {
+                        allExercises?.append(contentsOf: newItems)
+                    }
+
+                    // Also append to the main workout so they appear in LogWorkoutView main sets
                     if let current = workoutManager.todayWorkout {
                         let updated = TodayWorkout(
                             id: current.id,
                             date: current.date,
                             title: current.title,
-                            exercises: current.exercises + [newTW],
+                            exercises: current.exercises + newItems,
                             estimatedDuration: current.estimatedDuration,
                             fitnessGoal: current.fitnessGoal,
                             difficulty: current.difficulty,
@@ -598,7 +603,8 @@ struct ExerciseLoggingView: View {
                         workoutManager.setTodayWorkout(updated)
                     }
 
-                    selectExercise(newTW)
+                    // Focus the last added exercise
+                    if let last = newItems.last { selectExercise(last) }
                     showAddExerciseSheet = false
                 }
             }
