@@ -55,7 +55,7 @@ struct AddFoodView: View {
     // Add state for food generation
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
-    // Add loading state for AI generation
+    // Legacy local loading state (no longer used with modern loader)
     @State private var isGeneratingFood = false
     // Change from a single generated food to an array of generated foods
     @State private var generatedFoods: [Food] = []
@@ -325,7 +325,7 @@ struct AddFoodView: View {
             } else {
                 VStack(spacing: 12) {
                     // Show Create Food dropdown when there's no search text
-                    if searchText.isEmpty && !isGeneratingFood {
+                    if searchText.isEmpty && !foodManager.foodScanningState.isActive {
                                             Menu {
                         Button(action: {
                             print("Tapped Manual Create Food for Recipe")
@@ -390,13 +390,10 @@ struct AddFoodView: View {
                             print("AI tapped for: \(searchText)")
                             HapticFeedback.generateLigth()
                             
-                            // Set loading state to true
-                            isGeneratingFood = true
+                            // Modern loader handles state via FoodManager
                             
                             // Generate food with AI - skip confirmation for text search
                             foodManager.generateFoodWithAI(foodDescription: searchText, skipConfirmation: true) { result in
-                                // Set loading state to false
-                                isGeneratingFood = false
                                 
                                 switch result {
                                 case .success(let generatedFood):
@@ -455,14 +452,14 @@ struct AddFoodView: View {
                         }
                         .padding(.horizontal)
                         .padding(.top, 0)
-                        .disabled(isGeneratingFood) // Disable button while loading
+                        .disabled(foodManager.foodScanningState.isActive) // Disable while modern loader active
                     }
                     
-                    // Show food generation loading card if generating
-                    if isGeneratingFood || foodManager.isGeneratingFood {
-                        FoodGenerationCard()
+                    // Modern unified loader (replaces legacy FoodGenerationCard)
+                    if foodManager.foodScanningState.isActive {
+                        ModernFoodLoadingCard(state: foodManager.foodScanningState)
                             .padding(.horizontal)
-                            .transition(.opacity)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     }
                     
                     // Display selected foods section if we have any selections
@@ -810,4 +807,3 @@ private struct TabButton: View {
         .buttonStyle(PlainButtonStyle())
     }
 }
-
