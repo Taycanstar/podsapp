@@ -52,6 +52,7 @@ struct LogWorkoutView: View {
     @State private var showingFitnessLevelPicker = false
     @State private var showingFlexibilityPicker = false
     @State private var showingWorkoutFeedback = false
+    @State private var showingAddExerciseSheet = false
     
     // Keep only essential UI-only state (not data state)
     @State private var currentWorkout: TodayWorkout? = nil
@@ -210,6 +211,9 @@ struct LogWorkoutView: View {
             }
             .sheet(isPresented: $showingWorkoutFeedback) {
                 workoutFeedbackSheet
+            }
+            .sheet(isPresented: $showingAddExerciseSheet) {
+                addExerciseSheet
             }
             .fullScreenCover(item: $currentWorkout) { workout in
                 WorkoutInProgressView(
@@ -981,7 +985,8 @@ struct LogWorkoutView: View {
                         onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
                         onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
                         currentWorkout: $currentWorkout,
-                        effectiveFlexibilityPreferences: effectiveFlexibilityPreferences
+                        effectiveFlexibilityPreferences: effectiveFlexibilityPreferences,
+                        showAddExerciseSheet: $showingAddExerciseSheet
                     )
                     .transition(.opacity.combined(with: .scale))
                 }
@@ -1008,9 +1013,67 @@ struct LogWorkoutView: View {
                         .foregroundColor(.accentColor)
                 }
             }
-            
         }
     }
+
+    // MARK: - Add Exercise Sheet
+    @ViewBuilder
+    private var addExerciseSheet: some View {
+        NavigationView {
+            AddExerciseView { selected in
+                guard !selected.isEmpty else { return }
+                guard let current = workoutManager.todayWorkout else { return }
+
+                // Build TodayWorkoutExercise entries using recommendations
+                let recService = WorkoutRecommendationService.shared
+                let restDefault = defaultRestTime(for: effectiveFitnessGoal)
+
+                let appended: [TodayWorkoutExercise] = selected.map { ex in
+                    let rec = recService.getSmartRecommendation(for: ex, fitnessGoal: effectiveFitnessGoal)
+                    let tracking = ExerciseClassificationService.determineTrackingType(for: ex)
+                    return TodayWorkoutExercise(
+                        exercise: ex,
+                        sets: rec.sets,
+                        reps: rec.reps,
+                        weight: rec.weight,
+                        restTime: restDefault,
+                        notes: nil,
+                        warmupSets: nil,
+                        flexibleSets: nil,
+                        trackingType: tracking
+                    )
+                }
+
+                let updated = TodayWorkout(
+                    id: current.id,
+                    date: current.date,
+                    title: current.title,
+                    exercises: current.exercises + appended,
+                    estimatedDuration: current.estimatedDuration,
+                    fitnessGoal: current.fitnessGoal,
+                    difficulty: current.difficulty,
+                    warmUpExercises: current.warmUpExercises,
+                    coolDownExercises: current.coolDownExercises
+                )
+
+                workoutManager.setTodayWorkout(updated)
+            }
+        }
+    }
+
+    // Reasonable default rest time by goal
+    private func defaultRestTime(for goal: FitnessGoal) -> Int {
+        switch goal {
+        case .strength: return 105  // midpoint of 90–120s
+        case .hypertrophy: return 60
+        case .tone: return 50
+        case .endurance: return 30
+        case .powerlifting: return 150 // midpoint of 120–180s
+        default: return 75
+        }
+    }
+
+}
     
     // MARK: - Flexibility Preferences Methods
     
@@ -1018,7 +1081,6 @@ struct LogWorkoutView: View {
     
     // clearSessionFlexibilityPreferences removed - now handled by WorkoutManager.clearAllSessionOverrides()
     
-}
 
 // MARK: - Tab Button
 
@@ -1065,6 +1127,7 @@ private struct TodayWorkoutView: View {
     let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
     @Binding var currentWorkout: TodayWorkout?
     let effectiveFlexibilityPreferences: FlexibilityPreferences // Added this parameter
+    @Binding var showAddExerciseSheet: Bool
     
     
     @State private var userProfile = UserProfileService.shared
@@ -1112,7 +1175,7 @@ private struct TodayWorkoutView: View {
                                 
                                 // Add Exercise button below the list
                                 Button(action: {
-                                    // TODO: Navigate to add exercise view
+                                    showAddExerciseSheet = true
                                 }) {
                                     HStack(spacing: 8) {
                                         Image(systemName: "plus")
@@ -1229,6 +1292,8 @@ private struct TodayWorkoutView: View {
             generateTodayWorkout()
         }
     }
+
+    
     
     private func loadOrGenerateTodayWorkout() {
         // Check if we have a workout for today
