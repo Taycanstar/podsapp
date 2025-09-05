@@ -4947,39 +4947,19 @@ func analyzeNutritionLabel(
         isLoading        = true
         imageAnalysisMessage = "Analyzing image for creation…"
         uploadProgress   = 0
-        
-        // UNIFIED: Progress through scanning states during analysis
-        // Start uploading animation (0% → 50%)
-        updateFoodScanningState(.uploading(progress: 0.0))
-        
-        // ─── 2) Progress ticker ─────────────────────
-        progressTimer?.invalidate()
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            DispatchQueue.main.async {
-                if self.uploadProgress < 0.9 {
-                    self.uploadProgress += 0.02
-                    // UNIFIED: Update scanning state with upload progress (up to 50%)
-                    if self.uploadProgress < 0.5 {
-                        self.updateFoodScanningState(.uploading(progress: Double(self.uploadProgress)))
-                    } else if self.uploadProgress < 0.9 {
-                        // UNIFIED: Switch to analyzing state (50% → 90%)
-                        if self.foodScanningState != .analyzing {
-                            self.updateFoodScanningState(.analyzing)
-                        }
-                    }
-                }
-            }
+
+        // Deterministic, smooth progress without timers
+        updateFoodScanningState(.uploading(progress: 0.2))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            self.updateFoodScanningState(.uploading(progress: 0.5))
         }
         
         // ─── 3) Call backend ─────────────────────────
         NetworkManagerTwo.shared.analyzeFoodImageForCreation(image: image, userEmail: userEmail) { [weak self] success, payload, errMsg in
             guard let self = self else { return }
             DispatchQueue.main.async {
-                // stop ticker + UI
-                self.progressTimer?.invalidate()
-                withAnimation {
-                    self.uploadProgress = 1.0
-                }
+                // Ensure local progress completes
+                self.uploadProgress = 1.0
                 
                 // failure path
                 guard success, let payload = payload else {
@@ -5038,7 +5018,14 @@ func analyzeNutritionLabel(
                             message: "Analyzed \(food.displayName)",
                             foodLogId: nil
                         )
-                        self.updateFoodScanningState(.completed(result: completionLog))
+                        // Transition through analyzing → processing → completed for smoothness
+                        self.updateFoodScanningState(.analyzing)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            self.updateFoodScanningState(.processing)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                self.updateFoodScanningState(.completed(result: completionLog))
+                            }
+                        }
                         
                         // Auto-reset after showing completion
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
@@ -5110,27 +5097,10 @@ func analyzeNutritionLabel(
         imageAnalysisMessage = "Reading nutrition label for creation…"
         uploadProgress   = 0
         
-        // UNIFIED: Progress through scanning states during analysis
-        // Start uploading animation (0% → 50%)
-        updateFoodScanningState(.uploading(progress: 0.0))
-        
-        // ─── 2) Progress ticker ─────────────────────
-        progressTimer?.invalidate()
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            DispatchQueue.main.async {
-                if self.uploadProgress < 0.9 {
-                    self.uploadProgress += 0.02
-                    // UNIFIED: Update scanning state with upload progress (up to 50%)
-                    if self.uploadProgress < 0.5 {
-                        self.updateFoodScanningState(.uploading(progress: Double(self.uploadProgress)))
-                    } else if self.uploadProgress < 0.9 {
-                        // UNIFIED: Switch to analyzing state (50% → 90%)
-                        if self.foodScanningState != .analyzing {
-                            self.updateFoodScanningState(.analyzing)
-                        }
-                    }
-                }
-            }
+        // Deterministic, smooth progress without timers
+        updateFoodScanningState(.uploading(progress: 0.2))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            self.updateFoodScanningState(.uploading(progress: 0.5))
         }
         
         // ─── 3) Call backend ─────────────────────────
@@ -5138,11 +5108,8 @@ func analyzeNutritionLabel(
             guard let self = self else { return }
             
             DispatchQueue.main.async {
-                // stop ticker + UI
-                self.progressTimer?.invalidate()
-                withAnimation {
-                    self.uploadProgress = 1.0
-                }
+                // Ensure local progress completes
+                self.uploadProgress = 1.0
                 
                 // failure path
                 guard success, let payload = payload else {
@@ -5258,7 +5225,14 @@ func analyzeNutritionLabel(
                             message: "Analyzed \(food.displayName)",
                             foodLogId: nil
                         )
-                        self.updateFoodScanningState(.completed(result: completionLog))
+                        // Transition through analyzing → processing → completed for smooth animation
+                        self.updateFoodScanningState(.analyzing)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            self.updateFoodScanningState(.processing)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                self.updateFoodScanningState(.completed(result: completionLog))
+                            }
+                        }
                         
                         // Auto-reset after showing completion
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {

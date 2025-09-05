@@ -33,7 +33,7 @@ struct ByEquipmentView: View {
         ("Hammerstrength (Leverage) Machine", "hammerstrength"), // "Leverage machine" - 11+ exercises
         ("Kettlebells", "kbells"),                   // "Kettlebell" - 9+ exercises
         ("Resistance Bands", "handlebands"),         // "Band" - 7+ exercises
-        ("Stability (Swiss) Ball", "swissball"),     // "Stability ball" - 4+ exercises
+        ("Stability Ball", "swissball"),     // "Stability ball" - 4+ exercises
         ("Battle Ropes", "battleropes"),             // "Rope" - 3+ exercises
         ("EZ Bar", "ezbar"),                         // "EZ Barbell" - 2+ exercises
         ("BOSU Balance Trainer", "bosu"),            // "Bosu ball" - 1+ exercise

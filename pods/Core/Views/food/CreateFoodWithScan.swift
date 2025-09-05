@@ -494,9 +494,9 @@ struct CreateFoodWithScan: View {
         // UNIFIED: Start with proper 0% progress, then animate with smooth transitions
         foodManager.updateFoodScanningState(.initializing)  // Start at 0% with animation
         
-        // Animate to processing state after brief delay
+        // Animate to mid progress after brief delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.foodManager.updateFoodScanningState(.processing)  // Smooth animate to processing%
+            self.foodManager.updateFoodScanningState(.analyzing)
         }
         
         // Use NetworkManagerTwo to lookup barcode for creation (not logging)
@@ -543,7 +543,29 @@ struct CreateFoodWithScan: View {
                         }
                     }
                     
-                    // Reset scanning states
+                    // Show completed state then auto-reset via FoodManager
+                    let completionLog = CombinedLog(
+                        type: .food,
+                        status: "success",
+                        calories: response.food.calories ?? 0,
+                        message: "Scanned \(response.food.displayName)",
+                        foodLogId: nil,
+                        food: response.food.asLoggedFoodItem,
+                        mealType: "Lunch",
+                        mealLogId: nil,
+                        meal: nil,
+                        mealTime: nil,
+                        scheduledAt: Date(),
+                        recipeLogId: nil,
+                        recipe: nil,
+                        servingsConsumed: nil
+                    )
+                    self.foodManager.updateFoodScanningState(.processing)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        self.foodManager.updateFoodScanningState(.completed(result: completionLog))
+                    }
+                    
+                    // Reset old flags
                     self.foodManager.isScanningFood = false
                     self.foodManager.isGeneratingFood = false
                     // Reset barcode processing flag

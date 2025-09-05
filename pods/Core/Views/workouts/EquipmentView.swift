@@ -464,10 +464,12 @@ struct EquipmentSelectionButton: View {
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
+                    .minimumScaleFactor(0.85)
             }
             .frame(maxWidth: .infinity)
+            .frame(height: 85) // Ensure uniform card height across grid
             .padding(.horizontal, 8)
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
             .background(Color(.systemBackground))
             .cornerRadius(12)
             .overlay(
@@ -490,4 +492,3 @@ struct EquipmentSelectionButton: View {
         print("Selected equipment: \(equipment.map { $0.rawValue }), type: \(type)")
     }
 }
-
