@@ -623,12 +623,15 @@ class NetworkManagerTwo {
                         )
                         
                         // Save goals to UserDefaults for other parts of the app
-                        UserGoalsManager.shared.dailyGoals = DailyGoals(
-                            calories: Int(calories),
-                            protein: Int(protein),
-                            carbs: Int(carbs),
-                            fat: Int(fat)
-                        )
+                        // Avoid overwriting with zeros when API omits fields
+                        if calories > 0 || protein > 0 || carbs > 0 || fat > 0 {
+                            UserGoalsManager.shared.dailyGoals = DailyGoals(
+                                calories: max(Int(calories), 0),
+                                protein: max(Int(protein), 0),
+                                carbs: max(Int(carbs), 0),
+                                fat: max(Int(fat), 0)
+                            )
+                        }
                         
                         print("📝 DEBUG: Saving to UserGoalsManager: Calories=\(Int(calories)), Protein=\(Int(protein))g, Carbs=\(Int(carbs))g, Fat=\(Int(fat))g")
                         
@@ -3503,6 +3506,5 @@ class NetworkManagerTwo {
     }
 
 }
-
 
 

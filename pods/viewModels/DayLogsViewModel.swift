@@ -102,13 +102,23 @@ final class DayLogsViewModel: ObservableObject {
 
   // MARK: – Goal helpers ------------------------------------------------------
  func fetchCalorieGoal() {
-    if let g = UserDefaults.standard.value(forKey: "dailyCalorieGoal") as? Double {
+    // 1) Highest priority: explicit dailyCalorieGoal if non-zero
+    if let g = UserDefaults.standard.value(forKey: "dailyCalorieGoal") as? Double, g > 0 {
         calorieGoal = g
-    } else if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
-              let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data) {
+    }
+    // 2) Next: nutritionGoalsData if non-zero
+    else if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
+              let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data),
+              goals.calories > 0 {
         calorieGoal = goals.calories
-    } else {
+    }
+    // 3) Next: UserGoalsManager (may have been saved earlier); ignore zeros
+    else if UserGoalsManager.shared.dailyGoals.calories > 0 {
         calorieGoal = Double(UserGoalsManager.shared.dailyGoals.calories)
+    }
+    // 4) Fallback: sensible default
+    else {
+        calorieGoal = 2000
     }
     remainingCalories = max(0, calorieGoal - totalCalories)
 }
@@ -262,7 +272,10 @@ func loadLogs(for date: Date) {
         
         // Update goals if available
         if let goals = serverResponse.goals {
-            self.calorieGoal = goals.calories ?? self.calorieGoal
+            let serverCal = goals.calories ?? 0
+            if serverCal > 0 {
+                self.calorieGoal = serverCal
+            }
             self.proteinGoal = goals.protein ?? self.proteinGoal
             self.carbsGoal = goals.carbs ?? self.carbsGoal
             self.fatGoal = goals.fat ?? self.fatGoal

@@ -923,9 +923,12 @@ private extension DashboardView {
                     .opacity(0.2)
                     .foregroundColor(.green)
 
+                // Protect against divide-by-zero and NaN
+                let safeGoal = max(1.0, calorieGoal)
+                let progress = 1 - max(0, min(remainingCal / safeGoal, 1))
                 Circle()
                     .trim(from: 0,
-                          to: CGFloat(1 - (remainingCal / calorieGoal)))
+                          to: CGFloat(progress))
                     .stroke(style: StrokeStyle(lineWidth: 10,
                                                lineCap: .round))
                     .foregroundColor(.green)
