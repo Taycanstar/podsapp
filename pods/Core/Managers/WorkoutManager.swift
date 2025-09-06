@@ -516,6 +516,30 @@ class WorkoutManager: ObservableObject {
         }
     }
 
+    /// Remove an exercise (by ExerciseData.id) from today's workout (all sections)
+    func removeExerciseFromToday(exerciseId: Int) {
+        guard let currentWorkout = todayWorkout else { return }
+        
+        let newMain = currentWorkout.exercises.filter { $0.exercise.id != exerciseId }
+        let newWarmUp = currentWorkout.warmUpExercises?.filter { $0.exercise.id != exerciseId }
+        let newCoolDown = currentWorkout.coolDownExercises?.filter { $0.exercise.id != exerciseId }
+        
+        let updated = TodayWorkout(
+            id: currentWorkout.id,
+            date: currentWorkout.date,
+            title: currentWorkout.title,
+            exercises: newMain,
+            estimatedDuration: currentWorkout.estimatedDuration,
+            fitnessGoal: currentWorkout.fitnessGoal,
+            difficulty: currentWorkout.difficulty,
+            warmUpExercises: newWarmUp,
+            coolDownExercises: newCoolDown
+        )
+        todayWorkout = updated
+        saveTodayWorkout()
+        print("🧹 Removed exercise id=\(exerciseId) from today's workout")
+    }
+
     /// Convert all weights in today's workout between Imperial and Metric and persist
     func convertTodayWorkoutUnits(from old: UnitsSystem, to new: UnitsSystem) {
         guard old != new, let currentWorkout = todayWorkout else { return }

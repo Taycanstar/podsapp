@@ -312,6 +312,62 @@ class UserProfileService: ObservableObject {
         set { UserDefaults.standard.set(newValue, forKey: "avoidedExercises") }
     }
 
+    // MARK: - Exercise Recommendation Preferences (More/Less Often)
+    // Persist lightweight per-exercise bias to nudge selection probability
+    // Storage format: ["<exerciseId>": bias], where bias > 0 = more often, bias < 0 = less often
+    private let preferenceBiasesKey = "exercisePreferenceBiases"
+
+    private var rawPreferenceBiases: [String: Int] {
+        get { UserDefaults.standard.dictionary(forKey: preferenceBiasesKey) as? [String: Int] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: preferenceBiasesKey) }
+    }
+
+    func getExercisePreferenceBias(exerciseId: Int) -> Int {
+        rawPreferenceBiases[String(exerciseId)] ?? 0
+    }
+
+    func setExercisePreferenceMoreOften(exerciseId: Int) {
+        // +3 bias to meaningfully bump ranking without overpowering other factors
+        var map = rawPreferenceBiases
+        map[String(exerciseId)] = 3
+        rawPreferenceBiases = map
+        // Ensure not avoided
+        removeFromAvoided(exerciseId)
+    }
+
+    func setExercisePreferenceLessOften(exerciseId: Int) {
+        // -2 bias to gently reduce frequency
+        var map = rawPreferenceBiases
+        map[String(exerciseId)] = -2
+        rawPreferenceBiases = map
+        // Ensure not avoided
+        removeFromAvoided(exerciseId)
+    }
+
+    func clearExercisePreference(exerciseId: Int) {
+        var map = rawPreferenceBiases
+        map.removeValue(forKey: String(exerciseId))
+        rawPreferenceBiases = map
+    }
+
+    func addToAvoided(_ exerciseId: Int) {
+        var avoided = avoidedExercises
+        if !avoided.contains(exerciseId) {
+            avoided.append(exerciseId)
+            avoidedExercises = avoided
+        }
+        // Clear bias if now fully avoided
+        clearExercisePreference(exerciseId: exerciseId)
+    }
+
+    func removeFromAvoided(_ exerciseId: Int) {
+        var avoided = avoidedExercises
+        if let idx = avoided.firstIndex(of: exerciseId) {
+            avoided.remove(at: idx)
+            avoidedExercises = avoided
+        }
+    }
+
     // MARK: - Workout History & Progress
     
     func getWorkoutHistory() -> [WorkoutHistoryEntry] {

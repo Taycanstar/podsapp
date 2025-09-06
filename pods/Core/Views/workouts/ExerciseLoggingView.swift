@@ -2001,6 +2001,7 @@ struct ExerciseOptionsSheet: View {
     
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var onboarding: OnboardingViewModel
+    @EnvironmentObject var workoutManager: WorkoutManager
     @State private var showingReplaceExercise = false
     @State private var showingDeleteConfirmation = false
     @State private var restTimerEnabled = false
@@ -2008,6 +2009,7 @@ struct ExerciseOptionsSheet: View {
     @State private var warmupSetsTime = 60 // Default 1 minute in seconds
     @State private var showingWorkingSetsPicker = false
     @State private var showingWarmupSetsPicker = false
+    @State private var currentRecommendLabel: String = "Default"
     
     var body: some View {
         NavigationView {
@@ -2303,68 +2305,32 @@ struct ExerciseOptionsSheet: View {
                 .padding(.vertical, 16)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                 
-                // Recommend more often
+                // Recommend (Menu)
                 HStack(spacing: 12) {
-                    Image(systemName: "arrow.up.circle")
+                    Image(systemName: "arrow.up.arrow.down.circle")
                         .font(.system(size: 20))
                         .foregroundColor(.primary)
                         .frame(width: 28)
-                    Text("Recommend more often")
+                    Text("Recommend")
                         .font(.system(size: 16, weight: .regular))
                         .foregroundColor(.primary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.9)
                     Spacer()
-                    Toggle("", isOn: $recommendMoreOften)
-                        .onChange(of: recommendMoreOften) { _, newValue in
-                            if newValue {
-                                recommendLessOften = false
-                            }
+                    Menu {
+                        Button("More often") { setRecommendPreference(.moreOften) }
+                        Button("Less often") { setRecommendPreference(.lessOften) }
+                        Button("Do not recommend again") { setRecommendPreference(.doNotRecommend) }
+                        Button("Reset") { setRecommendPreference(.reset) }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(currentRecommendLabel)
+                                .foregroundColor(.secondary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
-                }
-                .padding(.vertical, 16)
-                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                
-                // Recommend less often
-                HStack(spacing: 12) {
-                    Image(systemName: "arrow.down.circle")
-                        .font(.system(size: 20))
-                        .foregroundColor(.primary)
-                        .frame(width: 28)
-                    Text("Recommend less often")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.9)
-                    Spacer()
-                    Toggle("", isOn: $recommendLessOften)
-                        .onChange(of: recommendLessOften) { _, newValue in
-                            if newValue {
-                                recommendMoreOften = false
-                            }
-                        }
-                }
-                .padding(.vertical, 16)
-                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                
-                // Don't recommend again
-                Button(action: {
-                    // Handle don't recommend again
-                    print("Don't recommend \(exercise.exercise.name) again")
-                    dismiss()
-                }) {
-                    HStack {
-                        Image(systemName: "nosign")
-                            .font(.system(size: 20))
-                            .foregroundColor(.primary)
-                            .frame(width: 28)
-                        Text("Don't recommend again")
-                            .font(.system(size: 16, weight: .regular))
-                            .foregroundColor(.primary)
-                        Spacer()
                     }
                 }
-                .padding(.vertical, 14)
+                .padding(.vertical, 16)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                 
                 
@@ -2402,6 +2368,7 @@ struct ExerciseOptionsSheet: View {
                 }
             }
         }
+        .onAppear { updateRecommendLabel() }
         .alert("Delete Exercise", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
@@ -2434,6 +2401,45 @@ struct ExerciseOptionsSheet: View {
                 return "\(minutes)m \(remainingSeconds)s"
             }
         }
+    }
+}
+
+// MARK: - Recommendation Preference Helpers
+extension ExerciseOptionsSheet {
+    private enum RecommendPref { case moreOften, lessOften, doNotRecommend, reset }
+
+    private func updateRecommendLabel() {
+        let id = exercise.exercise.id
+        let ups = UserProfileService.shared
+        if ups.avoidedExercises.contains(id) {
+            currentRecommendLabel = "Excluded"
+            return
+        }
+        let bias = ups.getExercisePreferenceBias(exerciseId: id)
+        if bias > 0 { currentRecommendLabel = "More often" }
+        else if bias < 0 { currentRecommendLabel = "Less often" }
+        else { currentRecommendLabel = "Default" }
+    }
+
+    private func setRecommendPreference(_ pref: RecommendPref) {
+        let id = exercise.exercise.id
+        let ups = UserProfileService.shared
+        switch pref {
+        case .moreOften:
+            ups.setExercisePreferenceMoreOften(exerciseId: id)
+        case .lessOften:
+            ups.setExercisePreferenceLessOften(exerciseId: id)
+        case .doNotRecommend:
+            ups.addToAvoided(id)
+            // Remove immediately from today's workout
+            workoutManager.removeExerciseFromToday(exerciseId: id)
+            // Close options sheet; user can back out of logging view if open
+            dismiss()
+        case .reset:
+            ups.clearExercisePreference(exerciseId: id)
+            ups.removeFromAvoided(id)
+        }
+        updateRecommendLabel()
     }
 }
 

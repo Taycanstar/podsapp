@@ -1050,11 +1050,14 @@ class WorkoutRecommendationService {
             score += 2 // Experience with exercise is valuable
         }
         
-        // User preferences
+        // User preferences by type
         let exerciseType = getExerciseType(exercise)
         if userProfile.preferredExerciseTypes.contains(exerciseType) {
             score += 1
         }
+        
+        // Per-exercise bias (More/Less Often)
+        score += userProfile.getExercisePreferenceBias(exerciseId: exercise.id)
         
         return score
     }
