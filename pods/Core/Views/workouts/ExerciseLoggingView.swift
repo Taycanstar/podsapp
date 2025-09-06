@@ -523,6 +523,10 @@ struct ExerciseLoggingView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         addNewWarmupSet()
                     }
+                },
+                onDoNotRecommend: {
+                    // Pop the ExerciseLoggingView after exclusion
+                    dismiss()
                 }
             )
             // .presentationDetents([.fraction(0.75)])
@@ -1998,6 +2002,7 @@ struct ExerciseOptionsSheet: View {
     let onExerciseReplaced: ((ExerciseData) -> Void)?
     let onNotesRequested: () -> Void
     let onWarmupSetRequested: () -> Void
+    let onDoNotRecommend: (() -> Void)?
     
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var onboarding: OnboardingViewModel
@@ -2433,8 +2438,11 @@ extension ExerciseOptionsSheet {
             ups.addToAvoided(id)
             // Remove immediately from today's workout
             workoutManager.removeExerciseFromToday(exerciseId: id)
-            // Close options sheet; user can back out of logging view if open
+            // Close options sheet and dismiss logging view after a short delay
             dismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                onDoNotRecommend?()
+            }
         case .reset:
             ups.clearExercisePreference(exerciseId: id)
             ups.removeFromAvoided(id)
