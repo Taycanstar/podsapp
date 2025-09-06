@@ -149,7 +149,7 @@ struct ProfileView: View {
                               }
                               
                               NavigationLink(destination: ManageExercisesView()) {
-                                  Label("Manage Exercises", systemImage: "figure.strengthtraining.traditional")
+                                  Label("Manage Exercises", systemImage: "figure.run.square.stack")
                                       .foregroundColor(iconColor)
                               }
                               .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)

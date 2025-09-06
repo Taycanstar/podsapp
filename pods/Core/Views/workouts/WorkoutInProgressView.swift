@@ -479,6 +479,16 @@ struct ExerciseRowInProgress: View {
     let loggedSetsCount: Int?
     let onToggle: () -> Void
     let onExerciseTap: () -> Void
+    @EnvironmentObject var workoutManager: WorkoutManager
+    @State private var showHistory = false
+    @State private var showReplace = false
+    @State private var tempExercise: TodayWorkoutExercise
+    
+    // Provide index resolution against current workout for replacement
+    private var exerciseIndexInToday: Int? {
+        guard let workout = workoutManager.todayWorkout else { return nil }
+        return workout.exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id })
+    }
     
     private var thumbnailImageName: String {
         String(format: "%04d", exercise.exercise.id)
@@ -489,6 +499,16 @@ struct ExerciseRowInProgress: View {
         return loggedCount >= exercise.sets
     }
     
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], isCompleted: Bool, loggedSetsCount: Int?, onToggle: @escaping () -> Void, onExerciseTap: @escaping () -> Void) {
+        self.exercise = exercise
+        self.allExercises = allExercises
+        self.isCompleted = isCompleted
+        self.loggedSetsCount = loggedSetsCount
+        self.onToggle = onToggle
+        self.onExerciseTap = onExerciseTap
+        self._tempExercise = State(initialValue: exercise)
+    }
+
     var body: some View {
         Button(action: onExerciseTap) {
             HStack(spacing: 12) {
@@ -551,23 +571,20 @@ struct ExerciseRowInProgress: View {
                 
                 // Menu button - exactly like LogWorkoutView
                 Menu {
-                    Button("Exercise History") {
-                        // TODO: Show exercise history
-                    }
+                    Button("Exercise History") { showHistory = true }
                     
                     Button("Replace") {
-                        // TODO: Replace exercise
+                        tempExercise = exercise
+                        showReplace = true
                     }
                     
                     Button("Skip Exercise") {
-                        // TODO: Skip this exercise
+                        withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
                     }
                     
                     Divider()
                     
-                    Button("Mark Complete") {
-                        onToggle()
-                    }
+                    Button("Mark Complete") { onToggle() }
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 16, weight: .medium))
@@ -589,6 +606,35 @@ struct ExerciseRowInProgress: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+        .background(
+            NavigationLink(
+                destination: ExerciseHistory(exercise: exercise),
+                isActive: $showHistory,
+                label: { EmptyView() }
+            ).hidden()
+        )
+        .sheet(isPresented: $showReplace) {
+            ReplaceExerciseSheet(
+                currentExercise: $tempExercise,
+                onExerciseReplaced: { newExercise in
+                    if let idx = exerciseIndexInToday {
+                        // Build updated TodayWorkoutExercise preserving fields
+                        let updated = TodayWorkoutExercise(
+                            exercise: newExercise,
+                            sets: exercise.sets,
+                            reps: exercise.reps,
+                            weight: exercise.weight,
+                            restTime: exercise.restTime,
+                            notes: exercise.notes,
+                            warmupSets: exercise.warmupSets,
+                            flexibleSets: exercise.flexibleSets,
+                            trackingType: exercise.trackingType
+                        )
+                        workoutManager.updateExercise(at: idx, with: updated)
+                    }
+                }
+            )
+        }
     }
     
 }

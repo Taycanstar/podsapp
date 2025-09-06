@@ -2283,6 +2283,9 @@ private struct ExerciseWorkoutCard: View {
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
     @State private var cachedDynamicExercise: DynamicWorkoutExercise?
+    @State private var showHistory = false
+    @State private var showReplace = false
+    @State private var tempExercise: TodayWorkoutExercise
     
     // Check if dynamic parameters are available
     private var shouldShowDynamicView: Bool {
@@ -2339,6 +2342,15 @@ private struct ExerciseWorkoutCard: View {
         return String(format: "%d:%02d", minutes, secs)
     }
     
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], exerciseIndex: Int, onExerciseReplaced: @escaping (Int, ExerciseData) -> Void, navigationPath: Binding<NavigationPath>) {
+        self.exercise = exercise
+        self.allExercises = allExercises
+        self.exerciseIndex = exerciseIndex
+        self.onExerciseReplaced = onExerciseReplaced
+        self._navigationPath = navigationPath
+        self._tempExercise = State(initialValue: exercise)
+    }
+
     var body: some View {
         Button(action: {
             // Navigate to exercise logging view with index
@@ -2381,32 +2393,35 @@ private struct ExerciseWorkoutCard: View {
                 
                 // Menu button
                 Menu {
-                    Button("Exercise History") {
-                        // TODO: Show exercise history
-                    }
+                    Button("Exercise History") { showHistory = true }
                     
-                    Button("Replace") {
-                        // TODO: Replace exercise
+                    Button("Replace") { 
+                        tempExercise = exercise
+                        showReplace = true
                     }
                     
                     Button("Recommend more often") {
-                        recommendMoreOften.toggle()
-                        // TODO: Save preference
+                        UserProfileService.shared.setExercisePreferenceMoreOften(exerciseId: exercise.exercise.id)
+                        recommendMoreOften = true
+                        recommendLessOften = false
                     }
                     
                     Button("Recommend less often") {
-                        recommendLessOften.toggle()
-                        // TODO: Save preference
+                        UserProfileService.shared.setExercisePreferenceLessOften(exerciseId: exercise.exercise.id)
+                        recommendLessOften = true
+                        recommendMoreOften = false
                     }
                     
                     Divider()
                     
                     Button("Don't recommend again", role: .destructive) {
-                        // TODO: Add to avoided exercises
+                        let ups = UserProfileService.shared
+                        ups.addToAvoided(exercise.exercise.id)
+                        withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
                     }
                     
                     Button("Delete from workout", role: .destructive) {
-                        // TODO: Remove from current workout
+                        withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -2421,6 +2436,21 @@ private struct ExerciseWorkoutCard: View {
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
+        .background(
+            NavigationLink(
+                destination: ExerciseHistory(exercise: exercise),
+                isActive: $showHistory,
+                label: { EmptyView() }
+            ).hidden()
+        )
+        .sheet(isPresented: $showReplace) {
+            ReplaceExerciseSheet(
+                currentExercise: $tempExercise,
+                onExerciseReplaced: { newExercise in
+                    onExerciseReplaced(exerciseIndex, newExercise)
+                }
+            )
+        }
         .onAppear {
             // Cache the dynamic exercise on first appearance
             updateCachedExercise()
