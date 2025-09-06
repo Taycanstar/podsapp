@@ -73,6 +73,7 @@ struct ExerciseTrendsView: View {
     @State private var oneRepMaxData: [(Date, Double)] = []
     @State private var isLoading = true
     @State private var selectedPeriod: TimePeriod = .month
+    @EnvironmentObject var onboarding: OnboardingViewModel
     
     var body: some View {
         ScrollView {
@@ -97,7 +98,7 @@ struct ExerciseTrendsView: View {
                     
                     HistoryMetricCard(
                         title: "Volume",
-                        currentValue: formatCurrentValue(metrics?.totalVolume, unit: " lb"),
+                        currentValue: formatCurrentValue(metrics?.totalVolume, unit: onboarding.unitsSystem == .imperial ? " lb" : " kg"),
                         loggedAgo: getLastLoggedTime(),
                         data: volumeData,
                         chartType: .bar,
@@ -107,7 +108,7 @@ struct ExerciseTrendsView: View {
                     
                     HistoryMetricCard(
                         title: "Weight",
-                        currentValue: formatCurrentValue(metrics?.maxWeight, unit: " lb"),
+                        currentValue: formatCurrentValue(metrics?.maxWeight, unit: onboarding.unitsSystem == .imperial ? " lb" : " kg"),
                         loggedAgo: getLastLoggedTime(),
                         data: weightData,
                         chartType: .line,
@@ -117,7 +118,7 @@ struct ExerciseTrendsView: View {
                     
                     HistoryMetricCard(
                         title: "Est. 1 Rep Max",
-                        currentValue: formatCurrentValue(metrics?.estimatedOneRepMax, unit: " lb"),
+                        currentValue: formatCurrentValue(metrics?.estimatedOneRepMax, unit: onboarding.unitsSystem == .imperial ? " lb" : " kg"),
                         loggedAgo: getLastLoggedTime(),
                         data: oneRepMaxData,
                         chartType: .line,
@@ -174,12 +175,15 @@ struct ExerciseTrendsView: View {
     }
     
     private func formatCurrentValue(_ value: Double?, unit: String) -> String {
-        guard let value = value, value > 0 else { return "--" }
-        
+        guard let raw = value, raw > 0 else { return "--" }
+        let isKg = unit.contains("kg")
+        let display = isKg ? (raw / 2.20462) : raw
         if unit.contains("lb") {
-            return String(format: "%.1f", value)
+            return String(format: "%.1f", display)
+        } else if unit.contains("kg") {
+            return String(format: "%.1f", display)
         } else {
-            return String(format: "%.0f", value)
+            return String(format: "%.0f", display)
         }
     }
     
@@ -327,6 +331,7 @@ struct HistoryMetricCard: View {
     let chartType: ChartType
     let color: Color
     let exercise: TodayWorkoutExercise
+    @EnvironmentObject var onboarding: OnboardingViewModel
     
     enum ChartType {
         case line, bar
@@ -373,15 +378,17 @@ struct HistoryMetricCard: View {
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.secondary)
                         } else if title == "Volume" {
-                            Text("lbs")
+                            Text(onboarding.unitsSystem == .imperial ? "lbs" : "kg")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.secondary)
                         } else if title == "Weight" {
-                            Text("lbs in 1 set")
+                            let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
+                            Text("\(unit) in 1 set")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.secondary)
                         } else if title == "Est. 1 Rep Max" {
-                            Text("lbs in 1 rep")
+                            let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
+                            Text("\(unit) in 1 rep")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.secondary)
                         }
@@ -728,6 +735,7 @@ struct ExerciseRecordsView: View {
     @StateObject private var dataService = ExerciseHistoryDataService.shared
     @State private var personalRecords: PersonalRecords?
     @State private var isLoading = true
+    @EnvironmentObject var onboarding: OnboardingViewModel
     
     var body: some View {
         ScrollView {
@@ -740,21 +748,26 @@ struct ExerciseRecordsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let records = personalRecords {
                 LazyVStack(spacing: 16) {
+                    let unit = onboarding.unitsSystem == .imperial ? "lb" : "kg"
+                    let weight = onboarding.unitsSystem == .imperial ? records.maxWeight.value : (records.maxWeight.value / 2.20462)
+                    let volume = onboarding.unitsSystem == .imperial ? records.maxVolume.value : (records.maxVolume.value / 2.20462)
+                    let oneRm = onboarding.unitsSystem == .imperial ? records.maxEstimatedOneRepMax.value : (records.maxEstimatedOneRepMax.value / 2.20462)
+
                     RecordRow(record: RecordItem(
                         label: "Weight",
-                        value: String(format: "%.1f lb", records.maxWeight.value),
+                        value: String(format: "%.1f %@", weight, unit),
                         date: records.maxWeight.date
                     ))
                     
                     RecordRow(record: RecordItem(
                         label: "Volume",
-                        value: String(format: "%.0f lb", records.maxVolume.value),
+                        value: String(format: "%.0f %@", volume, unit),
                         date: records.maxVolume.date
                     ))
                     
                     RecordRow(record: RecordItem(
                         label: "Est. 1 Rep Max",
-                        value: String(format: "%.1f lb", records.maxEstimatedOneRepMax.value),
+                        value: String(format: "%.1f %@", oneRm, unit),
                         date: records.maxEstimatedOneRepMax.date
                     ))
                     

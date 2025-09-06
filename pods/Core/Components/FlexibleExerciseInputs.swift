@@ -22,6 +22,7 @@ struct DynamicSetRowView: View {
     let onSetChanged: (() -> Void)? // Callback when set data changes
     let onPickerStateChanged: ((Bool) -> Void)? // Callback when time picker state changes
     @FocusState private var focusedField: FocusedField?
+    @EnvironmentObject var onboarding: OnboardingViewModel
 
     @State private var showTimePicker: Bool = false
     
@@ -132,7 +133,7 @@ struct DynamicSetRowView: View {
                     }
                 ))
                 .focused($focusedField, equals: .secondInput)
-                .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "lbs", isActive: isActive))
+                .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: (onboarding.unitsSystem == .imperial ? "lbs" : "kg"), isActive: isActive))
                 .keyboardType(.decimalPad)
                 .submitLabel(.done)
                 .onTapGesture {
@@ -533,7 +534,7 @@ struct DynamicSetRowView: View {
                 }
             ))
             .focused($focusedField, equals: .secondInput)
-            .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: "lbs"))
+            .textFieldStyle(CustomTextFieldStyleWorkout(isFocused: focusedField == .secondInput, unit: (onboarding.unitsSystem == .imperial ? "lbs" : "kg")))
             .keyboardType(.decimalPad)
             .submitLabel(.done)
             .onSubmit {
@@ -864,4 +865,3 @@ struct CustomTextFieldStyleWorkout: TextFieldStyle {
         )
     }
 }
-

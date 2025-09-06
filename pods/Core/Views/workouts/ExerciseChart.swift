@@ -44,6 +44,7 @@ struct ExerciseChart: View {
     @Environment(\.dismiss) private var dismiss
     
     @StateObject private var dataService = ExerciseHistoryDataService.shared
+    @EnvironmentObject var onboarding: OnboardingViewModel
     
     // Theme colors for record and average lines
     private var recordLineColor: Color { .yellow }
@@ -484,11 +485,11 @@ struct ExerciseChart: View {
         case .reps:
             return String(format: "%.0f", value)
         case .weight:
-            return String(format: "%.1f lb", value)
+            return String(format: "%.1f %@", value, onboarding.unitsSystem == .imperial ? "lb" : "kg")
         case .volume:
-            return String(format: "%.0f lb", value)
+            return String(format: "%.0f %@", value, onboarding.unitsSystem == .imperial ? "lb" : "kg")
         case .estOneRepMax:
-            return String(format: "%.1f lb", value)
+            return String(format: "%.1f %@", value, onboarding.unitsSystem == .imperial ? "lb" : "kg")
         }
     }
     
@@ -497,11 +498,11 @@ struct ExerciseChart: View {
         case .reps:
             return "reps in 1 set"
         case .weight:
-            return "lbs in 1 set"
+            return "\(onboarding.unitsSystem == .imperial ? "lbs" : "kg") in 1 set"
         case .volume:
-            return "lbs"
+            return onboarding.unitsSystem == .imperial ? "lbs" : "kg"
         case .estOneRepMax:
-            return "lbs in 1 rep"
+            return "\(onboarding.unitsSystem == .imperial ? "lbs" : "kg") in 1 rep"
         }
     }
     
@@ -524,12 +525,20 @@ struct ExerciseChart: View {
     }
     
     private func yAxisLabel(for value: Double) -> String {
-        if value >= 1000 {
-            return String(format: "%.0fk", value / 1000)
-        } else if value.truncatingRemainder(dividingBy: 1) == 0 {
-            return String(format: "%.0f", value)
+        // Convert for display if using metric
+        let displayValue: Double
+        switch metric {
+        case .reps:
+            displayValue = value
+        case .weight, .volume, .estOneRepMax:
+            displayValue = onboarding.unitsSystem == .imperial ? value : (value / 2.20462)
+        }
+        if displayValue >= 1000 {
+            return String(format: "%.0fk", displayValue / 1000)
+        } else if displayValue.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(format: "%.0f", displayValue)
         } else {
-            return String(format: "%.1f", value)
+            return String(format: "%.1f", displayValue)
         }
     }
     

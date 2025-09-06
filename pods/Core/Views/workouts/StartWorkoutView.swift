@@ -207,12 +207,13 @@ struct StartWorkoutView: View {
                             }
                             
                             if let weight = exercise.weight {
+                                let unit = (UserDefaults.standard.string(forKey: "unitsSystem") == UnitsSystem.metric.rawValue) ? "kg" : "lbs"
                                 VStack {
                                     Text("\(Int(weight))")
                                         .font(.title)
                                         .fontWeight(.bold)
                                         .foregroundColor(.primary)
-                                    Text("lbs")
+                                    Text(unit)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }

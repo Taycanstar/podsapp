@@ -871,7 +871,9 @@ struct FlexibleSetData: Identifiable, Codable, Hashable {
         case .repsWeight:
             let repsText = reps ?? "0"
             let weightText = weight ?? "0"
-            return "\(repsText) reps @ \(weightText) lbs"
+            let unitsSystem = UserDefaults.standard.string(forKey: "unitsSystem") ?? UnitsSystem.imperial.rawValue
+            let unitSymbol = unitsSystem == UnitsSystem.metric.rawValue ? "kg" : "lbs"
+            return "\(repsText) reps @ \(weightText) \(unitSymbol)"
         case .repsOnly:
             let repsText = reps ?? "0"
             return "\(repsText) reps"

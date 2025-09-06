@@ -1178,6 +1178,7 @@ private struct TodayWorkoutView: View {
                                     showAddExerciseSheet = true
                                 }) {
                                     HStack(spacing: 8) {
+                                        
                                         Image(systemName: "plus")
                                             .font(.system(size: 16, weight: .semibold))
                                         Text("Add Exercise")

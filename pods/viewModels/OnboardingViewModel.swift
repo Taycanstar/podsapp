@@ -140,6 +140,8 @@ class OnboardingViewModel: ObservableObject {
         didSet {
             // Save to UserDefaults whenever the value changes
             UserDefaults.standard.set(unitsSystem.rawValue, forKey: "unitsSystem")
+            // Backwards compatibility with legacy flag used in some views
+            UserDefaults.standard.set(unitsSystem == .imperial, forKey: "isImperial")
         }
     }
     
@@ -182,10 +184,12 @@ class OnboardingViewModel: ObservableObject {
         if let savedUnitsSystem = UserDefaults.standard.string(forKey: "unitsSystem"),
            let units = UnitsSystem(rawValue: savedUnitsSystem) {
             self.unitsSystem = units
+            UserDefaults.standard.set(units == .imperial, forKey: "isImperial")
         } else {
             self.unitsSystem = .imperial
             // Save the default value
             UserDefaults.standard.set(UnitsSystem.imperial.rawValue, forKey: "unitsSystem")
+            UserDefaults.standard.set(true, forKey: "isImperial")
         }
         
         // Load streak visibility from UserDefaults, default to true (visible)

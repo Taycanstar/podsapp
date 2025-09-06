@@ -18,6 +18,7 @@ struct OptimisticExerciseCard: View {
     @State private var cachedRepRange: String?
     @State private var dynamicRepRange: ClosedRange<Int>?
     @State private var animationID = UUID()
+    @EnvironmentObject var onboarding: OnboardingViewModel
     
     // MARK: - Services
     private let cacheService = RepRangeCacheService.shared
@@ -62,7 +63,8 @@ struct OptimisticExerciseCard: View {
                         .foregroundColor(.secondary)
                     
                     if let weight = exercise.weight {
-                        Label("\(Int(weight)) lbs", systemImage: "scalemass")
+                        let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
+                        Label("\(Int(weight)) \(unit)", systemImage: "scalemass")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -343,6 +345,7 @@ struct ProgressiveExerciseCard: View {
 /// Simple static exercise card for fallback scenarios
 struct StaticExerciseCard: View {
     let exercise: TodayWorkoutExercise
+    @EnvironmentObject var onboarding: OnboardingViewModel
     
     var body: some View {
         HStack(spacing: 12) {
@@ -377,7 +380,8 @@ struct StaticExerciseCard: View {
                         .foregroundColor(.secondary)
                     
                     if let weight = exercise.weight {
-                        Label("\(Int(weight)) lbs", systemImage: "scalemass")
+                        let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
+                        Label("\(Int(weight)) \(unit)", systemImage: "scalemass")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }

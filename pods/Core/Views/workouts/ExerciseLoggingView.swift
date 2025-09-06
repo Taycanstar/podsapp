@@ -20,6 +20,7 @@ import CryptoKit
 
 
 struct ExerciseLoggingView: View {
+    @EnvironmentObject var onboarding: OnboardingViewModel
     @EnvironmentObject var workoutManager: WorkoutManager
     let exercise: TodayWorkoutExercise
     @State private var allExercises: [TodayWorkoutExercise]? // Make it @State so we can update it
@@ -43,7 +44,8 @@ struct ExerciseLoggingView: View {
     @State private var isWorkoutComplete = false
     @State private var videoPlayerID = UUID() // Force video player refresh when needed
     @State private var showingExerciseOptions = false
-    @State private var selectedUnit: WeightUnit = .lbs
+    @State private var lastUnitsSystem: UnitsSystem? = nil
+    // Deprecated local unit state; use global preference via OnboardingViewModel
     @State private var exerciseNotes: String = ""
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
@@ -454,6 +456,9 @@ struct ExerciseLoggingView: View {
             }
             // Ensure sets are initialized for inline List
             initializeFlexibleSetsIfNeeded()
+            if lastUnitsSystem == nil {
+                lastUnitsSystem = onboarding.unitsSystem
+            }
         }
         .onChange(of: focusedField) { oldValue, newValue in
             if newValue != nil && oldValue != newValue {
@@ -500,7 +505,6 @@ struct ExerciseLoggingView: View {
             let _ = print("🔧 DEBUG: ExerciseOptionsSheet is being presented")
             ExerciseOptionsSheet(
                 exercise: $currentExercise,
-                selectedUnit: $selectedUnit,
                 exerciseNotes: $exerciseNotes,
                 recommendMoreOften: $recommendMoreOften,
                 recommendLessOften: $recommendLessOften,
@@ -523,6 +527,11 @@ struct ExerciseLoggingView: View {
             )
             // .presentationDetents([.fraction(0.75)])
             .presentationDragIndicator(.hidden)
+        }
+        .onChange(of: onboarding.unitsSystem) { newValue in
+            guard let old = lastUnitsSystem, old != newValue else { return }
+            applyUnitConversion(from: old, to: newValue)
+            lastUnitsSystem = newValue
         }
         .sheet(isPresented: $showingNotes) {
             // Determine which sheet to show based on notes length
@@ -666,6 +675,96 @@ struct ExerciseLoggingView: View {
 
         // Force the video to refresh
         videoPlayerID = UUID()
+    }
+
+    // MARK: - Unit Conversion Helpers
+    private func convertWeightValue(_ value: Double, from: UnitsSystem, to: UnitsSystem) -> Double {
+        guard from != to else { return value }
+        if from == .imperial && to == .metric {
+            return value / 2.20462
+        } else if from == .metric && to == .imperial {
+            return value * 2.20462
+        }
+        return value
+    }
+
+    private func formatWeightString(_ value: Double, for units: UnitsSystem) -> String {
+        if units == .metric {
+            return String(format: "%.1f", value)
+        } else {
+            return String(format: "%.0f", round(value))
+        }
+    }
+
+    private func applyUnitConversion(from old: UnitsSystem, to new: UnitsSystem) {
+        // Convert flexible set weights
+        for idx in flexibleSets.indices {
+            if let wStr = flexibleSets[idx].weight, let w = Double(wStr) {
+                let converted = convertWeightValue(w, from: old, to: new)
+                flexibleSets[idx].weight = formatWeightString(converted, for: new)
+            }
+        }
+        saveFlexibleSetsToExercise()
+
+        // Convert warmup set weights if present
+        if var warmups = currentExercise.warmupSets {
+            for i in warmups.indices {
+                if let w = Double(warmups[i].weight) {
+                    let converted = convertWeightValue(w, from: old, to: new)
+                    warmups[i] = WarmupSetData(reps: warmups[i].reps, weight: formatWeightString(converted, for: new))
+                }
+            }
+            let updated = TodayWorkoutExercise(
+                exercise: currentExercise.exercise,
+                sets: currentExercise.sets,
+                reps: currentExercise.reps,
+                weight: currentExercise.weight,
+                restTime: currentExercise.restTime,
+                notes: currentExercise.notes,
+                warmupSets: warmups,
+                flexibleSets: currentExercise.flexibleSets,
+                trackingType: currentExercise.trackingType
+            )
+            currentExercise = updated
+        }
+
+        // Convert recommended weight on current exercise
+        if let w = currentExercise.weight {
+            let converted = convertWeightValue(w, from: old, to: new)
+            let updated = TodayWorkoutExercise(
+                exercise: currentExercise.exercise,
+                sets: currentExercise.sets,
+                reps: currentExercise.reps,
+                weight: converted,
+                restTime: currentExercise.restTime,
+                notes: currentExercise.notes,
+                warmupSets: currentExercise.warmupSets,
+                flexibleSets: currentExercise.flexibleSets,
+                trackingType: currentExercise.trackingType
+            )
+            currentExercise = updated
+        }
+
+        // Convert recommended weights in thumbnails/allExercises if present
+        if var list = allExercises {
+            for i in list.indices {
+                if let w = list[i].weight {
+                    let converted = convertWeightValue(w, from: old, to: new)
+                    list[i] = TodayWorkoutExercise(
+                        exercise: list[i].exercise,
+                        sets: list[i].sets,
+                        reps: list[i].reps,
+                        weight: converted,
+                        restTime: list[i].restTime,
+                        notes: list[i].notes,
+                        warmupSets: list[i].warmupSets,
+                        flexibleSets: list[i].flexibleSets,
+                        trackingType: list[i].trackingType
+                    )
+                }
+            }
+            allExercises = list
+        }
     }
     
     private var videoHeaderView: some View {
@@ -1892,7 +1991,6 @@ struct FullscreenVideoView: View {
 
 struct ExerciseOptionsSheet: View {
     @Binding var exercise: TodayWorkoutExercise
-    @Binding var selectedUnit: WeightUnit
     @Binding var exerciseNotes: String
     @Binding var recommendMoreOften: Bool
     @Binding var recommendLessOften: Bool
@@ -1902,6 +2000,7 @@ struct ExerciseOptionsSheet: View {
     let onWarmupSetRequested: () -> Void
     
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var onboarding: OnboardingViewModel
     @State private var showingReplaceExercise = false
     @State private var showingDeleteConfirmation = false
     @State private var restTimerEnabled = false
@@ -2168,9 +2267,9 @@ struct ExerciseOptionsSheet: View {
                 .padding(.vertical, 16)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                 
-                // Units
+                // Units (global preference)
                 HStack {
-                    Image(systemName: "scalemass")
+                    Image(systemName: "globe")
                         .font(.system(size: 20))
                         .foregroundColor(.primary)
                         .frame(width: 28)
@@ -2178,13 +2277,28 @@ struct ExerciseOptionsSheet: View {
                         .font(.system(size: 16, weight: .regular))
                         .foregroundColor(.primary)
                     Spacer()
-                    Picker("Units", selection: $selectedUnit) {
-                        ForEach(WeightUnit.allCases, id: \.self) { unit in
-                            Text(unit.displayName).tag(unit)
+                    Menu {
+                        ForEach(UnitsSystem.allCases, id: \.self) { unit in
+                            Button(action: {
+                                onboarding.unitsSystem = unit
+                            }) {
+                                HStack {
+                                    Text(unit.displayName)
+                                    if onboarding.unitsSystem == unit {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text(onboarding.unitsSystem.displayName)
+                                .foregroundColor(.secondary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
                     }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .frame(width: 100)
                 }
                 .padding(.vertical, 16)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))

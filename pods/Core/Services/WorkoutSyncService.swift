@@ -36,7 +36,9 @@ class WorkoutSyncService {
             print("   Sets: \(exercise.completedSets)/\(exercise.totalSets)")
             
             for set in exercise.sets.sorted(by: { $0.setNumber < $1.setNumber }) {
-                let weightText = set.actualWeight != nil ? " @ \(set.displayWeight) lbs" : ""
+                let unitsSystem = UserDefaults.standard.string(forKey: "unitsSystem") ?? UnitsSystem.imperial.rawValue
+                let unitSymbol = unitsSystem == UnitsSystem.metric.rawValue ? "kg" : "lbs"
+                let weightText = set.actualWeight != nil ? " @ \(set.displayWeight) \(unitSymbol)" : ""
                 let repsText = set.actualReps != nil ? "\(set.actualReps!)" : "\(set.targetReps)"
                 print("   Set \(set.setNumber): \(repsText) reps\(weightText)")
             }
