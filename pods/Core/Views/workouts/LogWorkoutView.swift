@@ -42,6 +42,7 @@ struct LogWorkoutView: View {
     
     // Use global WorkoutManager from environment
     @EnvironmentObject var workoutManager: WorkoutManager
+    @EnvironmentObject var onboarding: OnboardingViewModel
     
     // Local UI state
     @State private var showingDurationPicker = false
@@ -184,6 +185,17 @@ struct LogWorkoutView: View {
             }
             .onAppear {
                 print("🚀 LogWorkoutView appeared - WorkoutManager is globally managed")
+                // Ensure workout weights match user's units when view appears
+                let savedUnits = UserDefaults.standard.string(forKey: "workoutUnitsSystem")
+                let currentUnits = onboarding.unitsSystem.rawValue
+                if let saved = savedUnits, saved != currentUnits {
+                    if let from = UnitsSystem(rawValue: saved), let to = UnitsSystem(rawValue: currentUnits) {
+                        workoutManager.convertTodayWorkoutUnits(from: from, to: to)
+                    }
+                } else if savedUnits == nil {
+                    // Initialize persisted units for workouts
+                    UserDefaults.standard.set(currentUnits, forKey: "workoutUnitsSystem")
+                }
             }
             .onDisappear {
                 // Cleanup if needed - WorkoutManager handles persistence
@@ -193,6 +205,14 @@ struct LogWorkoutView: View {
             }
             .sheet(isPresented: $showingDurationPicker) {
                 durationPickerSheet
+            }
+            .onChange(of: onboarding.unitsSystem) { newValue in
+                // Convert the persisted workout when units preference changes
+                let oldRaw = UserDefaults.standard.string(forKey: "workoutUnitsSystem") ?? (newValue == .imperial ? UnitsSystem.metric.rawValue : UnitsSystem.imperial.rawValue)
+                if let from = UnitsSystem(rawValue: oldRaw), from != newValue {
+                    workoutManager.convertTodayWorkoutUnits(from: from, to: newValue)
+                }
+                UserDefaults.standard.set(newValue.rawValue, forKey: "workoutUnitsSystem")
             }
             .sheet(isPresented: $showingTargetMusclesPicker) {
                 targetMusclesPickerSheet

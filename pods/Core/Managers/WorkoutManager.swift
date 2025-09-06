@@ -515,6 +515,86 @@ class WorkoutManager: ObservableObject {
             print("📅 WorkoutManager: Set today's workout - \(workout.title)")
         }
     }
+
+    /// Convert all weights in today's workout between Imperial and Metric and persist
+    func convertTodayWorkoutUnits(from old: UnitsSystem, to new: UnitsSystem) {
+        guard old != new, let currentWorkout = todayWorkout else { return }
+
+        func convert(_ value: Double) -> Double {
+            if old == .imperial && new == .metric { return value / 2.20462 }
+            if old == .metric && new == .imperial { return value * 2.20462 }
+            return value
+        }
+
+        func formatString(_ value: Double) -> String {
+            if new == .metric { return String(format: "%.1f", value) }
+            return String(format: "%.0f", round(value))
+        }
+
+        // Map helper for a single exercise
+        func mapExercise(_ ex: TodayWorkoutExercise) -> TodayWorkoutExercise {
+            // Convert recommended weight
+            let newWeight = ex.weight.map(convert)
+
+            // Convert warmup set strings
+            var newWarmups: [WarmupSetData]? = nil
+            if let warm = ex.warmupSets {
+                newWarmups = warm.map { ws in
+                    if let w = Double(ws.weight) {
+                        return WarmupSetData(reps: ws.reps, weight: formatString(convert(w)))
+                    }
+                    return ws
+                }
+            }
+
+            // Convert flexible set weight strings
+            var newFlexibleSets: [FlexibleSetData]? = nil
+            if let flex = ex.flexibleSets {
+                newFlexibleSets = flex.map { fs in
+                    var updated = fs
+                    if let wStr = fs.weight, let w = Double(wStr) {
+                        let converted = convert(w)
+                        updated.weight = formatString(converted)
+                    }
+                    return updated
+                }
+            }
+
+            return TodayWorkoutExercise(
+                exercise: ex.exercise,
+                sets: ex.sets,
+                reps: ex.reps,
+                weight: newWeight,
+                restTime: ex.restTime,
+                notes: ex.notes,
+                warmupSets: newWarmups,
+                flexibleSets: newFlexibleSets,
+                trackingType: ex.trackingType
+            )
+        }
+
+        // Apply to all sections
+        let convertedExercises = currentWorkout.exercises.map(mapExercise)
+        let convertedWarmups = currentWorkout.warmUpExercises?.map(mapExercise)
+        let convertedCooldowns = currentWorkout.coolDownExercises?.map(mapExercise)
+
+        let updatedWorkout = TodayWorkout(
+            id: currentWorkout.id,
+            date: currentWorkout.date,
+            title: currentWorkout.title,
+            exercises: convertedExercises,
+            estimatedDuration: currentWorkout.estimatedDuration,
+            fitnessGoal: currentWorkout.fitnessGoal,
+            difficulty: currentWorkout.difficulty,
+            warmUpExercises: convertedWarmups,
+            coolDownExercises: convertedCooldowns
+        )
+
+        todayWorkout = updatedWorkout
+        saveTodayWorkout()
+        UserDefaults.standard.set(new.rawValue, forKey: "workoutUnitsSystem")
+        print("🔁 Converted todayWorkout units from \(old.rawValue) to \(new.rawValue)")
+    }
     
     /// Start workout session
     func startWorkout(_ workout: TodayWorkout) {
