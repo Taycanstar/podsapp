@@ -56,6 +56,7 @@
 		362532A12E63805D003C3B8D /* ModernFoodLoadingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */; };
 		362532A32E6A0BEC003C3B8D /* ShimmerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A22E6A0BE8003C3B8D /* ShimmerView.swift */; };
 		362532A52E6CBA78003C3B8D /* ManageExercisesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A42E6CBA71003C3B8D /* ManageExercisesView.swift */; };
+		362532A72E6CD98B003C3B8D /* RestTimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A62E6CD987003C3B8D /* RestTimerSheet.swift */; };
 		36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36291B7F2B8166F9000B5F38 /* CarouselView.swift */; };
 		362969B42D0D3E4700DF0B26 /* ActivityLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362969B02D0D3E4700DF0B26 /* ActivityLogView.swift */; };
 		362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362969B12D0D3E4700DF0B26 /* EditActivityView.swift */; };
@@ -376,6 +377,7 @@
 		362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModernFoodLoadingCard.swift; sourceTree = "<group>"; };
 		362532A22E6A0BE8003C3B8D /* ShimmerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerView.swift; sourceTree = "<group>"; };
 		362532A42E6CBA71003C3B8D /* ManageExercisesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageExercisesView.swift; sourceTree = "<group>"; };
+		362532A62E6CD987003C3B8D /* RestTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerSheet.swift; sourceTree = "<group>"; };
 		36291B7F2B8166F9000B5F38 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
 		362969B02D0D3E4700DF0B26 /* ActivityLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogView.swift; sourceTree = "<group>"; };
 		362969B12D0D3E4700DF0B26 /* EditActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditActivityView.swift; sourceTree = "<group>"; };
@@ -867,6 +869,7 @@
 		3682C86A2BBAED5B00B350E2 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				362532A62E6CD987003C3B8D /* RestTimerSheet.swift */,
 				362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */,
 				3625329E2E629D12003C3B8D /* CircularProgressView.swift */,
 				36A851B42E60CF4C004E5CED /* FlexibleExerciseInputs.swift */,
@@ -1726,6 +1729,7 @@
 				36CB03332D5BA200006A74E9 /* FoodDetailView.swift in Sources */,
 				36A85CE52DB2F35000DD4266 /* GoalTimeView.swift in Sources */,
 				363AFA1D2D4759E000C91A14 /* FoldersView.swift in Sources */,
+				362532A72E6CD98B003C3B8D /* RestTimerSheet.swift in Sources */,
 				36ED35BC2DD938C800D174FB /* HeightDataView.swift in Sources */,
 				369474562CB9C0B600CD197F /* MetricCard.swift in Sources */,
 				36A91DC22E419A9400414543 /* NotificationSettingsView.swift in Sources */,

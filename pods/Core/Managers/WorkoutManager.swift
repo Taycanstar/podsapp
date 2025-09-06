@@ -117,6 +117,11 @@ class WorkoutManager: ObservableObject {
     @Published var selectedMuscleType: String = "Recovered Muscles"
     @Published var selectedEquipmentType: String = "Auto"
     
+    // MARK: - Session Rest Timer Settings (workout-wide)
+    @Published var sessionRestTimerEnabled: Bool = false
+    @Published var sessionRestWarmupSeconds: Int = 60
+    @Published var sessionRestWorkingSeconds: Int = 60
+    
     // MARK: - Debug Flags
     @Published var debugForceIncludeDurationExercise = true // Debug: Always include a duration-based exercise
     
@@ -139,6 +144,9 @@ class WorkoutManager: ObservableObject {
     private let customMusclesKey = "currentWorkoutCustomMuscles"
     private let sessionFitnessGoalKey = "currentWorkoutSessionFitnessGoal"
     private let sessionFlexibilityKey = "currentWorkoutSessionFlexibility"
+    private let sessionRestEnabledKey = "currentWorkoutSessionRestEnabled"
+    private let sessionRestWarmupKey = "currentWorkoutSessionRestWarmupSeconds"
+    private let sessionRestWorkingKey = "currentWorkoutSessionRestWorkingSeconds"
     
     // MARK: - Computed Properties (Effective Values)
     var effectiveDuration: WorkoutDuration {
@@ -419,12 +427,36 @@ class WorkoutManager: ObservableObject {
         }
     }
     
+    /// Set session rest-timer enabled (temporary override)
+    func setSessionRestTimerEnabled(_ enabled: Bool) {
+        sessionRestTimerEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: sessionRestEnabledKey)
+        UserDefaults.standard.set(Date(), forKey: sessionDateKey)
+    }
+    
+    /// Set session rest warmup seconds (temporary override)
+    func setSessionRestWarmupSeconds(_ seconds: Int) {
+        sessionRestWarmupSeconds = seconds
+        UserDefaults.standard.set(seconds, forKey: sessionRestWarmupKey)
+        UserDefaults.standard.set(Date(), forKey: sessionDateKey)
+    }
+    
+    /// Set session rest working seconds (temporary override)
+    func setSessionRestWorkingSeconds(_ seconds: Int) {
+        sessionRestWorkingSeconds = seconds
+        UserDefaults.standard.set(seconds, forKey: sessionRestWorkingKey)
+        UserDefaults.standard.set(Date(), forKey: sessionDateKey)
+    }
+    
     /// Clear all session overrides
     func clearAllSessionOverrides() {
         sessionDuration = nil
         sessionFitnessGoal = nil
         sessionFitnessLevel = nil
         sessionFlexibilityPreferences = nil
+        sessionRestTimerEnabled = false
+        sessionRestWarmupSeconds = 60
+        sessionRestWorkingSeconds = 60
         customTargetMuscles = nil
         customEquipment = nil
         selectedMuscleType = "Recovered Muscles"
@@ -440,6 +472,9 @@ class WorkoutManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomEquipment")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutEquipmentType")
+        UserDefaults.standard.removeObject(forKey: sessionRestEnabledKey)
+        UserDefaults.standard.removeObject(forKey: sessionRestWarmupKey)
+        UserDefaults.standard.removeObject(forKey: sessionRestWorkingKey)
     }
     
     /// Replace exercise at index with new exercise data
@@ -999,6 +1034,22 @@ class WorkoutManager: ObservableObject {
            let flexibility = try? JSONDecoder().decode(FlexibilityPreferences.self, from: flexibilityData) {
             sessionFlexibilityPreferences = flexibility
         }
+
+        // Load rest timer session settings (same-day)
+        if let sessionDate = UserDefaults.standard.object(forKey: sessionDateKey) as? Date,
+           Calendar.current.isDateInToday(sessionDate) {
+            if UserDefaults.standard.object(forKey: sessionRestEnabledKey) != nil {
+                sessionRestTimerEnabled = UserDefaults.standard.bool(forKey: sessionRestEnabledKey)
+            }
+            let warm = UserDefaults.standard.integer(forKey: sessionRestWarmupKey)
+            if warm > 0 { sessionRestWarmupSeconds = warm }
+            let work = UserDefaults.standard.integer(forKey: sessionRestWorkingKey)
+            if work > 0 { sessionRestWorkingSeconds = work }
+        } else {
+            sessionRestTimerEnabled = false
+            sessionRestWarmupSeconds = 60
+            sessionRestWorkingSeconds = 60
+        }
     }
     
     private func saveSessionData() {
@@ -1019,6 +1070,12 @@ class WorkoutManager: ObservableObject {
            let data = try? JSONEncoder().encode(flexibility) {
             UserDefaults.standard.set(data, forKey: sessionFlexibilityKey)
         }
+
+        // Persist rest timer settings
+        UserDefaults.standard.set(sessionRestTimerEnabled, forKey: sessionRestEnabledKey)
+        UserDefaults.standard.set(sessionRestWarmupSeconds, forKey: sessionRestWarmupKey)
+        UserDefaults.standard.set(sessionRestWorkingSeconds, forKey: sessionRestWorkingKey)
+        UserDefaults.standard.set(Date(), forKey: sessionDateKey)
     }
     
     private func clearSessionUserDefaults() {
@@ -1027,6 +1084,9 @@ class WorkoutManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: customMusclesKey)
         UserDefaults.standard.removeObject(forKey: sessionFitnessGoalKey)
         UserDefaults.standard.removeObject(forKey: sessionFlexibilityKey)
+        UserDefaults.standard.removeObject(forKey: sessionRestEnabledKey)
+        UserDefaults.standard.removeObject(forKey: sessionRestWarmupKey)
+        UserDefaults.standard.removeObject(forKey: sessionRestWorkingKey)
     }
     
     /// Determine if should advance to next session phase

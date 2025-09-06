@@ -60,6 +60,9 @@ struct ExerciseLoggingView: View {
     @State private var showTimerSheet = false
     @State private var timerDuration: TimeInterval = 60 // Duration for the current timer session
     // Removed complex focus tracking - not needed for basic duration functionality
+    // Rest timer sheet presentation (config values live in WorkoutManager session)
+    @State private var showRestTimerSheet: Bool = false
+    @State private var restTimerDuration: TimeInterval = 60
     
     
     init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((TodayWorkoutExercise, Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil, onWarmupSetsChanged: (([WarmupSetData]) -> Void)? = nil, onExerciseUpdated: ((TodayWorkoutExercise) -> Void)? = nil) {
@@ -411,11 +414,16 @@ struct ExerciseLoggingView: View {
                 exerciseName: currentExercise.exercise.name,
                 duration: timerDuration, // Use set-specific timer duration
                 onTimerComplete: {
-                    // Auto-log the set tied to this timer
-                    autoLogSetFromTimer()
-                    // Notify parent with up-to-date completed count
-                    onSetLogged?(currentExercise, completedSetsCount, nil)
+                    if let idx = autoLogSetFromTimer() {
+                        handleFlexibleSetCompletion(at: idx)
+                    }
                 }
+            )
+        }
+        .sheet(isPresented: $showRestTimerSheet) {
+            RestTimerSheet(
+                exerciseName: currentExercise.exercise.name,
+                duration: restTimerDuration
             )
         }
         .toolbar {
@@ -508,6 +516,18 @@ struct ExerciseLoggingView: View {
                 exerciseNotes: $exerciseNotes,
                 recommendMoreOften: $recommendMoreOften,
                 recommendLessOften: $recommendLessOften,
+                restTimerEnabled: Binding(
+                    get: { workoutManager.sessionRestTimerEnabled },
+                    set: { workoutManager.setSessionRestTimerEnabled($0) }
+                ),
+                workingSetsTime: Binding(
+                    get: { workoutManager.sessionRestWorkingSeconds },
+                    set: { workoutManager.setSessionRestWorkingSeconds($0) }
+                ),
+                warmupSetsTime: Binding(
+                    get: { workoutManager.sessionRestWarmupSeconds },
+                    set: { workoutManager.setSessionRestWarmupSeconds($0) }
+                ),
                 rirValue: rirValue,
                 onExerciseReplaced: onExerciseReplaced,
                 onNotesRequested: {
@@ -849,7 +869,7 @@ struct ExerciseLoggingView: View {
                     .foregroundColor(.primary)
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.systemGray6))
+                    .background(Color("containerbg"))
                     .cornerRadius(8)
                     .onTapGesture {
                         showingNotes = true
@@ -1110,7 +1130,7 @@ struct ExerciseLoggingView: View {
         }
     }
     
-    private func autoLogSetFromTimer() {
+    private func autoLogSetFromTimer() -> Int? {
         // Prefer the currently active set if valid; otherwise first incomplete
         let targetIndex: Int? = {
             if flexibleSets.indices.contains(currentSetIndex) && !flexibleSets[currentSetIndex].isCompleted {
@@ -1119,7 +1139,7 @@ struct ExerciseLoggingView: View {
             return flexibleSets.firstIndex(where: { !$0.isCompleted })
         }()
 
-        guard let index = targetIndex else { return }
+        guard let index = targetIndex else { return nil }
         flexibleSets[index].isCompleted = true
 
         // Save/format duration for this set (using its own duration)
@@ -1129,6 +1149,7 @@ struct ExerciseLoggingView: View {
 
         // Persist to workout model and notify parent
         saveFlexibleSetsToExercise()
+        return index
     }
     
     private func formatDuration(_ seconds: TimeInterval) -> String {
@@ -1375,6 +1396,16 @@ struct ExerciseLoggingView: View {
         // Notify parent about set completion
         onSetLogged?(currentExercise, completedSetsCount, rirValue > 0 ? rirValue : nil)
         
+        // If rest timer is enabled (session-wide) and there are remaining sets, show the rest timer
+        if workoutManager.sessionRestTimerEnabled && completedSetsCount < flexibleSets.count {
+            let justCompletedIsWarmup = flexibleSets[setIndex].isWarmupSet
+            let seconds = justCompletedIsWarmup ? workoutManager.sessionRestWarmupSeconds : workoutManager.sessionRestWorkingSeconds
+            if seconds > 0 {
+                restTimerDuration = TimeInterval(seconds)
+                showRestTimerSheet = true
+            }
+        }
+
         // Show RIR section if all sets are completed
         if completedSetsCount == flexibleSets.count {
             showRIRSection = true
@@ -1996,6 +2027,9 @@ struct ExerciseOptionsSheet: View {
     @Binding var exerciseNotes: String
     @Binding var recommendMoreOften: Bool
     @Binding var recommendLessOften: Bool
+    @Binding var restTimerEnabled: Bool
+    @Binding var workingSetsTime: Int
+    @Binding var warmupSetsTime: Int
     let rirValue: Double
     let onExerciseReplaced: ((ExerciseData) -> Void)?
     let onNotesRequested: () -> Void
@@ -2007,9 +2041,8 @@ struct ExerciseOptionsSheet: View {
     @EnvironmentObject var workoutManager: WorkoutManager
     @State private var showingReplaceExercise = false
     @State private var showingDeleteConfirmation = false
-    @State private var restTimerEnabled = false
-    @State private var workingSetsTime = 60 // Default 1 minute in seconds
-    @State private var warmupSetsTime = 60 // Default 1 minute in seconds
+    // Rest timer bindings are provided by parent
+    // Defaults applied by parent when this sheet is first opened
     @State private var showingWorkingSetsPicker = false
     @State private var showingWarmupSetsPicker = false
     @State private var currentRecommendLabel: String = "Default"
