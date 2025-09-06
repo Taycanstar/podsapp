@@ -13,12 +13,8 @@ struct AddedByMe: View {
     @State private var addedByMeExercises: [ExerciseData] = []
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Background color
-            Color(.systemBackground)
-                .ignoresSafeArea(.all)
-                .overlay(contentView)
-        }
+        contentView
+            .background(Color(.systemBackground))
         .navigationTitle("Added by Me")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)

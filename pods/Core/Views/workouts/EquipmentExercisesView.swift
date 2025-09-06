@@ -24,12 +24,8 @@ struct EquipmentExercisesView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Background color
-            Color(.systemBackground)
-                .ignoresSafeArea(.all)
-                .overlay(contentView)
-        }
+        contentView
+            .background(Color(.systemBackground))
         .navigationTitle(equipmentName)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)

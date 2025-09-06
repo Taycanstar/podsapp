@@ -333,6 +333,7 @@ class UserProfileService: ObservableObject {
         rawPreferenceBiases = map
         // Ensure not avoided
         removeFromAvoided(exerciseId)
+        publishChange()
     }
 
     func setExercisePreferenceLessOften(exerciseId: Int) {
@@ -342,12 +343,14 @@ class UserProfileService: ObservableObject {
         rawPreferenceBiases = map
         // Ensure not avoided
         removeFromAvoided(exerciseId)
+        publishChange()
     }
 
     func clearExercisePreference(exerciseId: Int) {
         var map = rawPreferenceBiases
         map.removeValue(forKey: String(exerciseId))
         rawPreferenceBiases = map
+        publishChange()
     }
 
     func addToAvoided(_ exerciseId: Int) {
@@ -358,6 +361,7 @@ class UserProfileService: ObservableObject {
         }
         // Clear bias if now fully avoided
         clearExercisePreference(exerciseId: exerciseId)
+        publishChange()
     }
 
     func removeFromAvoided(_ exerciseId: Int) {
@@ -365,6 +369,14 @@ class UserProfileService: ObservableObject {
         if let idx = avoided.firstIndex(of: exerciseId) {
             avoided.remove(at: idx)
             avoidedExercises = avoided
+        }
+        publishChange()
+    }
+
+    // MARK: - Publishing helpers
+    private func publishChange() {
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
         }
     }
 

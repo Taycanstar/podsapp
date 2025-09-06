@@ -573,8 +573,7 @@ struct ExerciseLoggingView: View {
             }
         }
         .sheet(isPresented: $showAddExerciseSheet) {
-            NavigationView {
-                AddExerciseView { selected in
+            AddExerciseView { selected in
                     guard !selected.isEmpty else { return }
 
                     // Build TodayWorkoutExercise items for ALL selected exercises
@@ -620,7 +619,6 @@ struct ExerciseLoggingView: View {
                     if let last = newItems.last { selectExercise(last) }
                     showAddExerciseSheet = false
                 }
-            }
         }
     }
 

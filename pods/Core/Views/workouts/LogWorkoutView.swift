@@ -1039,8 +1039,7 @@ struct LogWorkoutView: View {
     // MARK: - Add Exercise Sheet
     @ViewBuilder
     private var addExerciseSheet: some View {
-        NavigationView {
-            AddExerciseView { selected in
+        AddExerciseView { selected in
                 guard !selected.isEmpty else { return }
                 guard let current = workoutManager.todayWorkout else { return }
 
@@ -1078,7 +1077,6 @@ struct LogWorkoutView: View {
 
                 workoutManager.setTodayWorkout(updated)
             }
-        }
     }
 
     // Reasonable default rest time by goal

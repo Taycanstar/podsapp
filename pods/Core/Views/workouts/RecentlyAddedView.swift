@@ -13,12 +13,8 @@ struct RecentlyAddedView: View {
     @State private var recentlyAddedExercises: [ExerciseData] = []
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Background color
-            Color(.systemBackground)
-                .ignoresSafeArea(.all)
-                .overlay(contentView)
-        }
+        contentView
+            .background(Color(.systemBackground))
         .navigationTitle("Recently Added")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)

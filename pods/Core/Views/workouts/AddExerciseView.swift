@@ -84,12 +84,8 @@ struct AddExerciseView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Background color
-                Color(.systemBackground)
-                    .ignoresSafeArea(.all)
-                    .overlay(contentView)
-            }
+            contentView
+                .background(Color(.systemBackground))
             .navigationTitle("Add Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

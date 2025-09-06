@@ -147,6 +147,11 @@ struct ProfileView: View {
                                   Label("Scan and Log Preview", systemImage: "viewfinder")
                                       .foregroundColor(iconColor)
                               }
+                              
+                              NavigationLink(destination: ManageExercisesView()) {
+                                  Label("Manage Exercises", systemImage: "figure.strengthtraining.traditional")
+                                      .foregroundColor(iconColor)
+                              }
                               .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                               
                               .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
@@ -752,5 +757,4 @@ struct MyWorkspacesView: View {
         )
     }
 }
-
 

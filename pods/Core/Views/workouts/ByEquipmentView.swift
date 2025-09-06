@@ -75,12 +75,8 @@ struct ByEquipmentView: View {
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
-        VStack(spacing: 0) {
-            // Background color
-            Color(.systemBackground)
-                .ignoresSafeArea(.all)
-                .overlay(contentView)
-        }
+        contentView
+            .background(Color(.systemBackground))
         .navigationTitle("By Equipment")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
