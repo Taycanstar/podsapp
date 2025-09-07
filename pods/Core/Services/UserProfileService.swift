@@ -444,19 +444,75 @@ class UserProfileService: ObservableObject {
     // MARK: - Smart Recommendations
     
     func getRecommendedWeight(exerciseId: Int) -> Double? {
+        // Phase 2: RIR-based learning layered on recent performance
         guard let performance = getExercisePerformance(exerciseId: exerciseId) else {
             return nil
         }
-        
-        // Get the most recent successful weight
-        let recentRecords = performance.recentRecords(limit: 3)
-        if let lastWeight = recentRecords.first?.weight {
-            // Progressive overload: increase by 2.5-5% based on experience
-            let progressionRate = experienceLevel.workoutComplexity == 1 ? 0.025 : 0.05
-            return lastWeight * (1 + progressionRate)
+        let recent = performance.recentRecords(limit: 3)
+        guard let lastWeight = recent.first?.weight, lastWeight > 0 else {
+            return nil
         }
-        
-        return nil
+
+        // Pull recent RIR history (last 3 entries)
+        let rirs = getRIRHistory(exerciseId: exerciseId)
+        guard !rirs.isEmpty else {
+            // Default small progression if no RIR data
+            return lastWeight * 1.025
+        }
+
+        // Auto-deload trigger: 3 consecutive tough sessions
+        if rirs.count >= 3 && rirs.prefix(3).allSatisfy({ $0 <= 1.0 }) {
+            return lastWeight * 0.90 // -10%
+        }
+
+        let avg = rirs.reduce(0, +) / Double(rirs.count)
+        var adj: Double
+        if avg <= 1.0 {        // too heavy
+            adj = -0.07
+        } else if avg <= 2.0 { // just right
+            adj = 0.025
+        } else {               // too light
+            adj = 0.07
+        }
+
+        // Safety: require 2+ readings for larger moves
+        if rirs.count < 2 {
+            if adj > 0 { adj = min(adj, 0.025) } else { adj = max(adj, -0.05) }
+        }
+
+        // Cap single-session increases by experience
+        let cap: Double = {
+            switch experienceLevel {
+            case .beginner: return 0.10
+            case .intermediate: return 0.12
+            case .advanced: return 0.15
+            }
+        }()
+        if adj > 0 { adj = min(adj, cap) }
+
+        let rec = max(5.0, lastWeight * (1 + adj))
+        return rec
+    }
+
+    // MARK: - RIR History (lightweight persistence)
+    private var rirHistoryKey: String { "exerciseRIRHistory" }
+    private var rirHistory: [String: [Double]] {
+        get { (UserDefaults.standard.dictionary(forKey: rirHistoryKey) as? [String: [Double]]) ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: rirHistoryKey) }
+    }
+
+    func appendRIRValue(exerciseId: Int, rir: Double) {
+        guard rir >= 0 else { return }
+        var hist = rirHistory
+        var arr = hist[String(exerciseId)] ?? []
+        arr.insert(rir, at: 0) // most recent first
+        if arr.count > 3 { arr = Array(arr.prefix(3)) }
+        hist[String(exerciseId)] = arr
+        rirHistory = hist
+    }
+
+    func getRIRHistory(exerciseId: Int) -> [Double] {
+        rirHistory[String(exerciseId)] ?? []
     }
     
     func getRecommendedReps(exerciseId: Int) -> Int? {

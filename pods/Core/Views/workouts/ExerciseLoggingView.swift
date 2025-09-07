@@ -1047,10 +1047,12 @@ struct ExerciseLoggingView: View {
             // Apple Fitness-style effort slider
             RIRSlider(value: $rirValue)
                 .frame(height: 80)
-                .onChange(of: rirValue) { oldValue, newValue in
-                    // Notify parent whenever RIR value changes for real-time saving
-                    onSetLogged?(currentExercise, completedSetsCount, newValue)
-                }
+        .onChange(of: rirValue) { oldValue, newValue in
+            // Notify parent whenever RIR value changes for real-time saving
+            onSetLogged?(currentExercise, completedSetsCount, newValue)
+            // Persist lightweight RIR history for recommendation engine
+            UserProfileService.shared.appendRIRValue(exerciseId: currentExercise.exercise.id, rir: newValue)
+        }
         }
         .padding()
         .background(Color("tiktoknp"))

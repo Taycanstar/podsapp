@@ -189,7 +189,21 @@ struct DynamicSetsInputView: View {
             // Add default number of sets based on tracking type
             let defaultSets = defaultSetCount(for: trackingType)
             for _ in 0..<defaultSets {
-                sets.append(FlexibleSetData(trackingType: trackingType))
+                var newSet = FlexibleSetData(trackingType: trackingType)
+                // Pre-populate from workoutExercise when appropriate so users see real values, not placeholders
+                switch trackingType {
+                case .repsWeight:
+                    newSet.reps = "\(workoutExercise.reps)"
+                    if let w = workoutExercise.weight, w > 0 {
+                        newSet.weight = "\(Int(w))"
+                    }
+                case .repsOnly:
+                    newSet.reps = "\(workoutExercise.reps)"
+                case .timeDistance, .timeOnly, .holdTime, .rounds:
+                    // Time-based sets are created elsewhere with duration; leave values nil here
+                    break
+                }
+                sets.append(newSet)
             }
         }
     }

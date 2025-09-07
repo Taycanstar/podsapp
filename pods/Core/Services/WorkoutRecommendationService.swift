@@ -1403,37 +1403,98 @@ class WorkoutRecommendationService {
         return baseWeight
     }
     
-    private func estimateStartingWeight(for exercise: ExerciseData) -> Double? {
-        let userProfile = UserProfileService.shared
-        let bodyWeight = userProfile.userWeight
+    // Exposed for generators/UI fallbacks that need a deterministic starting value
+    func estimateStartingWeight(for exercise: ExerciseData) -> Double? {
+        // Phase 1: Enhanced demographic estimation based on research ratios
+        let ups = UserProfileService.shared
+        let bw = ups.userWeight
+        let gender = ups.gender // .male/.female
+        let age = ups.userAge
+        let level = ups.experienceLevel
         let equipment = exercise.equipment.lowercased()
-        
-        // Only estimate for weighted exercises
-        guard equipment.contains("dumbbell") || equipment.contains("barbell") || equipment.contains("kettlebell") else {
+
+        // Only skip for true bodyweight; treat cables/machines/smith as weighted
+        if equipment.contains("body weight") || equipment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return nil
         }
-        
-        let exerciseCategory = getExerciseCategory(exercise)
-        let experienceMultiplier = getExperienceMultiplier(userProfile.experienceLevel)
-        
-        // Base percentages of bodyweight for different exercise categories
-        let basePercentage: Double
-        switch exerciseCategory {
-        case .compound:
-            if equipment.contains("barbell") {
-                basePercentage = 0.5 // 50% of bodyweight for compound barbell movements
-            } else {
-                basePercentage = 0.2 // 20% of bodyweight for compound dumbbell movements (per hand)
-            }
-        case .isolation:
-            basePercentage = 0.1 // 10% of bodyweight for isolation movements
-        case .core:
-            basePercentage = 0.05 // 5% of bodyweight for core exercises
-        case .cardio:
-            basePercentage = 0.15 // 15% of bodyweight for cardio-strength exercises
+
+        // Identify primary lift
+        enum PrimaryLift { case bench, squat, deadlift, overhead, none }
+        func classify(_ e: ExerciseData) -> PrimaryLift {
+            let name = e.name.lowercased()
+            if name.contains("bench") && name.contains("press") { return .bench }
+            if name.contains("squat") { return .squat }
+            if name.contains("deadlift") { return .deadlift }
+            if (name.contains("overhead") && name.contains("press")) || name.contains("military press") || name.contains("shoulder press") { return .overhead }
+            return .none
         }
-        
-        return bodyWeight * basePercentage * experienceMultiplier
+
+        let lift = classify(exercise)
+
+        // Base bodyweight ratios by gender for primary lifts
+        func baseBWRatio(for lift: PrimaryLift, gender: Gender) -> Double? {
+            switch lift {
+            case .bench:    return (gender == .male) ? 1.00 : 0.55
+            case .squat:    return (gender == .male) ? 1.50 : 1.15
+            case .deadlift: return (gender == .male) ? 1.75 : 1.25
+            case .overhead: return (gender == .male) ? 0.625 : 0.40
+            case .none:     return nil
+            }
+        }
+
+        // Compute base estimate
+        var estimate: Double
+        if let ratio = baseBWRatio(for: lift, gender: gender) {
+            estimate = bw * ratio
+        } else {
+            // Isolation and others: 15–25% of compound equivalent by muscle group
+            let bodyPart = exercise.bodyPart.lowercased()
+            let compoundRef: PrimaryLift =
+                (bodyPart.contains("chest") || bodyPart.contains("shoulder") || bodyPart.contains("trice")) ? .bench :
+                (bodyPart.contains("back") || bodyPart.contains("bicep")) ? .deadlift :
+                (bodyPart.contains("thigh") || bodyPart.contains("quad") || bodyPart.contains("ham") || bodyPart.contains("glute") || bodyPart.contains("hip")) ? .squat :
+                .bench
+            let ref = baseBWRatio(for: compoundRef, gender: gender) ?? 0.8
+            let isoFactor = 0.20 // choose midpoint of 15–25%
+            estimate = bw * ref * isoFactor
+        }
+
+        // Equipment adjustment
+        if equipment.contains("dumbbell") {
+            estimate *= 0.4 // per-hand recommendation (UI expects per-dumbbell weight)
+        } else if equipment.contains("kettlebell") {
+            estimate *= 0.5
+        } else if equipment.contains("smith") {
+            estimate *= 0.85
+        } else if equipment.contains("cable") {
+            estimate *= 0.7
+        } else if equipment.contains("leverage") || equipment.contains("machine") || equipment.contains("hammer") {
+            estimate *= 0.6
+        }
+
+        // Age adjustment: -5% per decade after 30
+        if age > 30 {
+            let decades = max(0, (age - 30) / 10)
+            let ageFactor = 1.0 - (0.05 * Double(decades))
+            estimate *= ageFactor
+        }
+
+        // Experience adjustment
+        let expFactor: Double = {
+            switch level {
+            case .beginner: return 0.85 // -15%
+            case .intermediate: return 0.90 // -10%
+            case .advanced: return 0.95 // -5%
+            }
+        }()
+        estimate *= expFactor
+
+        // Conservative start: 10–20% below calculated average (choose 15%)
+        estimate *= 0.85
+
+        // Safety floor
+        if estimate.isNaN || !estimate.isFinite { return nil }
+        return max(5.0, estimate)
     }
     
     private func getExperienceMultiplier(_ level: ExperienceLevel) -> Double {

@@ -782,6 +782,7 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            .frame(height: 36)
             // .background(Color(.systemBackground))
             .background(Color("primarybg"))
             .cornerRadius(20)
@@ -827,6 +828,7 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            .frame(height: 36)
             // .background(Color(.systemBackground))
             .background(Color("primarybg"))
             .cornerRadius(20)
@@ -862,6 +864,7 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            .frame(height: 36)
             // .background(Color(.systemBackground))
             .background(Color("primarybg"))
             .cornerRadius(20)
@@ -897,6 +900,7 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            .frame(height: 36)
             // .background(Color(.systemBackground))
             .background(Color("primarybg"))
             .cornerRadius(20)
@@ -932,6 +936,7 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            .frame(height: 36)
             // .background(Color(.systemBackground))
             .background(Color("primarybg"))
             .cornerRadius(20)
@@ -954,7 +959,7 @@ struct LogWorkoutView: View {
         }) {
             HStack(spacing: 8) {
                 Image(systemName: effectiveFlexibilityPreferences.showPlusIcon ? "plus" : "figure.flexibility")
-                    .font(.system(size: effectiveFlexibilityPreferences.showPlusIcon ? 20 : 17, weight: .bold))
+                    .font(.system(size: 17, weight: .bold))
                     .foregroundColor(.secondary)
                 
                 Text(flexibilityPreferences?.shortText ?? effectiveFlexibilityPreferences.shortText)
@@ -967,6 +972,7 @@ struct LogWorkoutView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            .frame(height: 36)
             // .background(Color(.systemBackground))
             .background(Color("primarybg"))
             .cornerRadius(20)

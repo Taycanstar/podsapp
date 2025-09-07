@@ -143,6 +143,26 @@ struct DynamicSetRowView: View {
                 .onSubmit {
                     focusedField = nil
                 }
+                // Ensure we show an initial actual value (not placeholder) when available
+                .onAppear {
+                    if (set.reps == nil || set.reps?.isEmpty == true) {
+                        set.reps = "\(workoutExercise.reps)"
+                        onSetChanged?()
+                    }
+                    if (set.weight == nil || set.weight?.isEmpty == true) {
+                        if let w = workoutExercise.weight, w > 0 {
+                            set.weight = "\(Int(w))"
+                            onSetChanged?()
+                        } else {
+                            // Fallback: compute recommendation if generator didn't supply one
+                            let rec = WorkoutRecommendationService.shared.getSmartRecommendation(for: workoutExercise.exercise)
+                            if let rw = rec.weight, rw > 0 {
+                                set.weight = "\(Int(rw))"
+                                onSetChanged?()
+                            }
+                        }
+                    }
+                }
             }
         }
     }

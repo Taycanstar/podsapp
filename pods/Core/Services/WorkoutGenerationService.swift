@@ -288,11 +288,19 @@ class WorkoutGenerationService {
         switch trackingType {
         case .repsWeight, .repsOnly:
             let rec = recommendationService.getSmartRecommendation(for: exercise, fitnessGoal: fitnessGoal)
+            // Ensure a concrete starting weight for all weighted exercises
+            let concreteWeight: Double? = {
+                if ExerciseClassificationService.determineTrackingType(for: exercise) == .repsWeight {
+                    // If generator didn’t provide weight, compute a conservative estimate
+                    return rec.weight ?? recommendationService.estimateStartingWeight(for: exercise)
+                }
+                return nil
+            }()
             return TodayWorkoutExercise(
                 exercise: exercise,
                 sets: rec.sets,
                 reps: rec.reps,
-                weight: rec.weight,
+                weight: concreteWeight,
                 restTime: optimalRest,
                 notes: nil,
                 warmupSets: nil,
