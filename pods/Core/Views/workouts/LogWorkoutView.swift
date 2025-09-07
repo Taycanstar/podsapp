@@ -1163,122 +1163,85 @@ private struct TodayWorkoutView: View {
     }
     
     var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .bottom) {
-                // Main scrollable content
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 12) {
-                        // Add invisible spacing at the top to prevent overlap with header
-                        Color.clear.frame(height: 4)
-                        
-                        // Show generation loading
-                        if workoutManager.isGeneratingWorkout {
-                            ModernWorkoutLoadingView(message: "Creating your personalized workout...")
-                                .transition(.opacity)
-                        }
-                        
-                        // Show today's workout if available
-                        if let workout = workoutToShow {
-                            VStack(spacing: 12) {
-                                // Session phase header for dynamic workouts
-                                if let dynamicParams = workoutManager.dynamicParameters, showSessionPhaseCard {
-                                    DynamicSessionPhaseView(
-                                        sessionPhase: dynamicParams.sessionPhase,
-                                        workoutCount: calculateWorkoutCountInPhase()
-                                    )
-                                    .padding(.horizontal)
-                                }
-                                
-                                TodayWorkoutExerciseList(
-                                    workout: workout,
-                                    navigationPath: $navigationPath,
-                                    onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
-                                    onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet
-                                )
-                                .padding(.horizontal)
-                                
-                                // Add Exercise button below the list
-                                Button(action: {
-                                    showAddExerciseSheet = true
-                                }) {
-                                    HStack(spacing: 8) {
-                                        
-                                        Image(systemName: "plus")
-                                            .font(.system(size: 16, weight: .semibold))
-                                        Text("Add Exercise")
-                                            .font(.system(size: 16, weight: .semibold))
-                                    }
-                                    .foregroundColor(.primary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .cornerRadius(12)
-                                }
-                                .padding(.horizontal)
-                            }
-                        }
-                        
-                        // Empty state when no workout and not generating
-                        if workoutToShow == nil && !workoutManager.isGeneratingWorkout {
-                            VStack(spacing: 16) {
-                                Image("blackex")
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(maxWidth: 200, maxHeight: 200)
-                                
-                                Text("Preparing your workout...")
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                
-                                Text("We're creating a personalized workout based on your goals and preferences.")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 45)
-                            }
-                            .padding(.top, 40)
-                        }
-                        
-                        // Add extra bottom padding for floating buttons
-                        Color.clear.frame(height: 120)
-                    }
-                    .padding(.bottom, 16)
-                }
-                // .background(Color(.systemBackground))
-                .background(Color("primarybg"))
-                
-                // Sticky Start Workout button at bottom
-                if let workout = workoutManager.todayWorkout {
-                    VStack {
-                        Button(action: {
-                            print("🚀 Starting workout with \(workout.exercises.count) exercises")
-                            for (index, exercise) in workout.exercises.enumerated() {
-                                print("🚀 Exercise \(index): \(exercise.exercise.name)")
-                            }
-                            currentWorkout = workout
-                        }) {
-                            Text("Start Workout")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(Color.accentColor)
-                                .cornerRadius(12)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, geometry.safeAreaInsets.bottom + 10)
-                    }
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color("primarybg").opacity(0),
-                                Color("primarybg").opacity(0.95),
-                                Color("primarybg")
-                            ]),
-                            startPoint: .top,
-                            endPoint: .bottom
+        Group {
+            // Show generation loading
+            if workoutManager.isGeneratingWorkout {
+                ModernWorkoutLoadingView(message: "Creating your personalized workout...")
+                    .transition(.opacity)
+            } else if let workout = workoutToShow {
+                VStack(spacing: 12) {
+                    // Session phase header for dynamic workouts
+                    if let dynamicParams = workoutManager.dynamicParameters, showSessionPhaseCard {
+                        DynamicSessionPhaseView(
+                            sessionPhase: dynamicParams.sessionPhase,
+                            workoutCount: calculateWorkoutCountInPhase()
                         )
+                        .padding(.horizontal)
+                    }
+
+                    // Exercises list with swipe actions
+                    TodayWorkoutExerciseList(
+                        workout: workout,
+                        navigationPath: $navigationPath,
+                        onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
+                        onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
+                        showAddExerciseSheet: $showAddExerciseSheet
                     )
                 }
+            } else {
+                // Empty state when no workout and not generating
+                VStack(spacing: 16) {
+                    Image("blackex")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: 200, maxHeight: 200)
+                    
+                    Text("Preparing your workout...")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text("We're creating a personalized workout based on your goals and preferences.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 45)
+                }
+                .padding(.top, 40)
+            }
+        }
+        .background(Color("primarybg"))
+        .safeAreaInset(edge: .bottom) {
+            if let workout = workoutManager.todayWorkout {
+                HStack {
+                    Button(action: {
+                        print("🚀 Starting workout with \(workout.exercises.count) exercises")
+                        for (index, exercise) in workout.exercises.enumerated() {
+                            print("🚀 Exercise \(index): \(exercise.exercise.name)")
+                        }
+                        currentWorkout = workout
+                    }) {
+                        Text("Start Workout")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.accentColor)
+                            .cornerRadius(12)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color("primarybg").opacity(0),
+                            Color("primarybg").opacity(0.95),
+                            Color("primarybg")
+                        ]),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
             }
         }
         .onAppear {
@@ -2020,13 +1983,15 @@ private struct TodayWorkoutExerciseList: View {
     @State private var exercises: [TodayWorkoutExercise]
     @State private var warmUpExpanded: Bool = true
     @State private var coolDownExpanded: Bool = true
+    @Binding var showAddExerciseSheet: Bool
     
-    init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>, onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void, onExerciseUpdateCallbackSet: @escaping (((Int, TodayWorkoutExercise) -> Void)?) -> Void) {
+    init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>, onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void, onExerciseUpdateCallbackSet: @escaping (((Int, TodayWorkoutExercise) -> Void)?) -> Void, showAddExerciseSheet: Binding<Bool>) {
         self.workout = workout
         self._navigationPath = navigationPath
         self.onExerciseReplacementCallbackSet = onExerciseReplacementCallbackSet
         self.onExerciseUpdateCallbackSet = onExerciseUpdateCallbackSet
         self._exercises = State(initialValue: workout.exercises)
+        self._showAddExerciseSheet = showAddExerciseSheet
     }
     
     var body: some View {
@@ -2061,7 +2026,7 @@ private struct TodayWorkoutExerciseList: View {
                     )
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
                 }
             }
             
@@ -2095,7 +2060,7 @@ private struct TodayWorkoutExerciseList: View {
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
             }
             .onMove(perform: moveExercise)
             .onDelete(perform: deleteExercise)
@@ -2130,24 +2095,33 @@ private struct TodayWorkoutExerciseList: View {
                     )
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
                 }
             }
-            
-            // Add bottom spacer to prevent last exercise from being hidden by Add Exercise button
+
+            // Add Exercise button as the final list row
             Section {
-                Color.clear.frame(height: 8)
+                Button(action: { showAddExerciseSheet = true }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Add Exercise")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(PlainButtonStyle())
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 20, trailing: 16))
         }
         .listStyle(PlainListStyle())
         .scrollContentBackground(.hidden)
-        .scrollDisabled(true)
         .background(Color("primarybg"))
         .cornerRadius(12)
-        .frame(height: calculateTotalHeight()) // Dynamic height calculation with all sections + bottom spacer
         .onAppear {
             // Register the exercise replacement callback with the navigation container
             onExerciseReplacementCallbackSet { index, newExercise in
@@ -2166,7 +2140,7 @@ private struct TodayWorkoutExerciseList: View {
             // TODO: Save updated exercise order to UserDefaults or backend
         }
     }
-    
+
     private func moveExercise(from source: IndexSet, to destination: Int) {
         exercises.move(fromOffsets: source, toOffset: destination)
     }
@@ -2247,34 +2221,8 @@ private struct TodayWorkoutExerciseList: View {
         }
     }
     
-    // Calculate total height including all sections and spacing
-    private func calculateTotalHeight() -> CGFloat {
-        var totalHeight: CGFloat = 0
-        
-        // Warm-up section height (if exists)
-        if let warmUpExercises = workout.warmUpExercises, !warmUpExercises.isEmpty {
-            totalHeight += 60 // Title height with padding
-            totalHeight += CGFloat(warmUpExercises.count * 96) // 96pt per exercise
-        }
-        
-        // Main exercises section
-        // Add title height if warm-up or cool-down exists
-        if (workout.warmUpExercises?.isEmpty == false) || (workout.coolDownExercises?.isEmpty == false) {
-            totalHeight += 60 // "Main Sets" title height with padding
-        }
-        totalHeight += CGFloat(exercises.count * 96) // 96pt per exercise
-        
-        // Cool-down section height (if exists)  
-        if let coolDownExercises = workout.coolDownExercises, !coolDownExercises.isEmpty {
-            totalHeight += 60 // Title height with padding
-            totalHeight += CGFloat(coolDownExercises.count * 96) // 96pt per exercise
-        }
-        
-        // Bottom spacer to prevent content from being hidden under Add Exercise button
-        totalHeight += 8
-        
-        return totalHeight
-    }
+    
+
 }
 
 // MARK: - Exercise Workout Card
@@ -2315,31 +2263,26 @@ private struct ExerciseWorkoutCard: View {
         return cachedDynamicExercise
     }
     
-    // Computed display that respects tracking type
+    // Computed display based on actual exercise data (updates live)
     private var setsAndRepsDisplay: String {
         if let tracking = exercise.trackingType, let flex = exercise.flexibleSets, !flex.isEmpty {
             switch tracking {
-            case .timeOnly:
-                // For duration exercises, only show count of sets/intervals
-                return "\(flex.count) \(flex.count == 1 ? "set" : "sets")"
-            case .holdTime:
-                return "\(flex.count) \(flex.count == 1 ? "set" : "sets")"
-            case .timeDistance:
-                return "\(flex.count) \(flex.count == 1 ? "set" : "sets")"
+            case .timeOnly, .holdTime, .timeDistance:
+                let count = flex.count
+                let label = count == 1 ? "set" : "sets"
+                return "\(count) \(label)"
             case .rounds:
                 let rounds = flex.first?.rounds ?? exercise.sets
-                return "\(rounds) \(rounds == 1 ? "round" : "rounds")"
+                let label = rounds == 1 ? "round" : "rounds"
+                return "\(rounds) \(label)"
             default:
-                break // fall through to reps-based below
+                break
             }
         }
 
-        // Reps-based formatting (optionally use dynamic target when available)
-        if let dynamicExercise = stableDynamicExercise {
-            return dynamicExercise.dailyTargetDisplay
-        }
-        let setsText = exercise.sets == 1 ? "set" : "sets"
-        return "\(exercise.sets) \(setsText) • \(exercise.reps) reps"
+        // Reps-based formatting shows current sets × reps
+        let setsLabel = exercise.sets == 1 ? "set" : "sets"
+        return "\(exercise.sets) \(setsLabel) • \(exercise.reps) reps"
     }
 
     private func formatDuration(_ seconds: TimeInterval) -> String {
