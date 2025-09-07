@@ -154,6 +154,13 @@ struct ProfileView: View {
                               }
                               .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                               
+                              // Workout Schedule settings
+                              NavigationLink(destination: WorkoutScheduleSettingsView()) {
+                                  Label("Workout Schedule", systemImage: "calendar.badge.clock")
+                                      .foregroundColor(iconColor)
+                              }
+                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                              
                               .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                               
                           }
@@ -757,4 +764,3 @@ struct MyWorkspacesView: View {
         )
     }
 }
-
