@@ -1405,96 +1405,129 @@ class WorkoutRecommendationService {
     
     // Exposed for generators/UI fallbacks that need a deterministic starting value
     func estimateStartingWeight(for exercise: ExerciseData) -> Double? {
-        // Phase 1: Enhanced demographic estimation based on research ratios
-        let ups = UserProfileService.shared
-        let bw = ups.userWeight
-        let gender = ups.gender // .male/.female
-        let age = ups.userAge
-        let level = ups.experienceLevel
+        // Skip true bodyweight
         let equipment = exercise.equipment.lowercased()
-
-        // Only skip for true bodyweight; treat cables/machines/smith as weighted
         if equipment.contains("body weight") || equipment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return nil
         }
 
-        // Identify primary lift
-        enum PrimaryLift { case bench, squat, deadlift, overhead, none }
-        func classify(_ e: ExerciseData) -> PrimaryLift {
+        // Phase 1: Movement pattern classification
+        enum MovementPattern { case squat, press, pull, explosive, isolation, unilateral }
+        func classifyMovement(_ e: ExerciseData) -> MovementPattern {
+            let n = e.name.lowercased()
+            if n.contains("clean") || n.contains("snatch") || n.contains("thruster") { return .explosive }
+            if n.contains("single") || n.contains("one-arm") || n.contains("one arm") || n.contains("single-arm") { return .unilateral }
+            if n.contains("squat") { return .squat }
+            if n.contains("press") || n.contains("push") { return .press }
+            if n.contains("raise") || n.contains("curl") || n.contains("extension") || n.contains("fly") || n.contains("kickback") { return .isolation }
+            return .pull
+        }
+
+        let mp = classifyMovement(exercise)
+
+        // Phase 2: Equipment-specific base weights (in lbs). Dumbbell values are per-hand.
+        func equipmentBase(_ e: ExerciseData, mp: MovementPattern) -> Double {
             let name = e.name.lowercased()
-            if name.contains("bench") && name.contains("press") { return .bench }
-            if name.contains("squat") { return .squat }
-            if name.contains("deadlift") { return .deadlift }
-            if (name.contains("overhead") && name.contains("press")) || name.contains("military press") || name.contains("shoulder press") { return .overhead }
-            return .none
+            let eq = e.equipment.lowercased()
+            // Smith machine
+            if eq.contains("smith") {
+                if mp == .squat { return 95 } // more realistic for smith squat
+                if mp == .press { return 45 }
+                if mp == .pull { return 95 }
+                if mp == .explosive { return 65 }
+                return 30 // default smith for isolation/other
+            }
+            // Barbell
+            if eq.contains("barbell") {
+                if name.contains("deadlift") { return 135 }
+                if name.contains("bench") { return 75 }
+                if mp == .squat { return 95 }
+                if mp == .press { return 65 } // overhead press baseline
+                if mp == .pull { return 95 }
+                if mp == .explosive { return 95 }
+                return 45
+            }
+            // Dumbbell (per hand)
+            if eq.contains("dumbbell") {
+                if mp == .isolation { return 12 }
+                if mp == .explosive { return 20 }
+                if mp == .press { return 20 }
+                if mp == .pull { return 20 }
+                if mp == .squat { return 25 }
+                return 15
+            }
+            // Kettlebell
+            if eq.contains("kettlebell") { return (mp == .isolation ? 15 : 25) }
+            // Cable / Machine / Leverage
+            if eq.contains("cable") || eq.contains("machine") || eq.contains("leverage") || eq.contains("hammer") {
+                if mp == .isolation { return 20 }
+                if mp == .press { return 50 }
+                if mp == .pull { return 70 }
+                if mp == .squat { return 90 }
+                if mp == .explosive { return 70 }
+                return 40
+            }
+            // Fallback
+            return 30
         }
 
-        let lift = classify(exercise)
+        // Phase 3: Muscle group scaling
+        func muscleMultiplier(_ e: ExerciseData) -> Double {
+            let bp = e.bodyPart.lowercased()
+            if bp.contains("thigh") || bp.contains("ham") || bp.contains("quad") || bp.contains("glute") || bp.contains("hip") || bp.contains("back") { return 1.0 }
+            if bp.contains("chest") || bp.contains("shoulder") { return 0.7 }
+            if bp.contains("arm") || bp.contains("bicep") || bp.contains("tricep") || bp.contains("calf") { return 0.4 }
+            if bp.contains("forearm") || bp.contains("rear delt") { return 0.25 }
+            return 0.7
+        }
 
-        // Base bodyweight ratios by gender for primary lifts
-        func baseBWRatio(for lift: PrimaryLift, gender: Gender) -> Double? {
-            switch lift {
-            case .bench:    return (gender == .male) ? 1.00 : 0.55
-            case .squat:    return (gender == .male) ? 1.50 : 1.15
-            case .deadlift: return (gender == .male) ? 1.75 : 1.25
-            case .overhead: return (gender == .male) ? 0.625 : 0.40
-            case .none:     return nil
+        // Phase 5: Experience adjustments refined
+        func experienceMultiplier(_ mp: MovementPattern) -> Double {
+            switch UserProfileService.shared.experienceLevel {
+            case .beginner:
+                switch mp {
+                case .isolation: return 0.7
+                case .explosive: return 0.6
+                default: return 0.8 // compound
+                }
+            case .intermediate: return 0.9
+            case .advanced: return 1.0
             }
         }
 
-        // Compute base estimate
-        var estimate: Double
-        if let ratio = baseBWRatio(for: lift, gender: gender) {
-            estimate = bw * ratio
-        } else {
-            // Isolation and others: 15–25% of compound equivalent by muscle group
-            let bodyPart = exercise.bodyPart.lowercased()
-            let compoundRef: PrimaryLift =
-                (bodyPart.contains("chest") || bodyPart.contains("shoulder") || bodyPart.contains("trice")) ? .bench :
-                (bodyPart.contains("back") || bodyPart.contains("bicep")) ? .deadlift :
-                (bodyPart.contains("thigh") || bodyPart.contains("quad") || bodyPart.contains("ham") || bodyPart.contains("glute") || bodyPart.contains("hip")) ? .squat :
-                .bench
-            let ref = baseBWRatio(for: compoundRef, gender: gender) ?? 0.8
-            let isoFactor = 0.20 // choose midpoint of 15–25%
-            estimate = bw * ref * isoFactor
+        var w = equipmentBase(exercise, mp: mp)
+        w *= muscleMultiplier(exercise)
+
+        // Unilateral adjustment (40–60% of bilateral → choose midpoint 0.5)
+        if mp == .unilateral { w *= 0.5 }
+
+        // Explosive movements tend to need higher floor
+        if mp == .explosive { w = max(w, 20) }
+
+        // Apply experience factor
+        w *= experienceMultiplier(mp)
+
+        // Phase 4: Movement-appropriate safety minimums
+        func applyMinimums(_ weight: Double, eq: String, mp: MovementPattern) -> Double {
+            var minW = 8.0
+            if eq.contains("barbell") { minW = 45 }
+            else if eq.contains("smith") { minW = 35 }
+            else if mp == .explosive { minW = max(minW, 20) }
+            else if mp == .squat || mp == .press || mp == .pull { minW = max(minW, 15) }
+            return max(weight, minW)
         }
+        w = applyMinimums(w, eq: equipment, mp: mp)
 
-        // Equipment adjustment
-        if equipment.contains("dumbbell") {
-            estimate *= 0.4 // per-hand recommendation (UI expects per-dumbbell weight)
-        } else if equipment.contains("kettlebell") {
-            estimate *= 0.5
-        } else if equipment.contains("smith") {
-            estimate *= 0.85
-        } else if equipment.contains("cable") {
-            estimate *= 0.7
-        } else if equipment.contains("leverage") || equipment.contains("machine") || equipment.contains("hammer") {
-            estimate *= 0.6
+        // Round to reasonable plate steps (lbs 5, kg 2.5)
+        func roundForUnits(_ value: Double) -> Double {
+            let units = UserDefaults.standard.string(forKey: "workoutUnitsSystem") ?? "imperial"
+            if units == "metric" { return (round(value / 2.5) * 2.5) }
+            return (round(value / 5.0) * 5.0)
         }
+        w = roundForUnits(w)
 
-        // Age adjustment: -5% per decade after 30
-        if age > 30 {
-            let decades = max(0, (age - 30) / 10)
-            let ageFactor = 1.0 - (0.05 * Double(decades))
-            estimate *= ageFactor
-        }
-
-        // Experience adjustment
-        let expFactor: Double = {
-            switch level {
-            case .beginner: return 0.85 // -15%
-            case .intermediate: return 0.90 // -10%
-            case .advanced: return 0.95 // -5%
-            }
-        }()
-        estimate *= expFactor
-
-        // Conservative start: 10–20% below calculated average (choose 15%)
-        estimate *= 0.85
-
-        // Safety floor
-        if estimate.isNaN || !estimate.isFinite { return nil }
-        return max(5.0, estimate)
+        if w.isNaN || !w.isFinite { return nil }
+        return w
     }
     
     private func getExperienceMultiplier(_ level: ExperienceLevel) -> Double {
