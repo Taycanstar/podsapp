@@ -1515,12 +1515,12 @@ struct FoodRow: View {
                                           food.servingSizeText.trimmingCharacters(in: .whitespaces) == "1.0" ||
                                           food.servingSizeText.trimmingCharacters(in: .whitespaces) == "1"
                     
-                    if !food.servingSizeText.isEmpty && !isDefaultServing {
-                        Text("•")
-                            .foregroundColor(.secondary)
-                        Text(food.servingSizeText)
-                            .foregroundColor(.secondary)
-                    }
+                    // if !food.servingSizeText.isEmpty && !isDefaultServing {
+                    //     Text("•")
+                    //         .foregroundColor(.secondary)
+                    //     Text(food.servingSizeText)
+                    //         .foregroundColor(.secondary)
+                    // }
                     if let brand = food.brandText, !brand.isEmpty {
                         Text("•")
                             .foregroundColor(.secondary)
