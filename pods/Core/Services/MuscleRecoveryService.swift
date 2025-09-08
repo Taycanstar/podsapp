@@ -559,4 +559,88 @@ class MuscleRecoveryService: ObservableObject {
             isMuscleReadyForTraining(muscle.rawValue) ? muscle.rawValue : nil
         }
     }
-} 
+
+    // MARK: - Schedule-Aware Optimization
+    /// Choose muscle groups using both recent schedule balance and recovery readiness.
+    /// - Strategy:
+    ///   1) Read workout days per week (default 3) from UserDefaults (supports both keys we persist).
+    ///   2) Count main-muscle appearances in last 7 days of completed history.
+    ///   3) Target frequency per muscle = 1 if <=3 days/week else 2.
+    ///   4) Prefer muscles that are below target AND recovered >= 80%.
+    ///   5) Fill remaining slots by recovery recommendation to keep flow resilient.
+    func getScheduleOptimizedMuscleGroups(targetCount: Int) -> [String] {
+        let daysPerWeek = readWorkoutDaysPerWeek()
+        let targetPerMuscle = daysPerWeek <= 3 ? 1 : 2
+
+        // Frequency for last 7 days
+        let freq = fetchLast7DaysMuscleFrequency()
+
+        // Build candidates with recovery info
+        struct Candidate { let group: MuscleGroup; let deficit: Int; let recovery: Double; let priority: Int }
+        var candidates: [Candidate] = []
+
+        for group in MuscleGroup.allCases where group.isMainMuscleGroup {
+            let trained = freq[group] ?? 0
+            let deficit = max(0, targetPerMuscle - trained)
+            let recovery = getMuscleRecoveryPercentage(for: group.rawValue)
+            if deficit > 0 && recovery >= 80.0 { // fit and behind schedule
+                candidates.append(Candidate(group: group, deficit: deficit, recovery: recovery, priority: group.priority))
+            }
+        }
+
+        // Rank: larger deficit → higher, then recovery %, then intrinsic priority
+        let ranked = candidates.sorted {
+            if $0.deficit != $1.deficit { return $0.deficit > $1.deficit }
+            if $0.recovery != $1.recovery { return $0.recovery > $1.recovery }
+            return $0.priority > $1.priority
+        }
+
+        var result = Array(ranked.prefix(targetCount)).map { $0.group.rawValue }
+
+        // Fallback/fill with recovery-based recommendation (avoiding duplicates)
+        if result.count < targetCount {
+            let recoveryBackfill = getRecommendedMuscleGroups(for: targetCount)
+                .map { $0.rawValue }
+                .filter { !result.contains($0) && MuscleGroup(rawValue: $0)?.isMainMuscleGroup == true }
+            for m in recoveryBackfill {
+                guard result.count < targetCount else { break }
+                result.append(m)
+            }
+        }
+
+        // Final safety: ensure not empty
+        if result.isEmpty {
+            result = getRecommendedMuscleGroups(for: targetCount).map { $0.rawValue }
+        }
+
+        print("🧭 Schedule-optimized muscles: \(result)")
+        return result
+    }
+
+    // MARK: - Helpers (Schedule)
+    private func readWorkoutDaysPerWeek() -> Int {
+        // App setting key used by the new UI
+        let appStorageValue = UserDefaults.standard.integer(forKey: "workoutDaysPerWeek")
+        if appStorageValue > 0 { return appStorageValue }
+        // Server-style snake_case key
+        let snake = UserDefaults.standard.integer(forKey: "workout_days_per_week")
+        return snake > 0 ? snake : 3
+    }
+
+    /// Count how often each main muscle group appeared in the last 7 days of history
+    private func fetchLast7DaysMuscleFrequency() -> [MuscleGroup: Int] {
+        let history = UserProfileService.shared.getWorkoutHistory()
+        let cutoff = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        var counts: [MuscleGroup: Int] = [:]
+
+        for entry in history where entry.date >= cutoff {
+            for ex in entry.exercises {
+                let groups = getMuscleGroupsForExercise(exerciseId: ex.exerciseId)
+                for g in groups where g.isMainMuscleGroup {
+                    counts[g, default: 0] += 1
+                }
+            }
+        }
+        return counts
+    }
+}

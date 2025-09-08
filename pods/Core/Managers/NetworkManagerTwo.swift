@@ -80,6 +80,51 @@ class NetworkManagerTwo {
         }
     }
     
+    // MARK: - Workout Preferences
+    /// Update user's workout preferences on the server. Only non-nil fields are sent.
+    func updateWorkoutPreferences(
+        userEmail: String,
+        workoutDaysPerWeek: Int? = nil,
+        restDays: [String]? = nil,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        let urlString = "\(baseUrl)/update-workout-preferences/"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL)); return
+        }
+
+        var payload: [String: Any] = ["email": userEmail]
+        if let workoutDaysPerWeek = workoutDaysPerWeek { payload["workout_days_per_week"] = workoutDaysPerWeek }
+        if let restDays = restDays { payload["rest_days"] = restDays }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        } catch {
+            completion(.failure(error)); return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error { DispatchQueue.main.async { completion(.failure(error)) }; return }
+            guard let http = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }; return
+            }
+            guard (200...299).contains(http.statusCode) else {
+                // Try to read error message
+                if let data = data,
+                   let json = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                    DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: json.error))) }
+                } else {
+                    DispatchQueue.main.async { completion(.failure(NetworkError.requestFailed(statusCode: http.statusCode))) }
+                }
+                return
+            }
+            DispatchQueue.main.async { completion(.success(())) }
+        }.resume()
+    }
+    
 
     func lookupFoodByBarcode(
         barcode: String,
@@ -3506,5 +3551,4 @@ class NetworkManagerTwo {
     }
 
 }
-
 

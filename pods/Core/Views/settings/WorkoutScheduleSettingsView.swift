@@ -121,6 +121,22 @@ struct WorkoutScheduleSettingsView: View {
         viewModel.restDays = rest
         UserDefaults.standard.set(daysPerWeek, forKey: "workout_days_per_week")
         UserDefaults.standard.set(rest, forKey: "rest_days")
+
+        // Persist to backend for cross-device consistency
+        let email = (!viewModel.email.isEmpty ? viewModel.email : UserDefaults.standard.string(forKey: "userEmail")) ?? ""
+        guard !email.isEmpty else { return }
+        NetworkManagerTwo.shared.updateWorkoutPreferences(
+            userEmail: email,
+            workoutDaysPerWeek: daysPerWeek,
+            restDays: rest
+        ) { result in
+            switch result {
+            case .success:
+                print("✅ WorkoutSchedule: preferences synced to server")
+            case .failure(let error):
+                print("⚠️ WorkoutSchedule: failed to sync preferences - \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: - Helpers
@@ -163,4 +179,3 @@ struct WorkoutScheduleSettingsView: View {
             .environmentObject(OnboardingViewModel())
     }
 }
-

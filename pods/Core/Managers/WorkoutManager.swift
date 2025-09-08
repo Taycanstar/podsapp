@@ -776,9 +776,9 @@ class WorkoutManager: ObservableObject {
             muscleGroups = customMuscles
             print("🎯 WorkoutManager: Using CUSTOM muscle selection: \(muscleGroups)")
         } else {
-            // Use recovery service to get optimal muscle groups
-            muscleGroups = recoveryService.getRecoveryOptimizedMuscleGroups(targetCount: 4)
-            print("🧠 WorkoutManager: Using recovery-optimized muscles: \(muscleGroups)")
+            // Use schedule-aware + recovery optimization for selection
+            muscleGroups = recoveryService.getScheduleOptimizedMuscleGroups(targetCount: 4)
+            print("🧠 WorkoutManager: Using schedule-optimized muscles: \(muscleGroups)")
         }
         
         guard !muscleGroups.isEmpty else {
