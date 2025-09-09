@@ -188,6 +188,8 @@ class FoodManager: ObservableObject {
     private var currentMealPage = 1
     private var mealCurrentPage = 1  // Added missing variable
     private var hasMoreMeals = true
+    // Read-only for UI pagination checks
+    var hasMoreMealsAvailable: Bool { hasMoreMeals }
     private var mealsHasMore = true  // Added missing variable
     @Published var combinedLogs: [CombinedLog] = []
     private var lastRefreshTime: Date?

@@ -846,6 +846,7 @@ private struct FoodListView: View {
                             .listStyle(PlainListStyle())
                             .scrollContentBackground(.hidden)
                             .scrollIndicators(.hidden)
+                            .scrollIndicators(.hidden)
                        
                         }
                         .frame(maxHeight: cardHeight, alignment: .top)
@@ -1323,6 +1324,15 @@ private struct MealListView: View {
                             .listRowSeparator(.hidden)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
+                            .onAppear {
+                                // Near-end pagination for meals
+                                if let index = foodManager.meals.firstIndex(where: { $0.id == meal.id }),
+                                   index >= foodManager.meals.count - 3,
+                                   foodManager.hasMoreMealsAvailable,
+                                   !foodManager.isLoadingMeals {
+                                    foodManager.loadMoreMeals(refresh: false)
+                                }
+                            }
                         }
                         .onDelete { indexSet in
                             deleteMeals(at: indexSet)
@@ -1330,7 +1340,7 @@ private struct MealListView: View {
                     }
                     .listStyle(PlainListStyle())
                     .scrollContentBackground(.hidden)
-                    // Ensure scroll indicators are visible by not adding .scrollIndicators(.hidden)
+                    .scrollIndicators(.hidden)
                 }
                 .frame(height: min(CGFloat(foodManager.meals.count * 63), UIScreen.main.bounds.height * 0.7)) // Adjusted calculation
                 .cornerRadius(12)
@@ -1350,6 +1360,7 @@ private struct MealListView: View {
         }
         .padding(.bottom, 16)
         }
+        .scrollIndicators(.hidden)
         .background(Color("iosbg2"))
         .onAppear {
             if foodManager.meals.isEmpty && !foodManager.isLoadingMeals {
