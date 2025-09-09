@@ -402,9 +402,13 @@ struct MealDetailView: View {
                             Text(item.name)
                                 .font(.system(size: 16))
                                 .fontWeight(.semibold)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                             
-                            HStack {
+                            HStack(spacing: 4) {
                                 Text(item.servingText ?? "1 serving")
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
                                 if item.servings != "1" {
                                     Text("×\(item.servings)")
                                 }
@@ -597,4 +601,3 @@ extension MealDetailView {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
-

@@ -198,8 +198,10 @@ struct QuickLogFood: View {
                                 Text(food.displayName)
                                     .font(.headline)
                                 
-                                HStack {
+                                HStack(spacing: 4) {
                                     Text(food.servingSizeText)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
                                     if let servings = food.numberOfServings,
                                        servings > 1 {
                                         Text("×\(Int(servings))")
@@ -438,5 +440,4 @@ struct QuickLogFood: View {
         return result
     }
 }
-
 

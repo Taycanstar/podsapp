@@ -743,6 +743,8 @@ struct FoodItem: View {
                             Text("•")
                                 .foregroundColor(.secondary)
                             Text(food.servingSizeText)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                                 .foregroundColor(.secondary)
                         }
                         if let brand = food.brandText, !brand.isEmpty {

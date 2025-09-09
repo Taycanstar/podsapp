@@ -307,10 +307,14 @@ struct RecipeDetailView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.name)
                                 .font(.headline)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                             
                             // Show serving text if present
-                            HStack {
+                            HStack(spacing: 4) {
                                 Text(item.servingText ?? "1 serving")
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
                                 if item.servings != "1" {
                                     Text("×\(item.servings)")
                                 }

@@ -293,15 +293,17 @@ private var macroPercentages: (protein: Double, carbs: Double, fat: Double) {
                             Text(food.displayName)
                                 .font(.headline)
                             
-                            HStack {
-                                Text(food.servingSizeText)
-                                if let servings = food.numberOfServings,
-                                   servings > 1 {
-                                    Text("×\(Int(servings))")
+                                HStack(spacing: 4) {
+                                    Text(food.servingSizeText)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                    if let servings = food.numberOfServings,
+                                       servings > 1 {
+                                        Text("×\(Int(servings))")
+                                    }
                                 }
-                            }
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                         }
                         Spacer()
                         
@@ -655,7 +657,6 @@ struct ImagePicker: UIViewControllerRepresentable {
         }
     }
 }
-
 
 
 

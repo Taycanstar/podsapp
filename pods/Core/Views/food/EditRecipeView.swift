@@ -422,8 +422,10 @@ struct EditRecipeView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(food.displayName)
                                     .font(.headline)
-                                HStack {
+                                HStack(spacing: 4) {
                                     Text(food.servingSizeText)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
                                     if let s = food.numberOfServings, s > 1 {
                                         Text("×\(Int(s))")
                                     }

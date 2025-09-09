@@ -58,15 +58,17 @@ struct FoodDetailsView: View {
                 // Basic Info Section with Macros
                 VStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 12) {
-                        HStack {
+                        HStack(spacing: 8) {
                             Text("Serving Size")
                             Spacer()
+                            // Keep this compact so long texts don't blow layout
                             TextField("Enter serving", text: $servingSize)
                                 .multilineTextAlignment(.center)
-                                .fixedSize()
                                 .padding(8)
                                 .background(Color(.tertiarySystemFill))
                                 .cornerRadius(8)
+                                .frame(minWidth: 120, maxWidth: 220)
+                                .truncationMode(.tail)
                         }
 
                         servingsRowView
