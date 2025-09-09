@@ -4729,9 +4729,11 @@ func analyzeNutritionLabel(
         scanFailureType = type
         scanFailureMessage = message
         showScanFailureAlert = true
-        // Clear scanning states
+        // Clear scanning states and hide modern loader
         isScanningFood = false
         isGeneratingFood = false
+        // Immediately hide the modern loader for failure path (alert/sheet will be shown)
+        updateFoodScanningState(.inactive)
     }
     
     // MARK: - Build Food Data Without Database Creation
