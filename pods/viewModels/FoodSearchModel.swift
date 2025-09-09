@@ -279,16 +279,65 @@ struct LoggedFood: Codable, Identifiable {
     let message: String
     let food: LoggedFoodItem  // Changed from Food to LoggedFoodItem
     let mealType: String      // Changed from 'meal' to 'mealType'
-    
+
     var id: Int { foodLogId }
-    
+
     enum CodingKeys: String, CodingKey {
         case status
-        case foodLogId = "food_log_id"
+        case foodLogId
+        case food_log_id
         case calories
         case message
         case food
-        case mealType = "meal_type"
+        case mealType
+        case meal_type
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        status = try container.decode(String.self, forKey: .status)
+        calories = try container.decode(Double.self, forKey: .calories)
+        message = try container.decode(String.self, forKey: .message)
+        food = try container.decode(LoggedFoodItem.self, forKey: .food)
+
+        // Accept both camelCase and snake_case keys for compatibility
+        if let id = try container.decodeIfPresent(Int.self, forKey: .foodLogId) {
+            foodLogId = id
+        } else if let id = try container.decodeIfPresent(Int.self, forKey: .food_log_id) {
+            foodLogId = id
+        } else {
+            throw DecodingError.keyNotFound(CodingKeys.foodLogId, .init(codingPath: decoder.codingPath, debugDescription: "foodLogId/food_log_id not found"))
+        }
+
+        if let mt = try container.decodeIfPresent(String.self, forKey: .mealType) {
+            mealType = mt
+        } else if let mt = try container.decodeIfPresent(String.self, forKey: .meal_type) {
+            mealType = mt
+        } else {
+            throw DecodingError.keyNotFound(CodingKeys.mealType, .init(codingPath: decoder.codingPath, debugDescription: "mealType/meal_type not found"))
+        }
+    }
+
+    // Explicit memberwise initializer to support manual construction in fallbacks
+    init(status: String, foodLogId: Int, calories: Double, message: String, food: LoggedFoodItem, mealType: String) {
+        self.status = status
+        self.foodLogId = foodLogId
+        self.calories = calories
+        self.message = message
+        self.food = food
+        self.mealType = mealType
+    }
+
+    // Custom encoder so caching works (encode as camelCase)
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(status, forKey: .status)
+        try container.encode(foodLogId, forKey: .foodLogId)
+        try container.encode(calories, forKey: .calories)
+        try container.encode(message, forKey: .message)
+        try container.encode(food, forKey: .food)
+        try container.encode(mealType, forKey: .mealType)
     }
 }
 

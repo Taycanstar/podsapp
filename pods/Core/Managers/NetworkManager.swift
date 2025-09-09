@@ -58,8 +58,8 @@ extension Date {
 class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"  
-    // let baseUrl = "http://172.20.10.4:8000" 
+//   let baseUrl = "http://192.168.1.92:8000"  
+    let baseUrl = "http://172.20.10.4:8000" 
 
 
     // ### STAGING ###
@@ -5288,15 +5288,10 @@ func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escapi
         }
         
         do {
-            // Try to decode as normal LoggedFood
+            // Try to decode as normal LoggedFood (struct now supports both snake_case and camelCase)
             let decoder = JSONDecoder()
-            // Remove snake case conversion since backend now sends camelCase directly
-            // decoder.keyDecodingStrategy = .convertFromSnakeCase
             let loggedFood = try decoder.decode(LoggedFood.self, from: data)
-            
-            DispatchQueue.main.async {
-                completion(.success(loggedFood))
-            }
+            DispatchQueue.main.async { completion(.success(loggedFood)) }
         } catch {
             print("Decoding failed: \(error)")
             
@@ -5304,7 +5299,7 @@ func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escapi
             if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 // Try to extract data from the response
                 let status = "success" // Default to success since we got a response
-                let foodLogId = jsonObj["food_log_id"] as? Int ?? 0
+                let foodLogId = (jsonObj["foodLogId"] as? Int) ?? (jsonObj["food_log_id"] as? Int) ?? 0
                 
                 // Calculate calories from food.calories * servings
                 let calculatedCalories = calories * Double(servings)
@@ -5314,7 +5309,7 @@ func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escapi
                 // Extract food data (fallback to original food if not available)
                 let foodData = jsonObj["food"] as? [String: Any] ?? [:]
                 let fdcId = foodData["fdcId"] as? Int ?? food.fdcId
-                let displayName = foodData["display_name"] as? String ?? food.displayName
+                let displayName = (foodData["displayName"] as? String) ?? (foodData["display_name"] as? String) ?? food.displayName
                 let servingSizeText = food.servingSizeText
                 let brandText = food.brandText
                 let protein = food.protein

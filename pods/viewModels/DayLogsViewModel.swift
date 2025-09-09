@@ -189,13 +189,16 @@ func addPending(_ log: CombinedLog) {
   StreakManager.shared.updateStreak(activityDate: log.scheduledAt ?? Date())
 }
 
-func removeLog(_ log: CombinedLog) {
-    print("[DayLogsVM] removeLog( id:\(log.id) )")
-    
-    // Remove from logs array
+func removeLog(_ log: CombinedLog) async {
+    print("[DayLogsVM] removeLog( id:\(log.id), type:\(log.type) ) – optimistic remove + server sync")
+
+    // Keep backups for rollback on failure
+    let previousLogs = logs
+    let previousPending = pendingByDate
+
+    // 1) Optimistic local removal for immediate UI feedback
     logs.removeAll { $0.id == log.id }
-    
-    // Remove from pending cache if it exists there
+
     if let scheduledAt = log.scheduledAt {
         let key = Calendar.current.startOfDay(for: scheduledAt)
         if var pendingLogs = pendingByDate[key] {
@@ -203,11 +206,98 @@ func removeLog(_ log: CombinedLog) {
             pendingByDate[key] = pendingLogs
         }
     }
-    
-    print("[DayLogsVM] Removed log \(log.id), logs now = \(logs.map { $0.id })")
-    
-    // Trigger profile data refresh since logs changed
+
+    print("[DayLogsVM] Optimistically removed log \(log.id); remaining = \(logs.map { $0.id })")
     triggerProfileDataRefresh()
+
+    // 2) Attempt server deletion
+    do {
+        try await deleteOnServer(log)
+        print("[DayLogsVM] ✅ Server deletion succeeded for log \(log.id)")
+        // Success – nothing else to do
+    } catch {
+        // 3) Rollback on failure and surface error to UI
+        print("[DayLogsVM] ❌ Server deletion failed for log \(log.id): \(error.localizedDescription). Rolling back…")
+        logs = previousLogs
+        pendingByDate = previousPending
+        self.error = error
+        triggerProfileDataRefresh()
+    }
+}
+
+// Bridge deletion endpoints behind a single async function
+private func deleteOnServer(_ log: CombinedLog) async throws {
+    switch log.type {
+    case .food:
+        guard let foodLogId = log.foodLogId else {
+            throw NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing food log ID"])
+        }
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            repo.deleteLogItem(email: email, logId: foodLogId, logType: "food") { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let err):
+                    continuation.resume(throwing: err)
+                }
+            }
+        }
+
+    case .meal:
+        guard let mealLogId = log.mealLogId else {
+            throw NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing meal log ID"])
+        }
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            repo.deleteLogItem(email: email, logId: mealLogId, logType: "meal") { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let err):
+                    continuation.resume(throwing: err)
+                }
+            }
+        }
+
+    case .recipe:
+        guard let recipeLogId = log.recipeLogId else {
+            throw NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing recipe log ID"])
+        }
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            repo.deleteLogItem(email: email, logId: recipeLogId, logType: "recipe") { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let err):
+                    continuation.resume(throwing: err)
+                }
+            }
+        }
+
+    case .activity:
+        // HealthKit activities (UUID-style) cannot be deleted from server – ignore server sync
+        guard let activityId = log.activityId else {
+            throw NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing activity ID"])
+        }
+        let isHealthKit = activityId.count > 10 && activityId.contains("-")
+        if isHealthKit {
+            // No server-side deletion for HealthKit entries; keep local removal
+            print("[DayLogsVM] Skipping server deletion for HealthKit activity: \(activityId)")
+            return
+        }
+        guard let aiActivityLogId = Int(activityId) else {
+            throw NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid AI activity ID"])
+        }
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            NetworkManagerTwo.shared.deleteActivityLog(activityLogId: aiActivityLogId) { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let err):
+                    continuation.resume(throwing: err)
+                }
+            }
+        }
+    }
 }
 
 func loadLogs(for date: Date) {

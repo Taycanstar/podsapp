@@ -544,83 +544,19 @@ private var remainingCal: Double { vm.remainingCalories }
             }
         }
         
-        // Actually delete the items
+        // Actually delete the items – unified via DayLogsViewModel (optimistic + server rollback)
         for log in logsToDelete {
             switch log.type {
-            case .food:
-                if let foodLogId = log.foodLogId {
-                    foodMgr.deleteFoodLog(id: foodLogId) { result in
-                        switch result {
-                        case .success:
-                            print("✅ Successfully deleted food log ID: \(foodLogId)")
-                            // Remove from local logs after successful deletion
-                            DispatchQueue.main.async {
-                                vm.removeLog(log)
-                            }
-                        case .failure(let error):
-                            print("❌ Failed to delete food log: \(error)")
-                        }
-                    }
-                }
-            case .meal:
-                if let mealLogId = log.mealLogId {
-                    foodMgr.deleteMealLog(id: mealLogId) { result in
-                        switch result {
-                        case .success:
-                            print("✅ Successfully deleted meal log ID: \(mealLogId)")
-                            // Remove from local logs after successful deletion
-                            DispatchQueue.main.async {
-                                vm.removeLog(log)
-                            }
-                        case .failure(let error):
-                            print("❌ Failed to delete meal log: \(error)")
-                        }
-                    }
-                }
-            case .recipe:
-                if let recipeLogId = log.recipeLogId {
-                    // Note: Implement recipe log deletion if needed in FoodManager
-                    print("📝 Recipe log deletion not yet implemented for ID: \(recipeLogId)")
-                }
             case .activity:
-                // Check if this is an AI-generated activity (integer ID) vs HealthKit activity (UUID format)
-                guard let activityId = log.activityId else {
-                    print("❌ No activity ID available")
-                    return
-                }
-                
-                // HealthKit activities have UUID format (36 chars with dashes), AI activities have simple integer strings
-                let isHealthKitActivity = activityId.count > 10 && activityId.contains("-")
-                
-                if isHealthKitActivity {
+                // Preserve HealthKit safeguard
+                if let activityId = log.activityId, activityId.count > 10 && activityId.contains("-") {
                     print("🏃 HealthKit activity logs cannot be deleted (they come from Apple Health)")
-                    return
+                    continue
                 }
-                
-                // This is an AI-generated activity, we can delete it
-                print("🗑️ Deleting AI-generated activity: \(activityId)")
-                
-                // Convert string ID back to integer for deletion
-                guard let activityLogId = Int(activityId) else {
-                    print("❌ Cannot convert activity ID to integer: \(activityId)")
-                    return
-                }
-                
+                fallthrough
+            case .food, .meal, .recipe:
                 HapticFeedback.generate()
-                
-                // Call deletion endpoint (we need to add this method)
-                NetworkManagerTwo.shared.deleteActivityLog(activityLogId: activityLogId) { result in
-                    DispatchQueue.main.async {
-                        switch result {
-                        case .success:
-                            print("✅ Successfully deleted AI activity log: \(activityLogId)")
-                            // Remove from dayLogsVM
-                            self.vm.removeLog(log)
-                        case .failure(let error):
-                            print("❌ Failed to delete AI activity log: \(error)")
-                        }
-                    }
-                }
+                Task { await vm.removeLog(log) }
             }
         }
     }
@@ -750,95 +686,16 @@ private var remainingCal: Double { vm.remainingCalories }
         print("🗑️ Deleting individual log item: \(log.id)")
         
         switch log.type {
-        case .food:
-            guard let foodLogId = log.foodLogId else {
-                print("❌ No food log ID available")
-                return
-            }
-            
-            HapticFeedback.generate()
-            
-            foodMgr.deleteFoodLog(id: foodLogId) { result in
-                switch result {
-                case .success:
-                    print("✅ Successfully deleted food log ID: \(foodLogId)")
-                    // Remove from local logs after successful deletion
-                    DispatchQueue.main.async {
-                        vm.removeLog(log)
-                    }
-                case .failure(let error):
-                    print("❌ Failed to delete food log: \(error)")
-                }
-            }
-            
-        case .meal:
-            guard let mealLogId = log.mealLogId else {
-                print("❌ No meal log ID available")
-                return
-            }
-            
-            HapticFeedback.generate()
-            
-            foodMgr.deleteMealLog(id: mealLogId) { result in
-                switch result {
-                case .success:
-                    print("✅ Successfully deleted meal log ID: \(mealLogId)")
-                    // Remove from local logs after successful deletion
-                    DispatchQueue.main.async {
-                        vm.removeLog(log)
-                    }
-                case .failure(let error):
-                    print("❌ Failed to delete meal log: \(error)")
-                }
-            }
-            
-        case .recipe:
-            guard let recipeLogId = log.recipeLogId else {
-                print("❌ No recipe log ID available")
-                return
-            }
-            
-            HapticFeedback.generate()
-            print("📝 Recipe log deletion not yet implemented for ID: \(recipeLogId)")
         case .activity:
-            // Check if this is an AI-generated activity (integer ID) vs HealthKit activity (UUID format)
-            guard let activityId = log.activityId else {
-                print("❌ No activity ID available")
-                return
-            }
-            
-            // HealthKit activities have UUID format (36 chars with dashes), AI activities have simple integer strings
-            let isHealthKitActivity = activityId.count > 10 && activityId.contains("-")
-            
-            if isHealthKitActivity {
+            // Keep HealthKit safeguard
+            if let activityId = log.activityId, activityId.count > 10 && activityId.contains("-") {
                 print("🏃 HealthKit activity logs cannot be deleted (they come from Apple Health)")
                 return
             }
-            
-            // This is an AI-generated activity, we can delete it
-            print("🗑️ Deleting AI-generated activity: \(activityId)")
-            
-            // Convert string ID back to integer for deletion
-            guard let activityLogId = Int(activityId) else {
-                print("❌ Cannot convert activity ID to integer: \(activityId)")
-                return
-            }
-            
+            fallthrough
+        case .food, .meal, .recipe:
             HapticFeedback.generate()
-            
-            // Call deletion endpoint
-            NetworkManagerTwo.shared.deleteActivityLog(activityLogId: activityLogId) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success:
-                        print("✅ Successfully deleted AI activity log: \(activityLogId)")
-                        // Remove from dayLogsVM
-                        self.vm.removeLog(log)
-                    case .failure(let error):
-                        print("❌ Failed to delete AI activity log: \(error)")
-                    }
-                }
-            }
+            Task { await vm.removeLog(log) }
         }
     }
 }
