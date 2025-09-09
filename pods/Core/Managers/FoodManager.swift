@@ -174,6 +174,8 @@ class FoodManager: ObservableObject {
     @Published var userFoods: [Food] = []
     @Published var isLoadingUserFoods = false
     private var hasMoreUserFoods = true
+    // Read-only exposure for views
+    var hasMoreUserFoodsAvailable: Bool { hasMoreUserFoods }
     private var currentUserFoodsPage = 1
     
     private let networkManager: NetworkManager

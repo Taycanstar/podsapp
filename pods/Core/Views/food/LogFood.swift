@@ -791,10 +791,18 @@ private struct FoodListView: View {
                                                 )
                                                 .onAppear {
                                                     // If we're close to the end of the list, automatically load more
-                                                    if let index = validLogs.firstIndex(where: { $0.id == log.id }),
-                                                    index >= validLogs.count - 3 && foodManager.hasMore && !foodManager.isLoadingLogs {
-                                                        showMinimumLoader()
-                                                        foodManager.loadMoreLogs()
+                                                    if let index = validLogs.firstIndex(where: { $0.id == log.id }), index >= validLogs.count - 3 {
+                                                        if selectedFoodTab == .foods {
+                                                            if foodManager.hasMoreUserFoodsAvailable && !foodManager.isLoadingUserFoods {
+                                                                showMinimumLoader()
+                                                                foodManager.loadUserFoods(refresh: false)
+                                                            }
+                                                        } else {
+                                                            if foodManager.hasMore && !foodManager.isLoadingLogs {
+                                                                showMinimumLoader()
+                                                                foodManager.loadMoreLogs()
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -843,7 +851,7 @@ private struct FoodListView: View {
                         .frame(maxHeight: cardHeight, alignment: .top)
                         .cornerRadius(12)
                         .padding(.horizontal, 16)
-                    } else if foodManager.isLoadingLogs {
+                    } else if (selectedFoodTab == .foods ? foodManager.isLoadingUserFoods : foodManager.isLoadingLogs) {
                         ProgressView()
                             .frame(height: 100)
                             .frame(maxWidth: .infinity)
@@ -857,10 +865,16 @@ private struct FoodListView: View {
                             .padding(.top, 20)
                     }
                     
-                    // Show a loader at the bottom when loading more logs
-                    if foodManager.isLoadingLogs && foodManager.hasMore || isShowingMinimumLoader {
+                    // Show a loader at the bottom when loading more logs/foods
+                    if ((selectedFoodTab == .foods ? (foodManager.isLoadingUserFoods && foodManager.hasMoreUserFoodsAvailable) : (foodManager.isLoadingLogs && foodManager.hasMore)) || isShowingMinimumLoader) {
                         ProgressView()
                             .padding()
+                    }
+                }
+                .onAppear {
+                    // Ensure initial data is loaded for My Foods tab
+                    if selectedFoodTab == .foods && foodManager.userFoods.isEmpty && !foodManager.isLoadingUserFoods {
+                        foodManager.loadUserFoods(refresh: true)
                     }
                 }
             } else if searchResults.isEmpty && isSearching && selectedFoodTab != .all {
@@ -2797,5 +2811,3 @@ struct ChangeModifiers: ViewModifier {
             }
     }
 }
-
-
