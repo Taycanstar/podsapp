@@ -201,8 +201,7 @@ struct LandingView: View {
                             canCreateNewTeam: nil
                         )
 
-                        // Force synchronize to ensure all changes are written immediately
-                        UserDefaults.standard.synchronize()
+                        // Keep UI in sync across the tree by using AppStorage in ContentView
 
                         // Mixpanel tracking
                         Mixpanel.mainInstance().identify(distinctId: userIdString)
@@ -427,27 +426,10 @@ struct AuthenticationButtonStyle: ButtonStyle {
     }
 }
 
-// Allows corner-specific rounding
-// extension View {
-//     func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-//         clipShape(RoundedCorner(radius: radius, corners: corners))
-//     }
-// }
 
-// // Add this struct to enable specific corner rounding
-// struct RoundedCorner: Shape {
-//     var radius: CGFloat
-//     var corners: UIRectCorner
-
-//     func path(in rect: CGRect) -> Path {
-//         let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
-//         return Path(path.cgPath)
-//     }
-// }
 
 struct LandingView_Previews: PreviewProvider {
     static var previews: some View {
         LandingView(isAuthenticated: .constant(false))
     }
 }
-

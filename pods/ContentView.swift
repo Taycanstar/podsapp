@@ -18,7 +18,7 @@ struct ContentView: View {
     @State private var isRecording = false
     @State private var showVideoPreview = false
     @State private var recordedVideoURL: URL?
-    @State private var isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
+    @AppStorage("isAuthenticated") private var isAuthenticated: Bool = false
     @State private var showingVideoCreationScreen = false
     @State private var selectedCameraMode = CameraMode.fifteen
     @EnvironmentObject var uploadViewModel: UploadViewModel
@@ -330,9 +330,7 @@ struct ContentView: View {
             showNewSheet = true
         }
 
-    .onChange(of: isAuthenticated) { _, newValue in
-        UserDefaults.standard.set(newValue, forKey: "isAuthenticated")
-    }
+    // AppStorage keeps isAuthenticated synchronized; no manual persistence needed here
 }
     
     
@@ -635,5 +633,3 @@ struct ContentView: View {
         }
     }
 }
-
-

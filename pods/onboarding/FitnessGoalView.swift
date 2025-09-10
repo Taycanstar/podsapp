@@ -16,12 +16,12 @@ struct FitnessGoalView: View {
     
     // Enum for fitness goal options
     enum FitnessGoalType: String, Identifiable, CaseIterable {
-        case strength
-        case hypertrophy
-        case tone
-        case endurance
-        case powerlifting
-        case general
+        case strength = "strength"
+        case hypertrophy = "hypertrophy"
+        case circuitTraining = "circuit_training"   // NEW
+        case general = "general"
+        case powerlifting = "powerlifting"
+        case olympicWeightlifting = "olympic_weightlifting" // NEW
         
         var id: Self { self }
         
@@ -29,10 +29,10 @@ struct FitnessGoalView: View {
             switch self {
             case .strength: return "Strength"
             case .hypertrophy: return "Hypertrophy"
-            case .tone: return "Tone"
-            case .endurance: return "Endurance"
-            case .powerlifting: return "Powerlifting"
+            case .circuitTraining: return "Circuit Training"
             case .general: return "General Fitness"
+            case .powerlifting: return "Powerlifting"
+            case .olympicWeightlifting: return "Olympic Weightlifting"
             }
         }
         
@@ -40,9 +40,9 @@ struct FitnessGoalView: View {
             switch self {
             case .strength: return "Build functional strength for everyday activities"
             case .hypertrophy: return "Maximize muscle size and definition"
-            case .tone: return "Achieve lean, defined muscles without bulk"
-            case .endurance: return "Improve stamina and cardiovascular fitness"
+            case .circuitTraining: return "High-intensity circuits for conditioning and fat loss"
             case .powerlifting: return "Focus on maximal strength in major lifts"
+            case .olympicWeightlifting: return "Master the snatch and clean & jerk"
             case .general: return "General fitness and health"
             }
         }
@@ -51,9 +51,9 @@ struct FitnessGoalView: View {
             switch self {
             case .strength: return "figure.strengthtraining.traditional"
             case .hypertrophy: return "figure.strengthtraining.functional"
-            case .tone: return "figure.mixed.cardio"
-            case .endurance: return "figure.run"
+            case .circuitTraining: return "figure.highintensity.intervaltraining"
             case .powerlifting: return "dumbbell"
+            case .olympicWeightlifting: return "figure.strengthtraining.traditional"
             case .general: return "figure.run"
             }
         }
@@ -105,6 +105,11 @@ struct FitnessGoalView: View {
             .padding(.horizontal)
             .padding(.bottom, 20)
             
+            // Migration notice banner for legacy users
+            GoalMigrationBanner()
+                .padding(.horizontal)
+                .padding(.bottom, 4)
+
             // Fitness goal selection
             ScrollView {
                 VStack(spacing: 12) {
@@ -204,4 +209,24 @@ struct FitnessGoalView: View {
 
 #Preview {
     FitnessGoalView()
+}
+
+// MARK: - Migration Banner
+struct GoalMigrationBanner: View {
+    private var userHadLegacyGoal: Bool {
+        return UserDefaults.standard.string(forKey: "legacy_fitness_goal") != nil
+    }
+    var body: some View {
+        if userHadLegacyGoal {
+            HStack(spacing: 10) {
+                Image(systemName: "info.circle")
+                Text("We updated your goal to Circuit Training for a more targeted approach.")
+                    .font(.system(size: 14))
+                    .foregroundColor(.primary)
+            }
+            .padding(12)
+            .background(Color.blue.opacity(0.1))
+            .cornerRadius(8)
+        }
+    }
 }

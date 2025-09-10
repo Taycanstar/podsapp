@@ -1087,12 +1087,13 @@ struct LogWorkoutView: View {
 
     // Reasonable default rest time by goal
     private func defaultRestTime(for goal: FitnessGoal) -> Int {
-        switch goal {
+        switch goal.normalized {
         case .strength: return 105  // midpoint of 90–120s
         case .hypertrophy: return 60
-        case .tone: return 50
-        case .endurance: return 30
+        case .circuitTraining: return 30
         case .powerlifting: return 150 // midpoint of 120–180s
+        case .olympicWeightlifting: return 240
+        case .general: return 75
         default: return 75
         }
     }

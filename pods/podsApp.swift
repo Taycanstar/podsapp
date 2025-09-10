@@ -69,6 +69,8 @@ struct podsApp: App {
 //                                       }
         .modelContainer(createModelContainer())
                 .onAppear{
+                    // Migrate legacy fitness goal values in UserDefaults
+                    FitnessGoalMigrationService.migrateUserDefaults()
                     NetworkManager().determineUserLocation()
                     initializeDataArchitecture()
                 }
@@ -426,5 +428,4 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         }
     }
 }
-
 

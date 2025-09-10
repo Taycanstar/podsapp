@@ -94,31 +94,33 @@ enum SessionPhase: String, CaseIterable, Codable {
     
     /// Create phase that aligns with user's fitness goal
     static func alignedWith(fitnessGoal: FitnessGoal) -> SessionPhase {
-        switch fitnessGoal {
-        case .strength, .powerlifting, .power:
+        switch fitnessGoal.normalized {
+        case .strength, .powerlifting:
             return .strengthFocus
         case .hypertrophy, .general:
-            return .volumeFocus  
-        case .endurance, .tone, .sport:
+            return .volumeFocus
+        case .circuitTraining:
             return .conditioningFocus
+        case .olympicWeightlifting:
+            return .strengthFocus
+        default:
+            return .volumeFocus
         }
     }
     
     /// Display name that matches fitness goal context
     func contextualDisplayName(for goal: FitnessGoal) -> String {
-        switch (self, goal) {
-        case (.strengthFocus, .strength), (.strengthFocus, .powerlifting), (.strengthFocus, .power):
+        switch (self, goal.normalized) {
+        case (.strengthFocus, .strength), (.strengthFocus, .powerlifting):
             return "Strength Training"
+        case (.strengthFocus, .olympicWeightlifting):
+            return "Olympic Lifting"
         case (.volumeFocus, .hypertrophy):
             return "Muscle Building"  
         case (.volumeFocus, .general):
             return "General Fitness"
-        case (.conditioningFocus, .endurance):
-            return "Endurance Training"
-        case (.conditioningFocus, .tone):
-            return "Toning & Conditioning"
-        case (.conditioningFocus, .sport):
-            return "Sport Performance"
+        case (.conditioningFocus, .circuitTraining):
+            return "Circuit Training"
         default:
             return displayName  // Fallback to original
         }

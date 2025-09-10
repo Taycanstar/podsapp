@@ -34,39 +34,61 @@ enum Gender: String, CaseIterable, Codable {
 }
 
 enum FitnessGoal: String, CaseIterable, Codable {
+    // New canonical goals
     case strength = "strength"
     case hypertrophy = "hypertrophy"
-    case endurance = "endurance"
-    case power = "power"
+    case circuitTraining = "circuit_training"
     case general = "general"
-    case tone = "tone"
     case powerlifting = "powerlifting"
-    case sport = "sport"
-    
+    case olympicWeightlifting = "olympic_weightlifting"
+
+    // Legacy (deprecated) goals kept for backward compatibility
+    case tone = "tone"            // maps to circuitTraining
+    case endurance = "endurance"  // maps to circuitTraining
+    case power = "power"          // maps to strength
+    case sport = "sport"          // maps to general
+
     var displayName: String {
         switch self {
         case .strength: return "Strength"
         case .hypertrophy: return "Hypertrophy"
-        case .endurance: return "Endurance"
-        case .power: return "Power"
+        case .circuitTraining: return "Circuit Training"
         case .general: return "General Fitness"
-        case .tone: return "Tone"
         case .powerlifting: return "Powerlifting"
-        case .sport: return "Sports Performance"
+        case .olympicWeightlifting: return "Olympic Weightlifting"
+        case .tone: return "Tone" // legacy
+        case .endurance: return "Endurance" // legacy
+        case .power: return "Power" // legacy
+        case .sport: return "Sports Performance" // legacy
         }
     }
-    
-    // Convert from string value (for UserDefaults compatibility)
+
+    // Normalized target for app logic
+    var normalized: FitnessGoal {
+        switch self {
+        case .tone, .endurance: return .circuitTraining
+        case .sport: return .general
+        case .power: return .strength
+        default: return self
+        }
+    }
+
+    // Convert from string value (accept both new and legacy)
     static func from(string: String) -> FitnessGoal {
-        switch string.lowercased() {
+        let key = string.lowercased()
+        switch key {
         case "strength": return .strength
         case "hypertrophy": return .hypertrophy
+        case "general": return .general
+        case "powerlifting": return .powerlifting
+        case "circuit_training": return .circuitTraining
+        case "olympic_weightlifting": return .olympicWeightlifting
+        // Legacy
+        case "tone": return .tone
         case "endurance": return .endurance
         case "power": return .power
-        case "tone": return .tone
-        case "powerlifting": return .powerlifting
         case "sport", "sportsperformance": return .sport
-        default: return .strength // Default fallback
+        default: return .strength // safe fallback
         }
     }
 }

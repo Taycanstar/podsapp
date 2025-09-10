@@ -200,9 +200,12 @@ class WorkoutGenerationService {
         case .hypertrophy:
             // Metabolic stress optimization 1-2 minutes
             return isCompound ? 90 : 60
-        case .endurance:
-            // Cardiovascular adaptation 30-60 seconds
-            return isCompound ? 45 : 30
+        case .circuitTraining, .endurance:
+            // Minimal rest to drive conditioning
+            return isCompound ? 30 : 20
+        case .olympicWeightlifting:
+            // Technical lifts need long rest for quality
+            return isCompound ? 240 : 180
         default:
             // General fitness balanced approach
             return isCompound ? 75 : 60
@@ -262,8 +265,10 @@ class WorkoutGenerationService {
             return 3  // Controlled movement
         case .hypertrophy:
             return 4  // Time under tension
-        case .endurance:
-            return 2  // Faster tempo
+        case .circuitTraining, .endurance:
+            return 2  // Faster tempo for conditioning
+        case .olympicWeightlifting:
+            return 4  // Explosive with controlled phases
         default:
             return 3  // General fitness
         }
@@ -402,11 +407,11 @@ class WorkoutGenerationService {
     private func defaultDuration(for type: ExerciseTrackingType, goal: FitnessGoal) -> TimeInterval {
         switch type {
         case .timeDistance:
-            // Endurance favors longer steady-state
-            return goal == .endurance ? 900 : 600 // 15m else 10m
+            // Circuit/endurance favors longer steady-state blocks
+            return (goal == .circuitTraining || goal == .endurance) ? 900 : 600 // 15m else 10m
         case .timeOnly:
-            // Work-interval length; adjust slightly for endurance
-            return goal == .endurance ? 60 : 45
+            // Work-interval length; longer for conditioning
+            return (goal == .circuitTraining || goal == .endurance) ? 60 : 45
         case .holdTime:
             return 30
         case .rounds:
@@ -470,18 +475,18 @@ class WorkoutGenerationService {
                 transitionSeconds: 15
             )
             
-        case .endurance:
+        case .circuitTraining, .endurance:
             baseParams = WorkoutParameters(
-                percentageOneRM: 40...60,
-                repRange: 15...25,
-                repDurationSeconds: 2...4,
+                percentageOneRM: 50...70,
+                repRange: 12...20,
+                repDurationSeconds: 2...3,
                 setsPerExercise: 2...4,
-                restBetweenSetsSeconds: 20...45,
-                compoundSetupSeconds: 15,
-                isolationSetupSeconds: 7,
+                restBetweenSetsSeconds: 15...45,
+                compoundSetupSeconds: 12,
+                isolationSetupSeconds: 6,
                 transitionSeconds: 10
             )
-            
+        
         case .powerlifting:
             baseParams = WorkoutParameters(
                 percentageOneRM: 85...100,
@@ -493,7 +498,18 @@ class WorkoutGenerationService {
                 isolationSetupSeconds: 7,
                 transitionSeconds: 25
             )
-            
+        case .olympicWeightlifting:
+            baseParams = WorkoutParameters(
+                percentageOneRM: 80...95,
+                repRange: 1...5,
+                repDurationSeconds: 3...5,
+                setsPerExercise: 4...8,
+                restBetweenSetsSeconds: 180...300,
+                compoundSetupSeconds: 30,
+                isolationSetupSeconds: 10,
+                transitionSeconds: 25
+            )
+        
         default:
             // General fitness fallback
             baseParams = WorkoutParameters(

@@ -171,7 +171,13 @@ class DynamicParameterService: ObservableObject {
         case (.hypertrophy, _, .core):               return 12...20 // Core hypertrophy
         case (.hypertrophy, _, .cardio):             return 15...25 // Hypertrophy conditioning
         
-        // ENDURANCE GOAL
+        // CIRCUIT TRAINING / ENDURANCE GOALS
+        case (.circuitTraining, .primary, .compound):    return 12...20 // Conditioning compounds
+        case (.circuitTraining, .secondary, .compound):  return 15...25 // Conditioning supporting
+        case (.circuitTraining, .accessory, .isolation): return 18...30 // Conditioning isolation
+        case (.circuitTraining, _, .core):               return 20...35 // Core conditioning
+        case (.circuitTraining, _, .cardio):             return 25...50 // Cardio blocks
+
         case (.endurance, .primary, .compound):    return 15...25 // Endurance compounds
         case (.endurance, .secondary, .compound):  return 18...30 // Endurance supporting
         case (.endurance, .accessory, .isolation): return 20...35 // Endurance isolation
@@ -185,6 +191,13 @@ class DynamicParameterService: ObservableObject {
         case (.tone, _, .core):               return 15...25 // Core toning
         case (.tone, _, .cardio):             return 20...30 // Cardio toning
         
+        // OLYMPIC WEIGHTLIFTING (low reps, high sets)
+        case (.olympicWeightlifting, .primary, .compound):    return 1...5
+        case (.olympicWeightlifting, .secondary, .compound):  return 2...6
+        case (.olympicWeightlifting, .accessory, .isolation): return 6...10
+        case (.olympicWeightlifting, _, .core):               return 8...15
+        case (.olympicWeightlifting, _, .cardio):             return 8...15
+
         // GENERAL FITNESS (balanced approach)
         case (.general, .primary, .compound):    return 8...12  // General compounds
         case (.general, .secondary, .compound):  return 10...15 // General supporting

@@ -392,19 +392,19 @@ extension DynamicParameterService {
     // Expose internal methods for caching service
     func getBaseRepRangeForGoal(_ goal: FitnessGoal) -> ClosedRange<Int> {
         // Make internal method accessible
-        switch goal {
+        switch goal.normalized {
         case .strength:
             return 3...6
         case .powerlifting:
             return 1...5
         case .hypertrophy:
             return 6...15
-        case .endurance:
+        case .circuitTraining:
             return 15...25
         case .general:
             return 8...15
-        case .tone:
-            return 10...18
+        case .olympicWeightlifting:
+            return 1...5
         default:
             return 8...12
         }

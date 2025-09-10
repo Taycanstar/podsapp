@@ -1024,14 +1024,14 @@ class WorkoutRecommendationService {
         let category = getExerciseCategory(exercise)
         let goal = userProfile.fitnessGoal
         
-        switch goal {
+        switch goal.normalized {
         case .strength, .powerlifting:
             // Strength goals: Prioritize progressive overload with compounds
             return category == .compound ? 5 : 2
         case .hypertrophy:
             // Hypertrophy: Balance compounds and isolation, volume focus
             return category == .isolation ? 5 : 4
-        case .endurance:
+        case .circuitTraining, .endurance:
             // Endurance: Higher rep ranges, time efficiency
             return 4 // Most exercises work for endurance with proper programming
         case .general:
