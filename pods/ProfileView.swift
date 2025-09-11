@@ -148,20 +148,20 @@ struct ProfileView: View {
                                       .foregroundColor(iconColor)
                               }
                               
-                            //   NavigationLink(destination: ManageExercisesView()) {
-                            //       Label("Manage Exercises", systemImage: "figure.run.square.stack")
-                            //           .foregroundColor(iconColor)
-                            //   }
-                            //   .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                              NavigationLink(destination: ManageExercisesView()) {
+                                  Label("Manage Exercises", systemImage: "figure.run.square.stack")
+                                      .foregroundColor(iconColor)
+                              }
+                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                               
-                            //   // Workout Schedule settings
-                            //   NavigationLink(destination: WorkoutScheduleSettingsView()) {
-                            //       Label("Workout Schedule", systemImage: "calendar.badge.clock")
-                            //           .foregroundColor(iconColor)
-                            //   }
-                            //   .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                              // Workout Schedule settings
+                              NavigationLink(destination: WorkoutScheduleSettingsView()) {
+                                  Label("Workout Schedule", systemImage: "calendar.badge.clock")
+                                      .foregroundColor(iconColor)
+                              }
+                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                               
-                            //   .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
                               
                           }
                         .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)

@@ -1333,12 +1333,12 @@ private struct TodayWorkoutView: View {
                 print("🧠 Using recovery-optimized muscles: \(muscleGroups)")
             } else {
                 // Fallback to goal-based selection
-                switch fitnessGoal {
+                switch fitnessGoal.normalized {
                 case .strength, .powerlifting:
                     muscleGroups = ["Chest", "Back", "Shoulders", "Quadriceps", "Glutes"]
                 case .hypertrophy:
                     muscleGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps"]
-                case .endurance:
+                case .circuitTraining:
                     muscleGroups = ["Chest", "Back", "Quadriceps", "Abs"]
                 default:
                     muscleGroups = ["Chest", "Back", "Shoulders", "Quadriceps"]
@@ -1410,6 +1410,7 @@ private struct TodayWorkoutView: View {
     }
     
     private func getWorkoutParameters(for goal: FitnessGoal, experienceLevel: ExperienceLevel) -> WorkoutParameters {
+        let goal = goal.normalized
         let baseParams: WorkoutParameters
         
         switch goal {
@@ -1437,19 +1438,7 @@ private struct TodayWorkoutView: View {
                 transitionSeconds: 15
             )
             
-        case .tone:
-            baseParams = WorkoutParameters(
-                percentageOneRM: 50...70,
-                repRange: 12...15,
-                repDurationSeconds: 2...4,
-                setsPerExercise: 2...4,
-                restBetweenSetsSeconds: 45...60,
-                compoundSetupSeconds: 15,
-                isolationSetupSeconds: 7,
-                transitionSeconds: 15
-            )
-            
-        case .endurance:
+        case .circuitTraining:
             baseParams = WorkoutParameters(
                 percentageOneRM: 40...60,
                 repRange: 15...25,
@@ -1470,6 +1459,18 @@ private struct TodayWorkoutView: View {
                 restBetweenSetsSeconds: 120...180,  // Fixed: App-friendly powerlifting rest (2-3 min)
                 compoundSetupSeconds: 25,
                 isolationSetupSeconds: 7,
+                transitionSeconds: 25
+            )
+            
+        case .olympicWeightlifting:
+            baseParams = WorkoutParameters(
+                percentageOneRM: 80...95,
+                repRange: 1...5,
+                repDurationSeconds: 3...5,
+                setsPerExercise: 4...8,
+                restBetweenSetsSeconds: 180...300,
+                compoundSetupSeconds: 30,
+                isolationSetupSeconds: 10,
                 transitionSeconds: 25
             )
             
@@ -2770,12 +2771,21 @@ struct FitnessGoalPickerView: View {
     
     @State private var tempSelectedGoal: FitnessGoal
     
+    static let canonicalGoals: [FitnessGoal] = [
+        .strength,
+        .hypertrophy,
+        .circuitTraining,
+        .general,
+        .powerlifting,
+        .olympicWeightlifting
+    ]
+
     init(selectedFitnessGoal: Binding<FitnessGoal>, onSetDefault: @escaping (FitnessGoal) -> Void, onSetForWorkout: @escaping (FitnessGoal) -> Void) {
         self._selectedFitnessGoal = selectedFitnessGoal
         self.onSetDefault = onSetDefault
         self.onSetForWorkout = onSetForWorkout
-        // If the current goal is .sport or .power, default to .strength since they're not shown
-        let initialGoal = (selectedFitnessGoal.wrappedValue == .sport || selectedFitnessGoal.wrappedValue == .power) ? .strength : selectedFitnessGoal.wrappedValue
+        // Start from canonical goal (map legacy: tone/endurance→circuitTraining, sport→general, power→strength)
+        let initialGoal = selectedFitnessGoal.wrappedValue.normalized
         self._tempSelectedGoal = State(initialValue: initialGoal)
     }
     
@@ -2808,7 +2818,7 @@ struct FitnessGoalPickerView: View {
             // Fitness Goal List
             VStack(spacing: 16) {
                 VStack(spacing: 0) {
-                    ForEach(FitnessGoal.allCases.filter { $0 != .sport && $0 != .power }, id: \.self) { goal in
+                    ForEach(FitnessGoalPickerView.canonicalGoals, id: \.self) { goal in
                         Button(action: {
                             tempSelectedGoal = goal
                         }) {
@@ -2835,9 +2845,9 @@ struct FitnessGoalPickerView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        if goal != FitnessGoal.allCases.filter({ $0 != .sport && $0 != .power }).last {
-                                                            Divider()
-                                    .padding(.leading)
+                        if goal != FitnessGoalPickerView.canonicalGoals.last {
+                            Divider()
+                                .padding(.leading)
                         }
                     }
                 }
@@ -2861,7 +2871,7 @@ struct FitnessGoalPickerView: View {
     private var actionButtons: some View {
         HStack(spacing: 0) {
             Button("Set as default") {
-                selectedFitnessGoal = tempSelectedGoal
+                selectedFitnessGoal = tempSelectedGoal.normalized
                 onSetDefault(tempSelectedGoal)
             }
             .font(.system(size: 14, weight: .semibold))
@@ -2870,7 +2880,7 @@ struct FitnessGoalPickerView: View {
             Spacer()
             
             Button("Set for this workout") {
-                onSetForWorkout(tempSelectedGoal)
+                onSetForWorkout(tempSelectedGoal.normalized)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(Color(.systemBackground))
