@@ -78,7 +78,6 @@ struct WorkoutProfileSettingsView: View {
                         }
                     }
                 }
-                .padding(.vertical, 6)
                 .listRowBackground(rowBackground)
 
                 // Fitness Experience
@@ -108,7 +107,6 @@ struct WorkoutProfileSettingsView: View {
                         }
                     }
                 }
-               
                 .listRowBackground(rowBackground)
 
                 // Exercise Variability
@@ -135,7 +133,6 @@ struct WorkoutProfileSettingsView: View {
                         }
                     }
                 }
-             
                 .listRowBackground(rowBackground)
 
                 // Timed Intervals
@@ -149,7 +146,6 @@ struct WorkoutProfileSettingsView: View {
                     Label("Timed Intervals", systemImage: "stopwatch")
                         .foregroundColor(iconColor)
                 }
-             
                 .tint(.accentColor)
                 .listRowBackground(rowBackground)
 
@@ -164,7 +160,6 @@ struct WorkoutProfileSettingsView: View {
                     Label("Circuits and Supersets", systemImage: "square.grid.3x3")
                         .foregroundColor(iconColor)
                 }
-             
                 .tint(.accentColor)
                 .listRowBackground(rowBackground)
 
@@ -180,7 +175,6 @@ struct WorkoutProfileSettingsView: View {
                     Label("Warm-up Sets", systemImage: "flame")
                         .foregroundColor(iconColor)
                 }
-             
                 .tint(.accentColor)
                 .listRowBackground(rowBackground)
 
@@ -218,7 +212,6 @@ struct WorkoutProfileSettingsView: View {
                         .frame(height: 120)
                     }
                 }
-             
                 .listRowBackground(rowBackground)
               
 
@@ -246,7 +239,6 @@ struct WorkoutProfileSettingsView: View {
                         }
                     }
                 }
-         
                 .listRowBackground(rowBackground)
 
                 // Muscle Recovery Percentage (display-only for now)
@@ -260,7 +252,7 @@ struct WorkoutProfileSettingsView: View {
                 .listRowBackground(rowBackground)
             }
         }
-        .environment(\.defaultMinListRowHeight, 44)
+        .environment(\.defaultMinListRowHeight,56)
         .navigationTitle("Workout Settings")
         .onAppear { syncInitialDuration() }
         .scrollContentBackground(.hidden)
