@@ -301,6 +301,13 @@ class WorkoutGenerationService {
                 }
                 return nil
             }()
+            // Generate warm-up sets if enabled and weight-based
+            let warmups: [WarmupSetData]? = {
+                guard UserProfileService.shared.warmupSetsEnabled,
+                      let w = concreteWeight,
+                      trackingType == .repsWeight else { return nil }
+                return generateWarmupSets(for: exercise, workingWeight: w, goal: fitnessGoal)
+            }()
             return TodayWorkoutExercise(
                 exercise: exercise,
                 sets: rec.sets,
@@ -308,7 +315,7 @@ class WorkoutGenerationService {
                 weight: concreteWeight,
                 restTime: optimalRest,
                 notes: nil,
-                warmupSets: nil,
+                warmupSets: warmups,
                 flexibleSets: nil,
                 trackingType: .repsWeight
             )
@@ -402,6 +409,40 @@ class WorkoutGenerationService {
                 trackingType: .rounds
             )
         }
+    }
+
+    // MARK: - Warm-up Sets Builder
+    /// Create 1–3 warm-up sets based on working weight percentages.
+    private func generateWarmupSets(for exercise: ExerciseData, workingWeight: Double, goal: FitnessGoal) -> [WarmupSetData] {
+        // Skip warmups for very light loads
+        if workingWeight <= 20 { return [] }
+
+        // Percentage scheme varies slightly by goal
+        let scheme: [(pct: Double, reps: Int)] = {
+            switch goal.normalized {
+            case .strength, .powerlifting:
+                return [(0.4, 8), (0.6, 5), (0.8, 3)]
+            case .hypertrophy:
+                return [(0.5, 8), (0.7, 5)]
+            default:
+                return [(0.5, 6)]
+            }
+        }()
+
+        func roundWeight(_ x: Double) -> Double {
+            // Use 2.5 rounding (safe for kg; imperial gets converted later if needed)
+            let step = 2.5
+            return (x / step).rounded() * step
+        }
+
+        let sets = scheme.map { pair -> WarmupSetData in
+            let w = max(5.0, roundWeight(workingWeight * pair.pct))
+            let reps = String(pair.reps)
+            let weightStr = String(format: "%.1f", w)
+            return WarmupSetData(reps: reps, weight: weightStr)
+        }
+
+        return sets
     }
     
     private func defaultDuration(for type: ExerciseTrackingType, goal: FitnessGoal) -> TimeInterval {

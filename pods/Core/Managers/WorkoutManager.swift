@@ -294,7 +294,23 @@ class WorkoutManager: ObservableObject {
             
             // Update state (but DON'T override the synced session phase)
             self.dynamicParameters = dynamicParams
-            self.todayWorkout = dynamicWorkout.legacyWorkout  // Backward compatibility
+            // Keep legacy exercises for compatibility, but also attach blocks for unified architecture
+            let legacy = dynamicWorkout.legacyWorkout
+            // Preserve the blocks that were assembled on the base workout
+            let baseBlocks = dynamicWorkout.baseWorkout.blocks
+            let withBlocks = TodayWorkout(
+                id: legacy.id,
+                date: legacy.date,
+                title: legacy.title,
+                exercises: legacy.exercises,
+                blocks: baseBlocks,
+                estimatedDuration: legacy.estimatedDuration,
+                fitnessGoal: legacy.fitnessGoal,
+                difficulty: legacy.difficulty,
+                warmUpExercises: legacy.warmUpExercises,
+                coolDownExercises: legacy.coolDownExercises
+            )
+            self.todayWorkout = withBlocks
             // REMOVED: self.sessionPhase = dynamicParams.sessionPhase (this was overriding our sync!)
             
             saveTodayWorkout()
@@ -507,6 +523,7 @@ class WorkoutManager: ObservableObject {
             date: currentWorkout.date,
             title: currentWorkout.title,
             exercises: updatedExercises,
+            blocks: currentWorkout.blocks,
             estimatedDuration: currentWorkout.estimatedDuration,
             fitnessGoal: currentWorkout.fitnessGoal,
             difficulty: currentWorkout.difficulty,
@@ -531,6 +548,7 @@ class WorkoutManager: ObservableObject {
             date: currentWorkout.date,
             title: currentWorkout.title,
             exercises: updatedExercises,
+            blocks: currentWorkout.blocks,
             estimatedDuration: currentWorkout.estimatedDuration,
             fitnessGoal: currentWorkout.fitnessGoal,
             difficulty: currentWorkout.difficulty,
@@ -564,6 +582,7 @@ class WorkoutManager: ObservableObject {
             date: currentWorkout.date,
             title: currentWorkout.title,
             exercises: newMain,
+            blocks: currentWorkout.blocks,
             estimatedDuration: currentWorkout.estimatedDuration,
             fitnessGoal: currentWorkout.fitnessGoal,
             difficulty: currentWorkout.difficulty,
@@ -642,6 +661,7 @@ class WorkoutManager: ObservableObject {
             date: currentWorkout.date,
             title: currentWorkout.title,
             exercises: convertedExercises,
+            blocks: currentWorkout.blocks,
             estimatedDuration: currentWorkout.estimatedDuration,
             fitnessGoal: currentWorkout.fitnessGoal,
             difficulty: currentWorkout.difficulty,
@@ -809,7 +829,8 @@ class WorkoutManager: ObservableObject {
         let coolDownExercises = parameters.flexibilityPreferences.coolDownEnabled ?
             generateCoolDownExercises(targetMuscles: muscleGroups, equipment: parameters.customEquipment) : nil
         
-        return TodayWorkout(
+        // Build base workout
+        let base = TodayWorkout(
             id: UUID(),
             date: Date(),
             title: generateWorkoutTitle(muscleGroups),
@@ -819,6 +840,30 @@ class WorkoutManager: ObservableObject {
             difficulty: parameters.fitnessLevel.workoutComplexity,
             warmUpExercises: warmUpExercises,
             coolDownExercises: coolDownExercises
+        )
+        // Assemble dynamic blocks using session knobs and recent history
+        let recentBlockTypes: [BlockType] = todayWorkout?.blocks?.map { $0.type } ?? []
+        let assembledBlocks = BlockAssemblyService.assembleBlocks(
+            from: base,
+            goal: parameters.fitnessGoal,
+            duration: parameters.duration,
+            equipment: parameters.customEquipment,
+            recentHistory: recentBlockTypes
+        )
+        // Also adapt exercises to reflect interval/circuit prescriptions so legacy UI shows time-based sets
+        let adaptedExercises = BlockAssemblyService.applyBlockSchemes(to: base.exercises, using: assembledBlocks)
+
+        return TodayWorkout(
+            id: base.id,
+            date: base.date,
+            title: base.title,
+            exercises: adaptedExercises,
+            blocks: assembledBlocks,
+            estimatedDuration: base.estimatedDuration,
+            fitnessGoal: base.fitnessGoal,
+            difficulty: base.difficulty,
+            warmUpExercises: base.warmUpExercises,
+            coolDownExercises: base.coolDownExercises
         )
     }
     

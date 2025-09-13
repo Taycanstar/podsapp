@@ -242,6 +242,80 @@ class UserProfileService: ObservableObject {
         }
         set { UserDefaults.standard.set(newValue, forKey: "availableTime") }
     }
+
+    // MARK: - Advanced Workout Defaults (client-first with server-ready keys)
+    // Backward-compatible: stored in UserDefaults; safe if backend lacks fields
+
+    // Global gate: enable auto grouping (circuits/supersets)
+    var circuitsAndSupersetsEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "circuitsAndSupersetsEnabled") }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "circuitsAndSupersetsEnabled")
+            publishChange()
+        }
+    }
+
+    // Alias used by generation services
+    var autoGroupingEnabled: Bool { circuitsAndSupersetsEnabled }
+
+    // Timed intervals finisher/blocks gate
+    var timedIntervalsEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "timedIntervalsEnabled") }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "timedIntervalsEnabled")
+            publishChange()
+        }
+    }
+
+    // Warm-up sets toggle (maps to server's enable_warmup_sets). Default ON if unset.
+    var warmupSetsEnabled: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: "warmupSetsEnabled") == nil {
+                return true // align with server default_warmup_enabled=True
+            }
+            return UserDefaults.standard.bool(forKey: "warmupSetsEnabled")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "warmupSetsEnabled")
+            publishChange()
+        }
+    }
+
+    // Exercise variability preference (consistency vs. variety)
+    var exerciseVariability: ExerciseVariabilityPreference {
+        get {
+            let raw = UserDefaults.standard.string(forKey: "exerciseVariability") ?? ExerciseVariabilityPreference.balanced.rawValue
+            return ExerciseVariabilityPreference(rawValue: raw) ?? .balanced
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: "exerciseVariability")
+            publishChange()
+        }
+    }
+
+    // Training split preference
+    var trainingSplit: TrainingSplitPreference {
+        get {
+            let raw = UserDefaults.standard.string(forKey: "trainingSplit") ?? TrainingSplitPreference.fresh.rawValue
+            return TrainingSplitPreference(rawValue: raw) ?? .fresh
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: "trainingSplit")
+            publishChange()
+        }
+    }
+
+    // Muscle recovery target percentage (future; display-only for now)
+    var muscleRecoveryTargetPercent: Int {
+        get {
+            let val = UserDefaults.standard.integer(forKey: "muscleRecoveryTargetPercent")
+            return val == 0 ? 70 : val // default 70%
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "muscleRecoveryTargetPercent")
+            publishChange()
+        }
+    }
     
     var workoutLocation: WorkoutLocation {
         get {
@@ -631,6 +705,36 @@ extension WorkoutFrequency {
 }
 
 // MARK: - Data Models
+
+enum ExerciseVariabilityPreference: String, CaseIterable, Codable {
+    case consistent = "consistent"   // More Consistent
+    case balanced = "balanced"      // Balanced
+    case variable = "variable"      // More Variable
+
+    var displayName: String {
+        switch self {
+        case .consistent: return "More Consistent"
+        case .balanced:   return "Balanced"
+        case .variable:   return "More Variable"
+        }
+    }
+}
+
+enum TrainingSplitPreference: String, CaseIterable, Codable {
+    case fresh = "fresh"
+    case upperLower = "upper_lower"
+    case fullBody = "full_body"
+    case pushPullLower = "push_pull_lower"
+
+    var displayName: String {
+        switch self {
+        case .fresh: return "Fresh Muscle Groups"
+        case .upperLower: return "Upper/Lower Split"
+        case .fullBody: return "Full Body"
+        case .pushPullLower: return "Push/Pull/Lower Split"
+        }
+    }
+}
 
 struct WorkoutHistoryEntry: Codable {
     let id: UUID

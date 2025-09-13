@@ -626,6 +626,7 @@ struct ExerciseLoggingView: View {
                             date: current.date,
                             title: current.title,
                             exercises: current.exercises + newItems,
+                            blocks: current.blocks,
                             estimatedDuration: current.estimatedDuration,
                             fitnessGoal: current.fitnessGoal,
                             difficulty: current.difficulty,

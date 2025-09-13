@@ -642,6 +642,8 @@ struct TodayWorkout: Codable, Hashable, Identifiable {
     let date: Date
     let title: String
     let exercises: [TodayWorkoutExercise]
+    // Optional: New block-based programming representation
+    let blocks: [WorkoutBlock]?
     let estimatedDuration: Int
     let fitnessGoal: FitnessGoal
     let difficulty: Int
@@ -654,6 +656,7 @@ struct TodayWorkout: Codable, Hashable, Identifiable {
         date: Date = Date(),
         title: String,
         exercises: [TodayWorkoutExercise],
+        blocks: [WorkoutBlock]? = nil,
         estimatedDuration: Int,
         fitnessGoal: FitnessGoal,
         difficulty: Int,
@@ -664,6 +667,7 @@ struct TodayWorkout: Codable, Hashable, Identifiable {
         self.date = date
         self.title = title
         self.exercises = exercises
+        self.blocks = blocks
         self.estimatedDuration = estimatedDuration
         self.fitnessGoal = fitnessGoal
         self.difficulty = difficulty

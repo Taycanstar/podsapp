@@ -68,6 +68,8 @@ struct LogWorkoutView: View {
     private var generationMessage: String {
         workoutManager.generationMessage
     }
+
+    // (helpers moved into TodayWorkoutExerciseList where they are used)
     
     private var customTargetMuscles: [String]? {
         workoutManager.customTargetMuscles
@@ -1039,6 +1041,13 @@ struct LogWorkoutView: View {
                         .foregroundColor(.accentColor)
                 }
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(destination: WorkoutProfileSettingsView()) {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.primary)
+                }
+            }
         }
     }
 
@@ -1074,6 +1083,7 @@ struct LogWorkoutView: View {
                     date: current.date,
                     title: current.title,
                     exercises: current.exercises + appended,
+                    blocks: current.blocks,
                     estimatedDuration: current.estimatedDuration,
                     fitnessGoal: current.fitnessGoal,
                     difficulty: current.difficulty,
@@ -1976,171 +1986,315 @@ private struct RoutinesWorkoutView: View {
 
 // MARK: - Today Workout Exercise List
 
-private struct TodayWorkoutExerciseList: View {
-    let workout: TodayWorkout
-    @Binding var navigationPath: NavigationPath
-    let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
-    let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
-    @EnvironmentObject var workoutManager: WorkoutManager
-    @State private var exercises: [TodayWorkoutExercise]
-    @State private var warmUpExpanded: Bool = true
-    @State private var coolDownExpanded: Bool = true
-    @Binding var showAddExerciseSheet: Bool
-    
-    init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>, onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void, onExerciseUpdateCallbackSet: @escaping (((Int, TodayWorkoutExercise) -> Void)?) -> Void, showAddExerciseSheet: Binding<Bool>) {
-        self.workout = workout
-        self._navigationPath = navigationPath
-        self.onExerciseReplacementCallbackSet = onExerciseReplacementCallbackSet
-        self.onExerciseUpdateCallbackSet = onExerciseUpdateCallbackSet
-        self._exercises = State(initialValue: workout.exercises)
-        self._showAddExerciseSheet = showAddExerciseSheet
-    }
+    private struct TodayWorkoutExerciseList: View {
+        let workout: TodayWorkout
+        @Binding var navigationPath: NavigationPath
+        let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
+        let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
+        @EnvironmentObject var workoutManager: WorkoutManager
+        @State private var exercises: [TodayWorkoutExercise]
+        @State private var warmUpExpanded: Bool = true
+        @State private var coolDownExpanded: Bool = true
+        @Binding var showAddExerciseSheet: Bool
+        
+        init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>, onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void, onExerciseUpdateCallbackSet: @escaping (((Int, TodayWorkoutExercise) -> Void)?) -> Void, showAddExerciseSheet: Binding<Bool>) {
+            self.workout = workout
+            self._navigationPath = navigationPath
+            self.onExerciseReplacementCallbackSet = onExerciseReplacementCallbackSet
+            self.onExerciseUpdateCallbackSet = onExerciseUpdateCallbackSet
+            self._exercises = State(initialValue: workout.exercises)
+            self._showAddExerciseSheet = showAddExerciseSheet
+        }
+        
+        // Precomputed grouping helpers to simplify the List body (prevents type-checker blowups)
+        private var circuitOrSupersetBlocks: [WorkoutBlock] {
+            (workout.blocks ?? []).filter { $0.type == .circuit || $0.type == .superset }
+        }
+        
+        private var groupedExerciseIds: Set<Int> {
+            Set(circuitOrSupersetBlocks.flatMap { $0.exercises.map { $0.exercise.id } })
+        }
+        
+        private var nonGroupedExercisesList: [TodayWorkoutExercise] {
+            exercises.filter { !groupedExerciseIds.contains($0.exercise.id) }
+        }
     
     var body: some View {
         List {
-            // Warm-up section (if exercises exist)
-            if let warmUpExercises = workout.warmUpExercises, !warmUpExercises.isEmpty {
-                // Warm-Up Section Title
-                Section {
-                    Text("Warm-Up")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                
-                // Warm-up exercises
-                ForEach(Array(warmUpExercises.enumerated()), id: \.element.exercise.id) { index, exercise in
-                    ExerciseWorkoutCard(
-                        exercise: exercise,
-                        allExercises: warmUpExercises,
-                        exerciseIndex: index,
-                        onExerciseReplaced: { _, _ in 
-                            // Warm-up exercises can't be replaced for now
-                        },
-                        navigationPath: $navigationPath
-                    )
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                }
-            }
-            
-            // Main exercises section title (only if warm-up or cool-down exists)
-            if (workout.warmUpExercises?.isEmpty == false) || (workout.coolDownExercises?.isEmpty == false) {
-                Section {
-                    Text("Main Sets")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-            }
-            
-            // Main exercises section
-            ForEach(Array(exercises.enumerated()), id: \.element.exercise.id) { index, exercise in
-                ExerciseWorkoutCard(
-                    exercise: exercise,
-                    allExercises: exercises,
-                    exerciseIndex: index,
-                    onExerciseReplaced: { idx, newExercise in
-                        replaceExercise(at: idx, with: newExercise)
-                    },
-                    navigationPath: $navigationPath
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-            }
-            .onMove(perform: moveExercise)
-            .onDelete(perform: deleteExercise)
-            
-            // Cool-down section (if exercises exist)
-            if let coolDownExercises = workout.coolDownExercises, !coolDownExercises.isEmpty {
-                // Cool-Down Section Title
-                Section {
-                    Text("Cool-Down")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                
-                // Cool-down exercises
-                ForEach(Array(coolDownExercises.enumerated()), id: \.element.exercise.id) { index, exercise in
-                    ExerciseWorkoutCard(
-                        exercise: exercise,
-                        allExercises: coolDownExercises,
-                        exerciseIndex: index,
-                        onExerciseReplaced: { _, _ in 
-                            // Cool-down exercises can't be replaced for now
-                        },
-                        navigationPath: $navigationPath
-                    )
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                }
-            }
-
-            // Add Exercise button as the final list row
-            Section {
-                Button(action: { showAddExerciseSheet = true }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Add Exercise")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.primary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 20, trailing: 16))
+            warmUpSection
+            mainTitleSection
+            mainExercisesSection
+            coolDownSection
+            addExerciseSection
         }
         .listStyle(PlainListStyle())
         .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
         .cornerRadius(12)
         .onAppear {
-            // Register the exercise replacement callback with the navigation container
+            // Register callbacks once
             onExerciseReplacementCallbackSet { index, newExercise in
                 replaceExercise(at: index, with: newExercise)
             }
-            // Also register the update callback for full exercise updates (with warm-up sets)
             onExerciseUpdateCallbackSet { index, updatedExercise in
                 updateExercise(at: index, with: updatedExercise)
             }
         }
         .onChange(of: workout.exercises) { _, newExercises in
-            // Update local exercises when workout changes (e.g., from muscle selection change)
             exercises = newExercises
         }
-        .onChange(of: exercises) { _, newValue in
-            // TODO: Save updated exercise order to UserDefaults or backend
+    }
+
+    // MARK: - Subsections split out for type-checker performance
+
+    @ViewBuilder
+    private var warmUpSection: some View {
+        if let warmUpExercises = workout.warmUpExercises, !warmUpExercises.isEmpty {
+            Section {
+                Text("Warm-Up")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+
+            ForEach(Array(warmUpExercises.enumerated()), id: \.element.exercise.id) { index, exercise in
+                ExerciseWorkoutCard(
+                    exercise: exercise,
+                    allExercises: warmUpExercises,
+                    exerciseIndex: index,
+                    onExerciseReplaced: { _, _ in },
+                    navigationPath: $navigationPath
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+            }
         }
+    }
+
+    @ViewBuilder
+    private var mainTitleSection: some View {
+        if (workout.warmUpExercises?.isEmpty == false) || (workout.coolDownExercises?.isEmpty == false) {
+            Section {
+                Text("Main Sets")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+        }
+    }
+
+    @ViewBuilder
+    private var mainExercisesSection: some View {
+        if circuitOrSupersetBlocks.isEmpty {
+            // One big card with all exercises
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(exercises.enumerated()), id: \.element.exercise.id) { idx, exercise in
+                    ExerciseWorkoutCard(
+                        exercise: exercise,
+                        allExercises: exercises,
+                        exerciseIndex: idx,
+                        onExerciseReplaced: { index, newEx in replaceExercise(at: index, with: newEx) },
+                        navigationPath: $navigationPath,
+                        useBackground: false
+                    )
+                    // compact spacing; rely on internal row padding only
+                    if idx != exercises.count - 1 {
+                        Divider().opacity(0.08)
+                    }
+                }
+            }
+            .background(Color("containerbg"))
+            .cornerRadius(12)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+        } else {
+            groupedBlocksView
+            nonGroupedCardView
+        }
+    }
+
+    @ViewBuilder
+    private var groupedBlocksView: some View {
+        ForEach(Array(circuitOrSupersetBlocks.enumerated()), id: \.offset) { _, block in
+            VStack(alignment: .leading, spacing: 8) {
+                Text(block.type == .circuit ? "Circuit" : "Superset")
+                    .font(.title3)
+                    .foregroundColor(.primary)
+                    .fontWeight(.semibold)
+
+                // Single shared container for this block
+                VStack(alignment: .leading, spacing: 0) {
+                    let ordered = orderedExercises(for: block)
+                    ForEach(Array(ordered.enumerated()), id: \.element.exercise.id) { idx, exercise in
+                        if let globalIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                            ExerciseWorkoutCard(
+                                exercise: exercise,
+                                allExercises: exercises,
+                                exerciseIndex: globalIndex,
+                                onExerciseReplaced: { index, newEx in replaceExercise(at: index, with: newEx) },
+                                navigationPath: $navigationPath,
+                                useBackground: false
+                            )
+                            if idx != ordered.count - 1 {
+                                Divider().opacity(0.08)
+                            }
+                        }
+                    }
+                }
+                .background(Color("containerbg"))
+                .cornerRadius(12)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
+        }
+    }
+
+    @ViewBuilder
+    private var nonGroupedCardView: some View {
+        if !nonGroupedExercisesList.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(nonGroupedExercisesList.enumerated()), id: \.element.exercise.id) { _, exercise in
+                    if let globalIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                        ExerciseWorkoutCard(
+                            exercise: exercise,
+                            allExercises: exercises,
+                            exerciseIndex: globalIndex,
+                            onExerciseReplaced: { index, newEx in replaceExercise(at: index, with: newEx) },
+                            navigationPath: $navigationPath,
+                            useBackground: false
+                        )
+                        if exercise.exercise.id != nonGroupedExercisesList.last?.exercise.id {
+                            Divider().opacity(0.08)
+                        }
+                    }
+                }
+            }
+            .background(Color("containerbg"))
+            .cornerRadius(12)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 16, trailing: 16))
+        }
+    }
+
+    @ViewBuilder
+    private var coolDownSection: some View {
+        if let coolDownExercises = workout.coolDownExercises, !coolDownExercises.isEmpty {
+            Section {
+                Text("Cool-Down")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+
+            ForEach(Array(coolDownExercises.enumerated()), id: \.element.exercise.id) { index, exercise in
+                ExerciseWorkoutCard(
+                    exercise: exercise,
+                    allExercises: coolDownExercises,
+                    exerciseIndex: index,
+                    onExerciseReplaced: { _, _ in },
+                    navigationPath: $navigationPath
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var addExerciseSection: some View {
+        Section {
+            Button(action: { showAddExerciseSheet = true }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Add Exercise")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 20, trailing: 16))
+    }
+
+    // Helper to preserve block order
+    private func orderedExercises(for block: WorkoutBlock) -> [TodayWorkoutExercise] {
+        let ids = block.exercises.map { $0.exercise.id }
+        return exercises.filter { ids.contains($0.exercise.id) }
+    }
+
+    // MARK: - Group Header + Spacing Helpers (scoped to this list)
+    private func blockHeader(for exercise: TodayWorkoutExercise, in list: [TodayWorkoutExercise]) -> String? {
+        guard let blocks = workoutManager.todayWorkout?.blocks else { return nil }
+        var circuitIndex = 0
+        var supersetIndex = 0
+
+        for block in blocks {
+            switch block.type {
+            case .circuit:
+                circuitIndex += 1
+                if isFirst(exercise, in: block, list: list) {
+                    return "Circuit \(circuitIndex)"
+                }
+            case .superset:
+                supersetIndex += 1
+                if isFirst(exercise, in: block, list: list) {
+                    return "Superset \(supersetIndex)"
+                }
+            default:
+                continue
+            }
+        }
+        return nil
+    }
+
+    private func isGrouped(_ exercise: TodayWorkoutExercise) -> Bool {
+        guard let blocks = workoutManager.todayWorkout?.blocks else { return false }
+        return blocks.contains { blk in
+            (blk.type == .circuit || blk.type == .superset) && blk.exercises.contains(where: { $0.exercise.id == exercise.exercise.id })
+        }
+    }
+
+    private func isFirst(_ exercise: TodayWorkoutExercise, in block: WorkoutBlock, list: [TodayWorkoutExercise]) -> Bool {
+        let ids = block.exercises.map { $0.exercise.id }
+        let positions = ids.compactMap { id in list.firstIndex(where: { $0.exercise.id == id }) }
+        guard let minPos = positions.min(), minPos < list.count else { return false }
+        return list[minPos].exercise.id == exercise.exercise.id
+    }
+
+    private func rowTopInset(for exercise: TodayWorkoutExercise) -> CGFloat {
+        // Extra breathing room for standalone exercises; grouped ones use tighter spacing
+        return isGrouped(exercise) ? 5 : 14
     }
 
     private func moveExercise(from source: IndexSet, to destination: Int) {
@@ -2173,6 +2327,7 @@ private struct TodayWorkoutExerciseList: View {
                 date: workout.date,
                 title: workout.title,
                 exercises: exercises,
+                blocks: workout.blocks,
                 estimatedDuration: workout.estimatedDuration,
                 fitnessGoal: workout.fitnessGoal,
                 difficulty: workout.difficulty,
@@ -2210,6 +2365,7 @@ private struct TodayWorkoutExerciseList: View {
                 date: workout.date,
                 title: workout.title,
                 exercises: exercises,
+                blocks: workout.blocks,
                 estimatedDuration: workout.estimatedDuration,
                 fitnessGoal: workout.fitnessGoal,
                 difficulty: workout.difficulty,
@@ -2242,6 +2398,7 @@ private struct ExerciseWorkoutCard: View {
     @State private var showHistory = false
     @State private var showReplace = false
     @State private var tempExercise: TodayWorkoutExercise
+    let useBackground: Bool
     
     // Check if dynamic parameters are available
     private var shouldShowDynamicView: Bool {
@@ -2293,13 +2450,14 @@ private struct ExerciseWorkoutCard: View {
         return String(format: "%d:%02d", minutes, secs)
     }
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], exerciseIndex: Int, onExerciseReplaced: @escaping (Int, ExerciseData) -> Void, navigationPath: Binding<NavigationPath>) {
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], exerciseIndex: Int, onExerciseReplaced: @escaping (Int, ExerciseData) -> Void, navigationPath: Binding<NavigationPath>, useBackground: Bool = true) {
         self.exercise = exercise
         self.allExercises = allExercises
         self.exerciseIndex = exerciseIndex
         self.onExerciseReplaced = onExerciseReplaced
         self._navigationPath = navigationPath
         self._tempExercise = State(initialValue: exercise)
+        self.useBackground = useBackground
     }
 
     var body: some View {
@@ -2382,9 +2540,9 @@ private struct ExerciseWorkoutCard: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color("containerbg"))
-            .cornerRadius(12)
+            .padding(.vertical, useBackground ? 12 : 8)
+            .background(useBackground ? Color("containerbg") : Color.clear)
+            .cornerRadius(useBackground ? 12 : 0)
         }
         .buttonStyle(PlainButtonStyle())
         .background(
@@ -2415,6 +2573,8 @@ private struct ExerciseWorkoutCard: View {
             updateCachedExercise()
         }
     }
+
+    // Removed chips per request
     
     // Update cached exercise to prevent recomputation
     private func updateCachedExercise() {

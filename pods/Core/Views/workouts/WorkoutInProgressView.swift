@@ -153,6 +153,42 @@ struct WorkoutInProgressView: View {
                                 }
                                 print("🏋️ ✅ FIXED CONTAMINATION: Updated completion for globalIndex \(globalIndex) - \(completedSetsCount) sets completed")
                             }
+
+                            // Auto-advance within Superset/Circuit groups
+                            if let blocks = workout.blocks {
+                                // Find the block containing the active exercise
+                                if let block = blocks.first(where: { blk in
+                                    blk.exercises.contains(where: { $0.exercise.id == activeExercise.exercise.id })
+                                }), block.type == .superset || block.type == .circuit {
+                                    let ids = block.exercises.map { $0.exercise.id }
+                                    if let pos = ids.firstIndex(of: activeExercise.exercise.id) {
+                                        let nextPos = pos + 1
+                                        if nextPos < ids.count {
+                                            let nextId = ids[nextPos]
+                                            if let nextExercise = workout.exercises.first(where: { $0.exercise.id == nextId }) {
+                                                // Navigate to next exercise in the group
+                                                navigationPath.append(
+                                                    WorkoutNavigationDestination.logExercise(nextExercise, workout.exercises, nextPos)
+                                                )
+                                            }
+                                        } else {
+                                            // Completed the group round; if more rounds/sets remain, loop back to first
+                                            // Heuristic: if completedSetsCount < max sets among group members, go back to first
+                                            let groupMaxSets = ids.compactMap { id in
+                                                workout.exercises.first(where: { $0.exercise.id == id })?.sets
+                                            }.max() ?? 1
+                                            if completedSetsCount < groupMaxSets {
+                                                let firstId = ids.first!
+                                                if let firstExercise = workout.exercises.first(where: { $0.exercise.id == firstId }) {
+                                                    navigationPath.append(
+                                                        WorkoutNavigationDestination.logExercise(firstExercise, workout.exercises, 0)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         },
                         isFromWorkoutInProgress: true,  // Pass this flag to show Log Set/Log All Sets buttons immediately
                         initialCompletedSetsCount: {
@@ -184,6 +220,7 @@ struct WorkoutInProgressView: View {
                                     date: workout.date,
                                     title: workout.title,
                                     exercises: updatedExercises,
+                                    blocks: workout.blocks,
                                     estimatedDuration: workout.estimatedDuration,
                                     fitnessGoal: workout.fitnessGoal,
                                     difficulty: workout.difficulty,
