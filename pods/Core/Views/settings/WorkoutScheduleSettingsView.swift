@@ -73,7 +73,7 @@ struct WorkoutScheduleSettingsView: View {
             .scrollContentBackground(.hidden)
         }
         .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("Workout Schedule")
+        .navigationTitle("Workout Frequency")
         .onAppear {
             isTabBarVisible.wrappedValue = false
             loadSelectedDays()
@@ -122,17 +122,28 @@ struct WorkoutScheduleSettingsView: View {
         UserDefaults.standard.set(daysPerWeek, forKey: "workout_days_per_week")
         UserDefaults.standard.set(rest, forKey: "rest_days")
 
+        // NEW: Map to workout_frequency for onboarding data
+        let mappedFrequency = mapDaysToFrequency(daysPerWeek)
+        UserDefaults.standard.set(mappedFrequency, forKey: "workoutFrequency")
+
         // Persist to backend for cross-device consistency
         let email = (!viewModel.email.isEmpty ? viewModel.email : UserDefaults.standard.string(forKey: "userEmail")) ?? ""
         guard !email.isEmpty else { return }
+        
+        // Enhanced server payload with both values
+        let serverData: [String: Any] = [
+            "workout_days_per_week": daysPerWeek,
+            "rest_days": rest,
+            "workout_frequency": mappedFrequency
+        ]
+        
         NetworkManagerTwo.shared.updateWorkoutPreferences(
-            userEmail: email,
-            workoutDaysPerWeek: daysPerWeek,
-            restDays: rest
+            email: email,
+            workoutData: serverData
         ) { result in
             switch result {
             case .success:
-                print("✅ WorkoutSchedule: preferences synced to server")
+                print("✅ WorkoutSchedule: preferences synced to server (days: \(daysPerWeek), frequency: \(mappedFrequency))")
             case .failure(let error):
                 print("⚠️ WorkoutSchedule: failed to sync preferences - \(error.localizedDescription)")
             }
@@ -143,6 +154,15 @@ struct WorkoutScheduleSettingsView: View {
     private func frequencyTitle(for count: Int) -> String {
         if count == 7 { return "Every Day" }
         return "\(count) day\(count == 1 ? "" : "s") a week"
+    }
+    
+    private func mapDaysToFrequency(_ days: Int) -> String {
+        switch days {
+        case 1, 2: return "low"
+        case 3, 4, 5: return "medium" 
+        case 6, 7: return "high"
+        default: return "medium"
+        }
     }
 
     private func defaultDays(for count: Int) -> Set<Int> {

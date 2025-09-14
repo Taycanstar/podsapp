@@ -1244,6 +1244,9 @@ private struct TodayWorkoutView: View {
                             .background(Color.accentColor)
                             .cornerRadius(12)
                             .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+                            // Gaussian-like glow using stacked accent-colored shadows
+                            .shadow(color: Color.accentColor.opacity(0.30), radius: 16, x: 0, y: 0)
+                            .shadow(color: Color.accentColor.opacity(0.18), radius: 28, x: 0, y: 0)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -2134,7 +2137,7 @@ private struct RoutinesWorkoutView: View {
             .cornerRadius(12)
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
         } else {
             groupedBlocksView
             nonGroupedCardView
@@ -2176,7 +2179,7 @@ private struct RoutinesWorkoutView: View {
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
+            .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
         }
     }
 
@@ -2206,7 +2209,7 @@ private struct RoutinesWorkoutView: View {
             .cornerRadius(12)
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 16, trailing: 16))
+            .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
         }
     }
 
@@ -2263,6 +2266,15 @@ private struct RoutinesWorkoutView: View {
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 20, trailing: 16))
+
+        // Spacer so the floating Start button never covers the last row
+        Section {
+            Color.clear
+                .frame(height: 90)
+        }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets())
     }
 
     // Helper to preserve block order
@@ -2479,8 +2491,8 @@ private struct ExerciseWorkoutCard: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Tappable area: entire row except the ellipsis menu
+        ZStack(alignment: .trailing) {
+            // Whole row is tappable (except trailing ellipsis overlay)
             Button(action: { onOpen() }) {
                 HStack(spacing: 12) {
                     // Exercise thumbnail
@@ -2515,12 +2527,18 @@ private struct ExerciseWorkoutCard: View {
                             .foregroundColor(.secondary)
                     }
 
-                    Spacer()
+                    Spacer(minLength: 32) // leave space for overlay menu
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .padding(.horizontal, 16)
+                .padding(.vertical, useBackground ? 12 : 8)
+                .background(useBackground ? Color("containerbg") : Color.clear)
+                .cornerRadius(useBackground ? 12 : 0)
             }
             .buttonStyle(PlainButtonStyle())
 
-            // Menu button (non-tappable row area)
+            // Trailing menu overlay (excludes it from the tappable area)
             Menu {
                 Button("Exercise History") { showHistory = true }
 
@@ -2557,12 +2575,9 @@ private struct ExerciseWorkoutCard: View {
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.secondary)
                     .frame(width: 24, height: 24)
+                    .padding(.trailing, 20)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, useBackground ? 12 : 8)
-        .background(useBackground ? Color("containerbg") : Color.clear)
-        .cornerRadius(useBackground ? 12 : 0)
         .background(
             NavigationLink(
                 destination: ExerciseHistory(exercise: exercise),

@@ -76,6 +76,54 @@ struct ProfileView: View {
                         
                         Section(header: Text("Preferences")) {
                               
+                              // Fitness Goal
+                              HStack {
+                                  HStack(spacing: 12) {
+                                      Image(systemName: "target")
+                                          .font(.system(size: 16))
+                                          .fontWeight(.semibold)
+                                          .foregroundColor(iconColor)
+                                      Text("Fitness Goal")
+                                          .font(.system(size: 15))
+                                          .foregroundColor(iconColor)
+                                  }
+                                  Spacer()
+                                  Menu {
+                                      ForEach(FitnessGoal.allCases.filter { !["tone", "endurance", "power", "sport"].contains($0.rawValue) }, id: \.self) { goal in
+                                          Button(action: {
+                                              UserDefaults.standard.set(goal.rawValue, forKey: "fitnessGoal")
+                                              
+                                              // Send update to server
+                                              let email = viewModel.email.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : viewModel.email
+                                              if !email.isEmpty {
+                                                  NetworkManagerTwo.shared.updateWorkoutPreferences(email: email, workoutData: ["preferred_fitness_goal": goal.rawValue]) { result in
+                                                      switch result {
+                                                      case .success:
+                                                          print("✅ Fitness goal updated on server")
+                                                      case .failure(let error):
+                                                          print("❌ Failed to update fitness goal: \(error)")
+                                                      }
+                                                  }
+                                              }
+                                          }) {
+                                              HStack {
+                                                  Text(goal.displayName)
+                                                  if currentFitnessGoal.normalized == goal.normalized { Image(systemName: "checkmark") }
+                                              }
+                                          }
+                                      }
+                                  } label: {
+                                      HStack {
+                                          Text(currentFitnessGoal.displayName)
+                                              .foregroundColor(.secondary)
+                                          Image(systemName: "chevron.up.chevron.down")
+                                              .font(.caption2)
+                                              .foregroundColor(.secondary)
+                                      }
+                                  }
+                              }
+                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
+                              
                               HStack {
                                   Label("Theme", systemImage: "paintbrush")
                                       .foregroundColor(iconColor)
@@ -156,7 +204,7 @@ struct ProfileView: View {
                               
                               // Workout Schedule settings
                               NavigationLink(destination: WorkoutScheduleSettingsView()) {
-                                  Label("Workout Schedule", systemImage: "calendar.badge.clock")
+                                  Label("Workout Frequency", systemImage: "calendar.badge.clock")
                                       .foregroundColor(iconColor)
                               }
                               .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
@@ -223,6 +271,11 @@ struct ProfileView: View {
     
     private var iconColor: Color {
         colorScheme == .dark ? .white : .black
+    }
+    
+    private var currentFitnessGoal: FitnessGoal {
+        let goalString = UserDefaults.standard.string(forKey: "fitnessGoal") ?? "strength"
+        return FitnessGoal.from(string: goalString)
     }
     
     

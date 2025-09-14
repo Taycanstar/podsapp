@@ -615,6 +615,8 @@ struct ExerciseRowInProgress: View {
                 }
             }
             .buttonStyle(PlainButtonStyle())
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
 
             // Menu button - exactly like LogWorkoutView
             Menu {
