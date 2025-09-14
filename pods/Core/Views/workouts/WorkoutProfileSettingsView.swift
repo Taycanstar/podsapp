@@ -8,7 +8,7 @@ struct WorkoutProfileSettingsView: View {
     @State private var durationHours: Int = 0
     @State private var durationMinutes: Int = 45
 
-    private var rowBackground: Color { Color("primarybg") }
+    private var rowBackground: Color { Color("sectioncard") }
     private var iconColor: Color { colorScheme == .dark ? .white : .primary }
 
     private var formattedDuration: String {
@@ -321,7 +321,7 @@ struct WorkoutProfileSettingsView: View {
         .navigationTitle("Workout Settings")
         .onAppear { syncInitialDuration() }
         .scrollContentBackground(.hidden)
-        .background(Color("containerbg").ignoresSafeArea())
+        .background(Color("sectionbg").ignoresSafeArea())
         .onChange(of: showDurationPicker) { newVal in
             if newVal == false { // picker closed → persist to server
                 sendPreferenceUpdate(["preferred_workout_duration": profile.availableTime])

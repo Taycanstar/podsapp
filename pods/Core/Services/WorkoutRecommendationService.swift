@@ -919,8 +919,9 @@ class WorkoutRecommendationService {
             }
         }
         
-        // Let the caller handle truncation to avoid double truncation bug
-        return sortedExercises
+        // Enforce diversity and redundancy caps (Fitbod-style)
+        let diversified = enforceDiversity(sortedExercises, goal: userProfile.fitnessGoal, maxCount: maxCount)
+        return diversified
     }
     
     private func getExerciseScore(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {
@@ -1106,6 +1107,144 @@ class WorkoutRecommendationService {
         score += userProfile.getExercisePreferenceBias(exerciseId: exercise.id)
         
         return score
+    }
+
+    // MARK: - Redundancy/Diversity System
+    private enum MovementPattern: String { case squat, hinge, lunge, push, pull, isolation, core, other }
+
+    private func enforceDiversity(_ sorted: [ExerciseData], goal: FitnessGoal, maxCount: Int) -> [ExerciseData] {
+        var selected: [ExerciseData] = []
+        var patternCounts: [MovementPattern: Int] = [:]
+        var isolationMuscleCounts: [String: Int] = [:]
+
+        let minPatterns = (goal.normalized == .hypertrophy || goal.normalized == .strength) ? 3 : 3
+        let caps: [MovementPattern: Int] = [
+            .squat: 2, .hinge: 2, .lunge: 2, .push: 2, .pull: 2, .isolation: 99, .core: 2, .other: 99
+        ]
+
+        for candidate in sorted {
+            if selected.count >= maxCount { break }
+            let pattern = movementPattern(for: candidate)
+            let countForPattern = patternCounts[pattern] ?? 0
+            if countForPattern >= (caps[pattern] ?? 2) { continue }
+
+            // Isolation per-muscle cap (max 2)
+            if pattern == .isolation {
+                let muscle = primaryMuscleKey(candidate)
+                if (isolationMuscleCounts[muscle] ?? 0) >= 2 { continue }
+            }
+
+            // Similarity gate
+            var redundant = false
+            for ex in selected {
+                let sim = similarity(candidate, ex)
+                let exPat = movementPattern(for: ex)
+                let exCount = patternCounts[exPat] ?? 0
+                // If we already have one of this pattern and similarity is very high, skip
+                if exPat == pattern && exCount >= 1 && sim > 0.8 { redundant = true; break }
+                // If we already have two of this pattern and similarity is medium, skip
+                if exPat == pattern && exCount >= 2 && sim > 0.6 { redundant = true; break }
+            }
+            if redundant { continue }
+
+            // Diversity bias: prefer a new pattern until we reach minPatterns
+            let uniquePatterns = Set(selected.map { movementPattern(for: $0) })
+            if uniquePatterns.count < minPatterns {
+                // If this candidate adds a new pattern, strongly prefer it; otherwise allow only 50% chance
+                if uniquePatterns.contains(pattern) == false {
+                    // ok
+                } else {
+                    // allow but deprioritize: continue if we still need patterns and we already have a duplicate
+                    continue
+                }
+            }
+
+            // Accept
+            selected.append(candidate)
+            patternCounts[pattern] = (patternCounts[pattern] ?? 0) + 1
+            if pattern == .isolation {
+                let muscle = primaryMuscleKey(candidate)
+                isolationMuscleCounts[muscle] = (isolationMuscleCounts[muscle] ?? 0) + 1
+            }
+        }
+        return selected
+    }
+
+    private func movementPattern(for ex: ExerciseData) -> MovementPattern {
+        let n = ex.name.lowercased()
+        let eq = ex.equipment.lowercased()
+        let part = ex.bodyPart.lowercased()
+
+        // Legs
+        if n.contains("squat") || n.contains("leg press") || n.contains("hack squat") { return .squat }
+        if n.contains("deadlift") || n.contains("rdl") || n.contains("good morning") || n.contains("hip thrust") || n.contains("glute bridge") { return .hinge }
+        if n.contains("lunge") || n.contains("split squat") || n.contains("step-up") || n.contains("bulgarian") { return .lunge }
+        if n.contains("leg curl") || n.contains("leg extension") || n.contains("calf raise") { return .isolation }
+
+        // Upper body
+        if n.contains("bench press") || (n.contains("press") && (part.contains("chest") || part.contains("shoulder"))) || n.contains("dip") { return .push }
+        if n.contains("row") || n.contains("pulldown") || n.contains("pull-up") || n.contains("chin-up") || n.contains("face pull") { return .pull }
+
+        // Core
+        if n.contains("plank") || n.contains("crunch") || n.contains("sit-up") || n.contains("rotation") || n.contains("pallof") || n.contains("carry") { return .core }
+
+        // Fallback by type/equipment
+        if ex.exerciseType.lowercased() == "stretching" { return .core }
+        if eq.contains("barbell") || eq.contains("dumbbell") || eq.contains("machine") || eq.contains("cable") { return .other }
+        return .other
+    }
+
+    private func equipmentCategory(for ex: ExerciseData) -> String {
+        let e = ex.equipment.lowercased()
+        if e.contains("barbell") && !e.contains("ez") { return "barbell" }
+        if e.contains("dumbbell") { return "dumbbell" }
+        if e.contains("cable") { return "cable" }
+        if e.contains("machine") || e.contains("leverage") || e.contains("smith") { return "machine" }
+        if e.contains("kettlebell") { return "kettlebell" }
+        if e.contains("body") || e.isEmpty { return "bodyweight" }
+        return e
+    }
+
+    private func isUnilateral(_ ex: ExerciseData) -> Bool {
+        let n = ex.name.lowercased()
+        return n.contains("single") || n.contains("one-arm") || n.contains("one arm") || n.contains("one-leg") || n.contains("bulgarian") || n.contains("split squat") || n.contains("lunge") || n.contains("step-up")
+    }
+
+    private func primaryMuscleKey(_ ex: ExerciseData) -> String {
+        let t = ex.target.lowercased()
+        if t.contains("quad") || t.contains("rectus femoris") || t.contains("vastus") { return "quads" }
+        if t.contains("hamstring") || t.contains("biceps femoris") { return "hamstrings" }
+        if t.contains("glute") || t.contains("gluteus") { return "glutes" }
+        if t.contains("calf") || t.contains("gastrocnemius") || t.contains("soleus") { return "calves" }
+        if t.contains("chest") || t.contains("pectoralis") { return "chest" }
+        if t.contains("lat") || t.contains("back") { return "back" }
+        if t.contains("deltoid") || t.contains("shoulder") { return "shoulders" }
+        if t.contains("triceps") { return "triceps" }
+        if t.contains("biceps") { return "biceps" }
+        if t.contains("abs") || t.contains("core") || t.contains("rectus abdominis") { return "core" }
+        return ex.bodyPart.lowercased()
+    }
+
+    private func variationKey(_ ex: ExerciseData) -> String {
+        let n = ex.name.lowercased()
+        if n.contains("pause") { return "pause" }
+        if n.contains("tempo") || n.contains("eccentric") { return "tempo" }
+        if n.contains("box") { return "box" }
+        if n.contains("sumo") { return "sumo" }
+        return "standard"
+    }
+
+    private func similarity(_ a: ExerciseData, _ b: ExerciseData) -> Double {
+        var score: Double = 0
+        let pa = movementPattern(for: a)
+        let pb = movementPattern(for: b)
+        if pa == pb { score += 0.4 }
+        if variationKey(a) == variationKey(b) { score += 0.2 }
+        if equipmentCategory(for: a) == equipmentCategory(for: b) { score += 0.2 }
+        // muscle overlap heuristic
+        if primaryMuscleKey(a) == primaryMuscleKey(b) { score += 0.2 }
+        if isUnilateral(a) == isUnilateral(b) { score += 0.05 }
+        return min(score, 1.0)
     }
     
     // MARK: - Experience-Tailored Exercise Selection
