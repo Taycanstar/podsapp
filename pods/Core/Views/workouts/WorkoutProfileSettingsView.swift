@@ -15,7 +15,8 @@ struct WorkoutProfileSettingsView: View {
         let total = profile.availableTime
         let h = total / 60
         let m = total % 60
-        if h > 0 { return String(format: "%dh %02dm", h, m) }
+        if h > 0 && m > 0 { return String(format: "%dh %02dm", h, m) }
+        if h > 0 { return String(format: "%dh", h) }
         return String(format: "%dm", m)
     }
 

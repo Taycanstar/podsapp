@@ -941,7 +941,11 @@ class WorkoutRecommendationService {
         // TERTIARY FACTOR: Goal-Specific Optimization (20% weight)
         let goalScore = getGoalSpecificScore(exercise, userProfile: userProfile)
         score += goalScore * 2
-        
+
+        // EQUIPMENT FACTOR: Prefer appropriate equipment for the goal (Fitbod‑style)
+        let equipmentPref = getEquipmentPreferenceScore(exercise, userProfile: userProfile)
+        score += equipmentPref * 2 // meaningful weight so it shifts selection
+
         // MINOR FACTOR: User Preferences & History (10% weight)
         let preferenceScore = getUserPreferenceScore(exercise, userProfile: userProfile)
         score += preferenceScore
@@ -952,10 +956,52 @@ class WorkoutRecommendationService {
         print("   └── Progression: \(progressionScore) × 4 = \(progressionScore * 4)")
         print("   └── Quality: \(qualityScore) × 3 = \(qualityScore * 3)")
         print("   └── Goal: \(goalScore) × 2 = \(goalScore * 2)")
+        print("   └── EquipmentPref: \(equipmentPref) × 2 = \(equipmentPref * 2)")
         print("   └── Preference: \(preferenceScore) × 1 = \(preferenceScore)")
         print("   └── TOTAL SCORE: \(score) 🎯")
         
         return score
+    }
+
+    // MARK: - Goal × Equipment weighting (prevents bodyweight dominance for hypertrophy/strength when weights exist)
+    private func getEquipmentPreferenceScore(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {
+        let goal = userProfile.fitnessGoal.normalized
+        let equip = exercise.equipment.lowercased()
+        let hasBarbell = userProfile.availableEquipment.contains(.barbells)
+        let hasDumbbell = userProfile.availableEquipment.contains(.dumbbells)
+        let hasCable = userProfile.availableEquipment.contains(.cable) || userProfile.availableEquipment.contains(.latPulldownCable)
+        let hasMachines = userProfile.availableEquipment.contains(.hammerstrengthMachine) || userProfile.availableEquipment.contains(.legPress) || userProfile.availableEquipment.contains(.smithMachine)
+        let hasWeightedOptions = hasBarbell || hasDumbbell || hasCable || hasMachines
+
+        func isBodyweight() -> Bool {
+            return equip == "body weight" || equip.isEmpty || equip.contains("bodyweight")
+        }
+        func isBarbell() -> Bool { equip.contains("barbell") && !equip.contains("ez") }
+        func isDumbbell() -> Bool { equip.contains("dumbbell") }
+        func isCable() -> Bool { equip.contains("cable") }
+        func isMachine() -> Bool { equip.contains("machine") || equip.contains("leverage") || equip.contains("smith") }
+
+        switch goal {
+        case .hypertrophy:
+            if isBarbell() { return 3 }
+            if isDumbbell() { return 2 }
+            if isCable() || isMachine() { return 2 }
+            if isBodyweight() && hasWeightedOptions { return -2 }
+            return 0
+        case .strength, .powerlifting:
+            if isBarbell() { return 4 }
+            if isDumbbell() { return 2 }
+            if isMachine() { return 1 }
+            if isBodyweight() { return -1 }
+            return 0
+        case .circuitTraining:
+            if isBodyweight() { return 2 }
+            if isDumbbell() { return 1 }
+            if isBarbell() { return -1 }
+            return 0
+        default:
+            return 0
+        }
     }
     
     // MARK: - Evidence-Based Scoring Components
