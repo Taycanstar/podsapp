@@ -162,39 +162,50 @@ class UserProfileService: ObservableObject {
         }
     }
     
-    // Fitness Profile (Server First)
+    // Fitness Profile (Prefer local override for immediate UI, server fallback)
     var fitnessGoal: FitnessGoal {
         get {
-            // Try server data first
+            // Prefer local override (immediate UI feedback)
+            if let stored = UserDefaults.standard.string(forKey: "fitnessGoalType"), !stored.isEmpty {
+                return FitnessGoal.from(string: stored)
+            }
+
+            // Server fallback
             if let profileData = profileData,
                let workoutProfile = profileData.workoutProfile {
                 return FitnessGoal.from(string: workoutProfile.fitnessGoal)
             }
-            
-            // Fallback to UserDefaults
-            let goalString = UserDefaults.standard.string(forKey: "fitnessGoalType") ?? "strength"
-            return FitnessGoal.from(string: goalString)
+
+            // Default
+            return .strength
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: "fitnessGoalType")
+            publishChange()
         }
     }
     
     var experienceLevel: ExperienceLevel {
         get {
-            // Try server data first
+            // Prefer local override
+            if let stored = UserDefaults.standard.string(forKey: "experienceLevel"),
+               let level = ExperienceLevel(rawValue: stored) {
+                return level
+            }
+
+            // Server fallback
             if let profileData = profileData,
                let workoutProfile = profileData.workoutProfile {
                 let levelString = workoutProfile.fitnessLevel
                 return ExperienceLevel(rawValue: levelString) ?? .beginner
             }
-            
-            // Fallback to UserDefaults
-            let levelString = UserDefaults.standard.string(forKey: "experienceLevel") ?? "beginner"
-            return ExperienceLevel(rawValue: levelString) ?? .beginner
+
+            // Default
+            return .beginner
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: "experienceLevel")
+            publishChange()
         }
     }
     
@@ -228,19 +239,26 @@ class UserProfileService: ObservableObject {
         }
     }
     
-    // Workout Preferences (Server First)
+    // Workout Preferences (Prefer local override for immediate UI)
     var availableTime: Int {
         get {
-            // Try server data first
+            // Prefer local override
+            let local = UserDefaults.standard.integer(forKey: "availableTime")
+            if local > 0 { return local }
+
+            // Server fallback
             if let profileData = profileData,
                let workoutProfile = profileData.workoutProfile {
                 return workoutProfile.preferredWorkoutDuration
             }
-            
-            // Fallback to UserDefaults
-            return UserDefaults.standard.integer(forKey: "availableTime") != 0 ? UserDefaults.standard.integer(forKey: "availableTime") : 45
+
+            // Default
+            return 45
         }
-        set { UserDefaults.standard.set(newValue, forKey: "availableTime") }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "availableTime")
+            publishChange()
+        }
     }
 
     // MARK: - Advanced Workout Defaults (client-first with server-ready keys)
