@@ -1226,7 +1226,7 @@ private struct TodayWorkoutView: View {
             }
         }
         .background(Color("primarybg"))
-        .safeAreaInset(edge: .bottom) {
+        .overlay(alignment: .bottom) {
             if let workout = workoutManager.todayWorkout {
                 HStack {
                     Button(action: {
@@ -2014,7 +2014,10 @@ private struct RoutinesWorkoutView: View {
         }
         
         private var nonGroupedExercisesList: [TodayWorkoutExercise] {
-            exercises.filter { !groupedExerciseIds.contains($0.exercise.id) }
+            var seen = Set<Int>()
+            return exercises.filter {
+                !groupedExerciseIds.contains($0.exercise.id) && seen.insert($0.exercise.id).inserted
+            }
         }
     
     var body: some View {
@@ -2103,19 +2106,26 @@ private struct RoutinesWorkoutView: View {
         if circuitOrSupersetBlocks.isEmpty {
             // One big card with all exercises
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(exercises.enumerated()), id: \.element.exercise.id) { idx, exercise in
+                // Deduplicate by exercise.id for display to avoid accidental duplicates
+                let uniqueExercises: [TodayWorkoutExercise] = {
+                    var seen = Set<Int>()
+                    return exercises.filter { seen.insert($0.exercise.id).inserted }
+                }()
+                ForEach(Array(uniqueExercises.enumerated()), id: \.element.exercise.id) { idx, exercise in
+                    // Map display index to the first index in the underlying array for callbacks
+                    let originalIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) ?? idx
                     ExerciseWorkoutCard(
                         exercise: exercise,
                         allExercises: exercises,
-                        exerciseIndex: idx,
+                        exerciseIndex: originalIndex,
                         onExerciseReplaced: { index, newEx in replaceExercise(at: index, with: newEx) },
                         onOpen: {
-                            onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: exercises, index: idx))
+                            onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: exercises, index: originalIndex))
                         },
                         useBackground: false
                     )
                     // compact spacing; rely on internal row padding only
-                    if idx != exercises.count - 1 {
+                    if idx != uniqueExercises.count - 1 {
                         Divider().opacity(0.08)
                     }
                 }
