@@ -290,10 +290,9 @@ struct ExerciseLoggingView: View {
             let collapsedTop = max(expandedTop + 140, height * 0.45)
 
             ZStack(alignment: .top) {
-                // Video background area
-                // Color("containerbg")
-                Color(.systemGray5)
-                    .ignoresSafeArea()
+                // Video background area, fill entire screen for uniform color
+                Color("sectionbg")
+                    .ignoresSafeArea(.all)
 
                 // Adaptive video height based on sheet position
                 let sheetTop = sheetCurrentTop ?? expandedTop
@@ -303,7 +302,7 @@ struct ExerciseLoggingView: View {
                 let isCollapsed = sheetTop >= (collapsedTop - 20)
                 let extraGapWhenCollapsed: CGFloat = 16
                 let videoPadding: CGFloat = isCollapsed ? (12 + extraGapWhenCollapsed) : 12
-                // Allow the video to get smaller when the sheet is fully expanded
+                // Dynamic video height: original behavior (collapses/expands smoothly)
                 let videoH = max(120, sheetTop - videoPadding)
                 
                 if let videoURL = videoURL {
@@ -311,6 +310,7 @@ struct ExerciseLoggingView: View {
                         .id(videoPlayerID)
                         .frame(maxWidth: .infinity, minHeight: videoH, maxHeight: videoH, alignment: .center)
                         .clipped()
+                        .padding(.top, safeTop - 125)
                 }
 
                 // Thumbnails bar positioned just above the sheet
@@ -398,6 +398,23 @@ struct ExerciseLoggingView: View {
             .onAppear {
                 // Start expanded (highest) by default
                 if sheetCurrentTop == nil { sheetCurrentTop = expandedTop }
+            }
+        }
+        // Top close button pinned to the safe area
+        .safeAreaInset(edge: .top) {
+            HStack {
+                Spacer()
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .frame(width: 36, height: 36)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
+                }
+                .padding(.trailing, 12)
+                .padding(.top, 4)
             }
         }
         .overlay(

@@ -16,6 +16,8 @@ struct WorkoutInProgressView: View {
     @State private var timer: Timer?
     @State private var completedExercises: Set<Int> = []
     @State private var navigationPath = NavigationPath()
+    // Full-screen logging sheet context
+    @State private var loggingContext: LogExerciseSheetContext?
     @Environment(\.colorScheme) var colorScheme
     
     // Track if any sets have been logged during this workout
@@ -131,17 +133,27 @@ struct WorkoutInProgressView: View {
             .navigationDestination(for: WorkoutNavigationDestination.self) { destination in
                 switch destination {
                 case .logExercise(let exercise, let allExercises, let index):
-                    ExerciseLoggingView(
-                        exercise: exercise, 
-                        allExercises: allExercises, 
-                        onSetLogged: { activeExercise, completedSetsCount, rirValue in
+                    EmptyView()
+                        .onAppear {
+                            loggingContext = LogExerciseSheetContext(exercise: exercise, allExercises: allExercises, index: index)
+                            if !navigationPath.isEmpty { navigationPath.removeLast() }
+                        }
+                default:
+                    EmptyView()
+                }
+            }
+            .fullScreenCover(item: $loggingContext) { ctx in
+                ExerciseLoggingView(
+                    exercise: ctx.exercise,
+                    allExercises: ctx.allExercises,
+                    onSetLogged: { activeExercise, completedSetsCount, rirValue in
                             hasLoggedSets = true
                             // Use the exercise actually being logged (may differ from initially tapped)
                             if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == activeExercise.exercise.id }) {
                                 // DEBUG: Show what the old buggy system would have done
-                                let oldExerciseIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) ?? -1
+                                let oldExerciseIndex = exercises.firstIndex(where: { $0.exercise.id == ctx.exercise.exercise.id }) ?? -1
                                 print("🔍 DEBUG INDEX MAPPING:")
-                                print("   Initially tapped: \(exercise.exercise.name)")
+                                print("   Initially tapped: \(ctx.exercise.exercise.name)")
                                 print("   Actually logged: \(activeExercise.exercise.name)")
                                 print("   ❌ OLD BUGGY exerciseIndex: \(oldExerciseIndex) (would update wrong exercise!)")
                                 print("   ✅ FIXED globalIndex: \(globalIndex) (updates correct exercise)")
@@ -166,10 +178,8 @@ struct WorkoutInProgressView: View {
                                         if nextPos < ids.count {
                                             let nextId = ids[nextPos]
                                             if let nextExercise = workout.exercises.first(where: { $0.exercise.id == nextId }) {
-                                                // Navigate to next exercise in the group
-                                                navigationPath.append(
-                                                    WorkoutNavigationDestination.logExercise(nextExercise, workout.exercises, nextPos)
-                                                )
+                                                // Update the sheet to next exercise in the group
+                                                loggingContext = LogExerciseSheetContext(exercise: nextExercise, allExercises: workout.exercises, index: nextPos)
                                             }
                                         } else {
                                             // Completed the group round; if more rounds/sets remain, loop back to first
@@ -180,59 +190,55 @@ struct WorkoutInProgressView: View {
                                             if completedSetsCount < groupMaxSets {
                                                 let firstId = ids.first!
                                                 if let firstExercise = workout.exercises.first(where: { $0.exercise.id == firstId }) {
-                                                    navigationPath.append(
-                                                        WorkoutNavigationDestination.logExercise(firstExercise, workout.exercises, 0)
-                                                    )
+                                                    loggingContext = LogExerciseSheetContext(exercise: firstExercise, allExercises: workout.exercises, index: 0)
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
-                        },
-                        isFromWorkoutInProgress: true,  // Pass this flag to show Log Set/Log All Sets buttons immediately
-                        initialCompletedSetsCount: {
+                    },
+                    isFromWorkoutInProgress: true,
+                    initialCompletedSetsCount: {
                             // 🐛 FIX: Use globalIndex from allCombinedExercises for consistency
-                            if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                            if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == ctx.exercise.exercise.id }) {
                                 return exerciseCompletionStatus[globalIndex]
                             }
                             return nil
                         }(),
-                        initialRIRValue: {
+                    initialRIRValue: {
                             // 🐛 FIX: Use globalIndex from allCombinedExercises for consistency
-                            if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                            if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == ctx.exercise.exercise.id }) {
                                 return exerciseRIRValues[globalIndex]
                             }
                             return nil
                         }(),
-                        onExerciseReplaced: nil, // No exercise replacement needed in workout progress
-                        onWarmupSetsChanged: { warmupSets in
+                    onExerciseReplaced: nil,
+                    onWarmupSetsChanged: { warmupSets in
                             // TODO: Handle warm-up sets persistence during workout
                             // This should update the exercise in the workout data structure
                         },
-                        onExerciseUpdated: { updatedExercise in
-                            // Update the exercise in the workout data
-                            var updatedExercises = workout.exercises
-                            if let exerciseIndex = updatedExercises.firstIndex(where: { $0.exercise.id == updatedExercise.exercise.id }) {
-                                updatedExercises[exerciseIndex] = updatedExercise
-                                workout = TodayWorkout(
-                                    id: workout.id,
-                                    date: workout.date,
-                                    title: workout.title,
-                                    exercises: updatedExercises,
-                                    blocks: workout.blocks,
-                                    estimatedDuration: workout.estimatedDuration,
-                                    fitnessGoal: workout.fitnessGoal,
-                                    difficulty: workout.difficulty,
-                                    warmUpExercises: workout.warmUpExercises,
-                                    coolDownExercises: workout.coolDownExercises
-                                )
-                            }
+                    onExerciseUpdated: { updatedExercise in
+                        // Update the exercise in the workout data
+                        var updatedExercises = workout.exercises
+                        if let exerciseIndex = updatedExercises.firstIndex(where: { $0.exercise.id == updatedExercise.exercise.id }) {
+                            updatedExercises[exerciseIndex] = updatedExercise
+                            workout = TodayWorkout(
+                                id: workout.id,
+                                date: workout.date,
+                                title: workout.title,
+                                exercises: updatedExercises,
+                                blocks: workout.blocks,
+                                estimatedDuration: workout.estimatedDuration,
+                                fitnessGoal: workout.fitnessGoal,
+                                difficulty: workout.difficulty,
+                                warmUpExercises: workout.warmUpExercises,
+                                coolDownExercises: workout.coolDownExercises
+                            )
                         }
-                    )
-                default:
-                    EmptyView()
-                }
+                    }
+                    
+                )
             }
         } // Closes NavigationStack
         .onAppear {
@@ -358,12 +364,11 @@ struct WorkoutInProgressView: View {
                 toggleExerciseCompletion(globalIndex)
             },
             onExerciseTap: {
-                navigationPath.append(
-                    WorkoutNavigationDestination.logExercise(
-                        exercise,
-                        allCombinedExercises,
-                        globalIndex
-                    )
+                // Present logging fullscreen directly; avoid navigation placeholder
+                loggingContext = LogExerciseSheetContext(
+                    exercise: exercise,
+                    allExercises: allCombinedExercises,
+                    index: globalIndex
                 )
             }
         )
@@ -547,102 +552,105 @@ struct ExerciseRowInProgress: View {
     }
 
     var body: some View {
-        Button(action: onExerciseTap) {
-            HStack(spacing: 12) {
-                // Exercise thumbnail with completion overlay
-                ZStack {
-                    Group {
-                        if let image = UIImage(named: thumbnailImageName) {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } else {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
+        HStack(spacing: 12) {
+            // Tappable left area (thumbnail + labels)
+            Button(action: onExerciseTap) {
+                HStack(spacing: 12) {
+                    // Exercise thumbnail with completion overlay
+                    ZStack {
+                        Group {
+                            if let image = UIImage(named: thumbnailImageName) {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } else {
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .overlay(
+                                        Image(systemName: "dumbbell")
+                                            .foregroundColor(.gray)
+                                            .font(.system(size: 16))
+                                    )
+                            }
+                        }
+                        .opacity(isExerciseFullyLogged ? 0.6 : 1.0) // Dim when fully completed
+
+                        // Completion checkmark overlay
+                        if isExerciseFullyLogged {
+                            Circle()
+                                .fill(Color.accentColor)
+                                .frame(width: 24, height: 24)
                                 .overlay(
-                                    Image(systemName: "dumbbell")
-                                        .foregroundColor(.gray)
-                                        .font(.system(size: 16))
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.white)
                                 )
                         }
                     }
-                    .opacity(isExerciseFullyLogged ? 0.6 : 1.0) // Dim when fully completed
-                    
-                    // Completion checkmark overlay
-                    if isExerciseFullyLogged {
-                        Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: 24, height: 24)
-                            .overlay(
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.white)
-                            )
-                    }
-                }
-                .frame(width: 60, height: 60)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                
-                // Exercise info with completion styling
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(exercise.exercise.name)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(isExerciseFullyLogged ? .secondary : .primary)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                    
-                    Group {
-                        if let loggedCount = loggedSetsCount {
-                            Text("\(loggedCount)/\(exercise.sets) logged")
-                                .font(.system(size: 14, weight: isExerciseFullyLogged ? .semibold : .regular))
-                                .foregroundColor(isExerciseFullyLogged ? .accentColor : .orange)
-                        } else {
-                            Text("\(exercise.sets) sets • \(exercise.reps) reps")
-                                .font(.system(size: 14))
-                                .foregroundColor(.secondary)
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    // Exercise info with completion styling
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(exercise.exercise.name)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(isExerciseFullyLogged ? .secondary : .primary)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+
+                        Group {
+                            if let loggedCount = loggedSetsCount {
+                                Text("\(loggedCount)/\(exercise.sets) logged")
+                                    .font(.system(size: 14, weight: isExerciseFullyLogged ? .semibold : .regular))
+                                    .foregroundColor(isExerciseFullyLogged ? .accentColor : .orange)
+                            } else {
+                                Text("\(exercise.sets) sets • \(exercise.reps) reps")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
-                }
-                
-                Spacer()
-                
-                // Menu button - exactly like LogWorkoutView
-                Menu {
-                    Button("Exercise History") { showHistory = true }
-                    
-                    Button("Replace") {
-                        tempExercise = exercise
-                        showReplace = true
-                    }
-                    
-                    Button("Skip Exercise") {
-                        withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
-                    }
-                    
-                    Divider()
-                    
-                    Button("Mark Complete") { onToggle() }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .frame(width: 24, height: 24)
+
+                    Spacer()
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
-            .background(
-                isExerciseFullyLogged ? 
-                Color("tiktoknp").opacity(0.5) : 
-                Color("tiktoknp")
-            )
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isExerciseFullyLogged ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
-            )
+            .buttonStyle(PlainButtonStyle())
+
+            // Menu button - exactly like LogWorkoutView
+            Menu {
+                Button("Exercise History") { showHistory = true }
+
+                Button("Replace") {
+                    tempExercise = exercise
+                    showReplace = true
+                }
+
+                Button("Skip Exercise") {
+                    withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
+                }
+
+                Divider()
+
+                Button("Mark Complete") { onToggle() }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .frame(width: 24, height: 24)
+            }
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(
+            isExerciseFullyLogged ?
+            Color("tiktoknp").opacity(0.5) :
+            Color("tiktoknp")
+        )
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isExerciseFullyLogged ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
+        )
         .background(
             NavigationLink(
                 destination: ExerciseHistory(exercise: exercise),

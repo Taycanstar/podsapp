@@ -12,6 +12,7 @@ struct WorkoutContainerView: View {
     @State private var navigationPath = NavigationPath()
     @State private var exerciseReplacementCallback: ((Int, ExerciseData) -> Void)?
     @State private var exerciseUpdateCallback: ((Int, TodayWorkoutExercise) -> Void)?
+    @State private var loggingContext: LogExerciseSheetContext?
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -23,6 +24,10 @@ struct WorkoutContainerView: View {
                 },
                 onExerciseUpdateCallbackSet: { callback in
                     exerciseUpdateCallback = callback
+                },
+                onPresentLogSheet: { ctx in
+                    // Present logging as a full-screen cover instead of pushing
+                    loggingContext = ctx
                 }
             )
                 .navigationDestination(for: WorkoutNavigationDestination.self) { destination in
@@ -41,27 +46,31 @@ struct WorkoutContainerView: View {
                     case .startWorkout(let todayWorkout):
                         StartWorkoutView(todayWorkout: todayWorkout)
                     case .logExercise(let exercise, let allExercises, let index):
-                        ExerciseLoggingView(
-                            exercise: exercise, 
-                            allExercises: allExercises,
-                            onSetLogged: nil, // No set logging needed from this context
-                            isFromWorkoutInProgress: false,
-                            initialCompletedSetsCount: nil,
-                            initialRIRValue: nil,
-                            onExerciseReplaced: { newExercise in
-                                // Call the stored callback to update the parent list
-                                exerciseReplacementCallback?(index, newExercise)
-                            },
-                            onWarmupSetsChanged: { warmupSets in
-                                // TODO: Handle warm-up sets persistence in parent context
-                                // This will need to update the specific exercise in the workout data
-                            },
-                            onExerciseUpdated: { updatedExercise in
-                                // Update the exercise with full data (including warm-up sets and set count)
-                                exerciseUpdateCallback?(index, updatedExercise)
+                        // Legacy fallback: if any view still pushes this route, present sheet
+                        Color.clear
+                            .onAppear {
+                                loggingContext = LogExerciseSheetContext(exercise: exercise, allExercises: allExercises, index: index)
+                                // Immediately pop to avoid showing an empty page
+                                if !navigationPath.isEmpty { navigationPath.removeLast() }
                             }
-                        )
                     }
+                }
+                .fullScreenCover(item: $loggingContext) { ctx in
+                    ExerciseLoggingView(
+                        exercise: ctx.exercise,
+                        allExercises: ctx.allExercises,
+                        onSetLogged: nil,
+                        isFromWorkoutInProgress: false,
+                        initialCompletedSetsCount: nil,
+                        initialRIRValue: nil,
+                        onExerciseReplaced: { newExercise in
+                            exerciseReplacementCallback?(ctx.index, newExercise)
+                        },
+                        onWarmupSetsChanged: { _ in },
+                        onExerciseUpdated: { updated in
+                            exerciseUpdateCallback?(ctx.index, updated)
+                        }
+                    )
                 }
         }
     }

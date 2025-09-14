@@ -34,6 +34,8 @@ struct LogWorkoutView: View {
     @Binding var navigationPath: NavigationPath
     let onExerciseReplacementCallbackSet: (((Int, ExerciseData) -> Void)?) -> Void
     let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
+    // New: presenter for full-screen logging sheet (provided by container)
+    let onPresentLogSheet: (LogExerciseSheetContext) -> Void
     @State private var searchText = ""
     @FocusState private var isSearchFieldFocused: Bool
     
@@ -1014,7 +1016,8 @@ struct LogWorkoutView: View {
                         onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
                         currentWorkout: $currentWorkout,
                         effectiveFlexibilityPreferences: effectiveFlexibilityPreferences,
-                        showAddExerciseSheet: $showingAddExerciseSheet
+                        showAddExerciseSheet: $showingAddExerciseSheet,
+                        onPresentLogSheet: onPresentLogSheet
                     )
                     .transition(.opacity.combined(with: .scale))
                 }
@@ -1163,6 +1166,7 @@ private struct TodayWorkoutView: View {
     @Binding var currentWorkout: TodayWorkout?
     let effectiveFlexibilityPreferences: FlexibilityPreferences // Added this parameter
     @Binding var showAddExerciseSheet: Bool
+    let onPresentLogSheet: (LogExerciseSheetContext) -> Void
     
     
     @State private var userProfile = UserProfileService.shared
@@ -1196,7 +1200,8 @@ private struct TodayWorkoutView: View {
                         navigationPath: $navigationPath,
                         onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
                         onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
-                        showAddExerciseSheet: $showAddExerciseSheet
+                        showAddExerciseSheet: $showAddExerciseSheet,
+                        onPresentLogSheet: onPresentLogSheet
                     )
                 }
             } else {
@@ -1238,21 +1243,12 @@ private struct TodayWorkoutView: View {
                             .padding(.vertical, 16)
                             .background(Color.accentColor)
                             .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color("primarybg").opacity(0),
-                            Color("primarybg").opacity(0.95),
-                            Color("primarybg")
-                        ]),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
+                .background(Color.clear)
             }
         }
         .onAppear {
@@ -1996,14 +1992,16 @@ private struct RoutinesWorkoutView: View {
         @State private var warmUpExpanded: Bool = true
         @State private var coolDownExpanded: Bool = true
         @Binding var showAddExerciseSheet: Bool
+        let onPresentLogSheet: (LogExerciseSheetContext) -> Void
         
-        init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>, onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void, onExerciseUpdateCallbackSet: @escaping (((Int, TodayWorkoutExercise) -> Void)?) -> Void, showAddExerciseSheet: Binding<Bool>) {
+        init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>, onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void, onExerciseUpdateCallbackSet: @escaping (((Int, TodayWorkoutExercise) -> Void)?) -> Void, showAddExerciseSheet: Binding<Bool>, onPresentLogSheet: @escaping (LogExerciseSheetContext) -> Void) {
             self.workout = workout
             self._navigationPath = navigationPath
             self.onExerciseReplacementCallbackSet = onExerciseReplacementCallbackSet
             self.onExerciseUpdateCallbackSet = onExerciseUpdateCallbackSet
             self._exercises = State(initialValue: workout.exercises)
             self._showAddExerciseSheet = showAddExerciseSheet
+            self.onPresentLogSheet = onPresentLogSheet
         }
         
         // Precomputed grouping helpers to simplify the List body (prevents type-checker blowups)
@@ -2070,7 +2068,9 @@ private struct RoutinesWorkoutView: View {
                     allExercises: warmUpExercises,
                     exerciseIndex: index,
                     onExerciseReplaced: { _, _ in },
-                    navigationPath: $navigationPath
+                    onOpen: {
+                        onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: warmUpExercises, index: index))
+                    }
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -2109,7 +2109,9 @@ private struct RoutinesWorkoutView: View {
                         allExercises: exercises,
                         exerciseIndex: idx,
                         onExerciseReplaced: { index, newEx in replaceExercise(at: index, with: newEx) },
-                        navigationPath: $navigationPath,
+                        onOpen: {
+                            onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: exercises, index: idx))
+                        },
                         useBackground: false
                     )
                     // compact spacing; rely on internal row padding only
@@ -2148,7 +2150,9 @@ private struct RoutinesWorkoutView: View {
                                 allExercises: exercises,
                                 exerciseIndex: globalIndex,
                                 onExerciseReplaced: { index, newEx in replaceExercise(at: index, with: newEx) },
-                                navigationPath: $navigationPath,
+                                onOpen: {
+                                    onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: exercises, index: globalIndex))
+                                },
                                 useBackground: false
                             )
                             if idx != ordered.count - 1 {
@@ -2177,7 +2181,9 @@ private struct RoutinesWorkoutView: View {
                             allExercises: exercises,
                             exerciseIndex: globalIndex,
                             onExerciseReplaced: { index, newEx in replaceExercise(at: index, with: newEx) },
-                            navigationPath: $navigationPath,
+                            onOpen: {
+                                onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: exercises, index: globalIndex))
+                            },
                             useBackground: false
                         )
                         if exercise.exercise.id != nonGroupedExercisesList.last?.exercise.id {
@@ -2217,7 +2223,9 @@ private struct RoutinesWorkoutView: View {
                     allExercises: coolDownExercises,
                     exerciseIndex: index,
                     onExerciseReplaced: { _, _ in },
-                    navigationPath: $navigationPath
+                    onOpen: {
+                        onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: coolDownExercises, index: index))
+                    }
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -2390,7 +2398,7 @@ private struct ExerciseWorkoutCard: View {
     let allExercises: [TodayWorkoutExercise]
     let exerciseIndex: Int
     let onExerciseReplaced: (Int, ExerciseData) -> Void
-    @Binding var navigationPath: NavigationPath
+    let onOpen: () -> Void
     @EnvironmentObject var workoutManager: WorkoutManager
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
@@ -2450,101 +2458,101 @@ private struct ExerciseWorkoutCard: View {
         return String(format: "%d:%02d", minutes, secs)
     }
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], exerciseIndex: Int, onExerciseReplaced: @escaping (Int, ExerciseData) -> Void, navigationPath: Binding<NavigationPath>, useBackground: Bool = true) {
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], exerciseIndex: Int, onExerciseReplaced: @escaping (Int, ExerciseData) -> Void, onOpen: @escaping () -> Void, useBackground: Bool = true) {
         self.exercise = exercise
         self.allExercises = allExercises
         self.exerciseIndex = exerciseIndex
         self.onExerciseReplaced = onExerciseReplaced
-        self._navigationPath = navigationPath
+        self.onOpen = onOpen
         self._tempExercise = State(initialValue: exercise)
         self.useBackground = useBackground
     }
 
     var body: some View {
-        Button(action: {
-            // Navigate to exercise logging view with index
-            navigationPath.append(WorkoutNavigationDestination.logExercise(exercise, allExercises, exerciseIndex))
-        }) {
-            HStack(spacing: 12) {
-                // Exercise thumbnail
-                Group {
-                    if let image = UIImage(named: thumbnailImageName) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } else {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .overlay(
-                                Image(systemName: "dumbbell")
-                                    .foregroundColor(.gray)
-                                    .font(.system(size: 16))
-                            )
+        HStack(spacing: 12) {
+            // Tappable area: entire row except the ellipsis menu
+            Button(action: { onOpen() }) {
+                HStack(spacing: 12) {
+                    // Exercise thumbnail
+                    Group {
+                        if let image = UIImage(named: thumbnailImageName) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .overlay(
+                                    Image(systemName: "dumbbell")
+                                        .foregroundColor(.gray)
+                                        .font(.system(size: 16))
+                                )
+                        }
                     }
-                }
-                .frame(width: 60, height: 60)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                
-                // Exercise info
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(exercise.exercise.name)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                    
-                    Text(setsAndRepsDisplay)
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                // Menu button
-                Menu {
-                    Button("Exercise History") { showHistory = true }
-                    
-                    Button("Replace") { 
-                        tempExercise = exercise
-                        showReplace = true
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    // Exercise info
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(exercise.exercise.name)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+
+                        Text(setsAndRepsDisplay)
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
                     }
-                    
-                    Button("Recommend more often") {
-                        UserProfileService.shared.setExercisePreferenceMoreOften(exerciseId: exercise.exercise.id)
-                        recommendMoreOften = true
-                        recommendLessOften = false
-                    }
-                    
-                    Button("Recommend less often") {
-                        UserProfileService.shared.setExercisePreferenceLessOften(exerciseId: exercise.exercise.id)
-                        recommendLessOften = true
-                        recommendMoreOften = false
-                    }
-                    
-                    Divider()
-                    
-                    Button("Don't recommend again", role: .destructive) {
-                        let ups = UserProfileService.shared
-                        ups.addToAvoided(exercise.exercise.id)
-                        withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
-                    }
-                    
-                    Button("Delete from workout", role: .destructive) {
-                        withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .frame(width: 24, height: 24)
+
+                    Spacer()
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, useBackground ? 12 : 8)
-            .background(useBackground ? Color("containerbg") : Color.clear)
-            .cornerRadius(useBackground ? 12 : 0)
+            .buttonStyle(PlainButtonStyle())
+
+            // Menu button (non-tappable row area)
+            Menu {
+                Button("Exercise History") { showHistory = true }
+
+                Button("Replace") {
+                    tempExercise = exercise
+                    showReplace = true
+                }
+
+                Button("Recommend more often") {
+                    UserProfileService.shared.setExercisePreferenceMoreOften(exerciseId: exercise.exercise.id)
+                    recommendMoreOften = true
+                    recommendLessOften = false
+                }
+
+                Button("Recommend less often") {
+                    UserProfileService.shared.setExercisePreferenceLessOften(exerciseId: exercise.exercise.id)
+                    recommendLessOften = true
+                    recommendMoreOften = false
+                }
+
+                Divider()
+
+                Button("Don't recommend again", role: .destructive) {
+                    let ups = UserProfileService.shared
+                    ups.addToAvoided(exercise.exercise.id)
+                    withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
+                }
+
+                Button("Delete from workout", role: .destructive) {
+                    withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .frame(width: 24, height: 24)
+            }
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 16)
+        .padding(.vertical, useBackground ? 12 : 8)
+        .background(useBackground ? Color("containerbg") : Color.clear)
+        .cornerRadius(useBackground ? 12 : 0)
         .background(
             NavigationLink(
                 destination: ExerciseHistory(exercise: exercise),
@@ -3222,7 +3230,8 @@ struct NavigationBarSeparatorModifier: ViewModifier {
             selectedTab: .constant(0), 
             navigationPath: .constant(NavigationPath()),
             onExerciseReplacementCallbackSet: { _ in },
-            onExerciseUpdateCallbackSet: { _ in }
+            onExerciseUpdateCallbackSet: { _ in },
+            onPresentLogSheet: { _ in }
         )
     }
 }

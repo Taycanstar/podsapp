@@ -405,7 +405,7 @@ struct ExerciseDatabase {
             ExerciseData(id: 2910, name: "Dumbbell Suitcase Carry", exerciseType: "Strength", bodyPart: "Thighs", equipment: "Dumbbell", gender: "Male", target: "", synergist: ""),
             ExerciseData(id: 8701, name: "Weighted Bag Walking Lunge (male)", exerciseType: "Strength", bodyPart: "Thighs", equipment: "Weighted", gender: "Male", target: "", synergist: ""),
             ExerciseData(id: 9849, name: "Side Plank Clamshell (male)", exerciseType: "Strength", bodyPart: "Hips", equipment: "Body weight", gender: "Male", target: "", synergist: ""),
-            ExerciseData(id: 2338, name: "Chest Bench Press - Butt (WRONG-RIGHT)", exerciseType: "Strength", bodyPart: "Chest", equipment: "Barbell", gender: "Male", target: "", synergist: ""),
+            // ExerciseData(id: 2338, name: "Chest Bench Press - Butt (WRONG-RIGHT)", exerciseType: "Strength", bodyPart: "Chest", equipment: "Barbell", gender: "Male", target: "", synergist: ""),
             ExerciseData(id: 5883, name: "Barbell Curl Press Extension (male)", exerciseType: "Strength", bodyPart: "Upper Arms", equipment: "Barbell", gender: "Male", target: "", synergist: ""),
             ExerciseData(id: 4547, name: "Good Morning Squat", exerciseType: "Strength", bodyPart: "Hips", equipment: "Body weight", gender: "Male", target: "Hamstrings", synergist: "Adductor Magnus, Gluteus Maximus"),
             ExerciseData(id: 489, name: "Hyperextension", exerciseType: "Strength", bodyPart: "Waist", equipment: "Body weight", gender: "Male", target: "Erector Spinae", synergist: "Gluteus Maximus, Hamstrings"),
