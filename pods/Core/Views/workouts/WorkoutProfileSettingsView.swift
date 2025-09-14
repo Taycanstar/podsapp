@@ -53,8 +53,15 @@ struct WorkoutProfileSettingsView: View {
             Section {
                 // Fitness Goal
                 HStack {
-                    Label("Fitness Goal", systemImage: "target")
-                        .foregroundColor(iconColor)
+                    HStack(spacing: 12) {
+                        Image(systemName: "target")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Fitness Goal")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
                     Spacer()
                     Menu {
                         ForEach(FitnessGoalPickerView.canonicalGoals, id: \.self) { goal in
@@ -82,8 +89,15 @@ struct WorkoutProfileSettingsView: View {
 
                 // Fitness Experience
                 HStack {
-                    Label("Fitness Experience", systemImage: "aqi.medium")
-                        .foregroundColor(iconColor)
+                    HStack(spacing: 12) {
+                        Image(systemName: "aqi.medium")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Fitness Experience")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
                     Spacer()
                     Menu {
                         ForEach(ExperienceLevel.allCases, id: \.self) { lvl in
@@ -111,8 +125,15 @@ struct WorkoutProfileSettingsView: View {
 
                 // Exercise Variability
                 HStack {
-                    Label("Exercise Variability", systemImage: "shuffle")
-                        .foregroundColor(iconColor)
+                    HStack(spacing: 12) {
+                        Image(systemName: "shuffle")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Exercise Variability")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
                     Spacer()
                     Menu {
                         ForEach(ExerciseVariabilityPreference.allCases, id: \.self) { pref in
@@ -143,8 +164,15 @@ struct WorkoutProfileSettingsView: View {
                         sendPreferenceUpdate(["enable_timed_intervals": newVal])
                     }
                 )) {
-                    Label("Timed Intervals", systemImage: "stopwatch")
-                        .foregroundColor(iconColor)
+                    HStack(spacing: 12) {
+                        Image(systemName: "stopwatch")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Timed Intervals")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
                 }
                 .tint(.accentColor)
                 .listRowBackground(rowBackground)
@@ -157,8 +185,15 @@ struct WorkoutProfileSettingsView: View {
                         sendPreferenceUpdate(["enable_circuits_and_supersets": newVal])
                     }
                 )) {
-                    Label("Circuits and Supersets", systemImage: "square.grid.3x3")
-                        .foregroundColor(iconColor)
+                    HStack(spacing: 12) {
+                        Image(systemName: "square.grid.3x3")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Circuits and Supersets")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
                 }
                 .tint(.accentColor)
                 .listRowBackground(rowBackground)
@@ -172,8 +207,15 @@ struct WorkoutProfileSettingsView: View {
                         sendPreferenceUpdate(["enable_warmup_sets": newVal])
                     }
                 )) {
-                    Label("Warm-up Sets", systemImage: "flame")
-                        .foregroundColor(iconColor)
+                    HStack(spacing: 12) {
+                        Image(systemName: "flame")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Warm-up Sets")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
                 }
                 .tint(.accentColor)
                 .listRowBackground(rowBackground)
@@ -181,8 +223,15 @@ struct WorkoutProfileSettingsView: View {
                 // Workout Duration (inline picker on tap)
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Label("Workout Duration", systemImage: "clock")
-                            .foregroundColor(iconColor)
+                        HStack(spacing: 12) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 16))
+                                .fontWeight(.semibold)
+                                .foregroundColor(iconColor)
+                            Text("Workout Duration")
+                                .font(.system(size: 15))
+                                .foregroundColor(iconColor)
+                        }
                         Spacer()
                         Button(action: { withAnimation { showDurationPicker.toggle() } }) {
                             Text(formattedDuration)
@@ -205,7 +254,7 @@ struct WorkoutProfileSettingsView: View {
                             // Minutes
                             Picker("Minutes", selection: $durationMinutes.onChange { _ in updateDuration() }) {
                                 ForEach([0,15,30,45], id: \.self) { Text("\($0) m").tag($0) }
-                            }
+                              }
                             .pickerStyle(.wheel)
                             .frame(maxWidth: .infinity)
                         }
@@ -217,8 +266,15 @@ struct WorkoutProfileSettingsView: View {
 
                 // Training Splits
                 HStack {
-                    Label("Training Splits", systemImage: "square.split.2x2")
-                        .foregroundColor(iconColor)
+                    HStack(spacing: 12) {
+                        Image(systemName: "square.split.2x2")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Training Splits")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
                     Spacer()
                     Menu {
                         ForEach(TrainingSplitPreference.allCases, id: \.self) { split in
@@ -236,6 +292,7 @@ struct WorkoutProfileSettingsView: View {
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
+                                
                         }
                     }
                 }
@@ -243,8 +300,15 @@ struct WorkoutProfileSettingsView: View {
 
                 // Muscle Recovery Percentage (display-only for now)
                 HStack {
-                    Label("Muscle Recovery Percentage", systemImage: "bolt.heart")
-                        .foregroundColor(iconColor)
+                    HStack(spacing: 12) {
+                        Image(systemName: "bolt.heart")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Muscle Recovery Percentage")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
                     Spacer()
                     Text("\(profile.muscleRecoveryTargetPercent)%")
                         .foregroundColor(.secondary)
@@ -252,7 +316,7 @@ struct WorkoutProfileSettingsView: View {
                 .listRowBackground(rowBackground)
             }
         }
-        .environment(\.defaultMinListRowHeight,56)
+        .environment(\.defaultMinListRowHeight,52)
         .navigationTitle("Workout Settings")
         .onAppear { syncInitialDuration() }
         .scrollContentBackground(.hidden)
