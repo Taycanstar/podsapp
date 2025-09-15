@@ -1244,9 +1244,6 @@ private struct TodayWorkoutView: View {
                             .background(Color.accentColor)
                             .cornerRadius(12)
                             .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
-                            // Gaussian-like glow using stacked accent-colored shadows
-                            .shadow(color: Color.accentColor.opacity(0.30), radius: 16, x: 0, y: 0)
-                            .shadow(color: Color.accentColor.opacity(0.18), radius: 28, x: 0, y: 0)
                     }
                 }
                 .padding(.horizontal, 20)
