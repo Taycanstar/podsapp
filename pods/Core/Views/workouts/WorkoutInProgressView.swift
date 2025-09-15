@@ -45,6 +45,20 @@ struct WorkoutInProgressView: View {
         return warmUp + main + coolDown
     }
     
+    // Grouping helpers to mirror LogWorkoutView behavior
+    private var circuitOrSupersetBlocks: [WorkoutBlock] {
+        (workout.blocks ?? []).filter { $0.type == .circuit || $0.type == .superset }
+    }
+    
+    private var groupedExerciseIds: Set<Int> {
+        Set(circuitOrSupersetBlocks.flatMap { $0.exercises.map { $0.exercise.id } })
+    }
+    
+    private var nonGroupedExercisesList: [TodayWorkoutExercise] {
+        var seen = Set<Int>()
+        return exercises.filter { !groupedExerciseIds.contains($0.exercise.id) && seen.insert($0.exercise.id).inserted }
+    }
+    
     // Check if workout has any exercises
     private var hasAnyExercises: Bool {
         !(workout.warmUpExercises?.isEmpty ?? true) || 
@@ -308,14 +322,79 @@ struct WorkoutInProgressView: View {
                 sectionHeader(title: "Main Sets", color: .primary)
             }
             
-            ForEach(Array(workout.exercises.enumerated()), id: \.offset) { index, exercise in
-                let globalIndex = mainExercisesStartIndex + index
-                createExerciseRow(
-                    exercise: exercise,
-                    globalIndex: globalIndex,
-                    loggedSetsCount: exerciseCompletionStatus[globalIndex]
-                )
+            if circuitOrSupersetBlocks.isEmpty {
+                // Preserve existing flat list behavior when no blocks
+                ForEach(Array(workout.exercises.enumerated()), id: \.offset) { index, exercise in
+                    let globalIndex = mainExercisesStartIndex + index
+                    createExerciseRow(
+                        exercise: exercise,
+                        globalIndex: globalIndex,
+                        loggedSetsCount: exerciseCompletionStatus[globalIndex]
+                    )
+                }
+            } else {
+                groupedBlocksView
+                nonGroupedCardView
             }
+        }
+    }
+
+    // Grouped Circuit/Superset blocks view (styled like LogWorkoutView)
+    @ViewBuilder
+    private var groupedBlocksView: some View {
+        ForEach(Array(circuitOrSupersetBlocks.enumerated()), id: \.offset) { _, block in
+            VStack(alignment: .leading, spacing: 8) {
+                Text(block.type == .circuit ? "Circuit" : "Superset")
+                    .font(.title3)
+                    .foregroundColor(.primary)
+                    .fontWeight(.semibold)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    let ordered = orderedExercises(for: block)
+                    ForEach(Array(ordered.enumerated()), id: \.element.exercise.id) { idx, exercise in
+                        // Use global index across warm-up + main + cool-down for status tracking
+                        if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                            createExerciseRow(
+                                exercise: exercise,
+                                globalIndex: globalIndex,
+                                loggedSetsCount: exerciseCompletionStatus[globalIndex],
+                                useBackground: false
+                            )
+                            if idx != ordered.count - 1 {
+                                Divider().opacity(0.08)
+                            }
+                        }
+                    }
+                }
+                .background(Color("containerbg"))
+                .cornerRadius(12)
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    // Non-grouped exercises shown in a single card
+    @ViewBuilder
+    private var nonGroupedCardView: some View {
+        if !nonGroupedExercisesList.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(nonGroupedExercisesList.enumerated()), id: \.element.exercise.id) { idx, exercise in
+                    if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+                        createExerciseRow(
+                            exercise: exercise,
+                            globalIndex: globalIndex,
+                            loggedSetsCount: exerciseCompletionStatus[globalIndex],
+                            useBackground: false
+                        )
+                        if idx != nonGroupedExercisesList.count - 1 {
+                            Divider().opacity(0.08)
+                        }
+                    }
+                }
+            }
+            .background(Color("containerbg"))
+            .cornerRadius(12)
+            .padding(.top, 8)
         }
     }
     
@@ -353,13 +432,15 @@ struct WorkoutInProgressView: View {
     private func createExerciseRow(
         exercise: TodayWorkoutExercise,
         globalIndex: Int,
-        loggedSetsCount: Int?
+        loggedSetsCount: Int?,
+        useBackground: Bool = true
     ) -> some View {
         ExerciseRowInProgress(
             exercise: exercise,
             allExercises: allCombinedExercises,
             isCompleted: completedExercises.contains(globalIndex),
             loggedSetsCount: loggedSetsCount,
+            useBackground: useBackground,
             onToggle: {
                 toggleExerciseCompletion(globalIndex)
             },
@@ -519,6 +600,7 @@ struct ExerciseRowInProgress: View {
     let allExercises: [TodayWorkoutExercise]
     let isCompleted: Bool
     let loggedSetsCount: Int?
+    let useBackground: Bool
     let onToggle: () -> Void
     let onExerciseTap: () -> Void
     @EnvironmentObject var workoutManager: WorkoutManager
@@ -541,11 +623,12 @@ struct ExerciseRowInProgress: View {
         return loggedCount >= exercise.sets
     }
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], isCompleted: Bool, loggedSetsCount: Int?, onToggle: @escaping () -> Void, onExerciseTap: @escaping () -> Void) {
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], isCompleted: Bool, loggedSetsCount: Int?, useBackground: Bool = true, onToggle: @escaping () -> Void, onExerciseTap: @escaping () -> Void) {
         self.exercise = exercise
         self.allExercises = allExercises
         self.isCompleted = isCompleted
         self.loggedSetsCount = loggedSetsCount
+        self.useBackground = useBackground
         self.onToggle = onToggle
         self.onExerciseTap = onExerciseTap
         self._tempExercise = State(initialValue: exercise)
@@ -644,14 +727,16 @@ struct ExerciseRowInProgress: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
         .background(
-            isExerciseFullyLogged ?
-            Color("tiktoknp").opacity(0.5) :
-            Color("tiktoknp")
+            useBackground ? (isExerciseFullyLogged ? Color("tiktoknp").opacity(0.5) : Color("tiktoknp")) : Color.clear
         )
-        .cornerRadius(12)
+        .cornerRadius(useBackground ? 12 : 0)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isExerciseFullyLogged ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
+            Group {
+                if useBackground {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isExerciseFullyLogged ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
+                }
+            }
         )
         .background(
             NavigationLink(
@@ -684,6 +769,15 @@ struct ExerciseRowInProgress: View {
         }
     }
     
+}
+
+// MARK: - Group ordering helper
+extension WorkoutInProgressView {
+    /// Preserve the order of exercises in a block according to `workout.exercises`
+    fileprivate func orderedExercises(for block: WorkoutBlock) -> [TodayWorkoutExercise] {
+        let ids = block.exercises.map { $0.exercise.id }
+        return exercises.filter { ids.contains($0.exercise.id) }
+    }
 }
 
 
