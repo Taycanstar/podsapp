@@ -388,9 +388,19 @@ struct ExerciseLoggingView: View {
                         .contentShape(Rectangle())
                         .gesture(sheetDragGesture(expandedTop: expandedTop, collapsedTop: collapsedTop))
 
-                    // Main content
-                    mainListView
-                        .background(Color.clear)
+                    // Main content with animated transitions between exercises
+                    ZStack {
+                        mainListView
+                            .id(currentExercise.exercise.id)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                )
+                            )
+                    }
+                    .background(Color.clear)
+                    .animation(.easeInOut(duration: 0.28), value: currentExercise.exercise.id)
                 }
                 .background(Color("primarybg"))
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
@@ -1306,8 +1316,14 @@ struct ExerciseLoggingView: View {
     private func logSetAndContinue() {
         // Log a single set and rely on parent auto-advance for grouped flows
         logCurrentSet()
-        // Advance within the same cover to the next exercise in the group
-        advanceWithinGroupIfNeeded()
+        // Delay to let the user see the checkmark before advancing
+        let delay: TimeInterval = 0.4
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            withAnimation(.easeInOut(duration: 0.28)) {
+                // Advance within the same cover to the next exercise in the group
+                advanceWithinGroupIfNeeded()
+            }
+        }
     }
 
     // MARK: - Grouped Auto-Advance (in-cover)
@@ -1505,7 +1521,7 @@ struct ExerciseLoggingView: View {
         onSetLogged?(currentExercise, completedSetsCount, rirValue > 0 ? rirValue : nil)
         
         // If rest timer is enabled (session-wide) and there are remaining sets, show the rest timer
-        if workoutManager.sessionRestTimerEnabled && completedSetsCount < flexibleSets.count {
+        if workoutManager.sessionRestTimerEnabled && completedSetsCount < flexibleSets.count && !(isFromWorkoutInProgress && isCurrentExerciseInGroupedBlock) {
             let justCompletedIsWarmup = flexibleSets[setIndex].isWarmupSet
             let seconds = justCompletedIsWarmup ? workoutManager.sessionRestWarmupSeconds : workoutManager.sessionRestWorkingSeconds
             if seconds > 0 {

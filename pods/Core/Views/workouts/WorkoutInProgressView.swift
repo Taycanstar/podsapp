@@ -607,8 +607,8 @@ struct ExerciseRowInProgress: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Tappable left area (thumbnail + labels)
+        ZStack(alignment: .trailing) {
+            // Whole row is tappable (except trailing menu overlay)
             Button(action: onExerciseTap) {
                 HStack(spacing: 12) {
                     // Exercise thumbnail with completion overlay
@@ -666,14 +666,28 @@ struct ExerciseRowInProgress: View {
                         }
                     }
 
-                    Spacer()
+                    Spacer(minLength: 32) // leave space for overlay menu
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+                .background(
+                    useBackground ? (isExerciseFullyLogged ? Color("tiktoknp").opacity(0.5) : Color("tiktoknp")) : Color.clear
+                )
+                .cornerRadius(useBackground ? 12 : 0)
+                .overlay(
+                    Group {
+                        if useBackground {
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(isExerciseFullyLogged ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
+                        }
+                    }
+                )
             }
             .buttonStyle(PlainButtonStyle())
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
 
-            // Menu button - exactly like LogWorkoutView
+            // Trailing menu overlay (excludes it from the tappable area)
             Menu {
                 Button("Exercise History") { showHistory = true }
 
@@ -694,22 +708,9 @@ struct ExerciseRowInProgress: View {
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.secondary)
                     .frame(width: 24, height: 24)
+                    .padding(.trailing, 8)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 12)
-        .background(
-            useBackground ? (isExerciseFullyLogged ? Color("tiktoknp").opacity(0.5) : Color("tiktoknp")) : Color.clear
-        )
-        .cornerRadius(useBackground ? 12 : 0)
-        .overlay(
-            Group {
-                if useBackground {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isExerciseFullyLogged ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
-                }
-            }
-        )
         .background(
             NavigationLink(
                 destination: ExerciseHistory(exercise: exercise),
