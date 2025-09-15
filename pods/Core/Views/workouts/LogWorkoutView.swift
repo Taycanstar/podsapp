@@ -260,7 +260,7 @@ struct LogWorkoutView: View {
     
     @ViewBuilder
     private var backgroundView: some View {
-        Color("primarybg").edgesIgnoringSafeArea(.all)
+        Color("primarybg").ignoresSafeArea(.all)
     }
     
     @ViewBuilder
@@ -269,7 +269,6 @@ struct LogWorkoutView: View {
             headerSection
             sessionPhaseIndicator
             mainContentView
-            Spacer()
         }
     }
     
@@ -1225,7 +1224,8 @@ private struct TodayWorkoutView: View {
                 .padding(.top, 40)
             }
         }
-        .background(Color("primarybg"))
+        // Paint background without bottom safe area spacing
+        .background(Color("primarybg").ignoresSafeArea(edges: [.top, .horizontal]))
         .overlay(alignment: .bottom) {
             if let workout = workoutManager.todayWorkout {
                 HStack {
@@ -1251,6 +1251,8 @@ private struct TodayWorkoutView: View {
                 .background(Color.clear)
             }
         }
+        // Remove bottom safe-area reservation; we handle spacing ourselves
+        .ignoresSafeArea(edges: .bottom)
         .onAppear {
             loadOrGenerateTodayWorkout()
         }
