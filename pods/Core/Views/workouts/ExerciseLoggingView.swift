@@ -705,15 +705,26 @@ struct ExerciseLoggingView: View {
     private func selectExercise(_ exercise: TodayWorkoutExercise) {
         // Update current exercise and tracking
         currentExercise = exercise
+        // Reset per-exercise completion UI like RIR when switching
+        showRIRSection = false
+        rirValue = 0
         let detected = ExerciseClassificationService.determineTrackingType(for: exercise.exercise)
         trackingType = detected
 
         // Load flexible sets when available, otherwise initialize fresh
         if let flex = exercise.flexibleSets, !flex.isEmpty {
             flexibleSets = flex
+            // Jump to first incomplete set for the selected exercise
+            if let idx = flex.firstIndex(where: { !$0.isCompleted }) {
+                currentSetIndex = idx
+            } else {
+                currentSetIndex = max(flex.count - 1, 0)
+            }
         } else {
             flexibleSets = []
             initializeFlexibleSetsIfNeeded()
+            // Start at first set for a fresh exercise
+            currentSetIndex = 0
         }
 
         // Force the video to refresh
@@ -1276,6 +1287,8 @@ struct ExerciseLoggingView: View {
         
         // Mark current flexible set as completed
         flexibleSets[currentSetIndex].isCompleted = true
+        // Persist changes to current exercise and thumbnails list
+        saveFlexibleSetsToExercise()
         
         // Move to next set
         let previousSetIndex = currentSetIndex
@@ -1293,6 +1306,51 @@ struct ExerciseLoggingView: View {
     private func logSetAndContinue() {
         // Log a single set and rely on parent auto-advance for grouped flows
         logCurrentSet()
+        // Advance within the same cover to the next exercise in the group
+        advanceWithinGroupIfNeeded()
+    }
+
+    // MARK: - Grouped Auto-Advance (in-cover)
+    private func advanceWithinGroupIfNeeded() {
+        guard isCurrentExerciseInGroupedBlock else { return }
+        guard let blocks = workoutManager.todayWorkout?.blocks else { return }
+        guard let group = blocks.first(where: { blk in
+            (blk.type == .superset || blk.type == .circuit) && blk.exercises.count >= 2 &&
+            blk.exercises.contains(where: { $0.exercise.id == currentExercise.exercise.id })
+        }) else { return }
+
+        let groupIds = group.exercises.map { $0.exercise.id }
+        // Resolve the live list we should draw from
+        let sourceList: [TodayWorkoutExercise] = allExercises ?? workoutManager.todayWorkout?.exercises ?? []
+        let groupExercises: [TodayWorkoutExercise] = groupIds.compactMap { id in
+            sourceList.first(where: { $0.exercise.id == id })
+        }
+        guard let currentPos = groupIds.firstIndex(of: currentExercise.exercise.id) else { return }
+
+        // Helper to check if an exercise has remaining sets
+        func remainingSets(for ex: TodayWorkoutExercise) -> Int {
+            let completed = ex.flexibleSets?.filter { $0.isCompleted }.count ?? 0
+            return max(ex.sets - completed, 0)
+        }
+
+        // 1) Try next exercises in order
+        if currentPos + 1 < groupExercises.count {
+            let tail = groupExercises[(currentPos + 1)..<groupExercises.count]
+            if let next = tail.first(where: { remainingSets(for: $0) > 0 }) {
+                selectExercise(next)
+                return
+            }
+        }
+
+        // 2) Wrap to the beginning if any remain
+        if let firstRemaining = groupExercises.first(where: { remainingSets(for: $0) > 0 }) {
+            // Avoid immediately reselecting the just-logged exercise if it's still firstRemaining
+            if firstRemaining.exercise.id != currentExercise.exercise.id {
+                selectExercise(firstRemaining)
+            }
+            return
+        }
+        // 3) Otherwise, the whole group is complete. Stay on current exercise and allow Done/RIR.
     }
     
     private func logAllSets() {

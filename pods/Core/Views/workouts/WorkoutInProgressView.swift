@@ -181,47 +181,7 @@ struct WorkoutInProgressView: View {
                                 print("🏋️ ✅ FIXED CONTAMINATION: Updated completion for globalIndex \(globalIndex) - \(completedSetsCount) sets completed")
                             }
 
-                            // Auto-advance within groups only when group size >= 2
-                            if let blocks = workout.blocks {
-                                // Find the block containing the active exercise
-                                if let block = blocks.first(where: { blk in
-                                    blk.exercises.contains(where: { $0.exercise.id == activeExercise.exercise.id })
-                                }), (block.type == .superset || block.type == .circuit), block.exercises.count >= 2 {
-                                    let ids = block.exercises.map { $0.exercise.id }
-                                    if let pos = ids.firstIndex(of: activeExercise.exercise.id) {
-                                        let nextPos = pos + 1
-                                        if nextPos < ids.count {
-                                            let nextId = ids[nextPos]
-                                            if let nextExercise = allCombinedExercises.first(where: { $0.exercise.id == nextId }),
-                                               let nextGlobalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == nextId }) {
-                                                // Update the sheet to next exercise in the group (global index + combined list)
-                                                loggingContext = LogExerciseSheetContext(
-                                                    exercise: nextExercise,
-                                                    allExercises: allCombinedExercises,
-                                                    index: nextGlobalIndex
-                                                )
-                                            }
-                                        } else {
-                                            // Completed the group round; if more rounds/sets remain, loop back to first
-                                            // Heuristic: if completedSetsCount < max sets among group members, go back to first
-                                            let groupMaxSets = ids.compactMap { id in
-                                                allCombinedExercises.first(where: { $0.exercise.id == id })?.sets
-                                            }.max() ?? 1
-                                            if completedSetsCount < groupMaxSets {
-                                                let firstId = ids.first!
-                                                if let firstExercise = allCombinedExercises.first(where: { $0.exercise.id == firstId }),
-                                                   let firstGlobalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == firstId }) {
-                                                    loggingContext = LogExerciseSheetContext(
-                                                        exercise: firstExercise,
-                                                        allExercises: allCombinedExercises,
-                                                        index: firstGlobalIndex
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            // Defer grouped auto-advance to ExerciseLoggingView to keep the cover open
                     },
                     isFromWorkoutInProgress: true,
                     initialCompletedSetsCount: {
