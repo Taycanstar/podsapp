@@ -63,6 +63,8 @@ struct ExerciseLoggingView: View {
     // Rest timer sheet presentation (config values live in WorkoutManager session)
     @State private var showRestTimerSheet: Bool = false
     @State private var restTimerDuration: TimeInterval = 60
+    // Prevent overlapping grouped advances
+    @State private var isAdvancingGroup: Bool = false
     
     
     init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((TodayWorkoutExercise, Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil, onWarmupSetsChanged: (([WarmupSetData]) -> Void)? = nil, onExerciseUpdated: ((TodayWorkoutExercise) -> Void)? = nil) {
@@ -131,9 +133,9 @@ struct ExerciseLoggingView: View {
                     .padding(.top, 20)
             }
             
-            // Add bottom padding to ensure content isn't hidden behind floating button
+            // Add bottom padding so content isn't hidden behind floating buttons
             Color.clear
-                .frame(height: 100)
+                .frame(height: showRIRSection ? 160 : 100)
         }
         .padding(.horizontal, 16)
         .padding(.top, 16)
@@ -195,7 +197,7 @@ struct ExerciseLoggingView: View {
 
             // Bottom spacer so content isn't hidden behind floating buttons
             Color.clear
-                .frame(height: 80)
+                .frame(height: showRIRSection ? 160 : 80)
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
@@ -446,6 +448,10 @@ struct ExerciseLoggingView: View {
                 onTimerComplete: {
                     if let idx = autoLogSetFromTimer() {
                         handleFlexibleSetCompletion(at: idx)
+                        // For in-progress grouped flows, schedule advance within the sheet
+                        if isFromWorkoutInProgress && isCurrentExerciseInGroupedBlock {
+                            scheduleGroupedAdvanceAfterDelay()
+                        }
                     }
                 }
             )
@@ -1311,19 +1317,16 @@ struct ExerciseLoggingView: View {
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
+
+        // For in-progress grouped flows, schedule advance within the sheet
+        if isFromWorkoutInProgress && isCurrentExerciseInGroupedBlock {
+            scheduleGroupedAdvanceAfterDelay()
+        }
     }
 
     private func logSetAndContinue() {
-        // Log a single set and rely on parent auto-advance for grouped flows
+        // Log a single set; grouped advance is triggered by logCurrentSet() via scheduleGroupedAdvanceAfterDelay()
         logCurrentSet()
-        // Delay to let the user see the checkmark before advancing
-        let delay: TimeInterval = 0.4
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            withAnimation(.easeInOut(duration: 0.28)) {
-                // Advance within the same cover to the next exercise in the group
-                advanceWithinGroupIfNeeded()
-            }
-        }
     }
 
     // MARK: - Grouped Auto-Advance (in-cover)
@@ -1367,6 +1370,20 @@ struct ExerciseLoggingView: View {
             return
         }
         // 3) Otherwise, the whole group is complete. Stay on current exercise and allow Done/RIR.
+    }
+
+    private func scheduleGroupedAdvanceAfterDelay() {
+        guard isFromWorkoutInProgress && isCurrentExerciseInGroupedBlock else { return }
+        guard !isAdvancingGroup else { return }
+        isAdvancingGroup = true
+        //not change delay from 0.3
+        let delay: TimeInterval = 0.3
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            withAnimation(.easeInOut(duration: 0.28)) {
+                advanceWithinGroupIfNeeded()
+            }
+            isAdvancingGroup = false
+        }
     }
     
     private func logAllSets() {
