@@ -178,7 +178,7 @@ struct LogWorkoutView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .navigationTitle(selectedWorkoutTab == .workouts ? "Workouts" : "Today's Workout")
-            .toolbarBackground(.hidden, for: .navigationBar)
+              .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar { toolbarContent }
             .if(selectedWorkoutTab == .workouts) { view in
                 view.searchable(
@@ -1000,6 +1000,8 @@ struct LogWorkoutView: View {
                     ModernWorkoutLoadingView(message: generationMessage)
                         .transition(.opacity.combined(with: .scale))
                         .id("loading") // Force view refresh
+
+                        Spacer()
                 } else {
                     TodayWorkoutView(
                         searchText: searchText,
@@ -1178,11 +1180,8 @@ private struct TodayWorkoutView: View {
     
     var body: some View {
         Group {
-            // Show generation loading
-            if workoutManager.isGeneratingWorkout {
-                ModernWorkoutLoadingView(message: "Creating your personalized workout...")
-                    .transition(.opacity)
-            } else if let workout = workoutToShow {
+            // Show workout content (generation is handled at parent level)
+            if let workout = workoutToShow {
                 VStack(spacing: 12) {
                     // Session phase header for dynamic workouts
                     if let dynamicParams = workoutManager.dynamicParameters, showSessionPhaseCard {
@@ -1248,6 +1247,7 @@ private struct TodayWorkoutView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
+                .padding(.bottom, 18)
                 .background(Color.clear)
             }
         }
@@ -2031,6 +2031,7 @@ private struct RoutinesWorkoutView: View {
             addExerciseSection
         }
         .listStyle(PlainListStyle())
+        .scrollIndicators(.hidden)
         .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
         .cornerRadius(12)
@@ -3286,7 +3287,7 @@ private struct ModernWorkoutLoadingView: View {
         } else {
             // Full animated loading
             VStack(spacing: 32) {
-                // Add top spacing to avoid touching header
+                // Spacer ensures header controls (ellipsis, tabs) don't collide with nav bar
                 Color.clear.frame(height: 40)
                 // Elegant loading indicator
                 VStack(spacing: 16) {
