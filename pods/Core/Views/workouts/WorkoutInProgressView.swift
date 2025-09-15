@@ -47,7 +47,8 @@ struct WorkoutInProgressView: View {
     
     // Grouping helpers to mirror LogWorkoutView behavior
     private var circuitOrSupersetBlocks: [WorkoutBlock] {
-        (workout.blocks ?? []).filter { $0.type == .circuit || $0.type == .superset }
+        // Only treat as grouped if the block contains 2+ exercises
+        (workout.blocks ?? []).filter { ($0.type == .circuit || $0.type == .superset) && $0.exercises.count >= 2 }
     }
     
     private var groupedExerciseIds: Set<Int> {
@@ -180,31 +181,41 @@ struct WorkoutInProgressView: View {
                                 print("🏋️ ✅ FIXED CONTAMINATION: Updated completion for globalIndex \(globalIndex) - \(completedSetsCount) sets completed")
                             }
 
-                            // Auto-advance within Superset/Circuit groups
+                            // Auto-advance within groups only when group size >= 2
                             if let blocks = workout.blocks {
                                 // Find the block containing the active exercise
                                 if let block = blocks.first(where: { blk in
                                     blk.exercises.contains(where: { $0.exercise.id == activeExercise.exercise.id })
-                                }), block.type == .superset || block.type == .circuit {
+                                }), (block.type == .superset || block.type == .circuit), block.exercises.count >= 2 {
                                     let ids = block.exercises.map { $0.exercise.id }
                                     if let pos = ids.firstIndex(of: activeExercise.exercise.id) {
                                         let nextPos = pos + 1
                                         if nextPos < ids.count {
                                             let nextId = ids[nextPos]
-                                            if let nextExercise = workout.exercises.first(where: { $0.exercise.id == nextId }) {
-                                                // Update the sheet to next exercise in the group
-                                                loggingContext = LogExerciseSheetContext(exercise: nextExercise, allExercises: workout.exercises, index: nextPos)
+                                            if let nextExercise = allCombinedExercises.first(where: { $0.exercise.id == nextId }),
+                                               let nextGlobalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == nextId }) {
+                                                // Update the sheet to next exercise in the group (global index + combined list)
+                                                loggingContext = LogExerciseSheetContext(
+                                                    exercise: nextExercise,
+                                                    allExercises: allCombinedExercises,
+                                                    index: nextGlobalIndex
+                                                )
                                             }
                                         } else {
                                             // Completed the group round; if more rounds/sets remain, loop back to first
                                             // Heuristic: if completedSetsCount < max sets among group members, go back to first
                                             let groupMaxSets = ids.compactMap { id in
-                                                workout.exercises.first(where: { $0.exercise.id == id })?.sets
+                                                allCombinedExercises.first(where: { $0.exercise.id == id })?.sets
                                             }.max() ?? 1
                                             if completedSetsCount < groupMaxSets {
                                                 let firstId = ids.first!
-                                                if let firstExercise = workout.exercises.first(where: { $0.exercise.id == firstId }) {
-                                                    loggingContext = LogExerciseSheetContext(exercise: firstExercise, allExercises: workout.exercises, index: 0)
+                                                if let firstExercise = allCombinedExercises.first(where: { $0.exercise.id == firstId }),
+                                                   let firstGlobalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == firstId }) {
+                                                    loggingContext = LogExerciseSheetContext(
+                                                        exercise: firstExercise,
+                                                        allExercises: allCombinedExercises,
+                                                        index: firstGlobalIndex
+                                                    )
                                                 }
                                             }
                                         }
@@ -344,7 +355,8 @@ struct WorkoutInProgressView: View {
     private var groupedBlocksView: some View {
         ForEach(Array(circuitOrSupersetBlocks.enumerated()), id: \.offset) { _, block in
             VStack(alignment: .leading, spacing: 8) {
-                Text(block.type == .circuit ? "Circuit" : "Superset")
+                // Determine header by group size: 2 → Superset, 3+ → Circuit
+                Text(block.exercises.count >= 3 ? "Circuit" : "Superset")
                     .font(.title3)
                     .foregroundColor(.primary)
                     .fontWeight(.semibold)

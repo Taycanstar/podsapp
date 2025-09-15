@@ -2008,7 +2008,8 @@ private struct RoutinesWorkoutView: View {
         
         // Precomputed grouping helpers to simplify the List body (prevents type-checker blowups)
         private var circuitOrSupersetBlocks: [WorkoutBlock] {
-            (workout.blocks ?? []).filter { $0.type == .circuit || $0.type == .superset }
+            // Only show grouped blocks when there are 2+ exercises
+            (workout.blocks ?? []).filter { ($0.type == .circuit || $0.type == .superset) && $0.exercises.count >= 2 }
         }
         
         private var groupedExerciseIds: Set<Int> {
@@ -2148,7 +2149,8 @@ private struct RoutinesWorkoutView: View {
     private var groupedBlocksView: some View {
         ForEach(Array(circuitOrSupersetBlocks.enumerated()), id: \.offset) { _, block in
             VStack(alignment: .leading, spacing: 8) {
-                Text(block.type == .circuit ? "Circuit" : "Superset")
+                // Label by size: 2 → Superset, 3+ → Circuit
+                Text(block.exercises.count >= 3 ? "Circuit" : "Superset")
                     .font(.title3)
                     .foregroundColor(.primary)
                     .fontWeight(.semibold)
