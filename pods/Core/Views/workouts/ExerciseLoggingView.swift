@@ -161,6 +161,9 @@ struct ExerciseLoggingView: View {
                 } else {
                     durationExerciseButtons
                 }
+            } else if isFromWorkoutInProgress && isCurrentExerciseInGroupedBlock && !isDurationBasedExercise {
+                // In-progress + grouped (superset/circuit): single continue button
+                logSetAndContinueButton
             } else {
                 // Regular reps/weight exercises use standard buttons
                 workoutActionButtons
@@ -1007,6 +1010,20 @@ struct ExerciseLoggingView: View {
             }
         }
     }
+
+    // MARK: - Grouped flow button
+    private var logSetAndContinueButton: some View {
+        Button(action: logSetAndContinue) {
+            Text("Log Set and Continue")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color.blue)
+                .cornerRadius(12)
+                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+        }
+    }
     
     private var doneButton: some View {
         Button(action: completeWorkout) {
@@ -1106,6 +1123,14 @@ struct ExerciseLoggingView: View {
                trackingType == .holdTime || trackingType == .rounds
     }
     
+    private var isCurrentExerciseInGroupedBlock: Bool {
+        guard let blocks = workoutManager.todayWorkout?.blocks else { return false }
+        return blocks.contains { blk in
+            (blk.type == .superset || blk.type == .circuit) && blk.exercises.count >= 2 &&
+            blk.exercises.contains(where: { $0.exercise.id == currentExercise.exercise.id })
+        }
+    }
+
     private var allFlexibleSetsCompleted: Bool {
         !flexibleSets.isEmpty && flexibleSets.allSatisfy { $0.isCompleted }
     }
@@ -1263,6 +1288,11 @@ struct ExerciseLoggingView: View {
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
+    }
+
+    private func logSetAndContinue() {
+        // Log a single set and rely on parent auto-advance for grouped flows
+        logCurrentSet()
     }
     
     private func logAllSets() {
