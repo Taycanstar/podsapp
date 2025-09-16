@@ -36,7 +36,7 @@ struct ExerciseLoggingView: View {
     @State private var showingFullscreenVideo = false
     @State private var isVideoHidden = false // Deprecated toggle; kept for backward compatibility
     @State private var showKeyboardToolbar = false
-    @State private var showingWorkoutInProgress = false
+    @State private var presentedWorkout: TodayWorkout? = nil
     @State private var workoutStarted: Bool
     @State private var currentSetIndex = 0
     @State private var showRIRSection = false
@@ -533,25 +533,14 @@ struct ExerciseLoggingView: View {
                 FullscreenVideoView(videoURL: videoURL, isPresented: $showingFullscreenVideo)
             }
         }
-        .fullScreenCover(isPresented: $showingWorkoutInProgress) {
-            if let exercises = allExercises {
-                // Create a sample workout for the progress view
-                let sampleWorkout = TodayWorkout(
-                    id: UUID(),
-                    date: Date(),
-                    title: "Current Workout",
-                    exercises: exercises,
-                    estimatedDuration: exercises.count * 10, // Rough estimate
-                    fitnessGoal: .general,
-                    difficulty: 3,
-                    warmUpExercises: nil,
-                    coolDownExercises: nil
-                )
-                WorkoutInProgressView(
-                    isPresented: $showingWorkoutInProgress,
-                    workout: sampleWorkout
-                )
-            }
+        .fullScreenCover(item: $presentedWorkout) { workout in
+            WorkoutInProgressView(
+                isPresented: Binding(
+                    get: { presentedWorkout != nil },
+                    set: { if !$0 { presentedWorkout = nil } }
+                ),
+                workout: workout
+            )
         }
         .sheet(isPresented: $showingExerciseOptions) {
             let _ = print("🔧 DEBUG: ExerciseOptionsSheet is being presented")
@@ -1296,12 +1285,39 @@ struct ExerciseLoggingView: View {
     
     
     private func startWorkout() {
-        // Show the workout in progress view immediately
-        if let exercises = allExercises {
-            print("🏋️ Starting workout with \(exercises.count) exercises")
-            showingWorkoutInProgress = true
+        // Prefer the authoritative workout from WorkoutManager so grouped sections stay intact
+        var resolvedWorkout: TodayWorkout?
+
+        if let todayWorkout = workoutManager.todayWorkout {
+            resolvedWorkout = todayWorkout
+            print("🏋️ Starting workout from todayWorkout with \(todayWorkout.exercises.count) main exercises")
+        } else if let currentWorkout = workoutManager.currentWorkout {
+            resolvedWorkout = currentWorkout
+            print("🏋️ Starting workout from existing currentWorkout with \(currentWorkout.exercises.count) main exercises")
+        } else if let exercises = allExercises {
+            print("⚠️ WorkoutManager has no workout - using local exercise snapshot (circuits/supersets may be missing)")
+            resolvedWorkout = TodayWorkout(
+                id: UUID(),
+                date: Date(),
+                title: "Current Workout",
+                exercises: exercises,
+                estimatedDuration: exercises.count * 10,
+                fitnessGoal: .general,
+                difficulty: 3,
+                warmUpExercises: nil,
+                coolDownExercises: nil
+            )
         }
-        
+
+        guard let workoutToPresent = resolvedWorkout else {
+            print("❌ Unable to resolve workout to start from ExerciseLoggingView")
+            return
+        }
+
+        workoutManager.startWorkout(workoutToPresent)
+        presentedWorkout = workoutToPresent
+        workoutStarted = true
+
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.prepare()
