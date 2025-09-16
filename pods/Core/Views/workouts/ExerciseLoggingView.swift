@@ -1168,18 +1168,31 @@ struct ExerciseLoggingView: View {
     
     // FIXED: Use current active set's duration, not first set
     private func startTimer() {
-        // Get the current active set's duration
-        let currentSet = flexibleSets.indices.contains(currentSetIndex) ? flexibleSets[currentSetIndex] : nil
-        let setDuration = currentSet?.duration ?? defaultDurationForExerciseType()
-        
-        guard setDuration > 0 else { 
-            print("🔧 ERROR: Cannot start timer with duration: \(setDuration)")
-            return 
+        // Resolve the active set's duration, falling back to defaults only when needed
+        var setDuration = resolveDurationForCurrentSet()
+        if setDuration <= 0 {
+            let fallback = defaultDurationForExerciseType()
+            print("⚠️ Duration missing for set \(currentSetIndex + 1); using fallback \(fallback)s")
+            setDuration = fallback
+            if flexibleSets.indices.contains(currentSetIndex) {
+                flexibleSets[currentSetIndex].duration = fallback
+                flexibleSets[currentSetIndex].durationString = formatDuration(fallback)
+                saveFlexibleSetsToExercise()
+            }
         }
-        
+
+        guard setDuration > 0 else {
+            print("🔧 ERROR: Cannot start timer with duration: \(setDuration)")
+            return
+        }
+
         timerDuration = setDuration
         print("🔧 DEBUG: Starting timer for set \(currentSetIndex + 1) with duration: \(setDuration)s")
-        showTimerSheet = true
+
+        // Defer presentation until the next run loop so the sheet picks up the updated duration
+        DispatchQueue.main.async {
+            showTimerSheet = true
+        }
     }
 
     // MARK: - Set Helpers (List Inline)
@@ -1203,7 +1216,25 @@ struct ExerciseLoggingView: View {
             return 60
         }
     }
-    
+
+    private func resolveDurationForCurrentSet() -> TimeInterval {
+        guard flexibleSets.indices.contains(currentSetIndex) else { return 0 }
+
+        if let duration = flexibleSets[currentSetIndex].duration, duration > 0 {
+            return duration
+        }
+
+        if let string = flexibleSets[currentSetIndex].durationString,
+           let parsed = parseDurationString(string), parsed > 0 {
+            flexibleSets[currentSetIndex].duration = parsed
+            flexibleSets[currentSetIndex].durationString = formatDuration(parsed)
+            saveFlexibleSetsToExercise()
+            return parsed
+        }
+
+        return 0
+    }
+
     private func autoLogSetFromTimer() -> Int? {
         // Prefer the currently active set if valid; otherwise first incomplete
         let targetIndex: Int? = {
@@ -1230,6 +1261,32 @@ struct ExerciseLoggingView: View {
         let minutes = Int(seconds) / 60
         let remainingSeconds = Int(seconds) % 60
         return String(format: "%d:%02d", minutes, remainingSeconds)
+    }
+
+    private func parseDurationString(_ value: String) -> TimeInterval? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let components = trimmed.split(separator: ":")
+        guard !components.isEmpty else { return nil }
+
+        var numbers: [Int] = []
+        for part in components {
+            guard let number = Int(part) else { return nil }
+            numbers.append(number)
+        }
+
+        switch numbers.count {
+        case 3:
+            return TimeInterval(numbers[0] * 3600 + numbers[1] * 60 + numbers[2])
+        case 2:
+            return TimeInterval(numbers[0] * 60 + numbers[1])
+        case 1:
+            // Treat single component as minutes to avoid silent 0 durations
+            return TimeInterval(numbers[0] * 60)
+        default:
+            return nil
+        }
     }
     
     
