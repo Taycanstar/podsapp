@@ -65,6 +65,9 @@ struct ExerciseLoggingView: View {
     @State private var restTimerDuration: TimeInterval = 60
     // Prevent overlapping grouped advances
     @State private var isAdvancingGroup: Bool = false
+
+    // Prefer floating RIR card above the bottom buttons
+    private var useFloatingRIR: Bool { true }
     
     
     init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((TodayWorkoutExercise, Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil, onWarmupSetsChanged: (([WarmupSetData]) -> Void)? = nil, onExerciseUpdated: ((TodayWorkoutExercise) -> Void)? = nil) {
@@ -143,8 +146,13 @@ struct ExerciseLoggingView: View {
     
     @ViewBuilder
     private var floatingButtonStack: some View {
-        VStack {
+        VStack(spacing: 12) {
             Spacer()
+            // Float RIR card above the action button when visible
+            if showRIRSection && useFloatingRIR {
+                rirSection
+                    .padding(.horizontal, 16)
+            }
             floatingButtonContent
         }
     }
@@ -189,15 +197,15 @@ struct ExerciseLoggingView: View {
             setsListRows
             .padding(.horizontal)
 
-            if showRIRSection {
+            if showRIRSection && !useFloatingRIR {
                 rirSection
                     .listRowInsets(EdgeInsets(top: 20, leading: 16, bottom: 0, trailing: 16))
-                     .listRowBackground(Color("primarybg"))
+                    .listRowBackground(Color("primarybg"))
             }
 
             // Bottom spacer so content isn't hidden behind floating buttons
             Color.clear
-                .frame(height: showRIRSection ? 160 : 80)
+                .frame(height: 120)
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
@@ -1119,6 +1127,11 @@ struct ExerciseLoggingView: View {
         .padding()
         .background(Color("tiktoknp"))
         .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(.systemGray5), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 6)
     }
     
     // MARK: - Computed Properties
