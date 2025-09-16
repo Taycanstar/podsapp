@@ -167,22 +167,17 @@ struct WorkoutInProgressView: View {
                     onSetLogged: { activeExercise, completedSetsCount, rirValue in
                             hasLoggedSets = true
                             // Use the exercise actually being logged (may differ from initially tapped)
-                            if let globalIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == activeExercise.exercise.id }) {
-                                // DEBUG: Show what the old buggy system would have done
-                                let oldExerciseIndex = exercises.firstIndex(where: { $0.exercise.id == ctx.exercise.exercise.id }) ?? -1
-                                print("🔍 DEBUG INDEX MAPPING:")
-                                print("   Initially tapped: \(ctx.exercise.exercise.name)")
-                                print("   Actually logged: \(activeExercise.exercise.name)")
-                                print("   ❌ OLD BUGGY exerciseIndex: \(oldExerciseIndex) (would update wrong exercise!)")
-                                print("   ✅ FIXED globalIndex: \(globalIndex) (updates correct exercise)")
-                                print("   allCombinedExercises[\(globalIndex)]: \(allCombinedExercises[globalIndex].exercise.name)")
-                                
-                                exerciseCompletionStatus[globalIndex] = completedSetsCount
-                                if let rir = rirValue {
-                                    exerciseRIRValues[globalIndex] = rir
-                                }
-                                print("🏋️ ✅ FIXED CONTAMINATION: Updated completion for globalIndex \(globalIndex) - \(completedSetsCount) sets completed")
+                            let resolvedIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == activeExercise.exercise.id }) ?? ctx.index
+                            guard resolvedIndex < allCombinedExercises.count else {
+                                print("⚠️ Unable to resolve exercise index for \(activeExercise.exercise.name)")
+                                return
                             }
+
+                            if let rir = rirValue {
+                                exerciseRIRValues[resolvedIndex] = rir
+                            }
+                            exerciseCompletionStatus[resolvedIndex] = completedSetsCount
+                            print("🏋️ Updated completion for index \(resolvedIndex) - \(completedSetsCount) sets completed")
 
                             // Defer grouped auto-advance to ExerciseLoggingView to keep the cover open
                     },

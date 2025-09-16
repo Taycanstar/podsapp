@@ -1652,6 +1652,12 @@ struct ExerciseLoggingView: View {
                    let duration = durationSet.duration {
                     timerDuration = duration
                 }
+
+                if let nextIncomplete = savedFlexibleSets.firstIndex(where: { !$0.isCompleted }) {
+                    currentSetIndex = nextIncomplete
+                } else {
+                    currentSetIndex = max(savedFlexibleSets.count - 1, 0)
+                }
                 return
             }
             
