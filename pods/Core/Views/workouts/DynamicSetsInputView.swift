@@ -15,10 +15,10 @@ struct DynamicSetsInputView: View {
     let onSetCompleted: ((Int) -> Void)?
     let onAddSet: (() -> Void)?
     let onRemoveSet: ((Int) -> Void)?
-    let onDurationChanged: ((TimeInterval) -> Void)?
+    let onDurationChanged: ((Int, TimeInterval) -> Void)?
     let onSetFocused: ((Int?) -> Void)? // Callback when a set gains/loses focus
     let onSetDataChanged: (() -> Void)? // Callback when set data changes
-    let onPickerStateChanged: ((Bool) -> Void)?
+    let onPickerStateChanged: ((Int, Bool) -> Void)?
     
     @State private var showingAddSetOptions = false
     @FocusState private var focusedSetIndex: Int?
@@ -31,10 +31,10 @@ struct DynamicSetsInputView: View {
         onSetCompleted: ((Int) -> Void)? = nil,
         onAddSet: (() -> Void)? = nil,
         onRemoveSet: ((Int) -> Void)? = nil,
-        onDurationChanged: ((TimeInterval) -> Void)? = nil,
+        onDurationChanged: ((Int, TimeInterval) -> Void)? = nil,
         onSetFocused: ((Int?) -> Void)? = nil,
         onSetDataChanged: (() -> Void)? = nil,
-        onPickerStateChanged: ((Bool) -> Void)? = nil
+        onPickerStateChanged: ((Int, Bool) -> Void)? = nil
     ) {
         self._sets = sets
         self.workoutExercise = workoutExercise
@@ -98,7 +98,9 @@ struct DynamicSetsInputView: View {
                 set: binding(for: index),
                 setNumber: index + 1,
                 workoutExercise: workoutExercise,
-                onDurationChanged: onDurationChanged,
+                onDurationChanged: { duration in
+                    onDurationChanged?(index, duration)
+                },
                 isActive: index == focusedSetIndex,
                 onFocusChanged: { focused in
                     if focused {
@@ -112,7 +114,7 @@ struct DynamicSetsInputView: View {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         expandedPickerIndex = isExpanded ? index : nil
                     }
-                    onPickerStateChanged?(isExpanded)
+                    onPickerStateChanged?(index, isExpanded)
                 }
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))

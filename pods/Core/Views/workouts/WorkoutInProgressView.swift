@@ -66,6 +66,11 @@ struct WorkoutInProgressView: View {
         !workout.exercises.isEmpty || 
         !(workout.coolDownExercises?.isEmpty ?? true)
     }
+
+    private var navigationTimerTitle: String {
+        let base = timeString(from: elapsedTime)
+        return base
+    }
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -74,26 +79,24 @@ struct WorkoutInProgressView: View {
                 Color(.systemBackground)
                     .ignoresSafeArea()
                 
-                VStack(spacing: 0) {
-                    // Header with close button and timer
-                    headerSection
-                    
-                    // Exercise list
-                    ScrollView {
-                        VStack(spacing: 8) {
-                            if hasAnyExercises {
-                                exerciseContentView
-                            } else {
-                                emptyExercisesView
-                            }
-                            
-                            // Bottom padding for floating buttons
-                            Color.clear
-                                .frame(height: 100)
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // if isPaused {
+                        //     pausedStatusView
+                        // }
+
+                        if hasAnyExercises {
+                            exerciseContentView
+                        } else {
+                            emptyExercisesView
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
+
+                        // Bottom padding for floating buttons
+                        Color.clear
+                            .frame(height: 100)
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
                 }
                 
                 // Floating buttons
@@ -225,6 +228,20 @@ struct WorkoutInProgressView: View {
                     
                 )
             }
+            .navigationTitle(navigationTimerTitle)
+            .navigationBarTitleDisplayMode(.automatic)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { handleDismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .padding(6)
+                            .background(Color(.systemGray6))
+                            .clipShape(Circle())
+                    }
+                }
+            }
         } // Closes NavigationStack
         .onAppear {
             startTimer()
@@ -309,6 +326,8 @@ struct WorkoutInProgressView: View {
             }
         }
     }
+    
+  
 
     // Grouped Circuit/Superset blocks view (styled like LogWorkoutView)
     @ViewBuilder
@@ -425,66 +444,6 @@ struct WorkoutInProgressView: View {
                 )
             }
         )
-    }
-    
-    private var headerSection: some View {
-        VStack(spacing: 16) {
-            // Top bar with close button
-            HStack {
-                Button(action: {
-                    handleDismiss()
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
-                        .frame(width: 44, height: 44)
-                        .background(Color(.systemGray6))
-                        .clipShape(Circle())
-                }
-                
-                Spacer()
-                
-                Menu {
-                    Button("View Summary") {
-                        // TODO: Show workout summary
-                    }
-                    
-                    Button("Settings") {
-                        // TODO: Show workout settings
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
-                        .frame(width: 44, height: 44)
-                        .background(Color(.systemGray6))
-                        .clipShape(Circle())
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            
-            // Timer display
-            VStack(spacing: 4) {
-                HStack(spacing: 2) {
-                    Circle()
-                        .fill(isPaused ? Color.orange : Color.red)
-                        .frame(width: 8, height: 8)
-                    
-                    Text(timeString(from: elapsedTime))
-                        .font(.system(size: 42, weight: .bold))
-                        .foregroundColor(.primary)
-                }
-                
-                if isPaused {
-                    Text("Paused")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.orange)
-                }
-            }
-        }
-        .padding(.bottom, 8)
-        .background(Color(.systemBackground))
     }
     
     // MARK: - Helper Methods

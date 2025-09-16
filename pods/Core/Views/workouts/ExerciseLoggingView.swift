@@ -221,24 +221,26 @@ struct ExerciseLoggingView: View {
     private var setsListRows: some View {
         let _ = print("🔴 DEBUG setsListRows: trackingType = \(trackingType), flexibleSets.count = \(flexibleSets.count)")
 
-        ForEach(Array(flexibleSets.enumerated()), id: \.element.id) { index, _ in
+        ForEach(Array(flexibleSets.enumerated()), id: \.element.id) { setIndex, _ in
             DynamicSetRowView(
-                set: $flexibleSets[index],
-                setNumber: index + 1,
+                set: $flexibleSets[setIndex],
+                setNumber: setIndex + 1,
                 workoutExercise: currentExercise,
                 onDurationChanged: { duration in
-                    print("🔧 DEBUG: Duration updated to: \(duration) for set #\(index + 1)")
+                    print("🔧 DEBUG: Duration updated to: \(duration) for set #\(setIndex + 1)")
+                    currentSetIndex = setIndex
                     saveDurationToPersistence(duration)
                     saveFlexibleSetsToExercise()
                 },
-                isActive: index == currentSetIndex,
+                isActive: setIndex == currentSetIndex,
                 onFocusChanged: { focused in
-                    if focused { currentSetIndex = index }
+                    if focused { currentSetIndex = setIndex }
                 },
                 onSetChanged: {
                     saveFlexibleSetsToExercise()
                 },
                 onPickerStateChanged: { expanded in
+                    if expanded { currentSetIndex = setIndex }
                     isDurationPickerExpanded = expanded
                 }
             )
@@ -246,7 +248,7 @@ struct ExerciseLoggingView: View {
             .listRowBackground(Color.clear)
             .swipeActions(edge: .trailing) {
                 Button(role: .destructive) {
-                    deleteFlexibleSet(at: index)
+                    deleteFlexibleSet(at: setIndex)
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
@@ -959,9 +961,10 @@ struct ExerciseLoggingView: View {
                     onRemoveSet: { setIndex in
                         // Handle set removal if needed  
                     },
-                    onDurationChanged: { duration in
+                    onDurationChanged: { setIndex, duration in
                         // Set-specific duration update - no global variable
                         print("🔧 DEBUG: Duration updated to: \(duration) for current set")
+                        currentSetIndex = setIndex
                         saveDurationToPersistence(duration)
                         saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
                     },
@@ -971,7 +974,8 @@ struct ExerciseLoggingView: View {
                     onSetDataChanged: {
                         saveFlexibleSetsToExercise() // Save when any set data changes
                     },
-                    onPickerStateChanged: { expanded in
+                    onPickerStateChanged: { setIndex, expanded in
+                        if expanded { currentSetIndex = setIndex }
                         isDurationPickerExpanded = expanded
                     }
                 )
@@ -993,9 +997,10 @@ struct ExerciseLoggingView: View {
                     onRemoveSet: { setIndex in
                         // Handle set removal if needed  
                     },
-                    onDurationChanged: { duration in
+                    onDurationChanged: { setIndex, duration in
                         // Set-specific duration update - no global variable
                         print("🔧 DEBUG: Duration changed to: \(duration) for current set")
+                        currentSetIndex = setIndex
                         saveDurationToPersistence(duration)
                         saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
                     },
@@ -1005,7 +1010,8 @@ struct ExerciseLoggingView: View {
                     onSetDataChanged: {
                         saveFlexibleSetsToExercise() // Save when any set data changes
                     },
-                    onPickerStateChanged: { expanded in
+                    onPickerStateChanged: { setIndex, expanded in
+                        if expanded { currentSetIndex = setIndex }
                         isDurationPickerExpanded = expanded
                     }
                 )
@@ -1269,7 +1275,7 @@ struct ExerciseLoggingView: View {
     private func targetSetIndex() -> Int? {
         guard !flexibleSets.isEmpty else { return nil }
 
-        if flexibleSets.indices.contains(currentSetIndex) {
+        if flexibleSets.indices.contains(currentSetIndex) && !flexibleSets[currentSetIndex].isCompleted {
             return currentSetIndex
         }
 
