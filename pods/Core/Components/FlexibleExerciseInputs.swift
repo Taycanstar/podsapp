@@ -51,6 +51,7 @@ struct DynamicSetRowView: View {
             .onChange(of: showTimePicker) { _, newValue in
                 // Notify parent when time picker state changes for dynamic height
                 onPickerStateChanged?(newValue)
+                onFocusChanged?(newValue)
             }
     }
     

@@ -52,6 +52,7 @@ struct ExerciseLoggingView: View {
     @State private var currentExercise: TodayWorkoutExercise
     @State private var showingNotes = false
     @State private var showAddExerciseSheet = false
+    @State private var isDurationPickerExpanded = false
     
     // Enhanced tracking system state
     @State private var trackingType: ExerciseTrackingType = .repsWeight
@@ -237,7 +238,9 @@ struct ExerciseLoggingView: View {
                 onSetChanged: {
                     saveFlexibleSetsToExercise()
                 },
-                onPickerStateChanged: { _ in }
+                onPickerStateChanged: { expanded in
+                    isDurationPickerExpanded = expanded
+                }
             )
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
@@ -458,7 +461,10 @@ struct ExerciseLoggingView: View {
                         handleFlexibleSetCompletion(at: idx)
                         // For in-progress grouped flows, schedule advance within the sheet
                         if isFromWorkoutInProgress && isCurrentExerciseInGroupedBlock {
-                            scheduleGroupedAdvanceAfterDelay()
+                            let hasRemainingSets = flexibleSets.contains { !$0.isCompleted }
+                            if hasRemainingSets {
+                                scheduleGroupedAdvanceAfterDelay()
+                            }
                         }
                     }
                 }
@@ -511,6 +517,7 @@ struct ExerciseLoggingView: View {
             if lastUnitsSystem == nil {
                 lastUnitsSystem = onboarding.unitsSystem
             }
+            isDurationPickerExpanded = false
         }
         .onChange(of: focusedField) { oldValue, newValue in
             if newValue != nil && oldValue != newValue {
@@ -684,6 +691,7 @@ struct ExerciseLoggingView: View {
     private func sheetDragGesture(expandedTop: CGFloat, collapsedTop: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 8, coordinateSpace: .global)
             .onChanged { value in
+                guard !isDurationPickerExpanded else { return }
                 let dx = value.translation.width
                 let dy = value.translation.height
                 // Only treat predominantly vertical drags as sheet drags
@@ -696,6 +704,7 @@ struct ExerciseLoggingView: View {
                 sheetCurrentTop = max(expandedTop, min(collapsedTop, proposed))
             }
             .onEnded { _ in
+                guard !isDurationPickerExpanded else { return }
                 guard isDraggingSheet else { return }
                 let mid = (expandedTop + collapsedTop) / 2
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
@@ -721,6 +730,7 @@ struct ExerciseLoggingView: View {
         // Reset per-exercise completion UI like RIR when switching
         showRIRSection = false
         rirValue = 0
+        isDurationPickerExpanded = false
         let detected = ExerciseClassificationService.determineTrackingType(for: exercise.exercise)
         trackingType = detected
 
@@ -955,8 +965,14 @@ struct ExerciseLoggingView: View {
                         saveDurationToPersistence(duration)
                         saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
                     },
+                    onSetFocused: { index in
+                        if let idx = index { currentSetIndex = idx }
+                    },
                     onSetDataChanged: {
                         saveFlexibleSetsToExercise() // Save when any set data changes
+                    },
+                    onPickerStateChanged: { expanded in
+                        isDurationPickerExpanded = expanded
                     }
                 )
                 .transition(.opacity.combined(with: .scale))
@@ -983,8 +999,14 @@ struct ExerciseLoggingView: View {
                         saveDurationToPersistence(duration)
                         saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
                     },
+                    onSetFocused: { index in
+                        if let idx = index { currentSetIndex = idx }
+                    },
                     onSetDataChanged: {
                         saveFlexibleSetsToExercise() // Save when any set data changes
+                    },
+                    onPickerStateChanged: { expanded in
+                        isDurationPickerExpanded = expanded
                     }
                 )
                 .transition(.opacity.combined(with: .scale))
@@ -1071,10 +1093,12 @@ struct ExerciseLoggingView: View {
             Button(action: startTimer) {
                 Text("Start Timer")
                     .font(.system(size: 16, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(PlainButtonStyle())
             .foregroundColor(.primary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
             .background(Color(.systemGray6))
             .cornerRadius(8)
             
@@ -1168,8 +1192,15 @@ struct ExerciseLoggingView: View {
     
     // FIXED: Use current active set's duration, not first set
     private func startTimer() {
+        guard let targetIndex = targetSetIndex() else {
+            print("🔧 ERROR: No sets available to start timer")
+            return
+        }
+
+        currentSetIndex = targetIndex
+
         // Resolve the active set's duration, falling back to defaults only when needed
-        var setDuration = resolveDurationForCurrentSet()
+        var setDuration = resolveDuration(for: targetIndex)
         if setDuration <= 0 {
             let fallback = defaultDurationForExerciseType()
             print("⚠️ Duration missing for set \(currentSetIndex + 1); using fallback \(fallback)s")
@@ -1217,22 +1248,36 @@ struct ExerciseLoggingView: View {
         }
     }
 
-    private func resolveDurationForCurrentSet() -> TimeInterval {
-        guard flexibleSets.indices.contains(currentSetIndex) else { return 0 }
+    private func resolveDuration(for index: Int) -> TimeInterval {
+        guard flexibleSets.indices.contains(index) else { return 0 }
 
-        if let duration = flexibleSets[currentSetIndex].duration, duration > 0 {
+        if let duration = flexibleSets[index].duration, duration > 0 {
             return duration
         }
 
-        if let string = flexibleSets[currentSetIndex].durationString,
+        if let string = flexibleSets[index].durationString,
            let parsed = parseDurationString(string), parsed > 0 {
-            flexibleSets[currentSetIndex].duration = parsed
-            flexibleSets[currentSetIndex].durationString = formatDuration(parsed)
+            flexibleSets[index].duration = parsed
+            flexibleSets[index].durationString = formatDuration(parsed)
             saveFlexibleSetsToExercise()
             return parsed
         }
 
         return 0
+    }
+
+    private func targetSetIndex() -> Int? {
+        guard !flexibleSets.isEmpty else { return nil }
+
+        if flexibleSets.indices.contains(currentSetIndex) {
+            return currentSetIndex
+        }
+
+        if let nextIncomplete = flexibleSets.firstIndex(where: { !$0.isCompleted }) {
+            return nextIncomplete
+        }
+
+        return flexibleSets.indices.last
     }
 
     private func autoLogSetFromTimer() -> Int? {
@@ -1406,6 +1451,8 @@ struct ExerciseLoggingView: View {
 
         // For in-progress grouped flows, schedule advance within the sheet
         if isFromWorkoutInProgress && isCurrentExerciseInGroupedBlock {
+            let hasRemainingSets = flexibleSets.contains { !$0.isCompleted }
+            guard hasRemainingSets else { return }
             scheduleGroupedAdvanceAfterDelay()
         }
     }
@@ -1416,13 +1463,14 @@ struct ExerciseLoggingView: View {
     }
 
     // MARK: - Grouped Auto-Advance (in-cover)
-    private func advanceWithinGroupIfNeeded() {
-        guard isCurrentExerciseInGroupedBlock else { return }
-        guard let blocks = workoutManager.todayWorkout?.blocks else { return }
+    @discardableResult
+    private func advanceWithinGroupIfNeeded() -> Bool {
+        guard isCurrentExerciseInGroupedBlock else { return false }
+        guard let blocks = workoutManager.todayWorkout?.blocks else { return false }
         guard let group = blocks.first(where: { blk in
             (blk.type == .superset || blk.type == .circuit) && blk.exercises.count >= 2 &&
             blk.exercises.contains(where: { $0.exercise.id == currentExercise.exercise.id })
-        }) else { return }
+        }) else { return false }
 
         let groupIds = group.exercises.map { $0.exercise.id }
         // Resolve the live list we should draw from
@@ -1430,7 +1478,7 @@ struct ExerciseLoggingView: View {
         let groupExercises: [TodayWorkoutExercise] = groupIds.compactMap { id in
             sourceList.first(where: { $0.exercise.id == id })
         }
-        guard let currentPos = groupIds.firstIndex(of: currentExercise.exercise.id) else { return }
+        guard let currentPos = groupIds.firstIndex(of: currentExercise.exercise.id) else { return false }
 
         // Helper to check if an exercise has remaining sets
         func remainingSets(for ex: TodayWorkoutExercise) -> Int {
@@ -1443,7 +1491,7 @@ struct ExerciseLoggingView: View {
             let tail = groupExercises[(currentPos + 1)..<groupExercises.count]
             if let next = tail.first(where: { remainingSets(for: $0) > 0 }) {
                 selectExercise(next)
-                return
+                return true
             }
         }
 
@@ -1453,9 +1501,10 @@ struct ExerciseLoggingView: View {
             if firstRemaining.exercise.id != currentExercise.exercise.id {
                 selectExercise(firstRemaining)
             }
-            return
+            return firstRemaining.exercise.id != currentExercise.exercise.id
         }
         // 3) Otherwise, the whole group is complete. Stay on current exercise and allow Done/RIR.
+        return false
     }
 
     private func scheduleGroupedAdvanceAfterDelay() {
@@ -1495,6 +1544,19 @@ struct ExerciseLoggingView: View {
         onSetLogged?(currentExercise, completedSetsCount, rirValue)
         
         print("🏋️ Exercise completed with RIR: \(rirValue)")
+
+        if isFromWorkoutInProgress && isCurrentExerciseInGroupedBlock {
+            let advanced = withAnimation(.easeInOut(duration: 0.28)) {
+                advanceWithinGroupIfNeeded()
+            }
+            if advanced {
+                // Stay within the logging flow to continue the grouped sequence
+                let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                impactFeedback.prepare()
+                impactFeedback.impactOccurred()
+                return
+            }
+        }
         
         // Dismiss this view to go back to WorkoutInProgressView
         dismiss()

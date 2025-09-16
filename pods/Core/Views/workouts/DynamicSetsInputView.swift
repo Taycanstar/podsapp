@@ -18,6 +18,7 @@ struct DynamicSetsInputView: View {
     let onDurationChanged: ((TimeInterval) -> Void)?
     let onSetFocused: ((Int?) -> Void)? // Callback when a set gains/loses focus
     let onSetDataChanged: (() -> Void)? // Callback when set data changes
+    let onPickerStateChanged: ((Bool) -> Void)?
     
     @State private var showingAddSetOptions = false
     @FocusState private var focusedSetIndex: Int?
@@ -32,7 +33,8 @@ struct DynamicSetsInputView: View {
         onRemoveSet: ((Int) -> Void)? = nil,
         onDurationChanged: ((TimeInterval) -> Void)? = nil,
         onSetFocused: ((Int?) -> Void)? = nil,
-        onSetDataChanged: (() -> Void)? = nil
+        onSetDataChanged: (() -> Void)? = nil,
+        onPickerStateChanged: ((Bool) -> Void)? = nil
     ) {
         self._sets = sets
         self.workoutExercise = workoutExercise
@@ -43,6 +45,7 @@ struct DynamicSetsInputView: View {
         self.onDurationChanged = onDurationChanged
         self.onSetFocused = onSetFocused
         self.onSetDataChanged = onSetDataChanged
+        self.onPickerStateChanged = onPickerStateChanged
     }
     
     var body: some View {
@@ -109,6 +112,7 @@ struct DynamicSetsInputView: View {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         expandedPickerIndex = isExpanded ? index : nil
                     }
+                    onPickerStateChanged?(isExpanded)
                 }
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))

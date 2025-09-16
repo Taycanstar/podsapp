@@ -50,8 +50,8 @@ struct DurationExerciseTimerSheet: View {
                 
                 // Control buttons at bottom
                 if timeRemaining > 0 {
-                    HStack(spacing: 32) {
-                        // Pause/Resume button with custom circular container
+                    HStack {
+                        Spacer()
                         Button(action: toggleTimer) {
                             ZStack {
                                 Circle()
@@ -63,19 +63,7 @@ struct DurationExerciseTimerSheet: View {
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
-                        
-                        // Stop button with xmark and neutral circular background
-                        Button(action: stopTimer) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color(.systemGray5))
-                                    .frame(width: 64, height: 64)
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(.primary)
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                        Spacer()
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 16)
