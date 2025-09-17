@@ -15,6 +15,8 @@ class UserProfileService: ObservableObject {
     @Published var profileData: ProfileDataResponse?
     @Published var isLoading = false
     @Published var lastUpdated: Date?
+
+    private let muscleRecoveryOverridesKey = "muscleRecoveryOverrides"
     
     // MARK: - Fitbod-Aligned Progressive Milestone Tracking
     
@@ -331,6 +333,24 @@ class UserProfileService: ObservableObject {
         }
         set {
             UserDefaults.standard.set(newValue, forKey: "muscleRecoveryTargetPercent")
+            publishChange()
+        }
+    }
+
+    var muscleRecoveryOverrides: [String: Double] {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: muscleRecoveryOverridesKey),
+                  let overrides = try? JSONDecoder().decode([String: Double].self, from: data) else {
+                return [:]
+            }
+            return overrides
+        }
+        set {
+            if newValue.isEmpty {
+                UserDefaults.standard.removeObject(forKey: muscleRecoveryOverridesKey)
+            } else if let data = try? JSONEncoder().encode(newValue) {
+                UserDefaults.standard.set(data, forKey: muscleRecoveryOverridesKey)
+            }
             publishChange()
         }
     }

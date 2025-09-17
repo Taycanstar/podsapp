@@ -8,7 +8,7 @@ struct WorkoutProfileSettingsView: View {
     @State private var durationHours: Int = 0
     @State private var durationMinutes: Int = 45
 
-    private var rowBackground: Color { Color("sectioncard") }
+    private var rowBackground: Color { Color("altcard") }
     private var iconColor: Color { colorScheme == .dark ? .white : .primary }
 
     private var formattedDuration: String {
@@ -299,20 +299,24 @@ struct WorkoutProfileSettingsView: View {
                 }
                 .listRowBackground(rowBackground)
 
-                // Muscle Recovery Percentage (display-only for now)
-                HStack {
-                    HStack(spacing: 12) {
-                        Image(systemName: "bolt.heart")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Muscle Recovery Percentage")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
+                // Muscle Recovery Percentage
+                NavigationLink {
+                    EditMuscleRecoveryView()
+                } label: {
+                    HStack {
+                        HStack(spacing: 12) {
+                            Image(systemName: "bolt.heart")
+                                .font(.system(size: 16))
+                                .fontWeight(.semibold)
+                                .foregroundColor(iconColor)
+                            Text("Muscle Recovery Percentage")
+                                .font(.system(size: 15))
+                                .foregroundColor(iconColor)
+                        }
+                        Spacer()
+                        Text("\(profile.muscleRecoveryTargetPercent)%")
+                            .foregroundColor(.secondary)
                     }
-                    Spacer()
-                    Text("\(profile.muscleRecoveryTargetPercent)%")
-                        .foregroundColor(.secondary)
                 }
                 .listRowBackground(rowBackground)
             }
@@ -321,7 +325,7 @@ struct WorkoutProfileSettingsView: View {
         .navigationTitle("Workout Settings")
         .onAppear { syncInitialDuration() }
         .scrollContentBackground(.hidden)
-        .background(Color("sectionbg").ignoresSafeArea())
+        .background(Color("altbg").ignoresSafeArea())
         .onChange(of: showDurationPicker) { newVal in
             if newVal == false { // picker closed → persist to server
                 sendPreferenceUpdate(["preferred_workout_duration": profile.availableTime])
