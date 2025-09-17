@@ -907,11 +907,11 @@ struct ExerciseLoggingView: View {
                 }) {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(.primary)
                         .frame(width: 28, height: 28)
                         .background(
                             Circle()
-                                .fill(Color("containerbg"))
+                                .fill(Color("thumbbg"))
                         )
                         .contentShape(Circle()) // Make entire circle tappable
                 }
@@ -927,7 +927,7 @@ struct ExerciseLoggingView: View {
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color("containerbg"))
-                    .cornerRadius(8)
+                    .cornerRadius(24)
                     .onTapGesture {
                         showingNotes = true
                     }
@@ -2596,7 +2596,7 @@ struct ExerciseOptionsSheet: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 2)
                                 .background(Color(.systemGray5))
-                                .cornerRadius(4)
+                                .cornerRadius(24)
                         }
                     }
                 }
