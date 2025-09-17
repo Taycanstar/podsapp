@@ -355,7 +355,7 @@ struct ExerciseLoggingView: View {
                                                 .resizable()
                                                 .aspectRatio(contentMode: .fit)
                                                 .frame(width: 64, height: 64)
-                                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                                         }
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -377,7 +377,7 @@ struct ExerciseLoggingView: View {
                                             .frame(width: 64, height: 64)
                                         Image(systemName: "plus")
                                             .font(.system(size: 22, weight: .bold))
-                                            .foregroundColor(.accentColor)
+                                            .foregroundColor(.primary)
                                     }
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -2876,7 +2876,7 @@ struct ReplaceExerciseSheet: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: 60, height: 60)
-                                .cornerRadius(8)
+                                .cornerRadius(24)
                         } else {
                             RoundedRectangle(cornerRadius: 8)
                                 .fill(Color.gray.opacity(0.2))
@@ -2902,7 +2902,7 @@ struct ReplaceExerciseSheet: View {
                     .padding()
                     .background(Color(.systemBackground))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 24)
                             .stroke(Color(.systemGray4), lineWidth: 1)
                     )
                     .padding(.horizontal)
