@@ -798,7 +798,8 @@ private extension DashboardView {
         .padding(.vertical, 12) // Slightly reduced vertical padding
         .padding(.horizontal)
         .background(Color("containerbg"))
-        .cornerRadius(12)
+        // .cornerRadius(12)
+        .cornerRadius(24)
         }
         .buttonStyle(PlainButtonStyle()) // Remove button styling
     }
@@ -814,7 +815,8 @@ private extension DashboardView {
         }
         .padding()
         .background(Color("containerbg"))
-        .cornerRadius(12)
+        // .cornerRadius(12)
+        .cornerRadius(24)
         }
         .buttonStyle(PlainButtonStyle()) // Remove button styling
     }
@@ -850,7 +852,8 @@ private extension DashboardView {
         .padding(.vertical, 12) // Slightly reduced vertical padding
         .padding(.horizontal)
         .background(Color("containerbg"))
-        .cornerRadius(12)
+        // .cornerRadius(12)
+        .cornerRadius(24)
     }
 
     // Helper function to create each macro circle
@@ -986,7 +989,8 @@ private extension DashboardView {
         .padding(.vertical, 12) // Match macroCirclesCard padding
         .padding(.horizontal)
         .background(Color("containerbg"))
-        .cornerRadius(12)
+        // .cornerRadius(12)
+        .cornerRadius(24)
     }
 
     // ② Loading / error / empty / list --------------------------------------
@@ -1198,7 +1202,8 @@ private extension DashboardView {
         .frame(maxWidth: .infinity)
         .padding()
         .background(Color("containerbg"))
-        .cornerRadius(12)
+        // .cornerRadius(12)
+        .cornerRadius(24)
     }
 
     // Weight card for page 3
@@ -1253,7 +1258,8 @@ private extension DashboardView {
         .frame(maxWidth: .infinity)
         .padding()
         .background(Color("containerbg"))
-        .cornerRadius(12)
+        // .cornerRadius(12)
+        .cornerRadius(24)
     }
 }
 
@@ -1647,7 +1653,7 @@ struct LogRow: View {
                         .stroke(Color.accentColor.opacity(isHighlighted ? 0.5 : 0), lineWidth: 2)
                 )
         )
-        .cornerRadius(14)
+        .cornerRadius(24)
         .onAppear {
             // Apply highlight animation for new (optimistic) logs
             if log.isOptimistic {
@@ -1754,7 +1760,8 @@ struct MacroGenerationCard: View {
         }
         .padding()
         .background(Color("containerbg"))
-        .cornerRadius(12)
+        // .cornerRadius(12)
+        .cornerRadius(24)
     }
 }
 
@@ -1824,7 +1831,8 @@ struct FoodGenerationCard: View {
         }
         .padding()
         .background(Color("containerbg"))
-        .cornerRadius(12)
+        // .cornerRadius(12)
+        .cornerRadius(24)
         .onAppear {
             startAnimation()
         }
@@ -1934,7 +1942,8 @@ private extension DashboardView {
         }
         .padding()
         .background(Color("containerbg"))
-        .cornerRadius(12)
+        // .cornerRadius(12)
+        .cornerRadius(24)
     }
 
     /// Re‑usable metric cell used by healthSummaryCard

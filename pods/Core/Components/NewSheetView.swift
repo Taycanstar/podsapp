@@ -86,7 +86,7 @@ struct NewSheetView: View {
                     }
                     Spacer()
                 }
-                .background(Color(.systemBackground))
+                .background(Color("sheetbg"))
                 .onTapGesture {
                     // Handle tap
                     switch option.0 {
@@ -132,7 +132,7 @@ struct NewSheetView: View {
         .padding(.horizontal, 0)
         .background(
             RoundedRectangle(cornerRadius: 25)
-                .foregroundColor(Color(.systemBackground))
+                .foregroundColor(Color("sheetbg"))
                 .ignoresSafeArea()
         )
     }

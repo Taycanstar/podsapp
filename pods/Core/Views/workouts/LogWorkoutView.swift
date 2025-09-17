@@ -71,6 +71,8 @@ struct LogWorkoutView: View {
         workoutManager.generationMessage
     }
 
+    private var toolbarButtonDiameter: CGFloat { 36 }
+
     // (helpers moved into TodayWorkoutExerciseList where they are used)
     
     private var customTargetMuscles: [String]? {
@@ -1046,10 +1048,66 @@ struct LogWorkoutView: View {
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: WorkoutProfileSettingsView()) {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(.primary)
+                HStack(spacing: 12) {
+                    Button(action: {
+                        shouldRegenerateWorkout = true
+                    }) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
+                            .background(
+                                Circle()
+                                    .fill(Color("thumbbg"))
+                            )
+                            .contentShape(Circle())
+                    }
+
+                    Menu {
+                        Button(action: {
+                            // TODO: Implement rename workout action
+                        }) {
+                            HStack {
+                                Image(systemName: "pencil")
+                                Text("Rename Workout")
+                            }
+                        }
+
+                        Button(action: {
+                            // TODO: Implement save workout action
+                        }) {
+                            HStack {
+                                Image(systemName: "bookmark")
+                                Text("Save workout")
+                            }
+                        }
+
+                        Button(action: {
+                            // TODO: Implement build superset/circuit action
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.left.arrow.right")
+                                Text("Build superset/circuit")
+                            }
+                        }
+
+                        NavigationLink(destination: WorkoutProfileSettingsView()) {
+                            HStack {
+                                Image(systemName: "gear")
+                                Text("Workout Settings")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
+                            .background(
+                                Circle()
+                                    .fill(Color("thumbbg"))
+                            )
+                            .contentShape(Circle())
+                    }
                 }
             }
         }

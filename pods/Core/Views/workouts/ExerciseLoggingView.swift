@@ -1269,6 +1269,21 @@ struct ExerciseLoggingView: View {
             return parsed
         }
 
+        if let storedSets = currentExercise.flexibleSets, index < storedSets.count {
+            if let exerciseDuration = storedSets[index].duration, exerciseDuration > 0 {
+                flexibleSets[index].duration = exerciseDuration
+                flexibleSets[index].durationString = formatDuration(exerciseDuration)
+                return exerciseDuration
+            }
+
+            if let exerciseString = storedSets[index].durationString,
+               let parsed = parseDurationString(exerciseString), parsed > 0 {
+                flexibleSets[index].duration = parsed
+                flexibleSets[index].durationString = formatDuration(parsed)
+                return parsed
+            }
+        }
+
         return 0
     }
 
