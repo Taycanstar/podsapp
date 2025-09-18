@@ -882,7 +882,6 @@ class WorkoutManager: ObservableObject {
             warmUpExercises: warmUpExercises,
             coolDownExercises: coolDownExercises
         )
-        // Assemble dynamic blocks using session knobs and recent history
         let recentBlockTypes: [BlockType] = todayWorkout?.blocks?.map { $0.type } ?? []
         let assembledBlocks = BlockAssemblyService.assembleBlocks(
             from: base,
@@ -891,14 +890,13 @@ class WorkoutManager: ObservableObject {
             equipment: parameters.customEquipment,
             recentHistory: recentBlockTypes
         )
-        // Also adapt exercises to reflect interval/circuit prescriptions so legacy UI shows time-based sets
-        let adaptedExercises = BlockAssemblyService.applyBlockSchemes(to: base.exercises, using: assembledBlocks)
+        let combinedExercises = BlockAssemblyService.applyBlockSchemes(to: base.exercises, using: assembledBlocks)
 
         return TodayWorkout(
             id: base.id,
             date: base.date,
             title: base.title,
-            exercises: adaptedExercises,
+            exercises: combinedExercises,
             blocks: assembledBlocks,
             estimatedDuration: base.estimatedDuration,
             fitnessGoal: base.fitnessGoal,

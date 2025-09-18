@@ -278,15 +278,6 @@ class UserProfileService: ObservableObject {
     // Alias used by generation services
     var autoGroupingEnabled: Bool { circuitsAndSupersetsEnabled }
 
-    // Timed intervals finisher/blocks gate
-    var timedIntervalsEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: "timedIntervalsEnabled") }
-        set {
-            UserDefaults.standard.set(newValue, forKey: "timedIntervalsEnabled")
-            publishChange()
-        }
-    }
-
     // Warm-up sets toggle (maps to server's enable_warmup_sets). Default ON if unset.
     var warmupSetsEnabled: Bool {
         get {

@@ -13,16 +13,14 @@ struct ModalityWeights {
     var standard: Double
     var superset: Double
     var circuit: Double
-    var interval: Double
 
     func normalized() -> ModalityWeights {
-        let sum = standard + superset + circuit + interval
-        guard sum > 0 else { return ModalityWeights(standard: 1, superset: 0, circuit: 0, interval: 0) }
+        let sum = standard + superset + circuit
+        guard sum > 0 else { return ModalityWeights(standard: 1, superset: 0, circuit: 0) }
         return ModalityWeights(
             standard: standard / sum,
             superset: superset / sum,
-            circuit: circuit / sum,
-            interval: interval / sum
+            circuit: circuit / sum
         )
     }
 
@@ -30,8 +28,7 @@ struct ModalityWeights {
         [
             .standard: standard,
             .superset: superset,
-            .circuit: circuit,
-            .interval: interval
+            .circuit: circuit
         ]
     }
 }
@@ -48,7 +45,6 @@ enum BlockAssemblyService {
         // User preference gates (backward-compatible defaults)
         let profile = UserProfileService.shared
         let groupingEnabled = profile.autoGroupingEnabled
-        let intervalsEnabled = profile.timedIntervalsEnabled
         let baseWeights = baselineWeights(for: goal)
         let weighted = adjustedWeights(baseWeights, duration: duration, equipment: equipment, recentHistory: recentHistory, goal: goal)
 
@@ -62,9 +58,6 @@ enum BlockAssemblyService {
             if groupingEnabled && goal.normalized == .circuitTraining, let circuit = makeCircuit(from: mainExercises, pickingFrom: &remaining, duration: duration) {
                 blocks.append(circuit)
             }
-            if intervalsEnabled && goal.normalized == .circuitTraining, let finisher = maybeMakeIntervalFinisher(from: mainExercises, pickingFrom: &remaining, duration: duration) {
-                blocks.append(finisher)
-            }
             // Any leftovers become standard
             if !remaining.isEmpty, let std = makeStandard(from: mainExercises, pickingFrom: &remaining) { blocks.append(std) }
             return blocks
@@ -73,16 +66,13 @@ enum BlockAssemblyService {
         // Greedy sampling by weights until we assign all exercises (with conservative caps)
         var supersetCount = 0
         var circuitCount = 0
-        var intervalCount = 0
-        let (supersetCap, circuitCap, intervalCap) = caps(for: goal)
+        let (supersetCap, circuitCap) = caps(for: goal)
         while !remaining.isEmpty {
             guard var nextType = sample(by: weighted) else { break }
             if nextType == .circuit && (!groupingEnabled || !circuitsAllowed(for: goal)) { nextType = .standard }
             if nextType == .superset && (!groupingEnabled) { nextType = .standard }
-            if nextType == .interval && (!intervalsEnabled || !intervalsAllowed(for: goal)) { nextType = .standard }
             if nextType == .superset && supersetCount >= supersetCap { nextType = .standard }
             if nextType == .circuit && circuitCount >= circuitCap { nextType = .standard }
-            if nextType == .interval && intervalCount >= intervalCap { nextType = .standard }
             switch nextType {
             case .circuit:
                 if let circuit = makeCircuit(from: mainExercises, pickingFrom: &remaining, duration: duration) {
@@ -93,11 +83,6 @@ enum BlockAssemblyService {
                 if let ss = makeSuperset(from: mainExercises, pickingFrom: &remaining) {
                     blocks.append(ss)
                     supersetCount += 1
-                }
-            case .interval:
-                if let finisher = maybeMakeIntervalFinisher(from: mainExercises, pickingFrom: &remaining, duration: duration) {
-                    blocks.append(finisher)
-                    intervalCount += 1
                 }
             case .standard:
                 if let std = makeStandard(from: mainExercises, pickingFrom: &remaining) {
@@ -126,20 +111,6 @@ enum BlockAssemblyService {
 
         for block in blocks {
             switch block.type {
-            case .interval:
-                // Single exercise finisher; rounds = intervals
-                guard let bex = block.exercises.first,
-                      let scheme = bex.intervalScheme else { continue }
-                let rounds = max(1, block.rounds)
-                var sets: [FlexibleSetData] = []
-                sets.reserveCapacity(rounds)
-                for _ in 0..<rounds {
-                    var fs = FlexibleSetData(trackingType: .timeOnly)
-                    fs.duration = TimeInterval(scheme.workSec)
-                    sets.append(fs)
-                }
-                intervalPlan[bex.exercise.id] = (.timeOnly, sets)
-
             case .circuit:
                 // Each exercise gets time-only sets equal to rounds
                 let rounds = max(1, block.rounds)
@@ -189,17 +160,17 @@ enum BlockAssemblyService {
     private static func baselineWeights(for goal: FitnessGoal) -> ModalityWeights {
         switch goal.normalized {
         case .strength, .powerlifting:
-            return ModalityWeights(standard: 0.9, superset: 0.1, circuit: 0.0, interval: 0.0)
+            return ModalityWeights(standard: 0.9, superset: 0.1, circuit: 0.0)
         case .hypertrophy:
-            return ModalityWeights(standard: 0.88, superset: 0.08, circuit: 0.02, interval: 0.02)
+            return ModalityWeights(standard: 0.88, superset: 0.12, circuit: 0.0)
         case .circuitTraining:
-            return ModalityWeights(standard: 0.25, superset: 0.0, circuit: 0.6, interval: 0.15)
+            return ModalityWeights(standard: 0.25, superset: 0.0, circuit: 0.75)
         case .general:
-            return ModalityWeights(standard: 0.9, superset: 0.05, circuit: 0.03, interval: 0.02)
+            return ModalityWeights(standard: 0.9, superset: 0.1, circuit: 0.0)
         case .olympicWeightlifting:
-            return ModalityWeights(standard: 0.95, superset: 0.05, circuit: 0.0, interval: 0.0)
+            return ModalityWeights(standard: 0.95, superset: 0.05, circuit: 0.0)
         default:
-            return ModalityWeights(standard: 0.9, superset: 0.06, circuit: 0.02, interval: 0.02)
+            return ModalityWeights(standard: 0.9, superset: 0.1, circuit: 0.0)
         }
     }
 
@@ -213,16 +184,13 @@ enum BlockAssemblyService {
         var w = base
         let profile = UserProfileService.shared
         let groupingEnabled = profile.autoGroupingEnabled
-        let intervalsEnabled = profile.timedIntervalsEnabled
 
         // Time bias: remain conservative for short sessions
         if duration.minutes <= 30 {
             w.circuit *= 1.1
-            w.interval *= 1.1
             w.standard *= 0.95
         } else if duration.minutes >= 75 {
             w.circuit *= 0.85
-            w.interval *= 0.9
             w.standard *= 1.1
         }
 
@@ -246,7 +214,6 @@ enum BlockAssemblyService {
         w.standard *= Double.random(in: 0.9...1.1)
         w.superset *= Double.random(in: 0.9...1.1)
         w.circuit *= Double.random(in: 0.9...1.1)
-        w.interval *= Double.random(in: 0.9...1.1)
 
         // Normalize and enforce tiny minimums to avoid zeroing out variety (but 0 for disallowed types below)
         var dict = w.normalized().asDict()
@@ -256,12 +223,8 @@ enum BlockAssemblyService {
             dict[.superset] = 0.0
             dict[.circuit] = 0.0
         }
-        if !intervalsEnabled {
-            dict[.interval] = 0.0
-        }
         // Hard clamp disallowed modalities by goal
         if !circuitsAllowed(for: goal) { dict[.circuit] = 0.0 }
-        if !intervalsAllowed(for: goal) { dict[.interval] = 0.0 }
         // Re-normalize after clamping
         let sum = dict.values.reduce(0, +)
         if sum > 0 {
@@ -400,46 +363,10 @@ enum BlockAssemblyService {
         )
     }
 
-    private static func maybeMakeIntervalFinisher(from list: [TodayWorkoutExercise], pickingFrom remaining: inout [Int], duration: WorkoutDuration) -> WorkoutBlock? {
-        guard !remaining.isEmpty else { return nil }
-        // Prefer the last remaining as a finisher to minimize disruption
-        let idx = remaining.removeLast()
-        let ex = list[idx]
-        let work = 20
-        let rest = 10
-        let intervals = duration.minutes <= 30 ? 6 : 8
-        let bex = BlockExercise(
-            exercise: ex.exercise,
-            schemeType: .interval,
-            repScheme: nil,
-            intervalScheme: IntervalScheme(workSec: work, restSec: rest, targetReps: nil)
-        )
-        return WorkoutBlock(
-            type: .interval,
-            exercises: [bex],
-            rounds: intervals,
-            restBetweenExercises: nil,
-            restBetweenRounds: nil,
-            weightNormalization: nil,
-            timingConfig: TimingConfig(prepareSec: 5, transitionSec: 10, autoAdvance: true)
-        )
-    }
-
     // MARK: - Safety Heuristics (client-side)
     private static func circuitsAllowed(for goal: FitnessGoal) -> Bool {
         // Also respect global user gate
         if UserProfileService.shared.autoGroupingEnabled == false { return false }
-        switch goal.normalized {
-        case .strength, .powerlifting, .olympicWeightlifting:
-            return false
-        default:
-            return true
-        }
-    }
-
-    private static func intervalsAllowed(for goal: FitnessGoal) -> Bool {
-        // Also respect global user gate
-        if UserProfileService.shared.timedIntervalsEnabled == false { return false }
         switch goal.normalized {
         case .strength, .powerlifting, .olympicWeightlifting:
             return false
@@ -479,20 +406,20 @@ enum BlockAssemblyService {
         return type(ea) == type(eb)
     }
 
-    private static func caps(for goal: FitnessGoal) -> (superset: Int, circuit: Int, interval: Int) {
+    private static func caps(for goal: FitnessGoal) -> (superset: Int, circuit: Int) {
         switch goal.normalized {
         case .circuitTraining:
             // Tighten cap: circuits at 2 (not 3)
-            return (superset: 0, circuit: 2, interval: 1)
+            return (superset: 0, circuit: 2)
         case .hypertrophy:
-            return (superset: 1, circuit: 0, interval: 1)
+            return (superset: 1, circuit: 0)
         case .general:
             // Make circuits truly rare: cap circuits at 0 (supersets only)
-            return (superset: 1, circuit: 0, interval: 1)
+            return (superset: 1, circuit: 0)
         case .strength, .powerlifting, .olympicWeightlifting:
-            return (superset: 1, circuit: 0, interval: 0)
+            return (superset: 1, circuit: 0)
         default:
-            return (superset: 1, circuit: 0, interval: 1)
+            return (superset: 1, circuit: 0)
         }
     }
 }

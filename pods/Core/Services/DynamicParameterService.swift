@@ -117,8 +117,7 @@ class DynamicParameterService: ObservableObject {
         exercisePriority: MovementPriority = .secondary
     ) -> (target: Int, range: ClosedRange<Int>) {
         
-        print("🧮 === Clean Rep Target Calculation ===")
-        print("🧮 Goal: \(fitnessGoal) | Phase: \(sessionPhase.displayName) | Type: \(exerciseType.displayName) | Priority: \(exercisePriority.displayName)")
+      
         
         // Get optimal range from science-based lookup table (NO compounding adjustments)
         let optimalRange = getOptimalRepRange(
@@ -135,8 +134,7 @@ class DynamicParameterService: ObservableObject {
             feedback: lastFeedback
         )
         
-        print("🧮 Optimal range: \(optimalRange.lowerBound)-\(optimalRange.upperBound) | Clean target: \(cleanTarget)")
-        print("🧮 === End Clean Calculation ===")
+       
         
         return (target: cleanTarget, range: optimalRange)
     }

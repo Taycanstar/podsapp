@@ -142,10 +142,13 @@ struct WorkoutProfileSettingsView: View {
                     Spacer()
                     Menu {
                         ForEach(ExerciseVariabilityPreference.allCases, id: \.self) { pref in
-                            Button(action: { profile.exerciseVariability = pref }) {
+                            Button(action: {
+                                profile.exerciseVariability = pref
+                                sendPreferenceUpdate(["exercise_variability": pref.rawValue])
+                            }) {
                                 HStack {
                                     Text(pref.displayName)
-                               
+
                                     if profile.exerciseVariability == pref { Image(systemName: "checkmark") }
                                 }
                             }
@@ -161,27 +164,6 @@ struct WorkoutProfileSettingsView: View {
                         }
                     }
                 }
-                .listRowBackground(rowBackground)
-
-                // Timed Intervals
-                Toggle(isOn: Binding(
-                    get: { profile.timedIntervalsEnabled },
-                    set: { newVal in
-                        profile.timedIntervalsEnabled = newVal
-                        sendPreferenceUpdate(["enable_timed_intervals": newVal])
-                    }
-                )) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "stopwatch")
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
-                        Text("Timed Intervals")
-                            .font(.system(size: 15))
-                            .foregroundColor(iconColor)
-                    }
-                }
-                .tint(.accentColor)
                 .listRowBackground(rowBackground)
 
                 // Circuits and Supersets

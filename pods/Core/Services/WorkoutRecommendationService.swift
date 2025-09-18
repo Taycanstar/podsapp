@@ -30,13 +30,7 @@ class WorkoutRecommendationService {
     func getDefaultSetsAndReps(for exercise: ExerciseData, fitnessGoal: FitnessGoal) -> (sets: Int, reps: Int, weight: Double?) {
         let userProfile = UserProfileService.shared
         let exerciseCategory = getExerciseCategory(exercise)
-        
-        print("🧮 === Perplexity Algorithm Inputs ===")
-        print("🧮 Exercise: \(exercise.name)")
-        print("🧮 Fitness Goal: \(fitnessGoal)")
-        print("🧮 Experience Level: \(userProfile.experienceLevel)")
-        print("🧮 Gender: \(userProfile.gender)")
-        print("🧮 Exercise Category: \(exerciseCategory)")
+
         
         // Use Perplexity algorithm for sets and reps
         let (sets, reps, _, _) = getGoalParameters(
@@ -46,8 +40,7 @@ class WorkoutRecommendationService {
             exerciseType: exerciseCategory
         )
         
-        print("🧮 Final Result: \(sets)x\(reps)")
-        print("🧮 === End Perplexity Algorithm ===")
+     
         
         return (sets: sets, reps: reps, weight: nil)
     }
@@ -95,9 +88,9 @@ class WorkoutRecommendationService {
     }
     
     // Smart muscle filtering with target muscle matching
-    private func exerciseMatchesMuscle(_ exercise: ExerciseData, muscleGroup: String) -> Bool {
+    func exerciseMatchesMuscle(_ exercise: ExerciseData, muscleGroup: String) -> Bool {
         let targetBodyParts = getDatabaseBodyPart(for: muscleGroup)
-        
+
         // First check if bodyPart matches
         let bodyPartMatches = targetBodyParts.contains { bodyPart in
             exercise.bodyPart.localizedCaseInsensitiveContains(bodyPart)
@@ -178,9 +171,14 @@ class WorkoutRecommendationService {
         
         // Prioritize exercises based on user preferences, experience, and recovery
         let sortedExercises = prioritizeExercises(filteredExercises, recoveryPercentage: recoveryPercentage, maxCount: count)
-        return Array(sortedExercises.prefix(count))
+        let variabilityAdjusted = applyVariabilitySelection(
+            sortedExercises,
+            muscleGroup: muscleGroup,
+            desiredCount: count
+        )
+        return Array(variabilityAdjusted.prefix(count))
     }
-    
+
     // Method with custom equipment and flexibility filtering
     func getRecommendedExercises(for muscleGroup: String, count: Int = 5, customEquipment: [Equipment]?, flexibilityPreferences: FlexibilityPreferences? = nil) -> [ExerciseData] {
         let userProfile = UserProfileService.shared
@@ -194,7 +192,7 @@ class WorkoutRecommendationService {
         
         if !isReadyForTraining {
             let restHours = recoveryService.getRecommendedRestHours(for: muscleGroup)
-            print("⚠️ \(muscleGroup) not ready for training (\(Int(recoveryPercentage))% recovered). Recommended rest: \(Int(restHours)) hours")
+      
             // Return fewer exercises or lighter variants for insufficient recovery
         }
         
@@ -203,12 +201,12 @@ class WorkoutRecommendationService {
             exerciseMatchesMuscle(exercise, muscleGroup: muscleGroup)
         }
         
-        print("🎯 Smart muscle filtering for '\(muscleGroup)': Found \(muscleExercises.count) exercises out of \(allExercises.count) total")
+    
         
         // PROGRESSIVE EXERCISE SELECTION: Different exercise pools for different levels
         let experienceAppropriate = getExperienceTailoredExercises(muscleExercises, userProfile: userProfile)
         
-        print("🎓 Progressive Selection for \(userProfile.experienceLevel): \(muscleExercises.count) → \(experienceAppropriate.count) exercises")
+   
         
         // Filter by exercise type (exclude stretching for strength workouts by default)
         let typeFilteredExercises = filterByExerciseType(exercises: experienceAppropriate, flexibilityPreferences: flexibilityPreferences, muscleGroup: muscleGroup)
@@ -219,7 +217,7 @@ class WorkoutRecommendationService {
             availableExercises = typeFilteredExercises.filter { exercise in
                 canPerformExerciseWithCustomEquipment(exercise, equipment: customEquipment)
             }
-            print("🎯 Filtered exercises for \(muscleGroup) with custom equipment: \(customEquipment.map { $0.rawValue }), found \(availableExercises.count) exercises")
+       
         } else {
             availableExercises = typeFilteredExercises.filter { exercise in
                 userProfile.canPerformExercise(exercise)
@@ -233,7 +231,12 @@ class WorkoutRecommendationService {
         
         // Prioritize exercises based on user preferences, experience, and recovery
         let sortedExercises = prioritizeExercises(filteredExercises, recoveryPercentage: recoveryPercentage, maxCount: count)
-        return Array(sortedExercises.prefix(count))
+        let variabilityAdjusted = applyVariabilitySelection(
+            sortedExercises,
+            muscleGroup: muscleGroup,
+            desiredCount: count
+        )
+        return Array(variabilityAdjusted.prefix(count))
     }
     
     // Helper method to check if exercise can be performed with custom equipment
@@ -906,7 +909,7 @@ class WorkoutRecommendationService {
     
     private func prioritizeExercises(_ exercises: [ExerciseData], recoveryPercentage: Double, maxCount: Int) -> [ExerciseData] {
         let userProfile = UserProfileService.shared
-        
+
         let sortedExercises = exercises.sorted { exercise1, exercise2 in
             let score1 = getExerciseScore(exercise1, userProfile: userProfile)
             let score2 = getExerciseScore(exercise2, userProfile: userProfile)
@@ -922,6 +925,157 @@ class WorkoutRecommendationService {
         // Enforce diversity and redundancy caps (Fitbod-style)
         let diversified = enforceDiversity(sortedExercises, goal: userProfile.fitnessGoal, maxCount: maxCount)
         return diversified
+    }
+
+    private func applyVariabilitySelection(
+        _ sortedExercises: [ExerciseData],
+        muscleGroup: String,
+        desiredCount: Int
+    ) -> [ExerciseData] {
+        guard desiredCount > 0, sortedExercises.count > 1 else { return sortedExercises }
+
+        let variabilityPreference = UserProfileService.shared.exerciseVariability
+        let reuseRatio: Double
+        switch variabilityPreference {
+        case .consistent: reuseRatio = 0.75
+        case .balanced: reuseRatio = 0.5
+        case .variable: reuseRatio = 0.25
+        }
+
+        // Skip extra work when ratio aligns with default outcome (balanced) and no history exists
+        let recentUsage = ExerciseHistoryDataService.getRecentExercises(for: muscleGroup, days: 14)
+        guard !recentUsage.isEmpty else { return sortedExercises }
+
+        let recentIds = Set(recentUsage.map { $0.exercise.id })
+
+        // Partition list while preserving current score ordering
+        let recentExercises = sortedExercises.filter { recentIds.contains($0.id) }
+        let freshExercises = sortedExercises.filter { !recentIds.contains($0.id) }
+
+        if recentExercises.isEmpty || freshExercises.isEmpty {
+            // Not enough variety data to make a meaningful adjustment
+            return sortedExercises
+        }
+
+        var targetReuse = min(recentExercises.count, Int(round(Double(desiredCount) * reuseRatio)))
+        var targetFresh = desiredCount - targetReuse
+
+        if targetFresh > freshExercises.count {
+            targetFresh = freshExercises.count
+            targetReuse = min(desiredCount - targetFresh, recentExercises.count)
+        }
+
+        if targetReuse > recentExercises.count {
+            targetReuse = recentExercises.count
+            targetFresh = min(desiredCount - targetReuse, freshExercises.count)
+        }
+
+        var selected: [ExerciseData] = []
+        selected.reserveCapacity(desiredCount)
+        var usedIds = Set<Int>()
+
+        var reuseIndex = 0
+        var freshIndex = 0
+        var reuseTaken = 0
+        var freshTaken = 0
+
+        func takeFromRecent() -> ExerciseData? {
+            guard reuseIndex < recentExercises.count else { return nil }
+            let exercise = recentExercises[reuseIndex]
+            reuseIndex += 1
+            if usedIds.contains(exercise.id) { return takeFromRecent() }
+            usedIds.insert(exercise.id)
+            return exercise
+        }
+
+        func takeFromFresh() -> ExerciseData? {
+            guard freshIndex < freshExercises.count else { return nil }
+            let exercise = freshExercises[freshIndex]
+            freshIndex += 1
+            if usedIds.contains(exercise.id) { return takeFromFresh() }
+            usedIds.insert(exercise.id)
+            return exercise
+        }
+
+        switch variabilityPreference {
+        case .consistent:
+            while selected.count < desiredCount, reuseTaken < targetReuse, let exercise = takeFromRecent() {
+                selected.append(exercise)
+                reuseTaken += 1
+            }
+            while selected.count < desiredCount, let exercise = takeFromFresh() {
+                selected.append(exercise)
+                freshTaken += 1
+            }
+            while selected.count < desiredCount {
+                if let exercise = takeFromRecent() {
+                    selected.append(exercise)
+                    reuseTaken += 1
+                } else if let exercise = takeFromFresh() {
+                    selected.append(exercise)
+                    freshTaken += 1
+                } else {
+                    break
+                }
+            }
+
+        case .variable:
+            while selected.count < desiredCount, freshTaken < targetFresh, let exercise = takeFromFresh() {
+                selected.append(exercise)
+                freshTaken += 1
+            }
+            while selected.count < desiredCount, reuseTaken < targetReuse, let exercise = takeFromRecent() {
+                selected.append(exercise)
+                reuseTaken += 1
+            }
+            while selected.count < desiredCount {
+                if let exercise = takeFromFresh() {
+                    selected.append(exercise)
+                    freshTaken += 1
+                } else if let exercise = takeFromRecent() {
+                    selected.append(exercise)
+                    reuseTaken += 1
+                } else {
+                    break
+                }
+            }
+
+        case .balanced:
+            while selected.count < desiredCount {
+                var appended = false
+                if freshTaken < targetFresh, let exercise = takeFromFresh() {
+                    selected.append(exercise)
+                    freshTaken += 1
+                    appended = true
+                }
+                if selected.count >= desiredCount { break }
+                if reuseTaken < targetReuse, let exercise = takeFromRecent() {
+                    selected.append(exercise)
+                    reuseTaken += 1
+                    appended = true
+                }
+                if !appended { break }
+                if freshTaken >= targetFresh && reuseTaken >= targetReuse { break }
+            }
+        }
+
+        // Fill remaining slots with whichever pool still has candidates, preserving original order
+        while selected.count < desiredCount, let exercise = takeFromRecent() {
+            selected.append(exercise)
+        }
+        while selected.count < desiredCount, let exercise = takeFromFresh() {
+            selected.append(exercise)
+        }
+
+        // Append any exercises not yet selected to keep availability for downstream callers (e.g. duration tuning)
+        let remainder = sortedExercises.filter { !usedIds.contains($0.id) }
+        let adjusted = selected + remainder
+
+        if adjusted.count >= desiredCount {
+            print("🔄 Variability applied for \(muscleGroup): mode=\(variabilityPreference) → reuse target \(min(reuseTaken, desiredCount))/\(desiredCount)")
+        }
+
+        return adjusted
     }
     
     private func getExerciseScore(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {
@@ -1770,7 +1924,7 @@ class WorkoutRecommendationService {
         let exerciseType = exercise.exerciseType.lowercased()
         let exerciseName = exercise.name.lowercased()
         
-        print("🧮 Classifying exercise: \(exercise.name) | bodyPart: \(bodyPart) | exerciseType: \(exerciseType)")
+        
         
         let manualOverrides: [(keyword: String, category: ExerciseCategory)] = [
             ("handstand hold", .compound),
@@ -1782,36 +1936,34 @@ class WorkoutRecommendationService {
         ]
 
         if let override = manualOverrides.first(where: { exerciseName.contains($0.keyword) }) {
-            print("🧮 → Classified as \(override.category) (override)")
+         
             return override.category
         }
 
         // Core/Abs first (most specific)
         if bodyPart == "waist" || bodyPart.contains("abs") || exerciseName.contains("crunch") || exerciseName.contains("plank") {
-            print("🧮 → Classified as CORE")
+         
             return .core
         }
         
         // Cardio/Aerobic
         if exerciseType == "aerobic" || bodyPart == "cardio" || exerciseName.contains("treadmill") {
-            print("🧮 → Classified as CARDIO")
+    
             return .cardio
         }
         
         // Compound movements (multi-joint) - enhanced detection
         if isCompoundMovement(exercise) {
-            print("🧮 → Classified as COMPOUND")
+            
             return .compound
         }
         
         // Isolation movements (single-joint) - enhanced detection
         if isIsolationMovement(exercise) {
-            print("🧮 → Classified as ISOLATION")
+          
             return .isolation
         }
-        
-        // Default to isolation for safety
-        print("🧮 → Defaulted to ISOLATION")
+      
         return .isolation
     }
     
@@ -2120,12 +2272,12 @@ class WorkoutRecommendationService {
         // Map to standard gym rep ranges for practical use
         let finalReps = mapToStandardRepRange(unclamped, fitnessGoal: fitnessGoal, exerciseType: exerciseType)
         
-        print("🧮 Algorithm: \(baseReps) + \(experienceModifier) + \(genderModifier) + \(exerciseTypeModifier) = \(calculatedReps) → mapped to standard: \(finalReps)")
+      
     
         
         // Sets by goal (Exercise science validated)
         let sets = getSetsForGoal(fitnessGoal, exerciseType: exerciseType)
-        print("🧮 Final recommendation: \(sets)×\(finalReps) (exercise science validated)")
+      
         // Rest times based on goal and reps
         let restSeconds = getRestSecondsForGoal(fitnessGoal)
         
@@ -2149,7 +2301,7 @@ class WorkoutRecommendationService {
         case .tone: base = 15
         default: base = 12 // General fitness fallback
         }
-        print("🧮 Base reps for \(goal): \(base)")
+    
         return base
     }
     
@@ -2161,7 +2313,7 @@ class WorkoutRecommendationService {
         case .intermediate: modifier = 0  // Use base recommendations
         case .advanced: modifier = 0  // Keep practical ranges (changed from -1)
         }
-        print("🧮 Experience modifier for \(experience): \(modifier)")
+       
         return modifier
     }
     
@@ -2173,7 +2325,7 @@ class WorkoutRecommendationService {
         case .female: modifier = 1  // Slight increase for fatigue resistance (reduced from 2)
         case .other: modifier = 1  // Conservative middle ground
         }
-        print("🧮 Gender modifier for \(gender): \(modifier)")
+   
         return modifier
     }
     
@@ -2186,7 +2338,7 @@ class WorkoutRecommendationService {
         case .core: modifier = 3        // Core work benefits from higher reps
         case .cardio: modifier = 3      // Cardio-strength work, higher reps
         }
-        print("🧮 Exercise type modifier for \(exerciseType): \(modifier)")
+     
         return modifier
     }
     
@@ -2293,7 +2445,7 @@ class WorkoutRecommendationService {
         }
         
         if mappedReps != reps {
-            print("🧮 Standard rep mapping: \(reps) → \(mappedReps) (goal: \(fitnessGoal), type: \(exerciseType))")
+            
         }
         
         return mappedReps

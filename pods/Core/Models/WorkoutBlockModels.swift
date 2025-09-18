@@ -2,7 +2,7 @@
 //  WorkoutBlockModels.swift
 //  pods
 //
-//  Block-based workout data structures for Standard, Superset, Circuit, and Interval blocks.
+//  Block-based workout data structures for Standard, Superset, and Circuit blocks.
 //
 
 import Foundation
@@ -13,7 +13,6 @@ enum BlockType: String, Codable, CaseIterable, Hashable {
     case standard
     case superset
     case circuit
-    case interval
 }
 
 enum SchemeType: String, Codable, CaseIterable, Hashable {

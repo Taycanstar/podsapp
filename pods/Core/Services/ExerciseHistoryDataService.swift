@@ -109,6 +109,13 @@ struct RecordValueInt: Codable {
     let date: Date
 }
 
+// Lightweight usage summary for variability algorithms
+struct RecentExerciseUsage: Hashable {
+    let exercise: ExerciseData
+    let lastPerformed: Date
+    let sessionCount: Int
+}
+
 // MARK: - Exercise History Data Service
 
 @MainActor
@@ -125,6 +132,61 @@ class ExerciseHistoryDataService: ObservableObject {
     private var chartDataCache: [String: [(Date, Double)]] = [:]
     
     private init() {}
+
+    // MARK: - Lightweight recent history helpers
+
+    /// Returns recent exercise usage for a muscle group within a time window.
+    /// The method is `nonisolated` so recommendation pipelines can call it without
+    /// hopping onto the main actor (it only reads immutable snapshots).
+    nonisolated static func getRecentExercises(
+        for muscleGroup: String,
+        days: Int
+    ) -> [RecentExerciseUsage] {
+        let history = UserProfileService.shared.getWorkoutHistory()
+        guard !history.isEmpty else { return [] }
+
+        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? .distantPast
+        let allExercises = ExerciseDatabase.getAllExercises()
+        let exerciseMap = Dictionary(uniqueKeysWithValues: allExercises.map { ($0.id, $0) })
+        let recommender = WorkoutRecommendationService.shared
+
+        struct UsageAccumulator {
+            var exercise: ExerciseData
+            var lastPerformed: Date
+            var sessionCount: Int
+        }
+
+        var usage: [Int: UsageAccumulator] = [:]
+
+        for entry in history where entry.date >= cutoff {
+            for completed in entry.exercises {
+                guard let exerciseData = exerciseMap[completed.exerciseId] else { continue }
+                guard recommender.exerciseMatchesMuscle(exerciseData, muscleGroup: muscleGroup) else { continue }
+
+                var accumulator = usage[exerciseData.id] ?? UsageAccumulator(
+                    exercise: exerciseData,
+                    lastPerformed: entry.date,
+                    sessionCount: 0
+                )
+                accumulator.sessionCount += 1
+                if entry.date > accumulator.lastPerformed {
+                    accumulator.lastPerformed = entry.date
+                }
+                usage[exerciseData.id] = accumulator
+            }
+        }
+
+        guard !usage.isEmpty else { return [] }
+
+        let sorted = usage.values.sorted { lhs, rhs in
+            if lhs.sessionCount != rhs.sessionCount {
+                return lhs.sessionCount > rhs.sessionCount
+            }
+            return lhs.lastPerformed > rhs.lastPerformed
+        }
+
+        return sorted.map { RecentExerciseUsage(exercise: $0.exercise, lastPerformed: $0.lastPerformed, sessionCount: $0.sessionCount) }
+    }
     
     // MARK: - Public Methods
     

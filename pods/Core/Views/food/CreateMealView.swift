@@ -558,7 +558,7 @@ private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
     var totals = MacroTotals()
     
     // Debug info
-    print("🧮 Calculating totals for \(foods.count) foods")
+ 
     
     for (index, food) in foods.enumerated() {
         let servings = food.numberOfServings ?? 1

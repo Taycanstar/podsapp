@@ -394,37 +394,43 @@ struct FoodLogsResponse: Codable {
 
 extension LoggedFoodItem {
     var asFood: Food {
-        Food(
+        let normalizedServings = numberOfServings > 0 ? numberOfServings : 1
+        let hasDetailedNutrients = (foodNutrients?.isEmpty == false)
+        let fallbackNutrients: [Nutrient] = [
+            Nutrient(
+                nutrientName: "Energy",
+                value: calories,
+                unitName: "kcal"
+            ),
+            Nutrient(
+                nutrientName: "Protein",
+                value: protein ?? 0,
+                unitName: "g"
+            ),
+            Nutrient(
+                nutrientName: "Carbohydrate, by difference",
+                value: carbs ?? 0,
+                unitName: "g"
+            ),
+            Nutrient(
+                nutrientName: "Total lipid (fat)",
+                value: fat ?? 0,
+                unitName: "g"
+            )
+        ]
+
+        let nutrients = hasDetailedNutrients ? (foodNutrients ?? []) : fallbackNutrients
+
+        return Food(
             fdcId: self.fdcId,
             description: displayName,
             brandOwner: nil,
             brandName: brandText,
             servingSize: nil,
-            numberOfServings: numberOfServings,
+            numberOfServings: normalizedServings,
             servingSizeUnit: nil,
             householdServingFullText: servingSizeText,
-            foodNutrients: foodNutrients ?? [
-                Nutrient(
-                    nutrientName: "Energy",
-                    value: calories,
-                    unitName: "kcal"
-                ),
-                Nutrient(
-                    nutrientName: "Protein",
-                    value: protein ?? 0,
-                    unitName: "g"
-                ),
-                Nutrient(
-                    nutrientName: "Carbohydrate, by difference",
-                    value: carbs ?? 0,
-                    unitName: "g"
-                ),
-                Nutrient(
-                    nutrientName: "Total lipid (fat)",
-                    value: fat ?? 0,
-                    unitName: "g"
-                )
-            ],
+            foodNutrients: nutrients,
             foodMeasures: [],
             healthAnalysis: self.healthAnalysis  // Preserve health analysis
         )
@@ -714,7 +720,8 @@ struct CombinedLog: Codable, Identifiable, Equatable {
         
         // For food logs, use food's calories multiplied by numberOfServings
         if let food = food, type == .food {
-            return food.calories * (food.numberOfServings)
+            let servings = food.numberOfServings > 0 ? food.numberOfServings : 1
+            return food.calories * servings
         }
         
         // If all else fails, return the original calories value

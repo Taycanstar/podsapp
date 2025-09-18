@@ -37,48 +37,115 @@ struct FoodLogDetails: View {
     
     init(log: CombinedLog) {
         self.log = log
-        self._editedServings = State(initialValue: log.food?.numberOfServings ?? 1.0)
+        let rawServings = log.food?.numberOfServings ?? 1.0
+        let initialServings = rawServings > 0 ? rawServings : 1.0
+        self._editedServings = State(initialValue: initialServings)
         self._editedDate = State(initialValue: log.scheduledAt ?? Date())
         self._editedMealType = State(initialValue: log.mealType ?? "Lunch")
         
         // Initialize macronutrient values
         let food = log.food?.asFood ?? Food(fdcId: 0, description: "Unknown", brandOwner: nil, brandName: nil, servingSize: nil, numberOfServings: nil, servingSizeUnit: nil, householdServingFullText: nil, foodNutrients: [], foodMeasures: [])
-        let servings = log.food?.numberOfServings ?? 1.0
+        let servings = initialServings
         
-        // Get initial nutrient values
-        let calories = food.foodNutrients.first(where: { $0.nutrientName == "Energy" })?.value ?? 0
-        let protein = food.foodNutrients.first(where: { $0.nutrientName == "Protein" })?.value ?? 0
-        let carbs = food.foodNutrients.first(where: { $0.nutrientName == "Carbohydrate, by difference" })?.value ?? 0
-        let fat = food.foodNutrients.first(where: { $0.nutrientName == "Total lipid (fat)" })?.value ?? 0
+        // Resolve per-serving nutrient values with fallbacks to the original log payload
+        let caloriesPerServing = FoodLogDetails.resolvePerServingValue(
+            primaryName: "Energy",
+            alternativeMatch: { $0.nutrientName.lowercased().contains("energy") },
+            in: food,
+            fallback: log.food?.calories
+        )
+        let proteinPerServing = FoodLogDetails.resolvePerServingValue(
+            primaryName: "Protein",
+            alternativeMatch: { $0.nutrientName.lowercased().contains("protein") },
+            in: food,
+            fallback: log.food?.protein
+        )
+        let carbsPerServing = FoodLogDetails.resolvePerServingValue(
+            primaryName: "Carbohydrate, by difference",
+            alternativeMatch: { $0.nutrientName.lowercased().contains("carb") },
+            in: food,
+            fallback: log.food?.carbs
+        )
+        let fatPerServing = FoodLogDetails.resolvePerServingValue(
+            primaryName: "Total lipid (fat)",
+            alternativeMatch: { $0.nutrientName.lowercased().contains("fat") || $0.nutrientName.lowercased().contains("lipid") },
+            in: food,
+            fallback: log.food?.fat
+        )
         
         // Scale by servings and convert to strings
-        self._editedCalories = State(initialValue: String(format: "%g", calories * servings))
-        self._editedProtein = State(initialValue: String(format: "%g", protein * servings))
-        self._editedCarbs = State(initialValue: String(format: "%g", carbs * servings))
-        self._editedFat = State(initialValue: String(format: "%g", fat * servings))
+        self._editedCalories = State(initialValue: FoodLogDetails.formatValue(caloriesPerServing * servings))
+        self._editedProtein = State(initialValue: FoodLogDetails.formatValue(proteinPerServing * servings))
+        self._editedCarbs = State(initialValue: FoodLogDetails.formatValue(carbsPerServing * servings))
+        self._editedFat = State(initialValue: FoodLogDetails.formatValue(fatPerServing * servings))
     }
-    
+
     // Helper to get nutrient value by name (scaled by servings)
     private func nutrientValue(_ name: String) -> String {
-        if let value = food.foodNutrients.first(where: { $0.nutrientName == name })?.value {
-            let scaledValue = value * editedServings
-            return String(format: "%g", scaledValue)
-        }
-        return "0"
+        let value = FoodLogDetails.resolvePerServingValue(
+            primaryName: name,
+            alternativeMatch: { $0.nutrientName.lowercased() == name.lowercased() },
+            in: food,
+            fallback: fallbackForNutrient(named: name)
+        )
+        return FoodLogDetails.formatValue(value * editedServings)
     }
-    
+
     // Helper to get nutrient value with unit (scaled by servings)
     private func nutrientValueWithUnit(_ name: String, defaultUnit: String) -> String {
         if let nutrient = food.foodNutrients.first(where: { $0.nutrientName == name }) {
-            let value = nutrient.value ?? 0
-            let scaledValue = value * editedServings
+            let value = (nutrient.value ?? 0) * editedServings
             let unit = nutrient.unitName ?? defaultUnit
-            return "\(String(format: "%g", scaledValue)) \(unit)"
+            return "\(FoodLogDetails.formatValue(value)) \(unit)"
         }
-        return "0 \(defaultUnit)"
+        let fallback = FoodLogDetails.resolvePerServingValue(
+            primaryName: name,
+            alternativeMatch: { $0.nutrientName.lowercased() == name.lowercased() },
+            in: food,
+            fallback: fallbackForNutrient(named: name)
+        )
+        return "\(FoodLogDetails.formatValue(fallback * editedServings)) \(defaultUnit)"
     }
     
     @State private var showMoreNutrients: Bool = false
+
+    private static func resolvePerServingValue(
+        primaryName: String,
+        alternativeMatch: ((Nutrient) -> Bool)? = nil,
+        in food: Food,
+        fallback: Double?
+    ) -> Double {
+        if let exact = food.foodNutrients.first(where: { $0.nutrientName == primaryName })?.value, exact > 0 {
+            return exact
+        }
+
+        if let matcher = alternativeMatch,
+           let match = food.foodNutrients.first(where: matcher)?.value,
+           match > 0 {
+            return match
+        }
+
+        return fallback ?? 0
+    }
+
+    private static func formatValue(_ value: Double) -> String {
+        String(format: "%g", value)
+    }
+
+    private func fallbackForNutrient(named name: String) -> Double? {
+        switch name {
+        case "Energy":
+            return log.food?.calories
+        case "Protein":
+            return log.food?.protein
+        case "Carbohydrate, by difference":
+            return log.food?.carbs
+        case "Total lipid (fat)":
+            return log.food?.fat
+        default:
+            return nil
+        }
+    }
     
     var body: some View {
         ScrollView {
@@ -523,7 +590,5 @@ struct FoodLogDetails: View {
         .environmentObject(FoodManager())
         .environmentObject(DayLogsViewModel())
 }
-
-
 
 

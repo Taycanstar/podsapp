@@ -232,8 +232,7 @@ struct WorkoutInProgressView: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.primary)
                             .padding(6)
-                            .background(Color(.systemGray6))
-                            .clipShape(Circle())
+                       
                     }
                 }
             }
