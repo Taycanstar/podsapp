@@ -72,6 +72,7 @@ struct WorkoutProfileSettingsView: View {
                             }) {
                                 HStack {
                                     Text(goal.displayName)
+                                  
                                     if profile.fitnessGoal.normalized == goal.normalized { Image(systemName: "checkmark") }
                                 }
                             }
@@ -80,6 +81,7 @@ struct WorkoutProfileSettingsView: View {
                         HStack {
                             Text(profile.fitnessGoal.displayName)
                                 .foregroundColor(.secondary)
+                                .font(.system(size: 15))
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
@@ -108,6 +110,7 @@ struct WorkoutProfileSettingsView: View {
                             }) {
                                 HStack {
                                     Text(lvl.displayName)
+                                 
                                     if profile.experienceLevel == lvl { Image(systemName: "checkmark") }
                                 }
                             }
@@ -116,6 +119,7 @@ struct WorkoutProfileSettingsView: View {
                         HStack {
                             Text(profile.experienceLevel.displayName)
                                 .foregroundColor(.secondary)
+                                .font(.system(size: 15))
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
@@ -141,6 +145,7 @@ struct WorkoutProfileSettingsView: View {
                             Button(action: { profile.exerciseVariability = pref }) {
                                 HStack {
                                     Text(pref.displayName)
+                               
                                     if profile.exerciseVariability == pref { Image(systemName: "checkmark") }
                                 }
                             }
@@ -149,6 +154,7 @@ struct WorkoutProfileSettingsView: View {
                         HStack {
                             Text(profile.exerciseVariability.displayName)
                                 .foregroundColor(.secondary)
+                                .font(.system(size: 15))
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
@@ -282,6 +288,7 @@ struct WorkoutProfileSettingsView: View {
                             Button(action: { profile.trainingSplit = split }) {
                                 HStack {
                                     Text(split.displayName)
+                        
                                     if profile.trainingSplit == split { Image(systemName: "checkmark") }
                                 }
                             }
@@ -289,6 +296,7 @@ struct WorkoutProfileSettingsView: View {
                     } label: {
                         HStack {
                             Text(profile.trainingSplit.displayName)
+                            .font(.system(size: 15))
                                 .foregroundColor(.secondary)
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
@@ -313,9 +321,7 @@ struct WorkoutProfileSettingsView: View {
                                 .font(.system(size: 15))
                                 .foregroundColor(iconColor)
                         }
-                        Spacer()
-                        Text("\(profile.muscleRecoveryTargetPercent)%")
-                            .foregroundColor(.secondary)
+                        
                     }
                 }
                 .listRowBackground(rowBackground)

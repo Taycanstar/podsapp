@@ -1032,7 +1032,7 @@ struct ExerciseLoggingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(Color.blue)
-                .cornerRadius(12)
+                .cornerRadius(24)
                 .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
     }
@@ -1046,7 +1046,7 @@ struct ExerciseLoggingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(Color.blue)
-                    .cornerRadius(12)
+                    .cornerRadius(24)
                     .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
             }
             
@@ -1057,7 +1057,7 @@ struct ExerciseLoggingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(Color("tiktoknp"))
-                    .cornerRadius(12)
+                    .cornerRadius(24)
                     .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
             }
         }
@@ -1072,7 +1072,7 @@ struct ExerciseLoggingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(Color.blue)
-                .cornerRadius(12)
+                .cornerRadius(24)
                 .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
     }
@@ -1086,7 +1086,7 @@ struct ExerciseLoggingView: View {
                 .padding(.vertical, 16)
         }
         .background(Color.accentColor)
-        .cornerRadius(12)
+        .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         .contentShape(Rectangle())
     }
@@ -1106,7 +1106,7 @@ struct ExerciseLoggingView: View {
             .buttonStyle(PlainButtonStyle())
             .foregroundColor(.primary)
             .background(Color(.systemGray6))
-            .cornerRadius(8)
+            .cornerRadius(24)
             
             // Log Set button (consistent styling)
             Button(action: logCurrentSet) {
@@ -1117,7 +1117,7 @@ struct ExerciseLoggingView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(Color.blue)
-            .cornerRadius(12)
+            .cornerRadius(24)
             .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
     }
@@ -1145,7 +1145,7 @@ struct ExerciseLoggingView: View {
         }
         .padding()
         .background(Color("tiktoknp"))
-        .cornerRadius(12)
+        .cornerRadius(24)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color(.systemGray5), lineWidth: 0.5)

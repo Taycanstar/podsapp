@@ -1645,11 +1645,11 @@ struct LogRow: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 24)
                 .fill(Color("containerbg"))
                 .shadow(color: Color(.black).opacity(0.04), radius: 4, x: 0, y: 2)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: 24)
                         .stroke(Color.accentColor.opacity(isHighlighted ? 0.5 : 0), lineWidth: 2)
                 )
         )

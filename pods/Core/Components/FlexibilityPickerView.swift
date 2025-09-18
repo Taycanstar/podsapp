@@ -41,10 +41,11 @@ struct FlexibilityPickerView: View {
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.primary)
                         .frame(width: 30, height: 30)
+                        .padding(.horizontal)
                 }
             }
             // .padding(.horizontal)
-            .padding(.top, 42)
+            .padding(.top, 24)
             .padding(.bottom, 16)
             
             Text("Flexibility")
@@ -88,7 +89,7 @@ struct FlexibilityPickerView: View {
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
-                        .background(Color(.systemBackground))
+                        // .background(Color(.systemBackground))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -127,7 +128,7 @@ struct FlexibilityPickerView: View {
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 12)
-                        .background(Color(.systemBackground))
+                        // .background(Color(.systemBackground))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -142,10 +143,11 @@ struct FlexibilityPickerView: View {
             .padding(.bottom, 30)
         }
         .padding(.horizontal, 10)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .presentationDetents([.fraction(0.4)])
-        .presentationDragIndicator(.visible)
+        // .background(Color(.systemBackground))
+        .cornerRadius(24)
+        .presentationDetents([.medium])
+        // .presentationDetents([.fraction(0.4)])
+    
     }
     
     private var actionButtons: some View {

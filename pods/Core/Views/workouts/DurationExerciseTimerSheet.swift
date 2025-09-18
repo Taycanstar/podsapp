@@ -71,8 +71,8 @@ struct DurationExerciseTimerSheet: View {
             }
             .background(Color(.systemBackground))
         }
-        .presentationDetents([.fraction(0.25)])
-        .presentationDragIndicator(.visible)
+        .presentationDetents([.medium])
+  
         .onAppear {
             startTimer() // Start immediately with correct duration
         }

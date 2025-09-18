@@ -1299,7 +1299,7 @@ private struct TodayWorkoutView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                             .background(Color.accentColor)
-                            .cornerRadius(12)
+                            .cornerRadius(24)
                             .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                     }
                 }
@@ -2899,10 +2899,12 @@ struct WorkoutDurationPickerView: View {
         }
         .padding(.horizontal, 10)
         // .background(Color(.systemBackground))
-        .background(Color("primarybg"))
-        .cornerRadius(16)
-        .presentationDetents([.fraction(0.33)])
-        .presentationDragIndicator(.visible)
+        // .background(Color("primarybg"))
+        .cornerRadius(24)
+        .presentationDetents([
+            .medium
+        ])
+
     }
     
     private var durationSelector: some View {
@@ -2983,7 +2985,7 @@ struct WorkoutDurationPickerView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
             .background(Color.primary)
-            .cornerRadius(8)
+            .cornerRadius(24)
         }
         
     }
@@ -3047,7 +3049,7 @@ struct FitnessGoalPickerView: View {
             // Header with close button
             HStack {
                 Spacer()
-                
+
                 Button(action: {
                     dismiss()
                 }) {
@@ -3060,65 +3062,71 @@ struct FitnessGoalPickerView: View {
             .padding(.horizontal)
             .padding(.top, 16)
             .padding(.bottom, 16)
-            
+
             Text("Fitness Goal")
                 .font(.title2)
                 .fontWeight(.semibold)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
-                .padding(.bottom, 30)
-            
-            // Fitness Goal List
-            VStack(spacing: 16) {
-                VStack(spacing: 0) {
-                    ForEach(FitnessGoalPickerView.canonicalGoals, id: \.self) { goal in
-                        Button(action: {
-                            tempSelectedGoal = goal
-                        }) {
-                            HStack(spacing: 16) {
-                                // Radio button
-                                Image(systemName: tempSelectedGoal == goal ? "largecircle.fill.circle" : "circle")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(tempSelectedGoal == goal ? .accentColor : .secondary)
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(goal.displayName)
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.primary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 20)
+
+            // Scrollable content
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Fitness Goal List
+                    VStack(spacing: 0) {
+                        ForEach(FitnessGoalPickerView.canonicalGoals, id: \.self) { goal in
+                            Button(action: {
+                                tempSelectedGoal = goal
+                            }) {
+                                HStack(spacing: 16) {
+                                    // Radio button
+                                    Image(systemName: tempSelectedGoal == goal ? "largecircle.fill.circle" : "circle")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(tempSelectedGoal == goal ? .accentColor : .secondary)
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(goal.displayName)
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.primary)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+
+                                    Spacer()
                                 }
-                                
-                                Spacer()
-                            }
-                                                            .padding(.horizontal, 12)
+                                .padding(.horizontal, 12)
                                 .padding(.vertical, 12)
-                            // .background(Color(.systemBackground))
-                            .background(Color("primarybg"))
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        if goal != FitnessGoalPickerView.canonicalGoals.last {
-                            Divider()
-                                .padding(.leading)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+
+                            if goal != FitnessGoalPickerView.canonicalGoals.last {
+                                Divider()
+                                    .padding(.leading)
+                            }
                         }
                     }
+
+                    Spacer(minLength: 20)
                 }
-                
-                Spacer()
-                
-                // Action buttons
-                actionButtons
+                .padding(.horizontal, 8)
             }
-            .padding(.horizontal, 8)
-            .padding(.bottom, 30)
+
+            // Action buttons - outside ScrollView
+            actionButtons
+                .padding(.horizontal, 18)
+                .padding(.top, 16)
+                .padding(.bottom, 30)
         }
         .padding(.horizontal, 10)
         // .background(Color(.systemBackground))
-        .background(Color("primarybg"))
-        .cornerRadius(16)
-        .presentationDetents([.fraction(0.6)])
-        .presentationDragIndicator(.visible)
+        // .background(Color("primarybg"))
+        .cornerRadius(24)
+        // .presentationDetents([.fraction(0.6)])
+          .presentationDetents([
+            .medium, .large
+        ])
+
     }
     
     private var actionButtons: some View {
@@ -3140,7 +3148,7 @@ struct FitnessGoalPickerView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
             .background(Color.primary)
-            .cornerRadius(8)
+            .cornerRadius(24)
         }
     }
 }
@@ -3214,8 +3222,8 @@ struct FitnessLevelPickerView: View {
                             }
                                                             .padding(.horizontal, 12)
                                 .padding(.vertical, 12)
-                            // .background(Color(.systemBackground))
-                            .background(Color("primarybg"))
+                  
+                            // .background(Color("primarybg"))
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -3237,10 +3245,13 @@ struct FitnessLevelPickerView: View {
         }
         .padding(.horizontal, 10)
         // .background(Color(.systemBackground))
-        .background(Color("primarybg"))
-        .cornerRadius(16)
-        .presentationDetents([.fraction(0.4)])
-        .presentationDragIndicator(.visible)
+        // .background(Color("primarybg"))
+        .cornerRadius(24)
+          .presentationDetents([
+            .medium, .large
+        ])
+        // .presentationDetents([.fraction(0.4)])
+        
     }
     
     private var actionButtons: some View {
@@ -3262,7 +3273,7 @@ struct FitnessLevelPickerView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
             .background(Color.primary)
-            .cornerRadius(8)
+            .cornerRadius(24)
         }
     }
 }

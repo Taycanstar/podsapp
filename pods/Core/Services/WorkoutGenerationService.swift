@@ -21,6 +21,7 @@ class WorkoutGenerationService {
     static let shared = WorkoutGenerationService()
     
     private let recommendationService = WorkoutRecommendationService.shared
+    private let recoveryService = MuscleRecoveryService.shared
     
     private init() {}
     
@@ -91,7 +92,7 @@ class WorkoutGenerationService {
     private func generateOptimizedExercisesWithTotalBudget(
         muscleGroups: [String],
         totalExercises: Int,
-        basePerMuscle: Int,
+        basePerMuscle _: Int,
         targetDuration: WorkoutDuration,
         fitnessGoal: FitnessGoal,
         customEquipment: [Equipment]?,
@@ -100,49 +101,255 @@ class WorkoutGenerationService {
         var exercises: [TodayWorkoutExercise] = []
         var usedIds = Set<Int>() // Avoid duplicate exercises across muscle groups
         
-        print("🏗️ Starting smart distribution: \(totalExercises) total exercises across \(muscleGroups.count) muscles")
-        
-        // Calculate distribution with remainder handling
-        let baseCount = totalExercises / muscleGroups.count
-        let remainder = totalExercises % muscleGroups.count
-        
-        print("📊 Distribution plan: \(baseCount) base per muscle, \(remainder) muscles get +1 extra")
-        
-        for (index, muscle) in muscleGroups.enumerated() {
-            // First 'remainder' muscle groups get an extra exercise
-            let countForThisMuscle = baseCount + (index < remainder ? 1 : 0)
-            
-            print("🎯 \(muscle) (muscle \(index + 1)/\(muscleGroups.count)): requesting \(countForThisMuscle) exercises")
-            
-            // Use enhanced WorkoutRecommendationService for duration-optimized selection
+        print("🏗️ Starting recovery-aware distribution: \(totalExercises) total exercises across \(muscleGroups.count) muscles")
+
+        let allocations = calculateExerciseAllocations(
+            for: muscleGroups,
+            totalExercises: totalExercises
+        )
+
+        for allocation in allocations {
+            let muscle = allocation.muscle
+            let plannedCount = allocation.count
+            let recoveryPercentage = allocation.recovery
+
+            guard plannedCount > 0 else {
+                print("🛌 Skipping \(muscle) due to low recovery (\(Int(recoveryPercentage))%)")
+                continue
+            }
+
+            print("🎯 \(muscle): recovery \(Int(recoveryPercentage))% → requesting \(plannedCount) exercises")
+
             let recommended = recommendationService.getDurationOptimizedExercises(
                 for: muscle,
-                count: countForThisMuscle,
+                count: plannedCount,
                 duration: targetDuration,
                 fitnessGoal: fitnessGoal,
                 customEquipment: customEquipment,
                 flexibilityPreferences: flexibilityPreferences
             )
-            
-            print("🎯 \(muscle): requested \(countForThisMuscle), got \(recommended.count) exercises")
-            
-            for exercise in recommended {
-                guard !usedIds.contains(exercise.id) else { continue }
+
+            print("🎯 \(muscle): requested \(plannedCount), got \(recommended.count) exercises")
+
+            for exercise in recommended where !usedIds.contains(exercise.id) {
                 let built = makeWorkoutExercise(
                     for: exercise,
                     targetDuration: targetDuration,
-                    fitnessGoal: fitnessGoal
+                    fitnessGoal: fitnessGoal,
+                    recoveryPercentage: recoveryPercentage
                 )
+                guard built.sets > 0 else { continue }
                 exercises.append(built)
                 usedIds.insert(exercise.id)
             }
-            
+
             print("📊 Running total after \(muscle): \(exercises.count) exercises")
         }
-        
-        print("✅ Final smart distribution result: \(exercises.count) exercises (target was \(totalExercises))")
+
+        print("✅ Final recovery-aware distribution result: \(exercises.count) exercises (target was \(totalExercises))")
         print("💪 Generated \(exercises.count) exercises respecting time budget")
+
+        if exercises.count < totalExercises {
+            let shortfall = totalExercises - exercises.count
+            print("⚠️ Shortfall detected: missing \(shortfall) exercises. Attempting recovery-ordered backfill.")
+
+            for allocation in allocations.sorted(by: { $0.recovery > $1.recovery }) {
+                var remainingNeeded = totalExercises - exercises.count
+                guard remainingNeeded > 0 else { break }
+
+                // Still skip severely fatigued muscles even during backfill
+                if allocation.recovery < 30 {
+                    print("🛑 Backfill skip: \(allocation.muscle) at \(Int(allocation.recovery))% recovery")
+                    continue
+                }
+
+                let muscle = allocation.muscle
+                let recoveryPercentage = allocation.recovery
+
+                let supplemental = recommendationService.getDurationOptimizedExercises(
+                    for: muscle,
+                    count: remainingNeeded,
+                    duration: targetDuration,
+                    fitnessGoal: fitnessGoal,
+                    customEquipment: customEquipment,
+                    flexibilityPreferences: flexibilityPreferences
+                )
+
+                for exercise in supplemental where !usedIds.contains(exercise.id) {
+                    let built = makeWorkoutExercise(
+                        for: exercise,
+                        targetDuration: targetDuration,
+                        fitnessGoal: fitnessGoal,
+                        recoveryPercentage: recoveryPercentage
+                    )
+                    guard built.sets > 0 else { continue }
+                    exercises.append(built)
+                    usedIds.insert(exercise.id)
+                    remainingNeeded = totalExercises - exercises.count
+                    if remainingNeeded <= 0 { break }
+                }
+            }
+
+            print("✅ After backfill: \(exercises.count) exercises")
+        }
+
         return exercises
+    }
+
+    private struct MuscleAllocation {
+        let muscle: String
+        let count: Int
+        let recovery: Double
+    }
+
+    private func calculateExerciseAllocations(for muscleGroups: [String], totalExercises: Int) -> [MuscleAllocation] {
+        guard !muscleGroups.isEmpty else { return [] }
+
+        let resolvedTotal = max(0, totalExercises)
+
+        struct WeightedEntry {
+            let index: Int
+            let muscle: String
+            let recovery: Double
+            var weight: Double
+            var baseCount: Int = 0
+            var fraction: Double = 0
+        }
+
+        var entries: [WeightedEntry] = muscleGroups.enumerated().map { index, muscle in
+            let recovery = recoveryService.getMuscleRecoveryPercentage(for: muscle)
+            let weight = distributionWeight(for: recovery)
+            return WeightedEntry(index: index, muscle: muscle, recovery: recovery, weight: weight)
+        }
+
+        let totalWeight = entries.reduce(0) { $0 + $1.weight }
+
+        if resolvedTotal == 0 {
+            return entries.sorted { $0.index < $1.index }.map { entry in
+                MuscleAllocation(muscle: entry.muscle, count: 0, recovery: entry.recovery)
+            }
+        }
+
+        if totalWeight > 0.0001 {
+            for idx in entries.indices {
+                let share = entries[idx].weight / totalWeight
+                let raw = Double(resolvedTotal) * share
+                let base = Int(floor(raw))
+                entries[idx].baseCount = base
+                entries[idx].fraction = raw - Double(base)
+            }
+
+            var remaining = resolvedTotal - entries.reduce(0) { $0 + $1.baseCount }
+            if remaining > 0 {
+                let orderedIndices = entries.indices.sorted { lhs, rhs in
+                    if entries[lhs].fraction != entries[rhs].fraction {
+                        return entries[lhs].fraction > entries[rhs].fraction
+                    }
+                    if entries[lhs].recovery != entries[rhs].recovery {
+                        return entries[lhs].recovery > entries[rhs].recovery
+                    }
+                    return entries[lhs].index < entries[rhs].index
+                }
+
+                for idx in orderedIndices where remaining > 0 {
+                    entries[idx].baseCount += 1
+                    remaining -= 1
+                }
+            }
+        } else {
+            let base = resolvedTotal / muscleGroups.count
+            let remainder = resolvedTotal % muscleGroups.count
+            for idx in entries.indices {
+                entries[idx].baseCount = base + (idx < remainder ? 1 : 0)
+            }
+        }
+
+        // Safety: ensure at least one muscle receives work if total > 0
+        if resolvedTotal > 0 && entries.allSatisfy({ $0.baseCount == 0 }) {
+            if let index = entries.enumerated().max(by: { $0.element.recovery < $1.element.recovery })?.offset {
+                entries[index].baseCount = resolvedTotal
+            }
+        }
+
+        let ordered = entries.sorted { $0.index < $1.index }
+        let debugSummary = ordered.map { entry in
+            "\(entry.muscle): \(String(format: "%.0f", entry.recovery))% → \(entry.baseCount)"
+        }.joined(separator: ", ")
+        print("🧬 Recovery allocation plan: [\(debugSummary)] (target \(resolvedTotal))")
+
+        return ordered.map { entry in
+            MuscleAllocation(muscle: entry.muscle, count: entry.baseCount, recovery: entry.recovery)
+        }
+    }
+
+    private func distributionWeight(for recovery: Double) -> Double {
+        switch recovery {
+        case let value where value >= 90:
+            return 1.0
+        case 85..<90:
+            return 0.9
+        case 70..<85:
+            return 0.6
+        case 60..<70:
+            return 0.4
+        case 45..<60:
+            return 0.2
+        case 30..<45:
+            return 0.05
+        default:
+            // Under ~30% recovery we should avoid allocating volume entirely (Fitbod-style red zone)
+            return 0.0
+        }
+    }
+
+    private func volumeMultiplier(for recovery: Double) -> Double {
+        switch recovery {
+        case let value where value >= 90:
+            return 1.0
+        case 85..<90:
+            return 0.9
+        case 70..<85:
+            return 0.7
+        case 60..<70:
+            return 0.5
+        case 45..<60:
+            return 0.35
+        case 30..<45:
+            return 0.25
+        default:
+            return 0.0
+        }
+    }
+
+    private func adjustedSetCount(base: Int, multiplier: Double) -> Int {
+        guard base > 0 else { return 0 }
+        if multiplier <= 0 { return 0 }
+        let adjusted = Int(round(Double(base) * multiplier))
+        return max(1, min(base, adjusted))
+    }
+
+    private func adjustedDuration(base: Int, multiplier: Double, minimum: Int) -> Int {
+        guard base > 0 else { return minimum }
+        let adjusted = Int(round(Double(base) * multiplier))
+        return max(minimum, min(base, max(1, adjusted)))
+    }
+
+    private func adjustedDistance(base: Double, multiplier: Double, minimum: Double) -> Double {
+        let adjusted = base * multiplier
+        return max(minimum, min(base, adjusted))
+    }
+
+    private func minimumDistance(for unit: DistanceUnit?) -> Double {
+        switch unit {
+        case .miles:
+            return 0.25
+        case .kilometers:
+            return 0.4
+        case .meters:
+            return 20
+        case .none:
+            return 0.2
+        }
     }
     
     /// Generate exercises using optimal count from WorkoutRecommendationService
@@ -171,17 +378,20 @@ class WorkoutGenerationService {
             )
             
             print("🎯 \(muscle): requested \(exercisesPerMuscle), got \(recommended.count) exercises")
+            let recovery = recoveryService.getMuscleRecoveryPercentage(for: muscle)
             
-            for exercise in recommended {
-                guard !usedIds.contains(exercise.id) else { continue }
-                let built = makeWorkoutExercise(
-                    for: exercise,
-                    targetDuration: targetDuration,
-                    fitnessGoal: fitnessGoal
-                )
-                exercises.append(built)
-                usedIds.insert(exercise.id)
-            }
+        for exercise in recommended {
+            guard !usedIds.contains(exercise.id) else { continue }
+            let built = makeWorkoutExercise(
+                for: exercise,
+                targetDuration: targetDuration,
+                fitnessGoal: fitnessGoal,
+                recoveryPercentage: recovery
+            )
+            guard built.sets > 0 else { continue }
+            exercises.append(built)
+            usedIds.insert(exercise.id)
+        }
             
             print("📊 Running total after \(muscle): \(exercises.count) exercises")
         }
@@ -280,7 +490,8 @@ class WorkoutGenerationService {
     private func makeWorkoutExercise(
         for exercise: ExerciseData,
         targetDuration: WorkoutDuration,
-        fitnessGoal: FitnessGoal
+        fitnessGoal: FitnessGoal,
+        recoveryPercentage: Double
     ) -> TodayWorkoutExercise {
         let trackingType = ExerciseClassificationService.determineTrackingType(for: exercise)
         
@@ -289,10 +500,28 @@ class WorkoutGenerationService {
             fitnessGoal: fitnessGoal,
             isCompound: isCompoundExercise(exercise)
         )
+        let volumeFactor = volumeMultiplier(for: recoveryPercentage)
+        print("🧮 Volume tuning: \(exercise.name) | recovery \(Int(round(recoveryPercentage)))% ⇒ multiplier \(String(format: "%.2f", volumeFactor))")
         
         switch trackingType {
         case .repsWeight, .repsOnly:
             let rec = recommendationService.getSmartRecommendation(for: exercise, fitnessGoal: fitnessGoal)
+            let adjustedSets = adjustedSetCount(base: rec.sets, multiplier: volumeFactor)
+            guard adjustedSets > 0 else {
+                print("🪫 Volume suppressed: \(exercise.name) skipped due to low recovery")
+                return TodayWorkoutExercise(
+                    exercise: exercise,
+                    sets: 0,
+                    reps: 0,
+                    weight: nil,
+                    restTime: optimalRest,
+                    notes: nil,
+                    warmupSets: nil,
+                    flexibleSets: nil,
+                    trackingType: ExerciseClassificationService.determineTrackingType(for: exercise)
+                )
+            }
+            let finalTrackingType: ExerciseTrackingType = (trackingType == .repsOnly) ? .repsOnly : .repsWeight
             // Ensure a concrete starting weight for all weighted exercises
             let concreteWeight: Double? = {
                 if ExerciseClassificationService.determineTrackingType(for: exercise) == .repsWeight {
@@ -310,29 +539,59 @@ class WorkoutGenerationService {
             }()
             return TodayWorkoutExercise(
                 exercise: exercise,
-                sets: rec.sets,
+                sets: adjustedSets,
                 reps: rec.reps,
                 weight: concreteWeight,
                 restTime: optimalRest,
                 notes: nil,
                 warmupSets: warmups,
                 flexibleSets: nil,
-                trackingType: .repsWeight
+                trackingType: finalTrackingType
             )
         case .timeDistance:
             // One session with recommended duration and default distance
             let durationSeconds = defaultDuration(for: .timeDistance, goal: fitnessGoal)
             var set = FlexibleSetData(trackingType: .timeDistance)
-            set.duration = durationSeconds
-            set.durationString = formatDuration(durationSeconds)
+            let adjustedDuration = adjustedDuration(
+                base: Int(durationSeconds),
+                multiplier: volumeFactor,
+                minimum: Int(max(120.0, durationSeconds * 0.4))
+            )
+            guard adjustedDuration > 0 else {
+                print("🪫 Volume suppressed: \(exercise.name) skipped due to low recovery")
+                return TodayWorkoutExercise(
+                    exercise: exercise,
+                    sets: 0,
+                    reps: 0,
+                    weight: nil,
+                    restTime: 0,
+                    notes: nil,
+                    warmupSets: nil,
+                    flexibleSets: nil,
+                    trackingType: .timeDistance
+                )
+            }
+            set.duration = TimeInterval(adjustedDuration)
+            set.durationString = formatDuration(TimeInterval(adjustedDuration))
             // Use meters for loaded carries, miles for typical cardio
             let lname = exercise.name.lowercased()
             let isCarry = lname.contains("carry") || lname.contains("farmer") || lname.contains("suitcase") || lname.contains("yoke")
             if isCarry {
-                set.distance = 40 // default 40 meters carry
+                let baseDistance = 40.0
+                set.distance = adjustedDistance(
+                    base: baseDistance,
+                    multiplier: volumeFactor,
+                    minimum: minimumDistance(for: .meters)
+                )
                 set.distanceUnit = .meters
             } else {
-                set.distance = 1.0
+                let baseDistance = 1.0
+                let unit: DistanceUnit = .miles
+                set.distance = adjustedDistance(
+                    base: baseDistance,
+                    multiplier: volumeFactor,
+                    minimum: minimumDistance(for: unit)
+                )
                 set.distanceUnit = .miles
             }
             let flexible = [set]
@@ -350,7 +609,22 @@ class WorkoutGenerationService {
         case .timeOnly:
             // Interval-style or hold-based – use 3 intervals by default
             let perInterval = defaultDuration(for: .timeOnly, goal: fitnessGoal)
-            let intervals = 3
+            let baseIntervals = 3
+            let intervals = adjustedSetCount(base: baseIntervals, multiplier: volumeFactor)
+            guard intervals > 0 else {
+                print("🪫 Volume suppressed: \(exercise.name) skipped due to low recovery")
+                return TodayWorkoutExercise(
+                    exercise: exercise,
+                    sets: 0,
+                    reps: 0,
+                    weight: nil,
+                    restTime: 0,
+                    notes: nil,
+                    warmupSets: nil,
+                    flexibleSets: nil,
+                    trackingType: .timeOnly
+                )
+            }
             let flexible: [FlexibleSetData] = (0..<intervals).map { _ in
                 var set = FlexibleSetData(trackingType: .timeOnly)
                 set.duration = perInterval
@@ -371,7 +645,23 @@ class WorkoutGenerationService {
         case .holdTime:
             // Holds for stretching/core: 3 × 30–45s
             let hold = defaultDuration(for: .holdTime, goal: fitnessGoal)
-            let flexible: [FlexibleSetData] = (0..<3).map { _ in
+            let baseSets = 3
+            let adjustedSets = adjustedSetCount(base: baseSets, multiplier: volumeFactor)
+            guard adjustedSets > 0 else {
+                print("🪫 Volume suppressed: \(exercise.name) skipped due to low recovery")
+                return TodayWorkoutExercise(
+                    exercise: exercise,
+                    sets: 0,
+                    reps: 0,
+                    weight: nil,
+                    restTime: 0,
+                    notes: nil,
+                    warmupSets: nil,
+                    flexibleSets: nil,
+                    trackingType: .holdTime
+                )
+            }
+            let flexible: [FlexibleSetData] = (0..<adjustedSets).map { _ in
                 var set = FlexibleSetData(trackingType: .holdTime)
                 set.duration = hold
                 set.durationString = formatDuration(hold)
@@ -379,7 +669,7 @@ class WorkoutGenerationService {
             }
             return TodayWorkoutExercise(
                 exercise: exercise,
-                sets: 3,
+                sets: adjustedSets,
                 reps: 1,
                 weight: nil,
                 restTime: 30,
@@ -391,7 +681,22 @@ class WorkoutGenerationService {
         case .rounds:
             // Rounds with default 3 × 3:00
             let roundDuration = defaultDuration(for: .rounds, goal: fitnessGoal)
-            let rounds = 3
+            let baseRounds = 3
+            let rounds = adjustedSetCount(base: baseRounds, multiplier: volumeFactor)
+            guard rounds > 0 else {
+                print("🪫 Volume suppressed: \(exercise.name) skipped due to low recovery")
+                return TodayWorkoutExercise(
+                    exercise: exercise,
+                    sets: 0,
+                    reps: 0,
+                    weight: nil,
+                    restTime: 0,
+                    notes: nil,
+                    warmupSets: nil,
+                    flexibleSets: nil,
+                    trackingType: .rounds
+                )
+            }
             var set = FlexibleSetData(trackingType: .rounds)
             set.rounds = rounds
             set.duration = roundDuration
@@ -463,8 +768,9 @@ class WorkoutGenerationService {
     }
     
     private func formatDuration(_ seconds: TimeInterval) -> String {
-        let minutes = Int(seconds) / 60
-        let remaining = Int(seconds) % 60
+        let totalSeconds = Int(round(seconds))
+        let minutes = totalSeconds / 60
+        let remaining = totalSeconds % 60
         return String(format: "%d:%02d", minutes, remaining)
     }
     

@@ -94,7 +94,7 @@ struct TargetMusclesView: View {
             }
             .navigationBarHidden(true)
         }
-        // .presentationDetents([.fraction(0.5)])
+        .presentationDetents([.medium, .large])
         .onAppear {
             // Determine current selection based on current muscle type
             if let splitType = MuscleSplitType(rawValue: currentMuscleType) {
@@ -117,13 +117,9 @@ struct TargetMusclesView: View {
     private var muscleSplitsView: some View {
         VStack(spacing: 0) {
             // Header
-            
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Muscle split options - First Row
-                          HStack {
+            HStack {
                 Spacer()
-                
+
                 Button(action: {
                     HapticFeedback.generate()
                     dismiss()
@@ -135,15 +131,18 @@ struct TargetMusclesView: View {
                 }
             }
             .padding(.horizontal)
-            // .padding(.top, 16)
+            .padding(.top, 16)
             .padding(.bottom, 16)
-            
+
             Text("Muscle Splits")
                 .font(.title2)
                 .fontWeight(.semibold)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
                 .padding(.bottom, 8)
+
+            ScrollView {
+                VStack(spacing: 16) {
                     HStack(spacing: 12) {
                         MuscleSplitButton(
                             split: .recoveredMuscles,
@@ -241,7 +240,7 @@ struct TargetMusclesView: View {
                     .padding(.horizontal)
                     .padding(.top, 20)
                     
-                    Spacer()
+                    Spacer(minLength: 80)
                 }
                 .padding(.top, 20)
             }
@@ -280,8 +279,8 @@ struct MuscleSplitButton: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.primary)
                 .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
                 .frame(maxWidth: .infinity)
+                .minimumScaleFactor(0.8)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 12)
                 .background(Color(.systemBackground))

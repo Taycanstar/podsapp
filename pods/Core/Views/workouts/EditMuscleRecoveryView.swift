@@ -3,6 +3,7 @@ import SwiftUI
 struct EditMuscleRecoveryView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var profile = UserProfileService.shared
+    private let recoveryService = MuscleRecoveryService.shared
 
     private let mainMuscleGroups = [
         "Glutes", "Hamstrings", "Quadriceps", "Lower Back",
@@ -87,7 +88,7 @@ struct EditMuscleRecoveryView: View {
             HStack(spacing: 0) {
                 Slider(value: binding(for: muscle), in: 0...100, step: 1)
                     .tint(.accentColor)
-         
+               
             }
         }
         .padding(.vertical, 6)
@@ -108,8 +109,12 @@ struct EditMuscleRecoveryView: View {
         var seeded: [String: Double] = [:]
 
         for muscle in allMuscles {
-            let storedValue = storedOverrides[muscle] ?? 100
-            seeded[muscle] = min(100, max(0, storedValue))
+            if let override = storedOverrides[muscle] {
+                seeded[muscle] = min(100, max(0, override))
+            } else {
+                let computed = recoveryService.getMuscleRecoveryPercentage(for: muscle)
+                seeded[muscle] = min(100, max(0, computed))
+            }
         }
 
         recoveryValues = seeded
@@ -124,7 +129,15 @@ struct EditMuscleRecoveryView: View {
             sanitized[muscle] = value
         }
 
-        profile.muscleRecoveryOverrides = sanitized
+        var overridesToPersist: [String: Double] = [:]
+        for muscle in allMuscles {
+            guard let newValue = sanitized[muscle], let original = initialValues[muscle] else { continue }
+            if abs(newValue - original) >= 0.5 { // meaningful change
+                overridesToPersist[muscle] = newValue
+            }
+        }
+
+        profile.muscleRecoveryOverrides = overridesToPersist
 
         if !sanitized.isEmpty {
             let average = sanitized.values.reduce(0, +) / Double(sanitized.count)
@@ -132,6 +145,7 @@ struct EditMuscleRecoveryView: View {
         }
 
         initialValues = sanitized
+        recoveryValues = sanitized
         dismiss()
     }
 }

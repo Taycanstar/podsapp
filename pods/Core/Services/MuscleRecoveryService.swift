@@ -208,10 +208,24 @@ class MuscleRecoveryService: ObservableObject {
     
     func getMuscleRecoveryData() -> [MuscleRecoveryData] {
         let allMuscleGroups = MuscleGroup.allCases
-        
-        return allMuscleGroups.map { muscleGroup in
-            calculateRecoveryForMuscle(muscleGroup)
-        }.sorted { $0.recoveryPercentage < $1.recoveryPercentage }
+        let overrides = UserProfileService.shared.muscleRecoveryOverrides
+
+        let data = allMuscleGroups.map { muscleGroup -> MuscleRecoveryData in
+            let base = calculateRecoveryForMuscle(muscleGroup)
+            if let override = overrides[muscleGroup.rawValue] {
+                let clamped = min(100.0, max(0.0, override))
+                return MuscleRecoveryData(
+                    muscleGroup: base.muscleGroup,
+                    lastWorkedDate: base.lastWorkedDate,
+                    workoutIntensity: base.workoutIntensity,
+                    recoveryPercentage: clamped,
+                    estimatedFullRecoveryDate: base.estimatedFullRecoveryDate
+                )
+            }
+            return base
+        }
+
+        return data.sorted { $0.recoveryPercentage < $1.recoveryPercentage }
     }
     
     func getRecommendedMuscleGroups(for targetCount: Int = 4) -> [MuscleGroup] {
@@ -516,14 +530,19 @@ class MuscleRecoveryService: ObservableObject {
     }
     
     func shouldSkipMuscleGroup(_ muscleGroup: String) -> Bool {
-        guard let muscle = MuscleGroup(rawValue: muscleGroup) else { return false }
-        let recoveryData = calculateRecoveryForMuscle(muscle)
-        return !recoveryData.isRecommendedForTraining
+        let recoveryPercentage = getMuscleRecoveryPercentage(for: muscleGroup)
+        return recoveryPercentage < 85.0
     }
     
     func getMuscleRecoveryPercentage(for muscleGroup: String) -> Double {
         guard let muscle = MuscleGroup(rawValue: muscleGroup) else { return 100.0 }
+        let profile = UserProfileService.shared
+        if let manualOverride = profile.muscleRecoveryOverrides[muscleGroup] {
+            print("🎛️ Recovery override: \(muscleGroup) = \(Int(round(manualOverride)))%")
+            return min(100.0, max(0.0, manualOverride))
+        }
         let recoveryData = calculateRecoveryForMuscle(muscle)
+        print("📊 Recovery computed: \(muscleGroup) = \(Int(round(recoveryData.recoveryPercentage)))%")
         return recoveryData.recoveryPercentage
     }
     

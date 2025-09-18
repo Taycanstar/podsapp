@@ -987,7 +987,9 @@ class WorkoutRecommendationService {
             if isBarbell() { return 3 }
             if isDumbbell() { return 2 }
             if isCable() || isMachine() { return 2 }
-            if isBodyweight() && hasWeightedOptions { return -2 }
+            if isBodyweight() {
+                return hasWeightedOptions ? -1 : 0
+            }
             return 0
         case .strength, .powerlifting:
             if isBarbell() { return 4 }
@@ -1116,6 +1118,7 @@ class WorkoutRecommendationService {
         var selected: [ExerciseData] = []
         var patternCounts: [MovementPattern: Int] = [:]
         var isolationMuscleCounts: [String: Int] = [:]
+        var selectedIds = Set<Int>()
 
         let minPatterns = (goal.normalized == .hypertrophy || goal.normalized == .strength) ? 3 : 3
         let caps: [MovementPattern: Int] = [
@@ -1161,10 +1164,48 @@ class WorkoutRecommendationService {
 
             // Accept
             selected.append(candidate)
+            selectedIds.insert(candidate.id)
             patternCounts[pattern] = (patternCounts[pattern] ?? 0) + 1
             if pattern == .isolation {
                 let muscle = primaryMuscleKey(candidate)
                 isolationMuscleCounts[muscle] = (isolationMuscleCounts[muscle] ?? 0) + 1
+            }
+        }
+
+        if selected.count < maxCount {
+            let relaxedCaps = caps.mapValues { $0 + 1 }
+            for candidate in sorted {
+                if selected.count >= maxCount { break }
+                if selectedIds.contains(candidate.id) { continue }
+
+                let pattern = movementPattern(for: candidate)
+                let currentCount = patternCounts[pattern] ?? 0
+                let allowed = relaxedCaps[pattern] ?? (currentCount + 1)
+                if currentCount >= allowed { continue }
+
+                if pattern == .isolation {
+                    let muscle = primaryMuscleKey(candidate)
+                    if (isolationMuscleCounts[muscle] ?? 0) >= 3 { continue }
+                }
+
+                var redundant = false
+                for ex in selected {
+                    if ex.id == candidate.id { continue }
+                    let sim = similarity(candidate, ex)
+                    if movementPattern(for: ex) == pattern && sim > 0.9 {
+                        redundant = true
+                        break
+                    }
+                }
+                if redundant { continue }
+
+                selected.append(candidate)
+                selectedIds.insert(candidate.id)
+                patternCounts[pattern] = (patternCounts[pattern] ?? 0) + 1
+                if pattern == .isolation {
+                    let muscle = primaryMuscleKey(candidate)
+                    isolationMuscleCounts[muscle] = (isolationMuscleCounts[muscle] ?? 0) + 1
+                }
             }
         }
         return selected
@@ -1731,6 +1772,20 @@ class WorkoutRecommendationService {
         
         print("🧮 Classifying exercise: \(exercise.name) | bodyPart: \(bodyPart) | exerciseType: \(exerciseType)")
         
+        let manualOverrides: [(keyword: String, category: ExerciseCategory)] = [
+            ("handstand hold", .compound),
+            ("handstand push", .compound),
+            ("handstand", .compound),
+            ("face pull", .compound),
+            ("rear delt row", .compound),
+            ("rear drive", .compound)
+        ]
+
+        if let override = manualOverrides.first(where: { exerciseName.contains($0.keyword) }) {
+            print("🧮 → Classified as \(override.category) (override)")
+            return override.category
+        }
+
         // Core/Abs first (most specific)
         if bodyPart == "waist" || bodyPart.contains("abs") || exerciseName.contains("crunch") || exerciseName.contains("plank") {
             print("🧮 → Classified as CORE")
@@ -1769,7 +1824,8 @@ class WorkoutRecommendationService {
         // Primary compound movement patterns
         let compoundKeywords = [
             "squat", "deadlift", "bench press", "press", "row", "pull-up", "pullup", "chin-up", "chinup",
-            "dip", "lunge", "clean", "snatch", "thrust", "burpee", "push-up", "pushup"
+            "dip", "lunge", "clean", "snatch", "thrust", "burpee", "push-up", "pushup",
+            "face pull", "upright row", "handstand", "rear delt row", "rear drive", "push press", "arnold press"
         ]
         
         // Check exercise name for compound patterns
@@ -1805,7 +1861,8 @@ class WorkoutRecommendationService {
         // Primary isolation movement patterns
         let isolationKeywords = [
             "curl", "extension", "raise", "fly", "kickback", "shrug", "calf raise",
-            "tricep", "bicep", "lateral", "reverse", "hammer", "concentration"
+            "tricep", "bicep", "lateral", "reverse", "hammer", "concentration",
+            "t-raise", "y-raise"
         ]
         
         // Check exercise name for isolation patterns
