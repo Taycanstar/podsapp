@@ -60,6 +60,8 @@ struct LogWorkoutView: View {
     // Keep only essential UI-only state (not data state)
     @State private var currentWorkout: TodayWorkout? = nil
     @State private var userEmail: String = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+    @State private var isRenamingWorkout = false
+    @State private var renameWorkoutTitle = ""
     
     
     // Properties that delegate to WorkoutManager but are accessed locally
@@ -72,6 +74,18 @@ struct LogWorkoutView: View {
     }
 
     private var toolbarButtonDiameter: CGFloat { 36 }
+
+    private var todayWorkoutTitle: String {
+        if let title = workoutManager.todayWorkout?.title.trimmingCharacters(in: .whitespacesAndNewlines),
+           !title.isEmpty {
+            return title
+        }
+        return "Today's Workout"
+    }
+
+    private var trimmedRenameWorkoutTitle: String {
+        renameWorkoutTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     // (helpers moved into TodayWorkoutExerciseList where they are used)
     
@@ -179,9 +193,12 @@ struct LogWorkoutView: View {
         mainBody
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
-            .navigationTitle(selectedWorkoutTab == .workouts ? "Workouts" : "Today's Workout")
-              .toolbarBackground(.hidden, for: .navigationBar)
+            .navigationTitle(selectedWorkoutTab == .workouts ? "Workouts" : todayWorkoutTitle)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar { toolbarContent }
+            .sheet(isPresented: $isRenamingWorkout) {
+                renameWorkoutSheet
+            }
             .if(selectedWorkoutTab == .workouts) { view in
                 view.searchable(
                     text: $searchText,
@@ -1065,7 +1082,8 @@ struct LogWorkoutView: View {
 
                     Menu {
                         Button(action: {
-                            // TODO: Implement rename workout action
+                            renameWorkoutTitle = workoutManager.todayWorkout?.title ?? ""
+                            isRenamingWorkout = workoutManager.todayWorkout != nil
                         }) {
                             HStack {
                                 Image(systemName: "pencil")
@@ -1167,6 +1185,42 @@ struct LogWorkoutView: View {
         case .olympicWeightlifting: return 240
         case .general: return 75
         default: return 75
+        }
+    }
+
+    // MARK: - Rename Workout Sheet
+    private var renameWorkoutSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Name", text: $renameWorkoutTitle)
+                        .textInputAutocapitalization(.words)
+                        .disableAutocorrection(true)
+                }
+            }
+            .navigationTitle("Rename Workout")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        isRenamingWorkout = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        let newTitle = trimmedRenameWorkoutTitle
+                        guard !newTitle.isEmpty else { return }
+                        workoutManager.renameTodayWorkout(to: newTitle)
+                        renameWorkoutTitle = newTitle
+                        isRenamingWorkout = false
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                    }
+                    .disabled(trimmedRenameWorkoutTitle.isEmpty)
+                }
+            }
         }
     }
 

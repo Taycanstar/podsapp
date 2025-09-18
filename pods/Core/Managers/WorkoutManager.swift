@@ -272,6 +272,47 @@ class WorkoutManager: ObservableObject {
         )
     }
     
+    // MARK: - Workout Updates
+
+    func renameTodayWorkout(to newTitle: String) {
+        let trimmedTitle = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty, let existingWorkout = todayWorkout else { return }
+        guard existingWorkout.title != trimmedTitle else { return }
+
+        let updatedWorkout = TodayWorkout(
+            id: existingWorkout.id,
+            date: existingWorkout.date,
+            title: trimmedTitle,
+            exercises: existingWorkout.exercises,
+            blocks: existingWorkout.blocks,
+            estimatedDuration: existingWorkout.estimatedDuration,
+            fitnessGoal: existingWorkout.fitnessGoal,
+            difficulty: existingWorkout.difficulty,
+            warmUpExercises: existingWorkout.warmUpExercises,
+            coolDownExercises: existingWorkout.coolDownExercises
+        )
+
+        todayWorkout = updatedWorkout
+
+        if let activeWorkout = currentWorkout, activeWorkout.id == existingWorkout.id {
+            let updatedActiveWorkout = TodayWorkout(
+                id: activeWorkout.id,
+                date: activeWorkout.date,
+                title: trimmedTitle,
+                exercises: activeWorkout.exercises,
+                blocks: activeWorkout.blocks,
+                estimatedDuration: activeWorkout.estimatedDuration,
+                fitnessGoal: activeWorkout.fitnessGoal,
+                difficulty: activeWorkout.difficulty,
+                warmUpExercises: activeWorkout.warmUpExercises,
+                coolDownExercises: activeWorkout.coolDownExercises
+            )
+            currentWorkout = updatedActiveWorkout
+        }
+
+        saveTodayWorkout()
+    }
+
     // MARK: - Core Public Methods
     
     /// Generate today's workout with dynamic programming (1 second simple loading)
@@ -1000,11 +1041,43 @@ class WorkoutManager: ObservableObject {
     }
     
     private func generateWorkoutTitle(_ muscleGroups: [String]) -> String {
-        if muscleGroups.count <= 2 {
-            return muscleGroups.joined(separator: " & ")
-        } else {
-            return "Full Body Workout"
+        let normalized = muscleGroups.map { $0.lowercased() }
+        let muscleSet = Set(normalized)
+
+        let pushMuscles: Set<String> = ["chest", "shoulders", "triceps"]
+        let pullMuscles: Set<String> = ["back", "biceps", "rear delts", "forearms"]
+        let lowerMuscles: Set<String> = ["quadriceps", "hamstrings", "glutes", "calves", "lower back", "hips", "thighs"]
+        let coreMuscles: Set<String> = ["abs", "core", "waist"]
+
+        let hasPush = !muscleSet.isDisjoint(with: pushMuscles)
+        let hasPull = !muscleSet.isDisjoint(with: pullMuscles)
+        let hasLower = !muscleSet.isDisjoint(with: lowerMuscles)
+        let hasCoreOnly = muscleSet.subtracting(pushMuscles).subtracting(pullMuscles).subtracting(lowerMuscles).isSubset(of: coreMuscles)
+
+        switch (hasPush, hasPull, hasLower) {
+        case (true, false, false):
+            return "Push Day"
+        case (false, true, false):
+            return "Pull Day"
+        case (true, true, false):
+            return "Upper Body Day"
+        case (false, false, true):
+            return "Lower Body Day"
+        case (true, false, true), (false, true, true), (true, true, true):
+            return "Full Body Day"
+        default:
+            break
         }
+
+        if hasCoreOnly {
+            return "Core Day"
+        }
+
+        if let single = muscleGroups.first, muscleGroups.count == 1 {
+            return "\(single) Day"
+        }
+
+        return "Today's Workout"
     }
     
     private func setupObservers() {

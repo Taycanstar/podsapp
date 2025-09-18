@@ -555,7 +555,7 @@ struct DynamicTodayWorkout: Codable, Identifiable {
         return TodayWorkout(
             id: baseWorkout.id,
             date: baseWorkout.date,
-            title: "\(sessionPhase.emoji) \(sessionPhase.displayName): \(baseWorkout.title)",
+            title: baseWorkout.title,
             exercises: mergedExercises,
             estimatedDuration: baseWorkout.estimatedDuration,
             fitnessGoal: baseWorkout.fitnessGoal,
