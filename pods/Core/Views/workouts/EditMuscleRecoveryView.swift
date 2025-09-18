@@ -139,9 +139,31 @@ struct EditMuscleRecoveryView: View {
 
         profile.muscleRecoveryOverrides = overridesToPersist
 
-        if !sanitized.isEmpty {
-            let average = sanitized.values.reduce(0, +) / Double(sanitized.count)
-            profile.muscleRecoveryTargetPercent = Int(round(average))
+        let targetPercent: Int? = sanitized.isEmpty
+            ? nil
+            : Int(round(sanitized.values.reduce(0, +) / Double(sanitized.count)))
+
+        if let targetPercent {
+            profile.muscleRecoveryTargetPercent = targetPercent
+        }
+
+        let email = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+        if !email.isEmpty {
+            var payload: [String: Any] = [
+                "muscle_recovery_overrides": sanitized
+            ]
+            if let targetPercent {
+                payload["muscle_recovery_target_percent"] = targetPercent
+            }
+
+            NetworkManagerTwo.shared.updateWorkoutPreferences(email: email, workoutData: payload) { result in
+                switch result {
+                case .success:
+                    Task { await DataLayer.shared.updateProfileData(payload) }
+                case .failure(let error):
+                    print("❌ Failed to sync muscle recovery overrides: \(error)")
+                }
+            }
         }
 
         initialValues = sanitized
