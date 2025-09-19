@@ -45,6 +45,7 @@ struct LogWorkoutView: View {
     // Use global WorkoutManager from environment
     @EnvironmentObject var workoutManager: WorkoutManager
     @EnvironmentObject var onboarding: OnboardingViewModel
+    private let userProfileService = UserProfileService.shared
     
     // Local UI state
     @State private var showingDurationPicker = false
@@ -56,6 +57,7 @@ struct LogWorkoutView: View {
     @State private var showingFlexibilityPicker = false
     @State private var showingWorkoutFeedback = false
     @State private var showingAddExerciseSheet = false
+    @State private var showingSupersetCircuitSheet = false
     
     // Keep only essential UI-only state (not data state)
     @State private var currentWorkout: TodayWorkout? = nil
@@ -198,6 +200,18 @@ struct LogWorkoutView: View {
             .toolbar { toolbarContent }
             .sheet(isPresented: $isRenamingWorkout) {
                 renameWorkoutSheet
+            }
+            .sheet(isPresented: $showingSupersetCircuitSheet) {
+                if let workout = workoutManager.todayWorkout {
+                    SupersetCircuitSelectionSheet(workout: workout) { result in
+                        workoutManager.applyManualBlockResult(result)
+                    }
+                    .environmentObject(workoutManager)
+                } else {
+                    Text("No workout available")
+                        .font(.headline)
+                        .padding()
+                }
             }
             .if(selectedWorkoutTab == .workouts) { view in
                 view.searchable(
@@ -1100,12 +1114,15 @@ struct LogWorkoutView: View {
                             }
                         }
 
-                        Button(action: {
-                            // TODO: Implement build superset/circuit action
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.left.arrow.right")
-                                Text("Build superset/circuit")
+                        if userProfileService.circuitsAndSupersetsEnabled,
+                           (workoutManager.todayWorkout?.exercises.count ?? 0) >= 2 {
+                            Button(action: {
+                                showingSupersetCircuitSheet = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "arrow.left.arrow.right")
+                                    Text("Build superset/circuit")
+                                }
                             }
                         }
 
@@ -2060,7 +2077,7 @@ private struct RoutinesWorkoutView: View {
                 .padding(.vertical, 18)
                 .frame(maxWidth: .infinity)
                 .background(Color.primary)
-                .cornerRadius(12)
+                .cornerRadius(24)
             }
             .padding(.horizontal, 142)
             .padding(.top, 10)
@@ -2123,11 +2140,11 @@ private struct RoutinesWorkoutView: View {
             // Only show grouped blocks when there are 2+ exercises
             (workout.blocks ?? []).filter { ($0.type == .circuit || $0.type == .superset) && $0.exercises.count >= 2 }
         }
-        
+
         private var groupedExerciseIds: Set<Int> {
             Set(circuitOrSupersetBlocks.flatMap { $0.exercises.map { $0.exercise.id } })
         }
-        
+
         private var nonGroupedExercisesList: [TodayWorkoutExercise] {
             var seen = Set<Int>()
             return exercises.filter {
@@ -2147,7 +2164,7 @@ private struct RoutinesWorkoutView: View {
         .scrollIndicators(.hidden)
         .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
-        .cornerRadius(12)
+        .cornerRadius(24)
         .onAppear {
             // Register callbacks once
             onExerciseReplacementCallbackSet { index, newExercise in
@@ -2247,7 +2264,7 @@ private struct RoutinesWorkoutView: View {
                 }
             }
             .background(Color("containerbg"))
-            .cornerRadius(12)
+            .cornerRadius(24)
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
@@ -2289,7 +2306,7 @@ private struct RoutinesWorkoutView: View {
                     }
                 }
                 .background(Color("containerbg"))
-                .cornerRadius(12)
+                .cornerRadius(24)
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -2320,7 +2337,7 @@ private struct RoutinesWorkoutView: View {
                 }
             }
             .background(Color("containerbg"))
-            .cornerRadius(12)
+            .cornerRadius(24)
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
@@ -2395,50 +2412,6 @@ private struct RoutinesWorkoutView: View {
     private func orderedExercises(for block: WorkoutBlock) -> [TodayWorkoutExercise] {
         let ids = block.exercises.map { $0.exercise.id }
         return exercises.filter { ids.contains($0.exercise.id) }
-    }
-
-    // MARK: - Group Header + Spacing Helpers (scoped to this list)
-    private func blockHeader(for exercise: TodayWorkoutExercise, in list: [TodayWorkoutExercise]) -> String? {
-        guard let blocks = workoutManager.todayWorkout?.blocks else { return nil }
-        var circuitIndex = 0
-        var supersetIndex = 0
-
-        for block in blocks {
-            switch block.type {
-            case .circuit:
-                circuitIndex += 1
-                if isFirst(exercise, in: block, list: list) {
-                    return "Circuit \(circuitIndex)"
-                }
-            case .superset:
-                supersetIndex += 1
-                if isFirst(exercise, in: block, list: list) {
-                    return "Superset \(supersetIndex)"
-                }
-            default:
-                continue
-            }
-        }
-        return nil
-    }
-
-    private func isGrouped(_ exercise: TodayWorkoutExercise) -> Bool {
-        guard let blocks = workoutManager.todayWorkout?.blocks else { return false }
-        return blocks.contains { blk in
-            (blk.type == .circuit || blk.type == .superset) && blk.exercises.contains(where: { $0.exercise.id == exercise.exercise.id })
-        }
-    }
-
-    private func isFirst(_ exercise: TodayWorkoutExercise, in block: WorkoutBlock, list: [TodayWorkoutExercise]) -> Bool {
-        let ids = block.exercises.map { $0.exercise.id }
-        let positions = ids.compactMap { id in list.firstIndex(where: { $0.exercise.id == id }) }
-        guard let minPos = positions.min(), minPos < list.count else { return false }
-        return list[minPos].exercise.id == exercise.exercise.id
-    }
-
-    private func rowTopInset(for exercise: TodayWorkoutExercise) -> CGFloat {
-        // Extra breathing room for standalone exercises; grouped ones use tighter spacing
-        return isGrouped(exercise) ? 5 : 14
     }
 
     private func moveExercise(from source: IndexSet, to destination: Int) {
@@ -2529,12 +2502,16 @@ private struct RoutinesWorkoutView: View {
 
 // MARK: - Exercise Workout Card
 
-private struct ExerciseWorkoutCard: View {
+struct ExerciseWorkoutCard: View {
     let exercise: TodayWorkoutExercise
     let allExercises: [TodayWorkoutExercise]
     let exerciseIndex: Int
     let onExerciseReplaced: (Int, ExerciseData) -> Void
     let onOpen: () -> Void
+    let isSelectable: Bool
+    let isSelected: Bool
+    let onSelectionToggle: (() -> Void)?
+    let showsContextMenu: Bool
     @EnvironmentObject var workoutManager: WorkoutManager
     @State private var recommendMoreOften = false
     @State private var recommendLessOften = false
@@ -2595,22 +2572,48 @@ private struct ExerciseWorkoutCard: View {
         return String(format: "%d:%02d", minutes, secs)
     }
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], exerciseIndex: Int, onExerciseReplaced: @escaping (Int, ExerciseData) -> Void, onOpen: @escaping () -> Void, useBackground: Bool = true) {
+    init(
+        exercise: TodayWorkoutExercise,
+        allExercises: [TodayWorkoutExercise],
+        exerciseIndex: Int,
+        onExerciseReplaced: @escaping (Int, ExerciseData) -> Void,
+        onOpen: @escaping () -> Void,
+        useBackground: Bool = true,
+        isSelectable: Bool = false,
+        isSelected: Bool = false,
+        onSelectionToggle: (() -> Void)? = nil,
+        showsContextMenu: Bool = true
+    ) {
         self.exercise = exercise
         self.allExercises = allExercises
         self.exerciseIndex = exerciseIndex
         self.onExerciseReplaced = onExerciseReplaced
         self.onOpen = onOpen
+        self.isSelectable = isSelectable
+        self.isSelected = isSelected
+        self.onSelectionToggle = onSelectionToggle
+        self.showsContextMenu = showsContextMenu
         self._tempExercise = State(initialValue: exercise)
         self.useBackground = useBackground
     }
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            // Whole row is tappable (except trailing ellipsis overlay)
-            Button(action: { onOpen() }) {
+            Button(action: {
+                if isSelectable {
+                    onSelectionToggle?()
+                } else {
+                    onOpen()
+                }
+            }) {
+                let cornerRadius: CGFloat = useBackground ? 12 : 8
                 HStack(spacing: 12) {
-                    // Exercise thumbnail
+                    if isSelectable {
+                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(isSelected ? .accentColor : .secondary)
+                    }
+
                     Group {
                         if let image = UIImage(named: thumbnailImageName) {
                             Image(uiImage: image)
@@ -2629,7 +2632,6 @@ private struct ExerciseWorkoutCard: View {
                     .frame(width: 60, height: 60)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                    // Exercise info
                     VStack(alignment: .leading, spacing: 4) {
                         Text(exercise.exercise.name)
                             .font(.system(size: 16, weight: .medium))
@@ -2642,55 +2644,72 @@ private struct ExerciseWorkoutCard: View {
                             .foregroundColor(.secondary)
                     }
 
-                    Spacer(minLength: 32) // leave space for overlay menu
+                    Spacer(minLength: showsContextMenu ? 32 : 0)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
                 .padding(.horizontal, 16)
                 .padding(.vertical, useBackground ? 12 : 8)
-                .background(useBackground ? Color("containerbg") : Color.clear)
-                .cornerRadius(useBackground ? 12 : 0)
+                .background(
+                    ZStack {
+                        if useBackground {
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .fill(Color("containerbg"))
+                        }
+                        if isSelectable && isSelected {
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .fill(Color.accentColor.opacity(0.12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: cornerRadius)
+                                        .stroke(Color.accentColor, lineWidth: 1.5)
+                                )
+                        }
+                    }
+                )
+                .cornerRadius(cornerRadius)
             }
             .buttonStyle(PlainButtonStyle())
+            .disabled(isSelectable && onSelectionToggle == nil)
 
-            // Trailing menu overlay (excludes it from the tappable area)
-            Menu {
-                Button("Exercise History") { showHistory = true }
+            if showsContextMenu {
+                Menu {
+                    Button("Exercise History") { showHistory = true }
 
-                Button("Replace") {
-                    tempExercise = exercise
-                    showReplace = true
+                    Button("Replace") {
+                        tempExercise = exercise
+                        showReplace = true
+                    }
+
+                    Button("Recommend more often") {
+                        UserProfileService.shared.setExercisePreferenceMoreOften(exerciseId: exercise.exercise.id)
+                        recommendMoreOften = true
+                        recommendLessOften = false
+                    }
+
+                    Button("Recommend less often") {
+                        UserProfileService.shared.setExercisePreferenceLessOften(exerciseId: exercise.exercise.id)
+                        recommendLessOften = true
+                        recommendMoreOften = false
+                    }
+
+                    Divider()
+
+                    Button("Don't recommend again", role: .destructive) {
+                        let ups = UserProfileService.shared
+                        ups.addToAvoided(exercise.exercise.id)
+                        withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
+                    }
+
+                    Button("Delete from workout", role: .destructive) {
+                        withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(width: 24, height: 24)
+                        .padding(.trailing, 20)
                 }
-
-                Button("Recommend more often") {
-                    UserProfileService.shared.setExercisePreferenceMoreOften(exerciseId: exercise.exercise.id)
-                    recommendMoreOften = true
-                    recommendLessOften = false
-                }
-
-                Button("Recommend less often") {
-                    UserProfileService.shared.setExercisePreferenceLessOften(exerciseId: exercise.exercise.id)
-                    recommendLessOften = true
-                    recommendMoreOften = false
-                }
-
-                Divider()
-
-                Button("Don't recommend again", role: .destructive) {
-                    let ups = UserProfileService.shared
-                    ups.addToAvoided(exercise.exercise.id)
-                    withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
-                }
-
-                Button("Delete from workout", role: .destructive) {
-                    withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .frame(width: 24, height: 24)
-                    .padding(.trailing, 20)
             }
         }
         .background(
@@ -2775,7 +2794,7 @@ private struct WorkoutGenerationCard: View {
         .padding()
         // .background(Color(.systemBackground))
         .background(Color("primarybg"))
-        .cornerRadius(12)
+        .cornerRadius(24)
         .onAppear {
             startAnimation()
         }

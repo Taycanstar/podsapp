@@ -583,10 +583,10 @@ class WorkoutManager: ObservableObject {
     func updateExercise(at index: Int, with updatedExercise: TodayWorkoutExercise) {
         guard let currentWorkout = todayWorkout else { return }
         guard index < currentWorkout.exercises.count else { return }
-        
+
         var updatedExercises = currentWorkout.exercises
         updatedExercises[index] = updatedExercise
-        
+
         let updatedWorkout = TodayWorkout(
             id: currentWorkout.id,
             date: currentWorkout.date,
@@ -599,11 +599,17 @@ class WorkoutManager: ObservableObject {
             warmUpExercises: currentWorkout.warmUpExercises,
             coolDownExercises: currentWorkout.coolDownExercises
         )
-        
+
         todayWorkout = updatedWorkout
         saveTodayWorkout()
     }
-    
+
+    /// Apply a manual block creation result and persist the updated workout
+    func applyManualBlockResult(_ result: BlockCreationService.CreationResult) {
+        todayWorkout = result.workout
+        saveTodayWorkout()
+    }
+
     /// Set today's workout (for loading from UserDefaults)
     func setTodayWorkout(_ workout: TodayWorkout?) {
         todayWorkout = workout.map { sanitizeWarmupsIfNeeded($0) }

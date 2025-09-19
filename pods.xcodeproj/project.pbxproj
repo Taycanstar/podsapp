@@ -148,6 +148,8 @@
 		36881DF72E736C2A00262045 /* WorkoutBlockModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DF62E736C2400262045 /* WorkoutBlockModels.swift */; };
 		36881DFB2E75D97200262045 /* WorkoutProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DFA2E75D96B00262045 /* WorkoutProfileSettingsView.swift */; };
 		36881DFD2E77406300262045 /* ExerciseLoggingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DFC2E77405C00262045 /* ExerciseLoggingSheet.swift */; };
+		36F2C8AC2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8AB2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift */; };
+		36F2C8AE2F9D1C7B00B4A123 /* BlockCreationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8AD2F9D1C7B00B4A123 /* BlockCreationService.swift */; };
 		3688DBF82BDEAE6E001E244C /* PlayerPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3688DBF72BDEAE6E001E244C /* PlayerPageView.swift */; };
 		3688DBFA2BDEC79A001E244C /* PlayerContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3688DBF92BDEC79A001E244C /* PlayerContainerView.swift */; };
 		368A27372B977F5A0001BBCA /* LandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368A27362B977F5A0001BBCA /* LandingView.swift */; };
@@ -453,6 +455,7 @@
 		3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithVoice.swift; sourceTree = "<group>"; };
 		3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithScan.swift; sourceTree = "<group>"; };
 		3662A54E2DFDE03700847487 /* LogWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogWorkoutView.swift; sourceTree = "<group>"; };
+		36F2C8AB2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupersetCircuitSelectionSheet.swift; sourceTree = "<group>"; };
 		3662A5502DFDFF7B00847487 /* WorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutManager.swift; sourceTree = "<group>"; };
 		3662A5522DFE361200847487 /* CreateWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateWorkoutView.swift; sourceTree = "<group>"; };
 		3662A5542DFE3B8500847487 /* WorkoutContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutContainerView.swift; sourceTree = "<group>"; };
@@ -472,6 +475,7 @@
 		36881DF02E6E04ED00262045 /* WorkoutScheduleSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutScheduleSettingsView.swift; sourceTree = "<group>"; };
 		36881DF22E71E64900262045 /* FitnessGoalMigrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitnessGoalMigrationService.swift; sourceTree = "<group>"; };
 		36881DF42E736BB400262045 /* BlockAssemblyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockAssemblyService.swift; sourceTree = "<group>"; };
+		36F2C8AD2F9D1C7B00B4A123 /* BlockCreationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockCreationService.swift; sourceTree = "<group>"; };
 		36881DF62E736C2400262045 /* WorkoutBlockModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutBlockModels.swift; sourceTree = "<group>"; };
 		36881DFA2E75D96B00262045 /* WorkoutProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProfileSettingsView.swift; sourceTree = "<group>"; };
 		36881DFC2E77405C00262045 /* ExerciseLoggingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseLoggingSheet.swift; sourceTree = "<group>"; };
@@ -685,6 +689,7 @@
 			isa = PBXGroup;
 			children = (
 				36881DF42E736BB400262045 /* BlockAssemblyService.swift */,
+				36F2C8AD2F9D1C7B00B4A123 /* BlockCreationService.swift */,
 				36881DF22E71E64900262045 /* FitnessGoalMigrationService.swift */,
 				36A851B02E5FD71F004E5CED /* ExerciseComplexityService.swift */,
 				36A851A82E5E27D1004E5CED /* PerformanceFeedbackService.swift */,
@@ -836,6 +841,7 @@
 				361FF32A2E2085EA00B7F68E /* ExerciseDetailView.swift */,
 				361FF3282E20752200B7F68E /* WorkoutCreationView.swift */,
 				3662A54E2DFDE03700847487 /* LogWorkoutView.swift */,
+				36F2C8AB2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift */,
 				3662A5522DFE361200847487 /* CreateWorkoutView.swift */,
 				3662A5542DFE3B8500847487 /* WorkoutContainerView.swift */,
 				3662A5562DFE430D00847487 /* AddExerciseView.swift */,
@@ -1627,6 +1633,7 @@
 				363068E62E1B3FC700F2D4EC /* EditProfilePhotoView.swift in Sources */,
 				36A851B12E5FD728004E5CED /* ExerciseComplexityService.swift in Sources */,
 				36881DF52E736BBB00262045 /* BlockAssemblyService.swift in Sources */,
+				36F2C8AE2F9D1C7B00B4A123 /* BlockCreationService.swift in Sources */,
 				361FF3272E20722500B7F68E /* UserProfileService.swift in Sources */,
 				36A8519D2E5A10A6004E5CED /* ExerciseNotesData.swift in Sources */,
 				36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */,
@@ -1744,6 +1751,7 @@
 				363068E02E19E3F400F2D4EC /* EditMyProfileView.swift in Sources */,
 				36A851972E5A106F004E5CED /* ExerciseNotesSheet.swift in Sources */,
 				3662A54F2DFDE03700847487 /* LogWorkoutView.swift in Sources */,
+				36F2C8AC2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift in Sources */,
 				36CB03442D72C1B9006A74E9 /* BottomPopup.swift in Sources */,
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,
 				36ED359D2DD0DE1600D174FB /* LogRepository.swift in Sources */,
