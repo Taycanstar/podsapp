@@ -304,17 +304,6 @@ func loadLogs(for date: Date) {
   selectedDate = date
   isLoading = true; error = nil
 
-  // Clear stale pending cache when switching to a different date
-  let newDateKey = Calendar.current.startOfDay(for: date)
-  let currentDateKey = Calendar.current.startOfDay(for: Date())
-  
-  // If we're switching to today from a different date, clear the cache
-  // to prevent showing stale data from previous sessions
-  if Calendar.current.isDateInToday(date) && !pendingByDate.isEmpty {
-    clearPendingCache()
-    print("[DayLogsVM] Cleared pending cache when switching to today")
-  }
-
   repo.fetchLogs(email: email, for: date) { [weak self] result in
     guard let self = self else { return }
     
@@ -332,6 +321,9 @@ func loadLogs(for date: Date) {
         let dedupedPending = pending.filter { p in
           !serverLogs.contains(where: { $0.id == p.id })
         }
+
+        // Persist the pending state for this day after removing confirmed logs
+        self.pendingByDate[key] = dedupedPending
 
         // Get activity logs from Apple Health
         let activityLogs = self.getActivityLogsFromHealth(for: date)

@@ -68,7 +68,8 @@ extension WorkoutManager {
             DynamicParameterService.shared.generateDynamicExercise(
                 for: staticExercise.exercise,
                 parameters: params,
-                fitnessGoal: effectiveFitnessGoal
+                fitnessGoal: effectiveFitnessGoal,
+                baseExercise: staticExercise
             )
         }
         

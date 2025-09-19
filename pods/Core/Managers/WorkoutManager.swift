@@ -136,6 +136,7 @@ class WorkoutManager: ObservableObject {
     private let userProfileService = UserProfileService.shared
     private let workoutDataManager = WorkoutDataManager.shared
     private var cancellables = Set<AnyCancellable>()
+    private var manualWarmupExerciseIDs: Set<Int> = []
     
     // MARK: - UserDefaults Keys
     private let todayWorkoutKey = "todayWorkout"
@@ -251,7 +252,8 @@ class WorkoutManager: ObservableObject {
             DynamicParameterService.shared.generateDynamicExercise(
                 for: staticExercise.exercise,
                 parameters: parameters,
-                fitnessGoal: effectiveFitnessGoal
+                fitnessGoal: effectiveFitnessGoal,
+                baseExercise: staticExercise
             )
         }
         
@@ -292,7 +294,7 @@ class WorkoutManager: ObservableObject {
             coolDownExercises: existingWorkout.coolDownExercises
         )
 
-        todayWorkout = updatedWorkout
+        todayWorkout = sanitizeWarmupsIfNeeded(updatedWorkout)
 
         if let activeWorkout = currentWorkout, activeWorkout.id == existingWorkout.id {
             let updatedActiveWorkout = TodayWorkout(
@@ -307,7 +309,7 @@ class WorkoutManager: ObservableObject {
                 warmUpExercises: activeWorkout.warmUpExercises,
                 coolDownExercises: activeWorkout.coolDownExercises
             )
-            currentWorkout = updatedActiveWorkout
+            currentWorkout = sanitizeWarmupsIfNeeded(updatedActiveWorkout)
         }
 
         saveTodayWorkout()
@@ -351,9 +353,10 @@ class WorkoutManager: ObservableObject {
                 warmUpExercises: legacy.warmUpExercises,
                 coolDownExercises: legacy.coolDownExercises
             )
-            self.todayWorkout = withBlocks
+            let sanitized = sanitizeWarmupsIfNeeded(withBlocks)
+            self.todayWorkout = sanitized
             // REMOVED: self.sessionPhase = dynamicParams.sessionPhase (this was overriding our sync!)
-            
+
             saveTodayWorkout()
             generationError = nil
             
@@ -394,7 +397,7 @@ class WorkoutManager: ObservableObject {
             let workout = try await backgroundWorkoutGeneration(parameters)
             
             // Update on main thread
-            todayWorkout = workout
+            todayWorkout = sanitizeWarmupsIfNeeded(workout)
             generationError = nil
             saveTodayWorkout()
             
@@ -603,7 +606,7 @@ class WorkoutManager: ObservableObject {
     
     /// Set today's workout (for loading from UserDefaults)
     func setTodayWorkout(_ workout: TodayWorkout?) {
-        todayWorkout = workout
+        todayWorkout = workout.map { sanitizeWarmupsIfNeeded($0) }
         if let workout = workout {
             saveTodayWorkout()
             print("📅 WorkoutManager: Set today's workout - \(workout.title)")
@@ -630,7 +633,7 @@ class WorkoutManager: ObservableObject {
             warmUpExercises: newWarmUp,
             coolDownExercises: newCoolDown
         )
-        todayWorkout = updated
+        todayWorkout = sanitizeWarmupsIfNeeded(updated)
         saveTodayWorkout()
         print("🧹 Removed exercise id=\(exerciseId) from today's workout")
     }
@@ -710,15 +713,82 @@ class WorkoutManager: ObservableObject {
             coolDownExercises: convertedCooldowns
         )
 
-        todayWorkout = updatedWorkout
+        todayWorkout = sanitizeWarmupsIfNeeded(updatedWorkout)
         saveTodayWorkout()
         UserDefaults.standard.set(new.rawValue, forKey: "workoutUnitsSystem")
         print("🔁 Converted todayWorkout units from \(old.rawValue) to \(new.rawValue)")
     }
-    
+
+    /// Remove all stored warm-up sets from the current workouts when the user disables them.
+    func clearWarmupSetsForCurrentWorkout() {
+        manualWarmupExerciseIDs.removeAll()
+        if let workout = todayWorkout {
+            todayWorkout = stripWarmups(from: workout)
+            saveTodayWorkout()
+        }
+
+        if let activeWorkout = currentWorkout {
+            currentWorkout = stripWarmups(from: activeWorkout)
+        }
+    }
+
+    private func stripWarmups(from exercise: TodayWorkoutExercise) -> TodayWorkoutExercise {
+        if manualWarmupExerciseIDs.contains(exercise.exercise.id) {
+            return exercise
+        }
+        if !userProfileService.warmupSetsEnabled,
+           let warmups = exercise.warmupSets,
+           !warmups.isEmpty {
+            manualWarmupExerciseIDs.insert(exercise.exercise.id)
+            return exercise
+        }
+        let filteredFlexible = exercise.flexibleSets?.filter { !$0.isWarmupSet }
+        let normalizedFlexible = (filteredFlexible?.isEmpty ?? true) ? nil : filteredFlexible
+
+        return TodayWorkoutExercise(
+            exercise: exercise.exercise,
+            sets: exercise.sets,
+            reps: exercise.reps,
+            weight: exercise.weight,
+            restTime: exercise.restTime,
+            notes: exercise.notes,
+            warmupSets: nil,
+            flexibleSets: normalizedFlexible,
+            trackingType: exercise.trackingType
+        )
+    }
+
+    private func stripWarmups(from workout: TodayWorkout) -> TodayWorkout {
+        TodayWorkout(
+            id: workout.id,
+            date: workout.date,
+            title: workout.title,
+            exercises: workout.exercises.map(stripWarmups),
+            blocks: workout.blocks,
+            estimatedDuration: workout.estimatedDuration,
+            fitnessGoal: workout.fitnessGoal,
+            difficulty: workout.difficulty,
+            warmUpExercises: workout.warmUpExercises,
+            coolDownExercises: workout.coolDownExercises
+        )
+    }
+
+    private func sanitizeWarmupsIfNeeded(_ workout: TodayWorkout) -> TodayWorkout {
+        guard !userProfileService.warmupSetsEnabled else { return workout }
+        return stripWarmups(from: workout)
+    }
+
+    func registerManualWarmup(for exerciseId: Int) {
+        manualWarmupExerciseIDs.insert(exerciseId)
+    }
+
+    func unregisterManualWarmup(for exerciseId: Int) {
+        manualWarmupExerciseIDs.remove(exerciseId)
+    }
+
     /// Start workout session
     func startWorkout(_ workout: TodayWorkout) {
-        currentWorkout = workout
+        currentWorkout = sanitizeWarmupsIfNeeded(workout)
         print("🏃‍♂️ WorkoutManager: Started workout - \(workout.title)")
     }
     
@@ -1098,7 +1168,7 @@ class WorkoutManager: ObservableObject {
             
             // Check if workout is from today
             if Calendar.current.isDateInToday(workout.date) {
-                todayWorkout = workout
+                todayWorkout = sanitizeWarmupsIfNeeded(workout)
                 print("📱 WorkoutManager: Loaded today's workout from storage")
             } else {
                 print("📱 WorkoutManager: Found outdated workout, will generate new one")

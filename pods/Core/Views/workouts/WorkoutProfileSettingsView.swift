@@ -192,6 +192,9 @@ struct WorkoutProfileSettingsView: View {
                     get: { profile.warmupSetsEnabled },
                     set: { newVal in
                         profile.warmupSetsEnabled = newVal
+                        if !newVal {
+                            WorkoutManager.shared.clearWarmupSetsForCurrentWorkout()
+                        }
                         // Per-exercise warm-up sets flag (distinct from warm-up section)
                         sendPreferenceUpdate(["enable_warmup_sets": newVal])
                     }

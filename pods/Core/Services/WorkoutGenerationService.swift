@@ -476,9 +476,10 @@ class WorkoutGenerationService {
         guard let warmups = exercise.warmupSets, !warmups.isEmpty else { return 0 }
 
         let workingWeight = exercise.weight ?? 0
-        let userWeightKg = UserProfileService.shared.userWeight
-        let userWeightLbs = max(1.0, userWeightKg * 2.20462)
-        let relativeLoad = (userWeightLbs > 0 && workingWeight > 0) ? workingWeight / userWeightLbs : 0
+        let baselineWeight = workingWeight > 0 ? workingWeight : (recommendationService.estimateStartingWeight(for: exercise.exercise) ?? 0)
+        guard baselineWeight > 0 else { return 0 }
+
+        let relativeLoad = computeRelativeLoad(for: baselineWeight)
 
         let baseSecondsPerSet: Int
         if relativeLoad > 1.5 {
@@ -493,6 +494,36 @@ class WorkoutGenerationService {
         return warmups.count * baseSecondsPerSet + transitions
     }
     
+    /// Compute working-weight to bodyweight ratio using the user's preferred unit system
+    private func computeRelativeLoad(for workingWeight: Double) -> Double {
+        guard workingWeight > 0 else { return 0 }
+
+        let weightKg = UserProfileService.shared.userWeight
+        guard weightKg > 0 else { return 0 }
+
+        let usesImperial = UserDefaults.standard.bool(forKey: "isImperial")
+        let userWeight = usesImperial ? weightKg * 2.20462 : weightKg
+        guard userWeight > 0 else { return 0 }
+
+        let workingWeightInUserUnits = usesImperial ? workingWeight : workingWeight / 2.20462
+        return workingWeightInUserUnits / userWeight
+    }
+
+    private func shouldForceWarmup(for exercise: ExerciseData, goal: FitnessGoal, relativeLoad: Double, workingWeight: Double) -> Bool {
+        if workingWeight <= 0 || relativeLoad >= 0.5 { return false }
+        if goal == .strength || goal == .powerlifting { return true }
+
+        let equipment = exercise.equipment.lowercased()
+        let name = exercise.name.lowercased()
+        let usesImperial = UserDefaults.standard.bool(forKey: "isImperial")
+        let displayWorkingWeight = usesImperial ? workingWeight : workingWeight / 2.20462
+        let minimumBarWeight = usesImperial ? 45.0 : 20.0
+        let hasBarbell = equipment.contains("barbell") || equipment.contains("smith")
+        let isKeyCompound = isCompoundExercise(exercise) && (hasBarbell || name.contains("squat") || name.contains("deadlift") || name.contains("press") || name.contains("row"))
+        if isKeyCompound && displayWorkingWeight >= minimumBarWeight { return true }
+        return false
+    }
+
     /// Get rep duration based on fitness goal research
     private func getRepDurationForGoal(_ goal: FitnessGoal) -> Int {
         switch goal {
@@ -745,15 +776,19 @@ class WorkoutGenerationService {
     // MARK: - Warm-up Sets Builder
     /// Create 1–3 warm-up sets based on working weight percentages.
     private func generateWarmupSets(for exercise: ExerciseData, workingWeight: Double, goal: FitnessGoal) -> [WarmupSetData] {
-        guard isCompoundExercise(exercise), workingWeight > 0 else { return [] }
+        guard isCompoundExercise(exercise) else { return [] }
 
-        // Convert user weight to pounds to match recommendation weights (stored in lbs)
-        let userWeightKg = UserProfileService.shared.userWeight
-        let userWeightLbs = max(1.0, userWeightKg * 2.20462)
-        let relativeLoad = workingWeight / userWeightLbs
+        let baselineWeight: Double = {
+            if workingWeight > 0 { return workingWeight }
+            return recommendationService.estimateStartingWeight(for: exercise) ?? 0
+        }()
+        guard baselineWeight > 0 else { return [] }
+
+        let relativeLoad = computeRelativeLoad(for: baselineWeight)
+        let forceWarmup = shouldForceWarmup(for: exercise, goal: goal, relativeLoad: relativeLoad, workingWeight: baselineWeight)
 
         // Only prescribe warm-up sets once the working weight exceeds 50% of bodyweight
-        guard relativeLoad >= 0.5 else { return [] }
+        guard relativeLoad >= 0.5 || forceWarmup else { return [] }
 
         let scheme: [(pct: Double, reps: Int)]
         if relativeLoad > 1.5 {
@@ -767,17 +802,26 @@ class WorkoutGenerationService {
             scheme = [(0.6, 8), (0.85, 5)]
         }
 
+        let usesImperial = UserDefaults.standard.bool(forKey: "isImperial")
+        let displayWorkingWeight = usesImperial ? baselineWeight : baselineWeight / 2.20462
+        let minimumIncrement = usesImperial ? 5.0 : 2.5
+
         func roundedWarmupWeight(for percentage: Double) -> Double {
-            let raw = workingWeight * percentage
-            let usesImperial = UserDefaults.standard.bool(forKey: "isImperial")
-            let increment = usesImperial ? 5.0 : 2.5
-            return max(5.0, (raw / increment).rounded() * increment)
+            let raw = displayWorkingWeight * percentage
+            let increment = minimumIncrement
+            return max(increment, (raw / increment).rounded() * increment)
         }
 
         return scheme.map { step in
-            let weight = min(workingWeight * 0.98, roundedWarmupWeight(for: step.pct))
             let repsText = String(step.reps)
-            let weightText = weight.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", weight) : String(format: "%.1f", weight)
+            let rounded = roundedWarmupWeight(for: step.pct)
+            let warmupWeight = min(displayWorkingWeight * 0.98, rounded)
+            let weightText: String
+            if usesImperial {
+                weightText = warmupWeight.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", warmupWeight) : String(format: "%.1f", warmupWeight)
+            } else {
+                weightText = String(format: "%.1f", warmupWeight)
+            }
             return WarmupSetData(reps: repsText, weight: weightText)
         }
     }

@@ -69,7 +69,7 @@ struct ExerciseLoggingView: View {
 
     // Prefer floating RIR card above the bottom buttons
     private var useFloatingRIR: Bool { true }
-    
+
     
     init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise]? = nil, onSetLogged: ((TodayWorkoutExercise, Int, Double?) -> Void)? = nil, isFromWorkoutInProgress: Bool = false, initialCompletedSetsCount: Int? = nil, initialRIRValue: Double? = nil, onExerciseReplaced: ((ExerciseData) -> Void)? = nil, onWarmupSetsChanged: (([WarmupSetData]) -> Void)? = nil, onExerciseUpdated: ((TodayWorkoutExercise) -> Void)? = nil) {
         self.exercise = exercise
@@ -1372,10 +1372,11 @@ struct ExerciseLoggingView: View {
             guard let reps = flexibleSet.reps, let weight = flexibleSet.weight else { return nil }
             return WarmupSetData(reps: reps, weight: weight)
         }
-        
+
         // Count the actual number of regular sets (non-warmup)
-        let regularSetCount = flexibleSets.filter { !$0.isWarmupSet }.count
-        
+        let regularSets = flexibleSets.filter { !$0.isWarmupSet }
+        let regularSetCount = regularSets.count
+
         // Create updated exercise preserving flexible sets + tracking type
         let updatedExercise = TodayWorkoutExercise(
             exercise: currentExercise.exercise,
@@ -1385,25 +1386,31 @@ struct ExerciseLoggingView: View {
             restTime: currentExercise.restTime,
             notes: currentExercise.notes,
             warmupSets: warmupSetData.isEmpty ? nil : warmupSetData,
-            flexibleSets: flexibleSets.isEmpty ? nil : flexibleSets,
+            flexibleSets: regularSets.isEmpty && warmupFlexibleSets.isEmpty ? nil : flexibleSets,
             trackingType: trackingType
         )
-        
+
         // Update the current exercise reference
         currentExercise = updatedExercise
-        
+
         // Update the allExercises array if it exists (for WorkoutInProgressView)
         if var exercises = allExercises,
            let currentIndex = exercises.firstIndex(where: { $0.exercise.id == currentExercise.exercise.id }) {
             exercises[currentIndex] = updatedExercise
             allExercises = exercises
         }
-        
+
         // Save to parent via callback if available
         onExerciseUpdated?(updatedExercise)
-        
+
         // Call the callback for compatibility
         onWarmupSetsChanged?(warmupSetData)
+
+        if warmupSetData.isEmpty {
+            WorkoutManager.shared.unregisterManualWarmup(for: currentExercise.exercise.id)
+        } else if !UserProfileService.shared.warmupSetsEnabled {
+            WorkoutManager.shared.registerManualWarmup(for: currentExercise.exercise.id)
+        }
     }
     
     
@@ -1657,44 +1664,61 @@ struct ExerciseLoggingView: View {
     
     /// Initialize flexible sets for enhanced tracking
     private func initializeFlexibleSetsIfNeeded() {
-        if flexibleSets.isEmpty {
-            // PRIORITY 1: Restore from TodayWorkoutExercise if available
-            if let savedFlexibleSets = currentExercise.flexibleSets, !savedFlexibleSets.isEmpty {
-                flexibleSets = savedFlexibleSets
-                
-                // Update timerDuration from first duration-based set
-                if let durationSet = savedFlexibleSets.first(where: { $0.duration != nil }),
-                   let duration = durationSet.duration {
-                    timerDuration = duration
-                }
+        guard flexibleSets.isEmpty else { return }
 
-                if let nextIncomplete = savedFlexibleSets.firstIndex(where: { !$0.isCompleted }) {
-                    currentSetIndex = nextIncomplete
-                } else {
-                    currentSetIndex = max(savedFlexibleSets.count - 1, 0)
-                }
-                return
+        // PRIORITY 1: Restore from TodayWorkoutExercise if available
+        if let savedFlexibleSets = currentExercise.flexibleSets, !savedFlexibleSets.isEmpty {
+            let sanitizedSets = savedFlexibleSets
+            flexibleSets = sanitizedSets
+
+            // Update timerDuration from first duration-based set
+            if let durationSet = sanitizedSets.first(where: { $0.duration != nil }),
+               let duration = durationSet.duration {
+                timerDuration = duration
             }
-            
-            // PRIORITY 2: Create flexible sets based on workout's recommended sets
-            let setCount = currentExercise.sets
-            for _ in 0..<setCount {
-                var newSet = FlexibleSetData(trackingType: trackingType)
-                // Pre-populate with workout's recommended values
-                if trackingType == .repsWeight {
-                    newSet.reps = "\(currentExercise.reps)"
-                    if let weight = currentExercise.weight, weight > 0 {
-                        newSet.weight = "\(Int(weight))"
-                    }
-                } else if trackingType == .repsOnly {
-                    newSet.reps = "\(currentExercise.reps)"
-                }
-                flexibleSets.append(newSet)
+
+            if let nextIncomplete = sanitizedSets.firstIndex(where: { !$0.isCompleted }) {
+                currentSetIndex = nextIncomplete
+            } else {
+                currentSetIndex = max(sanitizedSets.count - 1, 0)
             }
-            
-            // PRIORITY 3: Apply persisted durations AFTER flexible sets are created
-            loadPersistedDurationSettings()
+
+            return
         }
+
+        // PRIORITY 2: Seed flexible sets with generated warm-up prescription (if any)
+        if let warmupSets = currentExercise.warmupSets,
+           !warmupSets.isEmpty {
+            for warmup in warmupSets {
+                var warmSet = FlexibleSetData(trackingType: trackingType)
+                warmSet.isWarmupSet = true
+                warmSet.reps = warmup.reps
+                warmSet.weight = warmup.weight
+                flexibleSets.append(warmSet)
+            }
+        }
+
+        // PRIORITY 2: Create flexible sets based on workout's recommended sets
+        let setCount = currentExercise.sets
+        for _ in 0..<setCount {
+            var newSet = FlexibleSetData(trackingType: trackingType)
+            // Pre-populate with workout's recommended values
+            if trackingType == .repsWeight {
+                newSet.reps = "\(currentExercise.reps)"
+                if let weight = currentExercise.weight, weight > 0 {
+                    newSet.weight = "\(Int(weight))"
+                }
+            } else if trackingType == .repsOnly {
+                newSet.reps = "\(currentExercise.reps)"
+            }
+            flexibleSets.append(newSet)
+        }
+
+        // PRIORITY 3: Apply persisted durations AFTER flexible sets are created
+        loadPersistedDurationSettings()
+
+        // Keep TodayWorkoutExercise in sync so warm-up prescription persists
+        saveWarmupSetsToExercise()
     }
     
     /// Handle completion of a flexible set

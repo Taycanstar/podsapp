@@ -2557,7 +2557,8 @@ private struct ExerciseWorkoutCard: View {
         return DynamicParameterService.shared.generateDynamicExercise(
             for: staticExercise.exercise,
             parameters: params,
-            fitnessGoal: workoutManager.effectiveFitnessGoal
+            fitnessGoal: workoutManager.effectiveFitnessGoal,
+            baseExercise: staticExercise
         )
     }
     
@@ -2733,7 +2734,8 @@ private struct ExerciseWorkoutCard: View {
         cachedDynamicExercise = DynamicParameterService.shared.generateDynamicExercise(
             for: exercise.exercise,
             parameters: dynamicParams,
-            fitnessGoal: workoutManager.effectiveFitnessGoal
+            fitnessGoal: workoutManager.effectiveFitnessGoal,
+            baseExercise: exercise
         )
     }
     

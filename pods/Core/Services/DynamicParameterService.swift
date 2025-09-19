@@ -55,7 +55,8 @@ class DynamicParameterService: ObservableObject {
     func generateDynamicExercise(
         for exercise: ExerciseData,
         parameters: DynamicWorkoutParameters,
-        fitnessGoal: FitnessGoal
+        fitnessGoal: FitnessGoal,
+        baseExercise: TodayWorkoutExercise? = nil
     ) -> DynamicWorkoutExercise {
         
         let exerciseType = MovementType.classify(exercise)
@@ -91,6 +92,10 @@ class DynamicParameterService: ObservableObject {
             exerciseType: exerciseType
         )
         
+        let warmupPreferenceEnabled = UserProfileService.shared.warmupSetsEnabled
+        let carriedWarmups = warmupPreferenceEnabled ? baseExercise?.warmupSets : nil
+        let carriedNotes = baseExercise?.notes
+
         return DynamicWorkoutExercise(
             exercise: exercise,
             setCount: setCount,
@@ -101,7 +106,9 @@ class DynamicParameterService: ObservableObject {
             restTime: restTime,
             sessionPhase: parameters.sessionPhase,
             recoveryStatus: parameters.recoveryStatus[exercise.target] ?? .moderate,
-            movementPriority: movementPriority
+            movementPriority: movementPriority,
+            notes: carriedNotes,
+            warmupSets: carriedWarmups
         )
     }
     
