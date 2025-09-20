@@ -1370,7 +1370,7 @@ private struct TodayWorkoutView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                             .background(Color.accentColor)
-                            .cornerRadius(24)
+                            .cornerRadius(100)
                             .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                     }
                 }
@@ -2651,22 +2651,14 @@ struct ExerciseWorkoutCard: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, useBackground ? 12 : 8)
                 .background(
-                    ZStack {
+                    Group {
                         if useBackground {
                             RoundedRectangle(cornerRadius: cornerRadius)
                                 .fill(Color("containerbg"))
                         }
-                        if isSelectable && isSelected {
-                            RoundedRectangle(cornerRadius: cornerRadius)
-                                .fill(Color.accentColor.opacity(0.12))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: cornerRadius)
-                                        .stroke(Color.accentColor, lineWidth: 1.5)
-                                )
-                        }
                     }
                 )
-                .cornerRadius(cornerRadius)
+                .cornerRadius(useBackground ? cornerRadius : 0)
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(isSelectable && onSelectionToggle == nil)

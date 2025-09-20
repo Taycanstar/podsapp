@@ -1032,7 +1032,7 @@ struct ExerciseLoggingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(Color.blue)
-                .cornerRadius(24)
+                .cornerRadius(100)
                 .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
     }
@@ -1046,7 +1046,7 @@ struct ExerciseLoggingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(Color.blue)
-                    .cornerRadius(24)
+                    .cornerRadius(100)
                     .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
             }
             

@@ -129,8 +129,6 @@ struct SupersetCircuitSelectionSheet: View {
                 }
             }
         }
-        // .background(Color("containerbg"))
-        .cornerRadius(24)
     }
 
     private func selectionCard(for item: ExerciseItem) -> some View {
