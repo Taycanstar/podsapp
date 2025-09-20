@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum UnitsSystem: String, CaseIterable {
+enum UnitsSystem: String, CaseIterable, Codable {
     case imperial = "imperial"
     case metric = "metric"
     

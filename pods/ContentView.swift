@@ -78,6 +78,9 @@ struct ContentView: View {
     var body: some View {
         Group {
             if isAuthenticated {
+                // Debug logging for navigation state
+                let _ = print("🔄 ContentView.body: Authenticated user - showing main app interface")
+                let _ = print("🔄 ContentView.body: Onboarding completed: \(viewModel.onboardingCompleted), Server completed: \(viewModel.serverOnboardingCompleted)")
                 ZStack(alignment: .bottom) {
                     VStack {
                         Group {
@@ -222,6 +225,8 @@ struct ContentView: View {
                 
                 .environment(\.isTabBarVisible, $isTabBarVisible)
             } else {
+                // Debug logging for authentication state
+                let _ = print("🔄 ContentView.body: Not authenticated - showing onboarding")
                 MainOnboardingView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
             }
         }
@@ -272,9 +277,16 @@ struct ContentView: View {
             }
         }
         .onChange(of: isAuthenticated) { _, newValue in
+            print("🔄 ContentView: isAuthenticated changed to \(newValue)")
             if newValue {
+                print("🔄 ContentView: User authenticated - fetching initial data and checking state")
                 fetchInitialPods()
-                
+
+                // Force check authentication state to ensure proper navigation
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    print("🔄 ContentView: Running delayed state check after authentication")
+                    self.forceCheckOnboarding()
+                }
             }
         }
 //        .sheet(isPresented: $showTourView) {
@@ -614,8 +626,15 @@ struct ContentView: View {
         
         // Add observer for authentication completion notification
         NotificationCenter.default.addObserver(forName: Notification.Name("AuthenticationCompleted"), object: nil, queue: .main) { _ in
-            // Refresh authentication state
-            self.isAuthenticated = true
+            print("🔔 ContentView: Received AuthenticationCompleted notification")
+            // Force refresh authentication state
+            self.isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
+
+            // Ensure we properly handle the navigation after authentication
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                print("🔔 ContentView: Processing authentication completion")
+                self.forceCheckOnboarding()
+            }
         }
     }
     

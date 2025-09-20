@@ -106,6 +106,7 @@ class WorkoutManager: ObservableObject {
     @Published private(set) var isGeneratingWorkout = false
     @Published private(set) var generationMessage = "Creating your workout..."
     @Published private(set) var generationError: WorkoutGenerationError?
+    @Published private(set) var completedWorkoutSummary: CompletedWorkoutSummary?
     
     // MARK: - Session Preferences (separate concern)
     @Published var sessionDuration: WorkoutDuration?
@@ -142,6 +143,7 @@ class WorkoutManager: ObservableObject {
     private var sessionMonitorTimer: Timer?
     private var activeWorkoutState: ActiveWorkoutState?
     private let sessionTimeoutInterval: TimeInterval = 3 * 60 * 60
+    private var pendingSummaryRegeneration = false
     
     // MARK: - UserDefaults Keys
     private let todayWorkoutKey = "todayWorkout"
@@ -814,21 +816,68 @@ class WorkoutManager: ObservableObject {
         return stripWarmups(from: workout)
     }
     
-    private func extractCompletedExercises(from workout: TodayWorkout) -> [CompletedExercise] {
+    private func buildWorkoutSession(from workout: TodayWorkout,
+                                     startTime: Date,
+                                     duration: TimeInterval) -> WorkoutSession {
+        let session = WorkoutSession(name: workout.title, userEmail: userEmail)
+        session.startedAt = startTime
+
+        var exerciseInstances: [ExerciseInstance] = []
+        let allExercises = (workout.warmUpExercises ?? []) + workout.exercises + (workout.coolDownExercises ?? [])
+
+        for (index, exercise) in allExercises.enumerated() {
+            let instance = ExerciseInstance(from: exercise.exercise, orderIndex: index)
+            instance.workoutSession = session
+
+            let setCount = max(exercise.sets, 0)
+            if setCount > 0 {
+                for setNumber in 1...setCount {
+                    let set = SetInstance(setNumber: setNumber,
+                                           targetReps: exercise.reps,
+                                           targetWeight: exercise.weight)
+                    set.actualReps = exercise.reps
+                    set.actualWeight = exercise.weight
+                    set.isCompleted = true
+                    set.completedAt = Date()
+                    set.exerciseInstance = instance
+                    instance.sets.append(set)
+                }
+            }
+
+            exerciseInstances.append(instance)
+        }
+
+        session.exercises = exerciseInstances
+        session.completedAt = startTime.addingTimeInterval(duration)
+        session.totalDuration = duration
+        session.markAsNeedingSync()
+        return session
+    }
+
+    private func convertToWorkoutExercises(from workout: TodayWorkout) -> [WorkoutExercise] {
         workout.exercises.map { exercise in
-            let setCount = max(exercise.sets, 1)
-            let sets = (0..<setCount).map { _ in
-                CompletedSet(
+            let sets = (0..<max(exercise.sets, 0)).map { _ in
+                WorkoutSet(
+                    id: Int.random(in: 1000...9999),
                     reps: exercise.reps,
                     weight: exercise.weight ?? 0,
-                    restTime: TimeInterval(exercise.restTime),
-                    completed: true
+                    duration: nil,
+                    distance: nil,
+                    restTime: nil
                 )
             }
-            return CompletedExercise(
-                exerciseId: exercise.exercise.id,
-                exerciseName: exercise.exercise.name,
-                sets: sets
+
+            return WorkoutExercise(
+                id: Int.random(in: 1000...9999),
+                exercise: LegacyExercise(
+                    id: exercise.exercise.id,
+                    name: exercise.exercise.name,
+                    category: exercise.exercise.category,
+                    description: nil,
+                    instructions: exercise.exercise.instructions
+                ),
+                sets: sets,
+                notes: nil
             )
         }
     }
@@ -866,14 +915,20 @@ class WorkoutManager: ObservableObject {
     func completeWorkout(autoComplete: Bool = false) {
         guard let sourceWorkout = currentWorkout ?? todayWorkout else { return }
         let workout = sanitizeWarmupsIfNeeded(sourceWorkout)
-        let completedExercises = extractCompletedExercises(from: workout)
-        if !completedExercises.isEmpty {
-            recoveryService.recordWorkout(completedExercises)
-        }
-        
+        let startTime = activeWorkoutState?.startedAt ?? workout.date
+        let duration = max(Date().timeIntervalSince(startTime), 0)
+        let unitsSystem = preferredUnitsSystem
+        let summary = WorkoutCalculationService.shared.buildSummary(for: workout,
+                                                                    duration: duration,
+                                                                    unitsSystem: unitsSystem,
+                                                                    profile: userProfileService.profileData)
+
+        // Persist workout session details for history & sync
         Task {
             do {
-                let workoutSession = WorkoutSession(name: workout.title, userEmail: userEmail)
+                let workoutSession = buildWorkoutSession(from: workout,
+                                                         startTime: startTime,
+                                                         duration: duration)
                 try await workoutDataManager.saveWorkout(workoutSession)
                 let status = autoComplete ? "Auto-completed" : "Completed"
                 print("✅ WorkoutManager: \(status) and saved workout")
@@ -881,14 +936,23 @@ class WorkoutManager: ObservableObject {
                 print("❌ WorkoutManager: Failed to save completed workout: \(error)")
             }
         }
-        
+
+        // Maintain legacy workout history analytics
+        let historyExercises = convertToWorkoutExercises(from: workout)
+        WorkoutHistoryService.shared.completeFullWorkout(
+            historyExercises,
+            duration: duration,
+            notes: nil
+        )
+
         if !autoComplete, dynamicParameters != nil {
             NotificationCenter.default.post(
                 name: .workoutCompletedNeedsFeedback,
                 object: workout
             )
         }
-        
+
+        // Clear active workout state and persistence
         currentWorkout = nil
         clearActiveWorkoutState()
         clearSessionOverrides()
@@ -896,7 +960,22 @@ class WorkoutManager: ObservableObject {
         todayWorkoutMuscleGroups = []
         todayWorkoutRecoverySnapshot = nil
         clearTodayWorkoutStorage()
-        scheduleNextWorkoutGeneration()
+
+        if autoComplete {
+            pendingSummaryRegeneration = false
+            scheduleNextWorkoutGeneration()
+        } else {
+            completedWorkoutSummary = summary
+            pendingSummaryRegeneration = true
+        }
+    }
+
+    func dismissWorkoutSummary() {
+        completedWorkoutSummary = nil
+        if pendingSummaryRegeneration {
+            pendingSummaryRegeneration = false
+            scheduleNextWorkoutGeneration()
+        }
     }
     
     /// Update flexibility preferences
@@ -955,12 +1034,20 @@ class WorkoutManager: ObservableObject {
     private var userEmail: String {
         UserDefaults.standard.string(forKey: "userEmail") ?? ""
     }
-    
+
+    private var preferredUnitsSystem: UnitsSystem {
+        if let saved = UserDefaults.standard.string(forKey: "unitsSystem"),
+           let units = UnitsSystem(rawValue: saved) {
+            return units
+        }
+        return .imperial
+    }
+
     private func storageKey(_ base: String) -> String {
         guard !userEmail.isEmpty else { return base }
         return "\(base)_\(userEmail)"
     }
-    
+
     private func setGenerating(_ generating: Bool, message: String = "") async {
         isGeneratingWorkout = generating
         generationMessage = message

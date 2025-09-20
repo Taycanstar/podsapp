@@ -209,14 +209,17 @@ struct LandingView: View {
                             "$email": viewModel.email,
                             "$name": viewModel.username
                         ])
-                        
-                        if isOnboardingComplete {
-                            // If onboarding is already completed, authenticate directly
-                            self.isAuthenticated = true
-                        } else {
-                            // If onboarding is not completed, show the onboarding flow right away
-                            viewModel.isShowingOnboarding = true
-                            self.isAuthenticated = true
+
+                        // Always set authentication to true - let ContentView handle onboarding flow
+                        print("🔑 Google Auth - Setting isAuthenticated = true, onboarding status: \(isOnboardingComplete)")
+                        self.isAuthenticated = true
+
+                        // Force synchronize to ensure state changes are written immediately
+                        UserDefaults.standard.synchronize()
+
+                        // Add small delay to ensure state propagation
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            print("🔑 Google Auth - Authentication state set, ContentView should handle navigation")
                         }
                     }
                 } else {
@@ -338,13 +341,16 @@ struct LandingView: View {
                             "$name": viewModel.username
                         ])
 
-                        if isOnboardingComplete {
-                            // If onboarding is already completed, authenticate directly
-                            self.isAuthenticated = true
-                        } else {
-                            // If onboarding is not completed, show the onboarding flow right away
-                            viewModel.isShowingOnboarding = true
-                            self.isAuthenticated = true
+                        // Always set authentication to true - let ContentView handle onboarding flow
+                        print("🔑 Apple Auth - Setting isAuthenticated = true, onboarding status: \(isOnboardingComplete)")
+                        self.isAuthenticated = true
+
+                        // Force synchronize to ensure state changes are written immediately
+                        UserDefaults.standard.synchronize()
+
+                        // Add small delay to ensure state propagation
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            print("🔑 Apple Auth - Authentication state set, ContentView should handle navigation")
                         }
                     }
                 } else {

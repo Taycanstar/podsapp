@@ -58,12 +58,13 @@ struct LogWorkoutView: View {
     @State private var showingWorkoutFeedback = false
     @State private var showingAddExerciseSheet = false
     @State private var showingSupersetCircuitSheet = false
-    
+
     // Keep only essential UI-only state (not data state)
     @State private var currentWorkout: TodayWorkout? = nil
     @State private var userEmail: String = UserDefaults.standard.string(forKey: "userEmail") ?? ""
     @State private var isRenamingWorkout = false
     @State private var renameWorkoutTitle = ""
+    @State private var pendingWorkoutFeedback = false
     
     
     // Properties that delegate to WorkoutManager but are accessed locally
@@ -76,6 +77,21 @@ struct LogWorkoutView: View {
     }
 
     private var toolbarButtonDiameter: CGFloat { 36 }
+
+    private var workoutSummaryBinding: Binding<CompletedWorkoutSummary?> {
+        Binding(
+            get: { workoutManager.completedWorkoutSummary },
+            set: { newValue in
+                if newValue == nil {
+                    workoutManager.dismissWorkoutSummary()
+                    if pendingWorkoutFeedback {
+                        pendingWorkoutFeedback = false
+                        showingWorkoutFeedback = true
+                    }
+                }
+            }
+        )
+    }
 
     private var todayWorkoutTitle: String {
         if let title = workoutManager.todayWorkout?.title.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -238,7 +254,11 @@ struct LogWorkoutView: View {
                 // Cleanup if needed - WorkoutManager handles persistence
             }
             .onReceive(NotificationCenter.default.publisher(for: .workoutCompletedNeedsFeedback)) { _ in
-                showingWorkoutFeedback = true
+                if workoutManager.completedWorkoutSummary != nil {
+                    pendingWorkoutFeedback = true
+                } else {
+                    showingWorkoutFeedback = true
+                }
             }
             .sheet(isPresented: $showingDurationPicker) {
                 durationPickerSheet
@@ -266,11 +286,11 @@ struct LogWorkoutView: View {
             .sheet(isPresented: $showingFlexibilityPicker) {
                 flexibilityPickerSheet
             }
-            .sheet(isPresented: $showingWorkoutFeedback) {
-                workoutFeedbackSheet
-            }
             .sheet(isPresented: $showingAddExerciseSheet) {
                 addExerciseSheet
+            }
+            .sheet(item: workoutSummaryBinding) { summary in
+                WorkoutSummarySheet(summary: summary)
             }
             .fullScreenCover(item: $currentWorkout) { workout in
                 WorkoutInProgressView(
@@ -529,27 +549,7 @@ struct LogWorkoutView: View {
             )
     }
     
-    @ViewBuilder
-    private var workoutFeedbackSheet: some View {
-        if let workout = workoutManager.todayWorkout {
-            WorkoutFeedbackSheet(
-                workout: workout,
-                onFeedbackSubmitted: { feedback in
-                    // Submit feedback via PerformanceFeedbackService
-                    Task {
-                        await PerformanceFeedbackService.shared.submitFeedback(feedback)
-                    }
-                    
-                    // Advance session phase if needed
-                    handleFeedbackSubmitted()
-                },
-                onSkipped: {
-                    // Still advance session phase
-                    handleFeedbackSkipped()
-                }
-            )
-        }
-    }
+
     
     private func handleFeedbackSubmitted() {
         workoutManager.advanceSessionPhaseIfNeeded()
