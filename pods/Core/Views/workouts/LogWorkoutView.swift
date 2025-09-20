@@ -1075,7 +1075,7 @@ struct LogWorkoutView: View {
                 }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(.primary)
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {

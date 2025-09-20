@@ -137,6 +137,11 @@ class WorkoutManager: ObservableObject {
     private let workoutDataManager = WorkoutDataManager.shared
     private var cancellables = Set<AnyCancellable>()
     private var manualWarmupExerciseIDs: Set<Int> = []
+    private var todayWorkoutRecoverySnapshot: [String: Double]?
+    private var todayWorkoutMuscleGroups: [String] = []
+    private var sessionMonitorTimer: Timer?
+    private var activeWorkoutState: ActiveWorkoutState?
+    private let sessionTimeoutInterval: TimeInterval = 3 * 60 * 60
     
     // MARK: - UserDefaults Keys
     private let todayWorkoutKey = "todayWorkout"
@@ -148,6 +153,24 @@ class WorkoutManager: ObservableObject {
     private let sessionRestEnabledKey = "currentWorkoutSessionRestEnabled"
     private let sessionRestWarmupKey = "currentWorkoutSessionRestWarmupSeconds"
     private let sessionRestWorkingKey = "currentWorkoutSessionRestWorkingSeconds"
+    private let todayWorkoutRecoverySnapshotKey = "todayWorkoutRecoverySnapshot"
+    private let todayWorkoutMusclesKey = "todayWorkoutMuscles"
+    private let activeWorkoutStateKey = "activeWorkoutState"
+
+    private struct ActiveWorkoutState: Codable {
+        let workoutId: UUID
+        let startedAt: Date
+        var lastActivityAt: Date
+
+        func hasTimedOut(referenceDate: Date = Date(), timeout: TimeInterval) -> Bool {
+            referenceDate.timeIntervalSince(lastActivityAt) > timeout
+        }
+    }
+    
+    private struct GeneratedWorkoutResult {
+        let workout: TodayWorkout
+        let muscleGroups: [String]
+    }
     
     // MARK: - Computed Properties (Effective Values)
     var effectiveDuration: WorkoutDuration {
@@ -191,6 +214,7 @@ class WorkoutManager: ObservableObject {
         setupObservers()
         loadSessionData()
         loadTodayWorkout()
+        setupSessionMonitoring()
         setupDynamicProgramming()  // Initialize dynamic programming
     }
     
@@ -229,7 +253,7 @@ class WorkoutManager: ObservableObject {
     // MARK: - Dynamic Programming Helper Methods
     
     /// Generate base workout using existing logic
-    private func generateBaseWorkout() async throws -> TodayWorkout {
+    private func generateBaseWorkout() async throws -> GeneratedWorkoutResult {
         let parameters = WorkoutGenerationParameters(
             duration: effectiveDuration,
             fitnessGoal: effectiveFitnessGoal,
@@ -330,7 +354,8 @@ class WorkoutManager: ObservableObject {
             )
             
             // Generate base workout structure (reuse existing logic)
-            let baseWorkout = try await generateBaseWorkout()
+            let baseResult = try await generateBaseWorkout()
+            let baseWorkout = baseResult.workout
             
             // Apply dynamic programming
             let dynamicWorkout = await applyDynamicProgramming(to: baseWorkout, parameters: dynamicParams)
@@ -355,6 +380,8 @@ class WorkoutManager: ObservableObject {
             )
             let sanitized = sanitizeWarmupsIfNeeded(withBlocks)
             self.todayWorkout = sanitized
+            self.todayWorkoutMuscleGroups = baseResult.muscleGroups
+            self.todayWorkoutRecoverySnapshot = captureCurrentRecoverySnapshot()
             // REMOVED: self.sessionPhase = dynamicParams.sessionPhase (this was overriding our sync!)
 
             saveTodayWorkout()
@@ -394,10 +421,13 @@ class WorkoutManager: ObservableObject {
             )
             
             // Perform heavy workout generation in background
-            let workout = try await backgroundWorkoutGeneration(parameters)
+            let result = try await backgroundWorkoutGeneration(parameters)
             
             // Update on main thread
-            todayWorkout = sanitizeWarmupsIfNeeded(workout)
+            let sanitized = sanitizeWarmupsIfNeeded(result.workout)
+            todayWorkout = sanitized
+            todayWorkoutMuscleGroups = result.muscleGroups
+            todayWorkoutRecoverySnapshot = captureCurrentRecoverySnapshot()
             generationError = nil
             saveTodayWorkout()
             
@@ -783,6 +813,25 @@ class WorkoutManager: ObservableObject {
         guard !userProfileService.warmupSetsEnabled else { return workout }
         return stripWarmups(from: workout)
     }
+    
+    private func extractCompletedExercises(from workout: TodayWorkout) -> [CompletedExercise] {
+        workout.exercises.map { exercise in
+            let setCount = max(exercise.sets, 1)
+            let sets = (0..<setCount).map { _ in
+                CompletedSet(
+                    reps: exercise.reps,
+                    weight: exercise.weight ?? 0,
+                    restTime: TimeInterval(exercise.restTime),
+                    completed: true
+                )
+            }
+            return CompletedExercise(
+                exerciseId: exercise.exercise.id,
+                exerciseName: exercise.exercise.name,
+                sets: sets
+            )
+        }
+    }
 
     func registerManualWarmup(for exerciseId: Int) {
         manualWarmupExerciseIDs.insert(exerciseId)
@@ -794,28 +843,46 @@ class WorkoutManager: ObservableObject {
 
     /// Start workout session
     func startWorkout(_ workout: TodayWorkout) {
-        currentWorkout = sanitizeWarmupsIfNeeded(workout)
-        print("🏃‍♂️ WorkoutManager: Started workout - \(workout.title)")
+        let sanitized = sanitizeWarmupsIfNeeded(workout)
+        currentWorkout = sanitized
+        let state = ActiveWorkoutState(
+            workoutId: sanitized.id,
+            startedAt: Date(),
+            lastActivityAt: Date()
+        )
+        activeWorkoutState = state
+        persistActiveWorkoutState(state)
+        print("🏃‍♂️ WorkoutManager: Started workout - \(sanitized.title)")
+    }
+    
+    func registerWorkoutActivity() {
+        guard var state = activeWorkoutState else { return }
+        state.lastActivityAt = Date()
+        activeWorkoutState = state
+        persistActiveWorkoutState(state)
     }
     
     /// Complete workout session
-    func completeWorkout() {
-        guard let workout = currentWorkout else { return }
+    func completeWorkout(autoComplete: Bool = false) {
+        guard let sourceWorkout = currentWorkout ?? todayWorkout else { return }
+        let workout = sanitizeWarmupsIfNeeded(sourceWorkout)
+        let completedExercises = extractCompletedExercises(from: workout)
+        if !completedExercises.isEmpty {
+            recoveryService.recordWorkout(completedExercises)
+        }
         
-        // Save completed workout
         Task {
             do {
-                // Convert to WorkoutSession for WorkoutDataManager
                 let workoutSession = WorkoutSession(name: workout.title, userEmail: userEmail)
                 try await workoutDataManager.saveWorkout(workoutSession)
-                print("✅ WorkoutManager: Completed and saved workout")
+                let status = autoComplete ? "Auto-completed" : "Completed"
+                print("✅ WorkoutManager: \(status) and saved workout")
             } catch {
                 print("❌ WorkoutManager: Failed to save completed workout: \(error)")
             }
         }
         
-        // Trigger feedback collection for dynamic workouts
-        if dynamicParameters != nil {
+        if !autoComplete, dynamicParameters != nil {
             NotificationCenter.default.post(
                 name: .workoutCompletedNeedsFeedback,
                 object: workout
@@ -823,7 +890,13 @@ class WorkoutManager: ObservableObject {
         }
         
         currentWorkout = nil
+        clearActiveWorkoutState()
         clearSessionOverrides()
+        todayWorkout = nil
+        todayWorkoutMuscleGroups = []
+        todayWorkoutRecoverySnapshot = nil
+        clearTodayWorkoutStorage()
+        scheduleNextWorkoutGeneration()
     }
     
     /// Update flexibility preferences
@@ -883,12 +956,17 @@ class WorkoutManager: ObservableObject {
         UserDefaults.standard.string(forKey: "userEmail") ?? ""
     }
     
+    private func storageKey(_ base: String) -> String {
+        guard !userEmail.isEmpty else { return base }
+        return "\(base)_\(userEmail)"
+    }
+    
     private func setGenerating(_ generating: Bool, message: String = "") async {
         isGeneratingWorkout = generating
         generationMessage = message
     }
     
-    private func backgroundWorkoutGeneration(_ parameters: WorkoutGenerationParameters) async throws -> TodayWorkout {
+    private func backgroundWorkoutGeneration(_ parameters: WorkoutGenerationParameters) async throws -> GeneratedWorkoutResult {
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 do {
@@ -897,8 +975,8 @@ class WorkoutManager: ObservableObject {
                         return
                     }
                     
-                    let workout = try self.createIntelligentWorkout(parameters)
-                    continuation.resume(returning: workout)
+                    let result = try self.createIntelligentWorkout(parameters)
+                    continuation.resume(returning: result)
                 } catch {
                     continuation.resume(throwing: error)
                 }
@@ -906,7 +984,7 @@ class WorkoutManager: ObservableObject {
         }
     }
     
-    private func createIntelligentWorkout(_ parameters: WorkoutGenerationParameters) throws -> TodayWorkout {
+    private func createIntelligentWorkout(_ parameters: WorkoutGenerationParameters) throws -> GeneratedWorkoutResult {
         // Get muscle groups based on recovery or custom selection
         let muscleGroups: [String]
         if let customMuscles = parameters.customTargetMuscles, !customMuscles.isEmpty {
@@ -968,7 +1046,7 @@ class WorkoutManager: ObservableObject {
         )
         let combinedExercises = BlockAssemblyService.applyBlockSchemes(to: base.exercises, using: assembledBlocks)
 
-        return TodayWorkout(
+        let finalWorkout = TodayWorkout(
             id: base.id,
             date: base.date,
             title: base.title,
@@ -980,6 +1058,8 @@ class WorkoutManager: ObservableObject {
             warmUpExercises: base.warmUpExercises,
             coolDownExercises: base.coolDownExercises
         )
+        
+        return GeneratedWorkoutResult(workout: finalWorkout, muscleGroups: muscleGroups)
     }
     
     private func generateWarmUpExercises(targetMuscles: [String], equipment: [Equipment]?) -> [TodayWorkoutExercise] {
@@ -1113,7 +1193,77 @@ class WorkoutManager: ObservableObject {
             synergist: ""
         )
     }
-    
+
+    private func captureCurrentRecoverySnapshot() -> [String: Double] {
+        recoveryService.captureRecoverySnapshot()
+    }
+
+    private func hasSignificantRecoveryChange(for workout: TodayWorkout) -> Bool {
+        guard let snapshot = todayWorkoutRecoverySnapshot else { return false }
+        guard Date().timeIntervalSince(workout.date) >= 6 * 60 * 60 else { return false }
+        return recoveryService.hasSignificantRecoveryChange(
+            since: snapshot,
+            muscles: todayWorkoutMuscleGroups
+        )
+    }
+
+    private func shouldRegenerateWorkout(using workout: TodayWorkout) -> Bool {
+        if !Calendar.current.isDateInToday(workout.date) {
+            return true
+        }
+        if let state = activeWorkoutState,
+           state.workoutId == workout.id,
+           state.hasTimedOut(timeout: sessionTimeoutInterval) {
+            autoCompleteAbandonedWorkout()
+            return false
+        }
+        if hasSignificantRecoveryChange(for: workout) {
+            return true
+        }
+        return false
+    }
+
+    private func setupSessionMonitoring() {
+        sessionMonitorTimer?.invalidate()
+        let timer = Timer(timeInterval: 300, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor in
+                self.checkForAbandonedSession()
+            }
+        }
+        sessionMonitorTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
+    private func checkForAbandonedSession() {
+        guard let state = activeWorkoutState else { return }
+        if state.hasTimedOut(timeout: sessionTimeoutInterval) {
+            print("🕒 Auto-completing abandoned workout after timeout")
+            autoCompleteAbandonedWorkout()
+        }
+    }
+
+    private func autoCompleteAbandonedWorkout() {
+        if currentWorkout == nil,
+           let workout = todayWorkout,
+           let state = activeWorkoutState,
+           workout.id == state.workoutId {
+            currentWorkout = workout
+        }
+        guard currentWorkout != nil else {
+            clearActiveWorkoutState()
+            return
+        }
+        completeWorkout(autoComplete: true)
+    }
+
+    private func scheduleNextWorkoutGeneration() {
+        Task { @MainActor [weak self] in
+            guard let self, !self.isGeneratingWorkout else { return }
+            await self.generateTodayWorkout()
+        }
+    }
+
     private func generateWorkoutTitle(_ muscleGroups: [String]) -> String {
         let normalized = muscleGroups.map { $0.lowercased() }
         let muscleSet = Set(normalized)
@@ -1167,37 +1317,118 @@ class WorkoutManager: ObservableObject {
     // MARK: - Persistence
     
     private func loadTodayWorkout() {
-        let key = "todayWorkout_\(userEmail)"
+        loadTodayWorkoutMetadata()
+        let key = storageKey(todayWorkoutKey)
         
         if let data = UserDefaults.standard.data(forKey: key),
            let workout = try? JSONDecoder().decode(TodayWorkout.self, from: data) {
+            let sanitized = sanitizeWarmupsIfNeeded(workout)
+            todayWorkout = sanitized
             
-            // Check if workout is from today
-            if Calendar.current.isDateInToday(workout.date) {
-                todayWorkout = sanitizeWarmupsIfNeeded(workout)
-                print("📱 WorkoutManager: Loaded today's workout from storage")
-            } else {
-                print("📱 WorkoutManager: Found outdated workout, will generate new one")
-                Task {
-                    await generateTodayWorkout()
-                }
+            if shouldRegenerateWorkout(using: sanitized) {
+                print("📱 WorkoutManager: Regenerating workout due to recovery or schedule changes")
+                Task { await generateTodayWorkout() }
+            } else if let currentWorkout = todayWorkout {
+                restoreActiveSessionIfNeeded(for: currentWorkout)
+                print("📱 WorkoutManager: Loaded existing workout from storage")
             }
         } else {
             print("📱 WorkoutManager: No existing workout found, will generate new one")
-            Task {
-                await generateTodayWorkout()
-            }
+            Task { await generateTodayWorkout() }
         }
+        
+        checkForAbandonedSession()
     }
-    
+
     private func saveTodayWorkout() {
         guard let workout = todayWorkout else { return }
-        let key = "todayWorkout_\(userEmail)"
+        let key = storageKey(todayWorkoutKey)
         
         if let data = try? JSONEncoder().encode(workout) {
             UserDefaults.standard.set(data, forKey: key)
+            saveTodayWorkoutMetadata()
             print("💾 WorkoutManager: Saved today's workout to storage")
         }
+    }
+    
+    private func saveTodayWorkoutMetadata() {
+        let defaults = UserDefaults.standard
+        let snapshotKey = storageKey(todayWorkoutRecoverySnapshotKey)
+        let musclesKey = storageKey(todayWorkoutMusclesKey)
+        
+        if let snapshot = todayWorkoutRecoverySnapshot,
+           let data = try? JSONEncoder().encode(snapshot) {
+            defaults.set(data, forKey: snapshotKey)
+        } else {
+            defaults.removeObject(forKey: snapshotKey)
+        }
+        
+        if !todayWorkoutMuscleGroups.isEmpty {
+            defaults.set(todayWorkoutMuscleGroups, forKey: musclesKey)
+        } else {
+            defaults.removeObject(forKey: musclesKey)
+        }
+    }
+    
+    private func loadTodayWorkoutMetadata() {
+        let defaults = UserDefaults.standard
+        let snapshotKey = storageKey(todayWorkoutRecoverySnapshotKey)
+        let musclesKey = storageKey(todayWorkoutMusclesKey)
+        
+        if let data = defaults.data(forKey: snapshotKey),
+           let snapshot = try? JSONDecoder().decode([String: Double].self, from: data) {
+            todayWorkoutRecoverySnapshot = snapshot
+        } else {
+            todayWorkoutRecoverySnapshot = nil
+        }
+        
+        if let muscles = defaults.array(forKey: musclesKey) as? [String] {
+            todayWorkoutMuscleGroups = muscles
+        } else {
+            todayWorkoutMuscleGroups = []
+        }
+        
+        activeWorkoutState = loadActiveWorkoutState()
+    }
+    
+    private func clearTodayWorkoutStorage() {
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: storageKey(todayWorkoutKey))
+        defaults.removeObject(forKey: storageKey(todayWorkoutRecoverySnapshotKey))
+        defaults.removeObject(forKey: storageKey(todayWorkoutMusclesKey))
+    }
+    
+    private func loadActiveWorkoutState() -> ActiveWorkoutState? {
+        let defaults = UserDefaults.standard
+        guard let data = defaults.data(forKey: storageKey(activeWorkoutStateKey)) else { return nil }
+        return try? JSONDecoder().decode(ActiveWorkoutState.self, from: data)
+    }
+    
+    private func persistActiveWorkoutState(_ state: ActiveWorkoutState?) {
+        let defaults = UserDefaults.standard
+        let key = storageKey(activeWorkoutStateKey)
+        if let state = state, let data = try? JSONEncoder().encode(state) {
+            defaults.set(data, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+    
+    private func restoreActiveSessionIfNeeded(for workout: TodayWorkout) {
+        guard let state = activeWorkoutState else { return }
+        guard state.workoutId == workout.id else {
+            clearActiveWorkoutState()
+            return
+        }
+        if currentWorkout == nil {
+            currentWorkout = workout
+            print("🏃‍♂️ Restored in-progress workout session from storage")
+        }
+    }
+    
+    private func clearActiveWorkoutState() {
+        activeWorkoutState = nil
+        persistActiveWorkoutState(nil)
     }
     
     private func loadSessionData() {

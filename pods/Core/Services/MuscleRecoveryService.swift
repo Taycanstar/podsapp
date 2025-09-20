@@ -275,6 +275,25 @@ class MuscleRecoveryService: ObservableObject {
         return finalSelection.map { $0.muscleGroup }
     }
     
+    func captureRecoverySnapshot() -> [String: Double] {
+        let recoveryData = getMuscleRecoveryData()
+        return Dictionary(uniqueKeysWithValues: recoveryData.map { ($0.muscleGroup.rawValue, $0.recoveryPercentage) })
+    }
+    
+    func hasSignificantRecoveryChange(
+        since snapshot: [String: Double],
+        muscles: [String],
+        gainThreshold: Double = 20.0,
+        readyThreshold: Double = 85.0
+    ) -> Bool {
+        let currentSnapshot = captureRecoverySnapshot()
+        let focusMuscles = muscles.isEmpty ? Array(snapshot.keys) : muscles
+        return focusMuscles.contains { muscle in
+            guard let previous = snapshot[muscle], let current = currentSnapshot[muscle] else { return false }
+            return current >= readyThreshold && (current - previous) >= gainThreshold
+        }
+    }
+    
     func recordWorkout(_ exercises: [CompletedExercise]) {
         let workoutDate = Date()
         var stimulusRecords: [WorkoutStimulus] = []

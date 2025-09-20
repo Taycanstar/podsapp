@@ -19,6 +19,7 @@ struct WorkoutInProgressView: View {
     // Full-screen logging sheet context
     @State private var loggingContext: LogExerciseSheetContext?
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject private var workoutManager: WorkoutManager
     
     // Track if any sets have been logged during this workout
     @State private var hasLoggedSets = false
@@ -166,6 +167,7 @@ struct WorkoutInProgressView: View {
                     allExercises: ctx.allExercises,
                     onSetLogged: { activeExercise, completedSetsCount, rirValue in
                             hasLoggedSets = true
+                            workoutManager.registerWorkoutActivity()
                             // Use the exercise actually being logged (may differ from initially tapped)
                             let resolvedIndex = allCombinedExercises.firstIndex(where: { $0.exercise.id == activeExercise.exercise.id }) ?? ctx.index
                             guard resolvedIndex < allCombinedExercises.count else {
@@ -477,7 +479,7 @@ struct WorkoutInProgressView: View {
     }
     
     private func completeWorkout() {
-        // TODO: Save workout data
+        workoutManager.completeWorkout()
         isPresented = false
     }
     
