@@ -10,6 +10,7 @@ class WorkoutSession {
     var completedAt: Date?
     var exercises: [ExerciseInstance]
     var userEmail: String
+    var remoteId: Int?
     var notes: String?
     var totalDuration: TimeInterval?
     
@@ -26,6 +27,7 @@ class WorkoutSession {
         self.startedAt = Date()
         self.exercises = []
         self.userEmail = userEmail
+        self.remoteId = nil
         self.notes = notes
         
         // Initialize sync properties
@@ -92,8 +94,10 @@ class WorkoutSession {
     // Helper method to mark as needing sync
     func markAsNeedingSync() {
         updatedAt = Date()
-        syncVersion += 1
-        needsSync = true
+        if !needsSync {
+            syncVersion += 1
+            needsSync = true
+        }
     }
     
     // Helper method to get workout summary

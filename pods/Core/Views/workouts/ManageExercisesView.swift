@@ -11,6 +11,7 @@ enum FilterOption: String {
 
 struct ManageExercisesView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isTabBarVisible) var isTabBarVisible
     @ObservedObject private var ups = UserProfileService.shared
     @State private var searchText = ""
     @State private var selectedSegment = 0 // 0 = All, 1 = By Muscle
@@ -113,7 +114,13 @@ struct ManageExercisesView: View {
             }
         }
         .searchable(text: $searchText, prompt: "Search exercises")
-        .onAppear { loadExercises() }
+        .onAppear {
+            loadExercises()
+            isTabBarVisible.wrappedValue = false
+        }
+        .onDisappear {
+            isTabBarVisible.wrappedValue = true
+        }
         .background(
             NavigationLink(
                 destination: destinationHistoryView,

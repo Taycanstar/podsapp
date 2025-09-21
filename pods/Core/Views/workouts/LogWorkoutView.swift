@@ -1088,8 +1088,16 @@ struct LogWorkoutView: View {
                             .foregroundColor(.primary)
                             .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
                             .background(
-                                Circle()
-                                    .fill(Color("thumbbg"))
+                            Group {
+                                    if #available(iOS 26, *) {
+                                        // iOS 18+ - no background
+                                        EmptyView()
+                                    } else {
+                                        // iOS 17 and below - show background
+                                        Circle()
+                                            .fill(Color("thumbbg"))
+                                    }
+                                }
                             )
                             .contentShape(Circle())
                     }
@@ -1138,8 +1146,18 @@ struct LogWorkoutView: View {
                             .foregroundColor(.primary)
                             .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
                             .background(
-                                Circle()
-                                    .fill(Color("thumbbg"))
+                                // Circle()
+                                //     .fill(Color("thumbbg"))
+                                 Group {
+                                    if #available(iOS 26, *) {
+                                        // iOS 18+ - no background
+                                        EmptyView()
+                                    } else {
+                                        // iOS 17 and below - show background
+                                        Circle()
+                                            .fill(Color("thumbbg"))
+                                    }
+                                }
                             )
                             .contentShape(Circle())
                     }

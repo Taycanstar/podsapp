@@ -659,12 +659,52 @@ class WorkoutManager: ObservableObject {
         let newWarmUp = currentWorkout.warmUpExercises?.filter { $0.exercise.id != exerciseId }
         let newCoolDown = currentWorkout.coolDownExercises?.filter { $0.exercise.id != exerciseId }
         
+        let adjustedBlocks: [WorkoutBlock]? = currentWorkout.blocks.map { blocks in
+            blocks.compactMap { block in
+                var filteredExercises = block.exercises.filter { $0.exercise.id != exerciseId }
+
+                if filteredExercises.isEmpty {
+                    return nil
+                }
+
+                switch block.type {
+                case .superset, .circuit:
+                    // Drop the block entirely if fewer than 2 exercises remain
+                    guard filteredExercises.count >= 2 else { return nil }
+
+                    let desiredType: BlockType = filteredExercises.count >= 3 ? .circuit : .superset
+
+                    if desiredType == block.type {
+                        var updatedBlock = block
+                        updatedBlock.exercises = filteredExercises
+                        return updatedBlock
+                    }
+
+                    return WorkoutBlock(
+                        id: block.id,
+                        type: desiredType,
+                        exercises: filteredExercises,
+                        rounds: block.rounds,
+                        restBetweenExercises: block.restBetweenExercises,
+                        restBetweenRounds: block.restBetweenRounds,
+                        weightNormalization: block.weightNormalization,
+                        timingConfig: block.timingConfig
+                    )
+
+                default:
+                    var updatedBlock = block
+                    updatedBlock.exercises = filteredExercises
+                    return updatedBlock
+                }
+            }
+        }
+
         let updated = TodayWorkout(
             id: currentWorkout.id,
             date: currentWorkout.date,
             title: currentWorkout.title,
             exercises: newMain,
-            blocks: currentWorkout.blocks,
+            blocks: adjustedBlocks,
             estimatedDuration: currentWorkout.estimatedDuration,
             fitnessGoal: currentWorkout.fitnessGoal,
             difficulty: currentWorkout.difficulty,

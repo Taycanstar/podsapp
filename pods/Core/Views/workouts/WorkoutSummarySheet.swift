@@ -30,7 +30,7 @@ struct WorkoutSummarySheet: View {
 
         return [
             ExerciseSection(title: "Warm-up", exercises: warmups, allowsFavorite: false),
-            ExerciseSection(title: "Workout", exercises: mains, allowsFavorite: true),
+            ExerciseSection(title: "Exercises", exercises: mains, allowsFavorite: true),
             ExerciseSection(title: "Cool-down", exercises: cooldowns, allowsFavorite: false)
         ].filter { !$0.exercises.isEmpty }
     }
@@ -63,15 +63,25 @@ struct WorkoutSummarySheet: View {
                     statsHeader
 
                     if !personalRecordDisplays.isEmpty {
-                        prSection
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Personal Records")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            prSection
+                        }
+                        .padding(.horizontal)
                     }
 
                     ForEach(sections) { section in
                         VStack(alignment: .leading, spacing: 12) {
                             Text(section.title)
-                                .font(.headline)
-                                .foregroundStyle(.secondary)
+                                .font(.title3)
+                                .foregroundStyle(.primary)
                                 .padding(.horizontal)
+                                .fontWeight(.bold)
 
                             LazyVStack(spacing: 16) {
                                 ForEach(section.exercises) { breakdown in
@@ -95,7 +105,7 @@ struct WorkoutSummarySheet: View {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "checkmark.circle.fill")
+                        Image(systemName: "checkmark")
                             .font(.title2)
                             .foregroundStyle(Color.accentColor)
                     }
@@ -136,9 +146,7 @@ struct WorkoutSummarySheet: View {
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(
-                    LinearGradient(colors: [Color.accentColor.opacity(0.18), Color.accentColor.opacity(0.05)],
-                                   startPoint: .topLeading,
-                                   endPoint: .bottomTrailing)
+                  Color("altcard")
                 )
         )
         .padding(.horizontal)
@@ -146,20 +154,13 @@ struct WorkoutSummarySheet: View {
 
     private var prSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Personal Records", systemImage: "trophy.fill")
-                .font(.headline)
-                .foregroundStyle(Color.accentColor)
-
             ForEach(personalRecordDisplays) { record in
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: record.icon)
                         .font(.callout)
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(.primary)
                         .frame(width: 28, height: 28)
-                        .background(
-                            Circle()
-                                .fill(Color.accentColor.opacity(0.12))
-                        )
+                       
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(record.title)
@@ -177,9 +178,8 @@ struct WorkoutSummarySheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+                .fill(Color("altcard"))
         )
-        .padding(.horizontal)
     }
 
     private func formattedSummaryDuration(_ duration: TimeInterval) -> String {
@@ -259,8 +259,8 @@ private struct StatTile: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(.systemBackground).opacity(0.85))
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color("altcard"))
         )
     }
 }
@@ -284,7 +284,7 @@ private struct ExerciseBreakdownRow: View {
         HStack(alignment: .top, spacing: 16) {
             thumbnail
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top) {
                     Text(breakdown.exercise.name)
                         .font(.headline)
@@ -301,8 +301,8 @@ private struct ExerciseBreakdownRow: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color("altbg"))
         )
     }
 

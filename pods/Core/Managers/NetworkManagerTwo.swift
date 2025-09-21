@@ -11,7 +11,19 @@ import SwiftUI
 class NetworkManagerTwo {
     // Shared instance (singleton)
     static let shared = NetworkManagerTwo()
-    
+
+    private let iso8601BasicFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    private let iso8601FractionalFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
     
 
 // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
@@ -41,9 +53,105 @@ class NetworkManagerTwo {
             }
         }
     }
-    
+
     struct ErrorResponse: Codable {
         let error: String
+    }
+
+    struct WorkoutListResponse: Codable {
+        let workouts: [WorkoutResponse.Workout]
+    }
+
+    struct WorkoutResponse: Codable {
+        struct Workout: Codable {
+            let id: Int
+            let userEmail: String
+            let name: String
+            let status: String?
+            let startedAt: Date?
+            let completedAt: Date?
+            let scheduledDate: Date?
+            let estimatedDurationMinutes: Int?
+            let actualDurationMinutes: Int?
+            let notes: String?
+            let createdAt: Date?
+            let updatedAt: Date?
+            let syncVersion: Int?
+            let exercises: [Exercise]
+        }
+
+        struct Exercise: Codable {
+            let id: Int
+            let exerciseId: Int
+            let exerciseName: String
+            let orderIndex: Int?
+            let notes: String?
+            let isCompleted: Bool?
+            let targetSets: Int?
+            let sets: [ExerciseSet]
+        }
+
+        struct ExerciseSet: Codable {
+            let id: Int
+            let setNumber: Int?
+            let weightKg: Double?
+            let reps: Int?
+            let durationSeconds: Int?
+            let restSeconds: Int?
+            let distanceMeters: Double?
+            let distanceUnit: String?
+            let paceSecondsPerKm: Int?
+            let rpe: Int?
+            let heartRateBpm: Int?
+            let intensityZone: Int?
+            let stretchIntensity: Int?
+            let rangeOfMotionNotes: String?
+            let roundsCompleted: Int?
+            let isWarmup: Bool?
+            let isCompleted: Bool?
+            let notes: String?
+        }
+    }
+
+    struct WorkoutRequest: Codable {
+        struct Exercise: Codable {
+            let exerciseId: Int
+            let exerciseName: String
+            let orderIndex: Int
+            let targetSets: Int
+            let isCompleted: Bool
+            let sets: [ExerciseSet]
+        }
+
+        struct ExerciseSet: Codable {
+            let weightKg: Double?
+            let reps: Int?
+            let durationSeconds: Int?
+            let restSeconds: Int?
+            let distanceMeters: Double?
+            let distanceUnit: String?
+            let paceSecondsPerKm: Int?
+            let rpe: Int?
+            let heartRateBpm: Int?
+            let intensityZone: Int?
+            let stretchIntensity: Int?
+            let rangeOfMotionNotes: String?
+            let roundsCompleted: Int?
+            let isWarmup: Bool
+            let isCompleted: Bool
+            let notes: String?
+        }
+
+        let userEmail: String
+        let name: String
+        let status: String
+        let startedAt: String
+        let completedAt: String?
+        let scheduledDate: String
+        let estimatedDurationMinutes: Int
+        let actualDurationMinutes: Int?
+        let notes: String?
+        let exercises: [Exercise]
     }
     
     struct UsernameEligibilityResponse: Codable {
@@ -80,6 +188,110 @@ class NetworkManagerTwo {
         }
     }
     
+    // MARK: - Workout Sync API
+
+    func fetchServerWorkouts(userEmail: String, pageSize: Int = 200) async throws -> WorkoutListResponse {
+        var components = URLComponents(string: "\(baseUrl)/get-user-workouts/")
+        components?.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "page", value: "1"),
+            URLQueryItem(name: "page_size", value: "\(pageSize)")
+        ]
+
+        guard let url = components?.url else { throw NetworkError.invalidURL }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .custom { decoder -> Date in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            if let date = self.iso8601FractionalFormatter.date(from: value) ?? self.iso8601BasicFormatter.date(from: value) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO8601 date: \(value)")
+        }
+        return try decoder.decode(WorkoutListResponse.self, from: data)
+    }
+
+    func createWorkout(payload: WorkoutRequest) async throws -> WorkoutResponse.Workout {
+        guard let url = URL(string: "\(baseUrl)/create-workout-session/") else { throw NetworkError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        request.httpBody = try encoder.encode(payload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .custom { decoder -> Date in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            if let date = self.iso8601FractionalFormatter.date(from: value) ?? self.iso8601BasicFormatter.date(from: value) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO8601 date: \(value)")
+        }
+        return try decoder.decode(WorkoutResponse.Workout.self, from: data)
+    }
+
+    func updateWorkout(sessionId: Int, payload: WorkoutRequest) async throws -> WorkoutResponse.Workout {
+        guard let url = URL(string: "\(baseUrl)/update-workout-session/\(sessionId)/") else { throw NetworkError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        request.httpBody = try encoder.encode(payload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .custom { decoder -> Date in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            if let date = self.iso8601FractionalFormatter.date(from: value) ?? self.iso8601BasicFormatter.date(from: value) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO8601 date: \(value)")
+        }
+        return try decoder.decode(WorkoutResponse.Workout.self, from: data)
+    }
+
+    func deleteWorkout(sessionId: Int, userEmail: String) async throws {
+        guard let url = URL(string: "\(baseUrl)/delete-workout-session/\(sessionId)/") else { throw NetworkError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = ["user_email": userEmail]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: nil)
+    }
+
+    private func validate(response: URLResponse, data: Data?) throws {
+        guard let http = response as? HTTPURLResponse else { throw NetworkError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else {
+            if let data,
+               let json = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                throw NetworkError.serverError(message: json.error)
+            }
+            throw NetworkError.requestFailed(statusCode: http.statusCode)
+        }
+    }
+
     // MARK: - Workout Preferences
     /// Update user's workout preferences on the server. Only non-nil fields are sent.
     func updateWorkoutPreferences(
@@ -3551,4 +3763,3 @@ class NetworkManagerTwo {
     }
 
 }
-

@@ -19,33 +19,60 @@ import SwiftData
 
 struct SyncableWorkoutSession: Codable {
     let id: UUID
+    let remoteId: Int?
     let userEmail: String
     let name: String
     let startedAt: Date
     let completedAt: Date?
     let exercises: [SyncableExerciseInstance]
     let notes: String?
-    
+    let estimatedDurationMinutes: Int
+    let actualDurationMinutes: Int?
+
     // Sync metadata
     let createdAt: Date
     let updatedAt: Date
     let syncVersion: Int
     let isDeleted: Bool
-    
+
     init(from workout: WorkoutSession) {
         self.id = workout.id
+        self.remoteId = workout.remoteId
         self.userEmail = workout.userEmail
         self.name = workout.name
         self.startedAt = workout.startedAt
         self.completedAt = workout.completedAt
         self.exercises = workout.exercises.map { SyncableExerciseInstance(from: $0) }
         self.notes = workout.notes
-        
-        // Sync metadata
+
+        let durationMinutes = Int((workout.totalDuration ?? workout.duration ?? 0) / 60)
+        self.estimatedDurationMinutes = max(durationMinutes, 0)
+        self.actualDurationMinutes = durationMinutes > 0 ? durationMinutes : nil
+
         self.createdAt = workout.createdAt
         self.updatedAt = workout.updatedAt
         self.syncVersion = workout.syncVersion
         self.isDeleted = workout.isDeleted
+    }
+
+    init(serverWorkout: NetworkManagerTwo.WorkoutResponse.Workout, localId: UUID? = nil) {
+        self.id = localId ?? UUID()
+        self.remoteId = serverWorkout.id
+        self.userEmail = serverWorkout.userEmail
+        self.name = serverWorkout.name
+        self.startedAt = serverWorkout.startedAt ?? Date()
+        self.completedAt = serverWorkout.completedAt
+        self.notes = serverWorkout.notes
+        self.estimatedDurationMinutes = serverWorkout.estimatedDurationMinutes ?? 0
+        self.actualDurationMinutes = serverWorkout.actualDurationMinutes
+        self.createdAt = serverWorkout.createdAt ?? Date()
+        self.updatedAt = serverWorkout.updatedAt ?? Date()
+        self.syncVersion = serverWorkout.syncVersion ?? 1
+        self.isDeleted = false
+
+        self.exercises = serverWorkout.exercises.enumerated().map { index, exercise in
+            SyncableExerciseInstance(serverExercise: exercise, orderFallback: index)
+        }
     }
 }
 
@@ -56,7 +83,7 @@ struct SyncableExerciseInstance: Codable {
     let bodyPart: String
     let orderIndex: Int
     let sets: [SyncableSetInstance]
-    
+
     init(from exercise: ExerciseInstance) {
         self.id = exercise.id
         self.exerciseId = exercise.exerciseId
@@ -64,6 +91,17 @@ struct SyncableExerciseInstance: Codable {
         self.bodyPart = exercise.bodyPart
         self.orderIndex = exercise.orderIndex
         self.sets = exercise.sets.map { SyncableSetInstance(from: $0) }
+    }
+
+    init(serverExercise: NetworkManagerTwo.WorkoutResponse.Exercise, orderFallback: Int) {
+        self.id = UUID()
+        self.exerciseId = serverExercise.exerciseId
+        self.exerciseName = serverExercise.exerciseName
+        self.bodyPart = ""
+        self.orderIndex = serverExercise.orderIndex ?? orderFallback
+        self.sets = serverExercise.sets.enumerated().map { index, set in
+            SyncableSetInstance(serverSet: set, fallbackNumber: index + 1)
+        }
     }
 }
 
@@ -76,7 +114,7 @@ struct SyncableSetInstance: Codable {
     let actualWeight: Double?
     let completed: Bool
     let completedAt: Date?
-    
+
     init(from set: SetInstance) {
         self.id = set.id
         self.setNumber = set.setNumber
@@ -86,6 +124,17 @@ struct SyncableSetInstance: Codable {
         self.actualWeight = set.actualWeight
         self.completed = set.completed
         self.completedAt = set.completedAt
+    }
+
+    init(serverSet: NetworkManagerTwo.WorkoutResponse.ExerciseSet, fallbackNumber: Int) {
+        self.id = UUID()
+        self.setNumber = serverSet.setNumber ?? fallbackNumber
+        self.targetReps = serverSet.reps ?? 0
+        self.targetWeight = serverSet.weightKg
+        self.actualReps = serverSet.reps
+        self.actualWeight = serverSet.weightKg
+        self.completed = serverSet.isCompleted ?? true
+        self.completedAt = nil
     }
 }
 
@@ -97,7 +146,6 @@ class WorkoutDataManager: ObservableObject {
     
     private let localStorage = WorkoutLocalStorage()
     private let cloudSync = WorkoutCloudSync()
-    private let conflictResolver = WorkoutConflictResolver()
     
     @Published var isSyncing = false
     @Published var lastSyncDate: Date?
@@ -157,28 +205,27 @@ class WorkoutDataManager: ObservableObject {
             syncError = nil
         
         do {
-            // 1. Get local changes
             let localChanges = await localStorage.getUnsyncedChanges()
-            
-            // 2. Get server changes
-            let serverChanges = try await cloudSync.fetchServerChanges()
-            
-            // 3. Resolve conflicts
-            let resolvedChanges = await conflictResolver.resolveConflicts(
-                local: localChanges,
-                server: serverChanges
-            )
-            
-            // 4. Apply resolved changes
-            try await localStorage.applyChanges(resolvedChanges)
-            try await cloudSync.pushChanges(resolvedChanges)
-            
-                lastSyncDate = Date()
-            
+
+            for change in localChanges {
+                if let workout = await localStorage.fetchWorkout(by: change.id) {
+                    await cloudSync.queueForSync(workout)
+                }
+            }
+            let userEmail = localChanges.first?.userEmail ?? UserDefaults.standard.string(forKey: "userEmail")
+
+            if let userEmail {
+                let serverChanges = try await cloudSync.fetchServerChanges(for: userEmail)
+                try await localStorage.applyChanges(serverChanges)
+            }
+
+            try await cloudSync.pushQueuedChanges()
+            try await localStorage.saveContextIfNeeded()
+            lastSyncDate = Date()
         } catch {
-                syncError = error.localizedDescription
+            syncError = error.localizedDescription
         }
-        
+
             isSyncing = false
     }
 }
@@ -246,10 +293,7 @@ class WorkoutLocalStorage {
     @MainActor
     func saveWorkout(_ workout: WorkoutSession) async throws {
         let modelContext = modelContainer.mainContext
-        
-        workout.syncVersion += 1
-        workout.updatedAt = Date()
-        
+
         modelContext.insert(workout)
         try modelContext.save()
     }
@@ -290,10 +334,18 @@ class WorkoutLocalStorage {
     @MainActor
     func applyChanges(_ changes: [SyncableWorkoutSession]) async throws {
         let modelContext = modelContainer.mainContext
-        
+
         for change in changes {
             if change.isDeleted {
-                // Mark as deleted locally
+                if let remoteId = change.remoteId,
+                   let existing = try? modelContext.fetch(FetchDescriptor<WorkoutSession>(
+                        predicate: #Predicate<WorkoutSession> { $0.remoteId == remoteId }
+                   )).first {
+                    existing.isDeleted = true
+                    existing.needsSync = false
+                    continue
+                }
+
                 if let existing = try? modelContext.fetch(FetchDescriptor<WorkoutSession>(
                     predicate: #Predicate<WorkoutSession> { $0.id == change.id }
                 )).first {
@@ -301,22 +353,44 @@ class WorkoutLocalStorage {
                     existing.needsSync = false
                 }
             } else {
-                // Update or create
+                if let remoteId = change.remoteId,
+                   let existing = try? modelContext.fetch(FetchDescriptor<WorkoutSession>(
+                        predicate: #Predicate<WorkoutSession> { $0.remoteId == remoteId }
+                   )).first {
+                    existing.updateFromSyncable(change)
+                    continue
+                }
+
                 if let existing = try? modelContext.fetch(FetchDescriptor<WorkoutSession>(
                     predicate: #Predicate<WorkoutSession> { $0.id == change.id }
                 )).first {
-                    // Update existing
                     existing.updateFromSyncable(change)
-                    existing.needsSync = false
                 } else {
-                    // Create new
                     let newWorkout = WorkoutSession(from: change)
+                    newWorkout.needsSync = false
                     modelContext.insert(newWorkout)
                 }
             }
         }
-        
+
         try modelContext.save()
+    }
+
+    @MainActor
+    func saveContextIfNeeded() async throws {
+        let modelContext = modelContainer.mainContext
+        if modelContext.hasChanges {
+            try modelContext.save()
+        }
+    }
+
+    @MainActor
+    func fetchWorkout(by id: UUID) async -> WorkoutSession? {
+        let modelContext = modelContainer.mainContext
+        let descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: #Predicate<WorkoutSession> { $0.id == id }
+        )
+        return try? modelContext.fetch(descriptor).first
     }
 }
 
@@ -325,98 +399,164 @@ class WorkoutLocalStorage {
 class WorkoutCloudSync {
     private let networkManager = NetworkManagerTwo.shared
     private var syncQueue: [WorkoutSession] = []
-    
+    private let isoFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
     func queueForSync(_ workout: WorkoutSession) async {
-        syncQueue.append(workout)
+        if let existingIndex = syncQueue.firstIndex(where: { $0.id == workout.id }) {
+            syncQueue[existingIndex] = workout
+        } else {
+            syncQueue.append(workout)
+        }
     }
-    
-    func fetchServerChanges() async throws -> [SyncableWorkoutSession] {
-        // This would call your server API
-        // For now, return empty array
-        return []
+
+    func fetchServerChanges(for userEmail: String) async throws -> [SyncableWorkoutSession] {
+        let response = try await networkManager.fetchServerWorkouts(userEmail: userEmail)
+        return response.workouts.map { SyncableWorkoutSession(serverWorkout: $0) }
     }
-    
-    func pushChanges(_ changes: [SyncableWorkoutSession]) async throws {
-        // This would push changes to your server
-        // For now, just clear the queue
+
+    func pushQueuedChanges() async throws {
+        guard !syncQueue.isEmpty else { return }
+
+        for workout in syncQueue {
+            if workout.isDeleted {
+                if let remoteId = workout.remoteId {
+                    try await networkManager.deleteWorkout(sessionId: remoteId, userEmail: workout.userEmail)
+                }
+                workout.needsSync = false
+                continue
+            }
+
+            let payload = makePayload(from: workout)
+            let response: NetworkManagerTwo.WorkoutResponse.Workout
+
+            if let remoteId = workout.remoteId {
+                response = try await networkManager.updateWorkout(sessionId: remoteId, payload: payload)
+            } else {
+                response = try await networkManager.createWorkout(payload: payload)
+            }
+
+            let syncable = SyncableWorkoutSession(serverWorkout: response, localId: workout.id)
+            workout.updateFromSyncable(syncable)
+            workout.createdAt = syncable.createdAt
+            workout.updatedAt = syncable.updatedAt
+            workout.remoteId = response.id
+            workout.needsSync = false
+        }
+
         syncQueue.removeAll()
+    }
+
+    private func makePayload(from workout: WorkoutSession) -> NetworkManagerTwo.WorkoutRequest {
+        let status = workout.completedAt != nil ? "completed" : "in_progress"
+        let estimatedMinutes = max(Int((workout.totalDuration ?? workout.duration ?? 0) / 60), 0)
+        let actualMinutes = workout.completedAt != nil ? estimatedMinutes : nil
+        let scheduledDate = isoFormatter.string(from: workout.startedAt)
+
+        let exercises = workout.exercises.sorted { $0.orderIndex < $1.orderIndex }.map { exercise in
+            NetworkManagerTwo.WorkoutRequest.Exercise(
+                exerciseId: exercise.exerciseId,
+                exerciseName: exercise.exerciseName,
+                orderIndex: exercise.orderIndex,
+                targetSets: exercise.totalSets,
+                isCompleted: exercise.isCompleted,
+                sets: exercise.sets.sorted { $0.setNumber < $1.setNumber }.map { set in
+                    NetworkManagerTwo.WorkoutRequest.ExerciseSet(
+                        weightKg: set.actualWeight ?? set.targetWeight,
+                        reps: set.actualReps ?? set.targetReps,
+                        durationSeconds: nil,
+                        restSeconds: nil,
+                        distanceMeters: nil,
+                        distanceUnit: nil,
+                        paceSecondsPerKm: nil,
+                        rpe: nil,
+                        heartRateBpm: nil,
+                        intensityZone: nil,
+                        stretchIntensity: nil,
+                        rangeOfMotionNotes: nil,
+                        roundsCompleted: nil,
+                        isWarmup: false,
+                        isCompleted: set.completed,
+                        notes: set.notes
+                    )
+                }
+            )
+        }
+
+        return NetworkManagerTwo.WorkoutRequest(
+            userEmail: workout.userEmail,
+            name: workout.name,
+            status: status,
+            startedAt: isoFormatter.string(from: workout.startedAt),
+            completedAt: workout.completedAt.map { isoFormatter.string(from: $0) },
+            scheduledDate: scheduledDate,
+            estimatedDurationMinutes: estimatedMinutes,
+            actualDurationMinutes: actualMinutes,
+            notes: workout.notes,
+            exercises: exercises
+        )
     }
 }
 
 // MARK: - Conflict Resolution
 
-class WorkoutConflictResolver {
-    func resolveConflicts(
-        local: [SyncableWorkoutSession],
-        server: [SyncableWorkoutSession]
-    ) async -> [SyncableWorkoutSession] {
-        var resolved: [SyncableWorkoutSession] = []
-        
-        // Create lookup dictionaries
-        let localDict = Dictionary(grouping: local, by: { $0.id })
-        let serverDict = Dictionary(grouping: server, by: { $0.id })
-        
-        // Process all unique IDs
-        let allIds = Set(localDict.keys).union(serverDict.keys)
-        
-        for id in allIds {
-            let localWorkouts = localDict[id] ?? []
-            let serverWorkouts = serverDict[id] ?? []
-            
-            if let resolvedWorkout = resolveConflict(
-                local: localWorkouts.first,
-                server: serverWorkouts.first
-            ) {
-                resolved.append(resolvedWorkout)
-            }
-        }
-        
-        return resolved
-    }
-    
-    private func resolveConflict(
-        local: SyncableWorkoutSession?,
-        server: SyncableWorkoutSession?
-    ) -> SyncableWorkoutSession? {
-        // Conflict resolution strategy:
-        // 1. If only one exists, use that
-        // 2. If both exist, use the most recently updated
-        // 3. If same timestamp, prefer server (server wins)
-        
-        guard let local = local else { return server }
-        guard let server = server else { return local }
-        
-        if local.updatedAt > server.updatedAt {
-            return local
-        } else {
-            return server
-        }
-    }
-}
-
 // MARK: - Extensions
 
 extension WorkoutSession {
     func updateFromSyncable(_ syncable: SyncableWorkoutSession) {
-        // Update local workout from syncable data
+        self.remoteId = syncable.remoteId
         self.name = syncable.name
+        self.userEmail = syncable.userEmail
         self.startedAt = syncable.startedAt
         self.completedAt = syncable.completedAt
         self.notes = syncable.notes
+        self.totalDuration = syncable.completedAt?.timeIntervalSince(syncable.startedAt)
+        self.createdAt = syncable.createdAt
         self.updatedAt = syncable.updatedAt
         self.syncVersion = syncable.syncVersion
         self.isDeleted = syncable.isDeleted
+        self.needsSync = false
+
+        // Replace exercises with server copy
+        self.exercises.removeAll()
+        for (index, exerciseSync) in syncable.exercises.enumerated() {
+            let exerciseInstance = ExerciseInstance(
+                exerciseId: exerciseSync.exerciseId,
+                exerciseName: exerciseSync.exerciseName,
+                exerciseType: "strength",
+                bodyPart: exerciseSync.bodyPart,
+                equipment: "",
+                target: "",
+                orderIndex: exerciseSync.orderIndex
+            )
+            exerciseInstance.workoutSession = self
+
+            exerciseInstance.sets = exerciseSync.sets.map { setSync in
+                let setInstance = SetInstance(setNumber: setSync.setNumber, targetReps: setSync.targetReps, targetWeight: setSync.targetWeight)
+                setInstance.actualReps = setSync.actualReps
+                setInstance.actualWeight = setSync.actualWeight
+                setInstance.isCompleted = setSync.completed
+                setInstance.completedAt = setSync.completedAt
+                setInstance.exerciseInstance = exerciseInstance
+                return setInstance
+            }
+
+            if exerciseInstance.orderIndex == 0 {
+                exerciseInstance.orderIndex = index
+            }
+            self.exercises.append(exerciseInstance)
+        }
+
+        self.exercises.sort { $0.orderIndex < $1.orderIndex }
     }
     
     convenience init(from syncable: SyncableWorkoutSession) {
         self.init(name: syncable.name, userEmail: syncable.userEmail)
         self.id = syncable.id
-        self.startedAt = syncable.startedAt
-        self.completedAt = syncable.completedAt
-        self.notes = syncable.notes
         self.createdAt = syncable.createdAt
-        self.updatedAt = syncable.updatedAt
-        self.syncVersion = syncable.syncVersion
-        self.isDeleted = syncable.isDeleted
+        updateFromSyncable(syncable)
     }
-} 
+}

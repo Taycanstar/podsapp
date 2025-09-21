@@ -114,7 +114,7 @@ struct WorkoutInProgressView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
                                     .background(Color("tiktoknp"))
-                                    .cornerRadius(12)
+                                    .cornerRadius(100)
                                     .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
                             }
                             
@@ -125,7 +125,7 @@ struct WorkoutInProgressView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
                                     .background(Color.blue)
-                                    .cornerRadius(12)
+                                    .cornerRadius(100)
                                     .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
                             }
                         }
@@ -300,27 +300,14 @@ struct WorkoutInProgressView: View {
     @ViewBuilder
     private var mainExercisesSectionView: some View {
         if !workout.exercises.isEmpty {
-            let mainExercisesStartIndex = workout.warmUpExercises?.count ?? 0
             let shouldShowHeader = !(workout.warmUpExercises?.isEmpty ?? true) || !(workout.coolDownExercises?.isEmpty ?? true)
             
             if shouldShowHeader {
                 sectionHeader(title: "Main Sets", color: .primary)
             }
             
-            if circuitOrSupersetBlocks.isEmpty {
-                // Preserve existing flat list behavior when no blocks
-                ForEach(Array(workout.exercises.enumerated()), id: \.offset) { index, exercise in
-                    let globalIndex = mainExercisesStartIndex + index
-                    createExerciseRow(
-                        exercise: exercise,
-                        globalIndex: globalIndex,
-                        loggedSetsCount: exerciseCompletionStatus[globalIndex]
-                    )
-                }
-            } else {
-                groupedBlocksView
-                nonGroupedCardView
-            }
+            groupedBlocksView
+            nonGroupedCardView
         }
     }
     
@@ -355,7 +342,7 @@ struct WorkoutInProgressView: View {
                     }
                 }
                 .background(Color("containerbg"))
-                .cornerRadius(12)
+                .cornerRadius(24)
             }
             .padding(.top, 8)
         }
@@ -381,7 +368,7 @@ struct WorkoutInProgressView: View {
                 }
             }
             .background(Color("containerbg"))
-            .cornerRadius(12)
+            .cornerRadius(24)
             .padding(.top, 8)
         }
     }
