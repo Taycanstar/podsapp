@@ -6,7 +6,7 @@ struct WorkoutSummarySheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private var unitsSymbol: String {
-        summary.stats.unitsSystem == .metric ? "kg" : "lbs"
+        summary.stats.unitsSystem == .metric ? "kg" : "lb"
     }
 
     private struct PersonalRecordDisplay: Identifiable {
@@ -36,28 +36,23 @@ struct WorkoutSummarySheet: View {
     }
 
     private var personalRecordDisplays: [PersonalRecordDisplay] {
-        summary.stats.personalRecords.map { record in
-            switch record.recordType {
-            case .heaviestWeight:
-                let value = formattedWeight(record.newValue)
-                let previous = record.previousValue.map { formattedWeight($0) } ?? "—"
-                return PersonalRecordDisplay(icon: "scalemass",
-                                              title: record.exerciseName,
-                                              detail: "Heaviest weight · \(value) \(unitsSymbol) (prev \(previous))")
-            case .mostReps:
-                let value = Int(record.newValue)
-                let previous = record.previousValue.map { Int($0) }
-                let previousText = previous != nil ? " (prev \(previous!))" : ""
-                return PersonalRecordDisplay(icon: "repeat",
-                                              title: record.exerciseName,
-                                              detail: "Most reps · \(value) reps\(previousText)")
-            case .bestVolume:
-                let value = formattedVolume(record.newValue)
-                let previous = record.previousValue.map { formattedVolume($0) } ?? "—"
-                return PersonalRecordDisplay(icon: "chart.bar.fill",
-                                              title: record.exerciseName,
-                                              detail: "Highest volume · \(value) \(unitsSymbol) (prev \(previous))")
+        summary.stats.personalRecords.compactMap { record in
+            guard record.recordType == .heaviestWeight,
+                  let weight = record.weight,
+                  weight > 0,
+                  let setText = formattedSet(weight: weight, reps: record.reps) else { return nil }
+
+            var detail = "Heaviest set · \(setText)"
+
+            if let previous = record.previousWeight, previous > 0 {
+                let previousSet = formattedSet(weight: previous, reps: record.previousReps)
+                    ?? "\(formattedWeight(previous)) \(unitsSymbol)"
+                detail += " (prev \(previousSet))"
             }
+
+            return PersonalRecordDisplay(icon: "scalemass",
+                                          title: record.exerciseName,
+                                          detail: detail)
         }
     }
 
@@ -92,7 +87,7 @@ struct WorkoutSummarySheet: View {
                 .padding(.top, 24)
                 .padding(.bottom, 32)
             }
-            // .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .background(Color("altbg"))
             .navigationTitle("Workout Complete")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -108,31 +103,32 @@ struct WorkoutSummarySheet: View {
                 }
             }
         }
+        .background(Color("altbg").ignoresSafeArea())
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }
 
     private var statsHeader: some View {
         VStack(spacing: 16) {
+            let durationDisplay = formattedSummaryDuration(summary.stats.duration)
+            let volumeDisplay = "\(formattedVolume(summary.stats.totalVolume)) \(unitsSymbol)"
+            let caloriesDisplay = formattedCalories(summary.stats.estimatedCalories)
+
             VStack(spacing: 6) {
                 Text(summary.workout.title)
                     .font(.title2.bold())
                     .multilineTextAlignment(.center)
-                Text("\(formattedDate(summary.workout.date)) · \(summary.stats.exerciseCount) exercises")
+                let loggedExerciseCount = summary.exerciseBreakdown.count
+                let exerciseLabel = loggedExerciseCount == 1 ? "exercise" : "exercises"
+                Text("\(formattedDate(summary.workout.date)) · \(loggedExerciseCount) \(exerciseLabel)")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 16) {
-                StatTile(title: "Duration",
-                         value: formattedDuration(summary.stats.duration),
-                         subtitle: "")
-                StatTile(title: "Volume",
-                         value: formattedVolume(summary.stats.totalVolume),
-                         subtitle: unitsSymbol)
-                StatTile(title: "Calories",
-                         value: "\(summary.stats.estimatedCalories)",
-                         subtitle: "kcal")
+                StatTile(title: "Duration", value: durationDisplay)
+                StatTile(title: "Volume", value: volumeDisplay)
+                StatTile(title: "Calories", value: caloriesDisplay)
             }
         }
         .padding(24)
@@ -140,7 +136,7 @@ struct WorkoutSummarySheet: View {
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(
-                    LinearGradient(colors: [Color.accentColor.opacity(0.2), Color.accentColor.opacity(0.05)],
+                    LinearGradient(colors: [Color.accentColor.opacity(0.18), Color.accentColor.opacity(0.05)],
                                    startPoint: .topLeading,
                                    endPoint: .bottomTrailing)
                 )
@@ -186,11 +182,28 @@ struct WorkoutSummarySheet: View {
         .padding(.horizontal)
     }
 
-    private func formattedDuration(_ duration: TimeInterval) -> String {
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = duration >= 3600 ? [.hour, .minute] : [.minute, .second]
-        formatter.unitsStyle = .abbreviated
-        return formatter.string(from: duration) ?? "0m"
+    private func formattedSummaryDuration(_ duration: TimeInterval) -> String {
+        let totalSeconds = max(Int(duration.rounded()), 0)
+        if totalSeconds < 60 {
+            return "\(totalSeconds) sec"
+        }
+
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+
+        var components: [String] = []
+        if hours > 0 {
+            components.append("\(hours) hr")
+        }
+        if minutes > 0 {
+            components.append("\(minutes) min")
+        }
+        if seconds > 0 {
+            components.append("\(seconds) sec")
+        }
+
+        return components.joined(separator: " ")
     }
 
     private func formattedVolume(_ volume: Double) -> String {
@@ -204,8 +217,23 @@ struct WorkoutSummarySheet: View {
     private func formattedWeight(_ weight: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = weight.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 1
+        let showsDecimal = summary.stats.unitsSystem == .metric && weight.truncatingRemainder(dividingBy: 1) != 0
+        formatter.maximumFractionDigits = showsDecimal ? 1 : 0
         return formatter.string(from: NSNumber(value: weight)) ?? "0"
+    }
+
+    private func formattedSet(weight: Double?, reps: Int?) -> String? {
+        if let weight, weight > 0, let reps, reps > 0 {
+            return "\(formattedWeight(weight)) \(unitsSymbol) x \(reps)"
+        }
+        if let reps, reps > 0 {
+            return "\(reps) reps"
+        }
+        return nil
+    }
+
+    private func formattedCalories(_ calories: Int) -> String {
+        "\(calories) cal"
     }
 
     private func formattedDate(_ date: Date) -> String {
@@ -218,7 +246,6 @@ struct WorkoutSummarySheet: View {
 private struct StatTile: View {
     let title: String
     let value: String
-    let subtitle: String
 
     var body: some View {
         VStack(spacing: 6) {
@@ -227,11 +254,7 @@ private struct StatTile: View {
                 .foregroundStyle(.secondary)
             Text(value)
                 .font(.title3.bold())
-            if !subtitle.isEmpty {
-                Text(subtitle)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
@@ -263,13 +286,8 @@ private struct ExerciseBreakdownRow: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(breakdown.exercise.name)
-                            .font(.headline)
-                        Text(breakdown.exercise.bodyPart)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(breakdown.exercise.name)
+                        .font(.headline)
 
                     Spacer(minLength: 12)
 
@@ -278,28 +296,7 @@ private struct ExerciseBreakdownRow: View {
                     }
                 }
 
-                metricsRow
-
-                if let topWeight = breakdown.topWeight {
-                    Text("Top set · \(formattedWeight(topWeight)) \(unitsSymbol)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let average = breakdown.averageWeight,
-                   let top = breakdown.topWeight,
-                   average > 0,
-                   abs(top - average) > 0.5 {
-                    Text("Average weight · \(formattedWeight(average)) \(unitsSymbol)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let duration = breakdown.totalDuration {
-                    Text("Total time · \(formattedDuration(duration))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                metricsView
             }
         }
         .padding(16)
@@ -328,10 +325,6 @@ private struct ExerciseBreakdownRow: View {
         }
         .frame(width: 60, height: 60)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color(.systemGray4), lineWidth: 0.5)
-        )
     }
 
     private var favoriteButton: some View {
@@ -352,87 +345,79 @@ private struct ExerciseBreakdownRow: View {
         .accessibilityLabel(isFavorite ? "Favorite exercise" : "Mark exercise as favorite")
     }
 
-    private var metricsRow: some View {
-        let chips = metricChips()
-        return Group {
-            if chips.isEmpty {
-                EmptyView()
-            } else {
-                ChipGrid(chips: chips)
+    private var metricsView: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if !breakdown.setSummaries.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(breakdown.setSummaries.sorted(by: { $0.index < $1.index })) { set in
+                        if let line = setLine(for: set) {
+                            Text(line)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                }
             }
-        }
-    }
 
-    private func metricChips() -> [String] {
-        var chips: [String] = []
-        if breakdown.totalSets > 0 {
-            chips.append("\(breakdown.totalSets) set\(breakdown.totalSets == 1 ? "" : "s")")
         }
-        if breakdown.totalReps > 0 {
-            chips.append("\(breakdown.totalReps) reps")
-        }
-        if breakdown.volume > 0 {
-            let volumeText = formattedVolume(breakdown.volume)
-            chips.append("Volume \(volumeText) \(unitsSymbol)")
-        }
-        return chips
     }
 
     private func formattedWeight(_ weight: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = weight.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 1
+        let usesDecimal = unitsSymbol == "kg" && weight.truncatingRemainder(dividingBy: 1) != 0
+        formatter.maximumFractionDigits = usesDecimal ? 1 : 0
         return formatter.string(from: NSNumber(value: weight)) ?? "0"
     }
 
-    private func formattedVolume(_ volume: Double) -> String {
-        guard volume > 0 else { return "0" }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: volume)) ?? "0"
-    }
-
     private func formattedDuration(_ duration: TimeInterval) -> String {
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = duration >= 3600 ? [.hour, .minute] : [.minute, .second]
-        formatter.unitsStyle = .abbreviated
-        return formatter.string(from: duration) ?? "0m"
+        clockDurationString(duration)
     }
-}
 
-private struct ChipGrid: View {
-    let chips: [String]
+    private func setLine(for summary: ExerciseSetSummary) -> String? {
+        let repsValue = summary.reps.map { Int(round($0)) }
 
-    private let columns: [GridItem] = [
-        GridItem(.adaptive(minimum: 110), spacing: 8, alignment: .leading)
-    ]
-
-    var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-            ForEach(chips, id: \.self) { chip in
-                Chip(text: chip)
+        switch summary.trackingType {
+        case .repsWeight:
+            guard let reps = repsValue, reps > 0,
+                  let weight = summary.weight else { return nil }
+            return "\(reps) reps x \(formattedWeight(weight)) \(unitsSymbol)"
+        case .repsOnly:
+            guard let reps = repsValue, reps > 0 else { return nil }
+            return "\(reps) reps"
+        case .timeOnly, .holdTime:
+            guard let duration = summary.duration, duration > 0 else { return nil }
+            return clockDurationString(duration)
+        case .timeDistance:
+            var components: [String] = []
+            if let duration = summary.duration, duration > 0 {
+                components.append(clockDurationString(duration))
             }
+            if let distance = summary.distance, distance > 0 {
+                let formatter = NumberFormatter()
+                formatter.numberStyle = .decimal
+                formatter.maximumFractionDigits = 2
+                let value = formatter.string(from: NSNumber(value: distance)) ?? "\(distance)"
+                components.append(value)
+            }
+            return components.isEmpty ? nil : components.joined(separator: " · ")
+        case .rounds:
+            if let reps = repsValue, reps > 0 {
+                return "\(reps) rounds"
+            }
+            return nil
         }
     }
-}
 
-private struct Chip: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(.caption)
-            .foregroundStyle(.primary)
-            .padding(.vertical, 4)
-            .padding(.horizontal, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(.systemBackground))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color(.systemGray4), lineWidth: 0.5)
-            )
+    private func clockDurationString(_ duration: TimeInterval) -> String {
+        guard duration > 0 else { return "0:00" }
+        let totalSeconds = Int(duration.rounded())
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        }
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }

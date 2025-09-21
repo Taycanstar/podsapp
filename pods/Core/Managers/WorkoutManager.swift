@@ -905,18 +905,54 @@ class WorkoutManager: ObservableObject {
     }
     
     func registerWorkoutActivity() {
-        guard var state = activeWorkoutState else { return }
-        state.lastActivityAt = Date()
+        let now = Date()
+
+        if var state = activeWorkoutState {
+            state.lastActivityAt = now
+            activeWorkoutState = state
+            persistActiveWorkoutState(state)
+            return
+        }
+
+        if currentWorkout == nil, let today = todayWorkout {
+            currentWorkout = sanitizeWarmupsIfNeeded(today)
+        }
+
+        let workoutId = currentWorkout?.id ?? todayWorkout?.id ?? UUID()
+        let state = ActiveWorkoutState(workoutId: workoutId,
+                                       startedAt: now,
+                                       lastActivityAt: now)
         activeWorkoutState = state
         persistActiveWorkoutState(state)
     }
-    
+
+    func applyActiveExerciseUpdate(_ exercise: TodayWorkoutExercise) {
+        let sanitizedExercise = stripWarmups(from: exercise)
+
+        if var active = currentWorkout,
+           let index = active.exercises.firstIndex(where: { $0.exercise.id == sanitizedExercise.exercise.id }) {
+            active.exercises[index] = sanitizedExercise
+            currentWorkout = active
+        }
+
+        if var today = todayWorkout,
+           let index = today.exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) {
+            today.exercises[index] = exercise
+            todayWorkout = sanitizeWarmupsIfNeeded(today)
+            saveTodayWorkout()
+        }
+    }
+
     /// Complete workout session
     func completeWorkout(autoComplete: Bool = false) {
         guard let sourceWorkout = currentWorkout ?? todayWorkout else { return }
         let workout = sanitizeWarmupsIfNeeded(sourceWorkout)
-        let startTime = activeWorkoutState?.startedAt ?? workout.date
-        let duration = max(Date().timeIntervalSince(startTime), 0)
+        let now = Date()
+        let state = activeWorkoutState
+        let startTime = state?.startedAt ?? now
+        let lastActivity = state?.lastActivityAt ?? now
+        let endTime = lastActivity > now ? lastActivity : now
+        let duration = max(endTime.timeIntervalSince(startTime), 0)
         let unitsSystem = preferredUnitsSystem
         let summary = WorkoutCalculationService.shared.buildSummary(for: workout,
                                                                     duration: duration,

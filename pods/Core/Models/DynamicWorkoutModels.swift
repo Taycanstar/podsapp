@@ -641,7 +641,7 @@ struct TodayWorkout: Codable, Hashable, Identifiable {
     let id: UUID
     let date: Date
     let title: String
-    let exercises: [TodayWorkoutExercise]
+    var exercises: [TodayWorkoutExercise]
     // Optional: New block-based programming representation
     let blocks: [WorkoutBlock]?
     let estimatedDuration: Int

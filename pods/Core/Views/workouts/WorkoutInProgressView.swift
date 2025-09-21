@@ -220,6 +220,7 @@ struct WorkoutInProgressView: View {
                                 warmUpExercises: workout.warmUpExercises,
                                 coolDownExercises: workout.coolDownExercises
                             )
+                            workoutManager.applyActiveExerciseUpdate(updatedExercise)
                         }
                     }
                     

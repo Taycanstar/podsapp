@@ -13,7 +13,6 @@ struct WorkoutStats: Identifiable, Codable {
 
 enum PersonalRecordType: String, Codable {
     case heaviestWeight
-    case mostReps
     case bestVolume
 }
 
@@ -24,6 +23,10 @@ struct PersonalRecord: Identifiable, Codable {
     let recordType: PersonalRecordType
     let newValue: Double
     let previousValue: Double?
+    let weight: Double?
+    let reps: Int?
+    let previousWeight: Double?
+    let previousReps: Int?
 }
 
 enum WorkoutExerciseSection: String, Codable {
@@ -38,11 +41,12 @@ struct ExerciseBreakdown: Identifiable, Codable {
     let section: WorkoutExerciseSection
     let totalSets: Int
     let totalReps: Int
-    let averageWeight: Double?
-    let topWeight: Double?
+    let bestSetWeight: Double?
+    let bestSetReps: Int?
     let volume: Double
     let totalDuration: TimeInterval?
     let trackingType: ExerciseTrackingType?
+    let setSummaries: [ExerciseSetSummary]
     let personalRecords: [PersonalRecordType]
 }
 
@@ -52,6 +56,16 @@ struct CompletedWorkoutSummary: Identifiable, Codable {
     let stats: WorkoutStats
     let exerciseBreakdown: [ExerciseBreakdown]
     let generatedAt: Date
+}
+
+struct ExerciseSetSummary: Identifiable, Codable {
+    let id: UUID = UUID()
+    let index: Int
+    let trackingType: ExerciseTrackingType
+    let reps: Double?
+    let weight: Double?
+    let duration: TimeInterval?
+    let distance: Double?
 }
 
 final class WorkoutCalculationService {
@@ -65,13 +79,14 @@ final class WorkoutCalculationService {
                       profile: ProfileDataResponse?) -> CompletedWorkoutSummary {
         let sanitizedDuration = max(duration, 0)
         let personalRecords = detectPersonalRecords(in: workout.exercises)
-        let stats = calculateWorkoutStats(exercises: workout.exercises,
+        let breakdown = buildExerciseBreakdown(for: workout,
+                                               personalRecords: personalRecords)
+        let allSections = (workout.warmUpExercises ?? []) + workout.exercises + (workout.coolDownExercises ?? [])
+        let stats = calculateWorkoutStats(exercises: allSections,
                                           duration: sanitizedDuration,
                                           unitsSystem: unitsSystem,
                                           profile: profile,
                                           personalRecords: personalRecords)
-        let breakdown = buildExerciseBreakdown(for: workout,
-                                               personalRecords: personalRecords)
         return CompletedWorkoutSummary(workout: workout,
                                        stats: stats,
                                        exerciseBreakdown: breakdown,
@@ -79,10 +94,12 @@ final class WorkoutCalculationService {
     }
 
     private struct SetContribution {
+        let index: Int
+        let trackingType: ExerciseTrackingType
         let reps: Double?
         let weight: Double?
         let duration: TimeInterval?
-        let trackingType: ExerciseTrackingType
+        let distance: Double?
     }
 
     func calculateWorkoutStats(exercises: [TodayWorkoutExercise],
@@ -90,18 +107,21 @@ final class WorkoutCalculationService {
                                unitsSystem: UnitsSystem,
                                profile: ProfileDataResponse?,
                                personalRecords: [PersonalRecord] = []) -> WorkoutStats {
-        let contributions = exercises.map { setContributions(for: $0) }
-        let totalVolume = contributions.reduce(0) { partial, sets in
-            partial + sets.reduce(0) { $0 + (($1.reps ?? 0) * ($1.weight ?? 0)) }
-        }
-        let exerciseCount = exercises.count
-        let totalSets = contributions.reduce(0) { $0 + $1.count }
+        let contributionsByExercise = exercises.map { setContributions(for: $0) }
+        let flattenedContributions = contributionsByExercise.flatMap { $0 }
+
+        let totalVolume = flattenedContributions.reduce(0) { partial, contribution in
+            partial + ((contribution.reps ?? 0) * (contribution.weight ?? 0))
+        }.rounded()
+        let exerciseCount = contributionsByExercise.filter { !$0.isEmpty }.count
+        let totalSets = contributionsByExercise.reduce(0) { $0 + $1.count }
+        let roundedDuration = duration.rounded()
         let calories = estimateCaloriesBurned(volume: totalVolume,
-                                              duration: duration,
+                                              duration: roundedDuration,
                                               profile: profile,
                                               unitsSystem: unitsSystem)
 
-        return WorkoutStats(duration: duration,
+        return WorkoutStats(duration: roundedDuration,
                             totalVolume: totalVolume,
                             estimatedCalories: calories,
                             exerciseCount: exerciseCount,
@@ -159,83 +179,147 @@ final class WorkoutCalculationService {
 
         for exercise in exercises {
             let contributions = setContributions(for: exercise)
-            guard !contributions.isEmpty else { continue }
+            let weightedContributions = contributions.filter { ($0.weight ?? 0) > 0 && ($0.reps ?? 0) > 0 }
+            guard !weightedContributions.isEmpty else { continue }
 
-            let exerciseId = exercise.exercise.id
-            let performance = userProfile.getExercisePerformance(exerciseId: exerciseId)
-            let previousHeaviest = performance?.records.compactMap { $0.weight > 0 ? $0.weight : nil }.max()
-            let previousMostReps = performance?.records.map { $0.reps }.max()
-            let previousBestVolume = performance?.records.map { $0.volume }.max()
-
-            let maxWeight = contributions.compactMap { $0.weight }.max() ?? 0
-            if maxWeight > 0, maxWeight > (previousHeaviest ?? 0) + 0.1 {
-                records.append(PersonalRecord(exerciseId: exerciseId,
-                                              exerciseName: exercise.exercise.name,
-                                              recordType: .heaviestWeight,
-                                              newValue: maxWeight,
-                                              previousValue: previousHeaviest))
+            let heaviestContribution = weightedContributions.max { lhs, rhs in
+                let lhsWeight = lhs.weight ?? 0
+                let rhsWeight = rhs.weight ?? 0
+                if lhsWeight == rhsWeight {
+                    return (lhs.reps ?? 0) < (rhs.reps ?? 0)
+                }
+                return lhsWeight < rhsWeight
             }
 
-            let maxReps = contributions.compactMap { $0.reps }.max() ?? 0
-            if maxReps > Double(previousMostReps ?? 0) {
-                records.append(PersonalRecord(exerciseId: exerciseId,
-                                              exerciseName: exercise.exercise.name,
-                                              recordType: .mostReps,
-                                              newValue: maxReps,
-                                              previousValue: previousMostReps.map(Double.init)))
+            let bestVolumeContribution = weightedContributions.max { lhs, rhs in
+                let lhsVolume = (lhs.weight ?? 0) * (lhs.reps ?? 0)
+                let rhsVolume = (rhs.weight ?? 0) * (rhs.reps ?? 0)
+                return lhsVolume < rhsVolume
             }
 
-            let bestVolume = contributions.map { ($0.reps ?? 0) * ($0.weight ?? 0) }.max() ?? 0
-            if bestVolume > (previousBestVolume ?? 0) + 0.1 {
-                records.append(PersonalRecord(exerciseId: exerciseId,
-                                              exerciseName: exercise.exercise.name,
-                                              recordType: .bestVolume,
-                                              newValue: bestVolume,
-                                              previousValue: previousBestVolume))
+            let performance = userProfile.getExercisePerformance(exerciseId: exercise.exercise.id)
+            let previousSets = previousBestSets(from: performance)
+
+            if let heaviestContribution,
+               let weight = heaviestContribution.weight,
+               weight > 0 {
+                let reps = Int(round(heaviestContribution.reps ?? 0))
+                let previousWeight = previousSets.heaviest?.weight
+                if previousWeight == nil || weight > (previousWeight ?? 0) + 0.1 {
+                    records.append(PersonalRecord(exerciseId: exercise.exercise.id,
+                                                  exerciseName: exercise.exercise.name,
+                                                  recordType: .heaviestWeight,
+                                                  newValue: weight,
+                                                  previousValue: previousWeight,
+                                                  weight: weight,
+                                                  reps: reps > 0 ? reps : nil,
+                                                  previousWeight: previousWeight,
+                                                  previousReps: previousSets.heaviest?.reps))
+                }
+            }
+
+            if let bestVolumeContribution,
+               let weight = bestVolumeContribution.weight,
+               let repsValue = bestVolumeContribution.reps,
+               weight > 0,
+               repsValue > 0 {
+                let reps = Int(round(repsValue))
+                let volume = weight * repsValue
+                let previousVolume = previousSets.bestVolume?.volume ?? 0
+                if previousSets.bestVolume == nil || volume > previousVolume + 0.1 {
+                    records.append(PersonalRecord(exerciseId: exercise.exercise.id,
+                                                  exerciseName: exercise.exercise.name,
+                                                  recordType: .bestVolume,
+                                                  newValue: volume,
+                                                  previousValue: previousSets.bestVolume?.volume,
+                                                  weight: weight,
+                                                  reps: reps > 0 ? reps : nil,
+                                                  previousWeight: previousSets.bestVolume?.weight,
+                                                  previousReps: previousSets.bestVolume.map { $0.reps }))
+                }
             }
         }
 
         return records
     }
 
+    private func previousBestSets(from performance: ExercisePerformance?) -> (heaviest: (weight: Double, reps: Int)?, bestVolume: (weight: Double, reps: Int, volume: Double)?) {
+        guard let performance else { return (nil, nil) }
+
+        let weightedRecords = performance.records.filter { $0.weight > 0 && $0.reps > 0 }
+
+        let heaviestRecord = weightedRecords.max { lhs, rhs in
+            if lhs.weight == rhs.weight {
+                return lhs.reps < rhs.reps
+            }
+            return lhs.weight < rhs.weight
+        }
+
+        let bestVolumeRecord = weightedRecords.max { lhs, rhs in
+            lhs.volume < rhs.volume
+        }
+
+        return (heaviestRecord.map { ($0.weight, $0.reps) },
+                bestVolumeRecord.map { ($0.weight, $0.reps, $0.volume) })
+    }
+
     // MARK: - Helpers
 
     private func setContributions(for exercise: TodayWorkoutExercise) -> [SetContribution] {
         if let flexibleSets = exercise.flexibleSets, !flexibleSets.isEmpty {
-            let completedSets = flexibleSets.filter { !$0.isWarmupSet }
-            var result: [SetContribution] = []
+            let result: [SetContribution] = flexibleSets.enumerated().compactMap { index, set in
+                if set.isWarmupSet { return nil }
+                let isCompleted = set.isCompleted || set.isActuallyCompleted
 
-            for set in completedSets {
                 switch set.trackingType {
                 case .repsWeight:
-                    let reps = set.reps.flatMap { Double($0) }
-                    let weight = set.weight.flatMap { Double($0) }
-                    result.append(SetContribution(reps: reps,
-                                                  weight: weight,
-                                                  duration: nil,
-                                                  trackingType: set.trackingType))
+                    guard isCompleted,
+                          let reps = parseDouble(set.reps), reps > 0,
+                          let weight = parseDouble(set.weight), weight > 0 else { return nil }
+                    return SetContribution(index: index,
+                                           trackingType: .repsWeight,
+                                           reps: reps,
+                                           weight: weight,
+                                           duration: nil,
+                                           distance: nil)
                 case .repsOnly:
-                    let reps = set.reps.flatMap { Double($0) }
-                    result.append(SetContribution(reps: reps,
-                                                  weight: nil,
-                                                  duration: nil,
-                                                  trackingType: set.trackingType))
+                    guard isCompleted,
+                          let reps = parseDouble(set.reps), reps > 0 else { return nil }
+                    return SetContribution(index: index,
+                                           trackingType: .repsOnly,
+                                           reps: reps,
+                                           weight: nil,
+                                           duration: nil,
+                                           distance: nil)
                 case .timeOnly, .holdTime:
-                    result.append(SetContribution(reps: nil,
-                                                  weight: nil,
-                                                  duration: set.duration,
-                                                  trackingType: set.trackingType))
+                    guard isCompleted,
+                          let duration = set.duration, duration > 0 else { return nil }
+                    return SetContribution(index: index,
+                                           trackingType: set.trackingType,
+                                           reps: nil,
+                                           weight: nil,
+                                           duration: duration,
+                                           distance: nil)
                 case .timeDistance:
-                    result.append(SetContribution(reps: nil,
-                                                  weight: nil,
-                                                  duration: set.duration,
-                                                  trackingType: set.trackingType))
+                    guard isCompleted else { return nil }
+                    let duration = set.duration ?? 0
+                    let distance = set.distance ?? 0
+                    guard duration > 0 || distance > 0 else { return nil }
+                    return SetContribution(index: index,
+                                           trackingType: .timeDistance,
+                                           reps: nil,
+                                           weight: nil,
+                                           duration: duration > 0 ? duration : nil,
+                                           distance: distance > 0 ? distance : nil)
                 case .rounds:
-                    let rounds = set.rounds.map { Double($0) }
-                    result.append(SetContribution(reps: rounds,
-                                                  weight: nil,
-                                                  duration: nil,
-                                                  trackingType: set.trackingType))
+                    guard isCompleted,
+                          let rounds = set.rounds, rounds > 0 else { return nil }
+                    return SetContribution(index: index,
+                                           trackingType: .rounds,
+                                           reps: Double(rounds),
+                                           weight: nil,
+                                           duration: nil,
+                                           distance: nil)
                 }
             }
 
@@ -244,18 +328,16 @@ final class WorkoutCalculationService {
             }
         }
 
-        let setCount = max(exercise.sets, 0)
-        guard setCount > 0 else { return [] }
+        return []
+    }
 
-        let reps = Double(max(exercise.reps, 0))
-        let weight = exercise.weight
-        let tracking = exercise.trackingType ?? .repsWeight
-
-        return Array(repeating: SetContribution(reps: reps > 0 ? reps : nil,
-                                                weight: weight,
-                                                duration: nil,
-                                                trackingType: tracking),
-                      count: setCount)
+    private func parseDouble(_ string: String?) -> Double? {
+        guard let raw = string?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
+        let allowed = CharacterSet(charactersIn: "0123456789.,-")
+        let filtered = raw.unicodeScalars.filter { allowed.contains($0) }
+        guard !filtered.isEmpty else { return nil }
+        let normalized = String(String.UnicodeScalarView(filtered)).replacingOccurrences(of: ",", with: ".")
+        return Double(normalized)
     }
 
     private func buildExerciseBreakdown(for workout: TodayWorkout,
@@ -267,21 +349,21 @@ final class WorkoutCalculationService {
         var breakdown: [ExerciseBreakdown] = []
 
         if let warmups = workout.warmUpExercises {
-            breakdown.append(contentsOf: warmups.map { exercise in
+            breakdown.append(contentsOf: warmups.compactMap { exercise in
                 buildBreakdownEntry(for: exercise,
                                     section: .warmUp,
                                     prMap: prMap)
             })
         }
 
-        breakdown.append(contentsOf: workout.exercises.map { exercise in
+        breakdown.append(contentsOf: workout.exercises.compactMap { exercise in
             buildBreakdownEntry(for: exercise,
                                 section: .main,
                                 prMap: prMap)
         })
 
         if let cooldowns = workout.coolDownExercises {
-            breakdown.append(contentsOf: cooldowns.map { exercise in
+            breakdown.append(contentsOf: cooldowns.compactMap { exercise in
                 buildBreakdownEntry(for: exercise,
                                     section: .coolDown,
                                     prMap: prMap)
@@ -293,27 +375,50 @@ final class WorkoutCalculationService {
 
     private func buildBreakdownEntry(for exercise: TodayWorkoutExercise,
                                      section: WorkoutExerciseSection,
-                                     prMap: [Int: [PersonalRecordType]]) -> ExerciseBreakdown {
+                                     prMap: [Int: [PersonalRecordType]]) -> ExerciseBreakdown? {
         let contributions = setContributions(for: exercise)
+        guard !contributions.isEmpty else { return nil }
         let totalSets = contributions.count
-        let totalReps = contributions.reduce(0) { $0 + Int($1.reps ?? 0) }
-        let weights = contributions.compactMap { $0.weight }.filter { $0 > 0 }
-        let averageWeight = weights.isEmpty ? nil : (weights.reduce(0, +) / Double(weights.count))
-        let topWeight = weights.max()
+        let totalReps = contributions.reduce(0) { $0 + Int(round($1.reps ?? 0)) }
+
+        let heaviestSet = contributions.max { lhs, rhs in
+            let lhsWeight = lhs.weight ?? 0
+            let rhsWeight = rhs.weight ?? 0
+            if lhsWeight == rhsWeight {
+                return (lhs.reps ?? 0) < (rhs.reps ?? 0)
+            }
+            return lhsWeight < rhsWeight
+        }
+
+        let bestSetWeight = heaviestSet?.weight
+        let bestSetReps = heaviestSet?.reps.flatMap { value -> Int? in
+            let reps = Int(round(value))
+            return reps > 0 ? reps : nil
+        }
+
         let volume = contributions.reduce(0) { $0 + (($1.reps ?? 0) * ($1.weight ?? 0)) }
         let totalDuration = contributions.compactMap { $0.duration }.reduce(0, +)
         let durationValue = totalDuration > 0 ? totalDuration : nil
         let trackingType = contributions.first?.trackingType ?? exercise.trackingType
+        let setSummaries = contributions.map { contribution in
+            ExerciseSetSummary(index: contribution.index,
+                               trackingType: contribution.trackingType,
+                               reps: contribution.reps,
+                               weight: contribution.weight,
+                               duration: contribution.duration,
+                               distance: contribution.distance)
+        }
 
         return ExerciseBreakdown(exercise: exercise.exercise,
                                  section: section,
                                  totalSets: totalSets,
                                  totalReps: totalReps,
-                                 averageWeight: averageWeight,
-                                 topWeight: topWeight,
+                                 bestSetWeight: bestSetWeight,
+                                 bestSetReps: bestSetReps,
                                  volume: volume,
                                  totalDuration: durationValue,
                                  trackingType: trackingType,
+                                 setSummaries: setSummaries,
                                  personalRecords: prMap[exercise.exercise.id] ?? [])
     }
 }

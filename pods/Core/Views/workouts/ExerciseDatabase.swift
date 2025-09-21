@@ -11,7 +11,7 @@ import UIKit
 struct ExerciseDatabase {
     static func getAllExercises() -> [ExerciseData] {
         let allExercises = loadAllExercisesFromEmbeddedData()
-        print("🏋️ ExerciseDatabase: \(allExercises.count) exercises loaded (all images should now work after fixing asset scales)")
+        // Debug: \(allExercises.count) exercises loaded
         return allExercises
     }
     

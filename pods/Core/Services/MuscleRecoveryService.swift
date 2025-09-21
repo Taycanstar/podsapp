@@ -354,8 +354,7 @@ class MuscleRecoveryService: ObservableObject {
         
         let estimatedFullRecoveryDate = lastStimulus.date.addingTimeInterval(finalRecoveryTime * 3600)
         
-        // Debug logging for recovery calculations
-        print("🔄 Recovery Calc: \(muscleGroup) | Experience: \(userProfile.experienceLevel) (\(experienceMultiplier)x) | Base: \(Int(baseRecoveryTime))h → Final: \(Int(finalRecoveryTime))h | Recovery: \(Int(recoveryPercentage))%")
+        // Recovery calculation: \(muscleGroup) \(Int(recoveryPercentage))% (base:\(Int(baseRecoveryTime))h, final:\(Int(finalRecoveryTime))h)
         
         return MuscleRecoveryData(
             muscleGroup: muscleGroup,
@@ -557,11 +556,11 @@ class MuscleRecoveryService: ObservableObject {
         guard let muscle = MuscleGroup(rawValue: muscleGroup) else { return 100.0 }
         let profile = UserProfileService.shared
         if let manualOverride = profile.muscleRecoveryOverrides[muscleGroup] {
-            print("🎛️ Recovery override: \(muscleGroup) = \(Int(round(manualOverride)))%")
+            // Recovery override: \(muscleGroup) = \(Int(round(manualOverride)))%
             return min(100.0, max(0.0, manualOverride))
         }
         let recoveryData = calculateRecoveryForMuscle(muscle)
-        print("📊 Recovery computed: \(muscleGroup) = \(Int(round(recoveryData.recoveryPercentage)))%")
+        // Recovery computed: \(muscleGroup) = \(Int(round(recoveryData.recoveryPercentage)))%
         return recoveryData.recoveryPercentage
     }
     

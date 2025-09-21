@@ -193,7 +193,6 @@
 		36A851A72E5E270D004E5CED /* DynamicParameterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851A62E5E2707004E5CED /* DynamicParameterService.swift */; };
 		36A851A92E5E27DA004E5CED /* PerformanceFeedbackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851A82E5E27D1004E5CED /* PerformanceFeedbackService.swift */; };
 		36A851AB2E5E3339004E5CED /* DynamicWorkoutModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851AA2E5E3334004E5CED /* DynamicWorkoutModels.swift */; };
-		36A851AD2E5E9292004E5CED /* WorkoutFeedbackSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851AC2E5E928B004E5CED /* WorkoutFeedbackSheet.swift */; };
 		36A851B12E5FD728004E5CED /* ExerciseComplexityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851B02E5FD71F004E5CED /* ExerciseComplexityService.swift */; };
 		36A851B32E60CF1B004E5CED /* DynamicSetsInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851B22E60CF12004E5CED /* DynamicSetsInputView.swift */; };
 		36A851B52E60CF54004E5CED /* FlexibleExerciseInputs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851B42E60CF4C004E5CED /* FlexibleExerciseInputs.swift */; };
@@ -521,7 +520,6 @@
 		36A851A62E5E2707004E5CED /* DynamicParameterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicParameterService.swift; sourceTree = "<group>"; };
 		36A851A82E5E27D1004E5CED /* PerformanceFeedbackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceFeedbackService.swift; sourceTree = "<group>"; };
 		36A851AA2E5E3334004E5CED /* DynamicWorkoutModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicWorkoutModels.swift; sourceTree = "<group>"; };
-		36A851AC2E5E928B004E5CED /* WorkoutFeedbackSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutFeedbackSheet.swift; sourceTree = "<group>"; };
 		36A851B02E5FD71F004E5CED /* ExerciseComplexityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseComplexityService.swift; sourceTree = "<group>"; };
 		36A851B22E60CF12004E5CED /* DynamicSetsInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicSetsInputView.swift; sourceTree = "<group>"; };
 		36A851B42E60CF4C004E5CED /* FlexibleExerciseInputs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlexibleExerciseInputs.swift; sourceTree = "<group>"; };
@@ -829,7 +827,6 @@
 				362532A42E6CBA71003C3B8D /* ManageExercisesView.swift */,
 				3625329C2E629508003C3B8D /* DurationExerciseTimerSheet.swift */,
 				36A851B22E60CF12004E5CED /* DynamicSetsInputView.swift */,
-				36A851AC2E5E928B004E5CED /* WorkoutFeedbackSheet.swift */,
 				36A8519E2E5ABF4C004E5CED /* FlexibilityPreferences.swift */,
 				36A851962E5A1064004E5CED /* ExerciseNotesSheet.swift */,
 				36A851942E5A1052004E5CED /* QuickNotesCaptureView.swift */,
@@ -1623,7 +1620,6 @@
 				36881DFD2E77406300262045 /* ExerciseLoggingSheet.swift in Sources */,
 				36A85D072DC3020000DD4266 /* SportSelectionView.swift in Sources */,
 				36ED35AB2DD529D600D174FB /* HealthKitViewModel.swift in Sources */,
-				36A851AD2E5E9292004E5CED /* WorkoutFeedbackSheet.swift in Sources */,
 				36ED35A32DD0DE6000D174FB /* DayLogsViewModel.swift in Sources */,
 				3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */,
 				36A91DB72E37094500414543 /* ExerciseLoggingView.swift in Sources */,

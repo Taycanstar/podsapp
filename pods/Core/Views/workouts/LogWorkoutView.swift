@@ -1362,7 +1362,8 @@ private struct TodayWorkoutView: View {
                         for (index, exercise) in workout.exercises.enumerated() {
                             print("🚀 Exercise \(index): \(exercise.exercise.name)")
                         }
-                        currentWorkout = workout
+                        workoutManager.startWorkout(workout)
+                        currentWorkout = workoutManager.currentWorkout ?? workout
                     }) {
                         Text("Start Workout")
                             .font(.system(size: 18, weight: .semibold))

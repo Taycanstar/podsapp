@@ -1105,15 +1105,7 @@ class WorkoutRecommendationService {
         let preferenceScore = getUserPreferenceScore(exercise, userProfile: userProfile)
         score += preferenceScore
         
-        // DEBUG: Show the evidence-based scoring breakdown
-        print("🎯 EVIDENCE-BASED SCORING: \(exercise.name)")
-        print("   └── Experience: \(userProfile.experienceLevel) | Goal: \(userProfile.fitnessGoal) | Complexity: L\(complexity)")
-        print("   └── Progression: \(progressionScore) × 4 = \(progressionScore * 4)")
-        print("   └── Quality: \(qualityScore) × 3 = \(qualityScore * 3)")
-        print("   └── Goal: \(goalScore) × 2 = \(goalScore * 2)")
-        print("   └── EquipmentPref: \(equipmentPref) × 2 = \(equipmentPref * 2)")
-        print("   └── Preference: \(preferenceScore) × 1 = \(preferenceScore)")
-        print("   └── TOTAL SCORE: \(score) 🎯")
+        // Evidence-based scoring: progression(\(progressionScore)×4) + quality(\(qualityScore)×3) + goal(\(goalScore)×2) + equipment(\(equipmentPref)×2) + preference(\(preferenceScore)×1) = \(score)
         
         return score
     }
@@ -1219,7 +1211,7 @@ class WorkoutRecommendationService {
             }
         }
         
-        print("🎯 Movement Quality Analysis: L\(complexity) exercise for \(experience) → Quality Score: \(qualityScore)/5")
+        // Movement Quality: L\(complexity) for \(experience) → Score: \(qualityScore)/5
         return qualityScore
     }
     

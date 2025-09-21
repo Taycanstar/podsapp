@@ -1449,7 +1449,7 @@ struct ExerciseLoggingView: View {
         workoutStarted = true
 
         // Generate haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
     }
@@ -1562,7 +1562,7 @@ struct ExerciseLoggingView: View {
         onSetLogged?(currentExercise, completedSetsCount, nil)
         
         // Generate haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
     }
@@ -1579,7 +1579,7 @@ struct ExerciseLoggingView: View {
             }
             if advanced {
                 // Stay within the logging flow to continue the grouped sequence
-                let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                 impactFeedback.prepare()
                 impactFeedback.impactOccurred()
                 return
@@ -1590,7 +1590,7 @@ struct ExerciseLoggingView: View {
         dismiss()
         
         // Generate haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
     }
