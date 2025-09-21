@@ -893,8 +893,8 @@ class WorkoutManager: ObservableObject {
 
         var results: [SetInstance] = []
         for setData in flexibleSets where !setData.isWarmupSet {
-            let isCompleted = setData.isCompleted || setData.isActuallyCompleted
-            guard isCompleted else { continue }
+            let wasLogged = setData.wasLogged ?? setData.isCompleted
+            guard wasLogged else { continue }
 
             switch setData.trackingType {
             case .repsWeight, .repsOnly:

@@ -811,35 +811,35 @@ struct FlexibleSetData: Identifiable, Codable, Hashable {
     var intensity: Int?                // 1-10 intensity scale for cardio
     var rounds: Int?                   // Number of rounds for circuit training
     var restTime: Int?                 // Custom rest time for this set (seconds)
-    
+
     // Set completion tracking
     var isCompleted: Bool
+    var wasLogged: Bool?              // Tracks if user explicitly logged the set
     var isWarmupSet: Bool
     var notes: String?
     
     /// Computed property to determine if set is actually completed based on entered data
     var isActuallyCompleted: Bool {
+        if isCompleted { return true }
+        if wasLogged == true { return true }
+
         switch trackingType {
         case .repsWeight:
-            // Both reps and weight must be filled and valid
             guard let repsStr = reps, !repsStr.isEmpty,
                   let weightStr = weight, !weightStr.isEmpty else { return false }
-            return Int(repsStr) != nil && Int(repsStr)! > 0 &&
-                   Double(weightStr) != nil && Double(weightStr)! > 0
+            return (Int(repsStr) ?? 0) > 0 && (Double(weightStr) ?? 0) > 0
         case .timeDistance:
-            // Both duration and distance must be set
-            return duration != nil && duration! > 0 && distance != nil && distance! > 0
+            let validDuration = (duration ?? 0) > 0
+            let validDistance = (distance ?? 0) > 0
+            return validDuration && validDistance
         case .timeOnly:
-            // Duration must be set
-            return duration != nil && duration! > 0
-        // Handle legacy types that might still exist
+            return (duration ?? 0) > 0
         case .repsOnly:
-            guard let repsStr = reps, !repsStr.isEmpty else { return false }
-            return Int(repsStr) != nil && Int(repsStr)! > 0
+            return (Int(reps ?? "0") ?? 0) > 0
         case .holdTime:
-            return duration != nil && duration! > 0
+            return (duration ?? 0) > 0
         case .rounds:
-            return rounds != nil && rounds! > 0
+            return (rounds ?? 0) > 0
         }
     }
     
@@ -847,6 +847,7 @@ struct FlexibleSetData: Identifiable, Codable, Hashable {
         self.id = UUID()
         self.trackingType = trackingType
         self.isCompleted = false
+        self.wasLogged = nil
         self.isWarmupSet = false
         
         // Initialize appropriate default values based on tracking type

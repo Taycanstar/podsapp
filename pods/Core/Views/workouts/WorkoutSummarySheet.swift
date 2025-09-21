@@ -22,7 +22,7 @@ struct WorkoutSummarySheet: View {
         let setSummaries: [ExerciseSetSummary]
     }
 
-     struct ExerciseSection: Identifiable {
+    private struct ExerciseSection: Identifiable {
         let id = UUID()
         let title: String
         let exercises: [LoggedExercise]
@@ -59,7 +59,8 @@ struct WorkoutSummarySheet: View {
 
         return flexibleSets.enumerated().compactMap { index, set -> ExerciseSetSummary? in
             guard !set.isWarmupSet else { return nil }
-            guard set.isCompleted || set.isActuallyCompleted else { return nil }
+            let wasLogged = set.wasLogged ?? set.isCompleted
+            guard wasLogged else { return nil }
 
             switch set.trackingType {
             case .repsWeight:

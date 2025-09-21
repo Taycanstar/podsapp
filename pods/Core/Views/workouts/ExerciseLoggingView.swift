@@ -1312,6 +1312,7 @@ struct ExerciseLoggingView: View {
 
         guard let index = targetIndex else { return nil }
         flexibleSets[index].isCompleted = true
+        flexibleSets[index].wasLogged = true
 
         // Save/format duration for this set (using its own duration)
         if let setDuration = flexibleSets[index].duration {
@@ -1462,6 +1463,7 @@ struct ExerciseLoggingView: View {
         
         // Mark current flexible set as completed
         flexibleSets[currentSetIndex].isCompleted = true
+        flexibleSets[currentSetIndex].wasLogged = true
         // Persist changes to current exercise and thumbnails list
         saveFlexibleSetsToExercise()
         
@@ -1553,6 +1555,7 @@ struct ExerciseLoggingView: View {
         // Mark all flexible sets as completed
         for index in flexibleSets.indices {
             flexibleSets[index].isCompleted = true
+            flexibleSets[index].wasLogged = true
         }
         
         // Show RIR section
@@ -1560,6 +1563,9 @@ struct ExerciseLoggingView: View {
         
         // Notify parent with completed sets count
         onSetLogged?(currentExercise, completedSetsCount, nil)
+
+        // Persist bulk completion
+        saveFlexibleSetsToExercise()
         
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
@@ -1724,7 +1730,10 @@ struct ExerciseLoggingView: View {
     /// Handle completion of a flexible set
     private func handleFlexibleSetCompletion(at setIndex: Int) {
         guard setIndex < flexibleSets.count else { return }
-        
+
+        flexibleSets[setIndex].wasLogged = true
+        saveFlexibleSetsToExercise()
+
         // Update current set index if needed
         if workoutStarted && setIndex >= currentSetIndex {
             currentSetIndex = min(setIndex + 1, flexibleSets.count - 1)
