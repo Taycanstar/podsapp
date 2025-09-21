@@ -255,6 +255,7 @@ private struct StatTile: View {
             Text(value)
                 .font(.title3.bold())
                 .multilineTextAlignment(.center)
+                .fontDesign(.rounded )
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)

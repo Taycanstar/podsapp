@@ -869,18 +869,28 @@ class WorkoutManager: ObservableObject {
             let instance = ExerciseInstance(from: exercise.exercise, orderIndex: index)
             instance.workoutSession = session
 
-            let setCount = max(exercise.sets, 0)
-            if setCount > 0 {
-                for setNumber in 1...setCount {
-                    let set = SetInstance(setNumber: setNumber,
-                                           targetReps: exercise.reps,
-                                           targetWeight: exercise.weight)
-                    set.actualReps = exercise.reps
-                    set.actualWeight = exercise.weight
-                    set.isCompleted = true
-                    set.completedAt = Date()
+            let loggedSets = makeLoggedSets(from: exercise, units: preferredUnitsSystem)
+
+            if !loggedSets.isEmpty {
+                loggedSets.enumerated().forEach { offset, set in
+                    set.setNumber = offset + 1
                     set.exerciseInstance = instance
                     instance.sets.append(set)
+                }
+            } else {
+                let setCount = max(exercise.sets, 0)
+                if setCount > 0 {
+                    for setNumber in 1...setCount {
+                        let set = SetInstance(setNumber: setNumber,
+                                               targetReps: exercise.reps,
+                                               targetWeight: exercise.weight)
+                        set.actualReps = exercise.reps
+                        set.actualWeight = exercise.weight
+                        set.isCompleted = true
+                        set.completedAt = Date()
+                        set.exerciseInstance = instance
+                        instance.sets.append(set)
+                    }
                 }
             }
 
@@ -892,6 +902,96 @@ class WorkoutManager: ObservableObject {
         session.totalDuration = duration
         session.markAsNeedingSync()
         return session
+    }
+
+    private func makeLoggedSets(from exercise: TodayWorkoutExercise, units: UnitsSystem) -> [SetInstance] {
+        guard let flexibleSets = exercise.flexibleSets else { return [] }
+
+        var results: [SetInstance] = []
+        for setData in flexibleSets where !setData.isWarmupSet {
+            let isCompleted = setData.isCompleted || setData.isActuallyCompleted
+            guard isCompleted else { continue }
+
+            switch setData.trackingType {
+            case .repsWeight, .repsOnly:
+                guard let repsValue = parseInt(setData.reps), repsValue > 0 else { continue }
+                let weightValue = parseWeight(setData.weight, units: units)
+
+                let set = SetInstance(setNumber: 0, targetReps: repsValue, targetWeight: weightValue)
+                set.actualReps = repsValue
+                set.actualWeight = weightValue
+                set.isCompleted = true
+                set.completedAt = Date()
+                set.notes = setData.notes
+                results.append(set)
+
+            case .timeOnly, .holdTime:
+                guard let duration = setData.duration, duration > 0 else { continue }
+                let set = SetInstance(setNumber: 0, targetReps: 0, targetWeight: nil)
+                set.actualReps = nil
+                set.actualWeight = nil
+                set.isCompleted = true
+                set.completedAt = Date()
+                set.notes = setData.notes
+                set.durationSeconds = Int(duration.rounded())
+                results.append(set)
+
+            case .timeDistance:
+                guard (setData.duration ?? 0) > 0 || (setData.distance ?? 0) > 0 else { continue }
+                let set = SetInstance(setNumber: 0, targetReps: 0, targetWeight: nil)
+                set.actualReps = nil
+                set.actualWeight = nil
+                set.isCompleted = true
+                set.completedAt = Date()
+                set.notes = setData.notes
+                if let duration = setData.duration {
+                    set.durationSeconds = Int(duration.rounded())
+                }
+                if let distance = setData.distance {
+                    set.distanceMeters = convertDistance(distance, unit: setData.distanceUnit)
+                }
+                results.append(set)
+
+            case .rounds:
+                guard let rounds = setData.rounds, rounds > 0 else { continue }
+                let set = SetInstance(setNumber: 0, targetReps: rounds, targetWeight: nil)
+                set.actualReps = rounds
+                set.actualWeight = nil
+                set.isCompleted = true
+                set.completedAt = Date()
+                set.notes = setData.notes
+                set.durationSeconds = Int((setData.duration ?? 0).rounded())
+                results.append(set)
+            }
+        }
+
+        return results
+    }
+
+    private func parseInt(_ string: String?) -> Int? {
+        guard let raw = string?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
+        let sanitized = raw.filter { "0123456789.,".contains($0) }.replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(sanitized) else { return nil }
+        return Int(value.rounded())
+    }
+
+    private func parseWeight(_ string: String?, units: UnitsSystem) -> Double? {
+        guard let raw = string?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
+        let sanitized = raw.filter { "0123456789.,".contains($0) }.replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(sanitized) else { return nil }
+        return value
+    }
+
+    private func convertDistance(_ value: Double, unit: DistanceUnit?) -> Double {
+        guard let unit else { return value }
+        switch unit {
+        case .kilometers:
+            return value * 1000.0
+        case .miles:
+            return value * 1609.34
+        case .meters:
+            return value
+        }
     }
 
     private func convertToWorkoutExercises(from workout: TodayWorkout) -> [WorkoutExercise] {

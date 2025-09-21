@@ -114,6 +114,9 @@ struct SyncableSetInstance: Codable {
     let actualWeight: Double?
     let completed: Bool
     let completedAt: Date?
+    let durationSeconds: Int?
+    let distanceMeters: Double?
+    let notes: String?
 
     init(from set: SetInstance) {
         self.id = set.id
@@ -124,6 +127,9 @@ struct SyncableSetInstance: Codable {
         self.actualWeight = set.actualWeight
         self.completed = set.completed
         self.completedAt = set.completedAt
+        self.durationSeconds = set.durationSeconds
+        self.distanceMeters = set.distanceMeters
+        self.notes = set.notes
     }
 
     init(serverSet: NetworkManagerTwo.WorkoutResponse.ExerciseSet, fallbackNumber: Int) {
@@ -135,6 +141,9 @@ struct SyncableSetInstance: Codable {
         self.actualWeight = serverSet.weightKg
         self.completed = serverSet.isCompleted ?? true
         self.completedAt = nil
+        self.durationSeconds = serverSet.durationSeconds
+        self.distanceMeters = serverSet.distanceMeters
+        self.notes = serverSet.notes
     }
 }
 
@@ -541,6 +550,9 @@ extension WorkoutSession {
                 setInstance.isCompleted = setSync.completed
                 setInstance.completedAt = setSync.completedAt
                 setInstance.exerciseInstance = exerciseInstance
+                setInstance.durationSeconds = setSync.durationSeconds
+                setInstance.distanceMeters = setSync.distanceMeters
+                setInstance.notes = setSync.notes
                 return setInstance
             }
 

@@ -13,11 +13,13 @@ class SetInstance {
     var isCompleted: Bool
     var notes: String?
     var exerciseInstance: ExerciseInstance?
-    
+    var durationSeconds: Int?
+    var distanceMeters: Double?
+
     // Additional properties for sync compatibility
     var completed: Bool { isCompleted } // Computed property for backward compatibility
     var completedAt: Date?
-    
+
     init(setNumber: Int, targetReps: Int, targetWeight: Double? = nil) {
         self.id = UUID()
         self.setNumber = setNumber
@@ -26,6 +28,8 @@ class SetInstance {
         self.isCompleted = false
         self.notes = nil
         self.completedAt = nil
+        self.durationSeconds = nil
+        self.distanceMeters = nil
     }
     
     var displayWeight: String {
@@ -50,7 +54,7 @@ class SetInstance {
         self.isCompleted = true
         self.completedAt = Date()
     }
-    
+
     // Helper method to reset set
     func resetSet() {
         self.actualReps = nil
@@ -58,6 +62,8 @@ class SetInstance {
         self.notes = nil
         self.isCompleted = false
         self.completedAt = nil
+        self.durationSeconds = nil
+        self.distanceMeters = nil
     }
     
     // Helper method to update target values
