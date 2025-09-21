@@ -1369,6 +1369,8 @@ private struct TodayWorkoutView: View {
                         .padding(.horizontal, 45)
                 }
                 .padding(.top, 40)
+
+                Spacer()
             }
         }
         // Paint background without bottom safe area spacing
