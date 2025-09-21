@@ -268,12 +268,98 @@ struct DynamicSetsInputView: View {
         return Binding(
             get: { sets[index] },
             set: { 
-                sets[index] = $0
-                if $0.isCompleted {
+                let oldValue = sets[index]
+                let newValue = $0
+                sets[index] = newValue
+                if newValue.isCompleted {
                     onSetCompleted?(index)
+                }
+                let propagated = propagateForwardChanges(from: oldValue, to: newValue, startingAt: index)
+                if propagated {
+                    onSetDataChanged?()
                 }
             }
         )
+    }
+
+    @discardableResult
+    private func propagateForwardChanges(from oldValue: FlexibleSetData,
+                                         to newValue: FlexibleSetData,
+                                         startingAt index: Int) -> Bool {
+        guard index + 1 < sets.count else { return false }
+
+        var didPropagate = false
+
+        for targetIndex in (index + 1)..<sets.count {
+            guard sets[targetIndex].trackingType == newValue.trackingType else { continue }
+
+            var targetSet = sets[targetIndex]
+            var modified = false
+
+            if oldValue.reps != newValue.reps {
+                targetSet.reps = newValue.reps
+                modified = true
+            }
+
+            if oldValue.weight != newValue.weight {
+                targetSet.weight = newValue.weight
+                modified = true
+            }
+
+            if oldValue.duration != newValue.duration {
+                targetSet.duration = newValue.duration
+                targetSet.durationString = newValue.durationString ?? formattedDurationString(newValue.duration)
+                modified = true
+                if let duration = newValue.duration {
+                    onDurationChanged?(targetIndex, duration)
+                }
+            }
+
+            if oldValue.distance != newValue.distance {
+                targetSet.distance = newValue.distance
+                modified = true
+            }
+
+            if oldValue.distanceUnit != newValue.distanceUnit {
+                targetSet.distanceUnit = newValue.distanceUnit
+                modified = true
+            }
+
+            if oldValue.intensity != newValue.intensity {
+                targetSet.intensity = newValue.intensity
+                modified = true
+            }
+
+            if oldValue.rounds != newValue.rounds {
+                targetSet.rounds = newValue.rounds
+                modified = true
+            }
+
+            if oldValue.restTime != newValue.restTime {
+                targetSet.restTime = newValue.restTime
+                modified = true
+            }
+
+            if modified {
+                sets[targetIndex] = targetSet
+                didPropagate = true
+            }
+        }
+
+        return didPropagate
+    }
+
+    private func formattedDurationString(_ duration: TimeInterval?) -> String? {
+        guard let duration, duration > 0 else { return nil }
+        let totalSeconds = Int(duration.rounded())
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        }
+        return String(format: "%d:%02d", minutes, seconds)
     }
     
     // MARK: - Height Calculation

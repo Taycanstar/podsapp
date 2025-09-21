@@ -1352,23 +1352,8 @@ private struct TodayWorkoutView: View {
                 }
             } else {
                 // Empty state when no workout and not generating
-                VStack(spacing: 16) {
-                    Image("blackex")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: 200, maxHeight: 200)
-                    
-                    Text("Preparing your workout...")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    Text("We're creating a personalized workout based on your goals and preferences.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 45)
-                }
-                .padding(.top, 40)
+                WorkoutSkeletonPlaceholderView()
+                    .padding(.top, 32)
 
                 Spacer()
             }
@@ -2099,7 +2084,7 @@ private struct RoutinesWorkoutView: View {
                 .padding(.vertical, 18)
                 .frame(maxWidth: .infinity)
                 .background(Color.primary)
-                .cornerRadius(24)
+                .cornerRadius(100)
             }
             .padding(.horizontal, 142)
             .padding(.top, 10)
@@ -3422,6 +3407,77 @@ struct NavigationBarSeparatorModifier: ViewModifier {
 }
 
 // MARK: - Modern Loading View Component
+
+private struct WorkoutSkeletonPlaceholderView: View {
+    @State private var shimmerOffset: CGFloat = -200
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ForEach(0..<3, id: \.self) { _ in
+                skeletonExerciseCard
+            }
+        }
+        .padding(.horizontal, 24)
+        .accessibilityHidden(true)
+        .onAppear(perform: startAnimations)
+    }
+
+    private var skeletonExerciseCard: some View {
+        HStack(spacing: 16) {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(shimmerGradient)
+                .frame(width: 60, height: 60)
+
+            VStack(alignment: .leading, spacing: 8) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(shimmerGradient)
+                    .frame(height: 16)
+
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(shimmerGradient)
+                    .frame(width: 80, height: 12)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.05), radius: 2, x: 0, y: 1)
+        )
+    }
+
+    private var shimmerGradient: LinearGradient {
+        let baseColor = colorScheme == .dark ? Color(.systemGray5).opacity(0.6) : Color(.systemGray5)
+        let highlightColor = colorScheme == .dark ? Color(.systemGray3) : Color(.systemGray4)
+        let offset = reduceMotion ? 0 : shimmerOffset / 200
+
+        return LinearGradient(
+            gradient: Gradient(stops: [
+                .init(color: baseColor, location: 0),
+                .init(color: highlightColor, location: 0.5),
+                .init(color: baseColor, location: 1)
+            ]),
+            startPoint: .init(x: -0.3 + offset, y: 0),
+            endPoint: .init(x: 0.3 + offset, y: 0)
+        )
+    }
+
+    private func startAnimations() {
+        guard !reduceMotion else { return }
+        shimmerOffset = -200
+        withAnimation(
+            .linear(duration: 1.5)
+            .repeatForever(autoreverses: false)
+        ) {
+            shimmerOffset = 200
+        }
+    }
+}
 
 private struct ModernWorkoutLoadingView: View {
     let message: String
