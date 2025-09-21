@@ -870,28 +870,12 @@ class WorkoutManager: ObservableObject {
             instance.workoutSession = session
 
             let loggedSets = makeLoggedSets(from: exercise, units: preferredUnitsSystem)
+            guard !loggedSets.isEmpty else { continue }
 
-            if !loggedSets.isEmpty {
-                loggedSets.enumerated().forEach { offset, set in
-                    set.setNumber = offset + 1
-                    set.exerciseInstance = instance
-                    instance.sets.append(set)
-                }
-            } else {
-                let setCount = max(exercise.sets, 0)
-                if setCount > 0 {
-                    for setNumber in 1...setCount {
-                        let set = SetInstance(setNumber: setNumber,
-                                               targetReps: exercise.reps,
-                                               targetWeight: exercise.weight)
-                        set.actualReps = exercise.reps
-                        set.actualWeight = exercise.weight
-                        set.isCompleted = true
-                        set.completedAt = Date()
-                        set.exerciseInstance = instance
-                        instance.sets.append(set)
-                    }
-                }
+            loggedSets.enumerated().forEach { offset, set in
+                set.setNumber = offset + 1
+                set.exerciseInstance = instance
+                instance.sets.append(set)
             }
 
             exerciseInstances.append(instance)

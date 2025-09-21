@@ -270,21 +270,28 @@ final class WorkoutCalculationService {
             let result: [SetContribution] = flexibleSets.enumerated().compactMap { index, set in
                 if set.isWarmupSet { return nil }
                 let isCompleted = set.isCompleted || set.isActuallyCompleted
+                guard isCompleted else { return nil }
 
                 switch set.trackingType {
                 case .repsWeight:
-                    guard isCompleted,
-                          let reps = parseDouble(set.reps), reps > 0,
-                          let weight = parseDouble(set.weight), weight > 0 else { return nil }
-                    return SetContribution(index: index,
-                                           trackingType: .repsWeight,
-                                           reps: reps,
-                                           weight: weight,
-                                           duration: nil,
-                                           distance: nil)
+                    guard let reps = parseDouble(set.reps), reps > 0 else { return nil }
+                    if let weight = parseDouble(set.weight), weight > 0 {
+                        return SetContribution(index: index,
+                                               trackingType: .repsWeight,
+                                               reps: reps,
+                                               weight: weight,
+                                               duration: nil,
+                                               distance: nil)
+                    } else {
+                        return SetContribution(index: index,
+                                               trackingType: .repsOnly,
+                                               reps: reps,
+                                               weight: nil,
+                                               duration: nil,
+                                               distance: nil)
+                    }
                 case .repsOnly:
-                    guard isCompleted,
-                          let reps = parseDouble(set.reps), reps > 0 else { return nil }
+                    guard let reps = parseDouble(set.reps), reps > 0 else { return nil }
                     return SetContribution(index: index,
                                            trackingType: .repsOnly,
                                            reps: reps,
@@ -292,8 +299,7 @@ final class WorkoutCalculationService {
                                            duration: nil,
                                            distance: nil)
                 case .timeOnly, .holdTime:
-                    guard isCompleted,
-                          let duration = set.duration, duration > 0 else { return nil }
+                    guard let duration = set.duration, duration > 0 else { return nil }
                     return SetContribution(index: index,
                                            trackingType: set.trackingType,
                                            reps: nil,
@@ -301,7 +307,6 @@ final class WorkoutCalculationService {
                                            duration: duration,
                                            distance: nil)
                 case .timeDistance:
-                    guard isCompleted else { return nil }
                     let duration = set.duration ?? 0
                     let distance = set.distance ?? 0
                     guard duration > 0 || distance > 0 else { return nil }
@@ -312,8 +317,7 @@ final class WorkoutCalculationService {
                                            duration: duration > 0 ? duration : nil,
                                            distance: distance > 0 ? distance : nil)
                 case .rounds:
-                    guard isCompleted,
-                          let rounds = set.rounds, rounds > 0 else { return nil }
+                    guard let rounds = set.rounds, rounds > 0 else { return nil }
                     return SetContribution(index: index,
                                            trackingType: .rounds,
                                            reps: Double(rounds),

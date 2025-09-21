@@ -32,19 +32,16 @@ struct SupersetCircuitSelectionSheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            ZStack(alignment: .bottom) {
                 exerciseList
-                if let errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundColor(.red)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack {
+                    actionButton
                 }
-                actionButton
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .padding(.bottom, 28)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 24)
-            .padding(.bottom, 28)
             .navigationTitle("Build Superset")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -77,8 +74,22 @@ struct SupersetCircuitSelectionSheet: View {
                         exerciseContainer(for: nonGroupedItems)
                     }
                 }
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 8)
+                }
+
+                // Spacer to ensure content isn't obscured by floating button
+                Color.clear.frame(height: 140)
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
         }
+        .scrollIndicators(.hidden)
     }
 
     private var circuitOrSupersetBlocks: [WorkoutBlock] {
@@ -150,12 +161,13 @@ struct SupersetCircuitSelectionSheet: View {
     private var actionButton: some View {
         Button(action: createBlock) {
             Text(buttonTitle)
-                .font(.system(size: 16, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(isSelectionValid ? Color.accentColor : Color.accentColor.opacity(0.4))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.white)
-                .cornerRadius(24)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(isSelectionValid ? Color.accentColor : Color.accentColor.opacity(0.4))
+                .cornerRadius(100)
+                .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 6)
         }
         .disabled(!isSelectionValid)
     }

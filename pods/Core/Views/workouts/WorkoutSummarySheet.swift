@@ -136,9 +136,9 @@ struct WorkoutSummarySheet: View {
             }
 
             HStack(spacing: 16) {
-                StatTile(title: "Duration", value: durationDisplay)
-                StatTile(title: "Volume", value: volumeDisplay)
-                StatTile(title: "Calories", value: caloriesDisplay)
+                StatTile(title: "Duration", value: durationDisplay, valueColor: Color("pinkRed"))
+                StatTile(title: "Volume", value: volumeDisplay, valueColor: .cyan)
+                StatTile(title: "Calories", value: caloriesDisplay, valueColor: Color("brightOrange"))
             }
         }
         .padding(24)
@@ -246,6 +246,7 @@ struct WorkoutSummarySheet: View {
 private struct StatTile: View {
     let title: String
     let value: String
+    let valueColor: Color
 
     var body: some View {
         VStack(spacing: 6) {
@@ -254,6 +255,7 @@ private struct StatTile: View {
                 .foregroundStyle(.secondary)
             Text(value)
                 .font(.title3.bold())
+                .foregroundStyle(valueColor)
                 .multilineTextAlignment(.center)
                 .fontDesign(.rounded )
         }
@@ -347,7 +349,7 @@ private struct ExerciseBreakdownRow: View {
     }
 
     private var metricsView: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             if !breakdown.setSummaries.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(breakdown.setSummaries.sorted(by: { $0.index < $1.index })) { set in
