@@ -16,23 +16,113 @@ struct WorkoutSummarySheet: View {
         let detail: String
     }
 
-    private struct ExerciseSection: Identifiable {
+     struct LoggedExercise: Identifiable {
+        let id: String
+        let exercise: ExerciseData
+        let setSummaries: [ExerciseSetSummary]
+    }
+
+     struct ExerciseSection: Identifiable {
         let id = UUID()
         let title: String
-        let exercises: [ExerciseBreakdown]
+        let exercises: [LoggedExercise]
         let allowsFavorite: Bool
     }
 
     private var sections: [ExerciseSection] {
-        let warmups = summary.exerciseBreakdown.filter { $0.section == .warmUp }
-        let mains = summary.exerciseBreakdown.filter { $0.section == .main }
-        let cooldowns = summary.exerciseBreakdown.filter { $0.section == .coolDown }
+        let warmups = loggedExercises(from: summary.workout.warmUpExercises ?? [], section: .warmUp)
+        let mains = loggedExercises(from: summary.workout.exercises, section: .main)
+        let cooldowns = loggedExercises(from: summary.workout.coolDownExercises ?? [], section: .coolDown)
 
         return [
             ExerciseSection(title: "Warm-up", exercises: warmups, allowsFavorite: false),
             ExerciseSection(title: "Exercises", exercises: mains, allowsFavorite: true),
             ExerciseSection(title: "Cool-down", exercises: cooldowns, allowsFavorite: false)
         ].filter { !$0.exercises.isEmpty }
+    }
+
+    private var loggedExerciseCount: Int {
+        sections.reduce(0) { $0 + $1.exercises.count }
+    }
+
+    private func loggedExercises(from exercises: [TodayWorkoutExercise], section: WorkoutExerciseSection) -> [LoggedExercise] {
+        exercises.enumerated().compactMap { offset, exercise in
+            let summaries = loggedSetSummaries(for: exercise)
+            guard !summaries.isEmpty else { return nil }
+            let identifier = "\(section.rawValue)-\(offset)-\(exercise.exercise.id)"
+            return LoggedExercise(id: identifier, exercise: exercise.exercise, setSummaries: summaries)
+        }
+    }
+
+    private func loggedSetSummaries(for exercise: TodayWorkoutExercise) -> [ExerciseSetSummary] {
+        guard let flexibleSets = exercise.flexibleSets, !flexibleSets.isEmpty else { return [] }
+
+        return flexibleSets.enumerated().compactMap { index, set -> ExerciseSetSummary? in
+            guard !set.isWarmupSet else { return nil }
+            guard set.isCompleted || set.isActuallyCompleted else { return nil }
+
+            switch set.trackingType {
+            case .repsWeight:
+                guard let reps = parseDouble(set.reps), reps > 0 else { return nil }
+                if let weight = parseDouble(set.weight), weight > 0 {
+                    return ExerciseSetSummary(index: index,
+                                              trackingType: .repsWeight,
+                                              reps: reps,
+                                              weight: weight,
+                                              duration: nil,
+                                              distance: nil)
+                } else {
+                    return ExerciseSetSummary(index: index,
+                                              trackingType: .repsOnly,
+                                              reps: reps,
+                                              weight: nil,
+                                              duration: nil,
+                                              distance: nil)
+                }
+            case .repsOnly:
+                guard let reps = parseDouble(set.reps), reps > 0 else { return nil }
+                return ExerciseSetSummary(index: index,
+                                          trackingType: .repsOnly,
+                                          reps: reps,
+                                          weight: nil,
+                                          duration: nil,
+                                          distance: nil)
+            case .timeOnly, .holdTime:
+                guard let duration = set.duration, duration > 0 else { return nil }
+                return ExerciseSetSummary(index: index,
+                                          trackingType: set.trackingType,
+                                          reps: nil,
+                                          weight: nil,
+                                          duration: duration,
+                                          distance: nil)
+            case .timeDistance:
+                let durationValue = (set.duration ?? 0) > 0 ? set.duration : nil
+                let distanceValue = (set.distance ?? 0) > 0 ? set.distance : nil
+                guard durationValue != nil || distanceValue != nil else { return nil }
+                return ExerciseSetSummary(index: index,
+                                          trackingType: .timeDistance,
+                                          reps: nil,
+                                          weight: nil,
+                                          duration: durationValue,
+                                          distance: distanceValue)
+            case .rounds:
+                guard let rounds = set.rounds, rounds > 0 else { return nil }
+                return ExerciseSetSummary(index: index,
+                                          trackingType: .rounds,
+                                          reps: Double(rounds),
+                                          weight: nil,
+                                          duration: (set.duration ?? 0) > 0 ? set.duration : nil,
+                                          distance: nil)
+            }
+        }
+    }
+
+    private func parseDouble(_ value: String?) -> Double? {
+        guard let raw = value?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
+        let filtered = raw.filter { "0123456789.,-".contains($0) }
+        guard !filtered.isEmpty else { return nil }
+        let normalized = filtered.replacingOccurrences(of: ",", with: ".")
+        return Double(normalized)
     }
 
     private var personalRecordDisplays: [PersonalRecordDisplay] {
@@ -84,8 +174,8 @@ struct WorkoutSummarySheet: View {
                                 .fontWeight(.bold)
 
                             LazyVStack(spacing: 16) {
-                                ForEach(section.exercises) { breakdown in
-                                    ExerciseBreakdownRow(breakdown: breakdown,
+                                ForEach(section.exercises) { exercise in
+                                    ExerciseBreakdownRow(entry: exercise,
                                                          unitsSymbol: unitsSymbol,
                                                          allowsFavorite: section.allowsFavorite)
                                 }
@@ -128,7 +218,6 @@ struct WorkoutSummarySheet: View {
                 Text(summary.workout.title)
                     .font(.title2.bold())
                     .multilineTextAlignment(.center)
-                let loggedExerciseCount = summary.exerciseBreakdown.count
                 let exerciseLabel = loggedExerciseCount == 1 ? "exercise" : "exercises"
                 Text("\(formattedDate(summary.workout.date)) · \(loggedExerciseCount) \(exerciseLabel)")
                     .font(.callout)
@@ -269,27 +358,27 @@ private struct StatTile: View {
 }
 
 private struct ExerciseBreakdownRow: View {
-    let breakdown: ExerciseBreakdown
+    let entry: WorkoutSummarySheet.LoggedExercise
     let unitsSymbol: String
     let allowsFavorite: Bool
 
     @State private var isFavorite: Bool
 
-    init(breakdown: ExerciseBreakdown, unitsSymbol: String, allowsFavorite: Bool) {
-        self.breakdown = breakdown
+    init(entry: WorkoutSummarySheet.LoggedExercise, unitsSymbol: String, allowsFavorite: Bool) {
+        self.entry = entry
         self.unitsSymbol = unitsSymbol
         self.allowsFavorite = allowsFavorite
-        let bias = UserProfileService.shared.getExercisePreferenceBias(exerciseId: breakdown.exercise.id)
+        let bias = UserProfileService.shared.getExercisePreferenceBias(exerciseId: entry.exercise.id)
         _isFavorite = State(initialValue: allowsFavorite && bias > 0)
     }
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
             thumbnail
-
+            
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top) {
-                    Text(breakdown.exercise.name)
+                    Text(entry.exercise.name)
                         .font(.headline)
 
                     Spacer(minLength: 12)
@@ -310,7 +399,7 @@ private struct ExerciseBreakdownRow: View {
     }
 
     private var thumbnail: some View {
-        let imageId = String(format: "%04d", breakdown.exercise.id)
+        let imageId = String(format: "%04d", entry.exercise.id)
         return Group {
             if let image = UIImage(named: imageId) {
                 Image(uiImage: image)
@@ -334,9 +423,9 @@ private struct ExerciseBreakdownRow: View {
         Button {
             isFavorite.toggle()
             if isFavorite {
-                UserProfileService.shared.setExercisePreferenceMoreOften(exerciseId: breakdown.exercise.id)
+                UserProfileService.shared.setExercisePreferenceMoreOften(exerciseId: entry.exercise.id)
             } else {
-                UserProfileService.shared.clearExercisePreference(exerciseId: breakdown.exercise.id)
+                UserProfileService.shared.clearExercisePreference(exerciseId: entry.exercise.id)
             }
         } label: {
             Image(systemName: isFavorite ? "star.fill" : "star")
@@ -350,9 +439,9 @@ private struct ExerciseBreakdownRow: View {
 
     private var metricsView: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if !breakdown.setSummaries.isEmpty {
+            if !entry.setSummaries.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    ForEach(breakdown.setSummaries.sorted(by: { $0.index < $1.index })) { set in
+                    ForEach(entry.setSummaries.sorted(by: { $0.index < $1.index })) { set in
                         if let line = setLine(for: set) {
                             Text(line)
                                 .font(.subheadline)

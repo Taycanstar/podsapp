@@ -1062,6 +1062,7 @@ struct LogWorkoutView: View {
                     workoutManager: workoutManager,
                     userEmail: userEmail
                 )
+                Spacer()
             }
         }
     }

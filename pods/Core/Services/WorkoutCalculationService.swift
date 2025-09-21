@@ -268,9 +268,8 @@ final class WorkoutCalculationService {
     private func setContributions(for exercise: TodayWorkoutExercise) -> [SetContribution] {
         if let flexibleSets = exercise.flexibleSets, !flexibleSets.isEmpty {
             let result: [SetContribution] = flexibleSets.enumerated().compactMap { index, set in
-                if set.isWarmupSet { return nil }
                 let isCompleted = set.isCompleted || set.isActuallyCompleted
-                guard isCompleted else { return nil }
+                if set.isWarmupSet || !isCompleted { return nil }
 
                 switch set.trackingType {
                 case .repsWeight:
