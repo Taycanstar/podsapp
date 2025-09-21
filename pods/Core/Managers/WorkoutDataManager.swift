@@ -207,12 +207,14 @@ class WorkoutDataManager: ObservableObject {
         }
     }
     
+    @MainActor
     private func syncPendingData() async {
         guard !isSyncing else { return }
-        
+
+            assert(Thread.isMainThread, "ModelContext must be accessed on main thread")
             isSyncing = true
             syncError = nil
-        
+
         do {
             let localChanges = await localStorage.getUnsyncedChanges()
 
@@ -388,8 +390,15 @@ class WorkoutLocalStorage {
     @MainActor
     func saveContextIfNeeded() async throws {
         let modelContext = modelContainer.mainContext
-        if modelContext.hasChanges {
+        guard modelContext.hasChanges else { return }
+
+        do {
             try modelContext.save()
+            print("✅ ModelContext saved successfully")
+        } catch {
+            print("❌ ModelContext save failed: \(error)")
+            modelContext.rollback()
+            throw error
         }
     }
 
@@ -514,6 +523,11 @@ class WorkoutCloudSync {
 
 // MARK: - Extensions
 
+private struct ExerciseIdentity: Hashable {
+    let exerciseId: Int
+    let orderIndex: Int
+}
+
 extension WorkoutSession {
     func updateFromSyncable(_ syncable: SyncableWorkoutSession) {
         self.remoteId = syncable.remoteId
@@ -529,46 +543,114 @@ extension WorkoutSession {
         self.isDeleted = syncable.isDeleted
         self.needsSync = false
 
-        // Replace exercises with server copy
-        self.exercises.removeAll()
-        for (index, exerciseSync) in syncable.exercises.enumerated() {
-            let exerciseInstance = ExerciseInstance(
-                exerciseId: exerciseSync.exerciseId,
-                exerciseName: exerciseSync.exerciseName,
-                exerciseType: "strength",
-                bodyPart: exerciseSync.bodyPart,
-                equipment: "",
-                target: "",
-                orderIndex: exerciseSync.orderIndex
-            )
-            exerciseInstance.workoutSession = self
+        var existingById: [UUID: ExerciseInstance] = Dictionary(uniqueKeysWithValues: self.exercises.map { ($0.id, $0) })
+        var existingByIdentity: [ExerciseIdentity: ExerciseInstance] = [:]
+        for exercise in self.exercises {
+            let identity = ExerciseIdentity(exerciseId: exercise.exerciseId, orderIndex: exercise.orderIndex)
+            existingByIdentity[identity] = exercise
+        }
 
-            exerciseInstance.sets = exerciseSync.sets.map { setSync in
-                let setInstance = SetInstance(setNumber: setSync.setNumber, targetReps: setSync.targetReps, targetWeight: setSync.targetWeight)
-                setInstance.actualReps = setSync.actualReps
-                setInstance.actualWeight = setSync.actualWeight
-                setInstance.isCompleted = setSync.completed
-                setInstance.completedAt = setSync.completedAt
-                setInstance.exerciseInstance = exerciseInstance
-                setInstance.durationSeconds = setSync.durationSeconds
-                setInstance.distanceMeters = setSync.distanceMeters
-                setInstance.notes = setSync.notes
-                return setInstance
+        var updatedExercises: [ExerciseInstance] = []
+        updatedExercises.reserveCapacity(syncable.exercises.count)
+
+        for (index, exerciseSync) in syncable.exercises.enumerated() {
+            let identity = ExerciseIdentity(exerciseId: exerciseSync.exerciseId, orderIndex: exerciseSync.orderIndex)
+
+            var exerciseInstance: ExerciseInstance
+
+            if let existing = existingById[exerciseSync.id] {
+                exerciseInstance = existing
+                existingById.removeValue(forKey: exerciseSync.id)
+                existingByIdentity.removeValue(forKey: identity)
+            } else if let existing = existingByIdentity.removeValue(forKey: identity) {
+                exerciseInstance = existing
+                existingById.removeValue(forKey: existing.id)
+            } else {
+                exerciseInstance = ExerciseInstance(
+                    exerciseId: exerciseSync.exerciseId,
+                    exerciseName: exerciseSync.exerciseName,
+                    exerciseType: "strength",
+                    bodyPart: exerciseSync.bodyPart,
+                    equipment: "",
+                    target: "",
+                    orderIndex: exerciseSync.orderIndex
+                )
             }
+
+            exerciseInstance.updateFromSyncable(exerciseSync, parent: self)
 
             if exerciseInstance.orderIndex == 0 {
                 exerciseInstance.orderIndex = index
             }
-            self.exercises.append(exerciseInstance)
+
+            updatedExercises.append(exerciseInstance)
         }
 
-        self.exercises.sort { $0.orderIndex < $1.orderIndex }
+        // Detach any exercises no longer present
+        for orphan in existingById.values {
+            orphan.workoutSession = nil
+        }
+
+        self.exercises = updatedExercises.sorted { $0.orderIndex < $1.orderIndex }
     }
-    
+
     convenience init(from syncable: SyncableWorkoutSession) {
         self.init(name: syncable.name, userEmail: syncable.userEmail)
         self.id = syncable.id
         self.createdAt = syncable.createdAt
         updateFromSyncable(syncable)
+    }
+}
+
+extension ExerciseInstance {
+    fileprivate func updateFromSyncable(_ syncable: SyncableExerciseInstance, parent: WorkoutSession) {
+        exerciseId = syncable.exerciseId
+        exerciseName = syncable.exerciseName
+        bodyPart = syncable.bodyPart
+        if exerciseType.isEmpty {
+            exerciseType = "strength"
+        }
+        if equipment.isEmpty {
+            equipment = ""
+        }
+        if target.isEmpty {
+            target = ""
+        }
+        orderIndex = syncable.orderIndex
+        workoutSession = parent
+
+        var existingBySetNumber: [Int: SetInstance] = Dictionary(uniqueKeysWithValues: sets.map { ($0.setNumber, $0) })
+        var updatedSets: [SetInstance] = []
+        updatedSets.reserveCapacity(syncable.sets.count)
+
+        for setSync in syncable.sets {
+            let setInstance: SetInstance
+
+            if let existing = existingBySetNumber.removeValue(forKey: setSync.setNumber) {
+                setInstance = existing
+            } else {
+                setInstance = SetInstance(setNumber: setSync.setNumber, targetReps: setSync.targetReps, targetWeight: setSync.targetWeight)
+            }
+
+            setInstance.setNumber = setSync.setNumber
+            setInstance.targetReps = setSync.targetReps
+            setInstance.targetWeight = setSync.targetWeight
+            setInstance.actualReps = setSync.actualReps
+            setInstance.actualWeight = setSync.actualWeight
+            setInstance.isCompleted = setSync.completed
+            setInstance.completedAt = setSync.completedAt
+            setInstance.durationSeconds = setSync.durationSeconds
+            setInstance.distanceMeters = setSync.distanceMeters
+            setInstance.notes = setSync.notes
+            setInstance.exerciseInstance = self
+
+            updatedSets.append(setInstance)
+        }
+
+        for orphan in existingBySetNumber.values {
+            orphan.exerciseInstance = nil
+        }
+
+        sets = updatedSets.sorted { $0.setNumber < $1.setNumber }
     }
 }
