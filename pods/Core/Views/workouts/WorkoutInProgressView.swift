@@ -449,14 +449,16 @@ struct WorkoutInProgressView: View {
     
     private func pauseWorkout() {
         isPaused = true
+        workoutManager.pauseActiveWorkout()
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
     }
-    
+
     private func resumeWorkout() {
         isPaused = false
+        workoutManager.resumeActiveWorkout()
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.prepare()

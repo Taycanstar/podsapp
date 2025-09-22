@@ -33,6 +33,9 @@ struct DynamicSetRowView: View {
     var body: some View {
         // Dynamic input based on tracking type (using legacy TextField style)
         dynamicInputView
+            .overlay(alignment: .topTrailing) {
+                adjustmentOverlay
+            }
             .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden)
             .padding(.vertical, 6)
@@ -81,6 +84,27 @@ struct DynamicSetRowView: View {
                     .foregroundColor(.primary)
             }
         }
+    }
+
+    private var adjustmentOverlay: some View {
+        Group {
+            if set.wasAutoAdjusted == true && !set.isWarmupSet {
+                adjustmentBadge
+                    .padding(.top, 4)
+                    .padding(.trailing, 4)
+            }
+        }
+    }
+
+    private var adjustmentBadge: some View {
+        Text("Adjusted")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundColor(.orange)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule().fill(Color.orange.opacity(0.16))
+            )
     }
     
     @ViewBuilder

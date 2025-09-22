@@ -817,6 +817,12 @@ struct FlexibleSetData: Identifiable, Codable, Hashable {
     var wasLogged: Bool?              // Tracks if user explicitly logged the set
     var isWarmupSet: Bool
     var notes: String?
+
+    // Adaptive recommendation tracking
+    var baselineReps: Int?            // Target reps captured when the set was seeded
+    var baselineDuration: TimeInterval? // Target duration captured when the set was seeded
+    var baselineWeight: Double?       // Target weight captured when the set was seeded (converted to user's unit system)
+    var wasAutoAdjusted: Bool?        // Flag indicating UI should show an adjustment indicator
     
     /// Computed property to determine if set is actually completed based on entered data
     var isActuallyCompleted: Bool {
@@ -849,6 +855,10 @@ struct FlexibleSetData: Identifiable, Codable, Hashable {
         self.isCompleted = false
         self.wasLogged = nil
         self.isWarmupSet = false
+        self.baselineReps = nil
+        self.baselineDuration = nil
+        self.baselineWeight = nil
+        self.wasAutoAdjusted = nil
         
         // Initialize appropriate default values based on tracking type
         switch trackingType {

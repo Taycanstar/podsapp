@@ -229,6 +229,10 @@ struct ExerciseLoggingView: View {
                 onDurationChanged: { duration in
                     print("🔧 DEBUG: Duration updated to: \(duration) for set #\(setIndex + 1)")
                     currentSetIndex = setIndex
+                    flexibleSets[setIndex].duration = duration
+                    flexibleSets[setIndex].durationString = formatDuration(duration)
+                    flexibleSets[setIndex].baselineDuration = duration
+                    handleManualSetChange(at: setIndex)
                     saveDurationToPersistence(duration)
                     saveFlexibleSetsToExercise()
                 },
@@ -237,6 +241,7 @@ struct ExerciseLoggingView: View {
                     if focused { currentSetIndex = setIndex }
                 },
                 onSetChanged: {
+                    handleManualSetChange(at: setIndex)
                     saveFlexibleSetsToExercise()
                 },
                 onPickerStateChanged: { expanded in
@@ -1324,11 +1329,11 @@ struct ExerciseLoggingView: View {
         return index
     }
     
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        let minutes = Int(seconds) / 60
-        let remainingSeconds = Int(seconds) % 60
-        return String(format: "%d:%02d", minutes, remainingSeconds)
-    }
+    // private func formatDuration(_ seconds: TimeInterval) -> String {
+    //     let minutes = Int(seconds) / 60
+    //     let remainingSeconds = Int(seconds) % 60
+    //     return String(format: "%d:%02d", minutes, remainingSeconds)
+    // }
 
     private func parseDurationString(_ value: String) -> TimeInterval? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1460,7 +1465,12 @@ struct ExerciseLoggingView: View {
             print("❌ ERROR: currentSetIndex \(currentSetIndex) >= flexibleSets.count \(flexibleSets.count)")
             return 
         }
-        
+
+        // Clear any prior adjustment badge once the set is consumed
+        flexibleSets[currentSetIndex].wasAutoAdjusted = false
+
+        applyAdaptiveRecommendations(afterLoggingSetAt: currentSetIndex)
+
         // Mark current flexible set as completed
         flexibleSets[currentSetIndex].isCompleted = true
         flexibleSets[currentSetIndex].wasLogged = true
@@ -1603,13 +1613,14 @@ struct ExerciseLoggingView: View {
     
     private func addNewSet() {
         print("🔧 DEBUG: addNewSet() called - Current flexibleSets count: \(flexibleSets.count)")
-        let newSet = FlexibleSetData(trackingType: trackingType)
+        var newSet = FlexibleSetData(trackingType: trackingType)
+        seedBaselineMetadata(for: &newSet)
         flexibleSets.append(newSet)
         print("🔧 DEBUG: After adding new set - flexibleSets count: \(flexibleSets.count)")
-        
+
         // Save to parent exercise data
         saveFlexibleSetsToExercise()
-        
+
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.prepare()
@@ -1625,11 +1636,12 @@ struct ExerciseLoggingView: View {
             newWarmupSet.reps = "\(currentExercise.reps)"
             newWarmupSet.weight = currentExercise.exercise.equipment.lowercased() == "body weight" ? nil : "50"
         }
-        
+        seedBaselineMetadata(for: &newWarmupSet)
+
         // Insert at the beginning (warmup sets come first)
         let warmupCount = flexibleSets.filter { $0.isWarmupSet }.count
         flexibleSets.insert(newWarmupSet, at: warmupCount)
-        
+
         // Save to parent exercise data
         saveWarmupSetsToExercise()
         
@@ -1674,7 +1686,11 @@ struct ExerciseLoggingView: View {
 
         // PRIORITY 1: Restore from TodayWorkoutExercise if available
         if let savedFlexibleSets = currentExercise.flexibleSets, !savedFlexibleSets.isEmpty {
-            let sanitizedSets = savedFlexibleSets
+            let sanitizedSets = savedFlexibleSets.map { set -> FlexibleSetData in
+                var seeded = set
+                seedBaselineMetadata(for: &seeded)
+                return seeded
+            }
             flexibleSets = sanitizedSets
 
             // Update timerDuration from first duration-based set
@@ -1700,6 +1716,7 @@ struct ExerciseLoggingView: View {
                 warmSet.isWarmupSet = true
                 warmSet.reps = warmup.reps
                 warmSet.weight = warmup.weight
+                seedBaselineMetadata(for: &warmSet)
                 flexibleSets.append(warmSet)
             }
         }
@@ -1717,6 +1734,7 @@ struct ExerciseLoggingView: View {
             } else if trackingType == .repsOnly {
                 newSet.reps = "\(currentExercise.reps)"
             }
+            seedBaselineMetadata(for: &newSet)
             flexibleSets.append(newSet)
         }
 
@@ -1725,6 +1743,298 @@ struct ExerciseLoggingView: View {
 
         // Keep TodayWorkoutExercise in sync so warm-up prescription persists
         saveWarmupSetsToExercise()
+    }
+
+    // MARK: - Adaptive Recommendation Helpers
+
+    private func applyAdaptiveRecommendations(afterLoggingSetAt setIndex: Int) {
+        guard flexibleSets.indices.contains(setIndex) else { return }
+        let completedSet = flexibleSets[setIndex]
+
+        // Skip adjustments for warm-up sets or sets without meaningful completion data
+        guard !completedSet.isWarmupSet else { return }
+
+        switch completedSet.trackingType {
+        case .repsWeight:
+            guard let actualReps = parseInteger(from: completedSet.reps), actualReps > 0 else { return }
+            let targetReps = completedSet.baselineReps ?? currentExercise.reps
+            guard targetReps > 0, actualReps != targetReps else { return }
+
+            guard let nextIndex = nextAdjustableSetIndex(after: setIndex, matching: Set([.repsWeight])) else { return }
+
+            if actualReps > targetReps {
+                let rawIncrease = Double(actualReps - targetReps) * 0.025
+                let cappedIncrease = min(rawIncrease, 0.15)
+                guard cappedIncrease > 0 else { return }
+                applyWeightAdjustment(to: nextIndex, percentDelta: cappedIncrease, referenceSet: completedSet)
+            } else {
+                applyWeightAdjustment(to: nextIndex, percentDelta: -0.05, referenceSet: completedSet)
+            }
+
+        case .timeOnly, .holdTime, .rounds, .timeDistance:
+            let actualDuration = completedSet.duration ?? completedSet.baselineDuration
+            guard let actualDuration, actualDuration > 0 else { return }
+
+            let targetDuration = completedSet.baselineDuration ?? actualDuration
+            guard targetDuration > 0 else { return }
+
+            guard let nextIndex = nextAdjustableSetIndex(after: setIndex, matching: Set([.timeOnly, .holdTime, .rounds, .timeDistance])) else { return }
+
+            if actualDuration > targetDuration {
+                let diffRatio = (actualDuration - targetDuration) / targetDuration
+                let cappedIncrease = min(diffRatio, 0.15)
+                guard cappedIncrease > 0.0 else { return }
+                applyDurationAdjustment(to: nextIndex, percentDelta: cappedIncrease, referenceSet: completedSet)
+            } else if actualDuration < targetDuration {
+                applyDurationAdjustment(to: nextIndex, percentDelta: -0.05, referenceSet: completedSet)
+            }
+
+        default:
+            break
+        }
+    }
+
+    private func nextAdjustableSetIndex(after index: Int, matching trackingTypes: Set<ExerciseTrackingType>) -> Int? {
+        guard index + 1 < flexibleSets.count else { return nil }
+
+        for nextIndex in (index + 1)..<flexibleSets.count {
+            let candidate = flexibleSets[nextIndex]
+            if candidate.isWarmupSet { continue }
+            if candidate.isCompleted { continue }
+            if trackingTypes.contains(candidate.trackingType) {
+                return nextIndex
+            }
+        }
+
+        return nil
+    }
+
+    private func applyWeightAdjustment(to setIndex: Int,
+                                       percentDelta: Double,
+                                       referenceSet: FlexibleSetData) {
+        guard flexibleSets.indices.contains(setIndex) else { return }
+
+        let candidate = flexibleSets[setIndex]
+
+        let baselineWeight = candidate.baselineWeight
+            ?? parseWeightString(candidate.weight)
+            ?? referenceSet.baselineWeight
+            ?? parseWeightString(referenceSet.weight)
+            ?? currentExercise.weight
+
+        guard var baseWeight = baselineWeight, baseWeight > 0 else { return }
+
+        baseWeight = max(baseWeight * (1 + percentDelta), 0)
+
+        flexibleSets[setIndex].weight = formatWeight(baseWeight)
+        flexibleSets[setIndex].baselineWeight = baseWeight
+        flexibleSets[setIndex].wasAutoAdjusted = true
+        let percentText = String(format: "%.1f%%", percentDelta * 100)
+        print("⚙️ Adaptive: Updated weight for set #\(setIndex + 1) to \(flexibleSets[setIndex].weight ?? "-") (Δ \(percentText))")
+    }
+
+    private func applyDurationAdjustment(to setIndex: Int,
+                                         percentDelta: Double,
+                                         referenceSet: FlexibleSetData) {
+        guard flexibleSets.indices.contains(setIndex) else { return }
+
+        let candidate = flexibleSets[setIndex]
+        let baseline = candidate.baselineDuration
+            ?? candidate.duration
+            ?? referenceSet.baselineDuration
+            ?? referenceSet.duration
+            ?? (isDurationBasedTrackingType(candidate.trackingType) ? timerDuration : nil)
+
+        guard var baseDuration = baseline, baseDuration > 0 else { return }
+
+        baseDuration = max(baseDuration * (1 + percentDelta), 0)
+
+        flexibleSets[setIndex].duration = baseDuration
+        flexibleSets[setIndex].durationString = formatDuration(baseDuration)
+        flexibleSets[setIndex].baselineDuration = baseDuration
+        flexibleSets[setIndex].wasAutoAdjusted = true
+        let percentText = String(format: "%.1f%%", percentDelta * 100)
+        print("⚙️ Adaptive: Updated duration for set #\(setIndex + 1) to \(formatDuration(baseDuration)) (Δ \(percentText))")
+    }
+
+    private func handleManualSetChange(at index: Int) {
+        guard flexibleSets.indices.contains(index) else { return }
+        flexibleSets[index].wasAutoAdjusted = false
+
+        if let updatedWeight = parseWeightString(flexibleSets[index].weight) {
+            flexibleSets[index].baselineWeight = updatedWeight
+        }
+
+        if let updatedDuration = flexibleSets[index].duration {
+            flexibleSets[index].baselineDuration = updatedDuration
+        }
+
+        if let updatedReps = parseInteger(from: flexibleSets[index].reps) {
+            flexibleSets[index].baselineReps = updatedReps
+        } else if flexibleSets[index].baselineReps == nil {
+            flexibleSets[index].baselineReps = currentExercise.reps
+        }
+
+        propagateManualValuesForward(from: index)
+    }
+
+    private func seedBaselineMetadata(for set: inout FlexibleSetData) {
+        if set.baselineReps == nil {
+            set.baselineReps = currentExercise.reps
+        }
+
+        if set.baselineWeight == nil {
+            if let weight = parseWeightString(set.weight) {
+                set.baselineWeight = weight
+            } else if let exerciseWeight = currentExercise.weight, exerciseWeight > 0 {
+                set.baselineWeight = exerciseWeight
+                if set.weight == nil {
+                    set.weight = formatWeight(exerciseWeight)
+                }
+            }
+        }
+
+        if set.baselineDuration == nil {
+            if let duration = set.duration {
+                set.baselineDuration = duration
+            } else if let durationString = set.durationString {
+                set.baselineDuration = parseDurationString(durationString)
+            } else if isDurationBasedTrackingType(set.trackingType), timerDuration > 0 {
+                set.baselineDuration = timerDuration
+            }
+        }
+
+        if set.wasAutoAdjusted == nil {
+            set.wasAutoAdjusted = false
+        }
+    }
+
+    private func propagateManualValuesForward(from index: Int) {
+        guard flexibleSets.indices.contains(index) else { return }
+        let source = flexibleSets[index]
+        guard !source.isWarmupSet else { return }
+
+        for targetIndex in (index + 1)..<flexibleSets.count {
+            var target = flexibleSets[targetIndex]
+            guard !target.isWarmupSet else { continue }
+            guard !target.isCompleted else { continue }
+            guard target.trackingType == source.trackingType else { continue }
+
+            var didModify = false
+
+            switch source.trackingType {
+            case .repsWeight:
+                if let reps = source.reps {
+                    target.reps = reps
+                    didModify = true
+                }
+                if let weight = source.weight {
+                    target.weight = weight
+                    didModify = true
+                }
+                target.baselineReps = source.baselineReps ?? target.baselineReps
+                target.baselineWeight = source.baselineWeight ?? target.baselineWeight
+
+            case .repsOnly:
+                if let reps = source.reps {
+                    target.reps = reps
+                    didModify = true
+                }
+                target.baselineReps = source.baselineReps ?? target.baselineReps
+
+            case .timeOnly, .holdTime:
+                if let duration = source.duration {
+                    target.duration = duration
+                    target.durationString = source.durationString ?? formatDuration(duration)
+                    didModify = true
+                }
+                target.baselineDuration = source.baselineDuration ?? target.baselineDuration
+
+            case .timeDistance:
+                if let duration = source.duration {
+                    target.duration = duration
+                    target.durationString = source.durationString ?? formatDuration(duration)
+                    didModify = true
+                }
+                if let distance = source.distance {
+                    target.distance = distance
+                    didModify = true
+                }
+                if let unit = source.distanceUnit {
+                    target.distanceUnit = unit
+                    didModify = true
+                }
+                target.baselineDuration = source.baselineDuration ?? target.baselineDuration
+
+            case .rounds:
+                if let duration = source.duration {
+                    target.duration = duration
+                    target.durationString = source.durationString ?? formatDuration(duration)
+                    didModify = true
+                }
+                if let rounds = source.rounds {
+                    target.rounds = rounds
+                    didModify = true
+                }
+                target.baselineDuration = source.baselineDuration ?? target.baselineDuration
+            }
+
+            if didModify {
+                target.wasAutoAdjusted = false
+                flexibleSets[targetIndex] = target
+            }
+        }
+    }
+
+    private func parseInteger(from string: String?) -> Int? {
+        guard let string else { return nil }
+        return Int(string.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private func parseWeightString(_ string: String?) -> Double? {
+        guard let string = string, !string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        let sanitized = string.replacingOccurrences(of: ",", with: ".")
+        return Double(sanitized)
+    }
+
+    private func formatWeight(_ value: Double) -> String {
+        if onboarding.unitsSystem == .metric {
+            return String(format: "%.1f", value)
+        }
+        return String(format: "%.0f", round(value))
+    }
+
+    private func parseDurationString(_ string: String) -> TimeInterval {
+        let components = string.split(separator: ":").map(String.init)
+        guard !components.isEmpty else { return 0 }
+
+        if components.count == 3 {
+            let hours = Double(components[0]) ?? 0
+            let minutes = Double(components[1]) ?? 0
+            let seconds = Double(components[2]) ?? 0
+            return (hours * 3600) + (minutes * 60) + seconds
+        } else if components.count == 2 {
+            let minutes = Double(components[0]) ?? 0
+            let seconds = Double(components[1]) ?? 0
+            return (minutes * 60) + seconds
+        } else if components.count == 1 {
+            return Double(components[0]) ?? 0
+        }
+
+        return 0
+    }
+
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let totalSeconds = Int(seconds.rounded())
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let secs = totalSeconds % 60
+
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        }
+
+        return String(format: "%d:%02d", minutes, secs)
     }
     
     /// Handle completion of a flexible set
@@ -1794,6 +2104,8 @@ struct ExerciseLoggingView: View {
                 if self.isDurationBasedTrackingType(self.flexibleSets[index].trackingType) {
                     self.flexibleSets[index].duration = durationSeconds
                     self.flexibleSets[index].durationString = self.formatDuration(durationSeconds)
+                    self.flexibleSets[index].baselineDuration = durationSeconds
+                    self.flexibleSets[index].wasAutoAdjusted = self.flexibleSets[index].wasAutoAdjusted ?? false
                 }
             }
         }
@@ -1852,7 +2164,7 @@ struct ExerciseLoggingView: View {
     
     /// Check if the tracking type is duration-based
     private func isDurationBasedTrackingType(_ trackingType: ExerciseTrackingType) -> Bool {
-        return trackingType == .timeOnly || trackingType == .timeDistance || trackingType == .holdTime
+        return trackingType == .timeOnly || trackingType == .timeDistance || trackingType == .holdTime || trackingType == .rounds
     }
     
     /// Hide keyboard when tapping outside input fields

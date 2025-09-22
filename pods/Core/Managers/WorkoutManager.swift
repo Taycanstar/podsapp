@@ -167,9 +167,23 @@ class WorkoutManager: ObservableObject {
         let workoutId: UUID
         let startedAt: Date
         var lastActivityAt: Date
+        var pausedIntervals: [DateInterval] = []
+        var pauseBeganAt: Date? = nil
 
         func hasTimedOut(referenceDate: Date = Date(), timeout: TimeInterval) -> Bool {
             referenceDate.timeIntervalSince(lastActivityAt) > timeout
+        }
+
+        func totalPausedDuration(referenceDate: Date = Date()) -> TimeInterval {
+            let closedIntervals = pausedIntervals.reduce(0) { partial, interval in
+                partial + interval.duration
+            }
+
+            guard let pauseStart = pauseBeganAt else {
+                return closedIntervals
+            }
+
+            return closedIntervals + max(referenceDate.timeIntervalSince(pauseStart), 0)
         }
     }
     
@@ -1062,6 +1076,39 @@ class WorkoutManager: ObservableObject {
         persistActiveWorkoutState(state)
     }
 
+    func pauseActiveWorkout(at date: Date = Date()) {
+        if activeWorkoutState == nil {
+            registerWorkoutActivity()
+        }
+
+        guard var state = activeWorkoutState else { return }
+        guard state.pauseBeganAt == nil else { return }
+
+        state.pauseBeganAt = date
+        state.lastActivityAt = date
+        activeWorkoutState = state
+        persistActiveWorkoutState(state)
+        print("⏸️ WorkoutManager: Paused active workout at \(date)")
+    }
+
+    func resumeActiveWorkout(at date: Date = Date()) {
+        guard var state = activeWorkoutState else { return }
+        guard let pauseStart = state.pauseBeganAt else { return }
+        guard date >= pauseStart else { return }
+
+        let interval = DateInterval(start: pauseStart, end: date)
+        if interval.duration > 0 {
+            state.pausedIntervals.append(interval)
+        }
+
+        state.pauseBeganAt = nil
+        state.lastActivityAt = date
+        activeWorkoutState = state
+        persistActiveWorkoutState(state)
+        let formatted = String(format: "%.0f", interval.duration)
+        print("▶️ WorkoutManager: Resumed workout, paused for \(formatted)s")
+    }
+
     func applyActiveExerciseUpdate(_ exercise: TodayWorkoutExercise) {
         let sanitizedExercise = stripWarmups(from: exercise)
 
@@ -1099,7 +1146,12 @@ class WorkoutManager: ObservableObject {
         let startTime = state?.startedAt ?? now
         let lastActivity = state?.lastActivityAt ?? now
         let endTime = lastActivity > now ? lastActivity : now
-        let duration = max(endTime.timeIntervalSince(startTime), 0)
+        let pausedDuration = state?.totalPausedDuration(referenceDate: endTime) ?? 0
+        let rawDuration = endTime.timeIntervalSince(startTime)
+        let duration = max(rawDuration - pausedDuration, 0)
+        if pausedDuration > 0 {
+            print("⏱️ WorkoutManager: Excluding paused time (\(pausedDuration)s) from workout duration")
+        }
         let unitsSystem = preferredUnitsSystem
         let summary = WorkoutCalculationService.shared.buildSummary(for: workout,
                                                                     duration: duration,
