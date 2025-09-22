@@ -45,6 +45,7 @@ struct ExerciseChart: View {
     
     @StateObject private var dataService = ExerciseHistoryDataService.shared
     @EnvironmentObject var onboarding: OnboardingViewModel
+    @Environment(\.modelContext) private var modelContext
     
     // Theme colors for record and average lines
     private var recordLineColor: Color { .yellow }
@@ -335,8 +336,8 @@ struct ExerciseChart: View {
         
         do {
             // Load metrics and chart data concurrently
-            async let metricsTask = dataService.getExerciseMetrics(exerciseId: exercise.exercise.id, period: selectedPeriod)
-            async let chartDataTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: metric, period: selectedPeriod)
+            async let metricsTask = dataService.getExerciseMetrics(exerciseId: exercise.exercise.id, period: selectedPeriod, context: modelContext)
+            async let chartDataTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: metric, period: selectedPeriod, context: modelContext)
             
             metrics = try await metricsTask
             chartData = try await chartDataTask

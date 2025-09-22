@@ -8,6 +8,7 @@
 import SwiftUI
 import Foundation
 import Combine
+import SwiftData
 
 // Core workout types are now in WorkoutModels.swift
 // Dynamic programming types are in DynamicWorkoutModels.swift
@@ -107,6 +108,7 @@ class WorkoutManager: ObservableObject {
     @Published private(set) var generationMessage = "Creating your workout..."
     @Published private(set) var generationError: WorkoutGenerationError?
     @Published private(set) var completedWorkoutSummary: CompletedWorkoutSummary?
+    @Published private(set) var isDisplayingSummary: Bool = false
     
     // MARK: - Session Preferences (separate concern)
     @Published var sessionDuration: WorkoutDuration?
@@ -144,6 +146,7 @@ class WorkoutManager: ObservableObject {
     private var activeWorkoutState: ActiveWorkoutState?
     private let sessionTimeoutInterval: TimeInterval = 3 * 60 * 60
     private var pendingSummaryRegeneration = false
+    private var lastModelContext: ModelContext?
     
     // MARK: - UserDefaults Keys
     private let todayWorkoutKey = "todayWorkout"
@@ -856,17 +859,21 @@ class WorkoutManager: ObservableObject {
         return stripWarmups(from: workout)
     }
     
+    @MainActor
     private func buildWorkoutSession(from workout: TodayWorkout,
                                      startTime: Date,
-                                     duration: TimeInterval) -> WorkoutSession {
+                                     duration: TimeInterval,
+                                     context: ModelContext) -> WorkoutSession {
         let session = WorkoutSession(name: workout.title, userEmail: userEmail)
         session.startedAt = startTime
+        context.insert(session)
 
         var exerciseInstances: [ExerciseInstance] = []
         let allExercises = (workout.warmUpExercises ?? []) + workout.exercises + (workout.coolDownExercises ?? [])
 
         for (index, exercise) in allExercises.enumerated() {
             let instance = ExerciseInstance(from: exercise.exercise, orderIndex: index)
+            context.insert(instance)
             instance.workoutSession = session
 
             let loggedSets = makeLoggedSets(from: exercise, units: preferredUnitsSystem)
@@ -874,8 +881,8 @@ class WorkoutManager: ObservableObject {
 
             loggedSets.enumerated().forEach { offset, set in
                 set.setNumber = offset + 1
+                context.insert(set)
                 set.exerciseInstance = instance
-                instance.sets.append(set)
             }
 
             exerciseInstances.append(instance)
@@ -883,8 +890,8 @@ class WorkoutManager: ObservableObject {
 
         session.exercises = exerciseInstances
         session.completedAt = startTime.addingTimeInterval(duration)
-        session.totalDuration = duration
-        session.markAsNeedingSync()
+       session.totalDuration = duration
+       session.markAsNeedingSync()
         return session
     }
 
@@ -1014,6 +1021,10 @@ class WorkoutManager: ObservableObject {
         manualWarmupExerciseIDs.remove(exerciseId)
     }
 
+    func setModelContext(_ context: ModelContext) {
+        lastModelContext = context
+    }
+
     /// Start workout session
     func startWorkout(_ workout: TodayWorkout) {
         let sanitized = sanitizeWarmupsIfNeeded(workout)
@@ -1068,7 +1079,18 @@ class WorkoutManager: ObservableObject {
     }
 
     /// Complete workout session
-    func completeWorkout(autoComplete: Bool = false) {
+    func completeWorkout(autoComplete: Bool = false, context: ModelContext? = nil) {
+        let resolvedContext: ModelContext
+        if let context {
+            resolvedContext = context
+            lastModelContext = context
+        } else if let cachedContext = lastModelContext {
+            resolvedContext = cachedContext
+        } else {
+            print("❌ WorkoutManager: Missing ModelContext for completing workout")
+            return
+        }
+
         guard let sourceWorkout = currentWorkout ?? todayWorkout else { return }
         let workout = sanitizeWarmupsIfNeeded(sourceWorkout)
         let now = Date()
@@ -1084,12 +1106,13 @@ class WorkoutManager: ObservableObject {
                                                                     profile: userProfileService.profileData)
 
         // Persist workout session details for history & sync
-        Task {
+        Task { @MainActor [resolvedContext] in
             do {
                 let workoutSession = buildWorkoutSession(from: workout,
                                                          startTime: startTime,
-                                                         duration: duration)
-                try await workoutDataManager.saveWorkout(workoutSession)
+                                                         duration: duration,
+                                                         context: resolvedContext)
+                try await workoutDataManager.saveWorkout(workoutSession, context: resolvedContext)
                 let status = autoComplete ? "Auto-completed" : "Completed"
                 print("✅ WorkoutManager: \(status) and saved workout")
             } catch {
@@ -1124,14 +1147,26 @@ class WorkoutManager: ObservableObject {
         if autoComplete {
             pendingSummaryRegeneration = false
             scheduleNextWorkoutGeneration()
+            Task { @MainActor [resolvedContext] in
+                await workoutDataManager.syncNow(context: resolvedContext)
+            }
         } else {
             completedWorkoutSummary = summary
             pendingSummaryRegeneration = true
+            isDisplayingSummary = true
         }
     }
 
     func dismissWorkoutSummary() {
         completedWorkoutSummary = nil
+        isDisplayingSummary = false
+
+        if let context = lastModelContext {
+            Task { @MainActor in
+                await workoutDataManager.syncNow(context: context)
+            }
+        }
+
         if pendingSummaryRegeneration {
             pendingSummaryRegeneration = false
             scheduleNextWorkoutGeneration()

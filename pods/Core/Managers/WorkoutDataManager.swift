@@ -152,9 +152,11 @@ struct SyncableSetInstance: Codable {
 @MainActor
 class WorkoutDataManager: ObservableObject {
     static let shared = WorkoutDataManager()
-    
-    private let localStorage = WorkoutLocalStorage()
+
     private let cloudSync = WorkoutCloudSync()
+    private var syncTimer: Timer?
+    private var lastKnownContext: ModelContext?
+    private var hasDeferredSync = false
     
     @Published var isSyncing = false
     @Published var lastSyncDate: Date?
@@ -167,253 +169,192 @@ class WorkoutDataManager: ObservableObject {
     // MARK: - Public API
     
     /// Save workout with automatic local storage and cloud sync
-    func saveWorkout(_ workout: WorkoutSession) async throws {
-        // 1. Save locally immediately
-        try await localStorage.saveWorkout(workout)
-        
-        // 2. Queue for cloud sync
+    func saveWorkout(_ workout: WorkoutSession, context: ModelContext) async throws {
+        registerContext(context)
+        insertIfNeeded(workout, context: context)
+        try saveContextIfNeeded(context)
+
         await cloudSync.queueForSync(workout)
-        
-        // 3. Trigger background sync
-        await syncPendingData()
     }
-    
+
     /// Fetch workouts with local-first approach
-    func fetchWorkouts(for userEmail: String) async throws -> [WorkoutSession] {
-        // 1. Get local data immediately
-        let localWorkouts = try await localStorage.fetchWorkouts(for: userEmail)
-        
-        // 2. Trigger background sync to get latest data
-        Task {
-            await syncPendingData()
+    func fetchWorkouts(for userEmail: String, context: ModelContext) async throws -> [WorkoutSession] {
+        registerContext(context)
+
+        let descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: #Predicate<WorkoutSession> { workout in
+                workout.userEmail == userEmail && workout.isDeleted == false
+            },
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+        )
+
+        let localWorkouts = try context.fetch(descriptor)
+
+        // Trigger background sync to refresh data
+        Task { @MainActor [weak self] in
+            await self?.syncPendingDataUsingStoredContext()
         }
-        
+
         return localWorkouts
     }
-    
+
     /// Manual sync trigger
-    func syncNow() async {
-        await syncPendingData()
+    func syncNow(context: ModelContext) async {
+        registerContext(context)
+        await syncPendingData(context: context)
     }
     
     // MARK: - Private Methods
     
     private func setupSyncTimer() {
         // Sync every 5 minutes when app is active
-        Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { _ in
+        syncTimer?.invalidate()
+        syncTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+            guard let self else { return }
             Task { @MainActor in
-                await self.syncPendingData()
+                await self.syncPendingDataUsingStoredContext()
             }
         }
     }
     
     @MainActor
-    private func syncPendingData() async {
+    private func syncPendingData(context: ModelContext) async {
         guard !isSyncing else { return }
 
-            assert(Thread.isMainThread, "ModelContext must be accessed on main thread")
-            isSyncing = true
-            syncError = nil
+        if WorkoutManager.shared.isDisplayingSummary {
+            hasDeferredSync = true
+            return
+        }
+
+        assert(Thread.isMainThread, "ModelContext must be accessed on main thread")
+        isSyncing = true
+        syncError = nil
+        registerContext(context)
 
         do {
-            let localChanges = await localStorage.getUnsyncedChanges()
+            let localChanges = try getUnsyncedChanges(context: context)
 
             for change in localChanges {
-                if let workout = await localStorage.fetchWorkout(by: change.id) {
+                if let workout = try fetchWorkout(by: change.id, context: context) {
                     await cloudSync.queueForSync(workout)
                 }
             }
+
             let userEmail = localChanges.first?.userEmail ?? UserDefaults.standard.string(forKey: "userEmail")
 
             if let userEmail {
                 let serverChanges = try await cloudSync.fetchServerChanges(for: userEmail)
-                try await localStorage.applyChanges(serverChanges)
+                try applyChanges(serverChanges, context: context)
             }
 
             try await cloudSync.pushQueuedChanges()
-            try await localStorage.saveContextIfNeeded()
+            try saveContextIfNeeded(context)
             lastSyncDate = Date()
+            hasDeferredSync = false
         } catch {
             syncError = error.localizedDescription
         }
 
-            isSyncing = false
+        isSyncing = false
     }
-}
 
-// MARK: - Local Storage
-
-class WorkoutLocalStorage {
-    private let modelContainer: ModelContainer
-    
-    init() {
-        // Initialize SwiftData container with migration handling
-        let container: ModelContainer
-        
-        do {
-            // Create a dedicated store location for workout data to avoid conflicts
-            let storeURL = URL.documentsDirectory.appending(path: "WorkoutData.store")
-            let configuration = ModelConfiguration(url: storeURL)
-            container = try ModelContainer(for: WorkoutSession.self, configurations: configuration)
-        } catch {
-            // Handle migration errors by clearing the store and starting fresh
-            print("⚠️ SwiftData migration failed: \(error)")
-            print("🔄 Clearing existing workout data and starting fresh...")
-            
-            do {
-                // Clear the existing store and create a new one
-                let storeURL = URL.documentsDirectory.appending(path: "WorkoutData.store")
-                let configuration = ModelConfiguration(url: storeURL)
-                try Self.clearExistingStore(at: storeURL)
-                container = try ModelContainer(for: WorkoutSession.self, configurations: configuration)
-                print("✅ Successfully created new WorkoutSession container")
-            } catch {
-                fatalError("Failed to initialize ModelContainer even after clearing store: \(error)")
-            }
-        }
-        
-        // Assign the successfully created container
-        self.modelContainer = container
+    private func syncPendingDataUsingStoredContext() async {
+        guard let context = lastKnownContext else { return }
+        await syncPendingData(context: context)
     }
-    
-    /// Clear existing SwiftData store to handle migration issues
-    private static func clearExistingStore(at storeURL: URL) throws {
-        let fileManager = FileManager.default
-        let storeDirectory = storeURL.deletingLastPathComponent()
-        let storeName = storeURL.deletingPathExtension().lastPathComponent
-        
-        // Define all possible store files
-        let storeFiles = [
-            storeURL,                                                    // main store
-            storeDirectory.appending(path: "\(storeName).store-wal"),   // WAL file
-            storeDirectory.appending(path: "\(storeName).store-shm")    // SHM file
-        ]
-        
-        for file in storeFiles {
-            if fileManager.fileExists(atPath: file.path) {
-                do {
-                    try fileManager.removeItem(at: file)
-                    print("🗑️ Removed existing store file: \(file.lastPathComponent)")
-                } catch {
-                    print("⚠️ Failed to remove \(file.lastPathComponent): \(error)")
-                }
-            }
+
+    private func registerContext(_ context: ModelContext) {
+        lastKnownContext = context
+    }
+
+    private func insertIfNeeded(_ workout: WorkoutSession, context: ModelContext) {
+        if workout.modelContext === context { return }
+        if workout.persistentModelID == nil {
+            context.insert(workout)
         }
     }
-    
-    @MainActor
-    func saveWorkout(_ workout: WorkoutSession) async throws {
-        let modelContext = modelContainer.mainContext
 
-        modelContext.insert(workout)
-        try modelContext.save()
-    }
-    
-    @MainActor
-    func fetchWorkouts(for userEmail: String) async throws -> [WorkoutSession] {
-        let modelContext = modelContainer.mainContext
-        
-        let descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate<WorkoutSession> { workout in
-                workout.userEmail == userEmail && !workout.isDeleted
-            },
-            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
-        )
-        
-        return try modelContext.fetch(descriptor)
-    }
-    
-    @MainActor
-    func getUnsyncedChanges() async -> [SyncableWorkoutSession] {
-        let modelContext = modelContainer.mainContext
-        
+    private func getUnsyncedChanges(context: ModelContext) throws -> [SyncableWorkoutSession] {
         let descriptor = FetchDescriptor<WorkoutSession>(
             predicate: #Predicate<WorkoutSession> { workout in
                 workout.needsSync == true
             }
         )
-        
-        do {
-            let workouts = try modelContext.fetch(descriptor)
-        return workouts.map { SyncableWorkoutSession(from: $0) }
-        } catch {
-            print("Error fetching unsynced changes: \(error)")
-            return []
-        }
-    }
-    
-    @MainActor
-    func applyChanges(_ changes: [SyncableWorkoutSession]) async throws {
-        let modelContext = modelContainer.mainContext
 
+        let workouts = try context.fetch(descriptor)
+        return workouts.map { SyncableWorkoutSession(from: $0) }
+    }
+
+    private func applyChanges(_ changes: [SyncableWorkoutSession], context: ModelContext) throws {
         for change in changes {
             if change.isDeleted {
-                if let remoteId = change.remoteId,
-                   let existing = try? modelContext.fetch(FetchDescriptor<WorkoutSession>(
+                if let remoteId = change.remoteId {
+                    let descriptor = FetchDescriptor<WorkoutSession>(
                         predicate: #Predicate<WorkoutSession> { $0.remoteId == remoteId }
-                   )).first {
-                    existing.isDeleted = true
-                    existing.needsSync = false
-                    continue
+                    )
+                    if let existing = try context.fetch(descriptor).first {
+                        existing.isDeleted = true
+                        existing.needsSync = false
+                        continue
+                    }
                 }
 
-                if let existing = try? modelContext.fetch(FetchDescriptor<WorkoutSession>(
+                let byId = FetchDescriptor<WorkoutSession>(
                     predicate: #Predicate<WorkoutSession> { $0.id == change.id }
-                )).first {
+                )
+                if let existing = try context.fetch(byId).first {
                     existing.isDeleted = true
                     existing.needsSync = false
                 }
             } else {
-                if let remoteId = change.remoteId,
-                   let existing = try? modelContext.fetch(FetchDescriptor<WorkoutSession>(
+                if let remoteId = change.remoteId {
+                    let descriptor = FetchDescriptor<WorkoutSession>(
                         predicate: #Predicate<WorkoutSession> { $0.remoteId == remoteId }
-                   )).first {
-                    existing.updateFromSyncable(change)
-                    continue
+                    )
+                    if let existing = try context.fetch(descriptor).first {
+                        existing.updateFromSyncable(change)
+                        continue
+                    }
                 }
 
-                if let existing = try? modelContext.fetch(FetchDescriptor<WorkoutSession>(
+                let byId = FetchDescriptor<WorkoutSession>(
                     predicate: #Predicate<WorkoutSession> { $0.id == change.id }
-                )).first {
+                )
+                if let existing = try context.fetch(byId).first {
                     existing.updateFromSyncable(change)
                 } else {
                     let newWorkout = WorkoutSession(from: change)
                     newWorkout.needsSync = false
-                    modelContext.insert(newWorkout)
+                    context.insert(newWorkout)
                 }
             }
         }
-
-        try modelContext.save()
     }
 
-    @MainActor
-    func saveContextIfNeeded() async throws {
-        let modelContext = modelContainer.mainContext
-        guard modelContext.hasChanges else { return }
+    private func saveContextIfNeeded(_ context: ModelContext) throws {
+        guard context.hasChanges else { return }
 
         do {
-            try modelContext.save()
+            try context.save()
             print("✅ ModelContext saved successfully")
         } catch {
             print("❌ ModelContext save failed: \(error)")
-            modelContext.rollback()
+            context.rollback()
             throw error
         }
     }
 
-    @MainActor
-    func fetchWorkout(by id: UUID) async -> WorkoutSession? {
-        let modelContext = modelContainer.mainContext
+    private func fetchWorkout(by id: UUID, context: ModelContext) throws -> WorkoutSession? {
         let descriptor = FetchDescriptor<WorkoutSession>(
             predicate: #Predicate<WorkoutSession> { $0.id == id }
         )
-        return try? modelContext.fetch(descriptor).first
+        return try context.fetch(descriptor).first
     }
 }
 
 // MARK: - Cloud Sync
 
+@MainActor
 class WorkoutCloudSync {
     private let networkManager = NetworkManagerTwo.shared
     private var syncQueue: [WorkoutSession] = []
@@ -586,9 +527,19 @@ extension WorkoutSession {
             updatedExercises.append(exerciseInstance)
         }
 
-        // Detach any exercises no longer present
-        for orphan in existingById.values {
-            orphan.workoutSession = nil
+        // Remove exercises no longer present on the server
+        if let context = self.modelContext {
+            for orphan in existingById.values {
+                if orphan.persistentModelID != nil {
+                    context.delete(orphan)
+                } else {
+                    orphan.workoutSession = nil
+                }
+            }
+        } else {
+            for orphan in existingById.values {
+                orphan.workoutSession = nil
+            }
         }
 
         self.exercises = updatedExercises.sorted { $0.orderIndex < $1.orderIndex }
@@ -619,7 +570,14 @@ extension ExerciseInstance {
         orderIndex = syncable.orderIndex
         workoutSession = parent
 
-        var existingBySetNumber: [Int: SetInstance] = Dictionary(uniqueKeysWithValues: sets.map { ($0.setNumber, $0) })
+        let context = parent.modelContext ?? self.modelContext
+
+        if let context, self.modelContext == nil {
+            context.insert(self)
+        }
+
+        let setsList = Array(sets)
+        var existingBySetNumber: [Int: SetInstance] = Dictionary(uniqueKeysWithValues: setsList.map { ($0.setNumber, $0) })
         var updatedSets: [SetInstance] = []
         updatedSets.reserveCapacity(syncable.sets.count)
 
@@ -629,7 +587,15 @@ extension ExerciseInstance {
             if let existing = existingBySetNumber.removeValue(forKey: setSync.setNumber) {
                 setInstance = existing
             } else {
-                setInstance = SetInstance(setNumber: setSync.setNumber, targetReps: setSync.targetReps, targetWeight: setSync.targetWeight)
+                let newSet = SetInstance(setNumber: setSync.setNumber, targetReps: setSync.targetReps, targetWeight: setSync.targetWeight)
+                if let context, newSet.modelContext == nil {
+                    context.insert(newSet)
+                }
+                setInstance = newSet
+            }
+
+            if let context, setInstance.modelContext == nil {
+                context.insert(setInstance)
             }
 
             setInstance.setNumber = setSync.setNumber
@@ -647,8 +613,18 @@ extension ExerciseInstance {
             updatedSets.append(setInstance)
         }
 
-        for orphan in existingBySetNumber.values {
-            orphan.exerciseInstance = nil
+        if let context {
+            for orphan in existingBySetNumber.values {
+                if orphan.modelContext == context || orphan.persistentModelID != nil {
+                    context.delete(orphan)
+                } else {
+                    orphan.exerciseInstance = nil
+                }
+            }
+        } else {
+            for orphan in existingBySetNumber.values {
+                orphan.exerciseInstance = nil
+            }
         }
 
         sets = updatedSets.sorted { $0.setNumber < $1.setNumber }

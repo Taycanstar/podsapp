@@ -190,7 +190,7 @@ struct WorkoutCreationView: View {
         // Save using the new sync system
         Task {
             do {
-                try await WorkoutDataManager.shared.saveWorkout(workoutSession)
+                try await WorkoutDataManager.shared.saveWorkout(workoutSession, context: modelContext)
                 
                 await MainActor.run {
                     print("✅ Workout saved successfully with sync")

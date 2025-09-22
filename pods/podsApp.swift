@@ -28,7 +28,9 @@ struct podsApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 //    @State private var isAuthenticated = false
     @Environment(\.scenePhase) var scenePhase
-    
+
+    private let modelContainer: ModelContainer = podsApp.buildModelContainer()
+
     // Initialize data architecture services
     @StateObject private var dataLayer = DataLayer.shared
     @StateObject private var dataSyncService = DataSyncService.shared
@@ -67,8 +69,11 @@ struct podsApp: App {
 //                                       NetworkManager().determineUserLocation()
 //                                   }
 //                                       }
-        .modelContainer(createModelContainer())
+        .modelContainer(modelContainer)
                 .onAppear{
+                    Task { @MainActor in
+                        migrateLegacyWorkoutStoreIfNeeded(using: modelContainer)
+                    }
                     // Migrate legacy fitness goal values in UserDefaults
                     FitnessGoalMigrationService.migrateUserDefaults()
                     NetworkManager().determineUserLocation()
@@ -146,47 +151,138 @@ struct podsApp: App {
     }
     
     /// Create ModelContainer with migration error handling
-    private func createModelContainer() -> ModelContainer {
+    private static func buildModelContainer() -> ModelContainer {
         do {
             // Try to create the container normally
-            // Note: WorkoutSession is handled separately by WorkoutDataManager
-            return try ModelContainer(for: UserProfile.self, Exercise.self, ExerciseInstance.self, SetInstance.self)
+            return try ModelContainer(
+                for: UserProfile.self,
+                Exercise.self,
+                ExerciseInstance.self,
+                SetInstance.self,
+                WorkoutSession.self
+            )
         } catch {
             print("⚠️ SwiftData migration failed in main app: \(error)")
             print("🔄 Clearing existing SwiftData store and starting fresh...")
-            
+
             // Clear the existing store
             clearSwiftDataStore()
-            
+
             do {
                 // Try again after clearing
-                return try ModelContainer(for: UserProfile.self, Exercise.self, ExerciseInstance.self, SetInstance.self)
+                return try ModelContainer(
+                    for: UserProfile.self,
+                    Exercise.self,
+                    ExerciseInstance.self,
+                    SetInstance.self,
+                    WorkoutSession.self
+                )
             } catch {
                 print("❌ Failed to create ModelContainer even after clearing: \(error)")
                 // Create an in-memory container as last resort
                 let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
                 do {
-                    return try ModelContainer(for: UserProfile.self, Exercise.self, ExerciseInstance.self, SetInstance.self, configurations: configuration)
+                    return try ModelContainer(
+                        for: UserProfile.self,
+                        Exercise.self,
+                        ExerciseInstance.self,
+                        SetInstance.self,
+                        WorkoutSession.self,
+                        configurations: configuration
+                    )
                 } catch {
                     fatalError("Failed to create even in-memory ModelContainer: \(error)")
                 }
             }
         }
     }
-    
+
     /// Clear existing SwiftData store files
-    private func clearSwiftDataStore() {
+    private static func clearSwiftDataStore() {
         let fileManager = FileManager.default
         let storeURL = URL.applicationSupportDirectory.appending(path: "default.store")
         let walURL = URL.applicationSupportDirectory.appending(path: "default.store-wal")
         let shmURL = URL.applicationSupportDirectory.appending(path: "default.store-shm")
-        
+
         // Remove store files if they exist
         [storeURL, walURL, shmURL].forEach { url in
             if fileManager.fileExists(atPath: url.path) {
                 try? fileManager.removeItem(at: url)
                 print("🗑️ Removed: \(url.lastPathComponent)")
             }
+        }
+    }
+
+    @MainActor
+    private func migrateLegacyWorkoutStoreIfNeeded(using container: ModelContainer) {
+        let defaults = UserDefaults.standard
+        let migrationFlagKey = "WorkoutSessionStoreMigrated"
+
+        guard defaults.bool(forKey: migrationFlagKey) == false else { return }
+
+        let legacyStoreURL = URL.documentsDirectory.appending(path: "WorkoutData.store")
+        let fileManager = FileManager.default
+
+        guard fileManager.fileExists(atPath: legacyStoreURL.path) else {
+            defaults.set(true, forKey: migrationFlagKey)
+            return
+        }
+
+        do {
+            let configuration = ModelConfiguration(url: legacyStoreURL)
+            let legacyContainer = try ModelContainer(
+                for: WorkoutSession.self,
+                ExerciseInstance.self,
+                SetInstance.self,
+                configurations: configuration
+            )
+
+            let legacyContext = legacyContainer.mainContext
+            let descriptor = FetchDescriptor<WorkoutSession>()
+            let legacyWorkouts = try legacyContext.fetch(descriptor)
+            let targetContext = container.mainContext
+
+            for legacyWorkout in legacyWorkouts {
+                let legacyId = legacyWorkout.id
+                let existingDescriptor = FetchDescriptor<WorkoutSession>(
+                    predicate: #Predicate { $0.id == legacyId }
+                )
+
+                let alreadyMigrated = try targetContext.fetch(existingDescriptor).isEmpty == false
+                if alreadyMigrated { continue }
+
+                let syncable = SyncableWorkoutSession(from: legacyWorkout)
+                let migratedSession = WorkoutSession(from: syncable)
+                migratedSession.needsSync = legacyWorkout.needsSync
+                targetContext.insert(migratedSession)
+            }
+
+            if targetContext.hasChanges {
+                try targetContext.save()
+            }
+
+            try podsApp.removeLegacyWorkoutStore(at: legacyStoreURL)
+            defaults.set(true, forKey: migrationFlagKey)
+            print("✅ Migrated legacy workout store with \(legacyWorkouts.count) sessions")
+        } catch {
+            print("❌ Failed to migrate legacy workout store: \(error)")
+        }
+    }
+
+    private static func removeLegacyWorkoutStore(at storeURL: URL) throws {
+        let fileManager = FileManager.default
+        let storeDirectory = storeURL.deletingLastPathComponent()
+        let storeName = storeURL.deletingPathExtension().lastPathComponent
+
+        let legacyFiles = [
+            storeURL,
+            storeDirectory.appending(path: "\(storeName).store-wal"),
+            storeDirectory.appending(path: "\(storeName).store-shm")
+        ]
+
+        for file in legacyFiles where fileManager.fileExists(atPath: file.path) {
+            try fileManager.removeItem(at: file)
+            print("🗑️ Removed legacy workout store file: \(file.lastPathComponent)")
         }
     }
 }
@@ -428,4 +524,3 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         }
     }
 }
-

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UIKit
+import SwiftData
 
 struct ExerciseHistory: View {
     let exercise: TodayWorkoutExercise
@@ -74,6 +75,7 @@ struct ExerciseTrendsView: View {
     @State private var isLoading = true
     @State private var selectedPeriod: TimePeriod = .month
     @EnvironmentObject var onboarding: OnboardingViewModel
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         ScrollView {
@@ -145,11 +147,11 @@ struct ExerciseTrendsView: View {
         
         do {
             // Load metrics and chart data concurrently
-            async let metricsTask = dataService.getExerciseMetrics(exerciseId: exercise.exercise.id, period: selectedPeriod)
-            async let repsTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .reps, period: selectedPeriod)
-            async let weightTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .weight, period: selectedPeriod)
-            async let volumeTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .volume, period: selectedPeriod)
-            async let oneRepMaxTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .estOneRepMax, period: selectedPeriod)
+            async let metricsTask = dataService.getExerciseMetrics(exerciseId: exercise.exercise.id, period: selectedPeriod, context: modelContext)
+            async let repsTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .reps, period: selectedPeriod, context: modelContext)
+            async let weightTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .weight, period: selectedPeriod, context: modelContext)
+            async let volumeTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .volume, period: selectedPeriod, context: modelContext)
+            async let oneRepMaxTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .estOneRepMax, period: selectedPeriod, context: modelContext)
             
             metrics = try await metricsTask
             repsData = try await repsTask
@@ -209,6 +211,7 @@ struct ExerciseResultsView: View {
     @State private var workoutSessions: [WorkoutSessionSummary] = []
     @State private var isLoading = true
     @State private var selectedPeriod: TimePeriod = .month
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         ScrollView {
@@ -263,7 +266,8 @@ struct ExerciseResultsView: View {
         do {
             let historyData = try await dataService.getExerciseHistory(
                 exerciseId: exercise.exercise.id,
-                period: selectedPeriod
+                period: selectedPeriod,
+                context: modelContext
             )
             workoutSessions = historyData.workoutSessions.sorted { $0.date > $1.date } // Most recent first
         } catch {
@@ -736,6 +740,7 @@ struct ExerciseRecordsView: View {
     @State private var personalRecords: PersonalRecords?
     @State private var isLoading = true
     @EnvironmentObject var onboarding: OnboardingViewModel
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         ScrollView {
@@ -810,7 +815,7 @@ struct ExerciseRecordsView: View {
         isLoading = true
         
         do {
-            personalRecords = try await dataService.getPersonalRecords(exerciseId: exercise.exercise.id)
+            personalRecords = try await dataService.getPersonalRecords(exerciseId: exercise.exercise.id, context: modelContext)
         } catch {
             print("❌ ExerciseRecordsView: Error loading records - \(error)")
             personalRecords = nil

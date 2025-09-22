@@ -20,6 +20,7 @@ struct WorkoutInProgressView: View {
     @State private var loggingContext: LogExerciseSheetContext?
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject private var workoutManager: WorkoutManager
+    @Environment(\.modelContext) private var modelContext
     
     // Track if any sets have been logged during this workout
     @State private var hasLoggedSets = false
@@ -241,6 +242,7 @@ struct WorkoutInProgressView: View {
             }
         } // Closes NavigationStack
         .onAppear {
+            workoutManager.setModelContext(modelContext)
             startTimer()
             let totalExercises = (workout.warmUpExercises?.count ?? 0) + workout.exercises.count + (workout.coolDownExercises?.count ?? 0)
             print("🏋️ WorkoutInProgressView appeared with \(totalExercises) exercises (\(workout.warmUpExercises?.count ?? 0) warm-up, \(workout.exercises.count) main, \(workout.coolDownExercises?.count ?? 0) cool-down)")
@@ -467,7 +469,7 @@ struct WorkoutInProgressView: View {
     }
     
     private func completeWorkout() {
-        workoutManager.completeWorkout()
+        workoutManager.completeWorkout(context: modelContext)
         isPresented = false
     }
     

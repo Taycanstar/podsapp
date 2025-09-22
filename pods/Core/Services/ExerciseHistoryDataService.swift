@@ -116,6 +116,17 @@ struct RecentExerciseUsage: Hashable {
     let sessionCount: Int
 }
 
+enum ExerciseHistoryDataError: LocalizedError {
+    case missingModelContext
+
+    var errorDescription: String? {
+        switch self {
+        case .missingModelContext:
+            return "Missing SwiftData context for exercise history operations."
+        }
+    }
+}
+
 // MARK: - Exercise History Data Service
 
 @MainActor
@@ -130,8 +141,24 @@ class ExerciseHistoryDataService: ObservableObject {
     private var metricsCache: [String: ExerciseMetrics] = [:]
     private var recordsCache: [Int: PersonalRecords] = [:]
     private var chartDataCache: [String: [(Date, Double)]] = [:]
+    private var lastKnownContext: ModelContext?
     
     private init() {}
+
+    func setModelContext(_ context: ModelContext) {
+        lastKnownContext = context
+    }
+
+    private func resolveContext(_ context: ModelContext?) throws -> ModelContext {
+        if let context {
+            lastKnownContext = context
+            return context
+        }
+        if let cached = lastKnownContext {
+            return cached
+        }
+        throw ExerciseHistoryDataError.missingModelContext
+    }
 
     // MARK: - Lightweight recent history helpers
 
@@ -191,23 +218,24 @@ class ExerciseHistoryDataService: ObservableObject {
     // MARK: - Public Methods
     
     /// Get exercise history for a specific exercise and time period
-    func getExerciseHistory(exerciseId: Int, period: TimePeriod) async throws -> ExerciseHistoryData {
+    func getExerciseHistory(exerciseId: Int, period: TimePeriod, context: ModelContext? = nil) async throws -> ExerciseHistoryData {
         print("📊 ExerciseHistoryDataService: Fetching history for exercise \(exerciseId), period: \(period.displayName)")
-        
+
         isLoading = true
         defer { isLoading = false }
-        
+
         do {
+            let resolvedContext = try resolveContext(context)
             let cacheKey = "exercise_history_\(exerciseId)_\(period.rawValue)"
-            
+
             // Check simple cache first
             if let cached = historyCache[cacheKey] {
                 print("✅ ExerciseHistoryDataService: Found cached data for exercise \(exerciseId)")
                 return cached
             }
-            
+
             // Fetch from local data
-            let workoutSessions = try await fetchWorkoutSessionsFromLocal(exerciseId: exerciseId, period: period)
+            let workoutSessions = try await fetchWorkoutSessionsFromLocal(exerciseId: exerciseId, period: period, context: resolvedContext)
             let (startDate, endDate) = getDateRange(for: period)
             
             let exerciseName = getExerciseName(exerciseId: exerciseId)
@@ -234,10 +262,10 @@ class ExerciseHistoryDataService: ObservableObject {
     }
     
     /// Get calculated metrics for a specific exercise and time period
-    func getExerciseMetrics(exerciseId: Int, period: TimePeriod) async throws -> ExerciseMetrics {
+    func getExerciseMetrics(exerciseId: Int, period: TimePeriod, context: ModelContext? = nil) async throws -> ExerciseMetrics {
         print("📈 ExerciseHistoryDataService: Calculating metrics for exercise \(exerciseId), period: \(period.displayName)")
-        
-        let historyData = try await getExerciseHistory(exerciseId: exerciseId, period: period)
+
+        let historyData = try await getExerciseHistory(exerciseId: exerciseId, period: period, context: context)
         
         // Calculate metrics from workout sessions
         var allSets: [SetSummary] = []
@@ -292,16 +320,16 @@ class ExerciseHistoryDataService: ObservableObject {
     }
     
     /// Get personal records for a specific exercise
-    func getPersonalRecords(exerciseId: Int) async throws -> PersonalRecords {
+    func getPersonalRecords(exerciseId: Int, context: ModelContext? = nil) async throws -> PersonalRecords {
         print("🏆 ExerciseHistoryDataService: Fetching personal records for exercise \(exerciseId)")
-        
+
         // Try to get from cache first
         if let cached = recordsCache[exerciseId] {
             return cached
         }
-        
+
         // Get all-time history
-        let allTimeHistory = try await getExerciseHistory(exerciseId: exerciseId, period: .year) // Get longest period available
+        let allTimeHistory = try await getExerciseHistory(exerciseId: exerciseId, period: .year, context: context)
         
         var maxWeight: (value: Double, date: Date) = (0.0, Date.distantPast)
         var maxReps: (value: Int, date: Date) = (0, Date.distantPast)
@@ -344,10 +372,10 @@ class ExerciseHistoryDataService: ObservableObject {
     }
     
     /// Get chart data for a specific metric and time period
-    func getChartData(exerciseId: Int, metric: ChartMetric, period: TimePeriod) async throws -> [(Date, Double)] {
+    func getChartData(exerciseId: Int, metric: ChartMetric, period: TimePeriod, context: ModelContext? = nil) async throws -> [(Date, Double)] {
         print("📊 ExerciseHistoryDataService: Getting chart data for exercise \(exerciseId), metric: \(metric.rawValue), period: \(period.displayName)")
-        
-        let historyData = try await getExerciseHistory(exerciseId: exerciseId, period: period)
+
+        let historyData = try await getExerciseHistory(exerciseId: exerciseId, period: period, context: context)
         
         // Convert workout sessions to chart data points
         var chartData: [(Date, Double)] = []
@@ -403,19 +431,19 @@ class ExerciseHistoryDataService: ObservableObject {
     
     // MARK: - Private Methods
     
-    private func fetchWorkoutSessionsFromLocal(exerciseId: Int, period: TimePeriod) async throws -> [WorkoutSessionSummary] {
+    private func fetchWorkoutSessionsFromLocal(exerciseId: Int, period: TimePeriod, context: ModelContext) async throws -> [WorkoutSessionSummary] {
         print("🔍 ExerciseHistoryDataService: Fetching local workout sessions for exercise \(exerciseId)")
-        
+
         // Get current user email from UserDefaults
         guard let currentUserEmail = UserDefaults.standard.string(forKey: "userEmail") else {
             print("⚠️ No current user email found in UserDefaults")
             return []
         }
-        
+
         do {
             // Use WorkoutDataManager to access SwiftData
             let workoutManager = WorkoutDataManager.shared
-            let allWorkouts = try await workoutManager.fetchWorkouts(for: currentUserEmail)
+            let allWorkouts = try await workoutManager.fetchWorkouts(for: currentUserEmail, context: context)
             
             // Get date range for filtering
             let (startDate, endDate) = getDateRange(for: period)
