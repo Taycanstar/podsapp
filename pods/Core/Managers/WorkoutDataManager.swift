@@ -203,6 +203,12 @@ class WorkoutDataManager: ObservableObject {
         registerContext(context)
         await syncPendingData(context: context)
     }
+
+    func performDeferredSyncIfNeeded(context: ModelContext) async {
+        guard hasDeferredSync else { return }
+        registerContext(context)
+        await syncPendingData(context: context)
+    }
     
     // MARK: - Private Methods
     
@@ -221,9 +227,14 @@ class WorkoutDataManager: ObservableObject {
     private func syncPendingData(context: ModelContext) async {
         guard !isSyncing else { return }
 
-        if WorkoutManager.shared.isDisplayingSummary {
+        if WorkoutManager.shared.isDisplayingSummary || WorkoutManager.shared.isWorkoutViewActive {
             hasDeferredSync = true
             return
+        }
+
+        if hasDeferredSync {
+            print("🔄 Executing deferred workout sync")
+            hasDeferredSync = false
         }
 
         assert(Thread.isMainThread, "ModelContext must be accessed on main thread")
@@ -250,9 +261,9 @@ class WorkoutDataManager: ObservableObject {
             try await cloudSync.pushQueuedChanges()
             try saveContextIfNeeded(context)
             lastSyncDate = Date()
-            hasDeferredSync = false
         } catch {
             syncError = error.localizedDescription
+            hasDeferredSync = true
         }
 
         isSyncing = false

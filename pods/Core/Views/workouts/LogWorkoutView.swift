@@ -45,6 +45,7 @@ struct LogWorkoutView: View {
     // Use global WorkoutManager from environment
     @EnvironmentObject var workoutManager: WorkoutManager
     @EnvironmentObject var onboarding: OnboardingViewModel
+    @Environment(\.modelContext) private var modelContext
     private let userProfileService = UserProfileService.shared
     
     // Local UI state
@@ -237,6 +238,8 @@ struct LogWorkoutView: View {
                 )
             }
             .onAppear {
+                workoutManager.setModelContext(modelContext)
+                workoutManager.setWorkoutViewActive(true)
                 print("🚀 LogWorkoutView appeared - WorkoutManager is globally managed")
                 // Ensure workout weights match user's units when view appears
                 let savedUnits = UserDefaults.standard.string(forKey: "workoutUnitsSystem")
@@ -252,6 +255,7 @@ struct LogWorkoutView: View {
             }
             .onDisappear {
                 // Cleanup if needed - WorkoutManager handles persistence
+                workoutManager.setWorkoutViewActive(false)
             }
             .onReceive(NotificationCenter.default.publisher(for: .workoutCompletedNeedsFeedback)) { _ in
                 if workoutManager.completedWorkoutSummary != nil {

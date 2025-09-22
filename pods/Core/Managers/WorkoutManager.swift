@@ -109,6 +109,7 @@ class WorkoutManager: ObservableObject {
     @Published private(set) var generationError: WorkoutGenerationError?
     @Published private(set) var completedWorkoutSummary: CompletedWorkoutSummary?
     @Published private(set) var isDisplayingSummary: Bool = false
+    @Published private(set) var isWorkoutViewActive: Bool = false
     
     // MARK: - Session Preferences (separate concern)
     @Published var sessionDuration: WorkoutDuration?
@@ -1161,15 +1162,21 @@ class WorkoutManager: ObservableObject {
         completedWorkoutSummary = nil
         isDisplayingSummary = false
 
-        if let context = lastModelContext {
-            Task { @MainActor in
-                await workoutDataManager.syncNow(context: context)
-            }
-        }
-
         if pendingSummaryRegeneration {
             pendingSummaryRegeneration = false
             scheduleNextWorkoutGeneration()
+        }
+    }
+
+    func setWorkoutViewActive(_ active: Bool) {
+        guard isWorkoutViewActive != active else { return }
+        isWorkoutViewActive = active
+
+        if !active, let context = lastModelContext {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                await workoutDataManager.performDeferredSyncIfNeeded(context: context)
+            }
         }
     }
     
