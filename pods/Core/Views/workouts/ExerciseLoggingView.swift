@@ -90,14 +90,6 @@ struct ExerciseLoggingView: View {
         let detectedTrackingType = ExerciseClassificationService.determineTrackingType(for: exercise.exercise)
         self._trackingType = State(initialValue: detectedTrackingType)
         
-        // DEBUG: Print exercise details
-        print("🔴 DEBUG: ExerciseLoggingView initialized for exercise:")
-        print("🔴 Name: \(exercise.exercise.name)")
-        print("🔴 ID: \(exercise.exercise.id)")
-        print("🔴 Type: \(exercise.exercise.exerciseType)")
-        print("🔴 Equipment: \(exercise.exercise.equipment)")
-        print("🔴 Detected Tracking Type: \(detectedTrackingType)")
-        print("🔴 Sets: \(exercise.sets), Reps: \(exercise.reps), Weight: \(exercise.weight ?? 0)")
     }
     
     enum FocusedField: Hashable {
@@ -219,15 +211,12 @@ struct ExerciseLoggingView: View {
     // Inline sets rows for the List
     @ViewBuilder
     private var setsListRows: some View {
-        let _ = print("🔴 DEBUG setsListRows: trackingType = \(trackingType), flexibleSets.count = \(flexibleSets.count)")
-
         ForEach(Array(flexibleSets.enumerated()), id: \.element.id) { setIndex, _ in
             DynamicSetRowView(
                 set: $flexibleSets[setIndex],
                 setNumber: setIndex + 1,
                 workoutExercise: currentExercise,
                 onDurationChanged: { duration in
-                    print("🔧 DEBUG: Duration updated to: \(duration) for set #\(setIndex + 1)")
                     currentSetIndex = setIndex
                     flexibleSets[setIndex].duration = duration
                     flexibleSets[setIndex].durationString = formatDuration(duration)
@@ -261,7 +250,6 @@ struct ExerciseLoggingView: View {
         }
 
         Button(action: {
-            print("🔧 DEBUG: Add button tapped in setsListRows")
             addNewSet()
         }) {
             HStack(spacing: 8) {
@@ -538,7 +526,6 @@ struct ExerciseLoggingView: View {
         .onChange(of: currentExercise.exercise.id) { oldId, newId in
             // When exercise is replaced, refresh the video player to load the new exercise video
             if oldId != newId {
-                print("🎬 Exercise replaced (ID: \(oldId) → \(newId)), refreshing video player")
                 videoPlayerID = UUID()
             }
         }
@@ -557,7 +544,6 @@ struct ExerciseLoggingView: View {
             )
         }
         .sheet(isPresented: $showingExerciseOptions) {
-            let _ = print("🔧 DEBUG: ExerciseOptionsSheet is being presented")
             ExerciseOptionsSheet(
                 exercise: $currentExercise,
                 exerciseNotes: $exerciseNotes,
@@ -907,7 +893,6 @@ struct ExerciseLoggingView: View {
                 
                 // Ellipsis button (exercise options)
                 Button(action: {
-                    print("🔧 DEBUG: Ellipsis button tapped - showing exercise options")
                     showingExerciseOptions = true
                 }) {
                     Image(systemName: "ellipsis")
@@ -945,14 +930,10 @@ struct ExerciseLoggingView: View {
         VStack(spacing: 12) {
             
             // DEBUG: Print which branch we're taking
-            let _ = print("🔴 DEBUG setsInputSection: isDurationBasedExercise = \(isDurationBasedExercise)")
-            let _ = print("🔴 DEBUG setsInputSection: trackingType = \(trackingType)")
-            let _ = print("🔴 DEBUG setsInputSection: flexibleSets.count = \(flexibleSets.count)")
             
             // SIMPLIFIED: For duration-based exercises, use existing perfect style with direct binding
             if isDurationBasedExercise {
                 // Keep the existing perfect duration input style with set-specific durations
-                let _ = print("🔍 DEBUG UI: Using DURATION-BASED system (isDurationBasedExercise=true, trackingType=\(trackingType), flexibleSets.count=\(flexibleSets.count))")
                 DynamicSetsInputView(
                     sets: $flexibleSets,
                     workoutExercise: currentExercise,
@@ -968,7 +949,6 @@ struct ExerciseLoggingView: View {
                     },
                     onDurationChanged: { setIndex, duration in
                         // Set-specific duration update - no global variable
-                        print("🔧 DEBUG: Duration updated to: \(duration) for current set")
                         currentSetIndex = setIndex
                         saveDurationToPersistence(duration)
                         saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
@@ -1004,7 +984,6 @@ struct ExerciseLoggingView: View {
                     },
                     onDurationChanged: { setIndex, duration in
                         // Set-specific duration update - no global variable
-                        print("🔧 DEBUG: Duration changed to: \(duration) for current set")
                         currentSetIndex = setIndex
                         saveDurationToPersistence(duration)
                         saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
@@ -1229,8 +1208,6 @@ struct ExerciseLoggingView: View {
         }
 
         timerDuration = setDuration
-        print("🔧 DEBUG: Starting timer for set \(currentSetIndex + 1) with duration: \(setDuration)s")
-
         // Defer presentation until the next run loop so the sheet picks up the updated duration
         DispatchQueue.main.async {
             showTimerSheet = true
@@ -1612,11 +1589,9 @@ struct ExerciseLoggingView: View {
     }
     
     private func addNewSet() {
-        print("🔧 DEBUG: addNewSet() called - Current flexibleSets count: \(flexibleSets.count)")
         var newSet = FlexibleSetData(trackingType: trackingType)
         seedBaselineMetadata(for: &newSet)
         flexibleSets.append(newSet)
-        print("🔧 DEBUG: After adding new set - flexibleSets count: \(flexibleSets.count)")
 
         // Save to parent exercise data
         saveFlexibleSetsToExercise()
@@ -2129,8 +2104,6 @@ struct ExerciseLoggingView: View {
     
     /// Save flexible sets to workout model - CRITICAL for duration/session consistency
     private func saveFlexibleSetsToExercise() {
-        print("🔧 DEBUG: saveFlexibleSetsToExercise() called with \(flexibleSets.count) flexible sets")
-
         // Keep TodayWorkoutExercise.sets in sync with non-warmup flexible sets
         let regularSetCount = flexibleSets.filter { !$0.isWarmupSet }.count
 
@@ -2147,18 +2120,14 @@ struct ExerciseLoggingView: View {
         )
         
         currentExercise = updatedExercise
-        print("🔧 DEBUG: Updated currentExercise with \(flexibleSets.count) flexible sets, sets=\(regularSetCount)")
-
         // Update local allExercises snapshot when present (keeps in-view flows consistent)
         if var exercises = allExercises,
            let idx = exercises.firstIndex(where: { $0.exercise.id == updatedExercise.exercise.id }) {
             exercises[idx] = updatedExercise
             allExercises = exercises
-            print("🔧 DEBUG: Updated local allExercises[\(idx)] for ExerciseLoggingView")
         }
-        
+
         // Update parent workout if needed
-        print("🔧 DEBUG: Calling onExerciseUpdated callback for exercise: \(updatedExercise.exercise.name)")
         onExerciseUpdated?(updatedExercise)
     }
     
@@ -2283,11 +2252,6 @@ func setupPlayerIfReady() {
     p.isMuted = true
     p.volume = 0
     // Ensure this playback never interrupts other audio
-    do {
-        try AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
-    } catch {
-        print("AudioSession category set error: \(error)")
-    }
     p.automaticallyWaitsToMinimizeStalling = true
     self.player = p
 
@@ -2378,11 +2342,6 @@ func withTimeout<T>(seconds: TimeInterval, _ op: @escaping () async throws -> T)
     p.isMuted = true
     p.volume = 0
     // Ensure this playback never interrupts other audio
-    do {
-        try AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
-    } catch {
-        print("AudioSession category set error: \(error)")
-    }
         p.automaticallyWaitsToMinimizeStalling = false
         player = p
 
