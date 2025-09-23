@@ -322,13 +322,14 @@ class WorkoutManager: ObservableObject {
 
     func renameTodayWorkout(to newTitle: String) {
         let trimmedTitle = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedTitle.isEmpty, let existingWorkout = todayWorkout else { return }
-        guard existingWorkout.title != trimmedTitle else { return }
+        let sanitizedTitle = sanitizeWorkoutTitle(trimmedTitle)
+        guard !sanitizedTitle.isEmpty, let existingWorkout = todayWorkout else { return }
+        guard existingWorkout.title != sanitizedTitle else { return }
 
         let updatedWorkout = TodayWorkout(
             id: existingWorkout.id,
             date: existingWorkout.date,
-            title: trimmedTitle,
+            title: sanitizedTitle,
             exercises: existingWorkout.exercises,
             blocks: existingWorkout.blocks,
             estimatedDuration: existingWorkout.estimatedDuration,
@@ -344,7 +345,7 @@ class WorkoutManager: ObservableObject {
             let updatedActiveWorkout = TodayWorkout(
                 id: activeWorkout.id,
                 date: activeWorkout.date,
-                title: trimmedTitle,
+                title: sanitizedTitle,
                 exercises: activeWorkout.exercises,
                 blocks: activeWorkout.blocks,
                 estimatedDuration: activeWorkout.estimatedDuration,
@@ -662,11 +663,28 @@ class WorkoutManager: ObservableObject {
 
     /// Set today's workout (for loading from UserDefaults)
     func setTodayWorkout(_ workout: TodayWorkout?) {
-        todayWorkout = workout.map { sanitizeWarmupsIfNeeded($0) }
-        if let workout = workout {
-            saveTodayWorkout()
-            print("📅 WorkoutManager: Set today's workout - \(workout.title)")
+        guard let workout else {
+            todayWorkout = nil
+            return
         }
+
+        let sanitizedTitle = sanitizeWorkoutTitle(workout.title)
+        let sanitizedWorkout = TodayWorkout(
+            id: workout.id,
+            date: workout.date,
+            title: sanitizedTitle,
+            exercises: workout.exercises,
+            blocks: workout.blocks,
+            estimatedDuration: workout.estimatedDuration,
+            fitnessGoal: workout.fitnessGoal,
+            difficulty: workout.difficulty,
+            warmUpExercises: workout.warmUpExercises,
+            coolDownExercises: workout.coolDownExercises
+        )
+
+        todayWorkout = sanitizeWarmupsIfNeeded(sanitizedWorkout)
+        saveTodayWorkout()
+        print("📅 WorkoutManager: Set today's workout - \(sanitizedTitle)")
     }
 
     /// Remove an exercise (by ExerciseData.id) from today's workout (all sections)
@@ -1619,30 +1637,55 @@ class WorkoutManager: ObservableObject {
         let hasLower = !muscleSet.isDisjoint(with: lowerMuscles)
         let hasCoreOnly = muscleSet.subtracting(pushMuscles).subtracting(pullMuscles).subtracting(lowerMuscles).isSubset(of: coreMuscles)
 
+        let rawTitle: String
+
         switch (hasPush, hasPull, hasLower) {
         case (true, false, false):
-            return "Push Day"
+            rawTitle = "Push Day"
         case (false, true, false):
-            return "Pull Day"
+            rawTitle = "Pull Day"
         case (true, true, false):
-            return "Upper Body Day"
+            rawTitle = "Upper Body Day"
         case (false, false, true):
-            return "Lower Body Day"
+            rawTitle = "Lower Body Day"
         case (true, false, true), (false, true, true), (true, true, true):
-            return "Full Body Day"
+            rawTitle = "Full Body Day"
         default:
-            break
+            if hasCoreOnly {
+                rawTitle = "Core Day"
+            } else if let single = muscleGroups.first, muscleGroups.count == 1 {
+                rawTitle = "\(single) Day"
+            } else {
+                rawTitle = "Today's Workout"
+            }
         }
 
-        if hasCoreOnly {
-            return "Core Day"
-        }
+        return sanitizeWorkoutTitle(rawTitle)
+    }
 
-        if let single = muscleGroups.first, muscleGroups.count == 1 {
-            return "\(single) Day"
-        }
+    var todayWorkoutDisplayTitle: String {
+        guard let workout = todayWorkout else { return "Today's Workout" }
+        return sanitizeWorkoutTitle(workout.title)
+    }
 
-        return "Today's Workout"
+    private func sanitizeWorkoutTitle(_ rawTitle: String) -> String {
+        let trimmed = rawTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "Today's Workout" }
+
+        let components = trimmed.split(separator: ":", omittingEmptySubsequences: false)
+        let candidateComponent = components.last?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let candidate = (components.count > 1 && !(candidateComponent?.isEmpty ?? true)) ? candidateComponent! : trimmed
+
+        var allowed = CharacterSet.alphanumerics
+        allowed.formUnion(.whitespacesAndNewlines)
+        allowed.insert(charactersIn: "-'&/()")
+
+        let filteredScalars = candidate.unicodeScalars.filter { allowed.contains($0) }
+        let cleaned = String(String.UnicodeScalarView(filteredScalars))
+        let condensed = cleaned.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        let finalTitle = condensed.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return finalTitle.isEmpty ? "Today's Workout" : finalTitle
     }
     
     private func setupObservers() {

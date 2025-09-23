@@ -95,11 +95,7 @@ struct LogWorkoutView: View {
     }
 
     private var todayWorkoutTitle: String {
-        if let title = workoutManager.todayWorkout?.title.trimmingCharacters(in: .whitespacesAndNewlines),
-           !title.isEmpty {
-            return title
-        }
-        return "Today's Workout"
+        workoutManager.todayWorkoutDisplayTitle
     }
 
     private var trimmedRenameWorkoutTitle: String {
@@ -1109,7 +1105,7 @@ struct LogWorkoutView: View {
 
                     Menu {
                         Button(action: {
-                            renameWorkoutTitle = workoutManager.todayWorkout?.title ?? ""
+                            renameWorkoutTitle = workoutManager.todayWorkoutDisplayTitle
                             isRenamingWorkout = workoutManager.todayWorkout != nil
                         }) {
                             HStack {
