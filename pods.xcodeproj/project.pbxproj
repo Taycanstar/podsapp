@@ -35,6 +35,18 @@
 		361FF3332E2213E300B7F68E /* WorkoutProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */; };
 		361FF3352E22E54C00B7F68E /* DataSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3342E22E54600B7F68E /* DataSyncService.swift */; };
 		361FF3372E22E56E00B7F68E /* DataLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3362E22E56A00B7F68E /* DataLayer.swift */; };
+		36F5A0012F9C1AAB00A1B234 /* UserContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */; };
+		36F5A0032F9C1AAB00A1B234 /* RepositoryTTL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */; };
+		36F5A0052F9C1AAB00A1B234 /* ProfileRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0042F9C1AAB00A1B234 /* ProfileRepository.swift */; };
+		36F5A0072F9C1AAB00A1B234 /* SubscriptionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0062F9C1AAB00A1B234 /* SubscriptionRepository.swift */; };
+		36F5A0092F9C1AAB00A1B234 /* DayLogsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0082F9C1AAB00A1B234 /* DayLogsRepository.swift */; };
+		36F5A00B2F9C1AAB00A1B234 /* FoodFeedRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A00A2F9C1AAB00A1B234 /* FoodFeedRepository.swift */; };
+		36F5A0132F9C1AAB00A1B234 /* CombinedLogsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0122F9C1AAB00A1B234 /* CombinedLogsRepository.swift */; };
+		36F5A0152F9C1AAB00A1B234 /* MealsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0142F9C1AAB00A1B234 /* MealsRepository.swift */; };
+		36F5A0172F9C1AAB00A1B234 /* RecipesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0162F9C1AAB00A1B234 /* RecipesRepository.swift */; };
+		36F5A0192F9C1AAB00A1B234 /* SavedMealsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0182F9C1AAB00A1B234 /* SavedMealsRepository.swift */; };
+		36F5A01B2F9C1AAB00A1B234 /* UserFoodsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A01A2F9C1AAB00A1B234 /* UserFoodsRepository.swift */; };
+		36A7B0022F0B4C9B00A6A1B0 /* StartupCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A7B0012F0B4C9B00A6A1B0 /* StartupCoordinator.swift */; };
 		361FF3392E23090000B7F68E /* StartWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3382E2308F900B7F68E /* StartWorkoutView.swift */; };
 		361FF33B2E234F5500B7F68E /* WeightSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF33A2E234F4E00B7F68E /* WeightSyncService.swift */; };
 		361FF33D2E26ECA300B7F68E /* StreaksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF33C2E26EC9E00B7F68E /* StreaksView.swift */; };
@@ -366,6 +378,18 @@
 		361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProfile.swift; sourceTree = "<group>"; };
 		361FF3342E22E54600B7F68E /* DataSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSyncService.swift; sourceTree = "<group>"; };
 		361FF3362E22E56A00B7F68E /* DataLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLayer.swift; sourceTree = "<group>"; };
+		36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserContextStore.swift; path = Pods/Core/Repositories/UserContextStore.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RepositoryTTL.swift; path = Pods/Core/Repositories/RepositoryTTL.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0042F9C1AAB00A1B234 /* ProfileRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProfileRepository.swift; path = Pods/Core/Repositories/ProfileRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0062F9C1AAB00A1B234 /* SubscriptionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SubscriptionRepository.swift; path = Pods/Core/Repositories/SubscriptionRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0082F9C1AAB00A1B234 /* DayLogsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DayLogsRepository.swift; path = Pods/Core/Repositories/DayLogsRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A00A2F9C1AAB00A1B234 /* FoodFeedRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodFeedRepository.swift; path = Pods/Core/Repositories/FoodFeedRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0122F9C1AAB00A1B234 /* CombinedLogsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CombinedLogsRepository.swift; path = Pods/Core/Repositories/CombinedLogsRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0142F9C1AAB00A1B234 /* MealsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MealsRepository.swift; path = Pods/Core/Repositories/MealsRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0162F9C1AAB00A1B234 /* RecipesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecipesRepository.swift; path = Pods/Core/Repositories/RecipesRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0182F9C1AAB00A1B234 /* SavedMealsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SavedMealsRepository.swift; path = Pods/Core/Repositories/SavedMealsRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A01A2F9C1AAB00A1B234 /* UserFoodsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserFoodsRepository.swift; path = Pods/Core/Repositories/UserFoodsRepository.swift; sourceTree = SOURCE_ROOT; };
+		36A7B0012F0B4C9B00A6A1B0 /* StartupCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupCoordinator.swift; sourceTree = "<group>"; };
 		361FF3382E2308F900B7F68E /* StartWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartWorkoutView.swift; sourceTree = "<group>"; };
 		361FF33A2E234F4E00B7F68E /* WeightSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightSyncService.swift; sourceTree = "<group>"; };
 		361FF33C2E26EC9E00B7F68E /* StreaksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreaksView.swift; sourceTree = "<group>"; };
@@ -709,8 +733,27 @@
 				361FF3172E20613F00B7F68E /* WorkoutRecommendationService.swift */,
 				361FF3192E20615200B7F68E /* WorkoutSyncService.swift */,
 				36A851A42E5D2DD0004E5CED /* WorkoutGenerationService.swift */,
+				36A7B0012F0B4C9B00A6A1B0 /* StartupCoordinator.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		36F5A00C2F9C1AAB00A1B234 /* Repositories */ = {
+			isa = PBXGroup;
+			children = (
+				36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */,
+				36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */,
+				36F5A0042F9C1AAB00A1B234 /* ProfileRepository.swift */,
+				36F5A0062F9C1AAB00A1B234 /* SubscriptionRepository.swift */,
+				36F5A00A2F9C1AAB00A1B234 /* FoodFeedRepository.swift */,
+				36F5A0082F9C1AAB00A1B234 /* DayLogsRepository.swift */,
+				36F5A0122F9C1AAB00A1B234 /* CombinedLogsRepository.swift */,
+				36F5A0142F9C1AAB00A1B234 /* MealsRepository.swift */,
+				36F5A0162F9C1AAB00A1B234 /* RecipesRepository.swift */,
+				36F5A0182F9C1AAB00A1B234 /* SavedMealsRepository.swift */,
+				36F5A01A2F9C1AAB00A1B234 /* UserFoodsRepository.swift */,
+			);
+			path = Repositories;
 			sourceTree = "<group>";
 		};
 		361FF31B2E20617800B7F68E /* Models */ = {
@@ -867,6 +910,7 @@
 			children = (
 				361FF31B2E20617800B7F68E /* Models */,
 				361FF3162E20612400B7F68E /* Services */,
+				36F5A00C2F9C1AAB00A1B234 /* Repositories */,
 				3662A5582DFE452100847487 /* Final_Exercise_List.xlsx */,
 				363AF9F32D1125F600C91A14 /* Managers */,
 				3688DBF62BDEAE54001E244C /* Views */,
@@ -1530,6 +1574,7 @@
 				3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */,
 				361FF30F2E1D96F900B7F68E /* WeightedExercisesView.swift in Sources */,
 				36A851B52E60CF54004E5CED /* FlexibleExerciseInputs.swift in Sources */,
+				36A7B0022F0B4C9B00A6A1B0 /* StartupCoordinator.swift in Sources */,
 				36A91DB92E39B37500414543 /* MealLogDetails.swift in Sources */,
 				363068C92E089EF800F2D4EC /* ByEquipmentView.swift in Sources */,
 				36C458E42B7457580060355F /* HomeView.swift in Sources */,
@@ -1742,6 +1787,17 @@
 				361FF30D2E1D96E900B7F68E /* BodyweightExercisesView.swift in Sources */,
 				364A83BA2D8F6C6A009D2620 /* RecipeDetailView.swift in Sources */,
 				361FF3372E22E56E00B7F68E /* DataLayer.swift in Sources */,
+				36F5A0012F9C1AAB00A1B234 /* UserContextStore.swift in Sources */,
+				36F5A0032F9C1AAB00A1B234 /* RepositoryTTL.swift in Sources */,
+				36F5A0052F9C1AAB00A1B234 /* ProfileRepository.swift in Sources */,
+				36F5A0072F9C1AAB00A1B234 /* SubscriptionRepository.swift in Sources */,
+				36F5A00B2F9C1AAB00A1B234 /* FoodFeedRepository.swift in Sources */,
+				36F5A0092F9C1AAB00A1B234 /* DayLogsRepository.swift in Sources */,
+				36F5A0132F9C1AAB00A1B234 /* CombinedLogsRepository.swift in Sources */,
+				36F5A0152F9C1AAB00A1B234 /* MealsRepository.swift in Sources */,
+				36F5A0172F9C1AAB00A1B234 /* RecipesRepository.swift in Sources */,
+				36F5A0192F9C1AAB00A1B234 /* SavedMealsRepository.swift in Sources */,
+				36F5A01B2F9C1AAB00A1B234 /* UserFoodsRepository.swift in Sources */,
 				3662A55B2DFE5FDA00847487 /* ExerciseDatabase.swift in Sources */,
 				362532A52E6CBA78003C3B8D /* ManageExercisesView.swift in Sources */,
 				36ED35F92DDE57C400D174FB /* HelperViewsFlow.swift in Sources */,

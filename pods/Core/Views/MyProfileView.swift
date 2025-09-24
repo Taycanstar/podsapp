@@ -86,9 +86,9 @@ struct MyProfileView: View {
                             .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)
                         
-                        Button("Try Again") {
-                            Task {
-                                await onboarding.fetchProfileData()
+                       Button("Try Again") {
+                           Task {
+                                await onboarding.fetchProfileData(force: true)
                             }
                         }
                         .buttonStyle(.borderedProminent)
@@ -159,8 +159,8 @@ struct MyProfileView: View {
                     print("⏳ No preloaded data - fetching fresh profile data")
                 }
                 // Fetch fresh profile data if not preloaded or wrong user
-                Task {
-                    await onboarding.fetchProfileData()
+               Task {
+                    await onboarding.fetchProfileData(force: true)
                     hasInitiallyLoaded = true
                 }
             }
@@ -181,7 +181,7 @@ struct MyProfileView: View {
             // Refresh profile data when logs change (food added/removed/updated)
             print("🔄 MyProfileView received LogsChangedNotification - refreshing profile data")
             Task {
-                await onboarding.fetchProfileData()
+                await onboarding.fetchProfileData(force: false)
             }
         }
     }
@@ -822,30 +822,19 @@ struct MyProfileView: View {
             return
         }
         
-        print("📊 No preloaded macro data - fetching fresh profile data for email: \(email)")
+        print("📊 No preloaded macro data - refreshing profile repository for email: \(email)")
         isLoadingMacros = true
-        
-        // Get user's timezone offset
-        let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
-        print("🕐 MyProfileView.fetchMacroSplitData - Using timezone offset: \(timezoneOffset) minutes")
-        
-        // Fetch profile data with timezone offset to get macro data
-        NetworkManagerTwo.shared.fetchProfileData(
-            userEmail: email,
-            timezoneOffset: timezoneOffset
-        ) { result in
-            DispatchQueue.main.async {
+
+        Task {
+            await onboarding.fetchProfileData(force: true)
+
+            await MainActor.run {
                 isLoadingMacros = false
-                
-                switch result {
-                case .success(let profileData):
-                    print("✅ Successfully fetched profile data with macro info")
-                    print("✅ MyProfileView.fetchMacroSplitData - Success with timezone offset: \(timezoneOffset)")
+                if let profileData = onboarding.profileData {
+                    print("✅ Successfully refreshed profile data with macro info")
                     processProfileMacroData(profileData)
-                    
-                case .failure(let error):
-                    print("❌ Error fetching profile data: \(error)")
-                    // Fallback to empty data
+                } else {
+                    print("❌ Macro data still unavailable after refresh")
                     macroSplitData = [:]
                 }
             }
@@ -1140,7 +1129,7 @@ struct MyProfileView: View {
         print("🔄 Pull to refresh triggered")
         
         // Refresh profile data (this will show the native pull-to-refresh indicator)
-        await onboarding.fetchProfileData()
+        await onboarding.fetchProfileData(force: true)
         
         // Refresh weight data
         fetchWeightData()
@@ -1716,4 +1705,3 @@ extension MyProfileView {
 #Preview {
     MyProfileView(isAuthenticated: .constant(true))
 }
-

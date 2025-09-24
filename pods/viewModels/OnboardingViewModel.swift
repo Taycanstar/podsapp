@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 enum UnitsSystem: String, CaseIterable, Codable {
     case imperial = "imperial"
@@ -94,7 +95,13 @@ class OnboardingViewModel: ObservableObject {
     @Published var currentStep: OnboardingStep = .landing
     @Published var currentFlowStep: OnboardingFlowStep = .gender
     @Published var onboardingCompleted: Bool = false
-    @Published var email: String = ""
+    @Published var email: String = "" {
+        didSet {
+            if !email.isEmpty {
+                bindRepositories(for: email)
+            }
+        }
+    }
     @Published var region: String = ""
     @Published var name: String = ""
     @Published var username: String = ""
@@ -169,14 +176,16 @@ class OnboardingViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     
-    // MARK: - Server Communication
-    private let networkManager = NetworkManagerTwo.shared
-    
     // Computed property to get current progress
     var progress: CGFloat {
         return OnboardingProgress.progressFor(screen: currentFlowStep.asScreen)
     }
     
+    private let profileRepository = ProfileRepository.shared
+    private let subscriptionRepository = SubscriptionRepository.shared
+    private var repositoryEmail: String?
+    private var cancellables: Set<AnyCancellable> = []
+
     init() {
         loadOnboardingState()
         
@@ -199,6 +208,58 @@ class OnboardingViewModel: ObservableObject {
             self.isStreakVisible = true
             // Save the default value
             UserDefaults.standard.set(true, forKey: "isStreakVisible")
+        }
+    }
+
+    func bindRepositories(for email: String) {
+        guard repositoryEmail != email else { return }
+        repositoryEmail = email
+
+        cancellables.removeAll()
+
+        profileRepository.configure(email: email)
+
+        profileRepository.$profile
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] profile in
+                guard let self else { return }
+                self.profileData = profile
+                self.updateLocalUserData(from: profile)
+                self.profileError = nil
+            }
+            .store(in: &cancellables)
+
+        subscriptionRepository.$subscription
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] subscription in
+                self?.updateSubscriptionInfo(
+                    status: subscription.status,
+                    plan: subscription.plan,
+                    expiresAt: subscription.expiresAt,
+                    renews: subscription.renews,
+                    seats: subscription.seats,
+                    canCreateNewTeam: subscription.canCreateNewTeam
+                )
+            }
+            .store(in: &cancellables)
+
+        // If repository already has cached profile, apply immediately
+        if let profile = profileRepository.profile {
+            profileData = profile
+            updateLocalUserData(from: profile)
+        }
+
+        if let subscription = subscriptionRepository.subscription {
+            updateSubscriptionInfo(
+                status: subscription.status,
+                plan: subscription.plan,
+                expiresAt: subscription.expiresAt,
+                renews: subscription.renews,
+                seats: subscription.seats,
+                canCreateNewTeam: subscription.canCreateNewTeam
+            )
         }
     }
     
@@ -433,62 +494,26 @@ class OnboardingViewModel: ObservableObject {
     // MARK: - Profile Data Methods
     
     /// Fetch comprehensive profile data for the current user
-    func fetchProfileData() {
+    func fetchProfileData(force: Bool = true) async {
         guard let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty else {
             profileError = "No user email available"
             return
         }
-        
+
+        bindRepositories(for: userEmail)
+
         isLoadingProfile = true
         profileError = nil
-        
-        // CRITICAL FIX: Use correct timezone offset instead of defaulting to 0
-        let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
-        print("🕐 OnboardingViewModel.fetchProfileData - Using timezone offset: \(timezoneOffset) minutes")
-        
-        // STEP 1: Try to get data from DataLayer first (faster)
-        Task {
-            if let cachedData = await DataLayer.shared.getData(key: "profile_data") as? [String: Any] {
-                await MainActor.run {
-                    // Convert cached data to ProfileDataResponse if needed
-                    print("🚀 OnboardingViewModel.fetchProfileData - Loaded from DataLayer cache")
-                }
-            }
-        }
-        
-        // STEP 2: Always fetch fresh data from server and update DataLayer
-        networkManager.fetchProfileData(userEmail: userEmail, timezoneOffset: timezoneOffset) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.isLoadingProfile = false
-                
-                switch result {
-                case .success(let data):
-                    self?.profileData = data
-                    self?.updateLocalUserData(from: data)
-                    
-                    // Update UserProfileService with server data
-                    let serverData: [String: Any] = [
-                        "name": data.name,
-                        "username": data.username,
-                        "profileInitial": data.profileInitial,
-                        "profileColor": data.profileColor
-                    ]
-                    UserProfileService.shared.updateFromServer(serverData: serverData)
-                    
-                    // Save to DataLayer for future use
-                    Task {
-                        await DataLayer.shared.updateProfileData(serverData)
-                        print("💾 OnboardingViewModel.fetchProfileData - Saved to DataLayer")
-                    }
-                    
-                    print("✅ OnboardingViewModel.fetchProfileData - Success with timezone offset: \(timezoneOffset)")
-                    print("✅ Updated UserProfileService with server data")
-                    
-                case .failure(let error):
-                    self?.profileError = error.localizedDescription
-                    print("❌ OnboardingViewModel.fetchProfileData - Error: \(error)")
-                }
-            }
+
+        await profileRepository.refresh(force: force)
+
+        isLoadingProfile = false
+
+        if let data = profileRepository.profile {
+            profileData = data
+            updateLocalUserData(from: data)
+        } else {
+            profileError = "Unable to load profile data"
         }
     }
     
@@ -504,10 +529,9 @@ class OnboardingViewModel: ObservableObject {
     }
     
     /// Refresh profile data if it's stale (older than 5 minutes)
-    func refreshProfileDataIfNeeded() {
-        // Only fetch if we don't have data or if it's been a while
+    func refreshProfileDataIfNeeded() async {
         if profileData == nil || isProfileDataStale() {
-            fetchProfileData()
+            await fetchProfileData(force: false)
         }
     }
     

@@ -25,6 +25,10 @@ final class DayLogsViewModel: ObservableObject {
   @Published var isLoading    = false
   @Published var selectedDate = Date()
 
+  private var lastEmail: String?
+  private var lastLoadTimestamps: [Date: Date] = [:]
+  private let logsRefreshInterval: TimeInterval = 60
+
   // Daily totals
   @Published var totalCalories: Double = 0
   @Published var totalProtein : Double = 0
@@ -64,31 +68,68 @@ final class DayLogsViewModel: ObservableObject {
   @Published var navigateToEditWeight: Bool = false
   @Published var navigateToWeightData: Bool = false
 
-  private let repo = LogRepository()
+  private let repository = DayLogsRepository.shared
+  private let logNetwork = LogRepository()
   private(set) var email = ""
   private weak var healthViewModel: HealthKitViewModel?
+  private var cancellables: Set<AnyCancellable> = []
 
   init(email: String = "", healthViewModel: HealthKitViewModel? = nil) {
     self.email = email
     self.healthViewModel = healthViewModel
-    // Clear any stale cached logs when initializing
     clearPendingCache()
-    
-    // Load nutrition goals if email is provided
-      if !email.isEmpty {
-          fetchNutritionGoals()
-      }
+
+    if !email.isEmpty {
+      configureRepository(for: email)
+      fetchNutritionGoals()
+    }
   }
 
   func setEmail(_ newEmail: String) {
     email = newEmail
+    lastEmail = newEmail
     fetchNutritionGoals()
     // Clear pending cache when switching users
     clearPendingCache()
+    configureRepository(for: newEmail)
+  }
+  
+  func preloadForStartup(email: String) {
+    if lastEmail != email {
+        setEmail(email)
+    }
+
+    let key = Calendar.current.startOfDay(for: selectedDate)
+    if let lastLoad = lastLoadTimestamps[key], Date().timeIntervalSince(lastLoad) < logsRefreshInterval,
+       !logs.isEmpty {
+        return
+    }
+
+    loadLogs(for: selectedDate)
   }
   
   func setHealthViewModel(_ healthViewModel: HealthKitViewModel) {
     self.healthViewModel = healthViewModel
+  }
+
+  private func configureRepository(for email: String) {
+    repository.configure(email: email)
+    cancellables.removeAll()
+
+    repository.$snapshots
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] snapshots in
+        guard let self else { return }
+        let key = Calendar.current.startOfDay(for: self.selectedDate)
+        if let snapshot = snapshots[key] {
+          self.applySnapshot(snapshot)
+        }
+      }
+      .store(in: &cancellables)
+
+    if let snapshot = repository.snapshot(for: selectedDate) {
+      applySnapshot(snapshot)
+    }
   }
 
   // MARK: - Public Methods
@@ -233,7 +274,7 @@ private func deleteOnServer(_ log: CombinedLog) async throws {
             throw NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing food log ID"])
         }
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            repo.deleteLogItem(email: email, logId: foodLogId, logType: "food") { result in
+            logNetwork.deleteLogItem(email: email, logId: foodLogId, logType: "food") { result in
                 switch result {
                 case .success:
                     continuation.resume()
@@ -248,7 +289,7 @@ private func deleteOnServer(_ log: CombinedLog) async throws {
             throw NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing meal log ID"])
         }
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            repo.deleteLogItem(email: email, logId: mealLogId, logType: "meal") { result in
+            logNetwork.deleteLogItem(email: email, logId: mealLogId, logType: "meal") { result in
                 switch result {
                 case .success:
                     continuation.resume()
@@ -263,7 +304,7 @@ private func deleteOnServer(_ log: CombinedLog) async throws {
             throw NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing recipe log ID"])
         }
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            repo.deleteLogItem(email: email, logId: recipeLogId, logType: "recipe") { result in
+            logNetwork.deleteLogItem(email: email, logId: recipeLogId, logType: "recipe") { result in
                 switch result {
                 case .success:
                     continuation.resume()
@@ -300,89 +341,90 @@ private func deleteOnServer(_ log: CombinedLog) async throws {
     }
 }
 
-func loadLogs(for date: Date) {
+func loadLogs(for date: Date, force: Bool = false) {
   selectedDate = date
-  isLoading = true; error = nil
 
-  repo.fetchLogs(email: email, for: date) { [weak self] result in
-    guard let self = self else { return }
-    
-    // Ensure all @Published property updates happen on main thread
-    DispatchQueue.main.async {
-      self.isLoading = false
+  let key = Calendar.current.startOfDay(for: date)
+  if !force,
+     let lastLoad = lastLoadTimestamps[key], Date().timeIntervalSince(lastLoad) < logsRefreshInterval,
+     !logs.isEmpty {
+    return
+  }
 
-      switch result {
-      case .success(let serverResponse):
-        let serverLogs = serverResponse.logs
-        let key = Calendar.current.startOfDay(for: date)
-        let pending = self.pendingByDate[key] ?? []
+  isLoading = true
+  error = nil
 
-        // ↓ new: drop any pending that the server also sent back
-        let dedupedPending = pending.filter { p in
-          !serverLogs.contains(where: { $0.id == p.id })
-        }
-
-        // Persist the pending state for this day after removing confirmed logs
-        self.pendingByDate[key] = dedupedPending
-
-        // Get activity logs from Apple Health
-        let activityLogs = self.getActivityLogsFromHealth(for: date)
-        
-        // Combine all logs: pending + server + activities
-        let combinedLogs = dedupedPending + serverLogs + activityLogs
-        
-        // Sort all logs by scheduledAt time (most recent first)
-        self.logs = combinedLogs.sorted { log1, log2 in
-            let date1 = log1.scheduledAt ?? Date.distantPast
-            let date2 = log2.scheduledAt ?? Date.distantPast
-            return date1 > date2  // Most recent first
-        }
-        
-  
-    
-        for (index, log) in serverResponse.waterLogs.enumerated() {
-            print("🚰 Water log \(index): \(log.waterOz)oz at \(log.dateLogged)")
-        }
-        self.waterLogs = serverResponse.waterLogs
-       
-        
-        // Update height and weight from onboarding data if available
-        if let userData = serverResponse.userData {
-            self.height = userData.height_cm
-            self.weight = userData.weight_kg
-        }
-        
-        // Update goals if available
-        if let goals = serverResponse.goals {
-            let serverCal = goals.calories ?? 0
-            if serverCal > 0 {
-                self.calorieGoal = serverCal
-            }
-            self.proteinGoal = goals.protein ?? self.proteinGoal
-            self.carbsGoal = goals.carbs ?? self.carbsGoal
-            self.fatGoal = goals.fat ?? self.fatGoal
-            
-            // Store desired weight if available
-            if let desiredKg = goals.desiredWeightKg {
-                self.desiredWeightKg = desiredKg
-                // Convert kg to lbs if desiredWeightLbs is not available
-                self.desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
-            } else if let desiredLbs = goals.desiredWeightLbs {
-                self.desiredWeightLbs = desiredLbs
-                // Convert lbs to kg if desiredWeightKg is not available
-                self.desiredWeightKg = desiredLbs / 2.20462
-            }
-            
-            // Recalculate remaining calories
-            self.remainingCalories = max(0, self.calorieGoal - self.totalCalories)
-        }
-
-      case .failure(let err):
-        self.error = err
+  Task {
+    await repository.refresh(date: date, force: force)
+    if let snapshot = repository.snapshot(for: date) {
+      applySnapshot(snapshot)
+    } else {
+      await MainActor.run {
+        self.isLoading = false
       }
     }
   }
 }
+
+private func applySnapshot(_ snapshot: DayLogsSnapshot) {
+  let key = Calendar.current.startOfDay(for: snapshot.date)
+  let serverLogs = snapshot.combined
+  let pending = pendingByDate[key] ?? []
+  let dedupedPending = pending.filter { item in
+    !serverLogs.contains(where: { $0.id == item.id })
+  }
+  pendingByDate[key] = dedupedPending
+
+  let activityLogs = getActivityLogsFromHealth(for: snapshot.date)
+  let combinedLogs = dedupedPending + serverLogs + activityLogs
+
+  logs = combinedLogs.sorted { log1, log2 in
+    let date1 = log1.scheduledAt ?? Date.distantPast
+    let date2 = log2.scheduledAt ?? Date.distantPast
+    return date1 > date2
+  }
+
+  lastLoadTimestamps[key] = Date()
+  isLoading = false
+  error = nil
+
+  waterLogs = snapshot.water
+
+  if let userData = snapshot.userData {
+    height = userData.height_cm
+    weight = userData.weight_kg
+
+    if let encoded = try? JSONEncoder().encode(userData) {
+      UserDefaults.standard.set(encoded, forKey: "userData")
+    }
+  }
+
+  if let goals = snapshot.goals {
+    let serverCal = goals.calories
+    if serverCal > 0 {
+      calorieGoal = serverCal
+    }
+    proteinGoal = goals.protein
+    carbsGoal = goals.carbs
+    fatGoal = goals.fat
+
+    if let desiredKg = goals.desiredWeightKg {
+      desiredWeightKg = desiredKg
+      desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
+    } else if let desiredLbs = goals.desiredWeightLbs {
+      desiredWeightLbs = desiredLbs
+      desiredWeightKg = desiredLbs / 2.20462
+    }
+
+    if let encoded = try? JSONEncoder().encode(goals) {
+      UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
+    }
+  }
+
+  remainingCalories = max(0, calorieGoal - totalCalories)
+  triggerProfileDataRefresh()
+}
+
 
 
 
@@ -432,7 +474,7 @@ func loadLogs(for date: Date) {
         }
 
         // Call the repository to update the log
-        repo.updateLog(userEmail: email, logId: foodLogId, servings: servings, date: date, mealType: mealType, calories: calories, protein: protein, carbs: carbs, fat: fat) { result in
+        logNetwork.updateLog(userEmail: email, logId: foodLogId, servings: servings, date: date, mealType: mealType, calories: calories, protein: protein, carbs: carbs, fat: fat) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let updatedFoodLog):
@@ -582,9 +624,9 @@ func loadLogs(for date: Date) {
             return
         }
 
-        print("🔄 DayLogsViewModel: Calling repo.updateMealLog with ID: \(mealLogId)")
+        print("🔄 DayLogsViewModel: Calling logNetwork.updateMealLog with ID: \(mealLogId)")
         // Call the repository to update the meal log
-        repo.updateMealLog(userEmail: email, logId: mealLogId, servings: servings, date: date, mealType: mealType, calories: calories, protein: protein, carbs: carbs, fat: fat) { result in
+        logNetwork.updateMealLog(userEmail: email, logId: mealLogId, servings: servings, date: date, mealType: mealType, calories: calories, protein: protein, carbs: carbs, fat: fat) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let updatedMealLog):

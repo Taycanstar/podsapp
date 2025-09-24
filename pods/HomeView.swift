@@ -6,6 +6,7 @@ struct HomeView: View {
     @EnvironmentObject var homeViewModel: HomeViewModel
     @EnvironmentObject var viewModel: OnboardingViewModel
     @EnvironmentObject var uploadViewModel: UploadViewModel
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
     var networkManager: NetworkManager = NetworkManager()
     
     @Environment(\.colorScheme) var colorScheme
@@ -135,21 +136,19 @@ struct HomeView: View {
     private func refreshSubscriptionIfNeeded() {
          let now = Date()
          if lastSubscriptionRefresh == nil || now.timeIntervalSince(lastSubscriptionRefresh!) > 3600 { // Refresh every hour
-             NetworkManager().fetchSubscriptionInfo(for: viewModel.email) { result in
-                 DispatchQueue.main.async {
-                     switch result {
-                     case .success(let subscriptionInfo):
+             Task {
+                 await SubscriptionRepository.shared.refresh(force: false)
+                 if let info = SubscriptionRepository.shared.subscription {
+                     await MainActor.run {
                          viewModel.updateSubscriptionInfo(
-                             status: subscriptionInfo.status,
-                             plan: subscriptionInfo.plan,
-                             expiresAt: subscriptionInfo.expiresAt,
-                             renews: subscriptionInfo.renews,
-                             seats: subscriptionInfo.seats,
-                             canCreateNewTeam: subscriptionInfo.canCreateNewTeam
+                             status: info.status,
+                             plan: info.plan,
+                             expiresAt: info.expiresAt,
+                             renews: info.renews,
+                             seats: info.seats,
+                             canCreateNewTeam: info.canCreateNewTeam
                          )
                          lastSubscriptionRefresh = now
-                     case .failure(let error):
-                         print("Failed to fetch subscription info: \(error.localizedDescription)")
                      }
                  }
              }

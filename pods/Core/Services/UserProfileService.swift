@@ -16,6 +16,9 @@ class UserProfileService: ObservableObject {
     @Published var isLoading = false
     @Published var lastUpdated: Date?
 
+    private var lastFetchedEmail: String?
+    private let refreshInterval: TimeInterval = 300
+
     private let muscleRecoveryOverridesKey = "muscleRecoveryOverrides"
     
     // MARK: - Fitbod-Aligned Progressive Milestone Tracking
@@ -79,6 +82,49 @@ class UserProfileService: ObservableObject {
             await DataLayer.shared.updateProfileData(serverData)
             print("✅ UserProfileService: Profile data updated in DataLayer")
         }
+    }
+
+    @MainActor
+    func refreshProfileDataIfNeeded(userEmail: String, force: Bool = false) async {
+        if !force,
+           let lastEmail = lastFetchedEmail,
+           lastEmail == userEmail,
+           let lastUpdated = lastUpdated,
+           Date().timeIntervalSince(lastUpdated) < refreshInterval,
+           profileData != nil {
+            return
+        }
+
+        isLoading = true
+
+        await withCheckedContinuation { continuation in
+            NetworkManagerTwo.shared.fetchProfileData(userEmail: userEmail,
+                                                     timezoneOffset: TimeZone.current.secondsFromGMT() / 60) { [weak self] result in
+                guard let self = self else {
+                    continuation.resume()
+                    return
+                }
+
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    switch result {
+                    case .success(let response):
+                        self.handleProfileResponse(response, email: userEmail)
+                    case .failure(let error):
+                        print("❌ UserProfileService: Failed to refresh profile data - \(error)")
+                    }
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
+    private func handleProfileResponse(_ response: ProfileDataResponse, email: String) {
+        profileData = response
+        lastFetchedEmail = email
+        lastUpdated = Date()
+        cacheProfileData(response)
+        updateFromServer(serverData: response.toDictionary())
     }
     
     /// Load cached profile data from UserDefaults

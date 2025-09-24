@@ -1318,9 +1318,6 @@ private extension DashboardView {
         
         // Preload weight and height logs for the current user
         preloadHealthData()
-        
-        // Refresh profile data if needed
-        onboarding.refreshProfileDataIfNeeded()
     }
     
     /// Preload health data logs so they're available when navigating to detail views
@@ -1328,113 +1325,57 @@ private extension DashboardView {
         guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
             return
         }
+
+        Task {
+            await ProfileRepository.shared.refresh(force: false)
+        }
         
-        // Preload profile data for instant MyProfileView loading
-        let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
-        print("🚀 DashboardView - Starting profile data preload for: \(email)")
-        print("🕐 DashboardView.preloadHealthData - Using timezone offset: \(timezoneOffset) minutes")
-        NetworkManagerTwo.shared.fetchProfileData(userEmail: email, timezoneOffset: timezoneOffset) { result in
-            Task { @MainActor in
+        let weightKey = "preloadedWeightLogsTimestamp"
+        if shouldFetchHealthCache(forKey: weightKey) {
+            NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
                 switch result {
-                case .success(let profileData):
-                    // Store in onboarding for MyProfileView to use
-                    onboarding.profileData = profileData
-                    
-                    // Update StreakManager with fresh data (if available)
-                    if let currentStreak = profileData.currentStreak,
-                       let longestStreak = profileData.longestStreak,
-                       let streakAsset = profileData.streakAsset {
-                        let streakData = UserStreakData(
-                            currentStreak: currentStreak,
-                            longestStreak: longestStreak,
-                            streakAsset: streakAsset,
-                            lastActivityDate: profileData.lastActivityDate,
-                            streakStartDate: profileData.streakStartDate
-                        )
-                        streakManager.syncFromServer(streakData: streakData)
-                        print("🔥 DashboardView - Synced streak data: \(currentStreak) days, asset: \(streakAsset)")
-                    } else {
-                        print("⚠️ DashboardView - No streak data in profile response (backward compatibility)")
+                case .success(let response):
+                    if let encodedData = try? JSONEncoder().encode(response) {
+                        UserDefaults.standard.set(encodedData, forKey: "preloadedWeightLogs")
+                        UserDefaults.standard.set(Date(), forKey: weightKey)
                     }
-                    
-                    print("✅ DashboardView - Preloaded profile data for \(profileData.email) - stored in onboarding.profileData")
-                    print("✅ DashboardView - Preload success with timezone offset: \(timezoneOffset)")
                 case .failure(let error):
-                    print("❌ DashboardView - Error preloading profile data: \(error)")
+                    print("Error preloading weight logs: \(error)")
                 }
             }
         }
-        
-        // Preload weight logs
-        NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
-            switch result {
-            case .success(let response):
-                // Store logs in UserDefaults for access in WeightDataView
-                if let encodedData = try? JSONEncoder().encode(response) {
-                    UserDefaults.standard.set(encodedData, forKey: "preloadedWeightLogs")
+
+        let heightKey = "preloadedHeightLogsTimestamp"
+        if shouldFetchHealthCache(forKey: heightKey) {
+            NetworkManagerTwo.shared.fetchHeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
+                switch result {
+                case .success(let response):
+                    if let encodedData = try? JSONEncoder().encode(response) {
+                        UserDefaults.standard.set(encodedData, forKey: "preloadedHeightLogs")
+                        UserDefaults.standard.set(Date(), forKey: heightKey)
+                    }
+                case .failure(let error):
+                    print("Error preloading height logs: \(error)")
                 }
-            case .failure(let error):
-                print("Error preloading weight logs: \(error)")
-            }
-        }
-        
-        // Preload height logs
-        NetworkManagerTwo.shared.fetchHeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
-            switch result {
-            case .success(let response):
-                // Store logs in UserDefaults for access in HeightDataView
-                if let encodedData = try? JSONEncoder().encode(response) {
-                    UserDefaults.standard.set(encodedData, forKey: "preloadedHeightLogs")
-                }
-            case .failure(let error):
-                print("Error preloading height logs: \(error)")
             }
         }
         
         // Refresh preloaded profile data when logs change
         refreshPreloadedProfileData()
     }
-    
+
     /// Refresh preloaded profile data when logs change
     private func refreshPreloadedProfileData() {
-        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
-            return
+        Task {
+            await ProfileRepository.shared.refresh(force: false)
         }
-        
-        let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
-        print("🔄 DashboardView - Refreshing profile data for: \(email)")
-        print("🕐 DashboardView.refreshPreloadedProfileData - Using timezone offset: \(timezoneOffset) minutes")
-        NetworkManagerTwo.shared.fetchProfileData(userEmail: email, timezoneOffset: timezoneOffset) { result in
-            Task { @MainActor in
-                switch result {
-                case .success(let profileData):
-                    // Update the preloaded profile data
-                    onboarding.profileData = profileData
-                    
-                    // Update StreakManager with fresh data (if available)
-                    if let currentStreak = profileData.currentStreak,
-                       let longestStreak = profileData.longestStreak,
-                       let streakAsset = profileData.streakAsset {
-                        let streakData = UserStreakData(
-                            currentStreak: currentStreak,
-                            longestStreak: longestStreak,
-                            streakAsset: streakAsset,
-                            lastActivityDate: profileData.lastActivityDate,
-                            streakStartDate: profileData.streakStartDate
-                        )
-                        streakManager.syncFromServer(streakData: streakData)
-                        print("🔥 DashboardView - Updated streak data: \(currentStreak) days, asset: \(streakAsset)")
-                    } else {
-                        print("⚠️ DashboardView - No streak data in profile response (backward compatibility)")
-                    }
-                    
-                    print("✅ DashboardView - Refreshed profile data for \(profileData.email)")
-                    print("✅ DashboardView - Refresh success with timezone offset: \(timezoneOffset)")
-                case .failure(let error):
-                    print("❌ DashboardView - Error refreshing profile data: \(error)")
-                }
-            }
+    }
+
+    private func shouldFetchHealthCache(forKey key: String, ttl: TimeInterval = 300) -> Bool {
+        if let last = UserDefaults.standard.object(forKey: key) as? Date {
+            return Date().timeIntervalSince(last) >= ttl
         }
+        return true
     }
 }
 

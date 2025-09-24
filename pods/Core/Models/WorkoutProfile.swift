@@ -130,4 +130,14 @@ struct WorkoutProfile: Codable {
         case restDays = "rest_days"
         case currentWeightKg = "current_weight_kg"
     }
-} 
+}
+
+extension ProfileDataResponse {
+    func toDictionary() -> [String: Any] {
+        guard let data = try? JSONEncoder().encode(self),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return [:]
+        }
+        return json
+    }
+}

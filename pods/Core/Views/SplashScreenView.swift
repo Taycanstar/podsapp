@@ -101,38 +101,57 @@ struct SplashScreenView: View {
         preloadHealthDataLogs(userEmail: userEmail)
         
         // Fetch profile data for the user (background task)
-        onboarding.refreshProfileDataIfNeeded()
+        Task {
+            await onboarding.refreshProfileDataIfNeeded()
+        }
         
         print("🚀 SplashScreenView - Data preload initiated")
     }
     
     /// Preload health data logs so they're available when navigating to detail views
     private func preloadHealthDataLogs(userEmail: String) {
-        // Preload weight logs (background)
-        NetworkManagerTwo.shared.fetchWeightLogs(userEmail: userEmail, limit: 1000, offset: 0) { result in
-            switch result {
-            case .success(let response):
-                if let encodedData = try? JSONEncoder().encode(response) {
-                    UserDefaults.standard.set(encodedData, forKey: "preloadedWeightLogs")
+        let weightTimestampKey = "preloadedWeightLogsTimestamp"
+        if shouldFetchHealthData(forKey: weightTimestampKey) {
+            NetworkManagerTwo.shared.fetchWeightLogs(userEmail: userEmail, limit: 1000, offset: 0) { result in
+                switch result {
+                case .success(let response):
+                    if let encodedData = try? JSONEncoder().encode(response) {
+                        UserDefaults.standard.set(encodedData, forKey: "preloadedWeightLogs")
+                        UserDefaults.standard.set(Date(), forKey: weightTimestampKey)
+                    }
+                    print("✅ Weight logs preloaded successfully")
+                case .failure(let error):
+                    print("❌ Error preloading weight logs: \(error)")
                 }
-                print("✅ Weight logs preloaded successfully")
-            case .failure(let error):
-                print("❌ Error preloading weight logs: \(error)")
             }
+        } else {
+            print("⏭️ Skipping weight log preload – cache is fresh")
         }
-        
-        // Preload height logs (background)
-        NetworkManagerTwo.shared.fetchHeightLogs(userEmail: userEmail, limit: 1000, offset: 0) { result in
-            switch result {
-            case .success(let response):
-                if let encodedData = try? JSONEncoder().encode(response) {
-                    UserDefaults.standard.set(encodedData, forKey: "preloadedHeightLogs")
+
+        let heightTimestampKey = "preloadedHeightLogsTimestamp"
+        if shouldFetchHealthData(forKey: heightTimestampKey) {
+            NetworkManagerTwo.shared.fetchHeightLogs(userEmail: userEmail, limit: 1000, offset: 0) { result in
+                switch result {
+                case .success(let response):
+                    if let encodedData = try? JSONEncoder().encode(response) {
+                        UserDefaults.standard.set(encodedData, forKey: "preloadedHeightLogs")
+                        UserDefaults.standard.set(Date(), forKey: heightTimestampKey)
+                    }
+                    print("✅ Height logs preloaded successfully")
+                case .failure(let error):
+                    print("❌ Error preloading height logs: \(error)")
                 }
-                print("✅ Height logs preloaded successfully")
-            case .failure(let error):
-                print("❌ Error preloading height logs: \(error)")
             }
+        } else {
+            print("⏭️ Skipping height log preload – cache is fresh")
         }
+    }
+
+    private func shouldFetchHealthData(forKey key: String, ttl: TimeInterval = 300) -> Bool {
+        if let last = UserDefaults.standard.object(forKey: key) as? Date {
+            return Date().timeIntervalSince(last) >= ttl
+        }
+        return true
     }
 }
 

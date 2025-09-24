@@ -78,6 +78,12 @@ struct podsApp: App {
                     FitnessGoalMigrationService.migrateUserDefaults()
                     NetworkManager().determineUserLocation()
                     initializeDataArchitecture()
+                    StartupCoordinator.shared.bootstrapIfNeeded(
+                        onboarding: onboardingViewModel,
+                        foodManager: foodManager,
+                        dayLogs: dayLogsVM,
+                        subscriptionManager: subscriptionManager
+                    )
                 }
                 .onChange(of: scenePhase) { newPhase in
                     if newPhase == .active {

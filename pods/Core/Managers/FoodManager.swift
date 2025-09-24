@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 import Mixpanel
 
 // Memory tracking helper for crash debugging (duplicated from FoodScannerView)
@@ -179,6 +180,14 @@ class FoodManager: ObservableObject {
     private var currentUserFoodsPage = 1
     
     private let networkManager: NetworkManager
+    private let feedRepository = FoodFeedRepository.shared
+    private let combinedLogsRepository = CombinedLogsRepository.shared
+    private let mealsRepository = MealsRepository.shared
+    private let recipesRepository = RecipesRepository.shared
+    private let savedMealsRepository = SavedMealsRepository.shared
+    private let userFoodsRepository = UserFoodsRepository.shared
+    private var feedCancellables: Set<AnyCancellable> = []
+    private var repositoryCancellables: Set<AnyCancellable> = []
     private var userEmail: String?
     private var currentPage = 1
     private let pageSize = 20
@@ -193,6 +202,21 @@ class FoodManager: ObservableObject {
     private var mealsHasMore = true  // Added missing variable
     @Published var combinedLogs: [CombinedLog] = []
     private var lastRefreshTime: Date?
+    private var lastMealsFetchDate: Date?
+    private var lastRecipesFetchDate: Date?
+    private var lastCombinedLogsFetchDate: Date?
+    private var lastUserFoodsFetchDate: Date?
+    private var lastSavedMealsFetchDate: Date?
+
+    private var isFetchingMeals = false
+    private var isFetchingRecipes = false
+    private var isFetchingCombinedLogs = false
+    private var isFetchingUserFoods = false
+    private var isFetchingSavedMeals = false
+
+    private var lastInitializedEmail: String?
+    private var lastRefreshDate: Date?
+    private let refreshInterval: TimeInterval = 120
     
     // Recipe-related properties
     @Published var recipes: [Recipe] = []
@@ -632,26 +656,55 @@ class FoodManager: ObservableObject {
     
     init() {
         self.networkManager = NetworkManager()
-   
     }
     
     
     func initialize(userEmail: String) {
+        initialize(userEmail: userEmail, force: false)
+    }
+
+    func initialize(userEmail: String, force: Bool) {
+        if !force,
+           let lastEmail = lastInitializedEmail,
+           lastEmail == userEmail,
+           let lastRefreshDate = lastRefreshDate,
+           Date().timeIntervalSince(lastRefreshDate) < refreshInterval {
+            return
+        }
+
+        lastInitializedEmail = userEmail
+        lastRefreshDate = Date()
+
+        if force {
+            lastMealsFetchDate = nil
+            lastRecipesFetchDate = nil
+            lastCombinedLogsFetchDate = nil
+            lastUserFoodsFetchDate = nil
+            lastSavedMealsFetchDate = nil
+        }
+
         print("🏁 FoodManager: Initializing with email \(userEmail)")
         self.userEmail = userEmail
 
-          for key in UserDefaults.standard.dictionaryRepresentation().keys
+        configureFeedRepository(for: userEmail)
+        configureDataRepositories(for: userEmail)
+
+        for key in UserDefaults.standard.dictionaryRepresentation().keys
         where key.hasPrefix("logs_by_date_\(userEmail)_") {
-        UserDefaults.standard.removeObject(forKey: key)
-    }
-        
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+
         print("📋 FoodManager: Starting initialization sequence")
-        resetAndFetchFoods()
-        resetAndFetchMeals()
-        resetAndFetchRecipes()
-        resetAndFetchLogs()
-        resetAndFetchUserFoods()
-        resetAndFetchSavedMeals()
+        resetAndFetchFoods(force: force)
+        resetAndFetchMeals(force: force)
+        resetAndFetchRecipes(force: force)
+        resetAndFetchLogs(force: force)
+        resetAndFetchUserFoods(force: force)
+        resetAndFetchSavedMeals(force: force)
+    }
+
+    func refresh(userEmail: String) {
+        initialize(userEmail: userEmail, force: true)
     }
     func trackRecentlyAdded(foodId: Int) {
     recentlyAddedFoodIds.insert(foodId)
@@ -662,233 +715,284 @@ class FoodManager: ObservableObject {
 
 
 
-    
-    private func resetAndFetchFoods() {
+
+    private func configureFeedRepository(for email: String) {
+        feedRepository.configure(email: email)
+        feedCancellables.removeAll()
+
+        feedRepository.$snapshot
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] snapshot in
+                self?.applyFoodFeedSnapshot(snapshot)
+            }
+            .store(in: &feedCancellables)
+
+        applyFoodFeedSnapshot(feedRepository.snapshot)
+    }
+
+    private func applyFoodFeedSnapshot(_ snapshot: FoodFeedSnapshot) {
+        loggedFoods = snapshot.loggedFoods
+        hasMore = snapshot.hasMoreFoods
+    }
+
+    private func configureDataRepositories(for email: String) {
+        repositoryCancellables.removeAll()
+
+        combinedLogsRepository.configure(email: email)
+        applyCombinedLogsSnapshot(combinedLogsRepository.snapshot)
+
+        combinedLogsRepository.$snapshot
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] snapshot in
+                self?.applyCombinedLogsSnapshot(snapshot)
+            }
+            .store(in: &repositoryCancellables)
+
+        Publishers.CombineLatest(
+            combinedLogsRepository.$isRefreshing,
+            combinedLogsRepository.$isLoadingNextPage
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] isRefreshing, isPaging in
+            self?.isLoadingLogs = isRefreshing
+            self?.isLoadingMoreLogs = isPaging
+        }
+        .store(in: &repositoryCancellables)
+
+        mealsRepository.configure(email: email)
+        applyMealsSnapshot(mealsRepository.snapshot)
+
+        mealsRepository.$snapshot
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] snapshot in
+                self?.applyMealsSnapshot(snapshot)
+            }
+            .store(in: &repositoryCancellables)
+
+        mealsRepository.$isRefreshing
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isRefreshing in
+                self?.isLoadingMeals = isRefreshing
+            }
+            .store(in: &repositoryCancellables)
+
+        mealsRepository.$isLoadingNextPage
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isPaging in
+                self?.isLoadingMealPage = isPaging
+            }
+            .store(in: &repositoryCancellables)
+
+        recipesRepository.configure(email: email)
+        applyRecipesSnapshot(recipesRepository.snapshot)
+
+        recipesRepository.$snapshot
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] snapshot in
+                self?.applyRecipesSnapshot(snapshot)
+            }
+            .store(in: &repositoryCancellables)
+
+        Publishers.CombineLatest(
+            recipesRepository.$isRefreshing,
+            recipesRepository.$isLoadingNextPage
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] isRefreshing, isPaging in
+            self?.isLoadingRecipePage = isRefreshing || isPaging
+        }
+        .store(in: &repositoryCancellables)
+
+        savedMealsRepository.configure(email: email)
+        applySavedMealsSnapshot(savedMealsRepository.snapshot)
+
+        savedMealsRepository.$snapshot
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] snapshot in
+                self?.applySavedMealsSnapshot(snapshot)
+            }
+            .store(in: &repositoryCancellables)
+
+        Publishers.CombineLatest(
+            savedMealsRepository.$isRefreshing,
+            savedMealsRepository.$isLoadingNextPage
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] isRefreshing, isPaging in
+            self?.isLoadingSavedMeals = isRefreshing || isPaging
+        }
+        .store(in: &repositoryCancellables)
+
+        userFoodsRepository.configure(email: email)
+        applyUserFoodsSnapshot(userFoodsRepository.snapshot)
+
+        userFoodsRepository.$snapshot
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] snapshot in
+                self?.applyUserFoodsSnapshot(snapshot)
+            }
+            .store(in: &repositoryCancellables)
+
+        Publishers.CombineLatest(
+            userFoodsRepository.$isRefreshing,
+            userFoodsRepository.$isLoadingNextPage
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] isRefreshing, isPaging in
+            self?.isLoadingUserFoods = isRefreshing || isPaging
+        }
+        .store(in: &repositoryCancellables)
+    }
+
+    private func applyCombinedLogsSnapshot(_ snapshot: CombinedLogsSnapshot) {
+        combinedLogs = snapshot.logs
+        hasMore = snapshot.hasMore
+        currentPage = snapshot.nextPage
+    }
+
+    private func applyMealsSnapshot(_ snapshot: MealsSnapshot) {
+        meals = snapshot.meals
+        hasMoreMeals = snapshot.hasMore
+        currentMealPage = snapshot.nextPage
+    }
+
+    private func applyRecipesSnapshot(_ snapshot: RecipesSnapshot) {
+        recipes = snapshot.recipes
+        hasMoreRecipes = snapshot.hasMore
+        currentRecipePage = snapshot.nextPage
+    }
+
+    private func applySavedMealsSnapshot(_ snapshot: SavedMealsSnapshot) {
+        savedMeals = snapshot.savedMeals
+        hasMoreSavedMeals = snapshot.hasMore
+        currentSavedMealsPage = snapshot.nextPage
+        rebuildSavedLogIds(from: snapshot.savedMeals)
+    }
+
+    private func applyUserFoodsSnapshot(_ snapshot: UserFoodsSnapshot) {
+        userFoods = snapshot.foods
+        hasMoreUserFoods = snapshot.hasMore
+        currentUserFoodsPage = snapshot.nextPage
+    }
+
+    private func rebuildSavedLogIds(from savedMeals: [SavedMeal]) {
+        savedLogIds.removeAll()
+        for savedMeal in savedMeals {
+            switch savedMeal.itemType {
+            case .foodLog:
+                if let foodLog = savedMeal.foodLog, let id = foodLog.foodLogId {
+                    savedLogIds.insert(id)
+                }
+            case .mealLog:
+                if let mealLog = savedMeal.mealLog, let id = mealLog.mealLogId {
+                    savedLogIds.insert(id)
+                }
+            }
+        }
+    }
+
+    private func resetAndFetchFoods(force: Bool = false) {
         print("🍔 FoodManager: Reset and fetch foods called")
-        currentPage = 1
-        hasMore = true
-        
-        // Store existing foods to allow smooth transitions
-        let oldFoods = loggedFoods
-        
-        // Clear foods with animation if we had previous logs
-        if !oldFoods.isEmpty {
-            withAnimation(.easeOut(duration: 0.2)) {
-                loggedFoods = []
+        Task { [weak self] in
+            guard let self else { return }
+            await self.refreshFoods(force: force)
+        }
+    }
+    private func resetAndFetchLogs(force: Bool = false) {
+        guard !isFetchingCombinedLogs else { return }
+        isFetchingCombinedLogs = true
+
+        Task { [weak self] in
+            guard let self else { return }
+            let success = await self.combinedLogsRepository.refresh(force: force)
+            if success {
+                self.lastCombinedLogsFetchDate = Date()
+                self.lastRefreshTime = Date()
             }
-        } else {
-            loggedFoods = []
+            self.isFetchingCombinedLogs = false
         }
-        
-        // Try loading from cache first
-        loadCachedFoods()
-        
-        // Then fetch from server with animation
-        loadMoreFoods(refresh: true)
-        
-        // Update refresh timestamp
-        lastRefreshTime = Date()
-    }
-    private func resetAndFetchLogs() {
-         
-        // Reset state
-        currentPage = 1
-        hasMore = true
-        
-        // Store existing logs to allow smooth transitions
-        let oldLogs = combinedLogs
-        
-        // Clear logs with animation if we had previous logs
-        if !oldLogs.isEmpty {
-            withAnimation(.easeOut(duration: 0.2)) {
-                combinedLogs = []
-            }
-        } else {
-            combinedLogs = []
-        }
-        
-        // Try loading from cache first
-        let cacheLoaded = loadCachedLogs()
-        
-        // Then fetch from server with animation
-        loadMoreLogs(refresh: true)
-        
-        // Update refresh timestamp
-        lastRefreshTime = Date()
     }
     
-    private func loadCachedFoods() {
-    guard let userEmail = userEmail else { return }
-    if let cached = UserDefaults.standard.data(forKey: "logged_foods_\(userEmail)_page_1"),
-       let decodedResponse = try? JSONDecoder().decode(FoodLogsResponse.self, from: cached) {
-        self.loggedFoods = uniqueLogs(from: decodedResponse.foodLogs)
-        self.hasMore = decodedResponse.hasMore
-    }
-}
-    
-    private func cacheFoods(_ response: FoodLogsResponse, forPage page: Int) {
-        guard let userEmail = userEmail else { return }
-        if let encoded = try? JSONEncoder().encode(response) {
-            UserDefaults.standard.set(encoded, forKey: "logged_foods_\(userEmail)_page_\(page)")
-        }
-    }
-    private func cacheLogs(_ response: CombinedLogsResponse, forPage page: Int) {
-    guard let userEmail = userEmail else { return }
-    if let encoded = try? JSONEncoder().encode(response) {
-        UserDefaults.standard.set(encoded, forKey: "combined_logs_\(userEmail)_page_\(page)")
-    }
-}
-private func loadCachedLogs() -> Bool {
-    guard let userEmail = userEmail else { return false }
-    
-    if let cached = UserDefaults.standard.data(forKey: "combined_logs_\(userEmail)_page_1"),
-       let decodedResponse = try? {
-           let decoder = JSONDecoder()
-           decoder.keyDecodingStrategy = .convertFromSnakeCase
-           decoder.dateDecodingStrategy = .iso8601
-           return try decoder.decode(CombinedLogsResponse.self, from: cached)
-       }() {
-        
-        withAnimation(.easeOut(duration: 0.3)) {
-            self.combinedLogs = decodedResponse.logs
-        }
-        self.hasMore = decodedResponse.hasMore
-        return true
-    }
-    
-    return false
-}
-    
-private func removeDuplicates(from logs: [LoggedFood]) -> [LoggedFood] {
-    var seen = Set<Int>()
-    var uniqueLogs: [LoggedFood] = []
-    for log in logs {
-        if !seen.contains(log.id) {
-            uniqueLogs.append(log)
-            seen.insert(log.id)
-        }
-    }
-    return uniqueLogs
-}
-private func uniqueLogs(from logs: [LoggedFood]) -> [LoggedFood] {
-    // First, sort the logs by their logged food id descending (assuming higher id is more recent)
-    let sortedLogs = logs.sorted { $0.foodLogId > $1.foodLogId }
-    var seen = Set<Int>()
-    var unique: [LoggedFood] = []
-    for log in sortedLogs {
-        let foodId = log.food.fdcId
-        if !seen.contains(foodId) {
-            unique.append(log)
-            seen.insert(foodId)
-        }
-    }
-    return unique
-}
 func loadMoreFoods(refresh: Bool = false) {
-    guard let email = userEmail else { return }
-    guard !isLoadingFood else { return }
-    
-    let pageToLoad = refresh ? 1 : currentPage
-    isLoadingFood = true
-    error = nil
-    networkManager.getFoodLogs(userEmail: email, page: pageToLoad) { [weak self] result in
-        DispatchQueue.main.async {
-            guard let self = self else { return }
-            self.isLoadingFood = false
-            switch result {
-            case .success(let response):
-                if refresh {
-                    // Filter the backend response to only the unique (most recent) logs
-                    let uniqueResponseLogs = self.uniqueLogs(from: response.foodLogs)
-                    self.loggedFoods = uniqueResponseLogs
-                    self.currentPage = 2
-                } else {
-                    let newUniqueLogs = self.uniqueLogs(from: response.foodLogs)
-                    self.loggedFoods.append(contentsOf: newUniqueLogs)
-                    self.loggedFoods = self.uniqueLogs(from: self.loggedFoods)
-                    self.currentPage += 1
-                }
-                self.hasMore = response.hasMore
-                self.cacheFoods(response, forPage: pageToLoad)
-            case .failure(let error):
-                self.error = error
-                self.hasMore = false
-            }
+    guard userEmail != nil else { return }
+
+    Task { [weak self] in
+        guard let self else { return }
+        if refresh {
+            await self.refreshFoods(force: true)
+        } else {
+            await self.loadNextFoodsPage()
         }
     }
 }
- func loadMoreLogs(refresh: Bool = false) {
-    guard let email = userEmail else {
-        print("❌ FoodManager.loadMoreLogs() - No user email available")
+
+    private func refreshFoods(force: Bool) async {
+        guard !feedRepository.isRefreshing else { return }
+        isLoadingFood = true
+        let success = await feedRepository.refresh(force: force)
+        isLoadingFood = false
+        if success {
+            hasMore = feedRepository.snapshot.hasMoreFoods
+            lastRefreshTime = Date()
+        }
+    }
+
+    private func loadNextFoodsPage() async {
+        guard feedRepository.snapshot.hasMoreFoods else { return }
+        guard !feedRepository.isLoadingNextPage else { return }
+        isLoadingFood = true
+        let success = await feedRepository.loadNextPage()
+        isLoadingFood = false
+        if success {
+            hasMore = feedRepository.snapshot.hasMoreFoods
+            lastRefreshTime = Date()
+        }
+    }
+func loadMoreLogs(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    guard userEmail != nil else {
+        completion?(false)
         return
     }
-    guard !isLoadingLogs else {
-        print("⏸️ FoodManager.loadMoreLogs() - Already loading, skipping request")
-        return
-    }
-    
-    let pageToLoad = refresh ? 1 : currentPage
-    print("📥 FoodManager.loadMoreLogs() - Loading page \(pageToLoad) for user \(email), currentPage: \(currentPage)")
-    isLoadingLogs = true
-    error = nil
-    networkManager.getCombinedLogs(userEmail: email, page: pageToLoad) { [weak self] result in
-        DispatchQueue.main.async {
-            guard let self = self else { return }
-            self.isLoadingLogs = false
-         
-            switch result {
-            case .success(let response):
-                print("✅ FoodManager.loadMoreLogs() - Received response for page \(pageToLoad): \(response.logs.count) logs, hasMore: \(response.hasMore), totalPages: \(response.totalPages)")
-                
-                if refresh {
-                    // When refreshing, replace all logs with the new ones
-            
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        self.combinedLogs = response.logs
-                    }
-                    self.currentPage = 2
-        
-                } else {
-                    // For pagination, append new logs at the end
-                    let startCount = self.combinedLogs.count
-                    let newLogs = response.logs.filter { newLog in
-                        // Only add logs that don't exist yet (by ID)
-                        !self.combinedLogs.contains { existingLog in
-                            switch (existingLog.type, newLog.type) {
-                            case (.food, .food):
-                                return existingLog.foodLogId == newLog.foodLogId
-                            case (.meal, .meal):
-                                return existingLog.mealLogId == newLog.mealLogId
-                            default:
-                                return false
-                            }
-                        }
-                    }
-                    if !newLogs.isEmpty {
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            self.combinedLogs.append(contentsOf: newLogs)
-                        }
 
-                    } else {
-             
-                    }
-
-                    self.currentPage += 1
-                }
-                
-     
-                self.hasMore = response.hasMore
-                self.cacheLogs(response, forPage: pageToLoad)
-                
-            case .failure(let error):
-                print("❌ FoodManager.loadMoreLogs() - Error: \(error)")
-                self.error = error
-                self.hasMore = false
-            }
+    Task { [weak self] in
+        guard let self else {
+            await MainActor.run { completion?(false) }
+            return
+        }
+        let success = await self.performLoadMoreLogs(refresh: refresh)
+        await MainActor.run {
+            completion?(success)
         }
     }
 }
-    
+
+private func performLoadMoreLogs(refresh: Bool) async -> Bool {
+    if refresh {
+        guard !combinedLogsRepository.isRefreshing else { return false }
+
+        let success = await combinedLogsRepository.refresh(force: true)
+        if success {
+            lastCombinedLogsFetchDate = Date()
+            lastRefreshTime = Date()
+            hasMore = combinedLogsRepository.snapshot.hasMore
+            currentPage = combinedLogsRepository.snapshot.nextPage
+        }
+        return success
+    } else {
+        guard hasMore else { return false }
+        guard !combinedLogsRepository.isLoadingNextPage else { return false }
+
+        let success = await combinedLogsRepository.loadNextPage()
+        hasMore = combinedLogsRepository.snapshot.hasMore
+        currentPage = combinedLogsRepository.snapshot.nextPage
+        if success {
+            lastCombinedLogsFetchDate = Date()
+            lastRefreshTime = Date()
+        }
+        return success
+    }
+}
+
     // New refresh function that ensures logs are loaded
     func refresh() {
         print("🔄 FoodManager.refresh() called")
@@ -898,141 +1002,92 @@ func loadMoreFoods(refresh: Bool = false) {
             print("⚠️ Skipping refresh because another operation is in progress")
             return
         }
-        
-        
-        // Reset pagination states
-        currentPage = 1
-        mealCurrentPage = 1
-        hasMore = true
-        mealsHasMore = true
-        
-        
+
+        lastMealsFetchDate = nil
+        lastRecipesFetchDate = nil
+        lastCombinedLogsFetchDate = nil
+        lastUserFoodsFetchDate = nil
+        lastSavedMealsFetchDate = nil
+
+        resetAndFetchMeals(force: true)
+        resetAndFetchRecipes(force: true)
+        resetAndFetchLogs(force: true)
+        resetAndFetchUserFoods(force: true)
+        resetAndFetchSavedMeals(force: true)
     }
     
     // MARK: - User Foods Methods
     
-     func clearUserFoodsCache() {
-        guard let userEmail = userEmail else { return }
-        
-        // Clear all pages of user foods cache
-        for page in 1...10 { // Assuming we won't have more than 10 pages
-            let cacheKey = "user_foods_\(userEmail)_page_\(page)"
-            UserDefaults.standard.removeObject(forKey: cacheKey)
-        }
-    }
-    
-    // Helper method to clear all logs cache
-    private func clearLogsCache() {
-        guard let userEmail = userEmail else { return }
-        
-        // Clear all pages of logs cache
-        for page in 1...10 { // Assuming we won't have more than 10 pages
-            let cacheKey = "combined_logs_\(userEmail)_page_\(page)"
-            UserDefaults.standard.removeObject(forKey: cacheKey)
-        }
-    }
-    
-    // Load cached user foods
-    private func loadCachedUserFoods() {
-        guard let userEmail = userEmail else { return }
-        if let cached = UserDefaults.standard.data(forKey: "user_foods_\(userEmail)_page_1") {
-            do {
-                let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
-                let decodedResponse = try decoder.decode(FoodResponse.self, from: cached)
-                self.userFoods = decodedResponse.foods
-                self.hasMoreUserFoods = decodedResponse.hasMore
-            } catch {
-                print("Error decoding cached user foods: \(error)")
-            }
-        }
-    }
-    
-    // Cache user foods
-    private func cacheUserFoods(_ response: FoodResponse, forPage page: Int) {
-        guard let userEmail = userEmail else { return }
-        if let encoded = try? JSONEncoder().encode(response) {
-            UserDefaults.standard.set(encoded, forKey: "user_foods_\(userEmail)_page_\(page)")
-        }
+    func clearUserFoodsCache() {
+        userFoodsRepository.clear()
+        lastUserFoodsFetchDate = nil
     }
     
     // Load user foods with pagination
     func loadUserFoods(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
-        guard let email = userEmail else {
+        guard userEmail != nil else {
             completion?(false)
             return
         }
-        
-        guard !isLoadingUserFoods else {
-            completion?(false)
-            return
-        }
-        
-        let pageToLoad = refresh ? 1 : currentUserFoodsPage
-        isLoadingUserFoods = true
-        
-        networkManager.getUserFoods(userEmail: email, page: pageToLoad) { [weak self] result in
-            guard let self = self else {
-                DispatchQueue.main.async {
-                    completion?(false)
-                }
+
+        Task { [weak self] in
+            guard let self else {
+                await MainActor.run { completion?(false) }
                 return
             }
-            
-            DispatchQueue.main.async {
-                self.isLoadingUserFoods = false
-                
-                switch result {
-                case .success(let response):
-                    if refresh {
-                        withAnimation {
-                            self.userFoods = response.foods
-                        }
-                        self.currentUserFoodsPage = 2
-                    } else {
-                        // Append new foods to existing list
-                        withAnimation {
-                            self.userFoods.append(contentsOf: response.foods)
-                        }
-                        self.currentUserFoodsPage += 1
-                    }
-                    
-                    self.hasMoreUserFoods = response.hasMore
-                    self.cacheUserFoods(response, forPage: pageToLoad)
-                    completion?(true)
-                    
-                case .failure(let error):
-                    print("❌ Failed to load user foods: \(error)")
-                    completion?(false)
+
+            if refresh {
+                guard !self.userFoodsRepository.isRefreshing else {
+                    await MainActor.run { completion?(false) }
+                    return
                 }
+
+                let success = await self.userFoodsRepository.refresh(force: true)
+                if success {
+                    self.lastUserFoodsFetchDate = Date()
+                    self.hasMoreUserFoods = self.userFoodsRepository.snapshot.hasMore
+                    self.currentUserFoodsPage = self.userFoodsRepository.snapshot.nextPage
+                }
+                await MainActor.run { completion?(success) }
+            } else {
+                guard self.hasMoreUserFoods else {
+                    await MainActor.run { completion?(false) }
+                    return
+                }
+                guard !self.userFoodsRepository.isLoadingNextPage else {
+                    await MainActor.run { completion?(false) }
+                    return
+                }
+
+                let success = await self.userFoodsRepository.loadNextPage()
+                self.hasMoreUserFoods = self.userFoodsRepository.snapshot.hasMore
+                self.currentUserFoodsPage = self.userFoodsRepository.snapshot.nextPage
+                if success {
+                    self.lastUserFoodsFetchDate = Date()
+                }
+                await MainActor.run { completion?(success) }
             }
         }
     }
     
     // Method to reset user foods and fetch fresh
-    func resetAndFetchUserFoods() {
+    func resetAndFetchUserFoods(force: Bool = false) {
         print("🍎 FoodManager: Reset and fetch user foods called")
-        currentUserFoodsPage = 1
-        hasMoreUserFoods = true
-        
-        // Store existing foods to allow smooth transitions
-        let oldFoods = userFoods
-        
-        // Clear foods with animation if we had previous foods
-        if !oldFoods.isEmpty {
-            withAnimation(.easeOut(duration: 0.2)) {
-                userFoods = []
+        guard !isFetchingUserFoods else { return }
+        isFetchingUserFoods = true
+
+        Task { [weak self] in
+            guard let self else { return }
+            let success = await self.userFoodsRepository.refresh(force: force)
+            if success {
+                self.lastUserFoodsFetchDate = Date()
+                self.hasMoreUserFoods = self.userFoodsRepository.snapshot.hasMore
+                self.currentUserFoodsPage = self.userFoodsRepository.snapshot.nextPage
             }
-        } else {
-            userFoods = []
+            self.isFetchingUserFoods = false
         }
-        
-        // Try loading from cache first
-        loadCachedUserFoods()
-        
-        // Then fetch from server with animation
-        loadUserFoods(refresh: true)
     }
+
     func updateFoodLog(
         logId: Int,
         servings: Double? = nil,
@@ -1212,28 +1267,11 @@ func loadMoreFoods(refresh: Bool = false) {
         }
     }
 }
-// Helper method to update the cache with the current combinedLogs array
-private func updateCombinedLogsCache() {
-    guard let userEmail = userEmail else { return }
-    
-    // Create a response object with our current logs
-    let response = CombinedLogsResponse(
-        logs: Array(combinedLogs.prefix(pageSize)),
-        hasMore: combinedLogs.count > pageSize,
-        totalPages: (combinedLogs.count + pageSize - 1) / pageSize,
-        currentPage: 1
-    )
-    
-    // Cache the first page
-    cacheLogs(response, forPage: 1)
-}
-    
     func loadMoreIfNeeded(food: LoggedFood) {
-        guard let index = loggedFoods.firstIndex(where: { $0.id == food.id }),
-              index == loggedFoods.count - 5,
-              hasMore else {
-            return
-        }
+        guard let index = loggedFoods.firstIndex(where: { $0.id == food.id }) else { return }
+        guard index == loggedFoods.count - 5 else { return }
+        guard feedRepository.snapshot.hasMoreFoods else { return }
+        guard !feedRepository.isLoadingNextPage else { return }
         loadMoreFoods()
     }
     // Update the existing function to handle CombinedLog
@@ -1342,7 +1380,10 @@ func createMeal(
                 print("📊 Meal has \(meal.mealItems.count) food items")
                 
                 self?.meals.insert(meal, at: 0)
-                self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
+                Task { [weak self] in
+                    guard let self else { return }
+                    await self.mealsRepository.refresh(force: true)
+                }
                 
                 // Show toast notification
                 withAnimation {
@@ -1361,166 +1402,83 @@ func createMeal(
         }
     }
 }
-private func clearMealCache() {
-    guard let userEmail = userEmail else { return }
-    
-    // Clear all pages of meal cache
-    for page in 1...10 { // Assuming we won't have more than 10 pages
-        let cacheKey = "meals_\(userEmail)_page_\(page)"
-        let hadCache = UserDefaults.standard.object(forKey: cacheKey) != nil
-        UserDefaults.standard.removeObject(forKey: cacheKey)
-    }
-}
-private func resetAndFetchMeals() {
+private func resetAndFetchMeals(force: Bool = false) {
     print("🍲 FoodManager: Reset and fetch meals called")
-    currentMealPage = 1
-    hasMoreMeals = true
-    
-    // Store existing meals to allow smooth transitions
-    let oldMeals = meals
-    
-    // Clear meals with animation if we had previous meals
-    if !oldMeals.isEmpty {
-        withAnimation(.easeOut(duration: 0.2)) {
-            meals = []
-        }
-    } else {
-        meals = []
-    }
-    
-    // Clear all meal caches
-    clearMealCache()
-    
-    // Try loading from cache first
-    loadCachedMeals()
-    
-    // Then fetch from server with animation
-    loadMoreMeals(refresh: true) { [weak self] success in
+    guard !isFetchingMeals else { return }
+    isFetchingMeals = true
+
+    Task { [weak self] in
+        guard let self else { return }
+        let success = await self.mealsRepository.refresh(force: force)
         if success {
             print("✅ FoodManager: Successfully loaded meals from server")
-            self?.prefetchMealImages()
+            self.prefetchMealImages()
+            self.lastMealsFetchDate = Date()
+            self.hasMoreMeals = self.mealsRepository.snapshot.hasMore
+            self.currentMealPage = self.mealsRepository.snapshot.nextPage
         } else {
             print("❌ FoodManager: Failed to load meals from server")
         }
-    }
-    
-    // Update refresh timestamp
-    lastRefreshTime = Date()
-}
-// Load cached meals
-private func loadCachedMeals() {
-    guard let userEmail = userEmail else { return }
-    if let cached = UserDefaults.standard.data(forKey: "meals_\(userEmail)_page_1"),
-       let decodedResponse = try? {
-           let decoder = JSONDecoder()
-           decoder.keyDecodingStrategy = .convertFromSnakeCase
-           decoder.dateDecodingStrategy = .iso8601
-           return try decoder.decode(MealsResponse.self, from: cached)
-       }() {
-        self.meals = decodedResponse.meals
-        self.hasMoreMeals = decodedResponse.hasMore
-    }
-}
-// Cache meals
-private func cacheMeals(_ response: MealsResponse, forPage page: Int) {
-  
-    
-    for (index, meal) in response.meals.prefix(3).enumerated() {
-        
-        
-        // Debug first few items
-        for (itemIndex, item) in meal.mealItems.prefix(3).enumerated() {
-       
-        }
-    }
-    
-    // Encode to JSON
-    guard let userEmail = userEmail else { return }
-    if let encoded = try? JSONEncoder().encode(response) {
-        UserDefaults.standard.set(encoded, forKey: "meals_\(userEmail)_page_\(page)")
+        self.isFetchingMeals = false
     }
 }
 // Update loadMoreMeals to include a completion handler
 func loadMoreMeals(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
-    guard let email = userEmail else { 
+    guard userEmail != nil else {
         completion?(false)
-        return 
+        return
     }
-    guard !isLoadingMeals else { 
-        completion?(false)
-        return 
-    }
-    
-    let pageToLoad = refresh ? 1 : currentMealPage
-    isLoadingMeals = true
-    error = nil
-    networkManager.getMeals(userEmail: email, page: pageToLoad) { [weak self] result in
-        DispatchQueue.main.async {
-            guard let self = self else { 
-                completion?(false)
-                return 
+
+    Task { [weak self] in
+        guard let self else {
+            await MainActor.run { completion?(false) }
+            return
+        }
+
+        if refresh {
+            guard !self.mealsRepository.isRefreshing else {
+                await MainActor.run { completion?(false) }
+                return
             }
-            self.isLoadingMeals = false
-            switch result {
-            case .success(let response):
-               
-                
-                // Log details for each meal
-                for (index, meal) in response.meals.prefix(5).enumerated() {
-                  
-                    
-                    // Log the first couple of food items
-                    for (itemIndex, item) in meal.mealItems.prefix(2).enumerated() {
-                    
-                    }
-                }
-                
-                if refresh {
-                    self.meals = response.meals
-                    self.currentMealPage = 2
-                } else {
-                    self.meals.append(contentsOf: response.meals)
-                    self.currentMealPage += 1
-                }
-                self.hasMoreMeals = response.hasMore
-                self.cacheMeals(response, forPage: pageToLoad)
-                completion?(true)
-            case .failure(let error):
-                self.error = error
-                self.hasMoreMeals = false
-                completion?(false)
+
+            let success = await self.mealsRepository.refresh(force: true)
+            if success {
+                self.lastMealsFetchDate = Date()
+                self.prefetchMealImages()
+                self.hasMoreMeals = self.mealsRepository.snapshot.hasMore
+                self.currentMealPage = self.mealsRepository.snapshot.nextPage
             }
+            await MainActor.run { completion?(success) }
+        } else {
+            guard self.hasMoreMeals else {
+                await MainActor.run { completion?(false) }
+                return
+            }
+            guard !self.mealsRepository.isLoadingNextPage else {
+                await MainActor.run { completion?(false) }
+                return
+            }
+
+            let success = await self.mealsRepository.loadNextPage()
+            self.hasMoreMeals = self.mealsRepository.snapshot.hasMore
+            self.currentMealPage = self.mealsRepository.snapshot.nextPage
+            if success {
+                self.lastMealsFetchDate = Date()
+            }
+            await MainActor.run { completion?(success) }
         }
     }
 }
-// Load more meals if needed
+
 func loadMoreMealsIfNeeded(meal: Meal) {
-    guard let index = meals.firstIndex(where: { $0.id == meal.id }),
-          index == meals.count - 5,
-          hasMoreMeals else {
-        return
-    }
+    guard let index = meals.firstIndex(where: { $0.id == meal.id }) else { return }
+    guard index == meals.count - 5 else { return }
+    guard hasMoreMeals else { return }
     loadMoreMeals()
 }
 func refreshMeals() {
-    
-    // Clear the meal cache
-    clearMealCache()
-    
-    // Reset state
-    currentMealPage = 1
-    hasMoreMeals = true
-    
-    // Force UI update before fetching new data
-    objectWillChange.send()
-    
-    // Fetch fresh data
-    loadMoreMeals(refresh: true)
-    
-    // Force another UI update after a short delay
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-        self.objectWillChange.send()
-    }
+    lastMealsFetchDate = nil
+    resetAndFetchMeals(force: true)
 }
 
  func logMeal(
@@ -1713,9 +1671,11 @@ func updateMeal(
                     
                     // Update the meals array if this meal exists in it
                     if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
-                       
                         self?.meals[index] = updatedMeal
-                        self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
+                        Task { [weak self] in
+                            guard let self else { return }
+                            await self.mealsRepository.refresh(force: true)
+                        }
                     } else {
                         print("ℹ️ Meal not found in meals array")
                     }
@@ -1806,7 +1766,10 @@ func updateMeal(
                     // Update the meals array if this meal exists in it
                     if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
                         self?.meals[index] = updatedMeal
-                        self?.cacheMeals(MealsResponse(meals: self?.meals ?? [], hasMore: false, totalPages: 1, currentPage: 1), forPage: 1)
+                        Task { [weak self] in
+                            guard let self else { return }
+                            await self.mealsRepository.refresh(force: true)
+                        }
                     }
                     
                     // Update combined logs if this meal exists there
@@ -1863,146 +1826,68 @@ private func recreateLogWithUpdatedMeal(originalLog: CombinedLog, updatedMeal: M
     )
 }
 // After the resetAndFetchRecipes method
-private func resetAndFetchRecipes() {
+private func resetAndFetchRecipes(force: Bool = false) {
     print("🍛 FoodManager: Reset and fetch recipes called")
-    currentRecipePage = 1
-    hasMoreRecipes = true    
-    // Store existing recipes to allow smooth transitions
-    let oldRecipes = recipes
-    
-    // Clear recipes with animation if we had previous recipes
-    if !oldRecipes.isEmpty {
-        withAnimation(.easeOut(duration: 0.2)) {
-            recipes = []
+    guard !isFetchingRecipes else { return }
+    isFetchingRecipes = true
+
+    Task { [weak self] in
+        guard let self else { return }
+        let success = await self.recipesRepository.refresh(force: force)
+        if success {
+            self.lastRecipesFetchDate = Date()
+            self.hasMoreRecipes = self.recipesRepository.snapshot.hasMore
+            self.currentRecipePage = self.recipesRepository.snapshot.nextPage
         }
-    } else {
-        recipes = []
+        self.isFetchingRecipes = false
     }
-    
-    // Try loading from cache first
-    loadCachedRecipes()
-    
-    // Then fetch from server with animation
-    loadMoreRecipes(refresh: true)
-    
-    // Update refresh timestamp
-    lastRefreshTime = Date()
 }
-private func loadCachedRecipes() {
-    guard let userEmail = userEmail else { return }
-    
-    if let cached = UserDefaults.standard.data(forKey: "recipes_\(userEmail)_page_1") {
-        do {
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            
-            // Use custom date formatting strategy to handle both string dates and numeric timestamps
-            decoder.dateDecodingStrategy = .custom { decoder -> Date in
-                let container = try decoder.singleValueContainer()
-                
-                // Try to decode as a timestamp (number) first
-                do {
-                    let timestamp = try container.decode(Double.self)
-                    return Date(timeIntervalSince1970: timestamp)
-                } catch {
-                    // If not a number, try as a string
-                    let dateString = try container.decode(String.self)
-                    
-                    // If string is empty or null, return current date
-                    if dateString.isEmpty {
-                        print("⚠️ Empty date string found in cache, using current date")
-                        return Date()
-                    }
-                    
-                    // Try ISO8601 first with various options
-                    let iso8601 = ISO8601DateFormatter()
-                    if let date = iso8601.date(from: dateString) {
-                        return date
-                    }
-                    
-                    // Try with fractional seconds
-                    iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                    if let date = iso8601.date(from: dateString) {
-                        return date
-                    }
-                    
-                    // Try each of our custom formats
-                    let formats = [
-                        "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",  // With 6 fractional digits, no timezone
-                        "yyyy-MM-dd'T'HH:mm:ss.SSS",     // With 3 fractional digits, no timezone
-                        "yyyy-MM-dd'T'HH:mm:ss",         // No fractional digits, no timezone
-                        "yyyy-MM-dd"                     // Just date
-                    ]
-                    
-                    let dateFormatter = DateFormatter()
-                    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-                    dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-                    
-                    for format in formats {
-                        dateFormatter.dateFormat = format
-                        if let date = dateFormatter.date(from: dateString) {
-                            return date
-                        }
-                    }
-                    
-                    // Last resort: just return current date
-                    print("⚠️ Could not decode date string: \(dateString)")
-                    return Date()
-                }
+func loadMoreRecipes(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    guard userEmail != nil else {
+        completion?(false)
+        return
+    }
+
+    Task { [weak self] in
+        guard let self else {
+            await MainActor.run { completion?(false) }
+            return
+        }
+
+        if refresh {
+            guard !self.recipesRepository.isRefreshing else {
+                await MainActor.run { completion?(false) }
+                return
             }
-            
-            let decodedResponse = try decoder.decode(RecipesResponse.self, from: cached)
-            print("✅ Successfully loaded \(decodedResponse.recipes.count) cached recipes")
-            
-            self.recipes = decodedResponse.recipes
-            self.hasMoreRecipes = decodedResponse.hasMore
-            self.totalRecipesPages = decodedResponse.totalPages
-            self.currentRecipesPage = decodedResponse.currentPage
-            
-        } catch {
-            print("❌ Error decoding cached recipes: \(error)")
-        }
-    } else {
-        print("ℹ️ No cached recipes found for user \(userEmail)")
-    }
-}
-private func cacheRecipes(_ response: RecipesResponse, forPage page: Int) {
-    guard let userEmail = userEmail else { return }
-    if let encoded = try? JSONEncoder().encode(response) {
-        UserDefaults.standard.set(encoded, forKey: "recipes_\(userEmail)_page_\(page)")
-        }
-    }
-func loadMoreRecipes(refresh: Bool = false) {
-    guard let email = userEmail else { return }
-    guard !isLoadingRecipePage else { return }
-    
-    let pageToLoad = refresh ? 1 : currentRecipePage
-    isLoadingRecipePage = true
-    error = nil
-    
-    networkManager.getRecipes(userEmail: email, page: pageToLoad) { [weak self] result in
-        DispatchQueue.main.async {
-            guard let self = self else { return }
-            self.isLoadingRecipePage = false
-            
-            switch result {
-            case .success(let response):
-                if refresh {
-                    self.recipes = response.recipes
-                    self.currentRecipePage = 2
-                } else {
-                    self.recipes.append(contentsOf: response.recipes)
-                    self.currentRecipePage += 1
-                }
-                self.hasMoreRecipes = response.hasMore
-                self.cacheRecipes(response, forPage: pageToLoad)
-            case .failure(let error):
-                self.error = error
-                self.hasMoreRecipes = false
+
+            let success = await self.recipesRepository.refresh(force: true)
+            if success {
+                self.lastRecipesFetchDate = Date()
+                self.hasMoreRecipes = self.recipesRepository.snapshot.hasMore
+                self.currentRecipePage = self.recipesRepository.snapshot.nextPage
             }
+            await MainActor.run { completion?(success) }
+        } else {
+            guard self.hasMoreRecipes else {
+                await MainActor.run { completion?(false) }
+                return
+            }
+            guard !self.recipesRepository.isLoadingNextPage else {
+                await MainActor.run { completion?(false) }
+                return
+            }
+
+            let success = await self.recipesRepository.loadNextPage()
+            self.hasMoreRecipes = self.recipesRepository.snapshot.hasMore
+            self.currentRecipePage = self.recipesRepository.snapshot.nextPage
+            if success {
+                self.lastRecipesFetchDate = Date()
+            }
+            await MainActor.run { completion?(success) }
         }
     }
 }
+
 // Add this function after createMeal
 func createRecipe(
     title: String,
@@ -2070,8 +1955,10 @@ func createRecipe(
                     self.recipes.insert(recipe, at: 0)
                 }
                 
-                // Invalidate cache for page 1
-                UserDefaults.standard.removeObject(forKey: "recipes_\(email)_page_1")
+                Task { [weak self] in
+                    guard let self else { return }
+                    await self.recipesRepository.refresh(force: true)
+                }
                 
                 // Notify success
                 completion?(.success(recipe))
@@ -4405,70 +4292,72 @@ func analyzeNutritionLabel(
     
     // MARK: - Saved Meals Functions
     
-    private func resetAndFetchSavedMeals() {
+    private func resetAndFetchSavedMeals(force: Bool = false) {
         print("💾 FoodManager: Reset and fetch saved meals called")
-        currentSavedMealsPage = 1
-        hasMoreSavedMeals = true
-        savedMeals = []
-        loadSavedMeals(refresh: true)
-    }
-    
-    func refreshSavedMeals() {
-        print("🔄 FoodManager: Refreshing saved meals")
-        currentSavedMealsPage = 1
-        hasMoreSavedMeals = true
-        loadSavedMeals(refresh: true)
-    }
-    
-    private func loadSavedMeals(refresh: Bool = false) {
-        guard let email = userEmail else { return }
-        guard !isLoadingSavedMeals else { return }
-        
-        isLoadingSavedMeals = true
-        let pageToLoad = refresh ? 1 : currentSavedMealsPage
-        
-        NetworkManagerTwo.shared.getSavedMeals(
-            userEmail: email,
-            page: pageToLoad
-        ) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.isLoadingSavedMeals = false
-                
-                switch result {
-                case .success(let response):
-                    if refresh {
-                        self.savedMeals = response.savedMeals
-                        self.currentSavedMealsPage = 2
-                        // Reset and rebuild saved log IDs
-                        self.savedLogIds.removeAll()
-                    } else {
-                        self.savedMeals.append(contentsOf: response.savedMeals)
-                        self.currentSavedMealsPage += 1
-                    }
-                    
-                    // Update saved log IDs
-                    for savedMeal in response.savedMeals {
-                        if savedMeal.itemType == .foodLog, let foodLog = savedMeal.foodLog, let foodLogId = foodLog.foodLogId {
-                            self.savedLogIds.insert(foodLogId)
-                            print("💾 Added foodLogId \(foodLogId) to savedLogIds")
-                        } else if savedMeal.itemType == .mealLog, let mealLog = savedMeal.mealLog, let mealLogId = mealLog.mealLogId {
-                            self.savedLogIds.insert(mealLogId)
-                            print("💾 Added mealLogId \(mealLogId) to savedLogIds")
-                        }
-                    }
-                    
-                    self.hasMoreSavedMeals = response.hasMore
 
-                    
-                case .failure(let error):
-                    print("❌ Failed to load saved meals: \(error)")
-                    self.errorMessage = "Failed to load saved meals: \(error.localizedDescription)"
-                }
+        guard !isFetchingSavedMeals else { return }
+
+        currentSavedMealsPage = 1
+        hasMoreSavedMeals = true
+        isFetchingSavedMeals = true
+
+        Task { [weak self] in
+            guard let self else { return }
+            let success = await self.savedMealsRepository.refresh(force: force)
+            if success {
+                self.lastSavedMealsFetchDate = Date()
+                self.hasMoreSavedMeals = self.savedMealsRepository.snapshot.hasMore
+                self.currentSavedMealsPage = self.savedMealsRepository.snapshot.nextPage
             }
+            self.isFetchingSavedMeals = false
         }
     }
+    func refreshSavedMeals() {
+        print("🔄 FoodManager: Refreshing saved meals")
+        lastSavedMealsFetchDate = nil
+        resetAndFetchSavedMeals(force: true)
+    }
     
+    private func loadSavedMeals(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        guard userEmail != nil else {
+            completion?(false)
+            return
+        }
+
+        Task { [weak self] in
+            guard let self else {
+                await MainActor.run { completion?(false) }
+                return
+            }
+
+            let success: Bool
+            if refresh {
+                guard !self.savedMealsRepository.isRefreshing else {
+                    await MainActor.run { completion?(false) }
+                    return
+                }
+                success = await self.savedMealsRepository.refresh(force: true)
+            } else {
+                guard self.hasMoreSavedMeals else {
+                    await MainActor.run { completion?(false) }
+                    return
+                }
+                guard !self.savedMealsRepository.isLoadingNextPage else {
+                    await MainActor.run { completion?(false) }
+                    return
+                }
+                success = await self.savedMealsRepository.loadNextPage()
+            }
+
+            self.hasMoreSavedMeals = self.savedMealsRepository.snapshot.hasMore
+            self.currentSavedMealsPage = self.savedMealsRepository.snapshot.nextPage
+            if success {
+                self.lastSavedMealsFetchDate = Date()
+            }
+            await MainActor.run { completion?(success) }
+        }
+    }
+
     func saveMeal(itemType: SavedItemType, itemId: Int, customName: String? = nil, notes: String? = nil, completion: @escaping (Result<SaveMealResponse, Error>) -> Void) {
         guard let email = userEmail else {
             completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: "User email not available")))

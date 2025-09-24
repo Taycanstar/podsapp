@@ -28,7 +28,7 @@ struct ContentView: View {
     @State private var showTourView = false
     @EnvironmentObject var homeViewModel: HomeViewModel
     @EnvironmentObject var deepLinkHandler: DeepLinkHandler
-    @StateObject private var subscriptionManager = SubscriptionManager()
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
     @State private var subscriptionStatus: String = "none"
     @State private var subscriptionPlan: String?
     @State private var subscriptionExpiresAt: Date?
@@ -307,7 +307,7 @@ struct ContentView: View {
             Text("Get gentle meal reminders and activity celebrations to help maintain your streak. You can configure these in Settings.")
         }
         .onReceive(NotificationCenter.default.publisher(for: .subscriptionPurchased)) { _ in
-             fetchSubscriptionInfo()
+             fetchSubscriptionInfo(force: true)
          }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowFoodConfirmation"))) { notification in
             // Handle scan completion - show confirmation view (works for both barcode and photo scanning)
@@ -354,27 +354,22 @@ struct ContentView: View {
             return SubscriptionTier(rawValue: viewModel.subscriptionPlan ?? "None") ?? .none
         }
     
-    private func fetchSubscriptionInfo() {
+    private func fetchSubscriptionInfo(force: Bool = false) {
         let email = viewModel.email
-        
-        NetworkManager().fetchSubscriptionInfo(for: email) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let subscriptionInfo):
-                    viewModel.updateSubscriptionInfo(
-                        status: subscriptionInfo.status,
-                        plan: subscriptionInfo.plan,
-                        expiresAt: subscriptionInfo.expiresAt,
-                        renews: subscriptionInfo.renews,
-                        seats: subscriptionInfo.seats,
-                        canCreateNewTeam: subscriptionInfo.canCreateNewTeam
-                    )
-                    
+        guard !email.isEmpty else { return }
 
-                    
-                case .failure(let error):
-                    print("Failed to fetch subscription info: \(error.localizedDescription)")
-                    // Optionally handle the error, e.g., show an alert to the user
+        Task {
+            await SubscriptionRepository.shared.refresh(force: force)
+            if let info = SubscriptionRepository.shared.subscription {
+                await MainActor.run {
+                    viewModel.updateSubscriptionInfo(
+                        status: info.status,
+                        plan: info.plan,
+                        expiresAt: info.expiresAt,
+                        renews: info.renews,
+                        seats: info.seats,
+                        canCreateNewTeam: info.canCreateNewTeam
+                    )
                 }
             }
         }
@@ -623,7 +618,7 @@ struct ContentView: View {
         } else {
             print("✅ No need to resume onboarding: isAuth=\(isAuthenticated), completed=\(viewModel.onboardingCompleted), serverCompleted=\(viewModel.serverOnboardingCompleted)")
         }
-        
+
         // Add observer for authentication completion notification
         NotificationCenter.default.addObserver(forName: Notification.Name("AuthenticationCompleted"), object: nil, queue: .main) { _ in
             print("🔔 ContentView: Received AuthenticationCompleted notification")
@@ -636,8 +631,15 @@ struct ContentView: View {
                 self.forceCheckOnboarding()
             }
         }
+
+        StartupCoordinator.shared.bootstrapIfNeeded(
+            onboarding: viewModel,
+            foodManager: foodManager,
+            dayLogs: dayLogsVM,
+            subscriptionManager: subscriptionManager
+        )
     }
-    
+
     // MARK: - Notification Permission Sheet Setup
     
     private func setupNotificationObservers() {

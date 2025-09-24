@@ -51,7 +51,6 @@ struct MainTabView: View {
         .task {
             // Perform any initializations or data loading for the tab view
             if let email = userManager.userEmail {
-                foodManager.initialize(userEmail: email)
                 recipeManager.initialize(userEmail: email)
                 podManager.initialize(userEmail: email)
                 activityManager.initialize(userEmail: email, podManager: podManager)

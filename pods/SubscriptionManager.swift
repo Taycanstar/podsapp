@@ -13,6 +13,10 @@ class SubscriptionManager: ObservableObject {
 
     @Published var isLoading: Bool = false
 
+    private var lastFetchedEmail: String?
+    private var lastFetchDate: Date?
+    private let refreshInterval: TimeInterval = 300 // 5 minutes TTL
+
     init() {
         Task {
             await fetchProducts()
@@ -20,16 +24,31 @@ class SubscriptionManager: ObservableObject {
             await listenForTransactions()
         }
 
+        loadCachedSubscription()
     }
     func setOnboardingViewModel(_ viewModel: OnboardingViewModel) {
             self.onboardingViewModel = viewModel
         }
     
     @MainActor
+    func fetchSubscriptionInfoIfNeeded(for email: String, force: Bool = false) async {
+        if !force,
+           let lastEmail = lastFetchedEmail,
+           lastEmail == email,
+           let lastFetchDate = lastFetchDate,
+           Date().timeIntervalSince(lastFetchDate) < refreshInterval,
+           subscriptionInfo != nil {
+            return
+        }
+
+        await fetchSubscriptionInfo(for: email)
+    }
+    
+    @MainActor
       func updateSubscriptionStatus() async {
           await checkCurrentEntitlements()
           if let email = onboardingViewModel?.email {
-              await fetchSubscriptionInfo(for: email)
+              await fetchSubscriptionInfoIfNeeded(for: email, force: true)
           }
           
           // Post a notification that the subscription has been updated
@@ -58,6 +77,9 @@ class SubscriptionManager: ObservableObject {
                 case .success(let info):
                     DispatchQueue.main.async {
                         self.subscriptionInfo = info
+                        self.cacheSubscription(info)
+                        self.lastFetchedEmail = email
+                        self.lastFetchDate = Date()
                         print("Updated subscription info: \(String(describing: info))")
                     }
                     continuation.resume()
@@ -69,6 +91,22 @@ class SubscriptionManager: ObservableObject {
                     continuation.resume()
                 }
             }
+        }
+    }
+
+    private func cacheSubscription(_ info: SubscriptionInfo) {
+        if let encoded = try? JSONEncoder().encode(info) {
+            UserDefaults.standard.set(encoded, forKey: "cachedSubscriptionInfo")
+            UserDefaults.standard.set(Date(), forKey: "cachedSubscriptionInfoTimestamp")
+        }
+    }
+
+    private func loadCachedSubscription() {
+        if let data = UserDefaults.standard.data(forKey: "cachedSubscriptionInfo"),
+           let cached = try? JSONDecoder().decode(SubscriptionInfo.self, from: data) {
+            subscriptionInfo = cached
+            lastFetchedEmail = UserDefaults.standard.string(forKey: "userEmail")
+            lastFetchDate = UserDefaults.standard.object(forKey: "cachedSubscriptionInfoTimestamp") as? Date
         }
     }
 
@@ -586,4 +624,3 @@ extension ISO8601DateFormatter {
         return formatter
     }()
 }
-
