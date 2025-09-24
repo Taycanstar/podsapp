@@ -117,8 +117,10 @@ class WorkoutManager: ObservableObject {
     @Published var sessionFitnessLevel: ExperienceLevel?
     @Published var sessionFlexibilityPreferences: FlexibilityPreferences?
     @Published var customTargetMuscles: [String]?
+    @Published private(set) var defaultTargetMuscles: [String]?
     @Published var customEquipment: [Equipment]?
     @Published var selectedMuscleType: String = "Recovered Muscles"
+    @Published private(set) var defaultMuscleType: String = "Recovered Muscles"
     @Published var selectedEquipmentType: String = "Auto"
     
     // MARK: - Session Rest Timer Settings (workout-wide)
@@ -159,6 +161,8 @@ class WorkoutManager: ObservableObject {
     private let sessionRestEnabledKey = "currentWorkoutSessionRestEnabled"
     private let sessionRestWarmupKey = "currentWorkoutSessionRestWarmupSeconds"
     private let sessionRestWorkingKey = "currentWorkoutSessionRestWorkingSeconds"
+    private let defaultMuscleTypeKey = "defaultWorkoutMuscleType"
+    private let defaultCustomMusclesKey = "defaultWorkoutCustomMuscles"
     private let todayWorkoutRecoverySnapshotKey = "todayWorkoutRecoverySnapshot"
     private let todayWorkoutMusclesKey = "todayWorkoutMuscles"
     private let activeWorkoutStateKey = "activeWorkoutState"
@@ -228,11 +232,26 @@ class WorkoutManager: ObservableObject {
         sessionFitnessLevel != nil ||
         sessionFlexibilityPreferences != nil
     }
+
+    var muscleSelectionDisplayLabel: String {
+        if let customTargetMuscles, !customTargetMuscles.isEmpty {
+            return selectedMuscleType
+        }
+        return defaultMuscleType
+    }
+
+    var baselineCustomMuscles: [String]? {
+        if let customTargetMuscles, !customTargetMuscles.isEmpty {
+            return customTargetMuscles
+        }
+        return defaultTargetMuscles
+    }
     
     // MARK: - Initialization
     private init() {
         setupObservers()
         loadSessionData()
+        loadDefaultMusclePreferences()
         loadTodayWorkout()
         setupSessionMonitoring()
         setupDynamicProgramming()  // Initialize dynamic programming
@@ -279,7 +298,7 @@ class WorkoutManager: ObservableObject {
             fitnessGoal: effectiveFitnessGoal,
             fitnessLevel: effectiveFitnessLevel,
             flexibilityPreferences: effectiveFlexibilityPreferences,
-            customTargetMuscles: customTargetMuscles,
+            customTargetMuscles: baselineCustomMuscles,
             customEquipment: customEquipment
         )
         
@@ -437,7 +456,7 @@ class WorkoutManager: ObservableObject {
                 fitnessGoal: effectiveFitnessGoal,
                 fitnessLevel: effectiveFitnessLevel,
                 flexibilityPreferences: effectiveFlexibilityPreferences,
-                customTargetMuscles: customTargetMuscles,
+                customTargetMuscles: baselineCustomMuscles,
                 customEquipment: customEquipment
             )
             
@@ -535,6 +554,41 @@ class WorkoutManager: ObservableObject {
         sessionFlexibilityPreferences = prefs
         if let data = try? JSONEncoder().encode(prefs) {
             UserDefaults.standard.set(data, forKey: sessionFlexibilityKey)
+        }
+    }
+
+    /// Set session-only target muscles (temporary override)
+    func setSessionTargetMuscles(_ muscles: [String], type: String) {
+        let normalized = muscles.filter { !$0.isEmpty }
+
+        if normalized.isEmpty {
+            customTargetMuscles = nil
+            UserDefaults.standard.removeObject(forKey: customMusclesKey)
+        } else {
+            customTargetMuscles = normalized
+        }
+
+        selectedMuscleType = type
+        UserDefaults.standard.set(type, forKey: "currentWorkoutMuscleType")
+        saveSessionData()
+    }
+
+    /// Set default muscle selection (permanent preference)
+    func setDefaultMuscleSelection(type: String, muscles: [String]) {
+        customTargetMuscles = nil
+        UserDefaults.standard.removeObject(forKey: customMusclesKey)
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
+
+        defaultMuscleType = type
+        selectedMuscleType = type
+
+        let normalized = muscles.filter { !$0.isEmpty }
+        if normalized.isEmpty || type == "Recovered Muscles" {
+            defaultTargetMuscles = nil
+            persistDefaultMusclePreferences(type: type, muscles: nil)
+        } else {
+            defaultTargetMuscles = normalized
+            persistDefaultMusclePreferences(type: type, muscles: normalized)
         }
     }
     
@@ -1292,7 +1346,7 @@ class WorkoutManager: ObservableObject {
         sessionFlexibilityPreferences = nil
         customTargetMuscles = nil
         customEquipment = nil
-        selectedMuscleType = "Recovered Muscles"
+        selectedMuscleType = defaultMuscleType
         selectedEquipmentType = "Auto"
         
         // Clear from UserDefaults
@@ -1833,8 +1887,12 @@ class WorkoutManager: ObservableObject {
             sessionFitnessGoal = FitnessGoal(rawValue: savedGoalString)
         }
         
-        if let savedMuscles = UserDefaults.standard.array(forKey: customMusclesKey) as? [String] {
+        if let savedMuscles = UserDefaults.standard.array(forKey: customMusclesKey) as? [String],
+           !savedMuscles.isEmpty {
             customTargetMuscles = savedMuscles
+            if let muscleType = UserDefaults.standard.string(forKey: "currentWorkoutMuscleType"), !muscleType.isEmpty {
+                selectedMuscleType = muscleType
+            }
         }
         
         if let flexibilityData = UserDefaults.standard.data(forKey: sessionFlexibilityKey),
@@ -1858,7 +1916,7 @@ class WorkoutManager: ObservableObject {
             sessionRestWorkingSeconds = 60
         }
     }
-    
+
     private func saveSessionData() {
         if let duration = sessionDuration {
             UserDefaults.standard.set(duration.rawValue, forKey: sessionDurationKey)
@@ -1884,16 +1942,47 @@ class WorkoutManager: ObservableObject {
         UserDefaults.standard.set(sessionRestWorkingSeconds, forKey: sessionRestWorkingKey)
         UserDefaults.standard.set(Date(), forKey: sessionDateKey)
     }
-    
+
     private func clearSessionUserDefaults() {
         UserDefaults.standard.removeObject(forKey: sessionDurationKey)
         UserDefaults.standard.removeObject(forKey: sessionDateKey)
         UserDefaults.standard.removeObject(forKey: customMusclesKey)
+        UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
         UserDefaults.standard.removeObject(forKey: sessionFitnessGoalKey)
         UserDefaults.standard.removeObject(forKey: sessionFlexibilityKey)
         UserDefaults.standard.removeObject(forKey: sessionRestEnabledKey)
         UserDefaults.standard.removeObject(forKey: sessionRestWarmupKey)
         UserDefaults.standard.removeObject(forKey: sessionRestWorkingKey)
+    }
+
+    private func loadDefaultMusclePreferences() {
+        let defaults = UserDefaults.standard
+
+        if let storedType = defaults.string(forKey: defaultMuscleTypeKey), !storedType.isEmpty {
+            defaultMuscleType = storedType
+        }
+
+        if let storedMuscles = defaults.array(forKey: defaultCustomMusclesKey) as? [String],
+           !storedMuscles.isEmpty {
+            defaultTargetMuscles = storedMuscles
+        } else {
+            defaultTargetMuscles = nil
+        }
+
+        if customTargetMuscles == nil {
+            selectedMuscleType = defaultMuscleType
+        }
+    }
+
+    private func persistDefaultMusclePreferences(type: String, muscles: [String]?) {
+        let defaults = UserDefaults.standard
+        defaults.set(type, forKey: defaultMuscleTypeKey)
+
+        if let muscles, !muscles.isEmpty {
+            defaults.set(muscles, forKey: defaultCustomMusclesKey)
+        } else {
+            defaults.removeObject(forKey: defaultCustomMusclesKey)
+        }
     }
     
     /// Determine if should advance to next session phase

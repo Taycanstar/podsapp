@@ -107,13 +107,13 @@ struct LogWorkoutView: View {
     private var customTargetMuscles: [String]? {
         workoutManager.customTargetMuscles
     }
-    
+
     private var customEquipment: [Equipment]? {
         workoutManager.customEquipment
     }
-    
+
     private var selectedMuscleType: String {
-        workoutManager.selectedMuscleType
+        workoutManager.muscleSelectionDisplayLabel
     }
     
     // selectedEquipmentType is now a @State property above
@@ -121,7 +121,6 @@ struct LogWorkoutView: View {
     // Deprecated keys (still needed for cleanup)
     private let sessionDurationKey = "currentWorkoutSessionDuration"
     private let sessionDateKey = "currentWorkoutSessionDate"
-    private let customMusclesKey = "currentWorkoutCustomMuscles"
     private let sessionFitnessGoalKey = "currentWorkoutSessionFitnessGoal"
     private let sessionFlexibilityKey = "currentWorkoutSessionFlexibility"
     
@@ -393,27 +392,28 @@ struct LogWorkoutView: View {
     @ViewBuilder
     private var targetMusclesPickerSheet: some View {
         TargetMusclesView(
-                onSelectionChanged: { newMuscles, muscleType in
-                    // Save custom muscle selection and type, regenerate workout
-                    print("🎯 UI: Selected muscles: \(newMuscles), type: \(muscleType)")
-                    workoutManager.customTargetMuscles = newMuscles
-                    workoutManager.selectedMuscleType = muscleType
-                    
-                    // Persist to UserDefaults (WorkoutManager handles this)
-                    UserDefaults.standard.set(newMuscles, forKey: customMusclesKey)
-                    UserDefaults.standard.set(muscleType, forKey: "currentWorkoutMuscleType")
-                    
-                    print("🎯 Selected target muscles: \(newMuscles), type: \(muscleType)")
-                    showingTargetMusclesPicker = false
-                    
-                    // Regenerate workout
-                    Task {
-                        await workoutManager.generateTodayWorkout()
-                    }
-                },
-                currentCustomMuscles: customTargetMuscles,
-                currentMuscleType: selectedMuscleType
-            )
+            onSetForWorkout: { newMuscles, split in
+                print("🎯 Session muscles set to \(newMuscles) for \(split.rawValue)")
+                workoutManager.setSessionTargetMuscles(newMuscles, type: split.rawValue)
+                showingTargetMusclesPicker = false
+
+                Task {
+                    await workoutManager.generateTodayWorkout()
+                }
+            },
+            onSetAsDefault: { newMuscles, split in
+                print("🎯 Default muscles set to \(newMuscles) for \(split.rawValue)")
+                workoutManager.setDefaultMuscleSelection(type: split.rawValue, muscles: newMuscles)
+                updateTrainingSplitPreference(for: split)
+                showingTargetMusclesPicker = false
+
+                Task {
+                    await workoutManager.generateTodayWorkout()
+                }
+            },
+            currentCustomMuscles: workoutManager.baselineCustomMuscles,
+            currentMuscleType: selectedMuscleType
+        )
     }
     
     @ViewBuilder
@@ -851,8 +851,8 @@ struct LogWorkoutView: View {
                         .foregroundColor(.secondary)
                 }
                 
-                // Use selectedMuscleType as single source of truth for button display
-                Text(workoutManager.selectedMuscleType)
+                // Use workout manager display label (default-aware)
+                Text(workoutManager.muscleSelectionDisplayLabel)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.primary)
                 
@@ -1221,6 +1221,25 @@ struct LogWorkoutView: View {
         case .olympicWeightlifting: return 240
         case .general: return 75
         default: return 75
+        }
+    }
+
+    private func updateTrainingSplitPreference(for split: TargetMusclesView.MuscleSplitType) {
+        let newPreference: TrainingSplitPreference
+
+        switch split {
+        case .recoveredMuscles, .customMuscleGroup:
+            newPreference = .fresh
+        case .pushMuscles, .pullMuscles:
+            newPreference = .pushPullLower
+        case .upperBody, .lowerBody:
+            newPreference = .upperLower
+        case .fullBody:
+            newPreference = .fullBody
+        }
+
+        if userProfileService.trainingSplit != newPreference {
+            userProfileService.trainingSplit = newPreference
         }
     }
 

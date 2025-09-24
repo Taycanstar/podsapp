@@ -13,7 +13,8 @@ struct TargetMusclesView: View {
     @State private var showingMuscleGroups = false
     @State private var selectedMuscles: Set<String> = []
     
-    let onSelectionChanged: ([String], String) -> Void // Updated to include muscle type
+    let onSetForWorkout: ([String], MuscleSplitType) -> Void
+    let onSetAsDefault: ([String], MuscleSplitType) -> Void
     let currentCustomMuscles: [String]? // Current custom muscle selection
     let currentMuscleType: String // Current muscle type
     
@@ -44,6 +45,36 @@ struct TargetMusclesView: View {
             case .customMuscleGroup:
                 // Custom muscles are handled separately - return empty array here
                 return []
+            }
+        }
+
+        var iconName: String {
+            switch self {
+            case .recoveredMuscles:
+                return "bolt.heart"
+            case .pushMuscles:
+                return "arrow.up.right.circle.fill"
+            case .pullMuscles:
+                return "arrow.down.left.circle.fill"
+            case .upperBody:
+                return "figure.strengthtraining.traditional"
+            case .lowerBody:
+                return "figure.step.training"
+            case .fullBody:
+                return "figure.mixed.cardio"
+            case .customMuscleGroup:
+                return "slider.horizontal.3"
+            }
+        }
+
+        var subtitle: String? {
+            switch self {
+            case .recoveredMuscles:
+                return nil
+            case .customMuscleGroup:
+                return "Pick exact muscles"
+            case .pushMuscles, .pullMuscles, .upperBody, .lowerBody, .fullBody:
+                return nil
             }
         }
     }
@@ -83,7 +114,8 @@ struct TargetMusclesView: View {
                             showingMuscleGroups = false
                         },
                         onSetForWorkout: {
-                            onSelectionChanged(Array(selectedMuscles), selectedSplit.rawValue)
+                            guard !selectedMuscles.isEmpty else { return }
+                            self.onSetForWorkout(Array(selectedMuscles), .customMuscleGroup)
                             dismiss()
                         }
                     )
@@ -94,7 +126,7 @@ struct TargetMusclesView: View {
             }
             .navigationBarHidden(true)
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
         .onAppear {
             // Determine current selection based on current muscle type
             if let splitType = MuscleSplitType(rawValue: currentMuscleType) {
@@ -142,129 +174,140 @@ struct TargetMusclesView: View {
                 .padding(.bottom, 8)
 
             ScrollView {
-                VStack(spacing: 16) {
-                    HStack(spacing: 12) {
-                        MuscleSplitButton(
-                            split: .recoveredMuscles,
-                            isSelected: selectedSplit == .recoveredMuscles,
-                            onTap: {
-                                HapticFeedback.generate()
-                                selectedSplit = .recoveredMuscles
-                                selectedMuscles = Set(selectedSplit.muscleGroups)
-                            }
-                        )
-                        
-                        MuscleSplitButton(
-                            split: .pushMuscles,
-                            isSelected: selectedSplit == .pushMuscles,
-                            onTap: {
-                                HapticFeedback.generate()
-                                selectedSplit = .pushMuscles
-                                selectedMuscles = Set(selectedSplit.muscleGroups)
-                            }
-                        )
-                        
-                        MuscleSplitButton(
-                            split: .pullMuscles,
-                            isSelected: selectedSplit == .pullMuscles,
-                            onTap: {
-                                HapticFeedback.generate()
-                                selectedSplit = .pullMuscles
-                                selectedMuscles = Set(selectedSplit.muscleGroups)
-                            }
-                        )
-                    }
-                    .padding(.horizontal)
-                    
-                    // Second Row
-                    HStack(spacing: 12) {
-                        MuscleSplitButton(
-                            split: .upperBody,
-                            isSelected: selectedSplit == .upperBody,
-                            onTap: {
-                                HapticFeedback.generate()
-                                selectedSplit = .upperBody
-                                selectedMuscles = Set(selectedSplit.muscleGroups)
-                            }
-                        )
-                        
-                        MuscleSplitButton(
-                            split: .lowerBody,
-                            isSelected: selectedSplit == .lowerBody,
-                            onTap: {
-                                HapticFeedback.generate()
-                                selectedSplit = .lowerBody
-                                selectedMuscles = Set(selectedSplit.muscleGroups)
-                            }
-                        )
-                        
-                        MuscleSplitButton(
-                            split: .fullBody,
-                            isSelected: selectedSplit == .fullBody,
-                            onTap: {
-                                HapticFeedback.generate()
-                                selectedSplit = .fullBody
-                                selectedMuscles = Set(selectedSplit.muscleGroups)
-                            }
-                        )
-                    }
-                    .padding(.horizontal)
-                    
-                    // Select Muscle Groups Navigation
-                    Button(action: {
-                        HapticFeedback.generate()
-                        selectedSplit = .customMuscleGroup
-                        showingMuscleGroups = true
-                    }) {
-                        HStack {
-                            Text("Select Muscle Groups")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.secondary)
+                VStack(spacing: 24) {
+                    LazyVGrid(columns: gridColumns, spacing: 16) {
+                        ForEach(MuscleSplitType.allCases.filter { $0 != .customMuscleGroup }, id: \.self) { split in
+                            MuscleSplitButton(
+                                split: split,
+                                isSelected: selectedSplit == split,
+                                onTap: {
+                                    HapticFeedback.generate()
+                                    selectedSplit = split
+                                    selectedMuscles = Set(split.muscleGroups)
+                                }
+                            )
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 16)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                        )
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.horizontal)
-                    .padding(.top, 20)
-                    
+
+                    customSelectionCard
+
                     Spacer(minLength: 80)
                 }
-                .padding(.top, 20)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
             }
-            
-            // Set for Workout Button
-            VStack(spacing: 16) {
-                Button(action: {
-                    HapticFeedback.generate()
-                    onSelectionChanged(Array(selectedMuscles), selectedSplit.rawValue)
-                    dismiss()
-                }) {
-                    Text("Set for workout")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color(.systemBackground))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.primary)
-                        .cornerRadius(12)
-                }
-                .buttonStyle(PlainButtonStyle())
-                .padding(.horizontal)
-                .padding(.bottom, 30)
-            }
+
+            actionButtons
         }
+    }
+
+    private var gridColumns: [GridItem] {
+        [
+            GridItem(.flexible(), spacing: 16),
+            GridItem(.flexible(), spacing: 16)
+        ]
+    }
+
+    private var customSelectionCard: some View {
+        let isSelected = selectedSplit == .customMuscleGroup
+
+        return Button(action: {
+            HapticFeedback.generate()
+            selectedSplit = .customMuscleGroup
+            if selectedMuscles.isEmpty, let current = currentCustomMuscles {
+                selectedMuscles = Set(current)
+            }
+            showingMuscleGroups = true
+        }) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: MuscleSplitType.customMuscleGroup.iconName)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Select Muscle Groups")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+
+                    if let subtitle = MuscleSplitType.customMuscleGroup.subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .padding(.top, 2)
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color("primarybg"))
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+            )
+            .overlay(
+                isSelected ?
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.primary.opacity(0.05)) : nil
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var actionButtons: some View {
+        VStack(spacing: 0) {
+            Divider()
+                .padding(.bottom, 12)
+
+            HStack(spacing: 0) {
+                Button("Set as default") {
+                    HapticFeedback.generate()
+                    onSetAsDefault(Array(selectedMuscles), selectedSplit)
+                    dismiss()
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(canSetDefault ? .primary : .primary.opacity(0.4))
+                .disabled(!canSetDefault)
+
+                Spacer(minLength: 12)
+
+                Button("Set for workout") {
+                    HapticFeedback.generate()
+                    onSetForWorkout(Array(selectedMuscles), selectedSplit)
+                    dismiss()
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color(.systemBackground))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(canSetForWorkout ? Color.primary : Color.gray.opacity(0.4))
+                .cornerRadius(24)
+                .disabled(!canSetForWorkout)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 30)
+        }
+    }
+
+    private var canSetForWorkout: Bool {
+        if selectedSplit == .customMuscleGroup {
+            return !selectedMuscles.isEmpty
+        }
+        return true
+    }
+
+    private var canSetDefault: Bool {
+        if selectedSplit == .customMuscleGroup {
+            return !selectedMuscles.isEmpty
+        }
+        return true
     }
 }
 
@@ -272,40 +315,53 @@ struct MuscleSplitButton: View {
     let split: TargetMusclesView.MuscleSplitType
     let isSelected: Bool
     let onTap: () -> Void
-    
+
     var body: some View {
         Button(action: onTap) {
-            Text(split.rawValue)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.primary)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity)
-                .minimumScaleFactor(0.8)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 12)
-                .background(Color(.systemBackground))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isSelected ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
-                )
-                .overlay(
-                    isSelected ? 
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.primary.opacity(0.05)) : nil
-                )
+            VStack(alignment: .leading, spacing: 10) {
+                Image(systemName: split.iconName)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                Text(split.rawValue)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.leading)
+
+                if let subtitle = split.subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color("primarybg"))
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? Color.primary : Color.gray.opacity(0.3), lineWidth: 1)
+            )
+            .overlay(
+                isSelected ?
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.primary.opacity(0.05)) : nil
+            )
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
     }
 }
 
 #Preview {
     TargetMusclesView(
-        onSelectionChanged: { muscles, type in
-            print("Selected muscles: \(muscles), type: \(type)")
+        onSetForWorkout: { muscles, split in
+            print("Set for workout: \(muscles) - \(split.rawValue)")
         },
-        currentCustomMuscles: nil,
+        onSetAsDefault: { muscles, split in
+            print("Set default: \(muscles) - \(split.rawValue)")
+        },
+        currentCustomMuscles: ["Chest", "Triceps"],
         currentMuscleType: "Recovered Muscles"
     )
 }
-
