@@ -178,9 +178,11 @@ class WorkoutManager: ObservableObject {
     private let customWorkoutsKey = "custom_workouts"
     private let customWorkoutIdCounterKey = "customWorkoutIdCounter"
     private let customWorkoutsLastFetchKey = "customWorkoutsLastFetch"
+    private let pinnedCustomWorkoutsKey = "pinnedCustomWorkouts"
 
-    @MainActor private var customWorkoutsLastFetch: Date?
-    @MainActor private var isFetchingCustomWorkouts = false
+    private var customWorkoutsLastFetch: Date?
+    private var isFetchingCustomWorkouts = false
+    private var pinnedCustomWorkoutIDs: Set<Int> = []
 
     private struct ActiveWorkoutState: Codable {
         let workoutId: UUID
@@ -618,6 +620,7 @@ class WorkoutManager: ObservableObject {
             if force {
                 customWorkoutsError = nil
             }
+            loadPinnedCustomWorkouts()
         }
 
         let raw = await DataLayer.shared.getData(key: customWorkoutsKey)
@@ -625,8 +628,12 @@ class WorkoutManager: ObservableObject {
         decoded.sort { $0.date > $1.date }
 
         await MainActor.run {
-            customWorkouts = decoded
+            customWorkouts = reorderCustomWorkouts(decoded)
             hasWorkouts = !decoded.isEmpty
+            pinnedCustomWorkoutIDs = pinnedCustomWorkoutIDs.filter { id in
+                customWorkouts.contains { pinnedIdentifier(for: $0) == id }
+            }
+            savePinnedCustomWorkouts()
         }
 
         guard !userEmail.isEmpty else {
@@ -679,10 +686,15 @@ class WorkoutManager: ObservableObject {
             remoteTemplates.sort { $0.date > $1.date }
 
             await MainActor.run {
-                customWorkouts = remoteTemplates
-                hasWorkouts = !remoteTemplates.isEmpty
+                let ordered = reorderCustomWorkouts(remoteTemplates)
+                customWorkouts = ordered
+                hasWorkouts = !ordered.isEmpty
                 customWorkoutsError = nil
                 updateCustomWorkoutsLastFetch(Date())
+                pinnedCustomWorkoutIDs = pinnedCustomWorkoutIDs.filter { id in
+                    ordered.contains { pinnedIdentifier(for: $0) == id }
+                }
+                savePinnedCustomWorkouts()
             }
 
             await persistCustomWorkouts()
@@ -733,7 +745,7 @@ class WorkoutManager: ObservableObject {
                 customWorkouts.append(template)
             }
 
-            customWorkouts.sort { $0.date > $1.date }
+            customWorkouts = reorderCustomWorkouts(customWorkouts)
             hasWorkouts = !customWorkouts.isEmpty
         }
         await persistCustomWorkouts()
@@ -759,9 +771,11 @@ class WorkoutManager: ObservableObject {
             }
 
             await MainActor.run {
+                removePinnedIdentifier(for: workout)
                 if let index = customWorkouts.firstIndex(where: { $0.id == id }) {
                     customWorkouts.remove(at: index)
                 }
+                customWorkouts = reorderCustomWorkouts(customWorkouts)
                 hasWorkouts = !customWorkouts.isEmpty
                 updateCustomWorkoutsLastFetch(Date())
             }
@@ -773,6 +787,33 @@ class WorkoutManager: ObservableObject {
                 }
             }
         }
+    }
+
+    func duplicateCustomWorkout(from workout: Workout) async {
+        let base = workout.name.isEmpty ? workout.displayName : workout.name
+        let newName = await MainActor.run { uniqueName(for: base) }
+
+        do {
+            try await saveCustomWorkout(name: newName, exercises: workout.exercises, notes: workout.notes)
+        } catch {
+            if !isCancellationError(error) {
+                await MainActor.run {
+                    self.customWorkoutsError = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    func pinCustomWorkout(_ workout: Workout) async {
+        await MainActor.run {
+            let identifier = pinnedIdentifier(for: workout)
+            if !pinnedCustomWorkoutIDs.contains(identifier) {
+                pinnedCustomWorkoutIDs.insert(identifier)
+                savePinnedCustomWorkouts()
+            }
+            customWorkouts = reorderCustomWorkouts(customWorkouts)
+        }
+        await persistCustomWorkouts()
     }
 
     func startCustomWorkout(_ workout: Workout) -> TodayWorkout {
@@ -1058,6 +1099,62 @@ class WorkoutManager: ObservableObject {
         }
     }
 
+    @MainActor
+    private func loadPinnedCustomWorkouts() {
+        if !pinnedCustomWorkoutIDs.isEmpty { return }
+        let defaults = UserDefaults.standard
+        let key = storageKey(pinnedCustomWorkoutsKey)
+        if let stored = defaults.array(forKey: key) as? [Int] {
+            pinnedCustomWorkoutIDs = Set(stored)
+        }
+    }
+
+    @MainActor
+    private func savePinnedCustomWorkouts() {
+        let defaults = UserDefaults.standard
+        defaults.set(Array(pinnedCustomWorkoutIDs), forKey: storageKey(pinnedCustomWorkoutsKey))
+    }
+
+    private func pinnedIdentifier(for workout: Workout) -> Int {
+        workout.remoteId ?? workout.id
+    }
+
+    private func reorderCustomWorkouts(_ workouts: [Workout]) -> [Workout] {
+        workouts.sorted { lhs, rhs in
+            let lhsPinned = pinnedCustomWorkoutIDs.contains(pinnedIdentifier(for: lhs))
+            let rhsPinned = pinnedCustomWorkoutIDs.contains(pinnedIdentifier(for: rhs))
+            if lhsPinned != rhsPinned {
+                return lhsPinned && !rhsPinned
+            }
+
+            let lhsDate = lhs.updatedAt ?? lhs.date
+            let rhsDate = rhs.updatedAt ?? rhs.date
+            return lhsDate > rhsDate
+        }
+    }
+
+    @MainActor
+    private func removePinnedIdentifier(for workout: Workout) {
+        let identifier = pinnedIdentifier(for: workout)
+        if pinnedCustomWorkoutIDs.remove(identifier) != nil {
+            savePinnedCustomWorkouts()
+        }
+    }
+
+    @MainActor
+    private func uniqueName(for base: String) -> String {
+        let trimmed = base.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallback = trimmed.isEmpty ? "Workout" : trimmed
+        var candidate = "\(fallback) Copy"
+        var counter = 2
+        let existingNames = Set(customWorkouts.map { $0.name.lowercased() })
+        while existingNames.contains(candidate.lowercased()) {
+            candidate = "\(fallback) Copy \(counter)"
+            counter += 1
+        }
+        return candidate
+    }
+
     private func isCancellationError(_ error: Error) -> Bool {
         if let urlError = error as? URLError, urlError.code == .cancelled {
             return true
@@ -1137,7 +1234,12 @@ class WorkoutManager: ObservableObject {
             customWorkouts.append(synced)
         }
 
-        customWorkouts.sort { $0.date > $1.date }
+        if pinnedCustomWorkoutIDs.remove(originalIdentifier) != nil {
+            pinnedCustomWorkoutIDs.insert(pinnedIdentifier(for: synced))
+            savePinnedCustomWorkouts()
+        }
+
+        customWorkouts = reorderCustomWorkouts(customWorkouts)
         hasWorkouts = !customWorkouts.isEmpty
         customWorkoutsError = nil
     }

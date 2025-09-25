@@ -754,14 +754,6 @@ struct LogWorkoutView: View {
         }
     }
 
-    @ViewBuilder
-    private var myWorkoutsHeader: some View {
-        Color.clear
-            .frame(height: 12)
-            .frame(maxWidth: .infinity)
-            .accessibilityHidden(true)
-    }
-    
     // MARK: - Button Ordering Logic
     
     private enum WorkoutButton: CaseIterable {
@@ -2024,48 +2016,71 @@ private struct RoutinesWorkoutView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                if let errorMessage = workoutManager.customWorkoutsError?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   !errorMessage.isEmpty {
-                    errorBanner(message: errorMessage)
-                }
-
-                Color.clear.frame(height: 4)
-
-                newWorkoutButton
-
-                if workoutManager.isLoadingWorkouts && workouts.isEmpty {
-                    loadingState
-                } else if showsEmptyState {
-                    emptyState
-                } else if showsSearchEmptyState {
-                    searchEmptyState
-                } else {
-                    LazyVStack(spacing: 16, pinnedViews: []) {
-                        ForEach(filteredWorkouts, id: \.id) { workout in
-                            WorkoutCard(
-                                workout: workout,
-                                durationMinutes: workout.duration ?? estimatedDuration(for: workout),
-                                onStart: {
-                                    HapticFeedback.generate()
-                                    let todayWorkout = workoutManager.startCustomWorkout(workout)
-                                    navigationPath.append(WorkoutNavigationDestination.startWorkout(todayWorkout))
-                                },
-                                onEdit: {
-                                    HapticFeedback.generate()
-                                    navigationPath.append(WorkoutNavigationDestination.editWorkout(workout))
-                                }
-                            )
-                        }
-                    }
-                }
+        List {
+            if let errorMessage = workoutManager.customWorkoutsError?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !errorMessage.isEmpty {
+                errorBanner(message: errorMessage)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 0, trailing: 20))
+                    .listRowSeparator(.hidden)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 32)
+
+            newWorkoutButton
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 16, leading: 20, bottom: 0, trailing: 20))
+                .listRowSeparator(.hidden)
+
+            if workoutManager.isLoadingWorkouts && workouts.isEmpty {
+                loadingState
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 24, leading: 20, bottom: 24, trailing: 20))
+                    .listRowSeparator(.hidden)
+            } else if showsEmptyState {
+                emptyState
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 24, leading: 20, bottom: 24, trailing: 20))
+                    .listRowSeparator(.hidden)
+            } else if showsSearchEmptyState {
+                searchEmptyState
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 24, leading: 20, bottom: 24, trailing: 20))
+                    .listRowSeparator(.hidden)
+            } else {
+                ForEach(filteredWorkouts, id: \.id) { workout in
+                    WorkoutCard(
+                        workout: workout,
+                        durationMinutes: workout.duration ?? estimatedDuration(for: workout),
+                        onStart: {
+                            HapticFeedback.generate()
+                            let todayWorkout = workoutManager.startCustomWorkout(workout)
+                            navigationPath.append(WorkoutNavigationDestination.startWorkout(todayWorkout))
+                        },
+                        onEdit: {
+                            HapticFeedback.generate()
+                            navigationPath.append(WorkoutNavigationDestination.editWorkout(workout))
+                        },
+                        onDuplicate: {
+                            duplicateWorkout(workout)
+                        },
+                        onDelete: {
+                            Task { await workoutManager.deleteCustomWorkout(id: workout.id) }
+                        },
+                        onPin: {
+                            Task { await workoutManager.pinCustomWorkout(workout) }
+                        }
+                    )
+                    .listRowBackground(Color("primarybg"))
+                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    .listRowSeparator(.hidden)
+                }
+                .onDelete(perform: deleteWorkouts)
+            }
         }
-        .scrollIndicators(.hidden)
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
         .task {
             await workoutManager.fetchCustomWorkouts()
@@ -2092,6 +2107,7 @@ private struct RoutinesWorkoutView: View {
             .background(Color.primary)
             .cornerRadius(28)
         }
+        .buttonStyle(.plain)
     }
 
     private var loadingState: some View {
@@ -2158,13 +2174,34 @@ private struct RoutinesWorkoutView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.red.opacity(0.85))
         .cornerRadius(16)
-        .padding(.horizontal, 20)
     }
 
     private func estimatedDuration(for workout: Workout) -> Int {
         let totalSets = max(workout.totalSets, 1)
         let estimate = Int(ceil(Double(totalSets) * 1.5))
         return max(10, min(estimate, 150))
+    }
+
+    private func deleteWorkouts(at offsets: IndexSet) {
+        let currentWorkouts = filteredWorkouts
+        let ids = offsets.compactMap { index -> Int? in
+            guard index < currentWorkouts.count else { return nil }
+            return currentWorkouts[index].id
+        }
+
+        guard !ids.isEmpty else { return }
+
+        Task {
+            for id in ids {
+                await workoutManager.deleteCustomWorkout(id: id)
+            }
+        }
+    }
+
+    private func duplicateWorkout(_ workout: Workout) {
+        Task {
+            await workoutManager.duplicateCustomWorkout(from: workout)
+        }
     }
 }
 
@@ -2173,70 +2210,59 @@ private struct WorkoutCard: View {
     let durationMinutes: Int
     let onStart: () -> Void
     let onEdit: () -> Void
-
-    private static let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter
-    }()
-
-    private var formattedDate: String {
-        WorkoutCard.dateFormatter.string(from: workout.date)
-    }
+    let onDuplicate: () -> Void
+    let onDelete: () -> Void
+    let onPin: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
                 Text(workout.displayName)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.leading)
 
                 Spacer()
 
-                Text(formattedDate)
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-            }
-
-            HStack(spacing: 16) {
-                Label("\(workout.exercises.count) exercises", systemImage: "dumbbell")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Label("\(durationMinutes) min", systemImage: "clock")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
-
-            HStack(spacing: 12) {
-                Button(action: onEdit) {
-                    Text("Edit")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.accentColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.clear)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.accentColor, lineWidth: 1.5)
-                        )
-                }
-
-                Button(action: onStart) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "play.fill")
-                        Text("Start")
-                            .fontWeight(.semibold)
+                Menu {
+                    Button(action: onPin) {
+                        Label("Pin Workout", systemImage: "pin")
                     }
-                    .font(.system(size: 15))
-                    .foregroundColor(Color("bg"))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.primary)
-                    .cornerRadius(16)
+                    Button(action: onEdit) {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    Button(action: onDuplicate) {
+                        Label("Duplicate", systemImage: "square.on.square")
+                    }
+                    Button(role: .destructive, action: onDelete) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .frame(width: 25, height: 25)
+                        .background(Circle().fill(Color(.systemBackground)))
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Workout options")
             }
+
+            Text("\(durationMinutes) min • \(workout.exercises.count) exercises")
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(.secondary)
+
+            HStack {
+                Button(action: onStart) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 25, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Start workout")
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+
         }
         .padding(20)
         .background(Color("containerbg"))
