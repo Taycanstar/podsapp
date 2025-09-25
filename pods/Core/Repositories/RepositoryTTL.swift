@@ -12,4 +12,5 @@ struct RepositoryTTL {
     static let recipes: TimeInterval = 5 * 60
     static let savedMeals: TimeInterval = 5 * 60
     static let userFoods: TimeInterval = 2 * 60
+    static let customWorkouts: TimeInterval = 5 * 60
 }

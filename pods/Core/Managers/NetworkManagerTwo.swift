@@ -68,6 +68,7 @@ let baseUrl = "http://172.20.10.4:8000"
             let userEmail: String
             let name: String
             let status: String?
+            let isTemplate: Bool?
             let startedAt: Date?
             let completedAt: Date?
             let scheduledDate: Date?
@@ -94,6 +95,7 @@ let baseUrl = "http://172.20.10.4:8000"
         struct ExerciseSet: Codable {
             let id: Int
             let setNumber: Int?
+            let trackingType: String?
             let weightKg: Double?
             let reps: Int?
             let durationSeconds: Int?
@@ -124,6 +126,7 @@ let baseUrl = "http://172.20.10.4:8000"
         }
 
         struct ExerciseSet: Codable {
+            let trackingType: String?
             let weightKg: Double?
             let reps: Int?
             let durationSeconds: Int?
@@ -145,6 +148,7 @@ let baseUrl = "http://172.20.10.4:8000"
         let userEmail: String
         let name: String
         let status: String
+        let isTemplate: Bool?
         let startedAt: String
         let completedAt: String?
         let scheduledDate: String
@@ -190,13 +194,17 @@ let baseUrl = "http://172.20.10.4:8000"
     
     // MARK: - Workout Sync API
 
-    func fetchServerWorkouts(userEmail: String, pageSize: Int = 200) async throws -> WorkoutListResponse {
+    func fetchServerWorkouts(userEmail: String, pageSize: Int = 200, isTemplateOnly: Bool? = nil) async throws -> WorkoutListResponse {
         var components = URLComponents(string: "\(baseUrl)/get-user-workouts/")
         components?.queryItems = [
             URLQueryItem(name: "user_email", value: userEmail),
             URLQueryItem(name: "page", value: "1"),
             URLQueryItem(name: "page_size", value: "\(pageSize)")
         ]
+
+        if let isTemplateOnly = isTemplateOnly {
+            components?.queryItems?.append(URLQueryItem(name: "is_template", value: isTemplateOnly ? "true" : "false"))
+        }
 
         guard let url = components?.url else { throw NetworkError.invalidURL }
 

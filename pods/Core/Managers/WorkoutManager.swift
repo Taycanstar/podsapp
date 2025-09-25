@@ -153,6 +153,12 @@ class WorkoutManager: ObservableObject {
     private var pendingSummaryRegeneration = false
     private var lastModelContext: ModelContext?
     private var exerciseLookupCache: [Int: ExerciseData] = [:]
+    private let networkManager = NetworkManagerTwo.shared
+    private let iso8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
     
     // MARK: - UserDefaults Keys
     private let todayWorkoutKey = "todayWorkout"
@@ -171,6 +177,10 @@ class WorkoutManager: ObservableObject {
     private let activeWorkoutStateKey = "activeWorkoutState"
     private let customWorkoutsKey = "custom_workouts"
     private let customWorkoutIdCounterKey = "customWorkoutIdCounter"
+    private let customWorkoutsLastFetchKey = "customWorkoutsLastFetch"
+
+    @MainActor private var customWorkoutsLastFetch: Date?
+    @MainActor private var isFetchingCustomWorkouts = false
 
     private struct ActiveWorkoutState: Codable {
         let workoutId: UUID
@@ -600,19 +610,89 @@ class WorkoutManager: ObservableObject {
     // MARK: - Custom Workout Templates
 
     func fetchCustomWorkouts(force: Bool = false) async {
-        if isLoadingWorkouts && !force { return }
+        let shouldSkip = await MainActor.run { isLoadingWorkouts && !force }
+        if shouldSkip { return }
 
-        isLoadingWorkouts = true
-        customWorkoutsError = nil
-
-        defer {
-            isLoadingWorkouts = false
+        await MainActor.run {
+            isLoadingWorkouts = true
+            if force {
+                customWorkoutsError = nil
+            }
         }
 
         let raw = await DataLayer.shared.getData(key: customWorkoutsKey)
-        let decoded = decodeCustomWorkouts(raw)
-        customWorkouts = decoded.sorted { $0.date > $1.date }
-        hasWorkouts = !customWorkouts.isEmpty
+        var decoded = decodeCustomWorkouts(raw)
+        decoded.sort { $0.date > $1.date }
+
+        await MainActor.run {
+            customWorkouts = decoded
+            hasWorkouts = !decoded.isEmpty
+        }
+
+        guard !userEmail.isEmpty else {
+            await MainActor.run { isLoadingWorkouts = false }
+            return
+        }
+
+        let shouldFetchRemote = await MainActor.run { () -> Bool in
+            loadCustomWorkoutsLastFetch()
+            if force {
+                isFetchingCustomWorkouts = true
+                return true
+            }
+            if isFetchingCustomWorkouts {
+                return false
+            }
+            if let lastFetch = customWorkoutsLastFetch,
+               Date().timeIntervalSince(lastFetch) < RepositoryTTL.customWorkouts {
+                return false
+            }
+            isFetchingCustomWorkouts = true
+            return true
+        }
+
+        guard shouldFetchRemote else {
+            await MainActor.run {
+                if !customWorkouts.isEmpty {
+                    customWorkoutsError = nil
+                }
+                isLoadingWorkouts = false
+            }
+            return
+        }
+
+        defer {
+            Task { @MainActor in
+                isFetchingCustomWorkouts = false
+                isLoadingWorkouts = false
+            }
+        }
+
+        do {
+            let response = try await networkManager.fetchServerWorkouts(userEmail: userEmail, pageSize: 200, isTemplateOnly: true)
+            let templateSessions = response.workouts.filter { ($0.isTemplate ?? false) }
+            var remoteTemplates = templateSessions.map(remoteWorkoutToTemplate)
+            var usedIds = Set(remoteTemplates.map { $0.id })
+            let unsyncedLocals = decoded.filter { $0.remoteId == nil }
+            let normalizedUnsynced = unsyncedLocals.map { uniqueLocalTemplate($0, usedIds: &usedIds) }
+            remoteTemplates.append(contentsOf: normalizedUnsynced)
+            remoteTemplates.sort { $0.date > $1.date }
+
+            await MainActor.run {
+                customWorkouts = remoteTemplates
+                hasWorkouts = !remoteTemplates.isEmpty
+                customWorkoutsError = nil
+                updateCustomWorkoutsLastFetch(Date())
+            }
+
+            await persistCustomWorkouts()
+        } catch {
+            if !isCancellationError(error) {
+                await MainActor.run {
+                    customWorkoutsError = error.localizedDescription
+                }
+            }
+        }
     }
 
     func saveCustomWorkout(name: String, exercises: [WorkoutExercise], notes: String? = nil, workoutId: Int? = nil) async throws {
@@ -623,34 +703,76 @@ class WorkoutManager: ObservableObject {
         let sanitizedExercises = sanitizeCustomWorkoutExercises(exercises)
         let durationMinutes = estimatedDurationMinutes(for: sanitizedExercises)
         let resolvedNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let identifier = workoutId ?? nextCustomWorkoutId()
+        let identifier: Int
+        if let workoutId = workoutId {
+            identifier = workoutId
+        } else {
+            identifier = -abs(nextCustomWorkoutId())
+        }
+        let existing = workoutId.flatMap { id in customWorkouts.first(where: { $0.id == id }) }
 
         let template = Workout(
             id: identifier,
+            remoteId: existing?.remoteId,
             name: trimmedName,
             date: Date(),
             duration: durationMinutes,
             exercises: sanitizedExercises,
             notes: resolvedNotes?.isEmpty == true ? nil : resolvedNotes,
-            category: nil
+            category: existing?.category,
+            isTemplate: true,
+            syncVersion: existing?.syncVersion,
+            createdAt: existing?.createdAt ?? Date(),
+            updatedAt: Date()
         )
 
-        if let workoutId = workoutId, let index = customWorkouts.firstIndex(where: { $0.id == workoutId }) {
-            customWorkouts[index] = template
-        } else {
-            customWorkouts.append(template)
-        }
+        await MainActor.run {
+            if let workoutId = workoutId, let index = customWorkouts.firstIndex(where: { $0.id == workoutId }) {
+                customWorkouts[index] = template
+            } else {
+                customWorkouts.append(template)
+            }
 
-        customWorkouts.sort { $0.date > $1.date }
-        hasWorkouts = !customWorkouts.isEmpty
+            customWorkouts.sort { $0.date > $1.date }
+            hasWorkouts = !customWorkouts.isEmpty
+        }
         await persistCustomWorkouts()
+
+        do {
+            try await syncCustomWorkout(template, originalIdentifier: identifier)
+        } catch {
+            if !isCancellationError(error) {
+                await MainActor.run {
+                    self.customWorkoutsError = error.localizedDescription
+                }
+            }
+            throw error
+        }
     }
 
     func deleteCustomWorkout(id: Int) async {
-        guard let index = customWorkouts.firstIndex(where: { $0.id == id }) else { return }
-        customWorkouts.remove(at: index)
-        hasWorkouts = !customWorkouts.isEmpty
-        await persistCustomWorkouts()
+        guard let workout = customWorkouts.first(where: { $0.id == id }) else { return }
+
+        do {
+            if let remoteId = workout.remoteId, !userEmail.isEmpty {
+                try await networkManager.deleteWorkout(sessionId: remoteId, userEmail: userEmail)
+            }
+
+            await MainActor.run {
+                if let index = customWorkouts.firstIndex(where: { $0.id == id }) {
+                    customWorkouts.remove(at: index)
+                }
+                hasWorkouts = !customWorkouts.isEmpty
+                updateCustomWorkoutsLastFetch(Date())
+            }
+            await persistCustomWorkouts()
+        } catch {
+            if !isCancellationError(error) {
+                await MainActor.run {
+                    self.customWorkoutsError = error.localizedDescription
+                }
+            }
+        }
     }
 
     func startCustomWorkout(_ workout: Workout) -> TodayWorkout {
@@ -662,7 +784,9 @@ class WorkoutManager: ObservableObject {
     private func persistCustomWorkouts() async {
         let encoded = encodeCustomWorkouts(customWorkouts)
         await DataLayer.shared.setData(key: customWorkoutsKey, value: encoded)
-        customWorkoutsError = nil
+        await MainActor.run {
+            customWorkoutsError = nil
+        }
     }
 
     private func decodeCustomWorkouts(_ raw: Any?) -> [Workout] {
@@ -684,15 +808,35 @@ class WorkoutManager: ObservableObject {
         let duration = valueAsInt(dictionary["duration"])
         let notes = trimmedOrNil(dictionary["notes"] as? String)
         let category = trimmedOrNil(dictionary["category"] as? String)
+        let remoteId = valueAsInt(dictionary["remote_id"])
+        let isTemplate = valueAsBool(dictionary["is_template"]) ?? true
+        let syncVersion = valueAsInt(dictionary["sync_version"])
+        let createdAt: Date? = {
+            if let interval = valueAsDouble(dictionary["created_at"]) {
+                return Date(timeIntervalSince1970: interval)
+            }
+            return nil
+        }()
+        let updatedAt: Date? = {
+            if let interval = valueAsDouble(dictionary["updated_at"]) {
+                return Date(timeIntervalSince1970: interval)
+            }
+            return nil
+        }()
 
         return Workout(
             id: id,
+            remoteId: remoteId,
             name: name,
             date: Date(timeIntervalSince1970: dateInterval),
             duration: duration,
             exercises: exercises,
             notes: notes,
-            category: category
+            category: category,
+            isTemplate: isTemplate,
+            syncVersion: syncVersion,
+            createdAt: createdAt,
+            updatedAt: updatedAt
         )
     }
 
@@ -775,10 +919,247 @@ class WorkoutManager: ObservableObject {
         }
     }
 
+    private func legacyExercise(from exerciseId: Int, fallbackName: String) -> LegacyExercise {
+        if exerciseLookupCache.isEmpty {
+            let allExercises = ExerciseDatabase.getAllExercises()
+            exerciseLookupCache = Dictionary(uniqueKeysWithValues: allExercises.map { ($0.id, $0) })
+        }
+
+        if let data = exerciseLookupCache[exerciseId] {
+            return LegacyExercise(
+                id: data.id,
+                name: data.name,
+                category: data.bodyPart,
+                description: data.target.isEmpty ? nil : data.target,
+                instructions: data.synergist.isEmpty ? nil : data.synergist
+            )
+        }
+
+        return LegacyExercise(
+            id: exerciseId,
+            name: fallbackName,
+            category: "General",
+            description: nil,
+            instructions: nil
+        )
+    }
+
+    private func remoteWorkoutToTemplate(_ server: NetworkManagerTwo.WorkoutResponse.Workout) -> Workout {
+        let referenceDate = server.scheduledDate ?? server.startedAt ?? server.createdAt ?? Date()
+        let convertedExercises = server.exercises.enumerated().map { _, exercise in
+            remoteExerciseToTemplate(exercise)
+        }
+
+        return Workout(
+            id: server.id,
+            remoteId: server.id,
+            name: server.name,
+            date: referenceDate,
+            duration: server.estimatedDurationMinutes,
+            exercises: convertedExercises,
+            notes: server.notes,
+            category: nil,
+            isTemplate: server.isTemplate ?? false,
+            syncVersion: server.syncVersion,
+            createdAt: server.createdAt,
+            updatedAt: server.updatedAt
+        )
+    }
+
+    private func remoteExerciseToTemplate(_ exercise: NetworkManagerTwo.WorkoutResponse.Exercise) -> WorkoutExercise {
+        let legacy = legacyExercise(from: exercise.exerciseId, fallbackName: exercise.exerciseName)
+        let convertedSets = exercise.sets.enumerated().map { index, set in
+            remoteSetToTemplate(set, fallbackIndex: index + 1)
+        }
+
+        return WorkoutExercise(
+            id: exercise.id,
+            exercise: legacy,
+            sets: convertedSets,
+            notes: trimmedOrNil(exercise.notes)
+        )
+    }
+
+    private func remoteSetToTemplate(_ set: NetworkManagerTwo.WorkoutResponse.ExerciseSet, fallbackIndex: Int) -> WorkoutSet {
+        WorkoutSet(
+            id: set.id,
+            reps: set.reps,
+            weight: set.weightKg,
+            duration: set.durationSeconds,
+            distance: set.distanceMeters,
+            restTime: set.restSeconds
+        )
+    }
+
+    private func copyWorkout(_ workout: Workout, id: Int, remoteId: Int?) -> Workout {
+        Workout(
+            id: id,
+            remoteId: remoteId,
+            name: workout.name,
+            date: workout.date,
+            duration: workout.duration,
+            exercises: workout.exercises,
+            notes: workout.notes,
+            category: workout.category,
+            isTemplate: workout.isTemplate,
+            syncVersion: workout.syncVersion,
+            createdAt: workout.createdAt,
+            updatedAt: workout.updatedAt
+        )
+    }
+
+    private func uniqueLocalTemplate(_ workout: Workout, usedIds: inout Set<Int>) -> Workout {
+        var adjustedId = workout.id
+        if usedIds.contains(adjustedId) {
+            adjustedId = workout.id < 0 ? workout.id : -abs(workout.id)
+            if adjustedId == 0 { adjustedId = -1 }
+            while usedIds.contains(adjustedId) {
+                adjustedId -= 1
+            }
+            usedIds.insert(adjustedId)
+            return copyWorkout(workout, id: adjustedId, remoteId: nil)
+        }
+
+        usedIds.insert(adjustedId)
+        return workout
+    }
+
+    private func determineTrackingType(for set: WorkoutSet) -> String {
+        if set.reps != nil {
+            return "reps_weight"
+        }
+        if set.duration != nil {
+            return "time"
+        }
+        if set.distance != nil {
+            return "distance"
+        }
+        return "custom"
+    }
+
+    @MainActor
+    private func loadCustomWorkoutsLastFetch() {
+        guard customWorkoutsLastFetch == nil else { return }
+        let defaults = UserDefaults.standard
+        if let stored = defaults.object(forKey: storageKey(customWorkoutsLastFetchKey)) as? Date {
+            customWorkoutsLastFetch = stored
+        }
+    }
+
+    @MainActor
+    private func updateCustomWorkoutsLastFetch(_ date: Date?) {
+        customWorkoutsLastFetch = date
+        let defaults = UserDefaults.standard
+        let key = storageKey(customWorkoutsLastFetchKey)
+        if let date {
+            defaults.set(date, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    private func isCancellationError(_ error: Error) -> Bool {
+        if let urlError = error as? URLError, urlError.code == .cancelled {
+            return true
+        }
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            return true
+        }
+        return nsError.localizedDescription.lowercased().contains("cancelled")
+    }
+
     private func estimatedDurationMinutes(for exercises: [WorkoutExercise]) -> Int {
         let totalSets = exercises.reduce(0) { $0 + max($1.sets.count, 1) }
-        let estimated = Int(ceil(Double(totalSets) * 1.5))
-        return max(10, min(estimated, 150))
+        let estimate = Int(ceil(Double(max(totalSets, 1)) * 1.5))
+        return max(10, min(estimate, 150))
+    }
+
+    private func makeWorkoutRequest(from workout: Workout) -> NetworkManagerTwo.WorkoutRequest {
+        let startedAt = workout.createdAt ?? workout.date
+        let scheduledDate = workout.date
+        let estimatedDuration = workout.duration ?? estimatedDurationMinutes(for: workout.exercises)
+
+        let exercisesPayload = workout.exercises.enumerated().map { index, exercise in
+            NetworkManagerTwo.WorkoutRequest.Exercise(
+                exerciseId: exercise.exercise.id,
+                exerciseName: exercise.exercise.name,
+                orderIndex: index,
+                targetSets: max(1, exercise.sets.count),
+                isCompleted: false,
+                sets: exercise.sets.enumerated().map { setIndex, set in
+                    NetworkManagerTwo.WorkoutRequest.ExerciseSet(
+                        trackingType: determineTrackingType(for: set),
+                        weightKg: set.weight,
+                        reps: set.reps,
+                        durationSeconds: set.duration,
+                        restSeconds: set.restTime,
+                        distanceMeters: set.distance,
+                        distanceUnit: nil,
+                        paceSecondsPerKm: nil,
+                        rpe: nil,
+                        heartRateBpm: nil,
+                        intensityZone: nil,
+                        stretchIntensity: nil,
+                        rangeOfMotionNotes: nil,
+                        roundsCompleted: nil,
+                        isWarmup: false,
+                        isCompleted: false,
+                        notes: nil
+                    )
+                }
+            )
+        }
+
+        return NetworkManagerTwo.WorkoutRequest(
+            userEmail: userEmail,
+            name: workout.name,
+            status: "planned",
+            isTemplate: true,
+            startedAt: iso8601Formatter.string(from: startedAt),
+            completedAt: nil,
+            scheduledDate: iso8601Formatter.string(from: scheduledDate),
+            estimatedDurationMinutes: estimatedDuration,
+            actualDurationMinutes: nil,
+            notes: workout.notes,
+            exercises: exercisesPayload
+        )
+    }
+
+    @MainActor
+    private func replaceCustomWorkout(originalIdentifier: Int, with synced: Workout) {
+        if let index = customWorkouts.firstIndex(where: { $0.id == originalIdentifier }) {
+            customWorkouts[index] = synced
+        } else if let remoteId = synced.remoteId,
+                  let index = customWorkouts.firstIndex(where: { $0.remoteId == remoteId }) {
+            customWorkouts[index] = synced
+        } else {
+            customWorkouts.append(synced)
+        }
+
+        customWorkouts.sort { $0.date > $1.date }
+        hasWorkouts = !customWorkouts.isEmpty
+        customWorkoutsError = nil
+    }
+
+    private func syncCustomWorkout(_ workout: Workout, originalIdentifier: Int) async throws {
+        guard !userEmail.isEmpty else { return }
+
+        let payload = makeWorkoutRequest(from: workout)
+        let response: NetworkManagerTwo.WorkoutResponse.Workout
+
+        if let remoteId = workout.remoteId {
+            response = try await networkManager.updateWorkout(sessionId: remoteId, payload: payload)
+        } else {
+            response = try await networkManager.createWorkout(payload: payload)
+        }
+
+        let synced = remoteWorkoutToTemplate(response)
+        await MainActor.run {
+            replaceCustomWorkout(originalIdentifier: originalIdentifier, with: synced)
+            updateCustomWorkoutsLastFetch(Date())
+        }
+        await persistCustomWorkouts()
     }
 
     private func nextCustomWorkoutId() -> Int {
@@ -794,11 +1175,16 @@ class WorkoutManager: ObservableObject {
         workouts.map { workout in
             [
                 "id": workout.id,
+                "remote_id": workout.remoteId ?? NSNull(),
                 "name": workout.name,
                 "date": workout.date.timeIntervalSince1970,
                 "duration": workout.duration ?? NSNull(),
                 "notes": workout.notes ?? "",
                 "category": workout.category ?? "",
+                "is_template": workout.isTemplate,
+                "sync_version": workout.syncVersion ?? NSNull(),
+                "created_at": workout.createdAt?.timeIntervalSince1970 ?? NSNull(),
+                "updated_at": workout.updatedAt?.timeIntervalSince1970 ?? NSNull(),
                 "exercises": workout.exercises.map(encodeWorkoutExercise)
             ]
         }
@@ -906,6 +1292,16 @@ class WorkoutManager: ObservableObject {
         if let int = value as? Int { return Double(int) }
         if let string = value as? String { return Double(string) }
         if let number = value as? NSNumber { return number.doubleValue }
+        return nil
+    }
+
+    private func valueAsBool(_ value: Any?) -> Bool? {
+        if let bool = value as? Bool { return bool }
+        if let number = value as? NSNumber { return number.boolValue }
+        if let string = (value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            if ["1", "true", "yes"].contains(string) { return true }
+            if ["0", "false", "no"].contains(string) { return false }
+        }
         return nil
     }
 
@@ -2445,12 +2841,17 @@ struct WorkoutExercise: Codable, Identifiable, Hashable {
 
 struct Workout: Codable, Identifiable, Hashable {
     let id: Int
+    let remoteId: Int?
     let name: String
     let date: Date
     let duration: Int?
     let exercises: [WorkoutExercise]
     let notes: String?
     let category: String?
+    let isTemplate: Bool
+    let syncVersion: Int?
+    let createdAt: Date?
+    let updatedAt: Date?
     
     var totalSets: Int {
         exercises.reduce(0) { $0 + $1.sets.count }
@@ -2458,6 +2859,81 @@ struct Workout: Codable, Identifiable, Hashable {
     
     var displayName: String {
         name.isEmpty ? "Workout" : name
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case remoteId
+        case name
+        case date
+        case duration
+        case exercises
+        case notes
+        case category
+        case isTemplate
+        case syncVersion
+        case createdAt
+        case updatedAt
+    }
+
+    init(
+        id: Int,
+        remoteId: Int?,
+        name: String,
+        date: Date,
+        duration: Int?,
+        exercises: [WorkoutExercise],
+        notes: String?,
+        category: String?,
+        isTemplate: Bool = true,
+        syncVersion: Int?,
+        createdAt: Date?,
+        updatedAt: Date?
+    ) {
+        self.id = id
+        self.remoteId = remoteId
+        self.name = name
+        self.date = date
+        self.duration = duration
+        self.exercises = exercises
+        self.notes = notes
+        self.category = category
+        self.isTemplate = isTemplate
+        self.syncVersion = syncVersion
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        remoteId = try container.decodeIfPresent(Int.self, forKey: .remoteId)
+        name = try container.decode(String.self, forKey: .name)
+        date = try container.decode(Date.self, forKey: .date)
+        duration = try container.decodeIfPresent(Int.self, forKey: .duration)
+        exercises = try container.decode([WorkoutExercise].self, forKey: .exercises)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        category = try container.decodeIfPresent(String.self, forKey: .category)
+        isTemplate = try container.decodeIfPresent(Bool.self, forKey: .isTemplate) ?? true
+        syncVersion = try container.decodeIfPresent(Int.self, forKey: .syncVersion)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(remoteId, forKey: .remoteId)
+        try container.encode(name, forKey: .name)
+        try container.encode(date, forKey: .date)
+        try container.encodeIfPresent(duration, forKey: .duration)
+        try container.encode(exercises, forKey: .exercises)
+        try container.encodeIfPresent(notes, forKey: .notes)
+        try container.encodeIfPresent(category, forKey: .category)
+        try container.encode(isTemplate, forKey: .isTemplate)
+        try container.encodeIfPresent(syncVersion, forKey: .syncVersion)
+        try container.encodeIfPresent(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
     }
     
     func hash(into hasher: inout Hasher) {

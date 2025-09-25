@@ -327,9 +327,11 @@ struct LogWorkoutView: View {
                 workoutControlsInHeader
                     // .padding(.top, 12)
                     .padding(.bottom, 12)
-            } else {
-                myWorkoutsHeader
-            }
+            } 
+            //do not show header for now
+            // else {
+            //     myWorkoutsHeader
+            // }
 
             Divider()
                 .background(Color.gray.opacity(0.3))
@@ -1330,10 +1332,10 @@ private struct TodayWorkoutView: View {
                     }) {
                         Text("Start Workout")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(Color(.systemBackground))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(.primary)
+                            .background(Color.primary)
                             .cornerRadius(100)
                             .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                     }
@@ -2024,6 +2026,11 @@ private struct RoutinesWorkoutView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
+                if let errorMessage = workoutManager.customWorkoutsError?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !errorMessage.isEmpty {
+                    errorBanner(message: errorMessage)
+                }
+
                 Color.clear.frame(height: 4)
 
                 newWorkoutButton
@@ -2131,6 +2138,27 @@ private struct RoutinesWorkoutView: View {
                 .padding(.horizontal, 40)
         }
         .padding(.top, 32)
+    }
+
+    @ViewBuilder
+    private func errorBanner(message: String) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+
+            Text(message)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white)
+                .multilineTextAlignment(.leading)
+                .lineLimit(3)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.red.opacity(0.85))
+        .cornerRadius(16)
+        .padding(.horizontal, 20)
     }
 
     private func estimatedDuration(for workout: Workout) -> Int {

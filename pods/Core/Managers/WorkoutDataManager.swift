@@ -435,6 +435,7 @@ class WorkoutCloudSync {
                 isCompleted: exercise.isCompleted,
                 sets: exercise.sets.sorted { $0.setNumber < $1.setNumber }.map { set in
                     NetworkManagerTwo.WorkoutRequest.ExerciseSet(
+                        trackingType: nil,
                         weightKg: set.actualWeight ?? set.targetWeight,
                         reps: set.actualReps ?? set.targetReps,
                         durationSeconds: nil,
@@ -460,6 +461,7 @@ class WorkoutCloudSync {
             userEmail: workout.userEmail,
             name: workout.name,
             status: status,
+            isTemplate: nil,
             startedAt: isoFormatter.string(from: workout.startedAt),
             completedAt: workout.completedAt.map { isoFormatter.string(from: $0) },
             scheduledDate: scheduledDate,
