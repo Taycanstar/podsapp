@@ -62,6 +62,7 @@ struct LogWorkoutView: View {
     // Keep only essential UI-only state (not data state)
     @State private var currentWorkout: TodayWorkout? = nil
     @State private var userEmail: String = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+    @State private var workoutSearchText: String = ""
     @State private var isRenamingWorkout = false
     @State private var renameWorkoutTitle = ""
     @State private var pendingWorkoutFeedback = false
@@ -206,6 +207,12 @@ struct LogWorkoutView: View {
             .navigationTitle("")
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar { toolbarContent }
+            .applyConditionalSearch(isEnabled: selectedWorkoutTab == .workouts, text: $workoutSearchText)
+            .onChange(of: selectedWorkoutTab) { _, newValue in
+                if newValue != .workouts {
+                    workoutSearchText = ""
+                }
+            }
             .sheet(isPresented: $isRenamingWorkout) {
                 renameWorkoutSheet
             }
@@ -320,12 +327,17 @@ struct LogWorkoutView: View {
                 workoutControlsInHeader
                     // .padding(.top, 12)
                     .padding(.bottom, 12)
+            } else {
+                myWorkoutsHeader
             }
 
             Divider()
                 .background(Color.gray.opacity(0.3))
         }
-        .background(Color("primarybg"))
+        .background(
+            Color("primarybg")
+                .ignoresSafeArea(edges: .top)
+        )
         .zIndex(1)
     }
     
@@ -739,6 +751,14 @@ struct LogWorkoutView: View {
             .padding(.vertical, 2)
         }
     }
+
+    @ViewBuilder
+    private var myWorkoutsHeader: some View {
+        Color.clear
+            .frame(height: 12)
+            .frame(maxWidth: .infinity)
+            .accessibilityHidden(true)
+    }
     
     // MARK: - Button Ordering Logic
     
@@ -1065,7 +1085,8 @@ struct LogWorkoutView: View {
             case .workouts:
                 RoutinesWorkoutView(
                     navigationPath: $navigationPath,
-                    workoutManager: workoutManager
+                    workoutManager: workoutManager,
+                    searchText: $workoutSearchText
                 )
                 Spacer()
             }
@@ -1971,13 +1992,33 @@ private struct TodayWorkoutView: View {
 private struct RoutinesWorkoutView: View {
     @Binding var navigationPath: NavigationPath
     @ObservedObject var workoutManager: WorkoutManager
-    
+    @Binding var searchText: String
+
     private var workouts: [Workout] {
         workoutManager.customWorkouts
     }
 
+    private var normalizedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isSearching: Bool {
+        !normalizedSearchText.isEmpty
+    }
+
+    private var filteredWorkouts: [Workout] {
+        guard isSearching else { return workouts }
+        return workouts.filter { workout in
+            workout.displayName.localizedCaseInsensitiveContains(normalizedSearchText)
+        }
+    }
+
     private var showsEmptyState: Bool {
-        !workoutManager.isLoadingWorkouts && workouts.isEmpty
+        !workoutManager.isLoadingWorkouts && workouts.isEmpty && !isSearching
+    }
+
+    private var showsSearchEmptyState: Bool {
+        !workoutManager.isLoadingWorkouts && filteredWorkouts.isEmpty && isSearching
     }
 
     var body: some View {
@@ -1991,9 +2032,11 @@ private struct RoutinesWorkoutView: View {
                     loadingState
                 } else if showsEmptyState {
                     emptyState
+                } else if showsSearchEmptyState {
+                    searchEmptyState
                 } else {
                     LazyVStack(spacing: 16, pinnedViews: []) {
-                        ForEach(workouts, id: \.id) { workout in
+                        ForEach(filteredWorkouts, id: \.id) { workout in
                             WorkoutCard(
                                 workout: workout,
                                 durationMinutes: workout.duration ?? estimatedDuration(for: workout),
@@ -2073,6 +2116,21 @@ private struct RoutinesWorkoutView: View {
                 .padding(.horizontal, 40)
         }
         .padding(.top, 24)
+    }
+
+    private var searchEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 36, weight: .medium))
+                .foregroundColor(.secondary)
+
+            Text("No workouts match your search.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .padding(.top, 32)
     }
 
     private func estimatedDuration(for workout: Workout) -> Int {
@@ -2155,6 +2213,31 @@ private struct WorkoutCard: View {
         .padding(20)
         .background(Color("containerbg"))
         .cornerRadius(24)
+    }
+}
+
+private struct ConditionalSearchModifier: ViewModifier {
+    let isEnabled: Bool
+    @Binding var text: String
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content
+                .searchable(
+                    text: $text,
+                    placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: "Search workouts"
+                )
+        } else {
+            content
+        }
+    }
+}
+
+private extension View {
+    func applyConditionalSearch(isEnabled: Bool, text: Binding<String>) -> some View {
+        modifier(ConditionalSearchModifier(isEnabled: isEnabled, text: text))
     }
 }
 
