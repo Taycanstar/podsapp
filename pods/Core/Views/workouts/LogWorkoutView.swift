@@ -2264,7 +2264,7 @@ private struct WorkoutCard: View {
             .padding(.top, 12)
 
         }
-        .padding(20)
+        .padding()
         .background(Color("containerbg"))
         .cornerRadius(24)
     }
