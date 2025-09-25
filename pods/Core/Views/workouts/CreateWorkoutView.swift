@@ -9,12 +9,16 @@ import SwiftUI
 
 struct CreateWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var workoutManager: WorkoutManager
     @Binding var navigationPath: NavigationPath
     @State private var workoutTitle: String = ""
     @State private var exercises: [WorkoutExercise] = []
     @State private var showingAddExercise = false
     @State private var showingExerciseDetail = false
     @State private var selectedExerciseForDetail: WorkoutExercise?
+    @State private var showingSaveAlert = false
+    @State private var saveError: String?
+    @State private var isSaving = false
     
     // Optional workout for editing
     let workout: Workout?
@@ -146,7 +150,11 @@ struct CreateWorkoutView: View {
          .toolbar {
              ToolbarItem(placement: .navigationBarLeading) {
                  Button("Cancel") {
-                     navigationPath.removeLast()
+                     if !navigationPath.isEmpty {
+                         navigationPath.removeLast()
+                     } else {
+                         dismiss()
+                     }
                  }
                  .foregroundColor(.accentColor)
              }
@@ -165,34 +173,81 @@ struct CreateWorkoutView: View {
                  addExercisesToWorkout(selectedExercises)
              }
          }
-         .sheet(isPresented: $showingExerciseDetail) {
-             if let exercise = selectedExerciseForDetail {
-                 ExerciseDetailView(exercise: exercise) { updatedExercise in
-                     updateExercise(updatedExercise)
-                 }
-             }
-         }
+        .sheet(isPresented: $showingExerciseDetail) {
+            if let exercise = selectedExerciseForDetail {
+                ExerciseDetailView(exercise: exercise) { updatedExercise in
+                    updateExercise(updatedExercise)
+                }
+            }
+        }
+        .alert("Save Workout", isPresented: $showingSaveAlert) {
+            Button("OK", role: .cancel) {
+                saveError = nil
+            }
+        } message: {
+            Text(saveError ?? "")
+        }
+        .overlay {
+            if isSaving {
+                ZStack {
+                    Color.black.opacity(0.25)
+                        .ignoresSafeArea()
+                    ProgressView("Saving workout...")
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 18)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(14)
+                }
+            }
+        }
     }
     
     private func saveWorkout() {
-        // Save workout to history if exercises exist
-        if !exercises.isEmpty {
-            let duration: TimeInterval = 3600 // Default 1 hour, could be tracked with a timer
-            let notes = workoutTitle.isEmpty ? nil : workoutTitle
-            
-            // Complete the workout and save to history
-            WorkoutHistoryService.shared.completeFullWorkout(exercises, duration: duration, notes: notes)
-            
-            // Clear workout session duration since workout is completed
-            LogWorkoutView.clearWorkoutSessionDuration()
-            
-            print("✅ Workout saved: \(workoutTitle) with \(exercises.count) exercises")
-        } else {
-            print("📝 Workout template saved: \(workoutTitle)")
+        let trimmedTitle = workoutTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedTitle.isEmpty else {
+            saveError = "Please enter a workout name."
+            showingSaveAlert = true
+            return
         }
-        
-        HapticFeedback.generate()
-        navigationPath.removeLast()
+
+        guard !exercises.isEmpty else {
+            saveError = "Add at least one exercise before saving."
+            showingSaveAlert = true
+            return
+        }
+
+        let currentExercises = exercises
+        let existingId = workout?.id
+
+        isSaving = true
+
+        Task {
+            do {
+                try await workoutManager.saveCustomWorkout(
+                    name: trimmedTitle,
+                    exercises: currentExercises,
+                    notes: nil,
+                    workoutId: existingId
+                )
+
+                await MainActor.run {
+                    isSaving = false
+                    HapticFeedback.generate()
+                    if !navigationPath.isEmpty {
+                        navigationPath.removeLast()
+                    } else {
+                        dismiss()
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isSaving = false
+                    saveError = error.localizedDescription
+                    showingSaveAlert = true
+                }
+            }
+        }
     }
     
     private func addExercisesToWorkout(_ selectedExercises: [ExerciseData]) {
@@ -329,4 +384,5 @@ struct WorkoutExerciseRow: View {
     NavigationView {
         CreateWorkoutView(navigationPath: .constant(NavigationPath()))
     }
+    .environmentObject(WorkoutManager.shared)
 }

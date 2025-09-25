@@ -134,6 +134,8 @@ class WorkoutManager: ObservableObject {
     // MARK: - Workout History State (for routines view)
     @Published private(set) var hasWorkouts: Bool = false
     @Published private(set) var isLoadingWorkouts: Bool = false
+    @Published private(set) var customWorkouts: [Workout] = []
+    @Published private(set) var customWorkoutsError: String?
     
     // MARK: - Service Dependencies (NOT @Published to avoid unnecessary updates)
     private let workoutGenerationService = WorkoutGenerationService.shared
@@ -150,6 +152,7 @@ class WorkoutManager: ObservableObject {
     private let sessionTimeoutInterval: TimeInterval = 3 * 60 * 60
     private var pendingSummaryRegeneration = false
     private var lastModelContext: ModelContext?
+    private var exerciseLookupCache: [Int: ExerciseData] = [:]
     
     // MARK: - UserDefaults Keys
     private let todayWorkoutKey = "todayWorkout"
@@ -166,6 +169,8 @@ class WorkoutManager: ObservableObject {
     private let todayWorkoutRecoverySnapshotKey = "todayWorkoutRecoverySnapshot"
     private let todayWorkoutMusclesKey = "todayWorkoutMuscles"
     private let activeWorkoutStateKey = "activeWorkoutState"
+    private let customWorkoutsKey = "custom_workouts"
+    private let customWorkoutIdCounterKey = "customWorkoutIdCounter"
 
     private struct ActiveWorkoutState: Codable {
         let workoutId: UUID
@@ -590,6 +595,325 @@ class WorkoutManager: ObservableObject {
             defaultTargetMuscles = normalized
             persistDefaultMusclePreferences(type: type, muscles: normalized)
         }
+    }
+
+    // MARK: - Custom Workout Templates
+
+    func fetchCustomWorkouts(force: Bool = false) async {
+        if isLoadingWorkouts && !force { return }
+
+        isLoadingWorkouts = true
+        customWorkoutsError = nil
+
+        defer {
+            isLoadingWorkouts = false
+        }
+
+        let raw = await DataLayer.shared.getData(key: customWorkoutsKey)
+        let decoded = decodeCustomWorkouts(raw)
+        customWorkouts = decoded.sorted { $0.date > $1.date }
+        hasWorkouts = !customWorkouts.isEmpty
+    }
+
+    func saveCustomWorkout(name: String, exercises: [WorkoutExercise], notes: String? = nil, workoutId: Int? = nil) async throws {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { throw CustomWorkoutError.invalidName }
+        guard !exercises.isEmpty else { throw CustomWorkoutError.noExercises }
+
+        let sanitizedExercises = sanitizeCustomWorkoutExercises(exercises)
+        let durationMinutes = estimatedDurationMinutes(for: sanitizedExercises)
+        let resolvedNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let identifier = workoutId ?? nextCustomWorkoutId()
+
+        let template = Workout(
+            id: identifier,
+            name: trimmedName,
+            date: Date(),
+            duration: durationMinutes,
+            exercises: sanitizedExercises,
+            notes: resolvedNotes?.isEmpty == true ? nil : resolvedNotes,
+            category: nil
+        )
+
+        if let workoutId = workoutId, let index = customWorkouts.firstIndex(where: { $0.id == workoutId }) {
+            customWorkouts[index] = template
+        } else {
+            customWorkouts.append(template)
+        }
+
+        customWorkouts.sort { $0.date > $1.date }
+        hasWorkouts = !customWorkouts.isEmpty
+        await persistCustomWorkouts()
+    }
+
+    func deleteCustomWorkout(id: Int) async {
+        guard let index = customWorkouts.firstIndex(where: { $0.id == id }) else { return }
+        customWorkouts.remove(at: index)
+        hasWorkouts = !customWorkouts.isEmpty
+        await persistCustomWorkouts()
+    }
+
+    func startCustomWorkout(_ workout: Workout) -> TodayWorkout {
+        let todayWorkout = makeTodayWorkout(from: workout)
+        startWorkout(todayWorkout)
+        return todayWorkout
+    }
+
+    private func persistCustomWorkouts() async {
+        let encoded = encodeCustomWorkouts(customWorkouts)
+        await DataLayer.shared.setData(key: customWorkoutsKey, value: encoded)
+        customWorkoutsError = nil
+    }
+
+    private func decodeCustomWorkouts(_ raw: Any?) -> [Workout] {
+        guard let entries = raw as? [[String: Any]] else { return [] }
+        return entries.compactMap(decodeWorkoutDictionary)
+    }
+
+    private func decodeWorkoutDictionary(_ dictionary: [String: Any]) -> Workout? {
+        guard let id = valueAsInt(dictionary["id"]),
+              let name = dictionary["name"] as? String,
+              let dateInterval = valueAsDouble(dictionary["date"]),
+              let exerciseEntries = dictionary["exercises"] as? [[String: Any]] else {
+            return nil
+        }
+
+        let exercises = exerciseEntries.compactMap(decodeWorkoutExercise)
+        guard !exercises.isEmpty else { return nil }
+
+        let duration = valueAsInt(dictionary["duration"])
+        let notes = trimmedOrNil(dictionary["notes"] as? String)
+        let category = trimmedOrNil(dictionary["category"] as? String)
+
+        return Workout(
+            id: id,
+            name: name,
+            date: Date(timeIntervalSince1970: dateInterval),
+            duration: duration,
+            exercises: exercises,
+            notes: notes,
+            category: category
+        )
+    }
+
+    private func decodeWorkoutExercise(_ dictionary: [String: Any]) -> WorkoutExercise? {
+        guard let id = valueAsInt(dictionary["id"]),
+              let legacyDict = dictionary["exercise"] as? [String: Any],
+              let setEntries = dictionary["sets"] as? [[String: Any]],
+              let legacyExercise = decodeLegacyExercise(legacyDict) else {
+            return nil
+        }
+
+        let sets = setEntries.compactMap(decodeWorkoutSet)
+        return WorkoutExercise(
+            id: id,
+            exercise: legacyExercise,
+            sets: sets,
+            notes: trimmedOrNil(dictionary["notes"] as? String)
+        )
+    }
+
+    private func decodeLegacyExercise(_ dictionary: [String: Any]) -> LegacyExercise? {
+        guard let id = valueAsInt(dictionary["id"]),
+              let name = dictionary["name"] as? String,
+              let category = dictionary["category"] as? String else {
+            return nil
+        }
+
+        let description = trimmedOrNil(dictionary["description"] as? String)
+        let instructions = trimmedOrNil(dictionary["instructions"] as? String)
+
+        return LegacyExercise(
+            id: id,
+            name: name,
+            category: category,
+            description: description,
+            instructions: instructions
+        )
+    }
+
+    private func decodeWorkoutSet(_ dictionary: [String: Any]) -> WorkoutSet? {
+        guard let id = valueAsInt(dictionary["id"]) else { return nil }
+
+        let reps = valueAsInt(dictionary["reps"])
+        let rest = valueAsInt(dictionary["restTime"])
+        let duration = valueAsInt(dictionary["duration"])
+        let distance = valueAsDouble(dictionary["distance"])
+        let weight = valueAsDouble(dictionary["weight"])
+
+        return WorkoutSet(
+            id: id,
+            reps: reps,
+            weight: weight,
+            duration: duration,
+            distance: distance,
+            restTime: rest
+        )
+    }
+
+    private func sanitizeCustomWorkoutExercises(_ exercises: [WorkoutExercise]) -> [WorkoutExercise] {
+        var exerciseIdentifier = 1
+        return exercises.map { exercise in
+            let sanitizedSets: [WorkoutSet] = exercise.sets.enumerated().map { offset, set in
+                WorkoutSet(
+                    id: offset + 1,
+                    reps: set.reps,
+                    weight: set.weight,
+                    duration: set.duration,
+                    distance: set.distance,
+                    restTime: set.restTime
+                )
+            }
+
+            defer { exerciseIdentifier += 1 }
+            return WorkoutExercise(
+                id: exerciseIdentifier,
+                exercise: exercise.exercise,
+                sets: sanitizedSets,
+                notes: trimmedOrNil(exercise.notes)
+            )
+        }
+    }
+
+    private func estimatedDurationMinutes(for exercises: [WorkoutExercise]) -> Int {
+        let totalSets = exercises.reduce(0) { $0 + max($1.sets.count, 1) }
+        let estimated = Int(ceil(Double(totalSets) * 1.5))
+        return max(10, min(estimated, 150))
+    }
+
+    private func nextCustomWorkoutId() -> Int {
+        let defaults = UserDefaults.standard
+        let key = storageKey(customWorkoutIdCounterKey)
+        let current = defaults.integer(forKey: key)
+        let next = current + 1
+        defaults.set(next, forKey: key)
+        return next
+    }
+
+    private func encodeCustomWorkouts(_ workouts: [Workout]) -> [[String: Any]] {
+        workouts.map { workout in
+            [
+                "id": workout.id,
+                "name": workout.name,
+                "date": workout.date.timeIntervalSince1970,
+                "duration": workout.duration ?? NSNull(),
+                "notes": workout.notes ?? "",
+                "category": workout.category ?? "",
+                "exercises": workout.exercises.map(encodeWorkoutExercise)
+            ]
+        }
+    }
+
+    private func encodeWorkoutExercise(_ exercise: WorkoutExercise) -> [String: Any] {
+        [
+            "id": exercise.id,
+            "notes": exercise.notes ?? "",
+            "exercise": encodeLegacyExercise(exercise.exercise),
+            "sets": exercise.sets.map(encodeWorkoutSet)
+        ]
+    }
+
+    private func encodeLegacyExercise(_ exercise: LegacyExercise) -> [String: Any] {
+        [
+            "id": exercise.id,
+            "name": exercise.name,
+            "category": exercise.category,
+            "description": exercise.description ?? "",
+            "instructions": exercise.instructions ?? ""
+        ]
+    }
+
+    private func encodeWorkoutSet(_ set: WorkoutSet) -> [String: Any] {
+        [
+            "id": set.id,
+            "reps": set.reps ?? NSNull(),
+            "weight": set.weight ?? NSNull(),
+            "duration": set.duration ?? NSNull(),
+            "distance": set.distance ?? NSNull(),
+            "restTime": set.restTime ?? NSNull()
+        ]
+    }
+
+    private func makeTodayWorkout(from template: Workout) -> TodayWorkout {
+        let todayExercises = template.exercises.map(convertWorkoutExerciseToToday)
+        let estimatedDuration = template.duration ?? estimatedDurationMinutes(for: template.exercises)
+
+        return TodayWorkout(
+            title: template.displayName,
+            exercises: todayExercises,
+            estimatedDuration: estimatedDuration,
+            fitnessGoal: effectiveFitnessGoal,
+            difficulty: userProfileService.experienceLevel.workoutComplexity,
+            warmUpExercises: nil,
+            coolDownExercises: nil
+        )
+    }
+
+    private func convertWorkoutExerciseToToday(_ exercise: WorkoutExercise) -> TodayWorkoutExercise {
+        let exerciseData = exerciseData(for: exercise.exercise)
+        let setsCount = max(exercise.sets.count, 1)
+        let primarySet = exercise.sets.first
+        let resolvedReps = primarySet?.reps ?? 10
+        let resolvedWeight = primarySet?.weight
+        let resolvedRest = primarySet?.restTime ?? 75
+
+        return TodayWorkoutExercise(
+            exercise: exerciseData,
+            sets: max(setsCount, 1),
+            reps: max(resolvedReps, 1),
+            weight: resolvedWeight,
+            restTime: resolvedRest,
+            notes: trimmedOrNil(exercise.notes),
+            warmupSets: nil,
+            flexibleSets: nil,
+            trackingType: nil
+        )
+    }
+
+    private func exerciseData(for legacy: LegacyExercise) -> ExerciseData {
+        if exerciseLookupCache.isEmpty {
+            let allExercises = ExerciseDatabase.getAllExercises()
+            exerciseLookupCache = Dictionary(uniqueKeysWithValues: allExercises.map { ($0.id, $0) })
+        }
+
+        if let cached = exerciseLookupCache[legacy.id] {
+            return cached
+        }
+
+        // Fallback if exercise isn't present in the embedded database
+        return ExerciseData(
+            id: legacy.id,
+            name: legacy.name,
+            exerciseType: "Strength",
+            bodyPart: legacy.category,
+            equipment: legacy.category,
+            gender: "Unisex",
+            target: legacy.description ?? "",
+            synergist: legacy.instructions ?? ""
+        )
+    }
+
+    private func valueAsInt(_ value: Any?) -> Int? {
+        if let int = value as? Int { return int }
+        if let double = value as? Double { return Int(double) }
+        if let string = value as? String { return Int(string) }
+        if let number = value as? NSNumber { return number.intValue }
+        return nil
+    }
+
+    private func valueAsDouble(_ value: Any?) -> Double? {
+        if let double = value as? Double { return double }
+        if let int = value as? Int { return Double(int) }
+        if let string = value as? String { return Double(string) }
+        if let number = value as? NSNumber { return number.doubleValue }
+        return nil
+    }
+
+    private func trimmedOrNil(_ value: String?) -> String? {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
+            return nil
+        }
+        return value
     }
     
     /// Set session rest-timer enabled (temporary override)
@@ -2161,6 +2485,20 @@ struct LoggedWorkout: Codable, Identifiable, Hashable {
     
     static func == (lhs: LoggedWorkout, rhs: LoggedWorkout) -> Bool {
         lhs.id == rhs.id
+    }
+}
+
+enum CustomWorkoutError: LocalizedError {
+    case invalidName
+    case noExercises
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidName:
+            return "Please enter a workout name."
+        case .noExercises:
+            return "Add at least one exercise before saving."
+        }
     }
 }
 

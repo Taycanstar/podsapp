@@ -36,7 +36,6 @@ struct LogWorkoutView: View {
     let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
     // New: presenter for full-screen logging sheet (provided by container)
     let onPresentLogSheet: (LogExerciseSheetContext) -> Void
-    @State private var searchText = ""
     @FocusState private var isSearchFieldFocused: Bool
     
     // Tab management
@@ -188,15 +187,8 @@ struct LogWorkoutView: View {
         
         var title: String {
             switch self {
-            case .today: return "Today"
+            case .today: return "For You"
             case .workouts: return "My Workouts"
-            }
-        }
-        
-        var searchPrompt: String {
-            switch self {
-            case .today: return "Search today's workout"
-            case .workouts: return "Search workouts"
             }
         }
     }
@@ -204,10 +196,14 @@ struct LogWorkoutView: View {
     let workoutTabs: [WorkoutTab] = [.today, .workouts]
     
     var body: some View {
+        configuredBaseView
+    }
+
+    private var configuredBaseView: some View {
         mainBody
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
-            .navigationTitle(selectedWorkoutTab == .workouts ? "Workouts" : todayWorkoutTitle)
+            .navigationTitle("")
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar { toolbarContent }
             .sheet(isPresented: $isRenamingWorkout) {
@@ -224,13 +220,6 @@ struct LogWorkoutView: View {
                         .font(.headline)
                         .padding()
                 }
-            }
-            .if(selectedWorkoutTab == .workouts) { view in
-                view.searchable(
-                    text: $searchText,
-                    placement: .navigationBarDrawer(displayMode: .always),
-                    prompt: selectedWorkoutTab.searchPrompt
-                )
             }
             .onAppear {
                 workoutManager.setModelContext(modelContext)
@@ -327,13 +316,17 @@ struct LogWorkoutView: View {
     @ViewBuilder
     private var headerSection: some View {
         VStack(spacing: 0) {
-            tabHeaderView
+            if selectedWorkoutTab == .today {
+                workoutControlsInHeader
+                    // .padding(.top, 12)
+                    .padding(.bottom, 12)
+            }
+
             Divider()
                 .background(Color.gray.opacity(0.3))
         }
-        // .background(Color(.systemBackground))
-          .background(Color("primarybg"))
-        .zIndex(1) // Keep header on top
+        .background(Color("primarybg"))
+        .zIndex(1)
     }
     
     // MARK: - Sheet Content Views
@@ -685,48 +678,46 @@ struct LogWorkoutView: View {
     
     // MARK: - Subviews
     
-    private var tabHeaderView: some View {
-        VStack(spacing: 0) {
-            // Tab buttons
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(workoutTabs, id: \.self) { tab in
-                        TabButton(tab: tab, selectedTab: $selectedWorkoutTab)
+    private var navTabSwitcher: some View {
+        HStack(spacing: 16) {
+            ForEach(workoutTabs, id: \.self) { tab in
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedWorkoutTab = tab
                     }
+                }) {
+                    VStack(spacing: 6) {
+                        Text(tab.title)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(tab == selectedWorkoutTab ? .primary : .secondary)
+
+                        Capsule()
+                            .fill(tab == selectedWorkoutTab ? Color.primary : Color.clear)
+                            .frame(width: 24, height: 3)
+                    }
+                    // .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
                 }
-                .padding(.horizontal)
-            }
-            .padding(.bottom, 16)
-            
-            // Workout controls (only show for Today tab)
-            if selectedWorkoutTab == .today {
-                workoutControlsInHeader
-                    .padding(.bottom, 12)
+                .buttonStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity)
     }
     
     private var workoutControlsInHeader: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                // X button to reset all session options (only show when any session option is set) - positioned first
                 if hasSessionModifications {
                     Button(action: {
-                        // Clear all session overrides via WorkoutManager
                         workoutManager.clearAllSessionOverrides()
-                        
-                        // Regenerate workout with defaults
-                        Task {
-                            await workoutManager.generateTodayWorkout()
-                        }
+                        Task { await workoutManager.generateTodayWorkout() }
                         print("🔄 Reset to default preferences")
                     }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.primary)
                             .frame(width: 30, height: 30)
-                            // .background(Color(.systemBackground))
-                             .background(Color("primarybg"))
+                            .background(Color("primarybg"))
                             .cornerRadius(17.5)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 17.5)
@@ -739,14 +730,13 @@ struct LogWorkoutView: View {
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
-                
-                // Dynamically ordered buttons - modified buttons appear first, then unmodified
+
                 ForEach(orderedButtons, id: \.self) { button in
                     buttonView(for: button)
                 }
             }
             .padding(.horizontal)
-            .padding(.vertical, 2) // Add vertical padding to prevent border cutoff
+            .padding(.vertical, 2)
         }
     }
     
@@ -1037,7 +1027,6 @@ struct LogWorkoutView: View {
                         Spacer()
                 } else {
                     TodayWorkoutView(
-                        searchText: searchText,
                         navigationPath: $navigationPath,
                         userEmail: userEmail,
                         selectedDuration: effectiveDuration,
@@ -1051,16 +1040,32 @@ struct LogWorkoutView: View {
                         currentWorkout: $currentWorkout,
                         effectiveFlexibilityPreferences: effectiveFlexibilityPreferences,
                         showAddExerciseSheet: $showingAddExerciseSheet,
-                        onPresentLogSheet: onPresentLogSheet
+                        onPresentLogSheet: onPresentLogSheet,
+                        onRefresh: {
+                            HapticFeedback.generate()
+                            shouldRegenerateWorkout = true
+                        },
+                        onRenameWorkout: {
+                            HapticFeedback.generate()
+                            renameWorkoutTitle = workoutManager.todayWorkoutDisplayTitle
+                            isRenamingWorkout = workoutManager.todayWorkout != nil
+                        },
+                        onSaveWorkout: {
+                            HapticFeedback.generate()
+                            print("💾 Save workout tapped - TODO: implement persistence")
+                        },
+                        canShowSupersetMenu: userProfileService.circuitsAndSupersetsEnabled && (workoutManager.todayWorkout?.exercises.count ?? 0) >= 2,
+                        onShowSuperset: {
+                            HapticFeedback.generate()
+                            showingSupersetCircuitSheet = true
+                        }
                     )
                     .transition(.opacity.combined(with: .scale))
                 }
             case .workouts:
                 RoutinesWorkoutView(
-                    searchText: searchText,
                     navigationPath: $navigationPath,
-                    workoutManager: workoutManager,
-                    userEmail: userEmail
+                    workoutManager: workoutManager
                 )
                 Spacer()
             }
@@ -1079,88 +1084,19 @@ struct LogWorkoutView: View {
                         .foregroundColor(.primary)
                 }
             }
+            ToolbarItem(placement: .principal) {
+                navTabSwitcher
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 12) {
-                    Button(action: {
-                        shouldRegenerateWorkout = true
-                    }) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.primary)
-                            .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
-                            .background(
-                            Group {
-                                    if #available(iOS 26, *) {
-                                        // iOS 18+ - no background
-                                        EmptyView()
-                                    } else {
-                                        // iOS 17 and below - show background
-                                        Circle()
-                                            .fill(Color("thumbbg"))
-                                    }
-                                }
-                            )
-                            .contentShape(Circle())
-                    }
-
-                    Menu {
-                        Button(action: {
-                            renameWorkoutTitle = workoutManager.todayWorkoutDisplayTitle
-                            isRenamingWorkout = workoutManager.todayWorkout != nil
-                        }) {
-                            HStack {
-                                Image(systemName: "pencil")
-                                Text("Rename Workout")
-                            }
-                        }
-
-                        Button(action: {
-                            // TODO: Implement save workout action
-                        }) {
-                            HStack {
-                                Image(systemName: "bookmark")
-                                Text("Save workout")
-                            }
-                        }
-
-                        if userProfileService.circuitsAndSupersetsEnabled,
-                           (workoutManager.todayWorkout?.exercises.count ?? 0) >= 2 {
-                            Button(action: {
-                                showingSupersetCircuitSheet = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "arrow.left.arrow.right")
-                                    Text("Build superset/circuit")
-                                }
-                            }
-                        }
-
+                Group {
+                    if selectedWorkoutTab == .today {
                         NavigationLink(destination: WorkoutProfileSettingsView()) {
-                            HStack {
-                                Image(systemName: "gear")
-                                Text("Workout Settings")
-                            }
+                            Image(systemName: "line.3.horizontal")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.primary)
+                                .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
+                                .contentShape(Circle())
                         }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.primary)
-                            .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
-                            .background(
-                                // Circle()
-                                //     .fill(Color("thumbbg"))
-                                 Group {
-                                    if #available(iOS 26, *) {
-                                        // iOS 18+ - no background
-                                        EmptyView()
-                                    } else {
-                                        // iOS 17 and below - show background
-                                        Circle()
-                                            .fill(Color("thumbbg"))
-                                    }
-                                }
-                            )
-                            .contentShape(Circle())
                     }
                 }
             }
@@ -1288,38 +1224,9 @@ struct LogWorkoutView: View {
     // clearSessionFlexibilityPreferences removed - now handled by WorkoutManager.clearAllSessionOverrides()
     
 
-// MARK: - Tab Button
-
-private struct TabButton: View {
-    let tab: LogWorkoutView.WorkoutTab
-    @Binding var selectedTab: LogWorkoutView.WorkoutTab
-    @Environment(\.colorScheme) var colorScheme
-    
-    var body: some View {
-        Button(action: {
-            withAnimation(.easeInOut) {
-                selectedTab = tab
-            }
-        }) {
-            Text(tab.title)
-                .font(.system(size: 15))
-                .fontWeight(.semibold)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule()
-                        .fill(selectedTab == tab ? Color("tiktoknp") : Color.clear)
-                )
-                .foregroundColor(selectedTab == tab ? .primary : Color.gray.opacity(0.8))
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
 // MARK: - Today Workout View
 
 private struct TodayWorkoutView: View {
-    let searchText: String
     @Binding var navigationPath: NavigationPath
     @EnvironmentObject var workoutManager: WorkoutManager
     let userEmail: String
@@ -1335,6 +1242,11 @@ private struct TodayWorkoutView: View {
     let effectiveFlexibilityPreferences: FlexibilityPreferences // Added this parameter
     @Binding var showAddExerciseSheet: Bool
     let onPresentLogSheet: (LogExerciseSheetContext) -> Void
+    let onRefresh: () -> Void
+    let onRenameWorkout: () -> Void
+    let onSaveWorkout: () -> Void
+    let canShowSupersetMenu: Bool
+    let onShowSuperset: () -> Void
     
     
     @State private var userProfile = UserProfileService.shared
@@ -1344,7 +1256,7 @@ private struct TodayWorkoutView: View {
     private var workoutToShow: TodayWorkout? {
         return workoutManager.todayWorkout
     }
-    
+
     var body: some View {
         Group {
             // Show workout content (generation is handled at parent level)
@@ -1366,7 +1278,12 @@ private struct TodayWorkoutView: View {
                         onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
                         onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
                         showAddExerciseSheet: $showAddExerciseSheet,
-                        onPresentLogSheet: onPresentLogSheet
+                        onPresentLogSheet: onPresentLogSheet,
+                        onRefresh: onRefresh,
+                        onRenameWorkout: onRenameWorkout,
+                        onSaveWorkout: onSaveWorkout,
+                        canShowSupersetMenu: canShowSupersetMenu,
+                        onShowSuperset: onShowSuperset
                     )
                 }
             } else {
@@ -1395,15 +1312,13 @@ private struct TodayWorkoutView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(Color.accentColor)
+                            .background(.primary)
                             .cornerRadius(100)
                             .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .padding(.bottom, 18)
-                .background(Color.clear)
+                .padding(.bottom, 20)
             }
         }
         // Remove bottom safe-area reservation; we handle spacing ourselves
@@ -2054,86 +1969,192 @@ private struct TodayWorkoutView: View {
 // MARK: - Routines Workout View
 
 private struct RoutinesWorkoutView: View {
-    let searchText: String
     @Binding var navigationPath: NavigationPath
     @ObservedObject var workoutManager: WorkoutManager
-    let userEmail: String
     
+    private var workouts: [Workout] {
+        workoutManager.customWorkouts
+    }
+
+    private var showsEmptyState: Bool {
+        !workoutManager.isLoadingWorkouts && workouts.isEmpty
+    }
+
     var body: some View {
-        VStack(spacing: 20) {
-            // Add invisible spacing at the top to prevent overlap with header
-            Color.clear.frame(height: 4)
-            
-            // Show "blackex" image when no workouts exist
-            if !workoutManager.hasWorkouts && !workoutManager.isLoadingWorkouts {
-                VStack(spacing: 16) {
-                    Image("blackex")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: 250, maxHeight: 250)
-                    
-                    Text("Build your perfect workout")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    Text("Create routines, track progress, and stay consistent. Once you add workouts, they'll show up here.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 45)
+        ScrollView {
+            VStack(spacing: 24) {
+                Color.clear.frame(height: 4)
+
+                newWorkoutButton
+
+                if workoutManager.isLoadingWorkouts && workouts.isEmpty {
+                    loadingState
+                } else if showsEmptyState {
+                    emptyState
+                } else {
+                    LazyVStack(spacing: 16, pinnedViews: []) {
+                        ForEach(workouts, id: \.id) { workout in
+                            WorkoutCard(
+                                workout: workout,
+                                durationMinutes: workout.duration ?? estimatedDuration(for: workout),
+                                onStart: {
+                                    HapticFeedback.generate()
+                                    let todayWorkout = workoutManager.startCustomWorkout(workout)
+                                    navigationPath.append(WorkoutNavigationDestination.startWorkout(todayWorkout))
+                                },
+                                onEdit: {
+                                    HapticFeedback.generate()
+                                    navigationPath.append(WorkoutNavigationDestination.editWorkout(workout))
+                                }
+                            )
+                        }
+                    }
                 }
-                .padding(.top, 40)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+        }
+        .scrollIndicators(.hidden)
+        .background(Color("primarybg"))
+        .task {
+            await workoutManager.fetchCustomWorkouts()
+        }
+        .refreshable {
+            await workoutManager.fetchCustomWorkouts(force: true)
+        }
+    }
+
+    private var newWorkoutButton: some View {
+        Button(action: {
+            HapticFeedback.generate()
+            navigationPath.append(WorkoutNavigationDestination.createWorkout)
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("New Workout")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(Color("bg"))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color.primary)
+            .cornerRadius(28)
+        }
+    }
+
+    private var loadingState: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.1)
+            Text("Loading workouts...")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .padding(.top, 32)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image("blackex")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(maxWidth: 220, maxHeight: 220)
+
+            Text("Build your perfect workout")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            Text("Create routines, track progress, and stay consistent. Once you add workouts, they'll show up here.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .padding(.top, 24)
+    }
+
+    private func estimatedDuration(for workout: Workout) -> Int {
+        let totalSets = max(workout.totalSets, 1)
+        let estimate = Int(ceil(Double(totalSets) * 1.5))
+        return max(10, min(estimate, 150))
+    }
+}
+
+private struct WorkoutCard: View {
+    let workout: Workout
+    let durationMinutes: Int
+    let onStart: () -> Void
+    let onEdit: () -> Void
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }()
+
+    private var formattedDate: String {
+        WorkoutCard.dateFormatter.string(from: workout.date)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(workout.displayName)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.leading)
+
+                Spacer()
+
+                Text(formattedDate)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
             }
 
-            // New Workout button
-            Button(action: {
-                print("Tapped New Workout")
-                HapticFeedback.generate()
-                navigationPath.append(WorkoutNavigationDestination.createWorkout)
-            }) {
-                HStack(spacing: 6) {
-                    Spacer()
-                    Text("New Workout")
-                        .font(.system(size: 15))
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color("bg"))
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 18)
-                .frame(maxWidth: .infinity)
-                .background(Color.primary)
-                .cornerRadius(100)
-            }
-            .padding(.horizontal, 142)
-            .padding(.top, 10)
-            
-            // Show loading indicator when loading workouts
-            if workoutManager.isLoadingWorkouts {
-                VStack(spacing: 16) {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                    
-                    Text("Loading workouts...")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.top, 40)
-            }
-            
-            // TODO: Show workout list when workouts exist
-            if workoutManager.hasWorkouts {
-                // This will be implemented later when we have workout data
-                Text("Workouts will be displayed here")
-                    .font(.subheadline)
+            HStack(spacing: 16) {
+                Label("\(workout.exercises.count) exercises", systemImage: "dumbbell")
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.secondary)
-                    .padding(.top, 40)
+
+                Label("\(durationMinutes) min", systemImage: "clock")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
             }
-            
-            Spacer()
+
+            HStack(spacing: 12) {
+                Button(action: onEdit) {
+                    Text("Edit")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.accentColor)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.clear)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.accentColor, lineWidth: 1.5)
+                        )
+                }
+
+                Button(action: onStart) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "play.fill")
+                        Text("Start")
+                            .fontWeight(.semibold)
+                    }
+                    .font(.system(size: 15))
+                    .foregroundColor(Color("bg"))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.primary)
+                    .cornerRadius(16)
+                }
+            }
         }
-        .padding(.bottom, 16)
-        .background(Color("primarybg"))
+        .padding(20)
+        .background(Color("containerbg"))
+        .cornerRadius(24)
     }
 }
 
@@ -2150,8 +2171,23 @@ private struct RoutinesWorkoutView: View {
         @State private var coolDownExpanded: Bool = true
         @Binding var showAddExerciseSheet: Bool
         let onPresentLogSheet: (LogExerciseSheetContext) -> Void
+        let onRefresh: () -> Void
+        let onRenameWorkout: () -> Void
+        let onSaveWorkout: () -> Void
+        let canShowSupersetMenu: Bool
+        let onShowSuperset: () -> Void
         
-        init(workout: TodayWorkout, navigationPath: Binding<NavigationPath>, onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void, onExerciseUpdateCallbackSet: @escaping (((Int, TodayWorkoutExercise) -> Void)?) -> Void, showAddExerciseSheet: Binding<Bool>, onPresentLogSheet: @escaping (LogExerciseSheetContext) -> Void) {
+        init(workout: TodayWorkout,
+             navigationPath: Binding<NavigationPath>,
+             onExerciseReplacementCallbackSet: @escaping (((Int, ExerciseData) -> Void)?) -> Void,
+             onExerciseUpdateCallbackSet: @escaping (((Int, TodayWorkoutExercise) -> Void)?) -> Void,
+             showAddExerciseSheet: Binding<Bool>,
+             onPresentLogSheet: @escaping (LogExerciseSheetContext) -> Void,
+             onRefresh: @escaping () -> Void,
+             onRenameWorkout: @escaping () -> Void,
+             onSaveWorkout: @escaping () -> Void,
+             canShowSupersetMenu: Bool,
+             onShowSuperset: @escaping () -> Void) {
             self.workout = workout
             self._navigationPath = navigationPath
             self.onExerciseReplacementCallbackSet = onExerciseReplacementCallbackSet
@@ -2159,8 +2195,70 @@ private struct RoutinesWorkoutView: View {
             self._exercises = State(initialValue: workout.exercises)
             self._showAddExerciseSheet = showAddExerciseSheet
             self.onPresentLogSheet = onPresentLogSheet
+            self.onRefresh = onRefresh
+            self.onRenameWorkout = onRenameWorkout
+            self.onSaveWorkout = onSaveWorkout
+            self.canShowSupersetMenu = canShowSupersetMenu
+            self.onShowSuperset = onShowSuperset
         }
-        
+
+        @ViewBuilder
+        private var workoutTitleSection: some View {
+            Section {
+                HStack(spacing: 12) {
+                    Text(workout.title.isEmpty ? "Workout" : workout.title)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+
+                    Spacer()
+
+                    Button(action: onRefresh) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .frame(width: 34, height: 34)
+                            .background(Circle().fill(Color("thumbbg")))
+                            .clipShape(Circle())
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+
+                    Menu {
+                        Button(action: onRenameWorkout) {
+                            Label("Rename Workout", systemImage: "pencil")
+                        }
+
+                        Button(action: onSaveWorkout) {
+                            Label("Save workout", systemImage: "bookmark")
+                        }
+
+                        if canShowSupersetMenu {
+                            Button(action: onShowSuperset) {
+                                Label("Build superset/circuit", systemImage: "arrow.left.arrow.right")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .frame(width: 34, height: 34)
+                            .background(Circle().fill(Color("thumbbg")))
+                            .clipShape(Circle())
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+                .padding(.bottom, 12)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+        }
+
         // Precomputed grouping helpers to simplify the List body (prevents type-checker blowups)
         private var circuitOrSupersetBlocks: [WorkoutBlock] {
             // Only show grouped blocks when there are 2+ exercises
@@ -2180,6 +2278,7 @@ private struct RoutinesWorkoutView: View {
     
     var body: some View {
         List {
+            workoutTitleSection
             warmUpSection
             mainTitleSection
             mainExercisesSection
@@ -2295,8 +2394,8 @@ private struct RoutinesWorkoutView: View {
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
         } else {
-            groupedBlocksView
             nonGroupedCardView
+            groupedBlocksView
         }
     }
 
