@@ -1080,7 +1080,8 @@ struct LogWorkoutView: View {
                 RoutinesWorkoutView(
                     navigationPath: $navigationPath,
                     workoutManager: workoutManager,
-                    searchText: $workoutSearchText
+                    searchText: $workoutSearchText,
+                    currentWorkout: $currentWorkout
                 )
                 Spacer()
             }
@@ -1987,6 +1988,7 @@ private struct RoutinesWorkoutView: View {
     @Binding var navigationPath: NavigationPath
     @ObservedObject var workoutManager: WorkoutManager
     @Binding var searchText: String
+    @Binding var currentWorkout: TodayWorkout?
 
     private var workouts: [Workout] {
         workoutManager.customWorkouts
@@ -2025,11 +2027,6 @@ private struct RoutinesWorkoutView: View {
                     .listRowSeparator(.hidden)
             }
 
-            newWorkoutButton
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 16, leading: 20, bottom: 0, trailing: 20))
-                .listRowSeparator(.hidden)
-
             if workoutManager.isLoadingWorkouts && workouts.isEmpty {
                 loadingState
                     .frame(maxWidth: .infinity)
@@ -2056,7 +2053,7 @@ private struct RoutinesWorkoutView: View {
                         onStart: {
                             HapticFeedback.generate()
                             let todayWorkout = workoutManager.startCustomWorkout(workout)
-                            navigationPath.append(WorkoutNavigationDestination.startWorkout(todayWorkout))
+                            currentWorkout = workoutManager.currentWorkout ?? todayWorkout
                         },
                         onEdit: {
                             HapticFeedback.generate()
@@ -2082,6 +2079,9 @@ private struct RoutinesWorkoutView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
+        .safeAreaInset(edge: .bottom) {
+            floatingNewWorkoutButton
+        }
         .task {
             await workoutManager.fetchCustomWorkouts()
         }
@@ -2090,24 +2090,23 @@ private struct RoutinesWorkoutView: View {
         }
     }
 
-    private var newWorkoutButton: some View {
+    private var floatingNewWorkoutButton: some View {
         Button(action: {
             HapticFeedback.generate()
             navigationPath.append(WorkoutNavigationDestination.createWorkout)
         }) {
-            HStack(spacing: 8) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                Text("New Workout")
-                    .font(.system(size: 16, weight: .semibold))
-            }
-            .foregroundColor(Color("bg"))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color.primary)
-            .cornerRadius(28)
+            Text("New Workout")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(Color(.systemBackground))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color.primary)
+                .cornerRadius(100)
+                .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
         }
         .buttonStyle(.plain)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
     }
 
     private var loadingState: some View {
@@ -2262,6 +2261,7 @@ private struct WorkoutCard: View {
                 .accessibilityLabel("Start workout")
             }
             .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.top, 12)
 
         }
         .padding(20)

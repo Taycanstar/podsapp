@@ -812,6 +812,7 @@ class WorkoutManager: ObservableObject {
                 savePinnedCustomWorkouts()
             }
             customWorkouts = reorderCustomWorkouts(customWorkouts)
+            updateCustomWorkoutsLastFetch(Date())
         }
         await persistCustomWorkouts()
     }
