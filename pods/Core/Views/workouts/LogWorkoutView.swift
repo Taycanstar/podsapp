@@ -2219,7 +2219,7 @@ private struct WorkoutCard: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
                 Text(workout.displayName)
-                    .font(.system(size: 17, weight: .medium))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.leading)
 
@@ -2266,7 +2266,8 @@ private struct WorkoutCard: View {
             .padding(.top, 12)
 
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.vertical, 12)
         .background(Color("containerbg"))
         .cornerRadius(24)
     }

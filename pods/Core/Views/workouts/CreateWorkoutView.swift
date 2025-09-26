@@ -37,7 +37,7 @@ struct CreateWorkoutView: View {
     var body: some View {
             VStack(spacing: 0) {
                 // Background color for the entire view
-                Color("iosbg2")
+                Color("altbg")
                     .ignoresSafeArea(.all)
                     .overlay(
                         VStack(spacing: 20) {
@@ -45,21 +45,20 @@ struct CreateWorkoutView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 TextField("Name", text: $workoutTitle)
                                     .font(.system(size: 17))
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                                    // .background(Color(.systemBackground))
-                                    .background(Color("iosfit"))
-                                    .cornerRadius(10)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 14)
+                                    .background(Color("altcard"))
+                                    .cornerRadius(24)
                             }
                             .padding(.horizontal, 16)
                             .padding(.top, 20)
                             
                             // Show dbbell image and text when no exercises
                             if exercises.isEmpty {
-                                Spacer()
+                                Spacer(minLength: 0)
                                 VStack(spacing: 16) {
                                     Image(systemName: "figure.strengthtraining.traditional")
-                                        .font(.system(size: 45, weight: .regular))
+                                        .font(.system(size: 64, weight: .regular))
                                         .foregroundColor(.secondary)
 
                                     Text("Add any exercises to your workout.")
@@ -67,10 +66,15 @@ struct CreateWorkoutView: View {
                                         .foregroundColor(.secondary)
                                         .multilineTextAlignment(.center)
 
-                                    Spacer()
+                                    Spacer(minLength: 0)
                                 }
                                 .padding(.horizontal, 32)
-                                Spacer()
+                                .padding(.vertical, 40)
+                                .frame(maxWidth: .infinity)
+                                .background(Color("altbg"))
+                                .cornerRadius(24)
+                                .padding(.horizontal, 16)
+                                Spacer(minLength: 0)
                             } else {
                                 // Show exercise list when exercises are added
                                 VStack(spacing: 16) {
@@ -87,13 +91,17 @@ struct CreateWorkoutView: View {
                                                 }
                                             }
                                         }
-                                        .padding(.horizontal, 16)
+                                        // .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
                                     }
+                                    .background(Color("altbg"))
+                                    .cornerRadius(24)
+                                    .padding(.horizontal, 16)
 
                                     Spacer(minLength: 0)
                                 }
                             }
-                            
+
                             Spacer(minLength: 0)
                         }
                         .padding(.bottom, 140)
@@ -125,7 +133,7 @@ struct CreateWorkoutView: View {
                         .font(.system(size: 17, weight: .semibold))
                 }
                 .foregroundColor(.primary)
-                .disabled(workoutTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(workoutTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || exercises.isEmpty)
             }
         }
          .sheet(isPresented: $showingAddExercise) {
@@ -312,12 +320,12 @@ struct WorkoutExerciseRow: View {
                     }
                 }
             }
-            .frame(width: 40, height: 40)
+            .frame(width: 45, height: 45)
             .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color(.systemGray4), lineWidth: 1)
-            )
+            // .overlay(
+            //     RoundedRectangle(cornerRadius: 8)
+            //         .stroke(Color(.systemGray4), lineWidth: 1)
+            // )
             
             // Exercise details
             VStack(alignment: .leading, spacing: 4) {
@@ -326,16 +334,16 @@ struct WorkoutExerciseRow: View {
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.leading)
                 
-                // Show recommended sets and reps
-                if let firstSet = exercise.sets.first {
-                    Text("\(exercise.sets.count) sets × \(firstSet.reps ?? 0) reps")
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("No sets configured")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
-                }
+                // // Show recommended sets and reps
+                // if let firstSet = exercise.sets.first {
+                //     Text("\(exercise.sets.count) sets × \(firstSet.reps ?? 0) reps")
+                //         .font(.system(size: 14))
+                //         .foregroundColor(.secondary)
+                // } else {
+                //     Text("No sets configured")
+                //     .font(.system(size: 14))
+                //     .foregroundColor(.secondary)
+                // }
             }
             
             Spacer()
@@ -349,12 +357,12 @@ struct WorkoutExerciseRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color("iosfit"))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(.systemGray4), lineWidth: 1)
-        )
+        .background(Color("altcard"))
+        .cornerRadius(24)
+        // .overlay(
+        //     RoundedRectangle(cornerRadius: 12)
+        //         .stroke(Color(.systemGray4), lineWidth: 1)
+        // )
     }
 }
 
