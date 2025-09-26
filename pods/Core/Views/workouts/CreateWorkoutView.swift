@@ -14,8 +14,8 @@ struct CreateWorkoutView: View {
     @State private var workoutTitle: String = ""
     @State private var exercises: [WorkoutExercise] = []
     @State private var showingAddExercise = false
-    @State private var showingExerciseDetail = false
-    @State private var selectedExerciseForDetail: WorkoutExercise?
+    @State private var showingExerciseFullScreen = false
+    @State private var focusedExerciseId: Int? = nil
     @State private var showingSaveAlert = false
     @State private var saveError: String?
     @State private var isSaving = false
@@ -86,8 +86,8 @@ struct CreateWorkoutView: View {
                                                     removeExercise(exercise)
                                                 }
                                                 .onTapGesture {
-                                                    selectedExerciseForDetail = exercise
-                                                    showingExerciseDetail = true
+                                                    focusedExerciseId = exercise.id
+                                                    showingExerciseFullScreen = true
                                                 }
                                             }
                                         }
@@ -141,12 +141,22 @@ struct CreateWorkoutView: View {
                  addExercisesToWorkout(selectedExercises)
              }
          }
-        .sheet(isPresented: $showingExerciseDetail) {
-            if let exercise = selectedExerciseForDetail {
-                ExerciseDetailView(exercise: exercise) { updatedExercise in
+        .fullScreenCover(isPresented: $showingExerciseFullScreen) {
+            WorkoutExerciseFullScreenView(
+                workoutTitle: workoutTitle,
+                exercises: $exercises,
+                focusedExerciseId: focusedExerciseId,
+                onDismiss: {
+                    showingExerciseFullScreen = false
+                    focusedExerciseId = nil
+                },
+                onUpdateExercise: { updatedExercise in
                     updateExercise(updatedExercise)
+                },
+                onRemoveExercise: { exercise in
+                    removeExercise(exercise)
                 }
-            }
+            )
         }
         .alert("Save Workout", isPresented: $showingSaveAlert) {
             Button("OK", role: .cancel) {
@@ -295,6 +305,210 @@ struct CreateWorkoutView: View {
 }
 
 // MARK: - Workout Exercise Row
+
+private struct WorkoutExerciseFullScreenView: View {
+    let workoutTitle: String
+    @Binding var exercises: [WorkoutExercise]
+    let focusedExerciseId: Int?
+    let onDismiss: () -> Void
+    let onUpdateExercise: (WorkoutExercise) -> Void
+    let onRemoveExercise: (WorkoutExercise) -> Void
+
+    @State private var sheetExercise: WorkoutExercise?
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color("primarybg")
+                    .ignoresSafeArea()
+
+                if exercises.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "dumbbell")
+                            .font(.system(size: 48, weight: .regular))
+                            .foregroundColor(.secondary)
+
+                        Text("No exercises added yet")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: 16) {
+                                header
+
+                                ForEach(exercises) { exercise in
+                                    WorkoutExerciseFullScreenCard(
+                                        exercise: exercise,
+                                        onEdit: {
+                                            if let latest = exercises.first(where: { $0.id == exercise.id }) {
+                                                sheetExercise = latest
+                                            }
+                                        },
+                                        onRemove: {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                onRemoveExercise(exercise)
+                                            }
+                                        }
+                                    )
+                                    .id(exercise.id)
+                                }
+                            }
+                            .padding(.top, 24)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 32)
+                        }
+                        .onAppear {
+                            if let targetId = focusedExerciseId {
+                                DispatchQueue.main.async {
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        proxy.scrollTo(targetId, anchor: .center)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Exercises")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done", action: onDismiss)
+                        .font(.system(size: 17, weight: .semibold))
+                }
+            }
+        }
+        .onChange(of: exercises) { _, _ in
+            if let current = sheetExercise,
+               exercises.first(where: { $0.id == current.id }) == nil {
+                sheetExercise = nil
+            }
+        }
+        .sheet(item: $sheetExercise) { exercise in
+            ExerciseDetailView(exercise: exercise) { updatedExercise in
+                onUpdateExercise(updatedExercise)
+
+                if let index = exercises.firstIndex(where: { $0.id == updatedExercise.id }) {
+                    exercises[index] = updatedExercise
+                }
+
+                sheetExercise = nil
+            }
+        }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(workoutTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Workout" : workoutTitle)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(.primary)
+
+            Text("Review and edit your exercises")
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct WorkoutExerciseFullScreenCard: View {
+    let exercise: WorkoutExercise
+    let onEdit: () -> Void
+    let onRemove: () -> Void
+
+    private var thumbnailImageName: String {
+        String(format: "%04d", exercise.exercise.id)
+    }
+
+    private var summaryText: String {
+        guard let firstSet = exercise.sets.first else {
+            return "No sets configured"
+        }
+
+        let setsCount = exercise.sets.count
+        let setsLabel = setsCount == 1 ? "set" : "sets"
+
+        if let reps = firstSet.reps {
+            return "\(setsCount) \(setsLabel) • \(reps) reps"
+        } else if let duration = firstSet.duration, duration > 0 {
+            return "\(setsCount) \(setsLabel) • \(formatDuration(duration))"
+        } else {
+            return "\(setsCount) \(setsLabel)"
+        }
+    }
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Button(action: onEdit) {
+                HStack(spacing: 12) {
+                    Group {
+                        if let image = UIImage(named: thumbnailImageName) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.2))
+                                .overlay(
+                                    Image(systemName: "dumbbell")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(.secondary)
+                                )
+                        }
+                    }
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(exercise.exercise.name)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+
+                        Text(summaryText)
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color("containerbg"))
+                )
+            }
+            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+
+            Button(action: onRemove) {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.red)
+                    .background(
+                        Circle()
+                            .fill(Color("containerbg"))
+                            .frame(width: 32, height: 32)
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 8)
+            .padding(.top, 8)
+        }
+    }
+
+    private func formatDuration(_ seconds: Int) -> String {
+        let minutes = seconds / 60
+        let remainingSeconds = seconds % 60
+        return String(format: "%d:%02d", minutes, remainingSeconds)
+    }
+}
+
 struct WorkoutExerciseRow: View {
     let exercise: WorkoutExercise
     let onRemove: () -> Void

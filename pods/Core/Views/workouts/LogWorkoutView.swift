@@ -1992,6 +1992,8 @@ private struct RoutinesWorkoutView: View {
     @Binding var searchText: String
     @Binding var currentWorkout: TodayWorkout?
 
+    @State private var selectedWorkout: Workout?
+
     private var workouts: [Workout] {
         workoutManager.customWorkouts
     }
@@ -2069,6 +2071,9 @@ private struct RoutinesWorkoutView: View {
                         },
                         onPin: {
                             Task { await workoutManager.pinCustomWorkout(workout) }
+                        },
+                        onView: {
+                            selectedWorkout = workout
                         }
                     )
                     .listRowBackground(Color("primarybg"))
@@ -2089,6 +2094,26 @@ private struct RoutinesWorkoutView: View {
         }
         .refreshable {
             await workoutManager.fetchCustomWorkouts(force: true)
+        }
+        .fullScreenCover(item: $selectedWorkout) { workout in
+            WorkoutDetailFullScreenView(
+                workout: workout,
+                onDismiss: {
+                    selectedWorkout = nil
+                },
+                onStart: {
+                    HapticFeedback.generate()
+                    let todayWorkout = workoutManager.startCustomWorkout(workout)
+                    currentWorkout = workoutManager.currentWorkout ?? todayWorkout
+                    selectedWorkout = nil
+                },
+                onEdit: {
+                    selectedWorkout = nil
+                    HapticFeedback.generate()
+                    navigationPath.append(WorkoutNavigationDestination.editWorkout(workout))
+                }
+            )
+            .environmentObject(workoutManager)
         }
     }
 
@@ -2214,6 +2239,7 @@ private struct WorkoutCard: View {
     let onDuplicate: () -> Void
     let onDelete: () -> Void
     let onPin: () -> Void
+    let onView: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -2270,6 +2296,175 @@ private struct WorkoutCard: View {
         .padding(.vertical, 12)
         .background(Color("containerbg"))
         .cornerRadius(24)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onView)
+    }
+}
+
+private struct WorkoutDetailFullScreenView: View {
+    let workout: Workout
+    let onDismiss: () -> Void
+    let onStart: () -> Void
+    let onEdit: () -> Void
+
+    @State private var todayExercises: [TodayWorkoutExercise]
+
+    init(
+        workout: Workout,
+        onDismiss: @escaping () -> Void,
+        onStart: @escaping () -> Void,
+        onEdit: @escaping () -> Void
+    ) {
+        self.workout = workout
+        self.onDismiss = onDismiss
+        self.onStart = onStart
+        self.onEdit = onEdit
+        self._todayExercises = State(initialValue: WorkoutDetailFullScreenView.makeTodayExercises(from: workout))
+    }
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color("primarybg")
+                    .ignoresSafeArea()
+
+                if todayExercises.isEmpty {
+                    emptyState
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 20) {
+                            header
+
+                            LazyVStack(spacing: 14) {
+                                ForEach(Array(todayExercises.enumerated()), id: \.offset) { index, exercise in
+                                    ExerciseWorkoutCard(
+                                        exercise: exercise,
+                                        allExercises: todayExercises,
+                                        exerciseIndex: index,
+                                        onExerciseReplaced: { _, _ in },
+                                        onOpen: {},
+                                        useBackground: true,
+                                        isSelectable: false,
+                                        showsContextMenu: false
+                                    )
+                                    .allowsHitTesting(false)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 28)
+                        .padding(.bottom, 120)
+                    }
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Done", action: onDismiss)
+                        .font(.system(size: 17, weight: .semibold))
+                }
+
+                ToolbarItem(placement: .principal) {
+                    Text(workout.displayName)
+                        .font(.system(size: 17, weight: .semibold))
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Edit") {
+                        onEdit()
+                    }
+                    .font(.system(size: 17, weight: .semibold))
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button(action: onStart) {
+                Text("Start Workout")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color(.systemBackground))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.primary)
+                    .cornerRadius(100)
+                    .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(summaryText)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.secondary)
+
+            if let notes = workout.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
+                Text(notes)
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var summaryText: String {
+        let exerciseCount = workout.exercises.count
+        let exerciseLabel = exerciseCount == 1 ? "exercise" : "exercises"
+        let durationLabel = "\(workout.duration ?? estimatedDuration) min"
+        return "\(durationLabel) • \(exerciseCount) \(exerciseLabel)"
+    }
+
+    private var estimatedDuration: Int {
+        workout.duration ?? max(Int(ceil(Double(max(workout.totalSets, 1)) * 1.5)), 10)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "dumbbell")
+                .font(.system(size: 52, weight: .regular))
+                .foregroundColor(.secondary)
+
+            Text("This workout has no exercises yet")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.secondary)
+
+            Button("Edit workout") {
+                onEdit()
+            }
+            .font(.system(size: 16, weight: .semibold))
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private static func makeTodayExercises(from workout: Workout) -> [TodayWorkoutExercise] {
+        workout.exercises.map { exercise in
+            let firstSet = exercise.sets.first
+
+            let exerciseData = ExerciseData(
+                id: exercise.exercise.id,
+                name: exercise.exercise.name,
+                exerciseType: exercise.exercise.category,
+                bodyPart: exercise.exercise.category,
+                equipment: exercise.exercise.category,
+                gender: "unisex",
+                target: exercise.exercise.instructions ?? "",
+                synergist: exercise.exercise.description ?? ""
+            )
+
+            return TodayWorkoutExercise(
+                exercise: exerciseData,
+                sets: max(exercise.sets.count, 1),
+                reps: firstSet?.reps ?? 10,
+                weight: firstSet?.weight,
+                restTime: firstSet?.restTime ?? 90,
+                notes: exercise.notes,
+                warmupSets: nil,
+                flexibleSets: nil,
+                trackingType: nil
+            )
+        }
     }
 }
 
