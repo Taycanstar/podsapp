@@ -43,64 +43,34 @@ struct CreateWorkoutView: View {
                         VStack(spacing: 20) {
                             // Title input field
                             VStack(alignment: .leading, spacing: 8) {
-                                TextField("Title", text: $workoutTitle)
+                                TextField("Name", text: $workoutTitle)
                                     .font(.system(size: 17))
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 12)
                                     // .background(Color(.systemBackground))
                                     .background(Color("iosfit"))
                                     .cornerRadius(10)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(Color(.systemGray4), lineWidth: 1)
-                                    )
                             }
                             .padding(.horizontal, 16)
                             .padding(.top, 20)
                             
                             // Show dbbell image and text when no exercises
                             if exercises.isEmpty {
+                                Spacer()
                                 VStack(spacing: 16) {
-                            
-                                    
-                                    Image("dbbell")
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(maxWidth: 150, maxHeight: 150)
-                                    
-                                    Text("Add exercises to get started")
+                                    Image(systemName: "figure.strengthtraining.traditional")
+                                        .font(.system(size: 45, weight: .regular))
+                                        .foregroundColor(.secondary)
+
+                                    Text("Add any exercises to your workout.")
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
                                         .multilineTextAlignment(.center)
-                                    
-                                                                         // Add Exercise button
-                                     Button(action: {
-                                         print("Tapped Add Exercise")
-                                         HapticFeedback.generate()
-                                         showingAddExercise = true
-                                     }) {
-                                        HStack(spacing: 6) {
-                                            Spacer()
-                                            Image(systemName: "plus.circle.fill")
-                                                .font(.system(size: 20))
-                                                .foregroundColor(.white)
-                                            Text("Add Exercise")
-                                                .font(.system(size: 17))
-                                                .fontWeight(.semibold)
-                                                .foregroundColor(.white)
-                                            Spacer()
-                                        }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 12)
-                                        .frame(maxWidth: .infinity)
-                                        .background(Color.accentColor)
-                                        .cornerRadius(12)
-                                    }
-                                    .padding(.horizontal)
-                                    .padding(.top, 20)
-                                    
+
                                     Spacer()
                                 }
+                                .padding(.horizontal, 32)
+                                Spacer()
                             } else {
                                 // Show exercise list when exercises are added
                                 VStack(spacing: 16) {
@@ -119,55 +89,45 @@ struct CreateWorkoutView: View {
                                         }
                                         .padding(.horizontal, 16)
                                     }
-                                    
-                                    // Add more exercises button
-                                    Button(action: {
-                                        showingAddExercise = true
-                                        HapticFeedback.generate()
-                                    }) {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: "plus.circle.fill")
-                                                .font(.system(size: 16))
-                                            Text("Add More Exercises")
-                                                .font(.system(size: 16, weight: .medium))
-                                        }
-                                        .foregroundColor(.accentColor)
-                                        .padding(.vertical, 12)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    
-                                    Spacer()
+
+                                    Spacer(minLength: 0)
                                 }
                             }
                             
-                            Spacer()
+                            Spacer(minLength: 0)
                         }
+                        .padding(.bottom, 140)
                     )
             }
                      .navigationTitle(workout != nil ? "Edit Workout" : "New Workout")
          .navigationBarTitleDisplayMode(.inline)
          .navigationBarBackButtonHidden(true)
          .toolbar {
-             ToolbarItem(placement: .navigationBarLeading) {
-                 Button("Cancel") {
-                     if !navigationPath.isEmpty {
-                         navigationPath.removeLast()
-                     } else {
-                         dismiss()
-                     }
-                 }
-                 .foregroundColor(.accentColor)
-             }
-             
-             ToolbarItem(placement: .navigationBarTrailing) {
-                 Button("Done") {
-                     saveWorkout()
-                 }
-                 .font(.system(size: 17, weight: .semibold))
-                 .foregroundColor(.accentColor)
-                 .disabled(workoutTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-             }
-         }
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    if !navigationPath.isEmpty {
+                        navigationPath.removeLast()
+                    } else {
+                        dismiss()
+                    }
+                }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .foregroundColor(.primary)
+            }
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    saveWorkout()
+                }) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .foregroundColor(.primary)
+                .disabled(workoutTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
          .sheet(isPresented: $showingAddExercise) {
              AddExerciseView { selectedExercises in
                  addExercisesToWorkout(selectedExercises)
@@ -199,6 +159,24 @@ struct CreateWorkoutView: View {
                         .cornerRadius(14)
                 }
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button(action: {
+                HapticFeedback.generate()
+                showingAddExercise = true
+            }) {
+                Text("Add Exercise")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color(.systemBackground))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.primary)
+                    .cornerRadius(100)
+                    .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
         }
     }
     

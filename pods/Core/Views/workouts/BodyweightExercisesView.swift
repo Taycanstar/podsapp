@@ -37,13 +37,15 @@ struct BodyweightExercisesView: View {
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
+                Button(action: {
                     let selected = exercises.filter { selectedExercises.contains($0.id) }
                     onExercisesSelected(selected)
                     dismiss()
+                }) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 17, weight: .semibold))
                 }
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.accentColor)
+                .foregroundColor(.primary)
                 .disabled(selectedExercises.isEmpty)
             }
         }

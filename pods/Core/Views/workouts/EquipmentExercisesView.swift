@@ -41,14 +41,16 @@ struct EquipmentExercisesView: View {
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
+                Button(action: {
                     let selected = exercises.filter { selectedExercises.contains($0.id) }
                     onExercisesSelected(selected)
                     // Dismiss this view and let the parent handle closing the sheet
                     dismiss()
+                }) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 17, weight: .semibold))
                 }
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.accentColor)
+                .foregroundColor(.primary)
                 .disabled(selectedExercises.isEmpty)
             }
         }

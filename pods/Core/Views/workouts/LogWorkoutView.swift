@@ -327,11 +327,12 @@ struct LogWorkoutView: View {
                 workoutControlsInHeader
                     // .padding(.top, 12)
                     .padding(.bottom, 12)
-            } 
-            //do not show header for now
-            // else {
-            //     myWorkoutsHeader
-            // }
+            } else {
+                Color("primarybg")
+                    .frame(height: 12)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityHidden(true)
+            }
 
             Divider()
                 .background(Color.gray.opacity(0.3))
@@ -1083,6 +1084,7 @@ struct LogWorkoutView: View {
                     searchText: $workoutSearchText,
                     currentWorkout: $currentWorkout
                 )
+                .padding(.top)
                 Spacer()
             }
         }

@@ -90,22 +90,27 @@ struct AddExerciseView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button(action: {
                         dismiss()
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 17, weight: .semibold))
                     }
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(.primary)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button(action: {
                         let selected = exercises.filter { selectedExercises.contains($0.id) }
                         if !selected.isEmpty {
                             onExercisesSelected(selected)
                             dismiss()
                         }
+                    }) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 17, weight: .semibold))
                     }
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(.primary)
                     .disabled(selectedExercises.isEmpty)
                 }
             }
