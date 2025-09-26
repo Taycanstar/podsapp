@@ -2101,16 +2101,14 @@ private struct RoutinesWorkoutView: View {
                 onDismiss: {
                     selectedWorkout = nil
                 },
-                onStart: {
+                onStart: { updatedWorkout in
                     HapticFeedback.generate()
-                    let todayWorkout = workoutManager.startCustomWorkout(workout)
+                    let todayWorkout = workoutManager.startCustomWorkout(updatedWorkout)
                     currentWorkout = workoutManager.currentWorkout ?? todayWorkout
                     selectedWorkout = nil
                 },
-                onEdit: {
-                    selectedWorkout = nil
-                    HapticFeedback.generate()
-                    navigationPath.append(WorkoutNavigationDestination.editWorkout(workout))
+                onRefreshWorkouts: {
+                    Task { await workoutManager.fetchCustomWorkouts(force: true) }
                 }
             )
             .environmentObject(workoutManager)
@@ -2302,24 +2300,50 @@ private struct WorkoutCard: View {
 }
 
 private struct WorkoutDetailFullScreenView: View {
-    let workout: Workout
-    let onDismiss: () -> Void
-    let onStart: () -> Void
-    let onEdit: () -> Void
+    @EnvironmentObject private var workoutManager: WorkoutManager
 
+    let onDismiss: () -> Void
+    let onStart: (Workout) -> Void
+    let onRefreshWorkouts: () -> Void
+
+    @State private var displayWorkout: Workout
     @State private var todayExercises: [TodayWorkoutExercise]
+    @State private var workoutBlocks: [WorkoutBlock]?
+    @State private var loggingSelection: LoggingSelection?
+    @State private var showingRenameSheet = false
+    @State private var renameText: String
+    @State private var isRenaming = false
+    @State private var renameError: String?
+    @State private var actionError: String?
+    @State private var showingSupersetSheet = false
+    @State private var isPerformingAction = false
+
+    struct LoggingSelection: Identifiable {
+        let id: UUID
+        let index: Int
+        var exercise: TodayWorkoutExercise
+
+        init(index: Int, exercise: TodayWorkoutExercise, id: UUID = UUID()) {
+            self.id = id
+            self.index = index
+            self.exercise = exercise
+        }
+    }
 
     init(
         workout: Workout,
         onDismiss: @escaping () -> Void,
-        onStart: @escaping () -> Void,
-        onEdit: @escaping () -> Void
+        onStart: @escaping (Workout) -> Void,
+        onRefreshWorkouts: @escaping () -> Void
     ) {
-        self.workout = workout
         self.onDismiss = onDismiss
         self.onStart = onStart
-        self.onEdit = onEdit
-        self._todayExercises = State(initialValue: WorkoutDetailFullScreenView.makeTodayExercises(from: workout))
+        self.onRefreshWorkouts = onRefreshWorkouts
+        _displayWorkout = State(initialValue: workout)
+        let exercises = WorkoutDetailFullScreenView.makeTodayExercises(from: workout)
+        _todayExercises = State(initialValue: exercises)
+        _workoutBlocks = State(initialValue: nil)
+        _renameText = State(initialValue: workout.name)
     }
 
     var body: some View {
@@ -2341,13 +2365,13 @@ private struct WorkoutDetailFullScreenView: View {
                                         exercise: exercise,
                                         allExercises: todayExercises,
                                         exerciseIndex: index,
-                                        onExerciseReplaced: { _, _ in },
-                                        onOpen: {},
-                                        useBackground: true,
-                                        isSelectable: false,
-                                        showsContextMenu: false
+                                        onExerciseReplaced: { _, newExercise in
+                                            replaceExercise(at: index, with: newExercise)
+                                        },
+                                        onOpen: {
+                                            openLogging(for: index)
+                                        }
                                     )
-                                    .allowsHitTesting(false)
                                 }
                             }
                         }
@@ -2360,25 +2384,49 @@ private struct WorkoutDetailFullScreenView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done", action: onDismiss)
-                        .font(.system(size: 17, weight: .semibold))
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
                 }
 
                 ToolbarItem(placement: .principal) {
-                    Text(workout.displayName)
+                    Text(displayWorkout.displayName)
                         .font(.system(size: 17, weight: .semibold))
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Edit") {
-                        onEdit()
+                    Menu {
+                        Button(action: pinWorkout) {
+                            Label("Pin Workout", systemImage: "pin")
+                        }
+
+                        Button(action: presentRenameSheet) {
+                            Label("Rename Workout", systemImage: "pencil")
+                        }
+
+                        Button(action: saveWorkoutChanges) {
+                            Label("Save Workout", systemImage: "tray.and.arrow.down")
+                        }
+
+                        Button(action: duplicateWorkout) {
+                            Label("Duplicate Workout", systemImage: "square.on.square")
+                        }
+
+                        Button(action: { showingSupersetSheet = true }) {
+                            Label("Build superset/circuit", systemImage: "arrow.left.arrow.right")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 18, weight: .semibold))
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle())
                     }
-                    .font(.system(size: 17, weight: .semibold))
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            Button(action: onStart) {
+            Button(action: startWorkout) {
                 Text("Start Workout")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(Color(.systemBackground))
@@ -2392,15 +2440,57 @@ private struct WorkoutDetailFullScreenView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
+        .sheet(item: $loggingSelection) { selection in
+            ExerciseLoggingView(
+                exercise: selection.exercise,
+                allExercises: todayExercises,
+                onExerciseReplaced: { newExercise in
+                    let replaced = makeReplacementExercise(from: newExercise, base: selection.exercise)
+                    updateExercise(at: selection.index, with: replaced)
+                    loggingSelection = LoggingSelection(index: selection.index, exercise: replaced, id: selection.id)
+                },
+                onWarmupSetsChanged: nil,
+                onExerciseUpdated: { updatedExercise in
+                    updateExercise(at: selection.index, with: updatedExercise)
+                    loggingSelection = LoggingSelection(index: selection.index, exercise: updatedExercise, id: selection.id)
+                }
+            )
+        }
+        .sheet(isPresented: $showingRenameSheet) {
+            renameSheet
+        }
+        .sheet(isPresented: $showingSupersetSheet) {
+            supersetSheet
+        }
+        .alert("Something went wrong", isPresented: Binding<Bool>(
+            get: { actionError != nil },
+            set: { if !$0 { actionError = nil } }
+        )) {
+            Button("OK", role: .cancel) {
+                actionError = nil
+            }
+        } message: {
+            Text(actionError ?? "Please try again later.")
+        }
+        .overlay {
+            if isPerformingAction {
+                ZStack {
+                    Color.black.opacity(0.25)
+                        .ignoresSafeArea()
+                    ProgressView()
+                        .padding(24)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(16)
+                }
+            }
+        }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(summaryText)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 0) {
+        
 
-            if let notes = workout.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
+            if let notes = displayWorkout.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
                 Text(notes)
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
@@ -2409,15 +2499,8 @@ private struct WorkoutDetailFullScreenView: View {
         }
     }
 
-    private var summaryText: String {
-        let exerciseCount = workout.exercises.count
-        let exerciseLabel = exerciseCount == 1 ? "exercise" : "exercises"
-        let durationLabel = "\(workout.duration ?? estimatedDuration) min"
-        return "\(durationLabel) • \(exerciseCount) \(exerciseLabel)"
-    }
-
     private var estimatedDuration: Int {
-        workout.duration ?? max(Int(ceil(Double(max(workout.totalSets, 1)) * 1.5)), 10)
+        displayWorkout.duration ?? max(Int(ceil(Double(max(displayWorkout.totalSets, 1)) * 1.5)), 10)
     }
 
     private var emptyState: some View {
@@ -2430,12 +2513,287 @@ private struct WorkoutDetailFullScreenView: View {
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
 
-            Button("Edit workout") {
-                onEdit()
+            Button("Add exercises") {
+                showingSupersetSheet = true
             }
             .font(.system(size: 16, weight: .semibold))
         }
         .padding(.horizontal, 24)
+    }
+
+    private var supersetSheet: some View {
+        SupersetCircuitSelectionSheet(workout: supersetWorkoutRepresentation) { result in
+            todayExercises = result.workout.exercises
+            workoutBlocks = result.workout.blocks
+            syncWorkoutExercises()
+        }
+    }
+
+    private var supersetWorkoutRepresentation: TodayWorkout {
+        TodayWorkout(
+            id: UUID(),
+            date: Date(),
+            title: displayWorkout.displayName,
+            exercises: todayExercises,
+            blocks: workoutBlocks,
+            estimatedDuration: estimatedDuration,
+            fitnessGoal: workoutManager.effectiveFitnessGoal,
+            difficulty: 2
+        )
+    }
+
+    private func openLogging(for index: Int) {
+        guard todayExercises.indices.contains(index) else { return }
+        loggingSelection = LoggingSelection(index: index, exercise: todayExercises[index])
+    }
+
+    private func startWorkout() {
+        syncWorkoutExercises()
+        onStart(displayWorkout)
+    }
+
+    private func presentRenameSheet() {
+        renameText = displayWorkout.name
+        renameError = nil
+        showingRenameSheet = true
+    }
+
+    private func saveWorkoutChanges() {
+        syncWorkoutExercises()
+        performAsyncAction {
+            try await workoutManager.saveCustomWorkout(
+                name: displayWorkout.name,
+                exercises: displayWorkout.exercises,
+                notes: displayWorkout.notes,
+                workoutId: displayWorkout.id
+            )
+            await MainActor.run {
+                onRefreshWorkouts()
+            }
+        }
+    }
+
+    private func duplicateWorkout() {
+        syncWorkoutExercises()
+        performAsyncAction {
+            await workoutManager.duplicateCustomWorkout(from: displayWorkout)
+            await MainActor.run {
+                onRefreshWorkouts()
+            }
+        }
+    }
+
+    private func pinWorkout() {
+        Task {
+            await workoutManager.pinCustomWorkout(displayWorkout)
+            await MainActor.run {
+                onRefreshWorkouts()
+            }
+        }
+    }
+
+    private func replaceExercise(at index: Int, with data: ExerciseData) {
+        guard todayExercises.indices.contains(index) else { return }
+        let base = todayExercises[index]
+        let replacement = makeReplacementExercise(from: data, base: base)
+        updateExercise(at: index, with: replacement)
+    }
+
+    private func updateExercise(at index: Int, with updatedExercise: TodayWorkoutExercise) {
+        guard todayExercises.indices.contains(index) else { return }
+        todayExercises[index] = updatedExercise
+        syncWorkoutExercises()
+    }
+
+    private func syncWorkoutExercises() {
+        let existing = displayWorkout.exercises
+        let converted = todayExercises.enumerated().map { index, exercise in
+            convertToWorkoutExercise(exercise, existing: existing.indices.contains(index) ? existing[index] : nil)
+        }
+        displayWorkout = updatedWorkout(exercises: converted)
+    }
+
+    private func updatedWorkout(name: String? = nil, exercises: [WorkoutExercise]? = nil) -> Workout {
+        Workout(
+            id: displayWorkout.id,
+            remoteId: displayWorkout.remoteId,
+            name: name ?? displayWorkout.name,
+            date: displayWorkout.date,
+            duration: displayWorkout.duration,
+            exercises: exercises ?? displayWorkout.exercises,
+            notes: displayWorkout.notes,
+            category: displayWorkout.category,
+            isTemplate: displayWorkout.isTemplate,
+            syncVersion: displayWorkout.syncVersion,
+            createdAt: displayWorkout.createdAt,
+            updatedAt: displayWorkout.updatedAt
+        )
+    }
+
+    private func convertToWorkoutExercise(_ exercise: TodayWorkoutExercise, existing: WorkoutExercise?) -> WorkoutExercise {
+        let baseLegacy = existing?.exercise
+        let legacy = makeLegacyExercise(from: exercise.exercise, fallback: baseLegacy)
+
+        let durationValue: Int?
+        if let tracking = exercise.trackingType,
+           let duration = exercise.flexibleSets?.first?.duration,
+           tracking == .timeOnly || tracking == .holdTime {
+            durationValue = Int(duration)
+        } else {
+            durationValue = nil
+        }
+
+        let generatedSets: [WorkoutSet] = (0..<max(exercise.sets, 1)).map { index in
+            let existingSet = existing?.sets.indices.contains(index) == true ? existing!.sets[index] : nil
+            return WorkoutSet(
+                id: existingSet?.id ?? (index + 1),
+                reps: exercise.reps,
+                weight: exercise.weight,
+                duration: durationValue,
+                distance: nil,
+                restTime: exercise.restTime
+            )
+        }
+
+        return WorkoutExercise(
+            id: existing?.id ?? Int.random(in: 1000...9999),
+            exercise: legacy,
+            sets: generatedSets,
+            notes: exercise.notes
+        )
+    }
+
+    private func makeLegacyExercise(from data: ExerciseData, fallback: LegacyExercise?) -> LegacyExercise {
+        if let fallback, fallback.id == data.id {
+            return fallback
+        }
+
+        return LegacyExercise(
+            id: data.id,
+            name: data.name,
+            category: data.category,
+            description: data.synergist.isEmpty ? fallback?.description : data.synergist,
+            instructions: data.instructions ?? fallback?.instructions
+        )
+    }
+
+    private func makeReplacementExercise(from data: ExerciseData, base: TodayWorkoutExercise) -> TodayWorkoutExercise {
+        TodayWorkoutExercise(
+            exercise: data,
+            sets: base.sets,
+            reps: base.reps,
+            weight: base.weight,
+            restTime: base.restTime,
+            notes: base.notes,
+            warmupSets: base.warmupSets,
+            flexibleSets: base.flexibleSets,
+            trackingType: base.trackingType
+        )
+    }
+
+    private func performAsyncAction(_ action: @escaping () async throws -> Void) {
+        guard !isPerformingAction else { return }
+        actionError = nil
+        isPerformingAction = true
+        Task {
+            defer {
+                Task { @MainActor in isPerformingAction = false }
+            }
+
+            do {
+                try await action()
+            } catch {
+                if !Task.isCancelled {
+                    await MainActor.run {
+                        actionError = error.localizedDescription
+                    }
+                }
+            }
+        }
+    }
+
+    private var renameSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Workout Name") {
+                    TextField("Name", text: $renameText)
+                        .autocapitalization(.words)
+                        .disableAutocorrection(true)
+
+                    if let renameError {
+                        Text(renameError)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+            .disabled(isRenaming)
+            .overlay {
+                if isRenaming {
+                    ZStack {
+                        Color.black.opacity(0.25).ignoresSafeArea()
+                        ProgressView()
+                            .padding(20)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(14)
+                    }
+                }
+            }
+            .navigationTitle("Rename Workout")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showingRenameSheet = false
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        performRename()
+                    }
+                    .disabled(renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRenaming)
+                }
+            }
+        }
+    }
+
+    private func performRename() {
+        let trimmed = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            renameError = "Please enter a workout name."
+            return
+        }
+
+        isRenaming = true
+        Task {
+            defer {
+                Task { @MainActor in isRenaming = false }
+            }
+
+            do {
+                syncWorkoutExercises()
+                try await workoutManager.saveCustomWorkout(
+                    name: trimmed,
+                    exercises: displayWorkout.exercises,
+                    notes: displayWorkout.notes,
+                    workoutId: displayWorkout.id
+                )
+
+                await MainActor.run {
+                    displayWorkout = updatedWorkout(name: trimmed)
+                    showingRenameSheet = false
+                    renameError = nil
+                    onRefreshWorkouts()
+                }
+            } catch {
+                if !Task.isCancelled {
+                    await MainActor.run {
+                        renameError = error.localizedDescription
+                    }
+                }
+            }
+        }
     }
 
     private static func makeTodayExercises(from workout: Workout) -> [TodayWorkoutExercise] {
@@ -2566,7 +2924,7 @@ private extension View {
                         }
 
                         Button(action: onSaveWorkout) {
-                            Label("Save workout", systemImage: "bookmark")
+                            Label("Save Workout", systemImage: "bookmark")
                         }
 
                         if canShowSupersetMenu {

@@ -165,7 +165,7 @@ struct SupersetCircuitSelectionSheet: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(isSelectionValid ? Color.accentColor : Color.accentColor.opacity(0.4))
+                .background(isSelectionValid ? .primary : .primary.opacity(0.4))
                 .cornerRadius(100)
                 .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 6)
         }

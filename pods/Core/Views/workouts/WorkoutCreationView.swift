@@ -73,10 +73,8 @@ struct WorkoutCreationView: View {
     private var contentView: some View {
         VStack(spacing: 0) {
             // Workout name input
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Workout Name")
-                    .font(.headline)
-                    .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 0) {
+               
                 
                 TextField("Enter workout name", text: $workoutName)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
