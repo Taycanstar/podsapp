@@ -1106,16 +1106,23 @@ struct LogWorkoutView: View {
                 navTabSwitcher
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                Group {
-                    if selectedWorkoutTab == .today {
-                        NavigationLink(destination: WorkoutProfileSettingsView()) {
-                            Image(systemName: "line.3.horizontal")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.primary)
-                                .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
-                                .contentShape(Circle())
-                        }
+                if selectedWorkoutTab == .today {
+                    NavigationLink(destination: WorkoutProfileSettingsView()) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
+                            .contentShape(Circle())
                     }
+                } else if #available(iOS 16, *) {
+                    Button("New") {
+                        HapticFeedback.generate()
+                        navigationPath.append(WorkoutNavigationDestination.createWorkout)
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.primary)
+                } else {
+                    EmptyView()
                 }
             }
         }
@@ -1984,7 +1991,7 @@ private struct TodayWorkoutView: View {
     }
 }
 
-// MARK: - Routines Workout View
+
 
 private struct RoutinesWorkoutView: View {
     @Binding var navigationPath: NavigationPath
@@ -2071,7 +2078,11 @@ private struct RoutinesWorkoutView: View {
         .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
         .safeAreaInset(edge: .bottom) {
-            floatingNewWorkoutButton
+            if #available(iOS 16, *) {
+                EmptyView()
+            } else {
+                floatingNewWorkoutButton
+            }
         }
         .task {
             await workoutManager.fetchCustomWorkouts()
