@@ -35,82 +35,65 @@ struct CreateWorkoutView: View {
     }
     
     var body: some View {
-            VStack(spacing: 0) {
-                // Background color for the entire view
-                Color("altbg")
-                    .ignoresSafeArea(.all)
-                    .overlay(
-                        VStack(spacing: 20) {
-                            // Title input field
-                            VStack(alignment: .leading, spacing: 8) {
-                                TextField("Name", text: $workoutTitle)
-                                    .font(.system(size: 17))
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 14)
-                                    .background(Color("altcard"))
-                                    .cornerRadius(24)
-                            }
+        ZStack {
+            Color("altbg")
+                .ignoresSafeArea(.all)
+
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Title input field
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField("Name", text: $workoutTitle)
+                            .font(.system(size: 17))
                             .padding(.horizontal, 16)
-                            .padding(.top, 20)
-                            
-                            // Show dbbell image and text when no exercises
-                            if exercises.isEmpty {
-                                Spacer(minLength: 0)
-                                VStack(spacing: 16) {
-                                    Image(systemName: "figure.strengthtraining.traditional")
-                                        .font(.system(size: 64, weight: .regular))
-                                        .foregroundColor(.secondary)
+                            .padding(.vertical, 12)
+                            .background(Color("altcard"))
+                            .cornerRadius(24)
+                    }
 
-                                    Text("Add any exercises to your workout.")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.center)
+                    if exercises.isEmpty {
+                        VStack(spacing: 16) {
+                            Image(systemName: "figure.strengthtraining.traditional")
+                                .font(.system(size: 45, weight: .regular))
+                                .foregroundColor(.secondary)
 
-                                    Spacer(minLength: 0)
+                            Text("Add any exercises to your workout.")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                        .background(Color("altbg"))
+                        .cornerRadius(24)
+                    } else {
+                        LazyVStack(spacing: 12) {
+                            ForEach(exercises, id: \.id) { exercise in
+                                WorkoutExerciseRow(exercise: exercise) {
+                                    removeExercise(exercise)
                                 }
-                                .padding(.horizontal, 32)
-                                .padding(.vertical, 40)
-                                .frame(maxWidth: .infinity)
-                                .background(Color("altbg"))
-                                .cornerRadius(24)
-                                .padding(.horizontal, 16)
-                                Spacer(minLength: 0)
-                            } else {
-                                // Show exercise list when exercises are added
-                                VStack(spacing: 16) {
-                                    // Exercise list
-                                    ScrollView {
-                                        LazyVStack(spacing: 12) {
-                                            ForEach(exercises, id: \.id) { exercise in
-                                                WorkoutExerciseRow(exercise: exercise) {
-                                                    removeExercise(exercise)
-                                                }
-                                                .onTapGesture {
-                                                    focusedExerciseId = exercise.id
-                                                    showingExerciseFullScreen = true
-                                                }
-                                            }
-                                        }
-                                        // .padding(.horizontal, 16)
-                                        .padding(.vertical, 12)
-                                    }
-                                    .background(Color("altbg"))
-                                    .cornerRadius(24)
-                                    .padding(.horizontal, 16)
-
-                                    Spacer(minLength: 0)
+                                .onTapGesture {
+                                    focusedExerciseId = exercise.id
+                                    showingExerciseFullScreen = true
                                 }
                             }
-
-                            Spacer(minLength: 0)
                         }
-                        .padding(.bottom, 140)
-                    )
+                        .padding(.vertical, 12)
+                        // .padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color("altbg"))
+                        .cornerRadius(24)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+                .padding(.bottom, 140)
             }
-                     .navigationTitle(workout != nil ? "Edit Workout" : "New Workout")
-         .navigationBarTitleDisplayMode(.inline)
-         .navigationBarBackButtonHidden(true)
-         .toolbar {
+        }
+        .navigationTitle(workout != nil ? "Edit Workout" : "New Workout")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
                     if !navigationPath.isEmpty {
@@ -136,11 +119,11 @@ struct CreateWorkoutView: View {
                 .disabled(workoutTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || exercises.isEmpty)
             }
         }
-         .sheet(isPresented: $showingAddExercise) {
-             AddExerciseView { selectedExercises in
-                 addExercisesToWorkout(selectedExercises)
-             }
-         }
+        .sheet(isPresented: $showingAddExercise) {
+            AddExerciseView { selectedExercises in
+                addExercisesToWorkout(selectedExercises)
+            }
+        }
         .fullScreenCover(isPresented: $showingExerciseFullScreen) {
             WorkoutExerciseFullScreenView(
                 workoutTitle: workoutTitle,
