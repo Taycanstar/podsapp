@@ -2067,7 +2067,7 @@ private struct RoutinesWorkoutView: View {
             }
         }
         .listStyle(.plain)
-        .listRowSpacing(10)
+        .listRowSpacing(0)
         .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
         .safeAreaInset(edge: .bottom) {
@@ -2345,7 +2345,7 @@ private struct WorkoutCard: View {
 
         }
         .padding(.horizontal)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .background(Color("containerbg"))
         .cornerRadius(24)
         .contentShape(Rectangle())
