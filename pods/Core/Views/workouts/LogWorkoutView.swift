@@ -329,7 +329,7 @@ struct LogWorkoutView: View {
                     .padding(.bottom, 12)
             } else {
                 Color("primarybg")
-                    .frame(height: 12)
+                    .frame(height: 0)
                     .frame(maxWidth: .infinity)
                     .accessibilityHidden(true)
             }
