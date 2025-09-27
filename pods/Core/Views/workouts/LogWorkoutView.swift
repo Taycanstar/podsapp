@@ -1114,7 +1114,7 @@ struct LogWorkoutView: View {
                             .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
                             .contentShape(Circle())
                     }
-                } else if #available(iOS 16, *) {
+                } else if #available(iOS 26, *) {
                     Button("New") {
                         HapticFeedback.generate()
                         navigationPath.append(WorkoutNavigationDestination.createWorkout)
@@ -2078,7 +2078,7 @@ private struct RoutinesWorkoutView: View {
         .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
         .safeAreaInset(edge: .bottom) {
-            if #available(iOS 16, *) {
+            if #available(iOS 26, *) {
                 EmptyView()
             } else {
                 floatingNewWorkoutButton
