@@ -66,6 +66,7 @@ struct LogWorkoutView: View {
     @State private var isRenamingWorkout = false
     @State private var renameWorkoutTitle = ""
     @State private var pendingWorkoutFeedback = false
+    @FocusState private var isRenameFieldFocused: Bool
     
     
     // Properties that delegate to WorkoutManager but are accessed locally
@@ -1212,6 +1213,7 @@ struct LogWorkoutView: View {
                     TextField("Name", text: $renameWorkoutTitle)
                         .textInputAutocapitalization(.words)
                         .disableAutocorrection(true)
+                        .focused($isRenameFieldFocused)
                 }
             }
             .navigationTitle("Rename Workout")
@@ -1236,6 +1238,14 @@ struct LogWorkoutView: View {
                     }
                     .disabled(trimmedRenameWorkoutTitle.isEmpty)
                 }
+            }
+            .onAppear {
+                DispatchQueue.main.async {
+                    isRenameFieldFocused = true
+                }
+            }
+            .onDisappear {
+                isRenameFieldFocused = false
             }
         }
     }
