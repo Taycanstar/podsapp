@@ -308,8 +308,8 @@ struct WorkoutInProgressView: View {
                 sectionHeader(title: "Main Sets", color: .primary)
             }
             
-            groupedBlocksView
             nonGroupedCardView
+            groupedBlocksView
         }
     }
     
