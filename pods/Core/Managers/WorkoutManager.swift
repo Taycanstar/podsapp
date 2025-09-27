@@ -679,6 +679,27 @@ class WorkoutManager: ObservableObject {
             let response = try await networkManager.fetchServerWorkouts(userEmail: userEmail, pageSize: 200, isTemplateOnly: true)
             let templateSessions = response.workouts.filter { ($0.isTemplate ?? false) }
             var remoteTemplates = templateSessions.map(remoteWorkoutToTemplate)
+
+            let localTemplatesByRemoteId = Dictionary(uniqueKeysWithValues: decoded.compactMap { workout -> (Int, Workout)? in
+                if let remoteId = workout.remoteId {
+                    return (remoteId, workout)
+                }
+                if workout.id > 0 {
+                    return (workout.id, workout)
+                }
+                return nil
+            })
+
+            remoteTemplates = remoteTemplates.map { remote in
+                let key = remote.remoteId ?? remote.id
+                guard remote.blocks == nil,
+                      let local = localTemplatesByRemoteId[key],
+                      local.blocks != nil else {
+                    return remote
+                }
+                return mergeWorkout(current: local, with: remote)
+            }
+
             var usedIds = Set(remoteTemplates.map { $0.id })
             let unsyncedLocals = decoded.filter { $0.remoteId == nil }
             let normalizedUnsynced = unsyncedLocals.map { uniqueLocalTemplate($0, usedIds: &usedIds) }
@@ -1462,6 +1483,7 @@ class WorkoutManager: ObservableObject {
         return TodayWorkout(
             title: template.displayName,
             exercises: todayExercises,
+            blocks: template.blocks,
             estimatedDuration: estimatedDuration,
             fitnessGoal: effectiveFitnessGoal,
             difficulty: userProfileService.experienceLevel.workoutComplexity,
