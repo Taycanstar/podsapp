@@ -35,12 +35,14 @@ struct SupersetCircuitSelectionSheet: View {
             ZStack(alignment: .bottom) {
                 exerciseList
 
-                VStack {
-                    actionButton
+                if isSelectionValid {
+                    VStack {
+                        actionButton
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .padding(.bottom, 28)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .padding(.bottom, 28)
             }
             .navigationTitle("Build Superset")
             .navigationBarTitleDisplayMode(.inline)
@@ -162,14 +164,13 @@ struct SupersetCircuitSelectionSheet: View {
         Button(action: createBlock) {
             Text(buttonTitle)
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundColor(Color(.systemBackground))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(isSelectionValid ? .primary : .primary.opacity(0.4))
+                .background(Color.primary)
                 .cornerRadius(100)
                 .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 6)
         }
-        .disabled(!isSelectionValid)
     }
 
     private var buttonTitle: String {

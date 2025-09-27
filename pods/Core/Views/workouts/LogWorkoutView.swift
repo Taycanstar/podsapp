@@ -2013,6 +2013,14 @@ private struct RoutinesWorkoutView: View {
         }
     }
 
+    private var pinnedFilteredWorkouts: [Workout] {
+        filteredWorkouts.filter { workoutManager.isCustomWorkoutPinned($0) }
+    }
+
+    private var regularFilteredWorkouts: [Workout] {
+        filteredWorkouts.filter { !workoutManager.isCustomWorkoutPinned($0) }
+    }
+
     private var showsEmptyState: Bool {
         !workoutManager.isLoadingWorkouts && workouts.isEmpty && !isSearching
     }
@@ -2050,40 +2058,16 @@ private struct RoutinesWorkoutView: View {
                     .listRowInsets(EdgeInsets(top: 24, leading: 20, bottom: 24, trailing: 20))
                     .listRowSeparator(.hidden)
             } else {
-                ForEach(filteredWorkouts, id: \.id) { workout in
-                    WorkoutCard(
-                        workout: workout,
-                        durationMinutes: workout.duration ?? estimatedDuration(for: workout),
-                        onStart: {
-                            HapticFeedback.generate()
-                            let todayWorkout = workoutManager.startCustomWorkout(workout)
-                            currentWorkout = workoutManager.currentWorkout ?? todayWorkout
-                        },
-                        onEdit: {
-                            HapticFeedback.generate()
-                            navigationPath.append(WorkoutNavigationDestination.editWorkout(workout))
-                        },
-                        onDuplicate: {
-                            duplicateWorkout(workout)
-                        },
-                        onDelete: {
-                            Task { await workoutManager.deleteCustomWorkout(id: workout.id) }
-                        },
-                        onPin: {
-                            Task { await workoutManager.pinCustomWorkout(workout) }
-                        },
-                        onView: {
-                            selectedWorkout = workout
-                        }
-                    )
-                    .listRowBackground(Color("primarybg"))
-                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
-                    .listRowSeparator(.hidden)
+                if isSearching {
+                    workoutListSection(for: filteredWorkouts)
+                } else {
+                    workoutListSection(for: pinnedFilteredWorkouts)
+                    workoutListSection(for: regularFilteredWorkouts)
                 }
-                .onDelete(perform: deleteWorkouts)
             }
         }
         .listStyle(.plain)
+        .listRowSpacing(10)
         .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
         .safeAreaInset(edge: .bottom) {
@@ -2132,6 +2116,59 @@ private struct RoutinesWorkoutView: View {
         .buttonStyle(.plain)
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
+    }
+
+    @ViewBuilder
+    private func workoutListSection(for source: [Workout]) -> some View {
+        if !source.isEmpty {
+            ForEach(source, id: \.id) { workout in
+                workoutRow(for: workout)
+            }
+            .onDelete { offsets in
+                deleteWorkouts(at: offsets, in: source)
+            }
+        }
+    }
+
+    private func workoutRow(for workout: Workout) -> some View {
+        WorkoutCard(
+            workout: workout,
+            durationMinutes: workout.duration ?? estimatedDuration(for: workout),
+            onStart: {
+                HapticFeedback.generate()
+                let todayWorkout = workoutManager.startCustomWorkout(workout)
+                currentWorkout = workoutManager.currentWorkout ?? todayWorkout
+            },
+            onEdit: {
+                HapticFeedback.generate()
+                navigationPath.append(WorkoutNavigationDestination.editWorkout(workout))
+            },
+            onDuplicate: {
+                duplicateWorkout(workout)
+            },
+            onDelete: {
+                Task { await workoutManager.deleteCustomWorkout(id: workout.id) }
+            },
+            onPin: {
+                Task {
+                    HapticFeedback.generate()
+                    await workoutManager.pinCustomWorkout(workout)
+                }
+            },
+            onUnpin: {
+                Task {
+                    HapticFeedback.generate()
+                    await workoutManager.unpinCustomWorkout(workout)
+                }
+            },
+            isPinned: workoutManager.isCustomWorkoutPinned(workout),
+            onView: {
+                selectedWorkout = workout
+            }
+        )
+        .listRowBackground(Color("primarybg"))
+        .listRowInsets(EdgeInsets(top: 10, leading: 20, bottom: 10, trailing: 20))
+        .listRowSeparator(.hidden)
     }
 
     private var loadingState: some View {
@@ -2206,11 +2243,10 @@ private struct RoutinesWorkoutView: View {
         return max(10, min(estimate, 150))
     }
 
-    private func deleteWorkouts(at offsets: IndexSet) {
-        let currentWorkouts = filteredWorkouts
+    private func deleteWorkouts(at offsets: IndexSet, in source: [Workout]) {
         let ids = offsets.compactMap { index -> Int? in
-            guard index < currentWorkouts.count else { return nil }
-            return currentWorkouts[index].id
+            guard index < source.count else { return nil }
+            return source[index].id
         }
 
         guard !ids.isEmpty else { return }
@@ -2224,6 +2260,7 @@ private struct RoutinesWorkoutView: View {
 
     private func duplicateWorkout(_ workout: Workout) {
         Task {
+            HapticFeedback.generate()
             await workoutManager.duplicateCustomWorkout(from: workout)
         }
     }
@@ -2237,22 +2274,39 @@ private struct WorkoutCard: View {
     let onDuplicate: () -> Void
     let onDelete: () -> Void
     let onPin: () -> Void
+    let onUnpin: () -> Void
+    let isPinned: Bool
     let onView: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
-                Text(workout.displayName)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.leading)
+                HStack(spacing: 6) {
+                    Text(workout.displayName)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
+
+                    if isPinned {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.secondary)
+                    }
+                }
 
                 Spacer()
 
                 Menu {
-                    Button(action: onPin) {
-                        Label("Pin Workout", systemImage: "pin")
+                    if isPinned {
+                        Button(action: onUnpin) {
+                            Label("Unpin Workout", systemImage: "pin.slash")
+                        }
+                    } else {
+                        Button(action: onPin) {
+                            Label("Pin Workout", systemImage: "pin")
+                        }
                     }
+
                     Button(action: onEdit) {
                         Label("Edit", systemImage: "pencil")
                     }
@@ -2342,7 +2396,7 @@ private struct WorkoutDetailFullScreenView: View {
         _displayWorkout = State(initialValue: workout)
         let exercises = WorkoutDetailFullScreenView.makeTodayExercises(from: workout)
         _todayExercises = State(initialValue: exercises)
-        _workoutBlocks = State(initialValue: nil)
+        _workoutBlocks = State(initialValue: workout.blocks)
         _renameText = State(initialValue: workout.name)
     }
 
@@ -2358,22 +2412,7 @@ private struct WorkoutDetailFullScreenView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             header
-
-                            LazyVStack(spacing: 14) {
-                                ForEach(Array(todayExercises.enumerated()), id: \.offset) { index, exercise in
-                                    ExerciseWorkoutCard(
-                                        exercise: exercise,
-                                        allExercises: todayExercises,
-                                        exerciseIndex: index,
-                                        onExerciseReplaced: { _, newExercise in
-                                            replaceExercise(at: index, with: newExercise)
-                                        },
-                                        onOpen: {
-                                            openLogging(for: index)
-                                        }
-                                    )
-                                }
-                            }
+                            exerciseGroupsContent
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 28)
@@ -2397,8 +2436,14 @@ private struct WorkoutDetailFullScreenView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button(action: pinWorkout) {
-                            Label("Pin Workout", systemImage: "pin")
+                        if isWorkoutPinned {
+                            Button(action: unpinWorkout) {
+                                Label("Unpin Workout", systemImage: "pin.slash")
+                            }
+                        } else {
+                            Button(action: pinWorkout) {
+                                Label("Pin Workout", systemImage: "pin")
+                            }
                         }
 
                         Button(action: presentRenameSheet) {
@@ -2487,9 +2532,7 @@ private struct WorkoutDetailFullScreenView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 0) {
-        
-
+        VStack(alignment: .leading, spacing: 8) {
             if let notes = displayWorkout.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
                 Text(notes)
                     .font(.system(size: 14))
@@ -2501,6 +2544,10 @@ private struct WorkoutDetailFullScreenView: View {
 
     private var estimatedDuration: Int {
         displayWorkout.duration ?? max(Int(ceil(Double(max(displayWorkout.totalSets, 1)) * 1.5)), 10)
+    }
+
+    private var isWorkoutPinned: Bool {
+        workoutManager.isCustomWorkoutPinned(displayWorkout)
     }
 
     private var emptyState: some View {
@@ -2526,6 +2573,7 @@ private struct WorkoutDetailFullScreenView: View {
             todayExercises = result.workout.exercises
             workoutBlocks = result.workout.blocks
             syncWorkoutExercises()
+            persistCurrentWorkout(showLoader: false)
         }
     }
 
@@ -2535,11 +2583,149 @@ private struct WorkoutDetailFullScreenView: View {
             date: Date(),
             title: displayWorkout.displayName,
             exercises: todayExercises,
-            blocks: workoutBlocks,
+            blocks: workoutBlocks ?? displayWorkout.blocks,
             estimatedDuration: estimatedDuration,
             fitnessGoal: workoutManager.effectiveFitnessGoal,
             difficulty: 2
         )
+    }
+
+    @ViewBuilder
+    private var exerciseGroupsContent: some View {
+        if supersetBlocks.isEmpty {
+            exerciseGroupCard(entries: uniqueExerciseEntries)
+        } else {
+            if !nonGroupedEntries.isEmpty {
+                exerciseGroupCard(entries: nonGroupedEntries)
+            }
+
+            ForEach(Array(supersetBlocks.enumerated()), id: \.element.id) { _, block in
+                let entries = blockEntries(for: block)
+                if !entries.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(blockLabel(for: block))
+                            .font(.title3)
+                            .foregroundColor(.primary)
+                            .fontWeight(.semibold)
+
+                        exerciseGroupCard(entries: entries)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func exerciseGroupCard(entries: [(TodayWorkoutExercise, Int)]) -> some View {
+        if entries.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(entries.enumerated()), id: \.element.1) { idx, entry in
+                    let exercise = entry.0
+                    let globalIndex = entry.1
+                    ExerciseWorkoutCard(
+                        exercise: exercise,
+                        allExercises: todayExercises,
+                        exerciseIndex: globalIndex,
+                        onExerciseReplaced: { _, newExercise in
+                            replaceExercise(at: globalIndex, with: newExercise)
+                        },
+                        onOpen: {
+                            openLogging(for: globalIndex)
+                        },
+                        useBackground: false
+                    )
+
+                    if idx != entries.count - 1 {
+                        Divider().opacity(0.08)
+                    }
+                }
+            }
+            .background(Color("containerbg"))
+            .cornerRadius(24)
+        }
+    }
+
+    private var uniqueExerciseEntries: [(TodayWorkoutExercise, Int)] {
+        var seen = Set<Int>()
+        return todayExercises.enumerated().compactMap { index, exercise in
+            guard seen.insert(exercise.exercise.id).inserted else { return nil }
+            return (exercise, index)
+        }
+    }
+
+    private var nonGroupedEntries: [(TodayWorkoutExercise, Int)] {
+        var seen = Set<Int>()
+        var results: [(TodayWorkoutExercise, Int)] = []
+
+        for (index, exercise) in todayExercises.enumerated() {
+            let id = exercise.exercise.id
+            guard !groupedExerciseIds.contains(id) else { continue }
+            if seen.insert(id).inserted {
+                results.append((exercise, index))
+            }
+        }
+
+        return results
+    }
+
+    private var currentBlocks: [WorkoutBlock] {
+        if let workoutBlocks {
+            return workoutBlocks
+        }
+
+        if let storedBlocks = displayWorkout.blocks {
+            return storedBlocks
+        }
+
+        let fallbackWorkout = TodayWorkout(
+            id: UUID(),
+            date: Date(),
+            title: displayWorkout.displayName,
+            exercises: todayExercises,
+            estimatedDuration: estimatedDuration,
+            fitnessGoal: workoutManager.effectiveFitnessGoal,
+            difficulty: 2
+        )
+
+        return fallbackWorkout.blockProgram
+    }
+
+    private var supersetBlocks: [WorkoutBlock] {
+        currentBlocks.filter { ($0.type == .superset || $0.type == .circuit) && $0.exercises.count >= 2 }
+    }
+
+    private var groupedExerciseIds: Set<Int> {
+        Set(supersetBlocks.flatMap { $0.exercises.map { $0.exercise.id } })
+    }
+
+    private var exerciseIndicesById: [Int: [Int]] {
+        var mapping: [Int: [Int]] = [:]
+        for (index, exercise) in todayExercises.enumerated() {
+            mapping[exercise.exercise.id, default: []].append(index)
+        }
+        return mapping
+    }
+
+    private func blockEntries(for block: WorkoutBlock) -> [(TodayWorkoutExercise, Int)] {
+        var occurrenceCursor: [Int: Int] = [:]
+        var entries: [(TodayWorkoutExercise, Int)] = []
+
+        for blockExercise in block.exercises {
+            let id = blockExercise.exercise.id
+            let occurrence = occurrenceCursor[id, default: 0]
+            if let indices = exerciseIndicesById[id], occurrence < indices.count {
+                let globalIndex = indices[occurrence]
+                entries.append((todayExercises[globalIndex], globalIndex))
+            }
+            occurrenceCursor[id] = occurrence + 1
+        }
+        return entries
+    }
+
+    private func blockLabel(for block: WorkoutBlock) -> String {
+        block.exercises.count >= 3 ? "Circuit" : "Superset"
     }
 
     private func openLogging(for index: Int) {
@@ -2560,32 +2746,29 @@ private struct WorkoutDetailFullScreenView: View {
 
     private func saveWorkoutChanges() {
         syncWorkoutExercises()
-        performAsyncAction {
-            try await workoutManager.saveCustomWorkout(
-                name: displayWorkout.name,
-                exercises: displayWorkout.exercises,
-                notes: displayWorkout.notes,
-                workoutId: displayWorkout.id
-            )
-            await MainActor.run {
-                onRefreshWorkouts()
-            }
-        }
+        persistCurrentWorkout()
     }
 
     private func duplicateWorkout() {
         syncWorkoutExercises()
-        performAsyncAction {
-            await workoutManager.duplicateCustomWorkout(from: displayWorkout)
+        HapticFeedback.generate()
+        persistDuplication()
+    }
+
+    private func pinWorkout() {
+        Task {
+            HapticFeedback.generate()
+            await workoutManager.pinCustomWorkout(displayWorkout)
             await MainActor.run {
                 onRefreshWorkouts()
             }
         }
     }
 
-    private func pinWorkout() {
+    private func unpinWorkout() {
         Task {
-            await workoutManager.pinCustomWorkout(displayWorkout)
+            HapticFeedback.generate()
+            await workoutManager.unpinCustomWorkout(displayWorkout)
             await MainActor.run {
                 onRefreshWorkouts()
             }
@@ -2594,9 +2777,11 @@ private struct WorkoutDetailFullScreenView: View {
 
     private func replaceExercise(at index: Int, with data: ExerciseData) {
         guard todayExercises.indices.contains(index) else { return }
-        let base = todayExercises[index]
-        let replacement = makeReplacementExercise(from: data, base: base)
-        updateExercise(at: index, with: replacement)
+        let previous = todayExercises[index]
+        let replacement = makeReplacementExercise(from: data, base: previous)
+        todayExercises[index] = replacement
+        updateBlocksReplacing(oldId: previous.exercise.id, with: data)
+        syncWorkoutExercises()
     }
 
     private func updateExercise(at index: Int, with updatedExercise: TodayWorkoutExercise) {
@@ -2613,6 +2798,43 @@ private struct WorkoutDetailFullScreenView: View {
         displayWorkout = updatedWorkout(exercises: converted)
     }
 
+    private func persistCurrentWorkout(showLoader: Bool = true) {
+        let persistenceTask: () async throws -> Void = {
+            _ = try await workoutManager.saveCustomWorkout(
+                name: displayWorkout.name,
+                exercises: displayWorkout.exercises,
+                notes: displayWorkout.notes,
+                workoutId: displayWorkout.id,
+                blocks: workoutBlocks
+            )
+            await MainActor.run {
+                onRefreshWorkouts()
+            }
+        }
+
+        if showLoader {
+            performAsyncAction(persistenceTask)
+        } else {
+            Task {
+                do {
+                    try await persistenceTask()
+                } catch {
+                    if !Task.isCancelled {
+                        await MainActor.run {
+                            actionError = error.localizedDescription
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func persistDuplication() {
+        performAsyncAction {
+            await workoutManager.duplicateCustomWorkout(from: displayWorkout)
+        }
+    }
+
     private func updatedWorkout(name: String? = nil, exercises: [WorkoutExercise]? = nil) -> Workout {
         Workout(
             id: displayWorkout.id,
@@ -2626,7 +2848,8 @@ private struct WorkoutDetailFullScreenView: View {
             isTemplate: displayWorkout.isTemplate,
             syncVersion: displayWorkout.syncVersion,
             createdAt: displayWorkout.createdAt,
-            updatedAt: displayWorkout.updatedAt
+            updatedAt: displayWorkout.updatedAt,
+            blocks: workoutBlocks ?? displayWorkout.blocks
         )
     }
 
@@ -2675,6 +2898,37 @@ private struct WorkoutDetailFullScreenView: View {
             description: data.synergist.isEmpty ? fallback?.description : data.synergist,
             instructions: data.instructions ?? fallback?.instructions
         )
+    }
+
+    private func updateBlocksReplacing(oldId: Int, with newExercise: ExerciseData) {
+        guard var blocks = workoutBlocks else { return }
+        var hasChanges = false
+
+        for index in blocks.indices {
+            var block = blocks[index]
+            var blockChanged = false
+
+            block.exercises = block.exercises.map { blockExercise in
+                guard blockExercise.exercise.id == oldId else { return blockExercise }
+                blockChanged = true
+                return BlockExercise(
+                    id: blockExercise.id,
+                    exercise: newExercise,
+                    schemeType: blockExercise.schemeType,
+                    repScheme: blockExercise.repScheme,
+                    intervalScheme: blockExercise.intervalScheme
+                )
+            }
+
+            if blockChanged {
+                blocks[index] = block
+                hasChanges = true
+            }
+        }
+
+        if hasChanges {
+            workoutBlocks = blocks
+        }
     }
 
     private func makeReplacementExercise(from data: ExerciseData, base: TodayWorkoutExercise) -> TodayWorkoutExercise {
@@ -2773,11 +3027,12 @@ private struct WorkoutDetailFullScreenView: View {
 
             do {
                 syncWorkoutExercises()
-                try await workoutManager.saveCustomWorkout(
+                _ = try await workoutManager.saveCustomWorkout(
                     name: trimmed,
                     exercises: displayWorkout.exercises,
                     notes: displayWorkout.notes,
-                    workoutId: displayWorkout.id
+                    workoutId: displayWorkout.id,
+                    blocks: workoutBlocks
                 )
 
                 await MainActor.run {

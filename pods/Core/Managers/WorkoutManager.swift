@@ -707,7 +707,11 @@ class WorkoutManager: ObservableObject {
         }
     }
 
-    func saveCustomWorkout(name: String, exercises: [WorkoutExercise], notes: String? = nil, workoutId: Int? = nil) async throws {
+    func saveCustomWorkout(name: String,
+                           exercises: [WorkoutExercise],
+                           notes: String? = nil,
+                           workoutId: Int? = nil,
+                           blocks: [WorkoutBlock]? = nil) async throws -> Workout {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { throw CustomWorkoutError.invalidName }
         guard !exercises.isEmpty else { throw CustomWorkoutError.noExercises }
@@ -735,23 +739,29 @@ class WorkoutManager: ObservableObject {
             isTemplate: true,
             syncVersion: existing?.syncVersion,
             createdAt: existing?.createdAt ?? Date(),
-            updatedAt: Date()
+            updatedAt: Date(),
+            blocks: blocks ?? existing?.blocks
         )
 
         await MainActor.run {
-            if let workoutId = workoutId, let index = customWorkouts.firstIndex(where: { $0.id == workoutId }) {
-                customWorkouts[index] = template
-            } else {
-                customWorkouts.append(template)
-            }
+            withAnimation(.easeInOut) {
+                if let workoutId = workoutId, let index = customWorkouts.firstIndex(where: { $0.id == workoutId }) {
+                    customWorkouts[index] = template
+                } else {
+                    customWorkouts.append(template)
+                }
 
-            customWorkouts = reorderCustomWorkouts(customWorkouts)
-            hasWorkouts = !customWorkouts.isEmpty
+                customWorkouts = reorderCustomWorkouts(customWorkouts)
+                hasWorkouts = !customWorkouts.isEmpty
+                updateCustomWorkoutsLastFetch(Date())
+            }
         }
         await persistCustomWorkouts()
 
+        var finalWorkout = template
+
         do {
-            try await syncCustomWorkout(template, originalIdentifier: identifier)
+            finalWorkout = try await syncCustomWorkout(template, originalIdentifier: identifier)
         } catch {
             if !isCancellationError(error) {
                 await MainActor.run {
@@ -760,6 +770,7 @@ class WorkoutManager: ObservableObject {
             }
             throw error
         }
+        return finalWorkout
     }
 
     func deleteCustomWorkout(id: Int) async {
@@ -771,13 +782,15 @@ class WorkoutManager: ObservableObject {
             }
 
             await MainActor.run {
-                removePinnedIdentifier(for: workout)
-                if let index = customWorkouts.firstIndex(where: { $0.id == id }) {
-                    customWorkouts.remove(at: index)
+                withAnimation(.easeInOut) {
+                    removePinnedIdentifier(for: workout)
+                    if let index = customWorkouts.firstIndex(where: { $0.id == id }) {
+                        customWorkouts.remove(at: index)
+                    }
+                    customWorkouts = reorderCustomWorkouts(customWorkouts)
+                    hasWorkouts = !customWorkouts.isEmpty
+                    updateCustomWorkoutsLastFetch(Date())
                 }
-                customWorkouts = reorderCustomWorkouts(customWorkouts)
-                hasWorkouts = !customWorkouts.isEmpty
-                updateCustomWorkoutsLastFetch(Date())
             }
             await persistCustomWorkouts()
         } catch {
@@ -791,30 +804,58 @@ class WorkoutManager: ObservableObject {
 
     func duplicateCustomWorkout(from workout: Workout) async {
         let base = workout.name.isEmpty ? workout.displayName : workout.name
-        let newName = await MainActor.run { uniqueName(for: base) }
+        let newName = await MainActor.run { duplicateName(for: base) }
 
         do {
-            try await saveCustomWorkout(name: newName, exercises: workout.exercises, notes: workout.notes)
+            _ = try await saveCustomWorkout(name: newName,
+                                            exercises: workout.exercises,
+                                            notes: workout.notes,
+                                            blocks: workout.blocks)
         } catch {
             if !isCancellationError(error) {
                 await MainActor.run {
                     self.customWorkoutsError = error.localizedDescription
                 }
             }
+            return
+        }
+
+        await MainActor.run {
+            withAnimation(.easeInOut) {
+                _ = positionDuplicate(named: newName, after: workout)
+            }
         }
     }
 
     func pinCustomWorkout(_ workout: Workout) async {
         await MainActor.run {
-            let identifier = pinnedIdentifier(for: workout)
-            if !pinnedCustomWorkoutIDs.contains(identifier) {
-                pinnedCustomWorkoutIDs.insert(identifier)
-                savePinnedCustomWorkouts()
+            withAnimation(.easeInOut) {
+                let identifier = pinnedIdentifier(for: workout)
+                if !pinnedCustomWorkoutIDs.contains(identifier) {
+                    pinnedCustomWorkoutIDs.insert(identifier)
+                    savePinnedCustomWorkouts()
+                }
+                customWorkouts = reorderCustomWorkouts(customWorkouts)
+                updateCustomWorkoutsLastFetch(Date())
             }
-            customWorkouts = reorderCustomWorkouts(customWorkouts)
-            updateCustomWorkoutsLastFetch(Date())
         }
         await persistCustomWorkouts()
+    }
+
+    func unpinCustomWorkout(_ workout: Workout) async {
+        await MainActor.run {
+            withAnimation(.easeInOut) {
+                removePinnedIdentifier(for: workout)
+                customWorkouts = reorderCustomWorkouts(customWorkouts)
+                updateCustomWorkoutsLastFetch(Date())
+            }
+        }
+        await persistCustomWorkouts()
+    }
+
+    @MainActor
+    func isCustomWorkoutPinned(_ workout: Workout) -> Bool {
+        pinnedCustomWorkoutIDs.contains(pinnedIdentifier(for: workout))
     }
 
     func startCustomWorkout(_ workout: Workout) -> TodayWorkout {
@@ -866,6 +907,8 @@ class WorkoutManager: ObservableObject {
             return nil
         }()
 
+        let blocks = decodeWorkoutBlocks(dictionary["blocks"])
+
         return Workout(
             id: id,
             remoteId: remoteId,
@@ -878,7 +921,8 @@ class WorkoutManager: ObservableObject {
             isTemplate: isTemplate,
             syncVersion: syncVersion,
             createdAt: createdAt,
-            updatedAt: updatedAt
+            updatedAt: updatedAt,
+            blocks: blocks
         )
     }
 
@@ -1004,7 +1048,8 @@ class WorkoutManager: ObservableObject {
             isTemplate: server.isTemplate ?? false,
             syncVersion: server.syncVersion,
             createdAt: server.createdAt,
-            updatedAt: server.updatedAt
+            updatedAt: server.updatedAt,
+            blocks: nil
         )
     }
 
@@ -1046,7 +1091,8 @@ class WorkoutManager: ObservableObject {
             isTemplate: workout.isTemplate,
             syncVersion: workout.syncVersion,
             createdAt: workout.createdAt,
-            updatedAt: workout.updatedAt
+            updatedAt: workout.updatedAt,
+            blocks: workout.blocks
         )
     }
 
@@ -1121,17 +1167,53 @@ class WorkoutManager: ObservableObject {
     }
 
     private func reorderCustomWorkouts(_ workouts: [Workout]) -> [Workout] {
-        workouts.sorted { lhs, rhs in
-            let lhsPinned = pinnedCustomWorkoutIDs.contains(pinnedIdentifier(for: lhs))
-            let rhsPinned = pinnedCustomWorkoutIDs.contains(pinnedIdentifier(for: rhs))
-            if lhsPinned != rhsPinned {
-                return lhsPinned && !rhsPinned
-            }
+        var pinned: [Workout] = []
+        var regular: [Workout] = []
 
-            let lhsDate = lhs.updatedAt ?? lhs.date
-            let rhsDate = rhs.updatedAt ?? rhs.date
-            return lhsDate > rhsDate
+        for workout in workouts {
+            if pinnedCustomWorkoutIDs.contains(pinnedIdentifier(for: workout)) {
+                pinned.append(workout)
+            } else {
+                regular.append(workout)
+            }
         }
+
+        return pinned + regular
+    }
+
+    @MainActor
+    private func positionDuplicate(named newName: String, after original: Workout) -> Workout? {
+        guard let duplicateIndex = customWorkouts.firstIndex(where: { $0.name == newName }) else {
+            return nil
+        }
+
+        var workingList = customWorkouts
+        var duplicate = workingList.remove(at: duplicateIndex)
+
+        let originalIdentifier = pinnedIdentifier(for: original)
+        let duplicateIdentifier = pinnedIdentifier(for: duplicate)
+
+        if pinnedCustomWorkoutIDs.contains(originalIdentifier) {
+            pinnedCustomWorkoutIDs.insert(duplicateIdentifier)
+            savePinnedCustomWorkouts()
+        }
+
+        let insertIndex: Int
+        if let originalIndex = workingList.firstIndex(where: { $0.id == original.id }) {
+            insertIndex = min(originalIndex + 1, workingList.count)
+        } else {
+            insertIndex = workingList.count
+        }
+
+        workingList.insert(duplicate, at: insertIndex)
+        customWorkouts = reorderCustomWorkouts(workingList)
+        updateCustomWorkoutsLastFetch(Date())
+
+        if let currentIndex = customWorkouts.firstIndex(where: { $0.name == newName }) {
+            duplicate = customWorkouts[currentIndex]
+        }
+
+        return duplicate
     }
 
     @MainActor
@@ -1143,14 +1225,14 @@ class WorkoutManager: ObservableObject {
     }
 
     @MainActor
-    private func uniqueName(for base: String) -> String {
+    private func duplicateName(for base: String) -> String {
         let trimmed = base.trimmingCharacters(in: .whitespacesAndNewlines)
         let fallback = trimmed.isEmpty ? "Workout" : trimmed
-        var candidate = "\(fallback) Copy"
+        var candidate = "Duplicate of \(fallback)"
         var counter = 2
         let existingNames = Set(customWorkouts.map { $0.name.lowercased() })
         while existingNames.contains(candidate.lowercased()) {
-            candidate = "\(fallback) Copy \(counter)"
+            candidate = "Duplicate of \(fallback) (\(counter))"
             counter += 1
         }
         return candidate
@@ -1226,27 +1308,51 @@ class WorkoutManager: ObservableObject {
 
     @MainActor
     private func replaceCustomWorkout(originalIdentifier: Int, with synced: Workout) {
-        if let index = customWorkouts.firstIndex(where: { $0.id == originalIdentifier }) {
-            customWorkouts[index] = synced
-        } else if let remoteId = synced.remoteId,
-                  let index = customWorkouts.firstIndex(where: { $0.remoteId == remoteId }) {
-            customWorkouts[index] = synced
-        } else {
-            customWorkouts.append(synced)
-        }
+        withAnimation(.easeInOut) {
+            if let index = customWorkouts.firstIndex(where: { $0.id == originalIdentifier }) {
+                let current = customWorkouts[index]
+                customWorkouts[index] = mergeWorkout(current: current, with: synced)
+            } else if let remoteId = synced.remoteId,
+                      let index = customWorkouts.firstIndex(where: { $0.remoteId == remoteId }) {
+                let current = customWorkouts[index]
+                customWorkouts[index] = mergeWorkout(current: current, with: synced)
+            } else {
+                customWorkouts.append(synced)
+            }
 
-        if pinnedCustomWorkoutIDs.remove(originalIdentifier) != nil {
-            pinnedCustomWorkoutIDs.insert(pinnedIdentifier(for: synced))
-            savePinnedCustomWorkouts()
-        }
+            if pinnedCustomWorkoutIDs.remove(originalIdentifier) != nil {
+                pinnedCustomWorkoutIDs.insert(pinnedIdentifier(for: synced))
+                savePinnedCustomWorkouts()
+            }
 
-        customWorkouts = reorderCustomWorkouts(customWorkouts)
-        hasWorkouts = !customWorkouts.isEmpty
-        customWorkoutsError = nil
+            customWorkouts = reorderCustomWorkouts(customWorkouts)
+            hasWorkouts = !customWorkouts.isEmpty
+            customWorkoutsError = nil
+        }
     }
 
-    private func syncCustomWorkout(_ workout: Workout, originalIdentifier: Int) async throws {
-        guard !userEmail.isEmpty else { return }
+    private func mergeWorkout(current: Workout, with synced: Workout) -> Workout {
+        Workout(
+            id: synced.id,
+            remoteId: synced.remoteId,
+            name: synced.name,
+            date: synced.date,
+            duration: synced.duration,
+            exercises: synced.exercises,
+            notes: synced.notes,
+            category: synced.category,
+            isTemplate: synced.isTemplate,
+            syncVersion: synced.syncVersion,
+            createdAt: synced.createdAt,
+            updatedAt: synced.updatedAt,
+            blocks: synced.blocks ?? current.blocks
+        )
+    }
+
+    private func syncCustomWorkout(_ workout: Workout, originalIdentifier: Int) async throws -> Workout {
+        if userEmail.isEmpty {
+            return workout
+        }
 
         let payload = makeWorkoutRequest(from: workout)
         let response: NetworkManagerTwo.WorkoutResponse.Workout
@@ -1263,6 +1369,7 @@ class WorkoutManager: ObservableObject {
             updateCustomWorkoutsLastFetch(Date())
         }
         await persistCustomWorkouts()
+        return synced
     }
 
     private func nextCustomWorkoutId() -> Int {
@@ -1276,7 +1383,7 @@ class WorkoutManager: ObservableObject {
 
     private func encodeCustomWorkouts(_ workouts: [Workout]) -> [[String: Any]] {
         workouts.map { workout in
-            [
+            var payload: [String: Any] = [
                 "id": workout.id,
                 "remote_id": workout.remoteId ?? NSNull(),
                 "name": workout.name,
@@ -1290,6 +1397,12 @@ class WorkoutManager: ObservableObject {
                 "updated_at": workout.updatedAt?.timeIntervalSince1970 ?? NSNull(),
                 "exercises": workout.exercises.map(encodeWorkoutExercise)
             ]
+
+            if let blocksPayload = encodeWorkoutBlocks(workout.blocks) {
+                payload["blocks"] = blocksPayload
+            }
+
+            return payload
         }
     }
 
@@ -1321,6 +1434,25 @@ class WorkoutManager: ObservableObject {
             "distance": set.distance ?? NSNull(),
             "restTime": set.restTime ?? NSNull()
         ]
+    }
+
+    private func encodeWorkoutBlocks(_ blocks: [WorkoutBlock]?) -> [[String: Any]]? {
+        guard let blocks, !blocks.isEmpty else { return nil }
+        let encoder = JSONEncoder()
+        guard let data = try? encoder.encode(blocks),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return nil
+        }
+        return object
+    }
+
+    private func decodeWorkoutBlocks(_ value: Any?) -> [WorkoutBlock]? {
+        guard let array = value as? [[String: Any]], !array.isEmpty else { return nil }
+        guard let data = try? JSONSerialization.data(withJSONObject: array),
+              let blocks = try? JSONDecoder().decode([WorkoutBlock].self, from: data) else {
+            return nil
+        }
+        return blocks
     }
 
     private func makeTodayWorkout(from template: Workout) -> TodayWorkout {
@@ -2955,6 +3087,7 @@ struct Workout: Codable, Identifiable, Hashable {
     let syncVersion: Int?
     let createdAt: Date?
     let updatedAt: Date?
+    let blocks: [WorkoutBlock]?
     
     var totalSets: Int {
         exercises.reduce(0) { $0 + $1.sets.count }
@@ -2977,6 +3110,7 @@ struct Workout: Codable, Identifiable, Hashable {
         case syncVersion
         case createdAt
         case updatedAt
+        case blocks
     }
 
     init(
@@ -2991,7 +3125,8 @@ struct Workout: Codable, Identifiable, Hashable {
         isTemplate: Bool = true,
         syncVersion: Int?,
         createdAt: Date?,
-        updatedAt: Date?
+        updatedAt: Date?,
+        blocks: [WorkoutBlock]?
     ) {
         self.id = id
         self.remoteId = remoteId
@@ -3005,6 +3140,7 @@ struct Workout: Codable, Identifiable, Hashable {
         self.syncVersion = syncVersion
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.blocks = blocks
     }
 
     init(from decoder: Decoder) throws {
@@ -3021,6 +3157,7 @@ struct Workout: Codable, Identifiable, Hashable {
         syncVersion = try container.decodeIfPresent(Int.self, forKey: .syncVersion)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
+        blocks = try container.decodeIfPresent([WorkoutBlock].self, forKey: .blocks)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -3037,6 +3174,7 @@ struct Workout: Codable, Identifiable, Hashable {
         try container.encodeIfPresent(syncVersion, forKey: .syncVersion)
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
+        try container.encodeIfPresent(blocks, forKey: .blocks)
     }
     
     func hash(into hasher: inout Hasher) {

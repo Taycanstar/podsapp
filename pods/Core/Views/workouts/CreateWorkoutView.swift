@@ -220,7 +220,7 @@ struct CreateWorkoutView: View {
 
         Task {
             do {
-                try await workoutManager.saveCustomWorkout(
+                _ = try await workoutManager.saveCustomWorkout(
                     name: trimmedTitle,
                     exercises: currentExercises,
                     notes: nil,
