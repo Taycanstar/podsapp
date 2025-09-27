@@ -2067,7 +2067,7 @@ private struct RoutinesWorkoutView: View {
             }
         }
         .listStyle(.plain)
-        .listRowSpacing(0)
+        .listRowSpacing(10)
         .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
         .safeAreaInset(edge: .bottom) {
@@ -2167,7 +2167,8 @@ private struct RoutinesWorkoutView: View {
             }
         )
         .listRowBackground(Color("primarybg"))
-        .listRowInsets(EdgeInsets(top: 10, leading: 20, bottom: 10, trailing: 20))
+        // spacingg
+        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
         .listRowSeparator(.hidden)
     }
 
