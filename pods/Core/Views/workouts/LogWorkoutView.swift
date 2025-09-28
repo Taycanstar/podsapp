@@ -67,6 +67,8 @@ struct LogWorkoutView: View {
     @State private var renameWorkoutTitle = ""
     @State private var pendingWorkoutFeedback = false
     @FocusState private var isRenameFieldFocused: Bool
+    @State private var isSavingTodayWorkout = false
+    @State private var saveWorkoutToast: SaveWorkoutToast?
     
     
     // Properties that delegate to WorkoutManager but are accessed locally
@@ -184,6 +186,12 @@ struct LogWorkoutView: View {
         ]
     }
     
+    private struct SaveWorkoutToast: Identifiable, Equatable {
+        let id = UUID()
+        let message: String
+        let isError: Bool
+    }
+
     enum WorkoutTab: Hashable {
         case today, workouts
         
@@ -304,6 +312,7 @@ struct LogWorkoutView: View {
         ZStack(alignment: .bottom) {
             backgroundView
             contentStack
+            saveWorkoutToastOverlay
         }
     }
     
@@ -319,6 +328,28 @@ struct LogWorkoutView: View {
             sessionPhaseIndicator
             mainContentView
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder
+    private var saveWorkoutToastOverlay: some View {
+        if let toast = saveWorkoutToast {
+            Text(toast.message)
+                .font(.system(size: 15))
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color(.systemBackground).opacity(0.9))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(.systemGray4), lineWidth: 1)
+                )
+                .cornerRadius(12)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 52)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
     }
     
     @ViewBuilder
@@ -330,7 +361,7 @@ struct LogWorkoutView: View {
                     .padding(.bottom, 12)
             } else {
                 Color("primarybg")
-                    .frame(height: 1)
+                    .frame(height: 12)
                     .frame(maxWidth: .infinity)
                     .accessibilityHidden(true)
             }
@@ -1066,10 +1097,7 @@ struct LogWorkoutView: View {
                             renameWorkoutTitle = workoutManager.todayWorkoutDisplayTitle
                             isRenamingWorkout = workoutManager.todayWorkout != nil
                         },
-                        onSaveWorkout: {
-                            HapticFeedback.generate()
-                            print("💾 Save workout tapped - TODO: implement persistence")
-                        },
+                        onSaveWorkout: handleSaveTodayWorkout,
                         canShowSupersetMenu: userProfileService.circuitsAndSupersetsEnabled && (workoutManager.todayWorkout?.exercises.count ?? 0) >= 2,
                         onShowSuperset: {
                             HapticFeedback.generate()
@@ -1087,6 +1115,70 @@ struct LogWorkoutView: View {
                 )
                 .padding(.top)
                 Spacer()
+            }
+        }
+    }
+
+    private func handleSaveTodayWorkout() {
+        HapticFeedback.generate()
+
+        guard !isSavingTodayWorkout else { return }
+
+        guard let todayWorkout = workoutManager.todayWorkout else {
+            Task {
+                await presentSaveWorkoutToast(isError: true, message: "No workout available to save.")
+            }
+            return
+        }
+
+        guard !todayWorkout.exercises.isEmpty else {
+            let title = todayWorkout.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let descriptor = title.isEmpty ? "this workout" : "\"\(title)\""
+            Task {
+                await presentSaveWorkoutToast(isError: true, message: "Add at least one exercise to \(descriptor) before saving.")
+            }
+            return
+        }
+
+        isSavingTodayWorkout = true
+
+        Task {
+            do {
+                _ = try await workoutManager.saveTodayWorkoutAsCustom()
+                await presentSaveWorkoutToast(isError: false)
+            } catch {
+                let message = error.localizedDescription.isEmpty
+                    ? "Couldn't save workout. Please try again."
+                    : error.localizedDescription
+                await presentSaveWorkoutToast(isError: true, message: message)
+            }
+
+            await MainActor.run {
+                isSavingTodayWorkout = false
+            }
+        }
+    }
+
+    @MainActor
+    private func presentSaveWorkoutToast(isError: Bool, message: String? = nil) {
+        let displayMessage: String
+        if let message, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            displayMessage = message
+        } else {
+            displayMessage = isError ? "Couldn't save workout" : "Workout saved"
+        }
+
+        let toast = SaveWorkoutToast(message: displayMessage, isError: isError)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+            saveWorkoutToast = toast
+        }
+
+        Task { @MainActor [toastID = toast.id] in
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            if saveWorkoutToast?.id == toastID {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    saveWorkoutToast = nil
+                }
             }
         }
     }
@@ -2472,10 +2564,6 @@ private struct WorkoutDetailFullScreenView: View {
                             Label("Rename Workout", systemImage: "pencil")
                         }
 
-                        Button(action: saveWorkoutChanges) {
-                            Label("Save Workout", systemImage: "tray.and.arrow.down")
-                        }
-
                         Button(action: duplicateWorkout) {
                             Label("Duplicate Workout", systemImage: "square.on.square")
                         }
@@ -2764,11 +2852,6 @@ private struct WorkoutDetailFullScreenView: View {
         renameText = displayWorkout.name
         renameError = nil
         showingRenameSheet = true
-    }
-
-    private func saveWorkoutChanges() {
-        syncWorkoutExercises()
-        persistCurrentWorkout()
     }
 
     private func duplicateWorkout() {

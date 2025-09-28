@@ -732,7 +732,8 @@ class WorkoutManager: ObservableObject {
                            exercises: [WorkoutExercise],
                            notes: String? = nil,
                            workoutId: Int? = nil,
-                           blocks: [WorkoutBlock]? = nil) async throws -> Workout {
+                           blocks: [WorkoutBlock]? = nil,
+                           syncImmediately: Bool = true) async throws -> Workout {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { throw CustomWorkoutError.invalidName }
         guard !exercises.isEmpty else { throw CustomWorkoutError.noExercises }
@@ -781,17 +782,50 @@ class WorkoutManager: ObservableObject {
 
         var finalWorkout = template
 
-        do {
-            finalWorkout = try await syncCustomWorkout(template, originalIdentifier: identifier)
-        } catch {
-            if !isCancellationError(error) {
-                await MainActor.run {
-                    self.customWorkoutsError = error.localizedDescription
+        if syncImmediately {
+            do {
+                finalWorkout = try await syncCustomWorkout(template, originalIdentifier: identifier)
+            } catch {
+                if !isCancellationError(error) {
+                    await MainActor.run {
+                        self.customWorkoutsError = error.localizedDescription
+                    }
+                }
+                throw error
+            }
+        } else {
+            Task {
+                do {
+                    _ = try await syncCustomWorkout(template, originalIdentifier: identifier)
+                } catch {
+                    if !isCancellationError(error) {
+                        await MainActor.run {
+                            self.customWorkoutsError = error.localizedDescription
+                        }
+                    }
                 }
             }
-            throw error
         }
+
         return finalWorkout
+    }
+
+    func saveTodayWorkoutAsCustom() async throws -> Workout {
+        guard let todayWorkout = todayWorkout else {
+            throw CustomWorkoutError.noExercises
+        }
+
+        let resolvedName = todayWorkout.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = resolvedName.isEmpty ? "Workout" : resolvedName
+        let workoutExercises = convertToWorkoutExercises(from: todayWorkout)
+
+        return try await saveCustomWorkout(
+            name: name,
+            exercises: workoutExercises,
+            notes: nil,
+            blocks: todayWorkout.blocks,
+            syncImmediately: false
+        )
     }
 
     func deleteCustomWorkout(id: Int) async {
@@ -2049,30 +2083,43 @@ class WorkoutManager: ObservableObject {
         }
     }
 
+    private func legacyExercise(from data: ExerciseData) -> LegacyExercise {
+        LegacyExercise(
+            id: data.id,
+            name: data.name,
+            category: data.category,
+            description: data.synergist.isEmpty ? nil : data.synergist,
+            instructions: data.instructions
+        )
+    }
+
     private func convertToWorkoutExercises(from workout: TodayWorkout) -> [WorkoutExercise] {
         workout.exercises.map { exercise in
-            let sets = (0..<max(exercise.sets, 0)).map { _ in
+            let durationValue: Int?
+            if let tracking = exercise.trackingType,
+               (tracking == .timeOnly || tracking == .holdTime),
+               let duration = exercise.flexibleSets?.first?.duration {
+                durationValue = Int(duration)
+            } else {
+                durationValue = nil
+            }
+
+            let sets = (0..<max(exercise.sets, 1)).map { index in
                 WorkoutSet(
-                    id: Int.random(in: 1000...9999),
+                    id: index + 1,
                     reps: exercise.reps,
-                    weight: exercise.weight ?? 0,
-                    duration: nil,
+                    weight: exercise.weight,
+                    duration: durationValue,
                     distance: nil,
-                    restTime: nil
+                    restTime: exercise.restTime
                 )
             }
 
             return WorkoutExercise(
                 id: Int.random(in: 1000...9999),
-                exercise: LegacyExercise(
-                    id: exercise.exercise.id,
-                    name: exercise.exercise.name,
-                    category: exercise.exercise.category,
-                    description: nil,
-                    instructions: exercise.exercise.instructions
-                ),
+                exercise: legacyExercise(from: exercise.exercise),
                 sets: sets,
-                notes: nil
+                notes: exercise.notes
             )
         }
     }
