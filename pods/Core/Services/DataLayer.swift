@@ -213,8 +213,16 @@ class DataLayer: ObservableObject {
         print("❌ DataLayer: Cache MISS for key: \(key)")
         recordCacheMiss()
         
-        // Layer 3: Check UserDefaults
-        if let data = userDefaults.data(forKey: "\(key)_\(userEmail ?? "unknown")") {
+        let currentEmail = resolvedUserEmail()
+        if let email = currentEmail {
+            self.userEmail = email
+        }
+
+        let primaryKey = "\(key)_\(currentEmail ?? "unknown")"
+        let legacyKey = "\(key)_unknown"
+
+        // Layer 3: Check UserDefaults (primary key)
+        if let data = userDefaults.data(forKey: primaryKey) {
             print("✅ DataLayer: Found in UserDefaults for key: \(key)")
             
             // Try to decode and cache
@@ -226,6 +234,26 @@ class DataLayer: ObservableObject {
                 print("   └── Access time: \(String(format: "%.2f", duration * 1000))ms")
                 return decoded
             }
+        }
+
+        // Fallback: migrate legacy "unknown" entries if present
+        if let data = userDefaults.data(forKey: legacyKey),
+           let decoded = try? JSONSerialization.jsonObject(with: data) {
+            print("♻️ DataLayer: Migrating legacy stored data for key: \(key)")
+
+            memoryCache[key] = decoded
+            cacheTimestamps[key] = Date()
+
+            if let email = currentEmail,
+               let encoded = try? JSONSerialization.data(withJSONObject: decoded) {
+                let targetKey = "\(key)_\(email)"
+                userDefaults.set(encoded, forKey: targetKey)
+                userDefaults.removeObject(forKey: legacyKey)
+            }
+
+            let duration = Date().timeIntervalSince(startTime)
+            print("   └── Access time: \(String(format: "%.2f", duration * 1000))ms")
+            return decoded
         }
         
         let duration = Date().timeIntervalSince(startTime)
@@ -244,9 +272,15 @@ class DataLayer: ObservableObject {
         cacheTimestamps[key] = Date()
         print("   └── Memory cache updated")
         
+        let currentEmail = resolvedUserEmail()
+        if let email = currentEmail {
+            self.userEmail = email
+        }
+
         // Layer 3: Update UserDefaults if serializable
         if let encoded = try? JSONSerialization.data(withJSONObject: value) {
-            userDefaults.set(encoded, forKey: "\(key)_\(userEmail ?? "unknown")")
+            let storageKey = "\(key)_\(currentEmail ?? "unknown")"
+            userDefaults.set(encoded, forKey: storageKey)
             print("   └── UserDefaults updated")
         }
         
@@ -262,10 +296,15 @@ class DataLayer: ObservableObject {
         cacheTimestamps.removeValue(forKey: key)
         print("   └── Memory cache cleared")
         
+        let currentEmail = resolvedUserEmail()
+        if let email = currentEmail {
+            self.userEmail = email
+        }
+
         // Layer 3: Remove from UserDefaults
-        userDefaults.removeObject(forKey: "\(key)_\(userEmail ?? "unknown")")
+        userDefaults.removeObject(forKey: "\(key)_\(currentEmail ?? "unknown")")
         print("   └── UserDefaults cleared")
-        
+
         print("✅ DataLayer: Data removed successfully for key: \(key)")
     }
     
@@ -320,11 +359,12 @@ class DataLayer: ObservableObject {
     private func loadCachedData() async {
         print("📂 DataLayer: Loading cached data into memory")
         
-        guard let userEmail = userEmail else {
+        guard let userEmail = resolvedUserEmail() else {
             print("❌ DataLayer: No user email - cannot load cached data")
             return
         }
-        
+        self.userEmail = userEmail
+
         // Load common data from UserDefaults into memory cache
         let commonKeys = ["onboarding_data", "profile_data", "user_preferences"]
         var loadedCount = 0
@@ -393,6 +433,16 @@ class DataLayer: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
         return formatter.string(from: date)
+    }
+
+    private func resolvedUserEmail() -> String? {
+        if let email = userEmail, !email.isEmpty {
+            return email
+        }
+        if let stored = UserDefaults.standard.string(forKey: "userEmail"), !stored.isEmpty {
+            return stored
+        }
+        return nil
     }
 }
 
