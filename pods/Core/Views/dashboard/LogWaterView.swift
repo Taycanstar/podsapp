@@ -9,49 +9,76 @@ struct LogWaterView: View {
     @State private var alertMessage = ""
     @State private var isLogging = false
     @FocusState private var isInputFocused: Bool
+    @AppStorage(WaterUnit.storageKey) private var storedWaterUnitRawValue: String = WaterUnit.defaultUnit.rawValue
+    @State private var selectedUnit: WaterUnit = WaterUnit.defaultUnit
     
     // Get user email from onboardingViewModel
     private var userEmail: String {
         onboardingViewModel.email
     }
     
-    // Preset water amounts (in fluid ounces)
-    let presets = [
-        (label: "8 oz", value: 8),
-        (label: "12 oz", value: 12),
-        (label: "16 oz", value: 16),
-        (label: "20 oz", value: 20),
-        (label: "24 oz", value: 24),
-        (label: "32 oz", value: 32),
-    ]
+    private var currentPresets: [Double] {
+        selectedUnit.presets
+    }
     
     var body: some View {
         NavigationView {
             VStack(alignment: .leading, spacing: 20) {
                 
-                HStack(spacing: 16) {
-                    Text("oz")
-                        .font(.system(size: 17, weight: .regular))
-                    
-                    Spacer()
-                    
-                    TextField("0", text: $waterAmount)
-                        .font(.system(size: 17, weight: .regular))
-                        .multilineTextAlignment(.trailing)
-                        .keyboardType(.decimalPad)
-                        .focused($isInputFocused)
-                        .onChange(of: waterAmount) { newValue in
-                            // If the user manually changes the input, clear the preset selection
-                            if let amount = Int(newValue), !presets.contains(where: { $0.value == amount }) {
-                                selectedPreset = nil
+                VStack(spacing: 0) {
+                    HStack {
+                        Text("Unit")
+                            .font(.system(size: 17, weight: .regular))
+                        Spacer()
+                        Menu {
+                            ForEach(WaterUnit.allCases) { unit in
+                                Button {
+                                    updateSelectedUnit(unit)
+                                } label: {
+                                    if unit == selectedUnit {
+                                        Label(unit.displayName, systemImage: "checkmark")
+                                    } else {
+                                        Text(unit.displayName)
+                                    }
+                                }
                             }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(selectedUnit.displayName)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.system(size: 12, weight: .semibold))
+                            }
+                            .font(.system(size: 17, weight: .regular))
                         }
+                        .menuStyle(.borderlessButton)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+
+                    Divider()
+
+                    HStack(spacing: 16) {
+                        Text(selectedUnit.abbreviation)
+                            .font(.system(size: 17, weight: .regular))
+                        
+                        Spacer()
+                        
+                        TextField("0", text: $waterAmount)
+                            .font(.system(size: 17, weight: .regular))
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.decimalPad)
+                            .focused($isInputFocused)
+                            .onChange(of: waterAmount) { newValue in
+                                handleManualInputChange(newValue)
+                            }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
                 }
-                .padding()
                 .background(Color("iosnp"))
                 .cornerRadius(12)
                 .padding(.horizontal)
-                
+
                 // Preset buttons
                 VStack(alignment: .leading, spacing: 16) {
                     // Grid of preset buttons
@@ -61,12 +88,12 @@ struct LogWaterView: View {
                         GridItem(.flexible()),
                         GridItem(.flexible())
                     ], spacing: 12) {
-                        ForEach(0..<presets.count, id: \.self) { index in
+                        ForEach(Array(currentPresets.enumerated()), id: \.offset) { index, preset in
                             Button(action: {
                                 selectPreset(index)
                                 HapticFeedback.generate()
                             }) {
-                                Text(presets[index].label)
+                                Text(selectedUnit.presetLabel(for: preset))
                                     .font(.system(size: 14, weight: .medium))
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 35)
@@ -117,6 +144,12 @@ struct LogWaterView: View {
                 Button("OK", role: .cancel) { }
             }
             .onAppear {
+                selectedUnit = persistedWaterUnit
+                if let amount = parsedAmount(from: waterAmount) {
+                    updatePresetSelection(for: amount)
+                } else {
+                    selectedPreset = nil
+                }
                 // Automatically focus the input when the view appears
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     isInputFocused = true
@@ -125,16 +158,84 @@ struct LogWaterView: View {
         }
     }
     
+    private var persistedWaterUnit: WaterUnit {
+        WaterUnit(rawValue: storedWaterUnitRawValue) ?? .defaultUnit
+    }
+
+    private func handleManualInputChange(_ newValue: String) {
+        guard let amount = parsedAmount(from: newValue) else {
+            selectedPreset = nil
+            return
+        }
+        updatePresetSelection(for: amount)
+    }
+
+    private func updatePresetSelection(for amount: Double) {
+        let presets = currentPresets
+        guard !presets.isEmpty else {
+            selectedPreset = nil
+            return
+        }
+
+        let tolerance = presetTolerance(for: selectedUnit)
+        if let matchIndex = presets.firstIndex(where: { abs($0 - amount) <= tolerance }) {
+            selectedPreset = matchIndex
+        } else {
+            selectedPreset = nil
+        }
+    }
+
+    private func presetTolerance(for unit: WaterUnit) -> Double {
+        switch unit {
+        case .milliliters:
+            return 0.5
+        case .liters:
+            return 0.005
+        default:
+            return 0.01
+        }
+    }
+
+    private func parsedAmount(from string: String) -> Double? {
+        let normalized = string
+            .replacingOccurrences(of: ",", with: ".")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return Double(normalized)
+    }
+
+    private func updateSelectedUnit(_ unit: WaterUnit) {
+        guard unit != selectedUnit else { return }
+
+        let previousUnit = selectedUnit
+        let currentValue = parsedAmount(from: waterAmount)
+        let valueInUSOunces = currentValue.map { previousUnit.convertToUSFluidOunces($0) }
+
+        selectedUnit = unit
+        storedWaterUnitRawValue = unit.rawValue
+
+        guard let usOunces = valueInUSOunces else {
+            selectedPreset = nil
+            return
+        }
+
+        let converted = unit.convertFromUSFluidOunces(usOunces)
+        waterAmount = unit.format(converted)
+        updatePresetSelection(for: converted)
+    }
+
     private func selectPreset(_ index: Int) {
+        let presets = currentPresets
+        guard presets.indices.contains(index) else { return }
+
         selectedPreset = index
-        waterAmount = "\(presets[index].value)"
+        waterAmount = selectedUnit.format(presets[index])
         
         // Dismiss keyboard
         isInputFocused = false
     }
     
     private func logWater() {
-        guard let amount = Double(waterAmount),
+        guard let amount = parsedAmount(from: waterAmount),
               amount > 0 else {
             alertMessage = "Please enter a valid amount"
             showAlert = true
@@ -149,10 +250,14 @@ struct LogWaterView: View {
         
         isLogging = true
         
+        let waterOz = selectedUnit.convertToUSFluidOunces(amount)
+
         // Log water to backend
         NetworkManagerTwo.shared.logWater(
             userEmail: userEmail,
-            waterOz: amount,
+            waterOz: waterOz,
+            originalAmount: amount,
+            unit: selectedUnit.rawValue,
             notes: ""
         ) { [self] result in
             DispatchQueue.main.async {

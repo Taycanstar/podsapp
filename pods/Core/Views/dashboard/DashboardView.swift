@@ -9,6 +9,7 @@ struct DashboardView: View {
     @Environment(\.isTabBarVisible) private var isTabBarVisible
     @EnvironmentObject var vm: DayLogsViewModel
     @EnvironmentObject private var mealReminderService: MealReminderService
+    @AppStorage(WaterUnit.storageKey) private var storedWaterUnitRawValue: String = WaterUnit.defaultUnit.rawValue
     
     // ─── Health data state ───────────────────────────────────────────────────
     @StateObject private var healthViewModel = HealthKitViewModel()
@@ -67,6 +68,14 @@ struct DashboardView: View {
         }.reduce(0.0) { $0 + $1 }
 
         return total
+    }
+    private var waterDisplayUnit: WaterUnit {
+        WaterUnit(rawValue: storedWaterUnitRawValue) ?? .defaultUnit
+    }
+
+    private var totalWaterDisplayValue: String {
+        let converted = waterDisplayUnit.convertFromUSFluidOunces(totalWaterIntake)
+        return waterDisplayUnit.format(converted)
     }
     private var isYesterday : Bool { Calendar.current.isDateInYesterday(vm.selectedDate) }
 
@@ -461,7 +470,7 @@ private var remainingCal: Double { vm.remainingCalories }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("WaterLoggedNotification"))) { _ in
                 print("💧 DashboardView received WaterLoggedNotification - refreshing logs for \(vm.selectedDate)")
                 // Refresh logs data when water is logged (for current selected date)
-                vm.loadLogs(for: vm.selectedDate)
+                vm.loadLogs(for: vm.selectedDate, force: true)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("FoodLogUpdated"))) { notification in
                 print("🍎 DashboardView received FoodLogUpdated notification")
@@ -1853,8 +1862,8 @@ private extension DashboardView {
                             // Water with add button
             waterMetricCell(
                 title: "Water",
-                value: String(format: "%.0f", totalWaterIntake),
-                unit: "oz",
+                value: totalWaterDisplayValue,
+                unit: waterDisplayUnit.abbreviation,
                 systemImage: "drop",
                 color: .blue
             )
@@ -1902,12 +1911,13 @@ private extension DashboardView {
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
                     .font(.system(size: 16))
+                let suffix = unit.isEmpty ? "" : " \(unit)"
                 if let intValue = value as? Int {
-                    Text("\(intValue)\(unit)")
+                    Text("\(intValue)\(suffix)")
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .foregroundColor(color)
                 } else if let stringValue = value as? String {
-                    Text("\(stringValue)\(unit)")
+                    Text("\(stringValue)\(suffix)")
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .foregroundColor(color)
                 }
@@ -1933,12 +1943,13 @@ private extension DashboardView {
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
                     .font(.system(size: 16))
+                let suffix = unit.isEmpty ? "" : " \(unit)"
                 if let intValue = value as? Int {
-                    Text("\(intValue)\(unit)")
+                    Text("\(intValue)\(suffix)")
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .foregroundColor(color)
                 } else if let stringValue = value as? String {
-                    Text("\(stringValue)\(unit)")
+                    Text("\(stringValue)\(suffix)")
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .foregroundColor(color)
                 }

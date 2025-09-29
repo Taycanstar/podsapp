@@ -79,6 +79,8 @@ struct WaterLogResponse: Codable {
     let waterLiters: Double
     let dateLogged: String
     let notes: String
+    let waterUnit: String?
+    let waterValue: Double?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -86,6 +88,8 @@ struct WaterLogResponse: Codable {
         case waterLiters = "water_liters"
         case dateLogged = "date_logged"
         case notes
+        case waterUnit = "water_unit"
+        case waterValue = "water_value"
     }
 }
 
@@ -132,4 +136,3 @@ enum HealthTimeframe: String, CaseIterable {
 // MARK: - Profile Data Models
 // NOTE: ProfileDataResponse, CalorieTrendDay, and MacroDataDay have been moved to WorkoutProfile.swift
 // to consolidate all profile-related data structures and avoid duplicate definitions.
-

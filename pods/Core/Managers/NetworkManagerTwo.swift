@@ -26,8 +26,8 @@ class NetworkManagerTwo {
 
     
 
-// let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
+let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+//   let baseUrl = "http://192.168.1.92:8000"
 // let baseUrl = "http://172.20.10.4:8000"
 // 
 
@@ -1369,11 +1369,15 @@ class NetworkManagerTwo {
     /// - Parameters:
     ///   - userEmail: User's email address
     ///   - waterOz: Water intake in fluid ounces
+    ///   - originalAmount: Water amount in the unit the user entered
+    ///   - unit: Unit label associated with the logged amount
     ///   - notes: Optional notes about the water intake
     ///   - completion: Result callback with the logged water data or error
     func logWater(
         userEmail: String,
         waterOz: Double,
+        originalAmount: Double,
+        unit: String,
         notes: String = "",
         completion: @escaping (Result<WaterLogResponse, Error>) -> Void
     ) {
@@ -1388,11 +1392,13 @@ class NetworkManagerTwo {
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let parameters: [String: Any] = [
+        var parameters: [String: Any] = [
             "user_email": userEmail,
             "water_oz": waterOz,
             "notes": notes
         ]
+        parameters["water_unit"] = unit
+        parameters["water_value"] = originalAmount
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
@@ -1401,7 +1407,7 @@ class NetworkManagerTwo {
             return
         }
         
-        print("💧 Logging water: \(waterOz) oz for user: \(userEmail)")
+        print("💧 Logging water: \(waterOz) oz (\(originalAmount) in \(unit)) for user: \(userEmail)")
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {

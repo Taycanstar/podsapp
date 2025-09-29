@@ -35,18 +35,6 @@
 		361FF3332E2213E300B7F68E /* WorkoutProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */; };
 		361FF3352E22E54C00B7F68E /* DataSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3342E22E54600B7F68E /* DataSyncService.swift */; };
 		361FF3372E22E56E00B7F68E /* DataLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3362E22E56A00B7F68E /* DataLayer.swift */; };
-		36F5A0012F9C1AAB00A1B234 /* UserContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */; };
-		36F5A0032F9C1AAB00A1B234 /* RepositoryTTL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */; };
-		36F5A0052F9C1AAB00A1B234 /* ProfileRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0042F9C1AAB00A1B234 /* ProfileRepository.swift */; };
-		36F5A0072F9C1AAB00A1B234 /* SubscriptionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0062F9C1AAB00A1B234 /* SubscriptionRepository.swift */; };
-		36F5A0092F9C1AAB00A1B234 /* DayLogsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0082F9C1AAB00A1B234 /* DayLogsRepository.swift */; };
-		36F5A00B2F9C1AAB00A1B234 /* FoodFeedRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A00A2F9C1AAB00A1B234 /* FoodFeedRepository.swift */; };
-		36F5A0132F9C1AAB00A1B234 /* CombinedLogsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0122F9C1AAB00A1B234 /* CombinedLogsRepository.swift */; };
-		36F5A0152F9C1AAB00A1B234 /* MealsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0142F9C1AAB00A1B234 /* MealsRepository.swift */; };
-		36F5A0172F9C1AAB00A1B234 /* RecipesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0162F9C1AAB00A1B234 /* RecipesRepository.swift */; };
-		36F5A0192F9C1AAB00A1B234 /* SavedMealsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0182F9C1AAB00A1B234 /* SavedMealsRepository.swift */; };
-		36F5A01B2F9C1AAB00A1B234 /* UserFoodsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A01A2F9C1AAB00A1B234 /* UserFoodsRepository.swift */; };
-		36A7B0022F0B4C9B00A6A1B0 /* StartupCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A7B0012F0B4C9B00A6A1B0 /* StartupCoordinator.swift */; };
 		361FF3392E23090000B7F68E /* StartWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF3382E2308F900B7F68E /* StartWorkoutView.swift */; };
 		361FF33B2E234F5500B7F68E /* WeightSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF33A2E234F4E00B7F68E /* WeightSyncService.swift */; };
 		361FF33D2E26ECA300B7F68E /* StreaksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF33C2E26EC9E00B7F68E /* StreaksView.swift */; };
@@ -154,6 +142,7 @@
 		3682F09D2B8403D400ABF344 /* CameraContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3682F09C2B8403D400ABF344 /* CameraContainerView.swift */; };
 		3682F0A32B84173100ABF344 /* Podfile in Resources */ = {isa = PBXBuildFile; fileRef = 3682F0A22B84173100ABF344 /* Podfile */; };
 		3683FDA92CB5A28F0031F149 /* product.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 3683FDA82CB5A28F0031F149 /* product.storekit */; };
+		368616651F83495CAC9300B4 /* WaterUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72915B93F931472588ADFD26 /* WaterUnit.swift */; };
 		36881DF12E6E04F900262045 /* WorkoutScheduleSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DF02E6E04ED00262045 /* WorkoutScheduleSettingsView.swift */; };
 		36881DF32E71E65D00262045 /* FitnessGoalMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DF22E71E64900262045 /* FitnessGoalMigrationService.swift */; };
 		36881DF52E736BBB00262045 /* BlockAssemblyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DF42E736BB400262045 /* BlockAssemblyService.swift */; };
@@ -191,6 +180,7 @@
 		3698E4F62C24872F0040AF60 /* ConfigurationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3698E4F52C24872F0040AF60 /* ConfigurationManager.swift */; };
 		3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3698E4F72C248EBB0040AF60 /* RegionManager.swift */; };
 		3698E4FC2C24968F0040AF60 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 3698E4FB2C24968F0040AF60 /* .gitignore */; };
+		36A7B0022F0B4C9B00A6A1B0 /* StartupCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A7B0012F0B4C9B00A6A1B0 /* StartupCoordinator.swift */; };
 		36A8518F2E56708C004E5CED /* ExerciseChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A8518E2E567083004E5CED /* ExerciseChart.swift */; };
 		36A851912E57AECF004E5CED /* ExerciseHistoryDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851902E57AEBA004E5CED /* ExerciseHistoryDataService.swift */; };
 		36A851932E58B419004E5CED /* ReplaceExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A851922E58B412004E5CED /* ReplaceExerciseView.swift */; };
@@ -320,6 +310,17 @@
 		36F2C8AC2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8AB2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift */; };
 		36F2C8AE2F9D1C7B00B4A123 /* BlockCreationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8AD2F9D1C7B00B4A123 /* BlockCreationService.swift */; };
 		36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */; };
+		36F5A0012F9C1AAB00A1B234 /* UserContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */; };
+		36F5A0032F9C1AAB00A1B234 /* RepositoryTTL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */; };
+		36F5A0052F9C1AAB00A1B234 /* ProfileRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0042F9C1AAB00A1B234 /* ProfileRepository.swift */; };
+		36F5A0072F9C1AAB00A1B234 /* SubscriptionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0062F9C1AAB00A1B234 /* SubscriptionRepository.swift */; };
+		36F5A0092F9C1AAB00A1B234 /* DayLogsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0082F9C1AAB00A1B234 /* DayLogsRepository.swift */; };
+		36F5A00B2F9C1AAB00A1B234 /* FoodFeedRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A00A2F9C1AAB00A1B234 /* FoodFeedRepository.swift */; };
+		36F5A0132F9C1AAB00A1B234 /* CombinedLogsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0122F9C1AAB00A1B234 /* CombinedLogsRepository.swift */; };
+		36F5A0152F9C1AAB00A1B234 /* MealsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0142F9C1AAB00A1B234 /* MealsRepository.swift */; };
+		36F5A0172F9C1AAB00A1B234 /* RecipesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0162F9C1AAB00A1B234 /* RecipesRepository.swift */; };
+		36F5A0192F9C1AAB00A1B234 /* SavedMealsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0182F9C1AAB00A1B234 /* SavedMealsRepository.swift */; };
+		36F5A01B2F9C1AAB00A1B234 /* UserFoodsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A01A2F9C1AAB00A1B234 /* UserFoodsRepository.swift */; };
 		36F722862DE52E2C009C1CA0 /* ScanFoodHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F722852DE52E2C009C1CA0 /* ScanFoodHelper.swift */; };
 		36F722882DE52E53009C1CA0 /* BarcodeHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F722872DE52E53009C1CA0 /* BarcodeHelper.swift */; };
 		36F7228A2DE52E60009C1CA0 /* GalleryHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F722892DE52E60009C1CA0 /* GalleryHelper.swift */; };
@@ -378,18 +379,6 @@
 		361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutProfile.swift; sourceTree = "<group>"; };
 		361FF3342E22E54600B7F68E /* DataSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSyncService.swift; sourceTree = "<group>"; };
 		361FF3362E22E56A00B7F68E /* DataLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataLayer.swift; sourceTree = "<group>"; };
-		36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserContextStore.swift; path = Pods/Core/Repositories/UserContextStore.swift; sourceTree = SOURCE_ROOT; };
-		36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RepositoryTTL.swift; path = Pods/Core/Repositories/RepositoryTTL.swift; sourceTree = SOURCE_ROOT; };
-		36F5A0042F9C1AAB00A1B234 /* ProfileRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProfileRepository.swift; path = Pods/Core/Repositories/ProfileRepository.swift; sourceTree = SOURCE_ROOT; };
-		36F5A0062F9C1AAB00A1B234 /* SubscriptionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SubscriptionRepository.swift; path = Pods/Core/Repositories/SubscriptionRepository.swift; sourceTree = SOURCE_ROOT; };
-		36F5A0082F9C1AAB00A1B234 /* DayLogsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DayLogsRepository.swift; path = Pods/Core/Repositories/DayLogsRepository.swift; sourceTree = SOURCE_ROOT; };
-		36F5A00A2F9C1AAB00A1B234 /* FoodFeedRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodFeedRepository.swift; path = Pods/Core/Repositories/FoodFeedRepository.swift; sourceTree = SOURCE_ROOT; };
-		36F5A0122F9C1AAB00A1B234 /* CombinedLogsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CombinedLogsRepository.swift; path = Pods/Core/Repositories/CombinedLogsRepository.swift; sourceTree = SOURCE_ROOT; };
-		36F5A0142F9C1AAB00A1B234 /* MealsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MealsRepository.swift; path = Pods/Core/Repositories/MealsRepository.swift; sourceTree = SOURCE_ROOT; };
-		36F5A0162F9C1AAB00A1B234 /* RecipesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecipesRepository.swift; path = Pods/Core/Repositories/RecipesRepository.swift; sourceTree = SOURCE_ROOT; };
-		36F5A0182F9C1AAB00A1B234 /* SavedMealsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SavedMealsRepository.swift; path = Pods/Core/Repositories/SavedMealsRepository.swift; sourceTree = SOURCE_ROOT; };
-		36F5A01A2F9C1AAB00A1B234 /* UserFoodsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserFoodsRepository.swift; path = Pods/Core/Repositories/UserFoodsRepository.swift; sourceTree = SOURCE_ROOT; };
-		36A7B0012F0B4C9B00A6A1B0 /* StartupCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupCoordinator.swift; sourceTree = "<group>"; };
 		361FF3382E2308F900B7F68E /* StartWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartWorkoutView.swift; sourceTree = "<group>"; };
 		361FF33A2E234F4E00B7F68E /* WeightSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightSyncService.swift; sourceTree = "<group>"; };
 		361FF33C2E26EC9E00B7F68E /* StreaksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreaksView.swift; sourceTree = "<group>"; };
@@ -530,6 +519,7 @@
 		3698E4F52C24872F0040AF60 /* ConfigurationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationManager.swift; sourceTree = "<group>"; };
 		3698E4F72C248EBB0040AF60 /* RegionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionManager.swift; sourceTree = "<group>"; };
 		3698E4FB2C24968F0040AF60 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		36A7B0012F0B4C9B00A6A1B0 /* StartupCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupCoordinator.swift; sourceTree = "<group>"; };
 		36A8518E2E567083004E5CED /* ExerciseChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseChart.swift; sourceTree = "<group>"; };
 		36A851902E57AEBA004E5CED /* ExerciseHistoryDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseHistoryDataService.swift; sourceTree = "<group>"; };
 		36A851922E58B412004E5CED /* ReplaceExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplaceExerciseView.swift; sourceTree = "<group>"; };
@@ -664,12 +654,24 @@
 		36F2C8AB2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupersetCircuitSelectionSheet.swift; sourceTree = "<group>"; };
 		36F2C8AD2F9D1C7B00B4A123 /* BlockCreationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockCreationService.swift; sourceTree = "<group>"; };
 		36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnTrendView.swift; sourceTree = "<group>"; };
+		36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserContextStore.swift; path = Pods/Core/Repositories/UserContextStore.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RepositoryTTL.swift; path = Pods/Core/Repositories/RepositoryTTL.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0042F9C1AAB00A1B234 /* ProfileRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProfileRepository.swift; path = Pods/Core/Repositories/ProfileRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0062F9C1AAB00A1B234 /* SubscriptionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SubscriptionRepository.swift; path = Pods/Core/Repositories/SubscriptionRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0082F9C1AAB00A1B234 /* DayLogsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DayLogsRepository.swift; path = Pods/Core/Repositories/DayLogsRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A00A2F9C1AAB00A1B234 /* FoodFeedRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodFeedRepository.swift; path = Pods/Core/Repositories/FoodFeedRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0122F9C1AAB00A1B234 /* CombinedLogsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CombinedLogsRepository.swift; path = Pods/Core/Repositories/CombinedLogsRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0142F9C1AAB00A1B234 /* MealsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MealsRepository.swift; path = Pods/Core/Repositories/MealsRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0162F9C1AAB00A1B234 /* RecipesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecipesRepository.swift; path = Pods/Core/Repositories/RecipesRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A0182F9C1AAB00A1B234 /* SavedMealsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SavedMealsRepository.swift; path = Pods/Core/Repositories/SavedMealsRepository.swift; sourceTree = SOURCE_ROOT; };
+		36F5A01A2F9C1AAB00A1B234 /* UserFoodsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserFoodsRepository.swift; path = Pods/Core/Repositories/UserFoodsRepository.swift; sourceTree = SOURCE_ROOT; };
 		36F722852DE52E2C009C1CA0 /* ScanFoodHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFoodHelper.swift; sourceTree = "<group>"; };
 		36F722872DE52E53009C1CA0 /* BarcodeHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeHelper.swift; sourceTree = "<group>"; };
 		36F722892DE52E60009C1CA0 /* GalleryHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryHelper.swift; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
 		63B50C70F2DA21A1E4B1519E /* Pods-pods.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pods.release.xcconfig"; path = "Target Support Files/Pods-pods/Pods-pods.release.xcconfig"; sourceTree = "<group>"; };
+		72915B93F931472588ADFD26 /* WaterUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterUnit.swift; sourceTree = "<group>"; };
 		7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Podstack.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		828AD9036235BA1CC3FDB722 /* Pods-Podstack-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.release.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
 		83EDB7BB4B1CA39393C90454 /* Pods-podsTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-podsTests.debug.xcconfig"; path = "Target Support Files/Pods-podsTests/Pods-podsTests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -738,24 +740,6 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
-		36F5A00C2F9C1AAB00A1B234 /* Repositories */ = {
-			isa = PBXGroup;
-			children = (
-				36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */,
-				36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */,
-				36F5A0042F9C1AAB00A1B234 /* ProfileRepository.swift */,
-				36F5A0062F9C1AAB00A1B234 /* SubscriptionRepository.swift */,
-				36F5A00A2F9C1AAB00A1B234 /* FoodFeedRepository.swift */,
-				36F5A0082F9C1AAB00A1B234 /* DayLogsRepository.swift */,
-				36F5A0122F9C1AAB00A1B234 /* CombinedLogsRepository.swift */,
-				36F5A0142F9C1AAB00A1B234 /* MealsRepository.swift */,
-				36F5A0162F9C1AAB00A1B234 /* RecipesRepository.swift */,
-				36F5A0182F9C1AAB00A1B234 /* SavedMealsRepository.swift */,
-				36F5A01A2F9C1AAB00A1B234 /* UserFoodsRepository.swift */,
-			);
-			path = Repositories;
-			sourceTree = "<group>";
-		};
 		361FF31B2E20617800B7F68E /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -763,6 +747,7 @@
 				36A851AA2E5E3334004E5CED /* DynamicWorkoutModels.swift */,
 				36A8519C2E5A10A0004E5CED /* ExerciseNotesData.swift */,
 				361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */,
+				72915B93F931472588ADFD26 /* WaterUnit.swift */,
 				361FF32C2E21988600B7F68E /* Equipment.swift */,
 				361FF3242E2065E400B7F68E /* Exercise.swift */,
 				361FF3222E2065B600B7F68E /* UserProfile.swift */,
@@ -1257,6 +1242,24 @@
 				36F722892DE52E60009C1CA0 /* GalleryHelper.swift */,
 			);
 			path = helperViews;
+			sourceTree = "<group>";
+		};
+		36F5A00C2F9C1AAB00A1B234 /* Repositories */ = {
+			isa = PBXGroup;
+			children = (
+				36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */,
+				36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */,
+				36F5A0042F9C1AAB00A1B234 /* ProfileRepository.swift */,
+				36F5A0062F9C1AAB00A1B234 /* SubscriptionRepository.swift */,
+				36F5A00A2F9C1AAB00A1B234 /* FoodFeedRepository.swift */,
+				36F5A0082F9C1AAB00A1B234 /* DayLogsRepository.swift */,
+				36F5A0122F9C1AAB00A1B234 /* CombinedLogsRepository.swift */,
+				36F5A0142F9C1AAB00A1B234 /* MealsRepository.swift */,
+				36F5A0162F9C1AAB00A1B234 /* RecipesRepository.swift */,
+				36F5A0182F9C1AAB00A1B234 /* SavedMealsRepository.swift */,
+				36F5A01A2F9C1AAB00A1B234 /* UserFoodsRepository.swift */,
+			);
+			path = Repositories;
 			sourceTree = "<group>";
 		};
 		A8CF5237E841CC0CB47CFC88 /* Frameworks */ = {
@@ -1765,6 +1768,7 @@
 				361FF3232E2065B900B7F68E /* UserProfile.swift in Sources */,
 				36F7228A2DE52E60009C1CA0 /* GalleryHelper.swift in Sources */,
 				361FF3332E2213E300B7F68E /* WorkoutProfile.swift in Sources */,
+				368616651F83495CAC9300B4 /* WaterUnit.swift in Sources */,
 				364A83AE2D87D210009D2620 /* CreateRecipeView.swift in Sources */,
 				36ED35ED2DDE533F00D174FB /* NameMealView.swift in Sources */,
 				36ED35B42DD7F27900D174FB /* EditWeightView.swift in Sources */,
@@ -2008,7 +2012,7 @@
 				BLOB_NAME_WESTUS = humulistoragewest;
 				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
 				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
@@ -2047,11 +2051,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.4;
+				MARKETING_VERSION = 1.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = devprofile;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = distributionNew;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
@@ -2078,7 +2082,7 @@
 				BLOB_NAME_WESTUS = humulistoragewest;
 				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
 				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
@@ -2117,11 +2121,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.4;
+				MARKETING_VERSION = 1.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = devprofile;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = distributionNew;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
