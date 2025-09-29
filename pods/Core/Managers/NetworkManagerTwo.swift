@@ -26,9 +26,9 @@ class NetworkManagerTwo {
 
     
 
-let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+// let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 //   let baseUrl = "http://192.168.1.92:8000"
-// let baseUrl = "http://172.20.10.4:8000"
+let baseUrl = "http://172.20.10.4:8000"
 // 
 
   // ### STAGING ###
@@ -56,6 +56,46 @@ let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
     struct ErrorResponse: Codable {
         let error: String
+    }
+
+    struct WorkoutProfilesResponse: Decodable {
+        let profiles: [WorkoutProfile]
+        let activeProfileId: Int?
+        let supportsMultipleWorkoutProfiles: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case profiles
+            case activeProfileId = "active_profile_id"
+            case supportsMultipleWorkoutProfiles = "supports_multiple_workout_profiles"
+        }
+    }
+
+    struct CreateWorkoutProfileResponse: Decodable {
+        let profile: WorkoutProfile
+        let profiles: [WorkoutProfile]
+        let activeProfileId: Int?
+        let supportsMultipleWorkoutProfiles: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case profile
+            case profiles
+            case activeProfileId = "active_profile_id"
+            case supportsMultipleWorkoutProfiles = "supports_multiple_workout_profiles"
+        }
+    }
+
+    struct ActivateWorkoutProfileResponse: Decodable {
+        let success: Bool
+        let profiles: [WorkoutProfile]
+        let activeProfileId: Int?
+        let supportsMultipleWorkoutProfiles: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case success
+            case profiles
+            case activeProfileId = "active_profile_id"
+            case supportsMultipleWorkoutProfiles = "supports_multiple_workout_profiles"
+        }
     }
 
     struct WorkoutListResponse: Codable {
@@ -306,6 +346,7 @@ let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
         userEmail: String,
         workoutDaysPerWeek: Int? = nil,
         restDays: [String]? = nil,
+        profileId: Int? = nil,
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
         let urlString = "\(baseUrl)/update-workout-preferences/"
@@ -316,6 +357,9 @@ let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
         var payload: [String: Any] = ["email": userEmail]
         if let workoutDaysPerWeek = workoutDaysPerWeek { payload["workout_days_per_week"] = workoutDaysPerWeek }
         if let restDays = restDays { payload["rest_days"] = restDays }
+        if let profileId = profileId ?? UserProfileService.shared.activeWorkoutProfile?.id {
+            payload["profile_id"] = profileId
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
@@ -1610,6 +1654,190 @@ let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     print("🔍 Full Response data: \(json)")
                 }
+                DispatchQueue.main.async { completion(.failure(error)) }
+            }
+        }.resume()
+    }
+
+    func fetchWorkoutProfiles(
+        email: String,
+        completion: @escaping (Result<WorkoutProfilesResponse, Error>) -> Void
+    ) {
+        guard var components = URLComponents(string: "\(baseUrl)/workout-profiles/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        components.queryItems = [URLQueryItem(name: "user_email", value: email)]
+        guard let url = components.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: errorMessage))) }
+                return
+            }
+            do {
+                let decoded = try JSONDecoder().decode(WorkoutProfilesResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(decoded)) }
+            } catch {
+                print("❌ Error decoding WorkoutProfilesResponse: \(error)")
+                DispatchQueue.main.async { completion(.failure(error)) }
+            }
+        }.resume()
+    }
+
+    func createWorkoutProfile(
+        email: String,
+        name: String,
+        makeActive: Bool = true,
+        completion: @escaping (Result<CreateWorkoutProfileResponse, Error>) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/workout-profiles/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let body: [String: Any] = [
+            "email": email,
+            "name": name,
+            "make_active": makeActive
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: errorMessage))) }
+                return
+            }
+            do {
+                let decoded = try JSONDecoder().decode(CreateWorkoutProfileResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(decoded)) }
+            } catch {
+                print("❌ Error decoding CreateWorkoutProfileResponse: \(error)")
+                DispatchQueue.main.async { completion(.failure(error)) }
+            }
+        }.resume()
+    }
+
+    func activateWorkoutProfile(
+        email: String,
+        profileId: Int,
+        completion: @escaping (Result<ActivateWorkoutProfileResponse, Error>) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/workout-profiles/\(profileId)/activate/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let body: [String: Any] = ["email": email]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: errorMessage))) }
+                return
+            }
+            do {
+                let decoded = try JSONDecoder().decode(ActivateWorkoutProfileResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(decoded)) }
+            } catch {
+                print("❌ Error decoding ActivateWorkoutProfileResponse: \(error)")
+                DispatchQueue.main.async { completion(.failure(error)) }
+            }
+        }.resume()
+    }
+
+    func deleteWorkoutProfile(
+        email: String,
+        profileId: Int,
+        completion: @escaping (Result<WorkoutProfilesResponse, Error>) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/workout-profiles/\(profileId)/delete/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let body: [String: Any] = ["email": email]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: errorMessage))) }
+                return
+            }
+            do {
+                let decoded = try JSONDecoder().decode(WorkoutProfilesResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(decoded)) }
+            } catch {
+                print("❌ Error decoding WorkoutProfilesResponse: \(error)")
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }.resume()
@@ -3105,7 +3333,7 @@ let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
     ///   - email: User's email address
     ///   - workoutData: Dictionary containing workout preference updates
     ///   - completion: Result callback indicating success or error
-    func updateWorkoutPreferences(email: String, workoutData: [String: Any], completion: @escaping (Result<Void, Error>) -> Void) {
+    func updateWorkoutPreferences(email: String, workoutData: [String: Any], profileId: Int? = nil, completion: @escaping (Result<Void, Error>) -> Void) {
         let urlString = "\(baseUrl)/update-workout-preferences/"
         
         guard let url = URL(string: urlString) else {
@@ -3120,6 +3348,11 @@ let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
         // Merge workout data into request body
         for (key, value) in workoutData {
             requestBody[key] = value
+        }
+        if requestBody["profile_id"] == nil {
+            if let profileId = profileId ?? UserProfileService.shared.activeWorkoutProfile?.id {
+                requestBody["profile_id"] = profileId
+            }
         }
         
         var request = URLRequest(url: url)

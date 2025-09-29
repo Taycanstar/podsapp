@@ -465,8 +465,10 @@ struct LogWorkoutView: View {
                 
                 // Persist to UserDefaults (WorkoutManager handles this)
                 let equipmentStrings = newEquipment.map { $0.rawValue }
-                UserDefaults.standard.set(equipmentStrings, forKey: "currentWorkoutCustomEquipment")
-                UserDefaults.standard.set(equipmentType, forKey: "currentWorkoutEquipmentType")
+                let equipmentKey = UserProfileService.shared.scopedDefaultsKey("currentWorkoutCustomEquipment")
+                let typeKey = UserProfileService.shared.scopedDefaultsKey("currentWorkoutEquipmentType")
+                UserDefaults.standard.set(equipmentStrings, forKey: equipmentKey)
+                UserDefaults.standard.set(equipmentType, forKey: typeKey)
                 
                 print("⚙️ Selected equipment: \(newEquipment.map { $0.rawValue }), type: \(equipmentType)")
                 showingEquipmentPicker = false
@@ -620,8 +622,13 @@ struct LogWorkoutView: View {
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionDate")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomMuscles")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutMuscleType")
+        UserDefaults.standard.removeObject(forKey: UserProfileService.shared.scopedDefaultsKey("currentWorkoutMuscleType"))
         UserDefaults.standard.removeObject(forKey: "currentWorkoutCustomEquipment")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutEquipmentType")
+        let equipmentKey = UserProfileService.shared.scopedDefaultsKey("currentWorkoutCustomEquipment")
+        let typeKey = UserProfileService.shared.scopedDefaultsKey("currentWorkoutEquipmentType")
+        UserDefaults.standard.removeObject(forKey: equipmentKey)
+        UserDefaults.standard.removeObject(forKey: typeKey)
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessGoal")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
         print("🗑️ Cleared workout session duration, custom muscles, custom equipment, and fitness preferences (static)")
@@ -1490,18 +1497,17 @@ private struct TodayWorkoutView: View {
     
     
     private func loadOrGenerateTodayWorkout() {
-        // Check if we have a workout for today
-        if let data = UserDefaults.standard.data(forKey: "todayWorkout_\(userEmail)"),
-           let workout = try? JSONDecoder().decode(TodayWorkout.self, from: data) {
-            
-            // Check if the workout is from today
-            if Calendar.current.isDateInToday(workout.date) {
-                workoutManager.setTodayWorkout(workout)
-                return
-            }
+        if let activeWorkout = workoutManager.currentWorkout {
+            currentWorkout = activeWorkout
+            return
         }
-        
-        // No workout for today, generate one automatically
+
+        if let cachedWorkout = workoutManager.cachedTodayWorkout() {
+            workoutManager.setTodayWorkout(cachedWorkout)
+            return
+        }
+
+        guard !workoutManager.isGeneratingWorkout else { return }
         generateTodayWorkout()
     }
     

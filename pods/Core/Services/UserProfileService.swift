@@ -11,10 +11,18 @@ import Foundation
 /// Now uses server data as primary source with UserDefaults fallback for backward compatibility
 class UserProfileService: ObservableObject {
     static let shared = UserProfileService()
-    
+
+    enum ProfileServiceError: Error {
+        case missingUserEmail
+        case missingProfileId
+    }
+
     @Published var profileData: ProfileDataResponse?
     @Published var isLoading = false
     @Published var lastUpdated: Date?
+    @Published var workoutProfiles: [WorkoutProfile] = []
+    @Published var activeWorkoutProfileId: Int?
+    @Published var supportsMultipleWorkoutProfiles = false
 
     private var lastFetchedEmail: String?
     private let refreshInterval: TimeInterval = 300
@@ -47,7 +55,19 @@ class UserProfileService: ObservableObject {
     var hasEarnedAdvanced: Bool {
         completedWorkouts >= 50
     }
-    
+
+    /// Currently selected workout profile (if server provided any)
+    var activeWorkoutProfile: WorkoutProfile? {
+        if let profile = profileData?.activeWorkoutProfile {
+            return profile
+        }
+        if let id = activeWorkoutProfileId,
+           let match = workoutProfiles.first(where: { $0.id == id }) {
+            return match
+        }
+        return workoutProfiles.first
+    }
+
     /// Record workout completion for milestone tracking
     func recordWorkoutCompletion() {
         var milestones = workoutMilestones
@@ -121,10 +141,165 @@ class UserProfileService: ObservableObject {
 
     private func handleProfileResponse(_ response: ProfileDataResponse, email: String) {
         profileData = response
+        workoutProfiles = response.workoutProfiles
+        activeWorkoutProfileId = response.activeWorkoutProfileId ?? response.workoutProfiles.first?.id
+        supportsMultipleWorkoutProfiles = response.supportsMultipleWorkoutProfiles
         lastFetchedEmail = email
         lastUpdated = Date()
         cacheProfileData(response)
         updateFromServer(serverData: response.toDictionary())
+    }
+
+    func scopedDefaultsKey(_ base: String) -> String {
+        if let id = activeWorkoutProfile?.id ?? activeWorkoutProfileId {
+            return "profile_\(id)_\(base)"
+        }
+        return base
+    }
+
+    @MainActor
+    func refreshWorkoutProfiles() async {
+        guard let email = try? currentUserEmail() else { return }
+        do {
+            let response = try await awaitFetchWorkoutProfiles(email: email)
+            applyWorkoutProfiles(response: response)
+        } catch {
+            print("❌ Failed to refresh workout profiles: \(error)")
+        }
+    }
+
+    @MainActor
+    func createWorkoutProfile(named name: String, makeActive: Bool = true) async throws {
+        let email = try currentUserEmail()
+        let response = try await awaitCreateWorkoutProfile(email: email, name: name, makeActive: makeActive)
+        applyWorkoutProfiles(profiles: response.profiles,
+                             activeId: response.activeProfileId ?? response.profile.id ?? response.profiles.first?.id,
+                             supported: response.supportsMultipleWorkoutProfiles)
+    }
+
+    @MainActor
+    func activateWorkoutProfile(profileId: Int) async throws {
+        let email = try currentUserEmail()
+        let response = try await awaitActivateWorkoutProfile(email: email, profileId: profileId)
+        applyWorkoutProfiles(profiles: response.profiles,
+                             activeId: response.activeProfileId ?? profileId,
+                             supported: response.supportsMultipleWorkoutProfiles)
+    }
+
+    @MainActor
+    func deleteWorkoutProfile(profileId: Int) async throws {
+        let email = try currentUserEmail()
+        let response = try await awaitDeleteWorkoutProfile(email: email, profileId: profileId)
+        applyWorkoutProfiles(response: response)
+    }
+
+    private func currentUserEmail() throws -> String {
+        let email = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+        guard !email.isEmpty else { throw ProfileServiceError.missingUserEmail }
+        return email
+    }
+
+    @MainActor
+    private func applyWorkoutProfiles(response: NetworkManagerTwo.WorkoutProfilesResponse) {
+        applyWorkoutProfiles(profiles: response.profiles,
+                             activeId: response.activeProfileId,
+                             supported: response.supportsMultipleWorkoutProfiles)
+    }
+
+    @MainActor
+    private func applyWorkoutProfiles(profiles: [WorkoutProfile], activeId: Int?, supported: Bool?) {
+        workoutProfiles = profiles
+        activeWorkoutProfileId = activeId ?? profiles.first?.id
+        supportsMultipleWorkoutProfiles = supported ?? supportsMultipleWorkoutProfiles || profiles.count > 1
+
+        if var data = profileData {
+            data.workoutProfiles = profiles
+            data.activeWorkoutProfileId = activeWorkoutProfileId
+            data.supportsMultipleWorkoutProfiles = supportsMultipleWorkoutProfiles
+            profileData = data
+            cacheProfileData(data)
+        }
+
+        if let active = activeWorkoutProfile,
+           let rawSplit = active.trainingSplit,
+           let preference = TrainingSplitPreference(rawValue: rawSplit) {
+            storeTrainingSplitLocally(preference, profileId: active.id, persistDefaults: true)
+        } else {
+            UserDefaults.standard.removeObject(forKey: scopedDefaultsKey("trainingSplit"))
+        }
+
+        WorkoutManager.shared.handleProfileChange()
+    }
+
+    private func awaitFetchWorkoutProfiles(email: String) async throws -> NetworkManagerTwo.WorkoutProfilesResponse {
+        try await withCheckedThrowingContinuation { continuation in
+            NetworkManagerTwo.shared.fetchWorkoutProfiles(email: email) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+
+    private func awaitCreateWorkoutProfile(email: String, name: String, makeActive: Bool) async throws -> NetworkManagerTwo.CreateWorkoutProfileResponse {
+        try await withCheckedThrowingContinuation { continuation in
+            NetworkManagerTwo.shared.createWorkoutProfile(email: email, name: name, makeActive: makeActive) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+
+    private func awaitActivateWorkoutProfile(email: String, profileId: Int) async throws -> NetworkManagerTwo.ActivateWorkoutProfileResponse {
+        try await withCheckedThrowingContinuation { continuation in
+            NetworkManagerTwo.shared.activateWorkoutProfile(email: email, profileId: profileId) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+
+    private func awaitDeleteWorkoutProfile(email: String, profileId: Int) async throws -> NetworkManagerTwo.WorkoutProfilesResponse {
+        try await withCheckedThrowingContinuation { continuation in
+            NetworkManagerTwo.shared.deleteWorkoutProfile(email: email, profileId: profileId) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+
+    @MainActor
+    private func storeTrainingSplitLocally(_ value: TrainingSplitPreference, profileId: Int? = nil, persistDefaults: Bool = true) {
+        let resolvedProfileId = profileId ?? activeWorkoutProfile?.id
+
+        if let id = resolvedProfileId,
+           let index = workoutProfiles.firstIndex(where: { $0.id == id }) {
+            var updated = workoutProfiles[index]
+            updated.trainingSplit = value.rawValue
+            workoutProfiles[index] = updated
+        }
+
+        if var data = profileData {
+            data.workoutProfiles = workoutProfiles
+            data.activeWorkoutProfileId = activeWorkoutProfileId
+            data.supportsMultipleWorkoutProfiles = supportsMultipleWorkoutProfiles
+            profileData = data
+        }
+
+        if persistDefaults {
+            UserDefaults.standard.set(value.rawValue, forKey: scopedDefaultsKey("trainingSplit"))
+        }
+    }
+
+    private func updateTrainingSplitOnServer(_ value: TrainingSplitPreference) async {
+        guard let email = try? currentUserEmail() else { return }
+        var payload: [String: Any] = [
+            "training_split": value.rawValue
+        ]
+        if let id = activeWorkoutProfile?.id {
+            payload["profile_id"] = id
+        }
+
+        NetworkManagerTwo.shared.updateWorkoutPreferences(email: email, workoutData: payload) { result in
+            if case .failure(let error) = result {
+                print("❌ Failed to update training split: \(error)")
+            }
+        }
     }
     
     /// Load cached profile data from UserDefaults
@@ -213,46 +388,69 @@ class UserProfileService: ObservableObject {
     // Fitness Profile (Prefer local override for immediate UI, server fallback)
     var fitnessGoal: FitnessGoal {
         get {
-            // Prefer local override (immediate UI feedback)
-            if let stored = UserDefaults.standard.string(forKey: "fitnessGoalType"), !stored.isEmpty {
-                return FitnessGoal.from(string: stored)
+            let scopedKey = scopedDefaultsKey("fitnessGoal")
+            if let stored = UserDefaults.standard.string(forKey: scopedKey) {
+                if !stored.isEmpty {
+                    return FitnessGoal.from(string: stored)
+                }
             }
 
-            // Server fallback
-            if let profileData = profileData,
-               let workoutProfile = profileData.workoutProfile {
-                return FitnessGoal.from(string: workoutProfile.fitnessGoal)
+            if let legacy = UserDefaults.standard.string(forKey: "fitnessGoalType") {
+                if !legacy.isEmpty {
+                    UserDefaults.standard.set(legacy, forKey: scopedKey)
+                    UserDefaults.standard.removeObject(forKey: "fitnessGoalType")
+                    return FitnessGoal.from(string: legacy)
+                } else {
+                    UserDefaults.standard.removeObject(forKey: "fitnessGoalType")
+                }
             }
 
-            // Default
+            if let workoutProfile = activeWorkoutProfile {
+                let goal = workoutProfile.fitnessGoal
+                if !goal.isEmpty {
+                    return FitnessGoal.from(string: goal)
+                }
+            }
+
             return .strength
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: "fitnessGoalType")
+            UserDefaults.standard.set(newValue.rawValue, forKey: scopedDefaultsKey("fitnessGoal"))
             publishChange()
         }
     }
     
     var experienceLevel: ExperienceLevel {
         get {
-            // Prefer local override
-            if let stored = UserDefaults.standard.string(forKey: "experienceLevel"),
+            let scopedKey = scopedDefaultsKey("experienceLevel")
+            if let stored = UserDefaults.standard.string(forKey: scopedKey),
+               !stored.isEmpty,
                let level = ExperienceLevel(rawValue: stored) {
                 return level
             }
 
-            // Server fallback
-            if let profileData = profileData,
-               let workoutProfile = profileData.workoutProfile {
-                let levelString = workoutProfile.fitnessLevel
-                return ExperienceLevel(rawValue: levelString) ?? .beginner
+            if let legacy = UserDefaults.standard.string(forKey: "experienceLevel") {
+                if !legacy.isEmpty,
+                   let level = ExperienceLevel(rawValue: legacy) {
+                    UserDefaults.standard.set(legacy, forKey: scopedKey)
+                    UserDefaults.standard.removeObject(forKey: "experienceLevel")
+                    return level
+                } else {
+                    UserDefaults.standard.removeObject(forKey: "experienceLevel")
+                }
             }
 
-            // Default
+            if let workoutProfile = activeWorkoutProfile {
+                let levelString = workoutProfile.fitnessLevel
+                if let level = ExperienceLevel(rawValue: levelString) {
+                    return level
+                }
+            }
+
             return .beginner
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: "experienceLevel")
+            UserDefaults.standard.set(newValue.rawValue, forKey: scopedDefaultsKey("experienceLevel"))
             publishChange()
         }
     }
@@ -271,40 +469,64 @@ class UserProfileService: ObservableObject {
     
     var workoutFrequency: WorkoutFrequency {
         get {
-            // Try server data first
-            if let profileData = profileData,
-               let workoutProfile = profileData.workoutProfile {
-                let freqString = workoutProfile.workoutFrequency
-                return WorkoutFrequency.from(string: freqString)
+            let scopedKey = scopedDefaultsKey("workoutFrequency")
+            if let stored = UserDefaults.standard.string(forKey: scopedKey),
+               !stored.isEmpty,
+               let frequency = WorkoutFrequency(rawValue: stored) {
+                return frequency
             }
-            
-            // Fallback to UserDefaults
-            let freqString = UserDefaults.standard.string(forKey: "workoutFrequency") ?? "3x per week"
-            return WorkoutFrequency(rawValue: freqString) ?? .three
+
+            if let legacy = UserDefaults.standard.string(forKey: "workoutFrequency") {
+                if !legacy.isEmpty,
+                   let frequency = WorkoutFrequency(rawValue: legacy) {
+                    UserDefaults.standard.set(legacy, forKey: scopedKey)
+                    UserDefaults.standard.removeObject(forKey: "workoutFrequency")
+                    return frequency
+                } else {
+                    UserDefaults.standard.removeObject(forKey: "workoutFrequency")
+                }
+            }
+
+            if let workoutProfile = activeWorkoutProfile {
+                let freqString = workoutProfile.workoutFrequency
+                if !freqString.isEmpty {
+                    return WorkoutFrequency.from(string: freqString)
+                }
+            }
+
+            return .three
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: "workoutFrequency")
+            UserDefaults.standard.set(newValue.rawValue, forKey: scopedDefaultsKey("workoutFrequency"))
         }
     }
     
     // Workout Preferences (Prefer local override for immediate UI)
     var availableTime: Int {
         get {
-            // Prefer local override
-            let local = UserDefaults.standard.integer(forKey: "availableTime")
-            if local > 0 { return local }
+            let override = UserDefaults.standard.integer(forKey: scopedDefaultsKey("availableTime"))
+            if override > 0 { return override }
 
-            // Server fallback
-            if let profileData = profileData,
-               let workoutProfile = profileData.workoutProfile {
+            if let workoutProfile = activeWorkoutProfile {
                 return workoutProfile.preferredWorkoutDuration
             }
 
-            // Default
             return 45
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: "availableTime")
+            if let activeId = activeWorkoutProfile?.id,
+               let index = workoutProfiles.firstIndex(where: { $0.id == activeId }) {
+                var updated = workoutProfiles[index]
+                updated.preferredWorkoutDuration = newValue
+                workoutProfiles[index] = updated
+                if var data = profileData {
+                    data.workoutProfiles = workoutProfiles
+                    data.activeWorkoutProfileId = activeWorkoutProfileId
+                    profileData = data
+                }
+            }
+
+            UserDefaults.standard.set(newValue, forKey: scopedDefaultsKey("availableTime"))
             publishChange()
         }
     }
@@ -314,9 +536,27 @@ class UserProfileService: ObservableObject {
 
     // Global gate: enable auto grouping (circuits/supersets)
     var circuitsAndSupersetsEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: "circuitsAndSupersetsEnabled") }
+        get {
+            let scopedKey = scopedDefaultsKey("circuitsAndSupersetsEnabled")
+            if UserDefaults.standard.object(forKey: scopedKey) != nil {
+                return UserDefaults.standard.bool(forKey: scopedKey)
+            }
+
+            if UserDefaults.standard.object(forKey: "circuitsAndSupersetsEnabled") != nil {
+                let value = UserDefaults.standard.bool(forKey: "circuitsAndSupersetsEnabled")
+                UserDefaults.standard.set(value, forKey: scopedKey)
+                UserDefaults.standard.removeObject(forKey: "circuitsAndSupersetsEnabled")
+                return value
+            }
+
+            if let workoutProfile = activeWorkoutProfile {
+                return workoutProfile.enableCircuitsAndSupersets
+            }
+
+            return false
+        }
         set {
-            UserDefaults.standard.set(newValue, forKey: "circuitsAndSupersetsEnabled")
+            UserDefaults.standard.set(newValue, forKey: scopedDefaultsKey("circuitsAndSupersetsEnabled"))
             publishChange()
         }
     }
@@ -327,13 +567,26 @@ class UserProfileService: ObservableObject {
     // Warm-up sets toggle (maps to server's enable_warmup_sets). Default ON if unset.
     var warmupSetsEnabled: Bool {
         get {
-            if UserDefaults.standard.object(forKey: "warmupSetsEnabled") == nil {
-                return true // align with server default_warmup_enabled=True
+            let scopedKey = scopedDefaultsKey("warmupSetsEnabled")
+            if UserDefaults.standard.object(forKey: scopedKey) != nil {
+                return UserDefaults.standard.bool(forKey: scopedKey)
             }
-            return UserDefaults.standard.bool(forKey: "warmupSetsEnabled")
+
+            if UserDefaults.standard.object(forKey: "warmupSetsEnabled") != nil {
+                let value = UserDefaults.standard.bool(forKey: "warmupSetsEnabled")
+                UserDefaults.standard.set(value, forKey: scopedKey)
+                UserDefaults.standard.removeObject(forKey: "warmupSetsEnabled")
+                return value
+            }
+
+            if let workoutProfile = activeWorkoutProfile {
+                return workoutProfile.enableWarmupSets
+            }
+
+            return true // align with server default
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: "warmupSetsEnabled")
+            UserDefaults.standard.set(newValue, forKey: scopedDefaultsKey("warmupSetsEnabled"))
             publishChange()
         }
     }
@@ -341,11 +594,34 @@ class UserProfileService: ObservableObject {
     // Exercise variability preference (consistency vs. variety)
     var exerciseVariability: ExerciseVariabilityPreference {
         get {
-            let raw = UserDefaults.standard.string(forKey: "exerciseVariability") ?? ExerciseVariabilityPreference.balanced.rawValue
-            return ExerciseVariabilityPreference(rawValue: raw) ?? .balanced
+            let scopedKey = scopedDefaultsKey("exerciseVariability")
+            if let stored = UserDefaults.standard.string(forKey: scopedKey),
+               !stored.isEmpty,
+               let preference = ExerciseVariabilityPreference(rawValue: stored) {
+                return preference
+            }
+
+            if let legacy = UserDefaults.standard.string(forKey: "exerciseVariability") {
+                if !legacy.isEmpty,
+                   let preference = ExerciseVariabilityPreference(rawValue: legacy) {
+                    UserDefaults.standard.set(legacy, forKey: scopedKey)
+                    UserDefaults.standard.removeObject(forKey: "exerciseVariability")
+                    return preference
+                } else {
+                    UserDefaults.standard.removeObject(forKey: "exerciseVariability")
+                }
+            }
+
+            if let workoutProfile = activeWorkoutProfile,
+               let raw = workoutProfile.exerciseVariability,
+               let preference = ExerciseVariabilityPreference(rawValue: raw) {
+                return preference
+            }
+
+            return .balanced
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: "exerciseVariability")
+            UserDefaults.standard.set(newValue.rawValue, forKey: scopedDefaultsKey("exerciseVariability"))
             publishChange()
         }
     }
@@ -353,12 +629,20 @@ class UserProfileService: ObservableObject {
     // Training split preference
     var trainingSplit: TrainingSplitPreference {
         get {
-            let raw = UserDefaults.standard.string(forKey: "trainingSplit") ?? TrainingSplitPreference.fresh.rawValue
+            if let profile = activeWorkoutProfile,
+               let raw = profile.trainingSplit,
+               let preference = TrainingSplitPreference(rawValue: raw) {
+                return preference
+            }
+            let raw = UserDefaults.standard.string(forKey: scopedDefaultsKey("trainingSplit")) ?? TrainingSplitPreference.fresh.rawValue
             return TrainingSplitPreference(rawValue: raw) ?? .fresh
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: "trainingSplit")
-            publishChange()
+            Task { @MainActor in
+                storeTrainingSplitLocally(newValue)
+                publishChange()
+            }
+            Task { await updateTrainingSplitOnServer(newValue) }
         }
     }
 
@@ -395,10 +679,8 @@ class UserProfileService: ObservableObject {
     var workoutLocation: WorkoutLocation {
         get {
             // Try server data first
-            if let profileData = profileData,
-               let workoutProfile = profileData.workoutProfile {
+            if let workoutProfile = activeWorkoutProfile {
                 let locationString = workoutProfile.workoutLocation
-                // Map Fitbod-style values to WorkoutLocation enum or use a string for display
                 return WorkoutLocation(rawValue: locationString.capitalized) ?? .gym
             }
             // Fallback to UserDefaults
@@ -411,8 +693,7 @@ class UserProfileService: ObservableObject {
     }
     // Optionally, add a computed property for display:
     var workoutLocationDisplay: String {
-        if let profileData = profileData,
-           let workoutProfile = profileData.workoutProfile {
+        if let workoutProfile = activeWorkoutProfile {
             switch workoutProfile.workoutLocation {
             case "large_gym": return "Large Gym"
             case "small_gym": return "Small Gym"
@@ -425,12 +706,11 @@ class UserProfileService: ObservableObject {
         }
         return "Gym"
     }
-    
+
     var availableEquipment: [Equipment] {
         get {
             // Try server data first
-            if let profileData = profileData,
-               let workoutProfile = profileData.workoutProfile {
+            if let workoutProfile = activeWorkoutProfile {
                 let equipmentStrings = workoutProfile.availableEquipment
                 return equipmentStrings.compactMap { Equipment(rawValue: $0) }
             }

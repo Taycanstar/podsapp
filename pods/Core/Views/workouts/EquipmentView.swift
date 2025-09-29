@@ -196,7 +196,10 @@ struct EquipmentView: View {
         }
         .onAppear {
             // Initialize selection based on current equipment type or workout location
-            if let savedEquipmentType = UserDefaults.standard.string(forKey: "currentWorkoutEquipmentType"),
+            let typeKey = UserProfileService.shared.scopedDefaultsKey("currentWorkoutEquipmentType")
+            let equipmentKey = UserProfileService.shared.scopedDefaultsKey("currentWorkoutCustomEquipment")
+
+            if let savedEquipmentType = UserDefaults.standard.string(forKey: typeKey),
                let equipmentType = EquipmentType(rawValue: savedEquipmentType) {
                 selectedEquipmentType = equipmentType
             } else {
@@ -205,7 +208,7 @@ struct EquipmentView: View {
             }
             
             // Load saved custom equipment selection if it exists
-            if let savedEquipmentStrings = UserDefaults.standard.array(forKey: "currentWorkoutCustomEquipment") as? [String] {
+            if let savedEquipmentStrings = UserDefaults.standard.array(forKey: equipmentKey) as? [String] {
                 let savedEquipment = savedEquipmentStrings.compactMap { Equipment(rawValue: $0) }
                 selectedEquipment = Set(savedEquipment)
                 print("🔄 Loaded saved equipment: \(savedEquipment.map { $0.rawValue })")

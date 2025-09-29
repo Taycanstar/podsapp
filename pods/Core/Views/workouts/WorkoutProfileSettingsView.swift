@@ -7,9 +7,31 @@ struct WorkoutProfileSettingsView: View {
     @State private var showDurationPicker = false
     @State private var durationHours: Int = 0
     @State private var durationMinutes: Int = 45
+    @State private var showNewProfileSheet = false
+    @State private var showSwitchProfileSheet = false
+    @State private var newProfileName: String = ""
+    @State private var isCreatingProfile = false
+    @State private var isSwitchingProfile = false
+    @FocusState private var isNewProfileFieldFocused: Bool
+    @State private var showDeleteProfileAlert = false
+    @State private var profilePendingDeletion: WorkoutProfile?
+    @State private var isDeletingProfile = false
+    @State private var deletionError: String?
 
     private var rowBackground: Color { Color("altcard") }
     private var iconColor: Color { colorScheme == .dark ? .white : .primary }
+
+    private var currentProfileTitle: String {
+        profile.activeWorkoutProfile?.displayName ?? "Gym Profile"
+    }
+
+    private var canSwitchProfiles: Bool {
+        profile.workoutProfiles.count > 1
+    }
+
+    private var canDeleteProfiles: Bool {
+        profile.workoutProfiles.count > 1
+    }
 
     private var formattedDuration: String {
         let total = profile.availableTime
@@ -39,10 +61,14 @@ struct WorkoutProfileSettingsView: View {
     private func sendPreferenceUpdate(_ data: [String: Any]) {
         let email = UserDefaults.standard.string(forKey: "userEmail") ?? ""
         guard !email.isEmpty else { return }
-        NetworkManagerTwo.shared.updateWorkoutPreferences(email: email, workoutData: data) { result in
+        var payload = data
+        if let profileId = profile.activeWorkoutProfile?.id {
+            payload["profile_id"] = profileId
+        }
+        NetworkManagerTwo.shared.updateWorkoutPreferences(email: email, workoutData: payload) { result in
             switch result {
             case .success:
-                Task { await DataLayer.shared.updateProfileData(data) }
+                Task { await DataLayer.shared.updateProfileData(payload) }
             case .failure(let err):
                 print("❌ Failed to update workout prefs: \(err)")
             }
@@ -51,7 +77,7 @@ struct WorkoutProfileSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
+            Section(header: Text("Workout Settings")) {
                 // Fitness Goal
                 HStack {
                     HStack(spacing: 12) {
@@ -313,7 +339,57 @@ struct WorkoutProfileSettingsView: View {
             }
         }
         .environment(\.defaultMinListRowHeight,52)
-        .navigationTitle("Workout Settings")
+        .navigationTitle(currentProfileTitle)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button {
+                        presentNewProfileSheet()
+                    } label: {
+                        Label("New Profile", systemImage: "plus")
+                    }
+                    Button {
+                        showSwitchProfileSheet = true
+                    } label: {
+                        Label("Switch Profile", systemImage: "arrow.left.arrow.right")
+                    }
+                    .disabled(!canSwitchProfiles)
+                    if let activeProfile = profile.activeWorkoutProfile {
+                        Button(role: .destructive) {
+                            profilePendingDeletion = activeProfile
+                            showDeleteProfileAlert = true
+                        } label: {
+                            Label("Delete Profile", systemImage: "trash")
+                        }
+                        .disabled(!canDeleteProfiles || isDeletingProfile)
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+            }
+        }
+        .sheet(isPresented: $showNewProfileSheet) { newProfileSheet() }
+        .sheet(isPresented: $showSwitchProfileSheet) { switchProfileSheet() }
+        .alert("Delete Gym Profile?", isPresented: $showDeleteProfileAlert, presenting: profilePendingDeletion) { pending in
+            Button("Delete", role: .destructive) {
+                Task { await deleteProfile(pending) }
+            }
+            Button("Cancel", role: .cancel) {
+                profilePendingDeletion = nil
+            }
+        } message: { pending in
+            Text("This will remove \(pending.displayName). You cannot undo this action.")
+        }
+        .alert("Unable to Delete Profile", isPresented: deletionErrorBinding) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(deletionError ?? "Please try again later.")
+        }
+        .task {
+            if profile.workoutProfiles.isEmpty {
+                await profile.refreshWorkoutProfiles()
+            }
+        }
         .onAppear { syncInitialDuration() }
         .scrollContentBackground(.hidden)
         .background(Color("altbg").ignoresSafeArea())
@@ -322,6 +398,157 @@ struct WorkoutProfileSettingsView: View {
                 sendPreferenceUpdate(["preferred_workout_duration": profile.availableTime])
             }
         }
+        .onChange(of: profile.activeWorkoutProfileId) { _ in
+            syncInitialDuration()
+        }
+    }
+}
+
+extension WorkoutProfileSettingsView {
+    private func presentNewProfileSheet() {
+        newProfileName = ""
+        showNewProfileSheet = true
+    }
+
+    @ViewBuilder
+    private func newProfileSheet() -> some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Name", text: $newProfileName)
+                        .disabled(isCreatingProfile)
+                        .submitLabel(.done)
+                        .onSubmit { Task { await createProfile() } }
+                        .focused($isNewProfileFieldFocused)
+                }
+            }
+            .formStyle(.grouped)
+            .padding(.top, -12)
+            .navigationTitle("New Gym Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        showNewProfileSheet = false
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .disabled(isCreatingProfile)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        Task { await createProfile() }
+                    } label: {
+                        if isCreatingProfile {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                    .disabled(isCreatingProfile || newProfileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.async {
+                    isNewProfileFieldFocused = true
+                }
+            }
+            .onDisappear {
+                isNewProfileFieldFocused = false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func switchProfileSheet() -> some View {
+        NavigationStack {
+            List {
+                ForEach(profile.workoutProfiles) { item in
+                    Button {
+                        Task { await switchProfile(to: item) }
+                    } label: {
+                        HStack {
+                            Text(item.displayName)
+                            .foregroundColor(.primary)
+                            Spacer()
+                            if item.id == profile.activeWorkoutProfile?.id {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                    }
+                    .disabled(isSwitchingProfile || item.id == nil || item.id == profile.activeWorkoutProfile?.id)
+                }
+            }
+            .navigationTitle("Switch Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        showSwitchProfileSheet = false
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .disabled(isSwitchingProfile)
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func createProfile() async {
+        let trimmed = newProfileName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        isCreatingProfile = true
+        defer { isCreatingProfile = false }
+        do {
+            try await profile.createWorkoutProfile(named: trimmed)
+            newProfileName = ""
+            showNewProfileSheet = false
+        } catch {
+            print("❌ Failed to create workout profile: \(error)")
+        }
+    }
+
+    @MainActor
+    private func switchProfile(to item: WorkoutProfile) async {
+        guard let identifier = item.id else { return }
+        isSwitchingProfile = true
+        defer { isSwitchingProfile = false }
+        do {
+            try await profile.activateWorkoutProfile(profileId: identifier)
+            showSwitchProfileSheet = false
+        } catch {
+            print("❌ Failed to switch workout profile: \(error)")
+        }
+    }
+
+    @MainActor
+    private func deleteProfile(_ workoutProfile: WorkoutProfile) async {
+        guard let identifier = workoutProfile.id else { return }
+        guard canDeleteProfiles else {
+            deletionError = "You must keep at least one gym profile."
+            showDeleteProfileAlert = false
+            return
+        }
+
+        isDeletingProfile = true
+        defer { isDeletingProfile = false }
+
+        do {
+            try await profile.deleteWorkoutProfile(profileId: identifier)
+            profilePendingDeletion = nil
+            showDeleteProfileAlert = false
+        } catch {
+            deletionError = error.localizedDescription
+        }
+    }
+
+    private var deletionErrorBinding: Binding<Bool> {
+        Binding(
+            get: { deletionError != nil },
+            set: { if !$0 { deletionError = nil } }
+        )
     }
 }
 
