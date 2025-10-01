@@ -50,7 +50,7 @@ struct ScheduleSelectionView: View {
         }
         .onAppear {
             viewModel.ensureDefaultSchedule()
-            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
         }
     }
 
@@ -83,10 +83,9 @@ struct ScheduleSelectionView: View {
 
     private var frequencyPickerCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-     
             HStack {
                 Text("Frequency")
-                    .font(.system(size: 16, weight: .regular))
+                    .font(.body)
                     .foregroundColor(.primary)
                 Spacer()
                 Menu {
@@ -104,16 +103,15 @@ struct ScheduleSelectionView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Text(label(for: viewModel.trainingDaysPerWeek))
-                            .font(.system(size: 16, weight: .regular))
+                            .font(.body)
                             .foregroundColor(.primary)
                         Image(systemName: "chevron.down")
                             .font(.caption)
-                            .foregroundColor(.primary)
+                            .foregroundColor(.primary.opacity(0.7))
                     }
                 }
             }
-            // .padding(.horizontal, 16)
-            // .padding(.vertical, 10)
+   
             .cornerRadius(16)
         }
         .padding()
@@ -173,7 +171,9 @@ struct ScheduleSelectionView: View {
     private var continueButton: some View {
         Button {
             viewModel.syncWorkoutSchedule()
-            viewModel.currentStep = .signup
+            viewModel.setNotificationTime(viewModel.notificationPreviewTime)
+            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            viewModel.currentStep = .enableNotifications
         } label: {
             Text("Continue")
                 .font(.headline)
@@ -214,14 +214,15 @@ struct ScheduleSelectionView: View {
             }
         }
 
-qq        ToolbarItem(placement: .principal) {
+   ToolbarItem(placement: .principal) {
             progressView
         }
 
         ToolbarItem(placement: .topBarTrailing) {
             Button("Skip") {
                 viewModel.syncWorkoutSchedule()
-                viewModel.currentStep = .signup
+                viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+                viewModel.currentStep = .enableNotifications
             }
             .font(.headline)
             .foregroundColor(.primary)

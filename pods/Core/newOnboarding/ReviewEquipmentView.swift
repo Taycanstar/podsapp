@@ -113,7 +113,7 @@ struct ReviewEquipmentView: View {
 
     private var continueButton: some View {
         Button {
-            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
             viewModel.currentStep = .workoutSchedule
         } label: {
             Text("Continue")
@@ -155,7 +155,7 @@ struct ReviewEquipmentView: View {
 
         ToolbarItem(placement: .topBarTrailing) {
             Button("Skip") {
-                viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
                 viewModel.currentStep = .workoutSchedule
             }
             .font(.headline)

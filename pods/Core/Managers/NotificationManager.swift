@@ -325,7 +325,36 @@ class NotificationManager: NSObject, ObservableObject {
             }
         }
     }
-    
+
+    /// Schedule a one-off workout plan notification
+    func scheduleWorkoutPlanNotification(after delay: TimeInterval) {
+        let identifier = "workout_plan_notification"
+
+        // Remove any pending notification with the same identifier so the latest schedule wins
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+
+        guard delay > 0 else {
+            print("⚠️ Workout plan notification delay invalid (<= 0). Skipping schedule.")
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Here's today's workout plan🏃‍♂️"
+        content.body = "Leg Day: Barbell Squats, Bulgarian Split Squats, Leg Extensions and 3 more."
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, delay), repeats: false)
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("❌ Failed to schedule workout plan notification: \(error)")
+            } else {
+                print("✅ Scheduled workout plan notification in \(delay) seconds")
+            }
+        }
+    }
+
     /// Cancel meal reminder for specific meal
     func cancelMealReminder(for meal: MealType) {
         let identifier = "meal_reminder_\(meal.rawValue)"

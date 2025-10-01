@@ -97,7 +97,7 @@ struct GymLocationView: View {
             viewModel.selectedGymLocation = option
             if option == .noEquipment {
                 viewModel.equipmentInventory.removeAll()
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 5)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
                 viewModel.currentStep = .workoutSchedule
             } else {
                 viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 5)
@@ -145,7 +145,7 @@ struct GymLocationView: View {
         
         ToolbarItem(placement: .topBarTrailing) {
             Button("Skip") {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 5)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
                 viewModel.selectedGymLocation = nil
                 viewModel.equipmentInventory.removeAll()
                 viewModel.currentStep = .workoutSchedule

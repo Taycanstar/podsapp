@@ -29,6 +29,7 @@ struct ContentView: View {
     @EnvironmentObject var homeViewModel: HomeViewModel
     @EnvironmentObject var deepLinkHandler: DeepLinkHandler
     @EnvironmentObject var subscriptionManager: SubscriptionManager
+    @EnvironmentObject var notificationManager: NotificationManager
     @State private var subscriptionStatus: String = "none"
     @State private var subscriptionPlan: String?
     @State private var subscriptionExpiresAt: Date?
@@ -62,9 +63,10 @@ struct ContentView: View {
     
     @State private var shouldNavigateToNewPod = false
     @State private var newPodId: Int?
-    
+
     @State private var isTabBarVisible: Bool = true
     @State private var hasCheckedOnboarding = false
+    @State private var didScheduleWorkoutPlanNotification = false
 
     @ObservedObject private var versionManager = VersionManager.shared
     @Environment(\.scenePhase) var scenePhase
@@ -240,6 +242,23 @@ struct ContentView: View {
             print("⚠️ ContentView appeared: Force checking onboarding status")
             forceCheckOnboarding()
             setupNotificationObservers()
+
+            guard !didScheduleWorkoutPlanNotification else { return }
+            didScheduleWorkoutPlanNotification = true
+
+            Task {
+                let alreadyAuthorized = notificationManager.authorizationStatus == .authorized
+                let granted: Bool
+
+                if alreadyAuthorized {
+                    granted = true
+                } else {
+                    granted = await notificationManager.requestPermissions()
+                }
+
+                guard granted else { return }
+                notificationManager.scheduleWorkoutPlanNotification(after: 60)
+            }
         }
         .onChange(of: selectedMeal) { _, newValue in
             print("🍽️ ContentView selectedMeal changed to: \(newValue)")

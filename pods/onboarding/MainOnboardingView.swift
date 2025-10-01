@@ -23,6 +23,8 @@ struct MainOnboardingView: View {
                 ReviewEquipmentView()
             case .workoutSchedule:
                 ScheduleSelectionView()
+            case .enableNotifications:
+                EnableNotificationsView()
             case .signup:
                 SignupView()
             case .emailVerification:

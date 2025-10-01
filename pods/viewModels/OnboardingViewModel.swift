@@ -25,6 +25,7 @@ class OnboardingViewModel: ObservableObject {
         case desiredWeight
         case gymLocation
         case workoutSchedule
+        case enableNotifications
         case reviewEquipment
         case signup
         case emailVerification
@@ -210,9 +211,11 @@ class OnboardingViewModel: ObservableObject {
     @Published var trainingDaysPerWeek: Int = 3
     @Published var selectedTrainingDays: Set<Weekday> = []
     @Published var preferredWorkoutDays: [String] = []
+    @Published var notificationPreviewTime: Date = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()
+    @Published var notificationPreviewTimeISO8601: String = ""
     @Published var newOnboardingStepIndex: Int = 1
 
-    let newOnboardingTotalSteps: Int = 6
+    let newOnboardingTotalSteps: Int = 7
 
     var newOnboardingProgress: Double {
         guard newOnboardingTotalSteps > 0 else { return 0 }
@@ -248,6 +251,16 @@ class OnboardingViewModel: ObservableObject {
     }
 
     func ensureDefaultSchedule() {
+        if !preferredWorkoutDays.isEmpty {
+            let restoredDays = Set(preferredWorkoutDays.compactMap { Weekday(rawValue: $0) })
+            if !restoredDays.isEmpty {
+                selectedTrainingDays = restoredDays
+                trainingDaysPerWeek = restoredDays.count
+                syncWorkoutSchedule()
+                return
+            }
+        }
+
         if selectedTrainingDays.isEmpty {
             setTrainingDaysPerWeek(trainingDaysPerWeek, autoSelectDays: true)
         } else {
@@ -285,6 +298,13 @@ class OnboardingViewModel: ObservableObject {
         preferredWorkoutDays = selectedTrainingDays
             .sorted { $0.sortOrder < $1.sortOrder }
             .map { $0.rawValue }
+    }
+
+    func setNotificationTime(_ date: Date) {
+        notificationPreviewTime = date
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        notificationPreviewTimeISO8601 = formatter.string(from: date)
     }
 
     enum Weekday: String, CaseIterable, Identifiable {
@@ -404,6 +424,8 @@ class OnboardingViewModel: ObservableObject {
             // Save the default value
             UserDefaults.standard.set(true, forKey: "isStreakVisible")
         }
+
+        setNotificationTime(notificationPreviewTime)
     }
 
     func bindRepositories(for email: String) {
