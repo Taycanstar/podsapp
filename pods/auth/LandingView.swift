@@ -6,12 +6,18 @@ import Mixpanel
 
 struct LandingView: View {
     // Background color changed to black
-    let backgroundColor = Color.black
+    private let backgroundColor = Color.black
+    private let showEmailOption: Bool
     @Binding var isAuthenticated: Bool
     @State private var showSignupView = false
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var currentNonce: String?
     @State private var idTokenString: String?
+
+    init(isAuthenticated: Binding<Bool>, showEmailOption: Bool = true) {
+        self._isAuthenticated = isAuthenticated
+        self.showEmailOption = showEmailOption
+    }
 
     var body: some View {
         NavigationStack {
@@ -31,15 +37,15 @@ struct LandingView: View {
                     // Bottom card with buttons, corrected for padding and edge issues
                     VStack(spacing: 10) { // Increased spacing for visual appeal
                         SignInWithAppleButton(
-                                                    .continue,
-                                                    onRequest: configureAppleSignIn,
-                                                    onCompletion: handleAppleSignIn
+                            .signIn,
+                            onRequest: configureAppleSignIn,
+                            onCompletion: handleAppleSignIn
+                        )
+                        .signInWithAppleButtonStyle(.white)
+                        .frame(height: 56)
+                        .frame(maxWidth: .infinity)
+                        .cornerRadius(36)
 
-                                                )
-                                                
-                        .frame(height: 50)
-                        .cornerRadius(10)
-                        
                         Button(action: {
                             // Handle Google sign-in
                             handleGoogleSignIn()
@@ -50,41 +56,48 @@ struct LandingView: View {
                                     .aspectRatio(contentMode: .fit)
                                     .frame(height: 20) // Adjust based on your design needs
                                 
-                                Text("Continue with Google")
-                                    .foregroundColor(.black) // Set text color
+                                Text("Sign in with Google")
+                                .font(.system(size: 21))
+                                .fontWeight(.medium)
                             }
                         }
                         .buttonStyle(AuthenticationButtonStyle())
                         
                         
+                        if showEmailOption {
+                            Button(action: {
+                                viewModel.currentStep = .signup
+                            }) {
+                                HStack {
+                                    Image(systemName: "envelope.fill") // Apple's envelope icon
+                                        .font(.system(size: 18)) // Adjust the size as needed
+                                    
+                                    Text("Sign up with Email")
+                                    .font(.system(size: 21))
+                                    .fontWeight(.medium)
+                                }
+                            }
+                            .buttonStyle(AuthenticationButtonStyle())
+                        }
+
                         Button(action: {
-
-                            viewModel.currentStep = .signup
-                        }) {
-                            HStack {
-                                Image(systemName: "envelope.fill") // Apple's envelope icon
-                                    .font(.system(size: 18)) // Adjust the size as needed
-                                
-                                Text("Continue with Email")
-                                    .foregroundColor(.black) // Set text color
-                            }
-                        }
-
-                                   
-                        .buttonStyle(AuthenticationButtonStyle())
-                        
-                        
-                        
-                        Button("Login") {
                             // Handle Login
                             viewModel.currentStep = .login
+                        }) {
+                            HStack {
+                                Image(systemName: "envelope.fill")
+                                    .font(.system(size: 18))
+                                Text("Sign in with Email")
+                                  .font(.system(size: 21))
+                                  .fontWeight(.medium)
+                            }
                         }
                         .buttonStyle(AuthenticationButtonStyle())
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 40)
-                    .padding(.top, 25)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 48)
+                    .padding(.bottom, 72)
                     .background(Color.white.cornerRadius(25, corners: [.topLeft, .topRight]))
                     //                .shadow(radius: 10)
                 }
@@ -424,11 +437,13 @@ struct LandingView: View {
 struct AuthenticationButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .font(.headline)
+            .fontWeight(.semibold)
             .frame(maxWidth: .infinity)
             .foregroundColor(.black)
-            .padding()
-            .background(Color.gray.opacity(0.2))
-            .cornerRadius(10)
+            .padding(.vertical, 16)
+            .background(Color.gray.opacity(configuration.isPressed ? 0.3 : 0.2))
+            .cornerRadius(36)
     }
 }
 
@@ -437,5 +452,6 @@ struct AuthenticationButtonStyle: ButtonStyle {
 struct LandingView_Previews: PreviewProvider {
     static var previews: some View {
         LandingView(isAuthenticated: .constant(false))
+            .environmentObject(OnboardingViewModel())
     }
 }

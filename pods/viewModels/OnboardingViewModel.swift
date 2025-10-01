@@ -20,12 +20,99 @@ class OnboardingViewModel: ObservableObject {
     // Original enum for core navigation states
     enum OnboardingStep {
         case landing
+        case fitnessGoal
+        case strengthExperience
+        case desiredWeight
+        case gymLocation
+        case workoutSchedule
+        case reviewEquipment
         case signup
         case emailVerification
         case info
         case gender
         case welcome
         case login
+    }
+
+    enum FitnessGoalOption: String, CaseIterable, Identifiable {
+        case liftMoreWeight = "Lift more weight"
+        case gainMuscle = "Gain muscle"
+        case leanAndToned = "Get lean and toned"
+        case loseWeight = "Lose weight"
+
+        var id: String { rawValue }
+
+        var iconName: String {
+            switch self {
+            case .liftMoreWeight:
+                return "figure.strengthtraining.traditional"
+            case .gainMuscle:
+                return "bolt.heart"
+            case .leanAndToned:
+                return "figure.cooldown"
+            case .loseWeight:
+                return "scalemass"
+            }
+        }
+    }
+
+    enum StrengthExperienceOption: String, CaseIterable, Identifiable {
+        case lessThanYear = "Less than a year"
+        case oneToTwoYears = "1-2 years"
+        case twoToFourYears = "2-4 years"
+        case fourPlusYears = "4+ years"
+
+        var id: String { rawValue }
+
+        var experienceLevel: ExperienceLevel {
+            switch self {
+            case .lessThanYear:
+                return .beginner
+            case .oneToTwoYears, .twoToFourYears:
+                return .intermediate
+            case .fourPlusYears:
+                return .advanced
+            }
+        }
+    }
+
+    enum GymLocationOption: String, CaseIterable, Identifiable {
+        case largeGym
+        case smallGym
+        case garageGym
+        case atHome
+        case noEquipment
+        case custom
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .largeGym: return "Large Gym"
+            case .smallGym: return "Small Gym"
+            case .garageGym: return "Garage Gym"
+            case .atHome: return "At Home"
+            case .noEquipment: return "No Equipment"
+            case .custom: return "Custom"
+            }
+        }
+
+        var description: String {
+            switch self {
+            case .largeGym:
+                return "Full fitness clubs with wide variety of equipment."
+            case .smallGym:
+                return "Compact gyms with essential equipment."
+            case .garageGym:
+                return "Dumbbells, squat rack, barbells and more."
+            case .atHome:
+                return "Bands, dumbbells, and minimum equipment."
+            case .noEquipment:
+                return "Bodyweight exercises only."
+            case .custom:
+                return "Create your equipment list from the ground up."
+            }
+        }
     }
     
     // Enum defining all detailed onboarding steps in order
@@ -111,6 +198,114 @@ class OnboardingViewModel: ObservableObject {
     @Published var profileInitial: String = ""
     @Published var profileColor: String = ""
     @Published var userId: Int?
+    @Published var selectedFitnessGoal: FitnessGoalOption?
+    @Published var selectedStrengthExperience: StrengthExperienceOption?
+    @Published var desiredWeight: Double?
+    @Published var selectedGymLocation: GymLocationOption? {
+        didSet {
+            equipmentInventory = equipmentForGymLocation(selectedGymLocation)
+        }
+    }
+    @Published var equipmentInventory: Set<Equipment> = []
+    @Published var trainingDaysPerWeek: Int = 3
+    @Published var selectedTrainingDays: Set<Weekday> = []
+    @Published var preferredWorkoutDays: [String] = []
+    @Published var newOnboardingStepIndex: Int = 1
+
+    let newOnboardingTotalSteps: Int = 6
+
+    var newOnboardingProgress: Double {
+        guard newOnboardingTotalSteps > 0 else { return 0 }
+        return min(max(Double(newOnboardingStepIndex) / Double(newOnboardingTotalSteps), 0), 1)
+    }
+
+    var strengthExperienceLevel: ExperienceLevel? {
+        selectedStrengthExperience?.experienceLevel
+    }
+
+    func equipmentForGymLocation(_ location: GymLocationOption?) -> Set<Equipment> {
+        guard let location = location else {
+            return equipmentInventory
+        }
+
+        let list: [Equipment]
+        switch location {
+        case .largeGym:
+            list = Equipment.allCases.filter { $0 != .bodyWeight }
+        case .smallGym:
+            list = EquipmentView.EquipmentType.smallGym.equipmentList
+        case .garageGym:
+            list = EquipmentView.EquipmentType.garageGym.equipmentList
+        case .atHome:
+            list = EquipmentView.EquipmentType.atHome.equipmentList
+        case .noEquipment:
+            list = []
+        case .custom:
+            list = Array(equipmentInventory)
+        }
+
+        return Set(list)
+    }
+
+    func ensureDefaultSchedule() {
+        if selectedTrainingDays.isEmpty {
+            setTrainingDaysPerWeek(trainingDaysPerWeek, autoSelectDays: true)
+        } else {
+            syncWorkoutSchedule()
+        }
+    }
+
+    func setTrainingDaysPerWeek(_ days: Int, autoSelectDays: Bool = true) {
+        let clamped = min(max(days, 1), Weekday.allCases.count)
+        trainingDaysPerWeek = clamped
+        if autoSelectDays {
+            selectedTrainingDays = Set(Weekday.allCases.prefix(clamped))
+        }
+        syncWorkoutSchedule()
+    }
+
+    func toggleTrainingDay(_ day: Weekday) {
+        if selectedTrainingDays.contains(day) {
+            selectedTrainingDays.remove(day)
+        } else {
+            selectedTrainingDays.insert(day)
+        }
+
+        if !selectedTrainingDays.isEmpty {
+            trainingDaysPerWeek = selectedTrainingDays.count
+        }
+
+        syncWorkoutSchedule()
+    }
+
+    func syncWorkoutSchedule() {
+        let effectiveCount = selectedTrainingDays.isEmpty ? trainingDaysPerWeek : selectedTrainingDays.count
+        let normalized = min(max(effectiveCount, 1), Weekday.allCases.count)
+        workoutFrequency = String(normalized)
+        preferredWorkoutDays = selectedTrainingDays
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map { $0.rawValue }
+    }
+
+    enum Weekday: String, CaseIterable, Identifiable {
+        case sunday = "Sunday"
+        case monday = "Monday"
+        case tuesday = "Tuesday"
+        case wednesday = "Wednesday"
+        case thursday = "Thursday"
+        case friday = "Friday"
+        case saturday = "Saturday"
+
+        var id: String { rawValue }
+
+        var shortLabel: String {
+            String(rawValue.prefix(3))
+        }
+
+        var sortOrder: Int {
+            Self.allCases.firstIndex(of: self) ?? 0
+        }
+    }
     
     // Food container visibility control
     @Published var isShowingFoodContainer: Bool = false

@@ -59,11 +59,11 @@ class NetworkManager {
  
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 //   let baseUrl = "http://192.168.1.92:8000"  
-    let baseUrl = "http://172.20.10.4:8000" 
+    // let baseUrl = "http://172.20.10.4:8000" 
 
 
     // ### STAGING ###
-    // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+    let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
 
 
     func determineUserLocation() {
@@ -5609,7 +5609,7 @@ func createMeal(
         
         // Print raw response for debugging
         if let responseString = String(data: data, encoding: .utf8) {
-            print("📥 CREATE MEAL RESPONSE:")
+
             print(responseString)
         }
         
@@ -5623,11 +5623,11 @@ func createMeal(
                 let dateString = try container.decode(String.self)
                 
                 // Debug the date string we're trying to parse
-                print("🔎 Attempting to decode date string: '\(dateString)'")
+            
                 
                 // Handle empty strings
                 if dateString.isEmpty {
-                    print("⚠️ Empty date string found, using current date")
+
                     return Date()
                 }
                 
@@ -5636,14 +5636,14 @@ func createMeal(
                 
                 // Standard ISO8601
                 if let date = iso8601.date(from: dateString) {
-                    print("✅ Successfully decoded with standard ISO8601: '\(dateString)'")
+     
                     return date
                 }
                 
                 // With fractional seconds
                 iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                 if let date = iso8601.date(from: dateString) {
-                    print("✅ Successfully decoded with ISO8601 + fractional seconds: '\(dateString)'")
+
                     return date
                 }
                 
@@ -6222,9 +6222,7 @@ func updateMealWithFoods(
             print("🔄 Attempting to decode response as Meal")
             // Attempt to decode as Meal
             let meal = try decoder.decode(Meal.self, from: data)
-            print("✅ Successfully decoded updated meal: \(meal.title) (ID: \(meal.id))")
-            print("   - Meal properties: calories=\(meal.totalCalories ?? 0), protein=\(meal.totalProtein ?? 0)")
-            print("   - Meal items count: \(meal.mealItems.count)")
+      
             completion(.success(meal))
         } catch {
             print("❌ Detailed decoding error in updateMealWithFoods:")
@@ -6470,7 +6468,7 @@ func getRecipes(userEmail: String, page: Int = 1, completion: @escaping (Result<
             
             let recipesResponse = try decoder.decode(RecipesResponse.self, from: fixedData)
             
-            print("✅ Successfully decoded \(recipesResponse.recipes.count) recipes")
+
             completion(.success(recipesResponse))
         } catch {
             print("❌ Decoding error when fetching recipes: \(error)")
@@ -6690,14 +6688,14 @@ func createRecipe(
                     
                     // Standard ISO8601
                     if let date = iso8601.date(from: dateString) {
-                        print("✅ Successfully decoded with standard ISO8601: '\(dateString)'")
+
                         return date
                     }
                     
                     // With fractional seconds
                     iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                     if let date = iso8601.date(from: dateString) {
-                        print("✅ Successfully decoded with ISO8601 + fractional seconds: '\(dateString)'")
+
                         return date
                     }
                     
@@ -6718,7 +6716,7 @@ func createRecipe(
                     for format in formats {
                         dateFormatter.dateFormat = format
                         if let date = dateFormatter.date(from: dateString) {
-                            print("✅ Successfully decoded with format '\(format)': '\(dateString)'")
+
                             return date
                         }
                     }
@@ -6830,7 +6828,7 @@ func logRecipe(
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             decoder.dateDecodingStrategy = .iso8601
             let loggedRecipe = try decoder.decode(LoggedRecipe.self, from: data)
-            print("✅ Successfully decoded LoggedRecipe with ID: \(loggedRecipe.recipeLogId)")
+
             completion(.success(loggedRecipe))
         } catch let decodingError {
             print("❌ Decoding error: \(decodingError)")

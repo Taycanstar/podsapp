@@ -282,16 +282,13 @@ struct ContentView: View {
                 print("🔄 ContentView: User authenticated - fetching initial data and checking state")
                 fetchInitialPods()
 
-                // Force check authentication state to ensure proper navigation
+     
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     print("🔄 ContentView: Running delayed state check after authentication")
                     self.forceCheckOnboarding()
                 }
             }
         }
-//        .sheet(isPresented: $showTourView) {
-//            TourView(isTourViewPresented: $showTourView)
-//        }
         .alert("Stay on Track", isPresented: $showBiWeeklyNotificationAlert) {
             Button("Enable in Settings") {
                 if let settingsURL = URL(string: UIApplication.openSettingsURLString) {

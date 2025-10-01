@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct UpdateWeight: View {
     @Environment(\.dismiss) var dismiss
@@ -136,10 +137,17 @@ struct WeightRulerView2: View {
     var body: some View {
         GeometryReader { geometry in
             let totalSteps = Int((range.upperBound - range.lowerBound) / step)
-            let majorStepCount = Int((1.0 / step).rounded())
-            let halfStepCount = Int((0.5 / step).rounded())
             let centerX = geometry.size.width / 2
-            let epsilon = step / 2
+            let alignToCurrentWeight: () -> Void = {
+                let rawIndex = (selectedWeight - range.lowerBound) / step
+                let roundedIndex = Double(round(rawIndex))
+                let clampedIndex = min(max(roundedIndex, 0), Double(totalSteps))
+                let weight = range.lowerBound + clampedIndex * step
+                selectedWeight = (weight * 10).rounded() / 10
+                baseOffset = -CGFloat(clampedIndex) * tickSpacing + centerX
+                dragOffset = 0
+            }
+
             ZStack {
                 // Ruler ticks
                 HStack(spacing: tickSpacing) {
@@ -183,11 +191,15 @@ struct WeightRulerView2: View {
             .gesture(
                 DragGesture()
                     .onChanged { g in
-                        dragOffset = g.translation.width
-                        let rawIndex = -(baseOffset + dragOffset - centerX) / tickSpacing
+                        let proposedOffset = baseOffset + g.translation.width
+                        let rawIndex = -(proposedOffset - centerX) / tickSpacing
                         let clamped = min(max(rawIndex, 0), CGFloat(totalSteps))
                         let roundedIndex = round(clamped)
-                        selectedWeight = range.lowerBound + Double(roundedIndex) * step
+                        let snappedOffset = -roundedIndex * tickSpacing + centerX
+                        dragOffset = snappedOffset - baseOffset
+
+                        let weight = range.lowerBound + Double(roundedIndex) * step
+                        selectedWeight = (weight * 10).rounded() / 10
 
                         let currentIndex = Int(roundedIndex)
                         if currentIndex != lastHapticIndex {
@@ -202,16 +214,12 @@ struct WeightRulerView2: View {
                         }
                     }
                     .onEnded { _ in
-                        let idx = CGFloat((selectedWeight - range.lowerBound) / step)
-                        let newBase = -idx * tickSpacing + centerX
-                        baseOffset = newBase
-                        dragOffset = 0
+                        alignToCurrentWeight()
                         lastHapticIndex = -1
                     }
             )
             .onAppear {
-                let idx = CGFloat((selectedWeight - range.lowerBound) / step)
-                baseOffset = -idx * tickSpacing + centerX
+                alignToCurrentWeight()
             }
         }
     }

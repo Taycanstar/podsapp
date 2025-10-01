@@ -28,11 +28,11 @@ class NetworkManagerTwo {
 
 // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 //   let baseUrl = "http://192.168.1.92:8000"
-let baseUrl = "http://172.20.10.4:8000"
+// let baseUrl = "http://172.20.10.4:8000"
 // 
 
   // ### STAGING ###
-    // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+    let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
 
     // Network errors - scoped to NetworkManagerTwo
     enum NetworkError: LocalizedError {
@@ -1050,14 +1050,14 @@ let baseUrl = "http://172.20.10.4:8000"
                     
                     // Standard ISO8601
                     if let date = iso8601.date(from: dateString) {
-                        print("✅ Successfully decoded with standard ISO8601: '\(dateString)'")
+
                         return date
                     }
                     
                     // With fractional seconds
                     iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                     if let date = iso8601.date(from: dateString) {
-                        print("✅ Successfully decoded with ISO8601 + fractional seconds: '\(dateString)'")
+
                         return date
                     }
                     

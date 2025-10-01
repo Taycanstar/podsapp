@@ -92,6 +92,48 @@ enum Equipment: String, CaseIterable {
     var description: String {
         return self.rawValue
     }
+
+    var imageAssetName: String {
+        switch self {
+        case .barbells: return "barbells"
+        case .dumbbells: return "dumbbells"
+        case .cable: return "crossovercable"
+        case .smithMachine: return "smith"
+        case .hammerstrengthMachine: return "hammerstrength"
+        case .kettlebells: return "kbells"
+        case .resistanceBands: return "handlebands"
+        case .stabilityBall: return "swissball"
+        case .battleRopes: return "battleropes"
+        case .ezBar: return "ezbar"
+        case .bosuBalanceTrainer: return "bosu"
+        case .sled: return "sled"
+        case .medicineBalls: return "medballs"
+        case .bodyWeight: return ""
+        case .flatBench: return "flatbench"
+        case .declineBench: return "declinebench"
+        case .preacherCurlBench: return "preachercurlmachine"
+        case .inclineBench: return "inclinebench"
+        case .latPulldownCable: return "latpulldown"
+        case .legExtensionMachine: return "legextmachine"
+        case .legCurlMachine: return "legcurlmachine"
+        case .calfRaiseMachine: return "calfraisesmachine"
+        case .rowMachine: return "seatedrow"
+        case .legPress: return "legpress"
+        case .pullupBar: return "pullupbar"
+        case .dipBar: return "dipbar"
+        case .squatRack: return "squatrack"
+        case .box: return "box"
+        case .platforms: return "platforms"
+        case .hackSquatMachine: return "hacksquat"
+        case .shoulderPressMachine: return "shoulderpress"
+        case .tricepsExtensionMachine: return "tricepext"
+        case .bicepsCurlMachine: return "bicepscurlmachine"
+        case .abCrunchMachine: return "abcrunch"
+        case .preacherCurlMachine: return "preachercurlmachine"
+        case .pvc: return "pvc"
+        case .rings: return "rrings"
+        }
+    }
 }
 
 // MARK: - Workout Location

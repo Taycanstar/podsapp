@@ -12,6 +12,7 @@ struct NotificationSettingsView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.isTabBarVisible) var isTabBarVisible
     @StateObject private var notificationManager = NotificationManager.shared
+    @StateObject private var mealReminderService = MealReminderService.shared
     
     // Quiet hours settings
     @AppStorage("quietHoursEnabled") private var quietHoursEnabled: Bool = true
@@ -47,6 +48,9 @@ struct NotificationSettingsView: View {
                     // Activity Notifications Section
                     activityNotificationsSection
                     
+                    // Meal Reminders Section
+                    mealRemindersSection
+                    
                     // Quiet Hours Section
                     quietHoursSection
                 }
@@ -71,8 +75,8 @@ struct NotificationSettingsView: View {
         }
     }
     
-    
-    
+
+
     // MARK: - Activity Notifications Section
     
     private var activityNotificationsSection: some View {
@@ -96,6 +100,78 @@ struct NotificationSettingsView: View {
             }
             .padding(.vertical, 4)
         } 
+    }
+
+    // MARK: - Meal Reminders Section
+
+    private var mealRemindersSection: some View {
+        Section {
+            if !isNotificationsAuthorized {
+                Text("Enable notifications to customize meal reminders.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 4)
+            }
+
+            mealReminderRow(
+                title: "Breakfast",
+                icon: "sunrise.fill",
+                isOn: MealReminderService.getBreakfastEnabledBinding(),
+                time: MealReminderService.getBreakfastTimeBinding()
+            )
+            .disabled(!isNotificationsAuthorized)
+            .opacity(isNotificationsAuthorized ? 1 : 0.5)
+
+            mealReminderRow(
+                title: "Lunch",
+                icon: "fork.knife",
+                isOn: MealReminderService.getLunchEnabledBinding(),
+                time: MealReminderService.getLunchTimeBinding()
+            )
+            .disabled(!isNotificationsAuthorized)
+            .opacity(isNotificationsAuthorized ? 1 : 0.5)
+
+            mealReminderRow(
+                title: "Dinner",
+                icon: "moon.stars.fill",
+                isOn: MealReminderService.getDinnerEnabledBinding(),
+                time: MealReminderService.getDinnerTimeBinding()
+            )
+            .disabled(!isNotificationsAuthorized)
+            .opacity(isNotificationsAuthorized ? 1 : 0.5)
+        } header: {
+            Text("Meal Reminders")
+        }
+    }
+
+    private func mealReminderRow(
+        title: String,
+        icon: String,
+        isOn: Binding<Bool>,
+        time: Binding<Date>
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+     
+                Toggle(isOn: isOn) {
+                    Text(title)
+                        .font(.subheadline)
+                        .foregroundColor(textColor)
+                }
+           
+          
+
+            if isOn.wrappedValue {
+                DatePicker(
+                    "Reminder Time",
+                    selection: time,
+                    displayedComponents: .hourAndMinute
+                )
+                .labelsHidden()
+                .datePickerStyle(.compact)
+                .padding(.horizontal)
+            }
+        }
+        .padding(.vertical, 4)
     }
     
     // MARK: - Quiet Hours Section
@@ -199,10 +275,10 @@ struct NotificationSettingsView: View {
     // MARK: - Settings Button Section
     
     private var settingsButtonSection: some View {
-        Button(action: openNotificationSettings) {
+        Button(action: handleNotificationButtonTap) {
             HStack {
                 Spacer()
-                Text(notificationManager.authorizationStatus == .authorized ? "Notification Settings" : "Enable Notifications")
+                Text(notificationButtonTitle)
                     .foregroundColor(.white)
                     .fontWeight(.medium)
                 Spacer()
@@ -216,10 +292,32 @@ struct NotificationSettingsView: View {
         .padding(.vertical, 8)
     }
     
-    private func openNotificationSettings() {
-        if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(settingsURL)
+    private func handleNotificationButtonTap() {
+        switch notificationManager.authorizationStatus {
+        case .notDetermined:
+            Task {
+                let granted = await notificationManager.requestPermissions()
+                if granted {
+                    await MainActor.run {
+                        notificationManager.setupNotificationCategories()
+                        mealReminderService.enableAllMealReminders()
+                        mealReminderService.refreshAllReminders()
+                        notificationManager.checkAuthorizationStatus()
+                    }
+                } else {
+                    await MainActor.run {
+                        notificationManager.checkAuthorizationStatus()
+                    }
+                }
+            }
+        default:
+            openSystemNotificationSettings()
         }
+    }
+
+    private func openSystemNotificationSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(settingsURL)
     }
     
     // MARK: - Computed Properties
@@ -230,6 +328,21 @@ struct NotificationSettingsView: View {
     
     private var textColor: Color {
         colorScheme == .dark ? .white : .black
+    }
+
+    private var isNotificationsAuthorized: Bool {
+        notificationManager.authorizationStatus == .authorized
+    }
+
+    private var notificationButtonTitle: String {
+        switch notificationManager.authorizationStatus {
+        case .authorized:
+            return "Open System Settings"
+        case .denied:
+            return "Enable in Settings"
+        default:
+            return "Enable Notifications"
+        }
     }
 }
 
@@ -246,4 +359,3 @@ extension Color {
         NotificationSettingsView()
     }
 }
-

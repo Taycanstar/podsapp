@@ -70,8 +70,8 @@ class MealReminderService: ObservableObject {
         // Initialize time properties with default values first
         self.breakfastTime = Calendar.current.date(from: DateComponents(hour: 8, minute: 0)) ?? Date()
         self.lunchTime = Calendar.current.date(from: DateComponents(hour: 12, minute: 0)) ?? Date()
-        self.dinnerTime = Calendar.current.date(from: DateComponents(hour: 19, minute: 0)) ?? Date()
-        
+        self.dinnerTime = Calendar.current.date(from: DateComponents(hour: 18, minute: 0)) ?? Date()
+
         // Load saved preferences - but ALWAYS default to true (meal reminders should always be on)
         let shouldDefaultToEnabled = true // Always enable meal reminders - if permissions denied, they won't show anyway
         self.isBreakfastEnabled = UserDefaults.standard.object(forKey: breakfastEnabledKey) != nil ? UserDefaults.standard.bool(forKey: breakfastEnabledKey) : shouldDefaultToEnabled
@@ -89,11 +89,16 @@ class MealReminderService: ObservableObject {
             self.dinnerTime = savedDinnerTime
         }
         
+        // React to notification authorization changes before scheduling anything
+        observeAuthorizationStatus()
+
         // Setup auto-tuning timer (weekly)
         setupAutoTuning()
-        
-        // Schedule existing reminders
-        scheduleAllReminders()
+
+        // If authorization is already known and granted, schedule immediately
+        if notificationManager.authorizationStatus == .authorized {
+            scheduleAllReminders()
+        }
     }
     
     // MARK: - Public Methods
@@ -133,9 +138,9 @@ class MealReminderService: ObservableObject {
         case .breakfast:
             return calendar.date(bySettingHour: 8, minute: 0, second: 0, of: today) ?? today
         case .lunch:
-            return calendar.date(bySettingHour: 13, minute: 0, second: 0, of: today) ?? today
+            return calendar.date(bySettingHour: 12, minute: 0, second: 0, of: today) ?? today
         case .dinner:
-            return calendar.date(bySettingHour: 19, minute: 0, second: 0, of: today) ?? today
+            return calendar.date(bySettingHour: 18, minute: 0, second: 0, of: today) ?? today
         }
     }
     
@@ -176,6 +181,30 @@ class MealReminderService: ObservableObject {
         updateMealReminder(.breakfast)
         updateMealReminder(.lunch)
         updateMealReminder(.dinner)
+    }
+
+    private func observeAuthorizationStatus() {
+        notificationManager.$authorizationStatus
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+                guard let self = self else { return }
+
+                switch status {
+                case .authorized:
+                    self.scheduleAllReminders()
+                case .denied:
+                    self.cancelAllReminders()
+                default:
+                    break
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private func cancelAllReminders() {
+        MealType.allCases.forEach { meal in
+            notificationManager.cancelMealReminder(for: meal)
+        }
     }
     
     private func updateMealReminder(_ meal: MealType) {
@@ -414,4 +443,3 @@ extension MealReminderService {
         )
     }
 }
-

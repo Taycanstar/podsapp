@@ -10,7 +10,19 @@ struct MainOnboardingView: View {
         ZStack {
             switch viewModel.currentStep {
             case .landing:
-                LandingView(isAuthenticated: $isAuthenticated)
+                StartupView(isAuthenticated: $isAuthenticated)
+            case .fitnessGoal:
+                FitnessGoalSelectionView()
+            case .strengthExperience:
+                StrengthExperienceView()
+            case .desiredWeight:
+                DesiredWeightSelectionView()
+            case .gymLocation:
+                GymLocationView()
+            case .reviewEquipment:
+                ReviewEquipmentView()
+            case .workoutSchedule:
+                ScheduleSelectionView()
             case .signup:
                 SignupView()
             case .emailVerification:
@@ -76,8 +88,3 @@ struct MainOnboardingView: View {
         }
     }
 }
-
-
-
-
-
