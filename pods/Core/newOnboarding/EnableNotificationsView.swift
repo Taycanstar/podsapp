@@ -3,6 +3,7 @@ import UserNotifications
 
 struct EnableNotificationsView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var workoutManager: WorkoutManager
     @State private var isRequesting = false
     @State private var showTimePicker = false
     @State private var tempTime: Date = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()
@@ -18,22 +19,19 @@ struct EnableNotificationsView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
-Spacer()
                 ScrollView {
-
-                    VStack {
-                        
+                    VStack(spacing: 32) {
                         header
-                
                         notificationPreviews
                         previewTimeCard
-                        
+                        Spacer(minLength: 120)
                     }
-                   
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 48)
+                    .padding(.bottom, 32)
                 }
                 .background(Color(.systemGroupedBackground).ignoresSafeArea())
 
-Spacer()
                 actionButtons
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -51,7 +49,7 @@ Spacer()
             NavigationStack {
                 VStack {
                     DatePicker(
-                        "Preview Time",
+                        "Preview time",
                         selection: $tempTime,
                         displayedComponents: [.hourAndMinute]
                     )
@@ -89,29 +87,28 @@ Spacer()
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
         }
+        .frame(maxWidth: .infinity)
         .padding(.bottom, 24)
     }
 
     private var notificationPreviews: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 16) {
             Image("foodnoti")
                 .resizable()
                 .scaledToFit()
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: 320)
             Image("wknoti")
                 .resizable()
                 .scaledToFit()
-
-                .frame(maxWidth: .infinity)
-    
+                .frame(maxWidth: 320)
         }
+        .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 24)
-        .padding(.bottom, 24)
+        .padding(.bottom, 8)
     }
 
     private var previewTimeCard: some View {
-        VStack(alignment: .leading) {
-       
+        VStack(alignment: .leading, spacing: 12) {
             Button {
                 HapticFeedback.generate()
                 tempTime = viewModel.notificationPreviewTime
@@ -129,16 +126,17 @@ Spacer()
                         .font(.subheadline)
                         .foregroundColor(.primary.opacity(0.6))
                 }
-        
-                .cornerRadius(16)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
             .buttonStyle(.plain)
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .frame(maxWidth: 360, alignment: .leading)
         .background(Color(.systemBackground))
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
     }
 
@@ -146,6 +144,8 @@ Spacer()
         VStack(spacing: 16) {
             Button("Not now") {
                 HapticFeedback.generate()
+                UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.notificationIdentifier])
+                viewModel.setNotificationTime(viewModel.notificationPreviewTime)
                 viewModel.currentStep = .signup
             }
             .foregroundColor(.primary)
@@ -204,6 +204,13 @@ Spacer()
     }
 
     private func requestNotifications() {
+        if authorizationStatus == .authorized {
+            schedulePreviewNotification()
+            HapticFeedback.generate()
+            viewModel.currentStep = .signup
+            return
+        }
+
         guard !isRequesting else { return }
         isRequesting = true
         let center = UNUserNotificationCenter.current()
@@ -211,6 +218,9 @@ Spacer()
             DispatchQueue.main.async {
                 self.isRequesting = false
                 refreshAuthorizationStatus()
+                if granted {
+                    schedulePreviewNotification()
+                }
                 HapticFeedback.generate()
                 viewModel.currentStep = .signup
             }
@@ -224,12 +234,71 @@ Spacer()
             }
         }
     }
+
+    private func schedulePreviewNotification() {
+        viewModel.setNotificationTime(viewModel.notificationPreviewTime)
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [Self.notificationIdentifier])
+
+        let content = UNMutableNotificationContent()
+        let (title, body) = workoutPreviewContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+
+        let calendar = Calendar.current
+        var components = calendar.dateComponents([.hour, .minute], from: viewModel.notificationPreviewTime)
+        components.second = 0
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        let request = UNNotificationRequest(identifier: Self.notificationIdentifier, content: content, trigger: trigger)
+
+        center.add(request) { error in
+            if let error = error {
+                print("⚠️ Failed to schedule workout preview notification: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func workoutPreviewContent() -> (String, String) {
+        let title = "Here's today's workout plan 🏃‍♂️"
+
+        if let workout = workoutManager.todayWorkout ?? workoutManager.currentWorkout {
+            let displayTitle: String
+            if workoutManager.todayWorkout != nil {
+                displayTitle = workoutManager.todayWorkoutDisplayTitle
+            } else {
+                let trimmed = workout.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                displayTitle = trimmed.isEmpty ? workoutManager.todayWorkoutDisplayTitle : trimmed
+            }
+            let exerciseNames = workout.exercises.map { $0.exercise.name }.filter { !$0.isEmpty }
+            if !exerciseNames.isEmpty {
+                let primaryNames = Array(exerciseNames.prefix(3))
+                var body = "\(displayTitle): \(primaryNames.joined(separator: ", "))"
+                let remaining = exerciseNames.count - primaryNames.count
+                if remaining > 0 {
+                    body += " and \(remaining) more."
+                } else {
+                    body += "."
+                }
+                return (title, body)
+            } else {
+                return (title, "\(displayTitle): Tap to see the latest exercises in the app.")
+            }
+        }
+
+        return (title, "Your personalized workout is ready. Open Humuli to preview today's plan.")
+    }
+
+    private static let notificationIdentifier = "daily_workout_preview"
 }
 
 struct EnableNotificationsView_Previews: PreviewProvider {
     static var previews: some View {
         let viewModel = OnboardingViewModel()
+        let workoutManager = WorkoutManager.shared
         return EnableNotificationsView()
             .environmentObject(viewModel)
+            .environmentObject(workoutManager)
     }
 }

@@ -216,6 +216,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var newOnboardingStepIndex: Int = 1
 
     let newOnboardingTotalSteps: Int = 7
+    private let notificationTimeDefaultsKey = "notificationPreviewTimeISO8601"
 
     var newOnboardingProgress: Double {
         guard newOnboardingTotalSteps > 0 else { return 0 }
@@ -295,16 +296,39 @@ class OnboardingViewModel: ObservableObject {
         let effectiveCount = selectedTrainingDays.isEmpty ? trainingDaysPerWeek : selectedTrainingDays.count
         let normalized = min(max(effectiveCount, 1), Weekday.allCases.count)
         workoutFrequency = String(normalized)
+        workoutDaysPerWeek = normalized
         preferredWorkoutDays = selectedTrainingDays
             .sorted { $0.sortOrder < $1.sortOrder }
             .map { $0.rawValue }
+
+        let selectedIndices = selectedTrainingDays
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map { $0.sortOrder }
+
+        if let data = try? JSONEncoder().encode(selectedIndices) {
+            UserDefaults.standard.set(data, forKey: "preferredWorkoutDays")
+        }
+
+        UserDefaults.standard.set(normalized, forKey: "workout_days_per_week")
+
+        let allIndices = Set(Weekday.allCases.map { $0.sortOrder })
+        let restIndices = Array(allIndices.subtracting(selectedIndices)).sorted()
+        let restDayNames = restIndices.map { Weekday.allCases[$0].rawValue }
+        restDays = restDayNames
+        UserDefaults.standard.set(restDayNames, forKey: "rest_days")
+
+        UserDefaults.standard.set(workoutFrequency, forKey: "workoutFrequency")
     }
 
     func setNotificationTime(_ date: Date) {
-        notificationPreviewTime = date
+        var components = Calendar.current.dateComponents([.hour, .minute], from: date)
+        components.second = 0
+        let normalized = Calendar.current.date(from: components) ?? date
+        notificationPreviewTime = normalized
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        notificationPreviewTimeISO8601 = formatter.string(from: date)
+        notificationPreviewTimeISO8601 = formatter.string(from: normalized)
+        UserDefaults.standard.set(notificationPreviewTimeISO8601, forKey: notificationTimeDefaultsKey)
     }
 
     enum Weekday: String, CaseIterable, Identifiable {
@@ -403,7 +427,38 @@ class OnboardingViewModel: ObservableObject {
 
     init() {
         loadOnboardingState()
-        
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let storedTime = UserDefaults.standard.string(forKey: notificationTimeDefaultsKey),
+           let storedDate = formatter.date(from: storedTime) {
+            notificationPreviewTime = storedDate
+        }
+
+        if let data = UserDefaults.standard.data(forKey: "preferredWorkoutDays"),
+           let indices = try? JSONDecoder().decode([Int].self, from: data) {
+            let validDays = indices.compactMap { index -> Weekday? in
+                guard index >= 0, index < Weekday.allCases.count else { return nil }
+                return Weekday.allCases[index]
+            }
+            if !validDays.isEmpty {
+                selectedTrainingDays = Set(validDays)
+                trainingDaysPerWeek = validDays.count
+                preferredWorkoutDays = validDays.map { $0.rawValue }
+            }
+        }
+
+        if preferredWorkoutDays.isEmpty {
+            let storedDays = UserDefaults.standard.integer(forKey: "workout_days_per_week")
+            if storedDays > 0 {
+                trainingDaysPerWeek = storedDays
+                selectedTrainingDays = Set(Weekday.allCases.prefix(storedDays))
+                preferredWorkoutDays = selectedTrainingDays
+                    .sorted { $0.sortOrder < $1.sortOrder }
+                    .map { $0.rawValue }
+            }
+        }
+
         // Load units system from UserDefaults, default to imperial
         if let savedUnitsSystem = UserDefaults.standard.string(forKey: "unitsSystem"),
            let units = UnitsSystem(rawValue: savedUnitsSystem) {
@@ -426,6 +481,7 @@ class OnboardingViewModel: ObservableObject {
         }
 
         setNotificationTime(notificationPreviewTime)
+        syncWorkoutSchedule()
     }
 
     func bindRepositories(for email: String) {

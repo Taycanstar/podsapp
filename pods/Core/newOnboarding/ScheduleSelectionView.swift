@@ -50,6 +50,7 @@ struct ScheduleSelectionView: View {
         }
         .onAppear {
             viewModel.ensureDefaultSchedule()
+            mode = viewModel.selectedTrainingDays.isEmpty ? .perWeek : .specific
             viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
         }
     }
@@ -111,10 +112,10 @@ struct ScheduleSelectionView: View {
                     }
                 }
             }
-   
-            .cornerRadius(16)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 4)
         }
-        .padding()
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.systemBackground))
         .cornerRadius(24)
