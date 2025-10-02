@@ -64,12 +64,11 @@ class HealthKitManager {
         let authStatus = healthStore.authorizationStatus(for: stepType)
         
         // Only request if we need to (not determined or denied status)
+        let typesToRead = getHealthDataTypesForRequest()
+        let typesToShare = getHealthDataTypesForShare()
         if authStatus != .sharingAuthorized {
-            // Get all health data types to request permission for
-            let typesToRead = getHealthDataTypesForRequest()
-            
             // Request authorization
-            healthStore.requestAuthorization(toShare: nil, read: typesToRead) { success, error in
+            healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead) { success, error in
                 DispatchQueue.main.async {
                     if let error = error {
                         print("❌ HealthKit authorization error: \(error.localizedDescription)")
@@ -77,7 +76,8 @@ class HealthKitManager {
                     
                     // Save the user preference
                     UserDefaults.standard.set(success, forKey: "healthKitEnabled")
-                    print("✅ HealthKit authorization result: \(success ? "granted" : "denied")")
+                    let statusMessage = success ? "granted" : "denied"
+                    print("✅ HealthKit authorization result: \(statusMessage)")
                     
                     // Notify of permission status
                     completion(success)
@@ -88,6 +88,7 @@ class HealthKitManager {
             }
         } else {
             // Already authorized
+            UserDefaults.standard.set(true, forKey: "healthKitEnabled")
             completion(true)
         }
     }
@@ -323,6 +324,50 @@ class HealthKitManager {
         return typesToRead
     }
     
+    private func getHealthDataTypesForShare() -> Set<HKSampleType> {
+        var typesToShare: Set<HKSampleType> = []
+
+        let quantityTypes: [HKQuantityTypeIdentifier] = [
+            .activeEnergyBurned,
+            .basalEnergyBurned,
+            .stepCount,
+            .distanceWalkingRunning,
+            .distanceCycling,
+            .distanceSwimming,
+            .vo2Max,
+            .heartRate,
+            .restingHeartRate,
+            .heartRateVariabilitySDNN,
+            .respiratoryRate,
+            .bodyMass,
+            .bodyMassIndex,
+            .bodyFatPercentage,
+            .dietaryEnergyConsumed,
+            .dietaryProtein,
+            .dietaryCarbohydrates,
+            .dietaryFatTotal,
+            .bloodGlucose
+        ]
+
+        for identifier in quantityTypes {
+            if let type = HKQuantityType.quantityType(forIdentifier: identifier) {
+                typesToShare.insert(type)
+            }
+        }
+
+        if let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) {
+            typesToShare.insert(sleepType)
+        }
+
+        if let mindfulType = HKCategoryType.categoryType(forIdentifier: .mindfulSession) {
+            typesToShare.insert(mindfulType)
+        }
+
+        typesToShare.insert(HKObjectType.workoutType())
+
+        return typesToShare
+    }
+
     // MARK: - Data Fetching Methods
     
     // Fetch step count for a specific date

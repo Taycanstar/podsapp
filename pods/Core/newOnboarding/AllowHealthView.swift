@@ -2,7 +2,9 @@ import SwiftUI
 
 struct AllowHealthView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
+    private let healthKitManager = HealthKitManager.shared
     private let backgroundColor = Color.onboardingBackground
+    @State private var isRequestingPermission = false
 
     var body: some View {
         NavigationStack {
@@ -47,6 +49,7 @@ struct AllowHealthView: View {
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
             viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            advanceIfHealthKitAlreadyAuthorized()
         }
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
@@ -57,6 +60,7 @@ struct AllowHealthView: View {
         VStack(spacing: 16) {
             Button("Not now") {
                 HapticFeedback.generate()
+                UserDefaults.standard.set(false, forKey: "healthKitEnabled")
                 viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
                 viewModel.currentStep = .signup
             }
@@ -64,18 +68,26 @@ struct AllowHealthView: View {
 
             Button {
                 HapticFeedback.generate()
-                viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
-                viewModel.currentStep = .signup
+                requestHealthPermissions()
             } label: {
-                Text("Continue")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.primary)
-                    .foregroundColor(Color(.systemBackground))
-                    .cornerRadius(36)
+                ZStack {
+                    Text("Continue")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .opacity(isRequestingPermission ? 0 : 1)
+
+                    if isRequestingPermission {
+                        ProgressView()
+                            .tint(Color(.systemBackground))
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color.primary)
+                .foregroundColor(Color(.systemBackground))
+                .cornerRadius(36)
             }
+            .disabled(isRequestingPermission)
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 32)
@@ -115,5 +127,30 @@ struct AllowHealthView_Previews: PreviewProvider {
     static var previews: some View {
         AllowHealthView()
             .environmentObject(OnboardingViewModel())
+    }
+}
+
+private extension AllowHealthView {
+    func requestHealthPermissions() {
+        guard !isRequestingPermission else { return }
+
+        isRequestingPermission = true
+        healthKitManager.checkAndRequestHealthPermissions { _ in
+            DispatchQueue.main.async {
+                completeStep()
+            }
+        }
+    }
+
+    func advanceIfHealthKitAlreadyAuthorized() {
+        if healthKitManager.isAuthorized {
+            completeStep()
+        }
+    }
+
+    func completeStep() {
+        isRequestingPermission = false
+        viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+        viewModel.currentStep = .signup
     }
 }

@@ -14,8 +14,7 @@ struct ConnectToAppleHealth: View {
     @State private var navigateToNextStep = false
     @State private var isRequestingPermission = false
     
-    // Health store for requesting permissions
-    private let healthStore = HKHealthStore()
+    private let healthKitManager = HealthKitManager.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -121,14 +120,23 @@ struct ConnectToAppleHealth: View {
                     HapticFeedback.generate()
                     requestHealthPermissions()
                 }) {
-                    Text("Continue")
-                        .font(.system(size: 18, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Color.accentColor)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                    ZStack {
+                        Text("Continue")
+                            .font(.system(size: 18, weight: .semibold))
+                            .opacity(isRequestingPermission ? 0 : 1)
+
+                        if isRequestingPermission {
+                            ProgressView()
+                                .tint(.white)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
                 }
+                .disabled(isRequestingPermission)
                 
                 Button(action: {
                     HapticFeedback.generate()
@@ -167,107 +175,19 @@ struct ConnectToAppleHealth: View {
         }
     }
     
-    // Request health permissions
     private func requestHealthPermissions() {
+        guard !isRequestingPermission else { return }
+
         guard HKHealthStore.isHealthDataAvailable() else {
-            // Health data not available on this device
             navigateToNextStep = true
             return
         }
-        
-        // Set up the health data types we want to read - expanded for comprehensive health tracking
-        var typesToRead: Set<HKObjectType> = []
-        
-        // Activity metrics
-        let activityTypes: [HKQuantityTypeIdentifier] = [
-            .stepCount,
-            .distanceWalkingRunning,
-            .activeEnergyBurned,
-            .appleExerciseTime,
-            .appleStandTime,
-            .distanceCycling,
-            .flightsClimbed,
-            .pushCount,
-            .distanceSwimming
-        ]
-        
-        // Body measurements
-        let bodyMeasurementTypes: [HKQuantityTypeIdentifier] = [
-            .height,
-            .bodyMass,
-            .bodyFatPercentage,
-            .leanBodyMass,
-            .bodyMassIndex,
-            .waistCircumference
-        ]
-        
-        // Vital signs
-        let vitalSignTypes: [HKQuantityTypeIdentifier] = [
-            .heartRate,
-            .restingHeartRate,
-            .walkingHeartRateAverage,
-            .heartRateVariabilitySDNN,
-            .oxygenSaturation,
-            .respiratoryRate,
-            .bloodPressureSystolic,
-            .bloodPressureDiastolic,
-            .bodyTemperature
-        ]
-        
-        // Nutrition
-        let nutritionTypes: [HKQuantityTypeIdentifier] = [
-            .dietaryEnergyConsumed,
-            .dietaryFatTotal,
-            .dietaryFatSaturated,
-            .dietaryProtein,
-            .dietaryCarbohydrates,
-            .dietarySugar,
-            .dietaryFiber,
-            .dietarySodium,
-            .dietaryCholesterol,
-            .dietaryWater,
-            .dietaryCaffeine
-        ]
-        
-        // Sleep & Mindfulness
-        let sleepTypes: [HKCategoryTypeIdentifier] = [
-            .sleepAnalysis,
-            .mindfulSession
-        ]
-        
-        // Add all quantity types
-        for typeId in activityTypes + bodyMeasurementTypes + vitalSignTypes + nutritionTypes {
-            if let type = HKQuantityType.quantityType(forIdentifier: typeId) {
-                typesToRead.insert(type)
-            }
-        }
-        
-        // Add all category types
-        for typeId in sleepTypes {
-            if let type = HKCategoryType.categoryType(forIdentifier: typeId) {
-                typesToRead.insert(type)
-            }
-        }
-        
-        // Add workout type to track all workouts
-        typesToRead.insert(HKObjectType.workoutType())
-        
-        // Request authorization with all the types
+
         isRequestingPermission = true
-        print("🏥 Requesting HealthKit permissions for \(typesToRead.count) data types")
-        healthStore.requestAuthorization(toShare: nil, read: typesToRead) { (success, error) in
+        print("🏥 Requesting HealthKit permissions via HealthKitManager")
+        healthKitManager.checkAndRequestHealthPermissions { _ in
             DispatchQueue.main.async {
                 isRequestingPermission = false
-                
-                if let error = error {
-                    print("❌ HealthKit authorization error: \(error.localizedDescription)")
-                }
-                
-                // Save the user preference
-                UserDefaults.standard.set(success, forKey: "healthKitEnabled")
-                print("✅ HealthKit authorization result: \(success ? "granted" : "denied")")
-                
-                // Navigate to next screen regardless of user choice
                 navigateToNextStep = true
             }
         }
