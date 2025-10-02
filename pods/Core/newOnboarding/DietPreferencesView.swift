@@ -36,6 +36,9 @@ struct DietPreferencesView: View {
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
         }
+        .onChange(of: viewModel.selectedDietPreference) { _, newValue in
+            selectedDiet = newValue
+        }
     }
 
     private var header: some View {
@@ -149,6 +152,7 @@ struct DietPreferencesView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Button("Skip") {
                 viewModel.selectedDietPreference = nil
+                selectedDiet = nil
                 viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
                 viewModel.currentStep = .enableNotifications
             }

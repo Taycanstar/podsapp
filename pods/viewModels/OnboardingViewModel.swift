@@ -252,7 +252,15 @@ class OnboardingViewModel: ObservableObject {
     @Published var userId: Int?
     @Published var selectedFitnessGoal: FitnessGoalOption?
     @Published var selectedStrengthExperience: StrengthExperienceOption?
-    @Published var selectedDietPreference: DietPreferenceOption?
+    @Published var selectedDietPreference: DietPreferenceOption? {
+        didSet {
+            let value = selectedDietPreference?.rawValue ?? ""
+            if dietPreference != value {
+                dietPreference = value
+            }
+            UserDefaults.standard.set(value, forKey: "dietPreference")
+        }
+    }
     @Published var desiredWeight: Double?
     @Published var selectedGymLocation: GymLocationOption? {
         didSet {
@@ -454,7 +462,17 @@ class OnboardingViewModel: ObservableObject {
     @Published var goalTimeframeWeeks: Int = 0
     @Published var weeklyWeightChange: Double = 0.0
     @Published var workoutFrequency: String = ""
-    @Published var dietPreference: String = ""
+    @Published var dietPreference: String = "" {
+        didSet {
+            if dietPreference.isEmpty {
+                if selectedDietPreference != nil {
+                    selectedDietPreference = nil
+                }
+            } else if let option = DietPreferenceOption(rawValue: dietPreference), option != selectedDietPreference {
+                selectedDietPreference = option
+            }
+        }
+    }
     @Published var primaryWellnessGoal: String = ""
     @Published var obstacles: [String] = []
     @Published var addCaloriesBurned: Bool = false
@@ -482,6 +500,13 @@ class OnboardingViewModel: ObservableObject {
 
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let storedDiet = UserDefaults.standard.string(forKey: "dietPreference"), !storedDiet.isEmpty {
+            dietPreference = storedDiet
+            if let option = DietPreferenceOption(rawValue: storedDiet) {
+                selectedDietPreference = option
+            }
+        }
+
         if let storedTime = UserDefaults.standard.string(forKey: notificationTimeDefaultsKey),
            let storedDate = formatter.date(from: storedTime) {
             notificationPreviewTime = storedDate
