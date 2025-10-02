@@ -110,14 +110,19 @@ struct EnableNotificationsView: View {
             .buttonStyle(.plain)
 
             if isShowingPicker {
-                DatePicker(
-                    "Preview time",
-                    selection: $tempTime,
-                    displayedComponents: [.hourAndMinute]
-                )
-                .datePickerStyle(.wheel)
-                .labelsHidden()
+                HStack {
+                    Spacer()
+                    DatePicker(
+                        "Preview time",
+                        selection: $tempTime,
+                        displayedComponents: [.hourAndMinute]
+                    )
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    Spacer()
+                }
                 .padding(.top, 12)
+                .transition(.opacity)
             }
         }
         .padding(.horizontal, 12)
