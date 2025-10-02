@@ -30,20 +30,25 @@ struct EnableNotificationsView: View {
                     .padding(.top, 48)
                     .padding(.bottom, 32)
                 }
-                .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                .background(Color.onboardingBackground.ignoresSafeArea())
 
                 actionButtons
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+            .toolbarBackground(Color.onboardingBackground, for: .navigationBar)
         }
+        .background(Color.onboardingBackground.ignoresSafeArea())
         .onAppear {
+            NavigationBarStyler.beginOnboardingAppearance()
             tempTime = viewModel.notificationPreviewTime
             viewModel.setNotificationTime(tempTime)
             refreshAuthorizationStatus()
             viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+        }
+        .onDisappear {
+            NavigationBarStyler.endOnboardingAppearance()
         }
         .sheet(isPresented: $showTimePicker) {
             NavigationStack {
@@ -96,11 +101,11 @@ struct EnableNotificationsView: View {
             Image("foodnoti")
                 .resizable()
                 .scaledToFit()
-                .frame(maxWidth: 320)
+                .frame(maxWidth: .infinity)
             Image("wknoti")
                 .resizable()
                 .scaledToFit()
-                .frame(maxWidth: 320)
+                .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 24)

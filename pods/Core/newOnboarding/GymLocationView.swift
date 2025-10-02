@@ -1,11 +1,11 @@
 import SwiftUI
-import UIKit
 
 struct GymLocationView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var selectedOption: OnboardingViewModel.GymLocationOption?
     
     private let options = OnboardingViewModel.GymLocationOption.allCases
+    private let backgroundColor = Color.onboardingBackground
     
     var body: some View {
         NavigationStack {
@@ -31,18 +31,23 @@ struct GymLocationView: View {
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                .background(backgroundColor.ignoresSafeArea())
                 
                 continueButton
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
+        .background(backgroundColor.ignoresSafeArea())
         .onAppear {
+            NavigationBarStyler.beginOnboardingAppearance()
             selectedOption = viewModel.selectedGymLocation
             viewModel.newOnboardingStepIndex = 4
+        }
+        .onDisappear {
+            NavigationBarStyler.endOnboardingAppearance()
         }
     }
     

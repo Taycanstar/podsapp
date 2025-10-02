@@ -1,11 +1,11 @@
 import SwiftUI
-import UIKit
 
 struct FitnessGoalSelectionView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var selectedGoal: OnboardingViewModel.FitnessGoalOption?
     
     private let goals = OnboardingViewModel.FitnessGoalOption.allCases
+    private let backgroundColor = Color.onboardingBackground
     
     var body: some View {
         NavigationStack {
@@ -30,21 +30,26 @@ struct FitnessGoalSelectionView: View {
                     }
                     
                     Spacer()
-                     
+                    
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                .background(backgroundColor.ignoresSafeArea())
                 
                 continueButton
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
+        .background(backgroundColor.ignoresSafeArea())
         .onAppear {
+            NavigationBarStyler.beginOnboardingAppearance()
             selectedGoal = viewModel.selectedFitnessGoal
             viewModel.newOnboardingStepIndex = 1
+        }
+        .onDisappear {
+            NavigationBarStyler.endOnboardingAppearance()
         }
     }
     
@@ -134,7 +139,7 @@ struct FitnessGoalSelectionView: View {
                     .foregroundColor(.primary)
             }
         }
-
+        
         ToolbarItem(placement: .principal) {
             progressView
         }
@@ -153,11 +158,11 @@ struct FitnessGoalSelectionView: View {
             .foregroundColor(.primary)
         }
     }
-}
-
-struct FitnessGoalSelectionView_Previews: PreviewProvider {
-    static var previews: some View {
-        FitnessGoalSelectionView()
-            .environmentObject(OnboardingViewModel())
+    
+    struct FitnessGoalSelectionView_Previews: PreviewProvider {
+        static var previews: some View {
+            FitnessGoalSelectionView()
+                .environmentObject(OnboardingViewModel())
+        }
     }
 }

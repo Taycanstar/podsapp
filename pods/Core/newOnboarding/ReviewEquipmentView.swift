@@ -1,8 +1,8 @@
 import SwiftUI
-import UIKit
 
 struct ReviewEquipmentView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
+    private let backgroundColor = Color.onboardingBackground
 
     private var equipmentSections: [(title: String, items: [Equipment])] {
         let allEquipment = Set(Equipment.allCases)
@@ -65,17 +65,22 @@ struct ReviewEquipmentView: View {
                     .padding(.top, 48)
                     .padding(.bottom, 0)
                 }
-                .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                .background(backgroundColor.ignoresSafeArea())
 
                 continueButton
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
+        .background(backgroundColor.ignoresSafeArea())
         .onAppear {
+            NavigationBarStyler.beginOnboardingAppearance()
             viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 5)
+        }
+        .onDisappear {
+            NavigationBarStyler.endOnboardingAppearance()
         }
     }
 

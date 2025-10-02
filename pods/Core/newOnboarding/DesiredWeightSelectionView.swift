@@ -1,11 +1,11 @@
 import SwiftUI
-import UIKit
 
 struct DesiredWeightSelectionView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var selectedWeight: Double = 0
     @State private var unit: WeightUnit = .imperial
     @State private var previousUnit: WeightUnit = .imperial
+    private let backgroundColor = Color.onboardingBackground
 
     private let conversionFactor = 0.45359237
     private let imperialRange: ClosedRange<Double> = 0.0...500.0
@@ -57,18 +57,23 @@ struct DesiredWeightSelectionView: View {
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                .background(backgroundColor.ignoresSafeArea())
                 
                 continueButton
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
+        .background(backgroundColor.ignoresSafeArea())
         .onAppear {
+            NavigationBarStyler.beginOnboardingAppearance()
             loadInitialWeight()
             viewModel.newOnboardingStepIndex = 3
+        }
+        .onDisappear {
+            NavigationBarStyler.endOnboardingAppearance()
         }
         .onChange(of: unit) { newUnit in
             handleUnitChange(from: previousUnit, to: newUnit)

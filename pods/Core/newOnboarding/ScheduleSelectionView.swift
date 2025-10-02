@@ -1,8 +1,8 @@
 import SwiftUI
-import UIKit
 
 struct ScheduleSelectionView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
+    private let backgroundColor = Color.onboardingBackground
 
     private enum Mode: String, CaseIterable, Identifiable {
         case perWeek
@@ -39,19 +39,24 @@ struct ScheduleSelectionView: View {
                     }
                     .padding(.top, 48)
                 }
-                .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                .background(backgroundColor.ignoresSafeArea())
 
                 continueButton
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
+        .background(backgroundColor.ignoresSafeArea())
         .onAppear {
+            NavigationBarStyler.beginOnboardingAppearance()
             viewModel.ensureDefaultSchedule()
             mode = viewModel.selectedTrainingDays.isEmpty ? .perWeek : .specific
             viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
+        }
+        .onDisappear {
+            NavigationBarStyler.endOnboardingAppearance()
         }
     }
 
@@ -215,7 +220,7 @@ struct ScheduleSelectionView: View {
             }
         }
 
-   ToolbarItem(placement: .principal) {
+        ToolbarItem(placement: .principal) {
             progressView
         }
 

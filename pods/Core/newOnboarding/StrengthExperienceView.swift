@@ -1,11 +1,11 @@
 import SwiftUI
-import UIKit
 
 struct StrengthExperienceView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var selectedOption: OnboardingViewModel.StrengthExperienceOption?
     
     private let options = OnboardingViewModel.StrengthExperienceOption.allCases
+    private let backgroundColor = Color.onboardingBackground
     
     var body: some View {
         NavigationStack {
@@ -32,18 +32,23 @@ struct StrengthExperienceView: View {
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                .background(backgroundColor.ignoresSafeArea())
                 
                 continueButton
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color(.systemBackground), for: .navigationBar)
+            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
+        .background(backgroundColor.ignoresSafeArea())
         .onAppear {
+            NavigationBarStyler.beginOnboardingAppearance()
             selectedOption = viewModel.selectedStrengthExperience
             viewModel.newOnboardingStepIndex = 2
+        }
+        .onDisappear {
+            NavigationBarStyler.endOnboardingAppearance()
         }
     }
     
@@ -148,11 +153,11 @@ struct StrengthExperienceView: View {
             .foregroundColor(.primary)
         }
     }
-}
-
-struct StrengthExperienceView_Previews: PreviewProvider {
-    static var previews: some View {
-        StrengthExperienceView()
-            .environmentObject(OnboardingViewModel())
+    
+    struct StrengthExperienceView_Previews: PreviewProvider {
+        static var previews: some View {
+            StrengthExperienceView()
+                .environmentObject(OnboardingViewModel())
+        }
     }
 }
