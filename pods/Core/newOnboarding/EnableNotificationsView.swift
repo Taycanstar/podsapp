@@ -5,9 +5,10 @@ struct EnableNotificationsView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @EnvironmentObject var workoutManager: WorkoutManager
     @State private var isRequesting = false
-    @State private var showTimePicker = false
     @State private var tempTime: Date = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()
+    @State private var isShowingPicker = false
     @State private var authorizationStatus: UNAuthorizationStatus = .notDetermined
+    private let backgroundColor = Color.onboardingBackground
 
     private var timeFormatter: DateFormatter {
         let formatter = DateFormatter()
@@ -30,16 +31,16 @@ struct EnableNotificationsView: View {
                     .padding(.top, 48)
                     .padding(.bottom, 32)
                 }
-                .background(Color.onboardingBackground.ignoresSafeArea())
+                .background(backgroundColor.ignoresSafeArea())
 
                 actionButtons
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color.onboardingBackground, for: .navigationBar)
+            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
-        .background(Color.onboardingBackground.ignoresSafeArea())
+        .background(backgroundColor.ignoresSafeArea())
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
             tempTime = viewModel.notificationPreviewTime
@@ -50,36 +51,8 @@ struct EnableNotificationsView: View {
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
         }
-        .sheet(isPresented: $showTimePicker) {
-            NavigationStack {
-                VStack {
-                    DatePicker(
-                        "Preview time",
-                        selection: $tempTime,
-                        displayedComponents: [.hourAndMinute]
-                    )
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-                    .padding()
-                    Spacer()
-                }
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            tempTime = viewModel.notificationPreviewTime
-                            showTimePicker = false
-                        }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") {
-                            HapticFeedback.generate()
-                            viewModel.setNotificationTime(tempTime)
-                            showTimePicker = false
-                        }
-                    }
-                }
-            }
-            .presentationDetents([.fraction(0.35)])
+        .onChange(of: tempTime) { newValue in
+            viewModel.setNotificationTime(newValue)
         }
     }
 
@@ -109,41 +82,53 @@ struct EnableNotificationsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 24)
-        .padding(.bottom, 8)
     }
 
     private var previewTimeCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Button {
                 HapticFeedback.generate()
-                tempTime = viewModel.notificationPreviewTime
-                showTimePicker = true
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isShowingPicker.toggle()
+                }
             } label: {
                 HStack {
                     Text("Preview time")
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    Text(timeFormatter.string(from: viewModel.notificationPreviewTime))
+                    Text(timeFormatter.string(from: tempTime))
                         .font(.body)
-                        .foregroundColor(.primary)
-                    Image(systemName: "chevron.right")
+                        .foregroundColor(.secondary)
+                    Image(systemName: isShowingPicker ? "chevron.up" : "chevron.down")
                         .font(.subheadline)
-                        .foregroundColor(.primary.opacity(0.6))
+                        .foregroundColor(.secondary)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 4)
             }
             .buttonStyle(.plain)
+
+            if isShowingPicker {
+                DatePicker(
+                    "Preview time",
+                    selection: $tempTime,
+                    displayedComponents: [.hourAndMinute]
+                )
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .padding(.top, 12)
+            }
         }
-        .padding(20)
-        .frame(maxWidth: 360, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.systemBackground))
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
-        .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
     }
+    
 
     private var actionButtons: some View {
         VStack(spacing: 16) {

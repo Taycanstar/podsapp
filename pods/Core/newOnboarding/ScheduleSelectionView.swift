@@ -52,7 +52,7 @@ struct ScheduleSelectionView: View {
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
             viewModel.ensureDefaultSchedule()
-            mode = viewModel.selectedTrainingDays.isEmpty ? .perWeek : .specific
+            mode = .perWeek
             viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
         }
         .onDisappear {
