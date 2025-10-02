@@ -24,10 +24,11 @@ class OnboardingViewModel: ObservableObject {
         case strengthExperience
         case desiredWeight
         case gymLocation
+        case reviewEquipment
         case workoutSchedule
         case dietPreferences
         case enableNotifications
-        case reviewEquipment
+        case allowHealth
         case signup
         case emailVerification
         case info
@@ -275,7 +276,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var notificationPreviewTimeISO8601: String = ""
     @Published var newOnboardingStepIndex: Int = 1
 
-    let newOnboardingTotalSteps: Int = 8
+    let newOnboardingTotalSteps: Int = 9
     private let notificationTimeDefaultsKey = "notificationPreviewTimeISO8601"
 
     var newOnboardingProgress: Double {

@@ -46,7 +46,7 @@ struct EnableNotificationsView: View {
             tempTime = viewModel.notificationPreviewTime
             viewModel.setNotificationTime(tempTime)
             refreshAuthorizationStatus()
-            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
         }
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
@@ -141,7 +141,8 @@ struct EnableNotificationsView: View {
                 HapticFeedback.generate()
                 UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.notificationIdentifier])
                 viewModel.setNotificationTime(viewModel.notificationPreviewTime)
-                viewModel.currentStep = .signup
+                viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+                viewModel.currentStep = .allowHealth
             }
             .foregroundColor(.primary)
 
@@ -202,7 +203,8 @@ struct EnableNotificationsView: View {
         if authorizationStatus == .authorized {
             schedulePreviewNotification()
             HapticFeedback.generate()
-            viewModel.currentStep = .signup
+            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            viewModel.currentStep = .allowHealth
             return
         }
 
@@ -217,7 +219,8 @@ struct EnableNotificationsView: View {
                     schedulePreviewNotification()
                 }
                 HapticFeedback.generate()
-                viewModel.currentStep = .signup
+                viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+                viewModel.currentStep = .allowHealth
             }
         }
     }

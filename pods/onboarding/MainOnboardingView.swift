@@ -27,6 +27,8 @@ struct MainOnboardingView: View {
                 DietPreferencesView()
             case .enableNotifications:
                 EnableNotificationsView()
+            case .allowHealth:
+                AllowHealthView()
             case .signup:
                 SignupView()
             case .emailVerification:

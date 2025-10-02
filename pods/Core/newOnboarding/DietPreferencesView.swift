@@ -107,7 +107,7 @@ struct DietPreferencesView: View {
         Button {
             guard let diet = selectedDiet else { return }
             viewModel.selectedDietPreference = diet
-            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
             viewModel.currentStep = .enableNotifications
         } label: {
             Text("Continue")
@@ -153,7 +153,7 @@ struct DietPreferencesView: View {
             Button("Skip") {
                 viewModel.selectedDietPreference = nil
                 selectedDiet = nil
-                viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
                 viewModel.currentStep = .enableNotifications
             }
             .font(.headline)
