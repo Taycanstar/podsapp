@@ -180,8 +180,8 @@ struct EnableNotificationsView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
-                viewModel.currentStep = .workoutSchedule
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
+                viewModel.currentStep = .dietPreferences
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.headline)

@@ -178,8 +178,8 @@ struct ScheduleSelectionView: View {
         Button {
             viewModel.syncWorkoutSchedule()
             viewModel.setNotificationTime(viewModel.notificationPreviewTime)
-            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
-            viewModel.currentStep = .enableNotifications
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
+            viewModel.currentStep = .dietPreferences
         } label: {
             Text("Continue")
                 .font(.headline)
@@ -207,10 +207,11 @@ struct ScheduleSelectionView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 5)
                 if viewModel.selectedGymLocation == .noEquipment || viewModel.selectedGymLocation == nil {
+                    viewModel.newOnboardingStepIndex = 4
                     viewModel.currentStep = .gymLocation
                 } else {
+                    viewModel.newOnboardingStepIndex = 5
                     viewModel.currentStep = .reviewEquipment
                 }
             } label: {
@@ -227,8 +228,8 @@ struct ScheduleSelectionView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Button("Skip") {
                 viewModel.syncWorkoutSchedule()
-                viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
-                viewModel.currentStep = .enableNotifications
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
+                viewModel.currentStep = .dietPreferences
             }
             .font(.headline)
             .foregroundColor(.primary)

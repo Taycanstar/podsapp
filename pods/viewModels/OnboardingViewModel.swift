@@ -25,6 +25,7 @@ class OnboardingViewModel: ObservableObject {
         case desiredWeight
         case gymLocation
         case workoutSchedule
+        case dietPreferences
         case enableNotifications
         case reviewEquipment
         case signup
@@ -115,6 +116,56 @@ class OnboardingViewModel: ObservableObject {
             }
         }
     }
+
+    enum DietPreferenceOption: String, CaseIterable, Identifiable {
+        case balanced
+        case keto
+        case vegetarian
+        case vegan
+        case paleo
+        case mediterranean
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .balanced: return "Balanced"
+            case .keto: return "Keto"
+            case .vegetarian: return "Vegetarian"
+            case .vegan: return "Vegan"
+            case .paleo: return "Paleo"
+            case .mediterranean: return "Mediterranean"
+            }
+        }
+
+        var systemImageName: String {
+            switch self {
+            case .balanced: return "fork.knife"
+            case .keto: return "drop.fill"
+            case .vegetarian: return "carrot.fill"
+            case .vegan: return "leaf.fill"
+            case .paleo: return "fish.fill"
+            case .mediterranean: return "tree.fill"
+            }
+        }
+
+        var description: String {
+            switch self {
+            case .balanced:
+                return "Excludes nothing."
+            case .keto:
+                return "Excludes high-carb grains, refined starches, and sugar."
+            case .vegetarian:
+                return "Excludes red meat, poultry, fish, and shellfish."
+            case .vegan:
+                return "Excludes meat, fish, dairy, eggs, mayo, and honey."
+            case .paleo:
+                return "Excludes dairy, grains, legumes, soy, refined starches, and sugar."
+            case .mediterranean:
+                return "Excludes red meat, processed meats, fruit juices, refined starches, and sugar."
+            }
+        }
+    }
     
     // Enum defining all detailed onboarding steps in order
     enum OnboardingFlowStep: Int, CaseIterable {
@@ -201,6 +252,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var userId: Int?
     @Published var selectedFitnessGoal: FitnessGoalOption?
     @Published var selectedStrengthExperience: StrengthExperienceOption?
+    @Published var selectedDietPreference: DietPreferenceOption?
     @Published var desiredWeight: Double?
     @Published var selectedGymLocation: GymLocationOption? {
         didSet {
@@ -215,7 +267,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var notificationPreviewTimeISO8601: String = ""
     @Published var newOnboardingStepIndex: Int = 1
 
-    let newOnboardingTotalSteps: Int = 7
+    let newOnboardingTotalSteps: Int = 8
     private let notificationTimeDefaultsKey = "notificationPreviewTimeISO8601"
 
     var newOnboardingProgress: Double {

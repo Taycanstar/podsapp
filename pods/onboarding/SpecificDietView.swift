@@ -97,7 +97,7 @@ struct SpecificDietView: View {
             
             // Diet selection options
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 10) {
                     ForEach(Diet.allCases) { diet in
                         Button(action: {
                             HapticFeedback.generate()
@@ -107,7 +107,7 @@ struct SpecificDietView: View {
                                 Image(systemName: diet.icon)
                                     .font(.system(size: 18))
                                     .foregroundColor(selectedDiet == diet ? .white : .primary)
-                                    .frame(width: 40)
+                                    .frame(width: 35)
                                 
                                 Text(diet.displayText)
                                     .font(.system(size: 15, weight: .medium))
@@ -116,7 +116,7 @@ struct SpecificDietView: View {
                                 
                               
                             }
-                            .padding(.leading, 12)
+                            .padding(.leading, 10)
                             .frame(maxWidth: .infinity)
                             .frame(height: 60)
                             .background(
