@@ -770,7 +770,37 @@ class OnboardingViewModel: ObservableObject {
             currentFlowStep = flowStep
             // Default to gender for initial step
             currentStep = .gender
+            return
         }
+
+        switch step {
+        case "FitnessGoalSelectionView":
+            currentStep = .fitnessGoal
+        case "StrengthExperienceView":
+            currentStep = .strengthExperience
+        case "DesiredWeightSelectionView":
+            currentStep = .desiredWeight
+        case "GymLocationView":
+            currentStep = .gymLocation
+        case "ReviewEquipmentView":
+            currentStep = .reviewEquipment
+        case "ScheduleSelectionView":
+            currentStep = .workoutSchedule
+        case "DietPreferencesView":
+            currentStep = .dietPreferences
+        case "EnableNotificationsView":
+            currentStep = .enableNotifications
+        case "AllowHealthView":
+            currentStep = .allowHealth
+        case "AboutYouView":
+            currentStep = .aboutYou
+        case "SignupView":
+            currentStep = .signup
+        default:
+            break
+        }
+
+        newOnboardingStepIndex = min(newOnboardingTotalSteps, newOnboardingIndex(for: currentStep))
     }
     
     // Method to load progress when view appears
@@ -784,6 +814,22 @@ class OnboardingViewModel: ObservableObject {
                 currentFlowStep = step
                 currentStep = .gender
             }
+        }
+    }
+
+    private func newOnboardingIndex(for step: OnboardingStep) -> Int {
+        switch step {
+        case .fitnessGoal: return 1
+        case .strengthExperience: return 2
+        case .gymLocation: return 3
+        case .reviewEquipment: return 4
+        case .workoutSchedule: return 5
+        case .dietPreferences: return 6
+        case .enableNotifications: return 7
+        case .allowHealth: return 8
+        case .aboutYou: return 9
+        case .desiredWeight, .signup: return 10
+        default: return 1
         }
     }
     

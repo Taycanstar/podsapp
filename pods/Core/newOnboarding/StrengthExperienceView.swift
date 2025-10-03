@@ -98,8 +98,8 @@ struct StrengthExperienceView: View {
             viewModel.selectedStrengthExperience = option
             let experienceLevel = option.experienceLevel
             UserDefaults.standard.set(experienceLevel.rawValue, forKey: "fitnessLevel")
-            viewModel.newOnboardingStepIndex = 3
-            viewModel.currentStep = .desiredWeight
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 3)
+            viewModel.currentStep = .gymLocation
         } label: {
             Text("Continue")
                 .font(.headline)
@@ -142,12 +142,13 @@ struct StrengthExperienceView: View {
         
         ToolbarItem(placement: .topBarTrailing) {
             Button("Skip") {
-                viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 3)
                 viewModel.selectedStrengthExperience = nil
                 selectedOption = nil
                 UserDefaults.standard.removeObject(forKey: "fitnessLevel")
                 viewModel.desiredWeight = nil
-                viewModel.currentStep = .signup
+                viewModel.desiredWeightKg = 0
+                viewModel.currentStep = .gymLocation
             }
             .font(.headline)
             .foregroundColor(.primary)

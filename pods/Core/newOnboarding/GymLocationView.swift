@@ -135,8 +135,8 @@ struct GymLocationView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = 3
-                viewModel.currentStep = .desiredWeight
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 2)
+                viewModel.currentStep = .strengthExperience
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.headline)

@@ -48,7 +48,10 @@ struct AllowHealthView: View {
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
+            UserDefaults.standard.set("AllowHealthView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
             advanceIfHealthKitAlreadyAuthorized()
         }
         .onDisappear {
@@ -61,7 +64,7 @@ struct AllowHealthView: View {
             Button("Not now") {
                 HapticFeedback.generate()
                 UserDefaults.standard.set(false, forKey: "healthKitEnabled")
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
                 viewModel.currentStep = .aboutYou
             }
             .foregroundColor(.primary)
@@ -150,7 +153,7 @@ private extension AllowHealthView {
 
     func completeStep() {
         isRequestingPermission = false
-        viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
+        viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
         viewModel.currentStep = .aboutYou
     }
 }

@@ -3,8 +3,8 @@ import SwiftUI
 struct DesiredWeightSelectionView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @State private var selectedWeight: Double = 0
-    @State private var unit: WeightUnit = .imperial
-    @State private var previousUnit: WeightUnit = .imperial
+    @State private var currentUnits: UnitsSystem = .imperial
+    @State private var previousUnits: UnitsSystem = .imperial
     private let backgroundColor = Color.onboardingBackground
 
     private let conversionFactor = 0.45359237
@@ -14,11 +14,11 @@ struct DesiredWeightSelectionView: View {
     }
 
     private var unitLabel: String {
-        unit == .imperial ? "lbs" : "kg"
+        currentUnits == .imperial ? "lbs" : "kg"
     }
 
     private var weightRange: ClosedRange<Double> {
-        unit == .imperial ? imperialRange : metricRange
+        currentUnits == .imperial ? imperialRange : metricRange
     }
     
     var body: some View {
@@ -40,8 +40,10 @@ struct DesiredWeightSelectionView: View {
                                 .font(.system(size: 44, weight: .semibold))
                                 .foregroundColor(.primary)
                                 .padding(.bottom, 8)
-                            
-                            unitPicker
+
+                            Text("Units: \(unitLabel)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
 
                             WeightRulerView2(
                                 selectedWeight: $selectedWeight,
@@ -49,7 +51,7 @@ struct DesiredWeightSelectionView: View {
                                 step: 0.1
                             )
                             .frame(height: 80)
-                            .id(unit)
+                            .id(currentUnits)
                         }
                         .padding(.horizontal, 24)
                     }
@@ -70,29 +72,34 @@ struct DesiredWeightSelectionView: View {
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
             loadInitialWeight()
-            viewModel.newOnboardingStepIndex = 3
+            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            UserDefaults.standard.set("DesiredWeightSelectionView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
         }
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
         }
-        .onChange(of: unit) { newUnit in
-            handleUnitChange(from: previousUnit, to: newUnit)
-            previousUnit = newUnit
+        .onChange(of: viewModel.unitsSystem) { newUnit in
+            handleUnitChange(from: previousUnits, to: newUnit)
+            previousUnits = newUnit
         }
     }
 
     private func loadInitialWeight() {
-        unit = viewModel.unitsSystem == .imperial || UserDefaults.standard.bool(forKey: "isImperial") ? .imperial : .metric
-        previousUnit = unit
+        currentUnits = viewModel.unitsSystem
+        previousUnits = currentUnits
+
         let storedKg = viewModel.desiredWeightKg
         if storedKg > 0 {
-            selectedWeight = unit == .imperial ? storedKg / conversionFactor : storedKg
+            selectedWeight = currentUnits == .imperial ? storedKg / conversionFactor : storedKg
             viewModel.desiredWeight = selectedWeight
+            viewModel.desiredWeightKg = storedKg
             return
         }
 
         let defaults = UserDefaults.standard
-        if unit == .imperial {
+        if currentUnits == .imperial {
             let desired = defaults.double(forKey: "desiredWeightPounds")
             if desired > 0 {
                 selectedWeight = desired
@@ -109,33 +116,40 @@ struct DesiredWeightSelectionView: View {
                 selectedWeight = current > 0 ? current : 77
             }
         }
+
         selectedWeight = min(max(selectedWeight, weightRange.lowerBound), weightRange.upperBound)
+        selectedWeight = (selectedWeight * 10).rounded() / 10
         viewModel.desiredWeight = selectedWeight
+        viewModel.desiredWeightKg = currentUnits == .imperial ? selectedWeight * conversionFactor : selectedWeight
     }
 
     private func saveDesiredWeight() {
         let defaults = UserDefaults.standard
         viewModel.desiredWeight = selectedWeight
-        if unit == .imperial {
-            defaults.set(selectedWeight, forKey: "desiredWeightPounds")
-            let kilograms = selectedWeight * conversionFactor
-            defaults.set(kilograms, forKey: "desiredWeightKilograms")
-            viewModel.desiredWeightKg = kilograms
-        } else {
-            defaults.set(selectedWeight, forKey: "desiredWeightKilograms")
-            let pounds = selectedWeight / conversionFactor
-            defaults.set(pounds, forKey: "desiredWeightPounds")
-            viewModel.desiredWeightKg = selectedWeight
-        }
+
+        let weightInKg = currentUnits == .imperial ? selectedWeight * conversionFactor : selectedWeight
+        let weightInPounds = weightInKg / conversionFactor
+
+        defaults.set(weightInKg, forKey: "desiredWeightKilograms")
+        defaults.set(weightInPounds, forKey: "desiredWeightPounds")
+        viewModel.desiredWeightKg = weightInKg
 
         // Determine diet goal based on current and desired weights
-        let currentWeight = unit == .imperial ?
-            defaults.double(forKey: "weightPounds") :
-            defaults.double(forKey: "weightKilograms")
-        let difference = selectedWeight - currentWeight
+        let storedWeightKg = defaults.double(forKey: "weightKilograms")
+        let storedWeightPounds = defaults.double(forKey: "weightPounds")
+        let currentWeightKg: Double
+        if storedWeightKg > 0 {
+            currentWeightKg = storedWeightKg
+        } else if storedWeightPounds > 0 {
+            currentWeightKg = storedWeightPounds * conversionFactor
+        } else {
+            currentWeightKg = weightInKg
+        }
+
+        let difference = weightInKg - currentWeightKg
         let fitnessGoal: String
         let serverDietGoal: String
-        if abs(difference) < 1.0 {
+        if abs(difference) < 0.45 { // roughly 1 lb
             fitnessGoal = "maintain"
             serverDietGoal = "maintain"
         } else if difference < 0 {
@@ -151,37 +165,29 @@ struct DesiredWeightSelectionView: View {
         viewModel.primaryWellnessGoal = fitnessGoal
     }
 
-    private func handleUnitChange(from oldUnit: WeightUnit, to newUnit: WeightUnit) {
+    private func handleUnitChange(from oldUnit: UnitsSystem, to newUnit: UnitsSystem) {
         guard oldUnit != newUnit else { return }
-        let weightInKilograms: Double
-        if oldUnit == .imperial {
-            weightInKilograms = selectedWeight * conversionFactor
-        } else {
-            weightInKilograms = selectedWeight
-        }
+        let weightInKilograms = oldUnit == .imperial ? selectedWeight * conversionFactor : selectedWeight
 
         if newUnit == .imperial {
             selectedWeight = weightInKilograms / conversionFactor
-            viewModel.desiredWeightKg = weightInKilograms
         } else {
             selectedWeight = weightInKilograms
-            viewModel.desiredWeightKg = selectedWeight
         }
 
         let range = newUnit == .imperial ? imperialRange : metricRange
         selectedWeight = min(max(selectedWeight, range.lowerBound), range.upperBound)
         selectedWeight = (selectedWeight * 10).rounded() / 10
-        viewModel.unitsSystem = newUnit == .imperial ? .imperial : .metric
-        UserDefaults.standard.set(viewModel.unitsSystem.rawValue, forKey: "unitsSystem")
-        UserDefaults.standard.set(newUnit == .imperial, forKey: "isImperial")
+        currentUnits = newUnit
+        viewModel.desiredWeightKg = weightInKilograms
         viewModel.desiredWeight = selectedWeight
     }
 
     private var continueButton: some View {
         Button {
             saveDesiredWeight()
-            viewModel.newOnboardingStepIndex = 4
-            viewModel.currentStep = .gymLocation
+            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            viewModel.currentStep = .signup
         } label: {
             Text("Continue")
                 .font(.headline)
@@ -207,8 +213,8 @@ struct DesiredWeightSelectionView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = 2
-                viewModel.currentStep = .strengthExperience
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
+                viewModel.currentStep = .aboutYou
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.headline)
@@ -224,41 +230,11 @@ struct DesiredWeightSelectionView: View {
             Button("Skip") {
                 viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
                 viewModel.desiredWeight = nil
+                viewModel.desiredWeightKg = 0
                 viewModel.currentStep = .signup
             }
             .font(.headline)
             .foregroundColor(.primary)
-        }
-    }
-}
-
-private extension DesiredWeightSelectionView {
-    enum WeightUnit: String, CaseIterable, Identifiable {
-        case imperial
-        case metric
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .imperial: return "Imperial"
-            case .metric: return "Metric"
-            }
-        }
-    }
-
-    var unitPicker: some View {
-        VStack(spacing: 8) {
-            Text("Unit")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            Picker("Unit", selection: $unit) {
-                ForEach(WeightUnit.allCases) { option in
-                    Text(option.title).tag(option)
-                }
-            }
-            .pickerStyle(.segmented)
         }
     }
 }

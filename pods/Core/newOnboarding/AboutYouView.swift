@@ -11,7 +11,8 @@ struct AboutYouView: View {
     @State private var isShowingHeightPicker = false
     @State private var isShowingWeightPicker = false
 
-    @State private var tempDateOfBirth = Calendar.current.date(byAdding: .year, value: -25, to: Date()) ?? Date()
+    @State private var dobInput: String = ""
+    @FocusState private var isDobFieldFocused: Bool
     @State private var tempSex: SexOption = .male
 
     @State private var tempFeet = 5
@@ -105,7 +106,7 @@ struct AboutYouView: View {
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
             setupInitialState()
-            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
             saveProgressMarker()
             prefillFromHealthKitIfNeeded()
         }
@@ -114,18 +115,35 @@ struct AboutYouView: View {
         }
         .sheet(isPresented: $isShowingDatePicker) {
             NavigationStack {
-                VStack {
-                    DatePicker(
-                        "Date of Birth",
-                        selection: $tempDateOfBirth,
-                        in: ...Date(),
-                        displayedComponents: .date
-                    )
-                    .datePickerStyle(.graphical)
-                    .padding()
+                VStack(spacing: 20) {
+                    Text("Enter your birthday")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    TextField("MMDDYYYY", text: Binding(
+                        get: { formattedDobInput(dobInput) },
+                        set: { newValue in dobInput = sanitizedDobInput(newValue) }
+                    ))
+                    .keyboardType(.numberPad)
+                    .focused($isDobFieldFocused)
+                    .textInputAutocapitalization(.never)
+                    .disableAutocorrection(true)
+                    .font(.title2.weight(.semibold))
+                    .multilineTextAlignment(.center)
+
+                    Text("Type 8 digits — month, day, year")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+
+                    if dobInput.count == 8 && dateFromDobInput(dobInput) == nil {
+                        Text("Enter a valid calendar date")
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                    }
 
                     Spacer()
                 }
+                .padding()
                 .navigationTitle("Date of Birth")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -136,24 +154,19 @@ struct AboutYouView: View {
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") {
-                            viewModel.dateOfBirth = tempDateOfBirth
-                            let formatter = DateFormatter()
-                            formatter.dateFormat = "yyyy-MM-dd"
-                            let calendar = Calendar.current
-                            UserDefaults.standard.set(formatter.string(from: tempDateOfBirth), forKey: "dateOfBirth")
-                            UserDefaults.standard.set(calendar.component(.month, from: tempDateOfBirth), forKey: "birthMonth")
-                            UserDefaults.standard.set(calendar.component(.day, from: tempDateOfBirth), forKey: "birthDay")
-                            UserDefaults.standard.set(calendar.component(.year, from: tempDateOfBirth), forKey: "birthYear")
-                            let ageComponents = calendar.dateComponents([.year], from: tempDateOfBirth, to: Date())
-                            if let age = ageComponents.year {
-                                UserDefaults.standard.set(age, forKey: "age")
-                            }
+                            guard let date = dateFromDobInput(dobInput) else { return }
+                            viewModel.dateOfBirth = date
+                            storeDateOfBirth(date)
                             isShowingDatePicker = false
                         }
+                        .disabled(dateFromDobInput(dobInput) == nil)
                     }
                 }
+                .onAppear {
+                    isDobFieldFocused = true
+                }
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.fraction(0.35)])
         }
         .sheet(isPresented: $isShowingSexPicker) {
             NavigationStack {
@@ -197,15 +210,6 @@ struct AboutYouView: View {
         .sheet(isPresented: $isShowingHeightPicker) {
             NavigationStack {
                 Form {
-                    Section(header: Text("Units")) {
-                        Picker("Units", selection: $viewModel.unitsSystem) {
-                            ForEach(UnitsSystem.allCases, id: \.self) { system in
-                                Text(system.displayName).tag(system)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                    }
-
                     Section(header: Text("Height")) {
                         if isImperial {
                             HStack(spacing: 0) {
@@ -257,15 +261,6 @@ struct AboutYouView: View {
         .sheet(isPresented: $isShowingWeightPicker) {
             NavigationStack {
                 Form {
-                    Section(header: Text("Units")) {
-                        Picker("Units", selection: $viewModel.unitsSystem) {
-                            ForEach(UnitsSystem.allCases, id: \.self) { system in
-                                Text(system.displayName).tag(system)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                    }
-
                     Section(header: Text("Weight")) {
                         if isImperial {
                             Picker("Pounds", selection: $tempPounds) {
@@ -341,7 +336,7 @@ struct AboutYouView: View {
                 HStack {
                     Image(systemName: icon)
                         .font(.title3)
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.primary)
                     Spacer()
                 }
 
@@ -352,7 +347,7 @@ struct AboutYouView: View {
 
                 Text(value)
                     .font(.title3)
-                    .fontWeight(.semibold)
+                    .fontWeight(.regular)
                     .foregroundColor(.primary)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
@@ -370,7 +365,7 @@ struct AboutYouView: View {
         Button {
             persistCurrentValues()
             viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
-            viewModel.currentStep = .signup
+            viewModel.currentStep = .desiredWeight
         } label: {
             Text("Continue")
                 .font(.headline)
@@ -418,7 +413,7 @@ struct AboutYouView: View {
     private var formattedDateOfBirth: String {
         guard let dob = viewModel.dateOfBirth else { return "Add" }
         let formatter = DateFormatter()
-        formatter.dateStyle = .medium
+        formatter.dateFormat = "MM/dd/yyyy"
         return formatter.string(from: dob)
     }
 
@@ -460,7 +455,9 @@ struct AboutYouView: View {
 
     private func setupInitialState() {
         if let dob = viewModel.dateOfBirth {
-            tempDateOfBirth = dob
+            dobInput = digitsString(from: dob)
+        } else {
+            dobInput = ""
         }
 
         if let option = SexOption(rawValue: viewModel.gender.lowercased()) {
@@ -473,7 +470,9 @@ struct AboutYouView: View {
 
     private func prepareDateState() {
         if let dob = viewModel.dateOfBirth {
-            tempDateOfBirth = dob
+            dobInput = digitsString(from: dob)
+        } else {
+            dobInput = ""
         }
     }
 
@@ -503,8 +502,10 @@ struct AboutYouView: View {
         if isImperial {
             let totalInches = (tempFeet * 12) + tempInches
             viewModel.heightCm = Double(totalInches) * 2.54
+            UserDefaults.standard.set(Double(totalInches), forKey: "heightInches")
         } else {
             viewModel.heightCm = Double(tempCentimeters)
+            UserDefaults.standard.set(Double(tempCentimeters) / 2.54, forKey: "heightInches")
         }
 
         UserDefaults.standard.set(viewModel.heightCm, forKey: "heightCentimeters")
@@ -513,8 +514,10 @@ struct AboutYouView: View {
     private func saveWeightSelection() {
         if isImperial {
             viewModel.weightKg = Double(tempPounds) * 0.45359237
+            UserDefaults.standard.set(Double(tempPounds), forKey: "weightPounds")
         } else {
             viewModel.weightKg = Double(tempKilograms)
+            UserDefaults.standard.set(Double(tempKilograms) * 2.20462262, forKey: "weightPounds")
         }
 
         UserDefaults.standard.set(viewModel.weightKg, forKey: "weightKilograms")
@@ -535,6 +538,7 @@ struct AboutYouView: View {
                 DispatchQueue.main.async {
                     self.viewModel.heightCm = height
                     UserDefaults.standard.set(height, forKey: "heightCentimeters")
+                    UserDefaults.standard.set(height / 2.54, forKey: "heightInches")
                 }
             }
         }
@@ -544,6 +548,7 @@ struct AboutYouView: View {
                 DispatchQueue.main.async {
                     self.viewModel.weightKg = weight
                     UserDefaults.standard.set(weight, forKey: "weightKilograms")
+                    UserDefaults.standard.set(weight * 2.20462262, forKey: "weightPounds")
                 }
             }
         }
@@ -552,17 +557,8 @@ struct AboutYouView: View {
             if let date = date, self.viewModel.dateOfBirth == nil {
                 DispatchQueue.main.async {
                     self.viewModel.dateOfBirth = date
-                    let formatter = DateFormatter()
-                    formatter.dateFormat = "yyyy-MM-dd"
-                    let calendar = Calendar.current
-                    UserDefaults.standard.set(formatter.string(from: date), forKey: "dateOfBirth")
-                    UserDefaults.standard.set(calendar.component(.month, from: date), forKey: "birthMonth")
-                    UserDefaults.standard.set(calendar.component(.day, from: date), forKey: "birthDay")
-                    UserDefaults.standard.set(calendar.component(.year, from: date), forKey: "birthYear")
-                    let ageComponents = calendar.dateComponents([.year], from: date, to: Date())
-                    if let age = ageComponents.year {
-                        UserDefaults.standard.set(age, forKey: "age")
-                    }
+                    dobInput = digitsString(from: date)
+                    storeDateOfBirth(date)
                 }
             }
         }
@@ -590,29 +586,81 @@ struct AboutYouView: View {
 
     private func persistCurrentValues() {
         if let dob = viewModel.dateOfBirth {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            let calendar = Calendar.current
-            UserDefaults.standard.set(formatter.string(from: dob), forKey: "dateOfBirth")
-            UserDefaults.standard.set(calendar.component(.month, from: dob), forKey: "birthMonth")
-            UserDefaults.standard.set(calendar.component(.day, from: dob), forKey: "birthDay")
-            UserDefaults.standard.set(calendar.component(.year, from: dob), forKey: "birthYear")
-            let ageComponents = calendar.dateComponents([.year], from: dob, to: Date())
-            if let age = ageComponents.year {
-                UserDefaults.standard.set(age, forKey: "age")
-            }
+            storeDateOfBirth(dob)
         }
 
         if !viewModel.gender.isEmpty {
             UserDefaults.standard.set(viewModel.gender, forKey: "gender")
         }
 
+        let defaults = UserDefaults.standard
+
         if viewModel.heightCm > 0 {
-            UserDefaults.standard.set(viewModel.heightCm, forKey: "heightCentimeters")
+            defaults.set(viewModel.heightCm, forKey: "heightCentimeters")
+            let totalInches = viewModel.heightCm / 2.54
+            defaults.set(totalInches, forKey: "heightInches")
         }
 
         if viewModel.weightKg > 0 {
-            UserDefaults.standard.set(viewModel.weightKg, forKey: "weightKilograms")
+            defaults.set(viewModel.weightKg, forKey: "weightKilograms")
+            defaults.set(viewModel.weightKg * 2.20462262, forKey: "weightPounds")
+        }
+    }
+
+    private func sanitizedDobInput(_ input: String) -> String {
+        let digits = input.filter { $0.isNumber }
+        if digits.count <= 8 {
+            return digits
+        }
+        return String(digits.prefix(8))
+    }
+
+    private func formattedDobInput(_ digits: String) -> String {
+        var result = ""
+        for (index, char) in digits.enumerated() {
+            if index == 2 || index == 4 {
+                result.append("/")
+            }
+            result.append(char)
+        }
+        return result
+    }
+
+    private func dateFromDobInput(_ digits: String) -> Date? {
+        guard digits.count == 8 else { return nil }
+        let monthString = String(digits.prefix(2))
+        let dayString = String(digits.dropFirst(2).prefix(2))
+        let yearString = String(digits.suffix(4))
+
+        guard let month = Int(monthString), let day = Int(dayString), let year = Int(yearString) else { return nil }
+
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = day
+        let calendar = Calendar.current
+        return calendar.date(from: components)
+    }
+
+    private func digitsString(from date: Date) -> String {
+        let calendar = Calendar.current
+        let month = calendar.component(.month, from: date)
+        let day = calendar.component(.day, from: date)
+        let year = calendar.component(.year, from: date)
+        return String(format: "%02d%02d%04d", month, day, year)
+    }
+
+    private func storeDateOfBirth(_ date: Date) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let calendar = Calendar.current
+        UserDefaults.standard.set(formatter.string(from: date), forKey: "dateOfBirth")
+        UserDefaults.standard.set(calendar.component(.month, from: date), forKey: "birthMonth")
+        UserDefaults.standard.set(calendar.component(.day, from: date), forKey: "birthDay")
+        UserDefaults.standard.set(calendar.component(.year, from: date), forKey: "birthYear")
+        let ageComponents = calendar.dateComponents([.year], from: date, to: Date())
+        if let age = ageComponents.year {
+            UserDefaults.standard.set(age, forKey: "age")
         }
     }
 }
