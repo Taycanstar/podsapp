@@ -546,7 +546,7 @@ class HealthKitManager {
     // Fetch body weight
     func fetchBodyWeight(completion: @escaping (Double?, Error?) -> Void) {
         let weightType = HKQuantityType.quantityType(forIdentifier: .bodyMass)!
-        
+
         let query = HKSampleQuery(
             sampleType: weightType,
             predicate: nil,
@@ -564,7 +564,32 @@ class HealthKitManager {
         
         healthStore.execute(query)
     }
-    
+
+    // Fetch date of birth from HealthKit characteristics
+    func fetchDateOfBirth(completion: @escaping (Date?, Error?) -> Void) {
+        do {
+            let components = try healthStore.dateOfBirthComponents()
+            let calendar = Calendar.current
+            if let date = calendar.date(from: components) {
+                completion(date, nil)
+            } else {
+                completion(nil, NSError(domain: "com.pods.healthkit", code: 2, userInfo: [NSLocalizedDescriptionKey: "Unable to create birth date from components"]))
+            }
+        } catch {
+            completion(nil, error)
+        }
+    }
+
+    // Fetch biological sex characteristic
+    func fetchBiologicalSex(completion: @escaping (HKBiologicalSex?, Error?) -> Void) {
+        do {
+            let sexObject = try healthStore.biologicalSex()
+            completion(sexObject.biologicalSex, nil)
+        } catch {
+            completion(nil, error)
+        }
+    }
+
     // Fetch height
     func fetchHeight(completion: @escaping (Double?, Error?) -> Void) {
         let heightType = HKQuantityType.quantityType(forIdentifier: .height)!
