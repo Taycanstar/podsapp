@@ -60,6 +60,32 @@ class OnboardingViewModel: ObservableObject {
                 return "scalemass"
             }
         }
+
+        /// Normalized backend goal value used during onboarding completion
+        var mappedOnboardingValue: String {
+            switch self {
+            case .liftMoreWeight, .gainMuscle:
+                return "strength"
+            case .leanAndToned:
+                return "hypertrophy"
+            case .loseWeight:
+                return "hypertrophy"
+            }
+        }
+
+        /// Best-effort reverse lookup from a stored onboarding value
+        static func option(forOnboardingValue value: String) -> FitnessGoalOption? {
+            switch value {
+            case "strength":
+                return .liftMoreWeight
+            case "hypertrophy":
+                return .leanAndToned
+            case "circuit_training":
+                return .leanAndToned
+            default:
+                return nil
+            }
+        }
     }
 
     enum StrengthExperienceOption: String, CaseIterable, Identifiable {
@@ -254,7 +280,11 @@ class OnboardingViewModel: ObservableObject {
     @Published var profileInitial: String = ""
     @Published var profileColor: String = ""
     @Published var userId: Int?
-    @Published var selectedFitnessGoal: FitnessGoalOption?
+    @Published var selectedFitnessGoal: FitnessGoalOption? {
+        didSet {
+            applyFitnessGoalMapping(for: selectedFitnessGoal)
+        }
+    }
     @Published var selectedStrengthExperience: StrengthExperienceOption?
     @Published var selectedDietPreference: DietPreferenceOption? {
         didSet {
@@ -382,6 +412,8 @@ class OnboardingViewModel: ObservableObject {
         UserDefaults.standard.set(restDayNames, forKey: "rest_days")
 
         UserDefaults.standard.set(workoutFrequency, forKey: "workoutFrequency")
+
+        updateTrainingSplit(for: normalized)
     }
 
     func setNotificationTime(_ date: Date) {
@@ -393,6 +425,37 @@ class OnboardingViewModel: ObservableObject {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         notificationPreviewTimeISO8601 = formatter.string(from: normalized)
         UserDefaults.standard.set(notificationPreviewTimeISO8601, forKey: notificationTimeDefaultsKey)
+    }
+
+    private func updateTrainingSplit(for workoutDays: Int) {
+        let split: String
+        switch workoutDays {
+        case ...2:
+            split = "full_body"
+        case 3:
+            split = "push_pull_lower"
+        case 4...5:
+            split = "upper_lower"
+        case 6...:
+            split = "push_pull_lower"
+        default:
+            split = "full_body"
+        }
+
+        if trainingSplit != split {
+            trainingSplit = split
+        }
+    }
+
+    private func applyFitnessGoalMapping(for option: FitnessGoalOption?) {
+        if let option {
+            UserDefaults.standard.set(option.rawValue, forKey: "selectedFitnessGoalOption")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "selectedFitnessGoalOption")
+        }
+
+        let mappedValue = option?.mappedOnboardingValue ?? ""
+        fitnessGoal = mappedValue
     }
 
     enum Weekday: String, CaseIterable, Identifiable {
@@ -462,7 +525,15 @@ class OnboardingViewModel: ObservableObject {
     @Published var weightKg: Double = 0.0
     @Published var desiredWeightKg: Double = 0.0
     @Published var dietGoal: String = ""
-    @Published var fitnessGoal: String = ""
+    @Published var fitnessGoal: String = "" {
+        didSet {
+            if fitnessGoal.isEmpty {
+                UserDefaults.standard.removeObject(forKey: "fitnessGoal")
+            } else {
+                UserDefaults.standard.set(fitnessGoal, forKey: "fitnessGoal")
+            }
+        }
+    }
     @Published var goalTimeframeWeeks: Int = 0
     @Published var weeklyWeightChange: Double = 0.0
     @Published var workoutFrequency: String = ""
@@ -486,6 +557,15 @@ class OnboardingViewModel: ObservableObject {
     @Published var preferredWorkoutDuration: Int = 0
     @Published var workoutDaysPerWeek: Int = 0
     @Published var restDays: [String] = []
+    @Published var trainingSplit: String = "push_pull_lower" {
+        didSet {
+            if trainingSplit.isEmpty {
+                UserDefaults.standard.removeObject(forKey: "trainingSplit")
+            } else {
+                UserDefaults.standard.set(trainingSplit, forKey: "trainingSplit")
+            }
+        }
+    }
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     
@@ -538,6 +618,23 @@ class OnboardingViewModel: ObservableObject {
                     .sorted { $0.sortOrder < $1.sortOrder }
                     .map { $0.rawValue }
             }
+        }
+
+        if let storedFitnessGoalOption = UserDefaults.standard.string(forKey: "selectedFitnessGoalOption"),
+           let option = FitnessGoalOption(rawValue: storedFitnessGoalOption) {
+            selectedFitnessGoal = option
+        } else if let storedFitnessGoal = UserDefaults.standard.string(forKey: "fitnessGoal"), !storedFitnessGoal.isEmpty {
+            fitnessGoal = storedFitnessGoal
+            if selectedFitnessGoal == nil,
+               let inferredOption = FitnessGoalOption.option(forOnboardingValue: storedFitnessGoal) {
+                selectedFitnessGoal = inferredOption
+            }
+        }
+
+        if let storedSplit = UserDefaults.standard.string(forKey: "trainingSplit"), !storedSplit.isEmpty {
+            trainingSplit = storedSplit
+        } else {
+            updateTrainingSplit(for: max(trainingDaysPerWeek, 1))
         }
 
         if let storedName = UserDefaults.standard.string(forKey: "userName"), !storedName.isEmpty {
@@ -712,6 +809,7 @@ class OnboardingViewModel: ObservableObject {
             "preferred_workout_duration": preferredWorkoutDuration,
             "workout_days_per_week": workoutDaysPerWeek,
             "rest_days": restDays,
+            "training_split": trainingSplit,
             "units_system": unitsSystem.rawValue
         ]
         
