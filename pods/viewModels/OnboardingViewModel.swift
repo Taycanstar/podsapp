@@ -20,6 +20,8 @@ class OnboardingViewModel: ObservableObject {
     // Original enum for core navigation states
     enum OnboardingStep {
         case landing
+        case enterName
+        case greeting
         case fitnessGoal
         case strengthExperience
         case desiredWeight
@@ -277,7 +279,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var notificationPreviewTimeISO8601: String = ""
     @Published var newOnboardingStepIndex: Int = 1
 
-    let newOnboardingTotalSteps: Int = 10
+    let newOnboardingTotalSteps: Int = 12
     private let notificationTimeDefaultsKey = "notificationPreviewTimeISO8601"
 
     var newOnboardingProgress: Double {
@@ -538,6 +540,10 @@ class OnboardingViewModel: ObservableObject {
             }
         }
 
+        if let storedName = UserDefaults.standard.string(forKey: "userName"), !storedName.isEmpty {
+            name = storedName
+        }
+
         // Load units system from UserDefaults, default to imperial
         if let savedUnitsSystem = UserDefaults.standard.string(forKey: "unitsSystem"),
            let units = UnitsSystem(rawValue: savedUnitsSystem) {
@@ -644,11 +650,11 @@ class OnboardingViewModel: ObservableObject {
     }
     
     func startOnboarding() {
-        currentStep = .gender
+        currentStep = .enterName
         currentFlowStep = .gender
         onboardingCompleted = false
         saveOnboardingState()
-        
+
         // Mark that onboarding is now in progress
         UserDefaults.standard.set(true, forKey: "onboardingInProgress")
     }
@@ -774,6 +780,10 @@ class OnboardingViewModel: ObservableObject {
         }
 
         switch step {
+        case "EnterNameView":
+            currentStep = .enterName
+        case "GreetingView":
+            currentStep = .greeting
         case "FitnessGoalSelectionView":
             currentStep = .fitnessGoal
         case "StrengthExperienceView":
@@ -819,16 +829,18 @@ class OnboardingViewModel: ObservableObject {
 
     private func newOnboardingIndex(for step: OnboardingStep) -> Int {
         switch step {
-        case .fitnessGoal: return 1
-        case .strengthExperience: return 2
-        case .gymLocation: return 3
-        case .reviewEquipment: return 4
-        case .workoutSchedule: return 5
-        case .dietPreferences: return 6
-        case .enableNotifications: return 7
-        case .allowHealth: return 8
-        case .aboutYou: return 9
-        case .desiredWeight, .signup: return 10
+        case .enterName: return 1
+        case .greeting: return 2
+        case .fitnessGoal: return 3
+        case .strengthExperience: return 4
+        case .gymLocation: return 5
+        case .reviewEquipment: return 6
+        case .workoutSchedule: return 7
+        case .dietPreferences: return 8
+        case .enableNotifications: return 9
+        case .allowHealth: return 10
+        case .aboutYou: return 11
+        case .desiredWeight, .signup: return 12
         default: return 1
         }
     }

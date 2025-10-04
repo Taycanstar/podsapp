@@ -13,6 +13,10 @@ struct MainOnboardingView: View {
                 StartupView(isAuthenticated: $isAuthenticated)
             case .fitnessGoal:
                 FitnessGoalSelectionView()
+            case .enterName:
+                EnterNameView()
+            case .greeting:
+                GreetingView()
             case .strengthExperience:
                 StrengthExperienceView()
             case .desiredWeight:

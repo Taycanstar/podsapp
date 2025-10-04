@@ -77,7 +77,10 @@ struct ReviewEquipmentView: View {
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 5)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
+            UserDefaults.standard.set("ReviewEquipmentView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
         }
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
@@ -118,7 +121,7 @@ struct ReviewEquipmentView: View {
 
     private var continueButton: some View {
         Button {
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
             viewModel.currentStep = .workoutSchedule
         } label: {
             Text("Continue")
@@ -145,7 +148,7 @@ struct ReviewEquipmentView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 4)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 5)
                 viewModel.currentStep = .gymLocation
             } label: {
                 Image(systemName: "chevron.left")
@@ -160,7 +163,7 @@ struct ReviewEquipmentView: View {
 
         ToolbarItem(placement: .topBarTrailing) {
             Button("Skip") {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
                 viewModel.currentStep = .workoutSchedule
             }
             .font(.headline)

@@ -44,7 +44,10 @@ struct GymLocationView: View {
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
             selectedOption = viewModel.selectedGymLocation
-            viewModel.newOnboardingStepIndex = 4
+            viewModel.newOnboardingStepIndex = 5
+            UserDefaults.standard.set("GymLocationView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
         }
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
@@ -102,10 +105,10 @@ struct GymLocationView: View {
             viewModel.selectedGymLocation = option
             if option == .noEquipment {
                 viewModel.equipmentInventory.removeAll()
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
                 viewModel.currentStep = .workoutSchedule
             } else {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 5)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
                 viewModel.currentStep = .reviewEquipment
             }
         } label: {
@@ -135,7 +138,7 @@ struct GymLocationView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 2)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 4)
                 viewModel.currentStep = .strengthExperience
             } label: {
                 Image(systemName: "chevron.left")

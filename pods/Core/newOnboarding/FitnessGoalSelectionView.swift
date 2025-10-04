@@ -46,7 +46,10 @@ struct FitnessGoalSelectionView: View {
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
             selectedGoal = viewModel.selectedFitnessGoal
-            viewModel.newOnboardingStepIndex = 1
+            viewModel.newOnboardingStepIndex = 3
+            UserDefaults.standard.set("FitnessGoalSelectionView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
         }
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
@@ -102,7 +105,7 @@ struct FitnessGoalSelectionView: View {
         Button {
             guard let goal = selectedGoal else { return }
             viewModel.selectedFitnessGoal = goal
-            viewModel.newOnboardingStepIndex = 2
+            viewModel.newOnboardingStepIndex = 4
             viewModel.currentStep = .strengthExperience
         } label: {
             Text("Continue")
@@ -131,8 +134,8 @@ struct FitnessGoalSelectionView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = 1
-                viewModel.currentStep = .landing
+                viewModel.newOnboardingStepIndex = 2
+                viewModel.currentStep = .greeting
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.headline)

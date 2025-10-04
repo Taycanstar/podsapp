@@ -41,10 +41,6 @@ struct DesiredWeightSelectionView: View {
                                 .foregroundColor(.primary)
                                 .padding(.bottom, 8)
 
-                            Text("Units: \(unitLabel)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-
                             WeightRulerView2(
                                 selectedWeight: $selectedWeight,
                                 range: weightRange,
@@ -87,7 +83,15 @@ struct DesiredWeightSelectionView: View {
     }
 
     private func loadInitialWeight() {
-        currentUnits = viewModel.unitsSystem
+        let defaults = UserDefaults.standard
+        let hasSelectedUnits = defaults.object(forKey: "hasSelectedUnits") as? Bool ?? false
+
+        if hasSelectedUnits {
+            currentUnits = viewModel.unitsSystem
+        } else {
+            currentUnits = .imperial
+            viewModel.unitsSystem = .imperial
+        }
         previousUnits = currentUnits
 
         let storedKg = viewModel.desiredWeightKg
@@ -98,7 +102,6 @@ struct DesiredWeightSelectionView: View {
             return
         }
 
-        let defaults = UserDefaults.standard
         if currentUnits == .imperial {
             let desired = defaults.double(forKey: "desiredWeightPounds")
             if desired > 0 {

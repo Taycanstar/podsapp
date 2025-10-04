@@ -45,7 +45,10 @@ struct StrengthExperienceView: View {
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
             selectedOption = viewModel.selectedStrengthExperience
-            viewModel.newOnboardingStepIndex = 2
+            viewModel.newOnboardingStepIndex = 4
+            UserDefaults.standard.set("StrengthExperienceView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
         }
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
@@ -98,7 +101,7 @@ struct StrengthExperienceView: View {
             viewModel.selectedStrengthExperience = option
             let experienceLevel = option.experienceLevel
             UserDefaults.standard.set(experienceLevel.rawValue, forKey: "fitnessLevel")
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 3)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 5)
             viewModel.currentStep = .gymLocation
         } label: {
             Text("Continue")
@@ -127,7 +130,7 @@ struct StrengthExperienceView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = 1
+                viewModel.newOnboardingStepIndex = 3
                 viewModel.currentStep = .fitnessGoal
             } label: {
                 Image(systemName: "chevron.left")
@@ -142,7 +145,7 @@ struct StrengthExperienceView: View {
         
         ToolbarItem(placement: .topBarTrailing) {
             Button("Skip") {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 3)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 5)
                 viewModel.selectedStrengthExperience = nil
                 selectedOption = nil
                 UserDefaults.standard.removeObject(forKey: "fitnessLevel")

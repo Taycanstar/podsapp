@@ -31,7 +31,10 @@ struct DietPreferencesView: View {
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
             selectedDiet = viewModel.selectedDietPreference
-            viewModel.newOnboardingStepIndex = 7
+            viewModel.newOnboardingStepIndex = 8
+            UserDefaults.standard.set("DietPreferencesView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
         }
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
@@ -107,7 +110,7 @@ struct DietPreferencesView: View {
         Button {
             guard let diet = selectedDiet else { return }
             viewModel.selectedDietPreference = diet
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
             viewModel.currentStep = .enableNotifications
         } label: {
             Text("Continue")
@@ -136,7 +139,7 @@ struct DietPreferencesView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = 6
+                viewModel.newOnboardingStepIndex = 7
                 viewModel.currentStep = .workoutSchedule
             } label: {
                 Image(systemName: "chevron.left")
@@ -153,7 +156,7 @@ struct DietPreferencesView: View {
             Button("Skip") {
                 viewModel.selectedDietPreference = nil
                 selectedDiet = nil
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
                 viewModel.currentStep = .enableNotifications
             }
             .font(.headline)

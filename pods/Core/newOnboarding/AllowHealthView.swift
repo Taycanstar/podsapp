@@ -48,7 +48,7 @@ struct AllowHealthView: View {
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 10)
             UserDefaults.standard.set("AllowHealthView", forKey: "currentOnboardingStep")
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
             UserDefaults.standard.synchronize()
@@ -64,7 +64,7 @@ struct AllowHealthView: View {
             Button("Not now") {
                 HapticFeedback.generate()
                 UserDefaults.standard.set(false, forKey: "healthKitEnabled")
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 11)
                 viewModel.currentStep = .aboutYou
             }
             .foregroundColor(.primary)
@@ -107,7 +107,7 @@ struct AllowHealthView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
                 viewModel.currentStep = .enableNotifications
             } label: {
                 Image(systemName: "chevron.left")
@@ -153,7 +153,7 @@ private extension AllowHealthView {
 
     func completeStep() {
         isRequestingPermission = false
-        viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
+        viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 11)
         viewModel.currentStep = .aboutYou
     }
 }

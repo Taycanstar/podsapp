@@ -46,7 +46,10 @@ struct EnableNotificationsView: View {
             tempTime = viewModel.notificationPreviewTime
             viewModel.setNotificationTime(tempTime)
             refreshAuthorizationStatus()
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
+            UserDefaults.standard.set("EnableNotificationsView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
         }
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
@@ -141,7 +144,7 @@ struct EnableNotificationsView: View {
                 HapticFeedback.generate()
                 UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.notificationIdentifier])
                 viewModel.setNotificationTime(viewModel.notificationPreviewTime)
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 10)
                 viewModel.currentStep = .allowHealth
             }
             .foregroundColor(.primary)
@@ -181,7 +184,7 @@ struct EnableNotificationsView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
                 viewModel.currentStep = .dietPreferences
             } label: {
                 Image(systemName: "chevron.left")
@@ -203,7 +206,7 @@ struct EnableNotificationsView: View {
         if authorizationStatus == .authorized {
             schedulePreviewNotification()
             HapticFeedback.generate()
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 10)
             viewModel.currentStep = .allowHealth
             return
         }
@@ -219,7 +222,7 @@ struct EnableNotificationsView: View {
                     schedulePreviewNotification()
                 }
                 HapticFeedback.generate()
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 10)
                 viewModel.currentStep = .allowHealth
             }
         }

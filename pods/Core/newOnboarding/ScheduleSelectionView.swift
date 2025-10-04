@@ -53,7 +53,10 @@ struct ScheduleSelectionView: View {
             NavigationBarStyler.beginOnboardingAppearance()
             viewModel.ensureDefaultSchedule()
             mode = .perWeek
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 6)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
+            UserDefaults.standard.set("ScheduleSelectionView", forKey: "currentOnboardingStep")
+            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+            UserDefaults.standard.synchronize()
         }
         .onDisappear {
             NavigationBarStyler.endOnboardingAppearance()
@@ -178,7 +181,7 @@ struct ScheduleSelectionView: View {
         Button {
             viewModel.syncWorkoutSchedule()
             viewModel.setNotificationTime(viewModel.notificationPreviewTime)
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 8)
             viewModel.currentStep = .dietPreferences
         } label: {
             Text("Continue")
@@ -208,10 +211,10 @@ struct ScheduleSelectionView: View {
         ToolbarItem(placement: .topBarLeading) {
             Button {
                 if viewModel.selectedGymLocation == .noEquipment || viewModel.selectedGymLocation == nil {
-                    viewModel.newOnboardingStepIndex = 4
+                    viewModel.newOnboardingStepIndex = 5
                     viewModel.currentStep = .gymLocation
                 } else {
-                    viewModel.newOnboardingStepIndex = 5
+                    viewModel.newOnboardingStepIndex = 6
                     viewModel.currentStep = .reviewEquipment
                 }
             } label: {

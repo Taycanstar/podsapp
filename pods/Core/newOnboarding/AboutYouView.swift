@@ -7,7 +7,6 @@ struct AboutYouView: View {
     private let backgroundColor = Color.onboardingBackground
 
     @State private var isShowingDatePicker = false
-    @State private var isShowingSexPicker = false
     @State private var isShowingHeightPicker = false
     @State private var isShowingWeightPicker = false
 
@@ -57,15 +56,7 @@ struct AboutYouView: View {
                                 }
                             )
 
-                            infoCard(
-                                icon: "figure.stand",
-                                title: "SEX",
-                                value: selectedSexLabel,
-                                action: {
-                                    prepareSexState()
-                                    isShowingSexPicker = true
-                                }
-                            )
+                            sexSelectionMenu
 
                             infoCard(
                                 icon: "scalemass.fill",
@@ -115,25 +106,25 @@ struct AboutYouView: View {
         }
         .sheet(isPresented: $isShowingDatePicker) {
             NavigationStack {
-                VStack(spacing: 20) {
-                    Text("Enter your birthday")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-
-                    TextField("MMDDYYYY", text: Binding(
+                VStack(spacing: 24) {
+                    TextField("mm/dd/yyyy", text: Binding(
                         get: { formattedDobInput(dobInput) },
                         set: { newValue in dobInput = sanitizedDobInput(newValue) }
                     ))
-                    .keyboardType(.numberPad)
+                    .keyboardType(.numbersAndPunctuation)
                     .focused($isDobFieldFocused)
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
-                    .font(.title2.weight(.semibold))
-                    .multilineTextAlignment(.center)
-
-                    Text("Type 8 digits — month, day, year")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
+                    .font(.title2)
+                    .fontWeight(.regular)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                    )
 
                     if dobInput.count == 8 && dateFromDobInput(dobInput) == nil {
                         Text("Enter a valid calendar date")
@@ -148,16 +139,20 @@ struct AboutYouView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
+                        Button {
                             isShowingDatePicker = false
+                        } label: {
+                            Image(systemName: "xmark")
                         }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") {
+                        Button {
                             guard let date = dateFromDobInput(dobInput) else { return }
                             viewModel.dateOfBirth = date
                             storeDateOfBirth(date)
                             isShowingDatePicker = false
+                        } label: {
+                            Image(systemName: "checkmark")
                         }
                         .disabled(dateFromDobInput(dobInput) == nil)
                     }
@@ -168,90 +163,59 @@ struct AboutYouView: View {
             }
             .presentationDetents([.fraction(0.35)])
         }
-        .sheet(isPresented: $isShowingSexPicker) {
-            NavigationStack {
-                List {
-                    Section("Select sex") {
-                        ForEach(SexOption.allCases) { option in
-                            HStack {
-                                Text(option.displayName)
-                                Spacer()
-                                if option == tempSex {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.accentColor)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                tempSex = option
-                            }
-                        }
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .navigationTitle("Sex")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            isShowingSexPicker = false
-                        }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") {
-                            viewModel.gender = tempSex.rawValue
-                            UserDefaults.standard.set(tempSex.rawValue, forKey: "gender")
-                            isShowingSexPicker = false
-                        }
-                    }
-                }
-            }
-            .presentationDetents([.medium])
-        }
         .sheet(isPresented: $isShowingHeightPicker) {
             NavigationStack {
-                Form {
-                    Section(header: Text("Height")) {
-                        if isImperial {
-                            HStack(spacing: 0) {
-                                Picker("Feet", selection: $tempFeet) {
-                                    ForEach(heightFeetRange, id: \.self) { value in
-                                        Text("\(value) ft").tag(value)
-                                    }
-                                }
-                                .pickerStyle(.wheel)
-                                .frame(maxWidth: .infinity)
-
-                                Picker("Inches", selection: $tempInches) {
-                                    ForEach(heightInchesRange, id: \.self) { value in
-                                        Text("\(value) in").tag(value)
-                                    }
-                                }
-                                .pickerStyle(.wheel)
-                                .frame(maxWidth: .infinity)
-                            }
-                            .frame(height: 180)
-                        } else {
-                            Picker("Centimeters", selection: $tempCentimeters) {
-                                ForEach(centimeterRange, id: \.self) { value in
-                                    Text("\(value) cm").tag(value)
+                VStack {
+                    if isImperial {
+                        HStack(spacing: 0) {
+                            Picker("Feet", selection: $tempFeet) {
+                                ForEach(heightFeetRange, id: \.self) { value in
+                                    Text("\(value) ft").tag(value)
                                 }
                             }
                             .pickerStyle(.wheel)
-                            .frame(height: 180)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity)
+
+                            Picker("Inches", selection: $tempInches) {
+                                ForEach(heightInchesRange, id: \.self) { value in
+                                    Text("\(value) in").tag(value)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity)
                         }
+                        .frame(height: 180)
+                    } else {
+                        Picker("Centimeters", selection: $tempCentimeters) {
+                            ForEach(centimeterRange, id: \.self) { value in
+                                Text("\(value) cm").tag(value)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .labelsHidden()
+                        .frame(height: 180)
                     }
+
+                    Spacer()
                 }
+                .padding()
                 .navigationTitle("Height")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
+                        Button {
                             isShowingHeightPicker = false
+                        } label: {
+                            Image(systemName: "xmark")
                         }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") {
+                        Button {
                             saveHeightSelection()
                             isShowingHeightPicker = false
+                        } label: {
+                            Image(systemName: "checkmark")
                         }
                     }
                 }
@@ -260,38 +224,45 @@ struct AboutYouView: View {
         }
         .sheet(isPresented: $isShowingWeightPicker) {
             NavigationStack {
-                Form {
-                    Section(header: Text("Weight")) {
-                        if isImperial {
-                            Picker("Pounds", selection: $tempPounds) {
-                                ForEach(poundsRange, id: \.self) { value in
-                                    Text("\(value) lb").tag(value)
-                                }
+                VStack {
+                    if isImperial {
+                        Picker("Pounds", selection: $tempPounds) {
+                            ForEach(poundsRange, id: \.self) { value in
+                                Text("\(value) lb").tag(value)
                             }
-                            .pickerStyle(.wheel)
-                            .frame(height: 180)
-                        } else {
-                            Picker("Kilograms", selection: $tempKilograms) {
-                                ForEach(kilogramsRange, id: \.self) { value in
-                                    Text("\(value) kg").tag(value)
-                                }
-                            }
-                            .pickerStyle(.wheel)
-                            .frame(height: 180)
                         }
+                        .pickerStyle(.wheel)
+                        .labelsHidden()
+                        .frame(height: 180)
+                    } else {
+                        Picker("Kilograms", selection: $tempKilograms) {
+                            ForEach(kilogramsRange, id: \.self) { value in
+                                Text("\(value) kg").tag(value)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .labelsHidden()
+                        .frame(height: 180)
                     }
+
+                    Spacer()
                 }
+                .padding()
                 .navigationTitle("Weight")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
+                        Button {
                             isShowingWeightPicker = false
+                        } label: {
+                            Image(systemName: "xmark")
                         }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") {
+                        Button {
                             saveWeightSelection()
                             isShowingWeightPicker = false
+                        } label: {
+                            Image(systemName: "checkmark")
                         }
                     }
                 }
@@ -327,38 +298,73 @@ struct AboutYouView: View {
         .padding(.horizontal, 24)
         .onChange(of: viewModel.unitsSystem) { _ in
             HapticFeedback.generate()
+            UserDefaults.standard.set(true, forKey: "hasSelectedUnits")
         }
     }
 
     private func infoCard(icon: String, title: String, value: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Image(systemName: icon)
-                        .font(.title3)
-                        .foregroundStyle(Color.primary)
-                    Spacer()
-                }
-
-                Text(title)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
-
-                Text(value)
-                    .font(.title3)
-                    .fontWeight(.regular)
-                    .foregroundColor(.primary)
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(1)
+            cardContainer {
+                cardLabel(icon: icon, title: title, value: value)
             }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var sexSelectionMenu: some View {
+        Menu {
+            ForEach(SexOption.allCases) { option in
+                Button {
+                    tempSex = option
+                    viewModel.gender = option.rawValue
+                    UserDefaults.standard.set(option.rawValue, forKey: "gender")
+                } label: {
+                    HStack {
+                        Text(option.displayName)
+                        if option == tempSex {
+                            Spacer()
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            cardContainer {
+                cardLabel(icon: "figure.stand", title: "SEX", value: selectedSexLabel)
+            }
+        }
+    }
+
+    private func cardContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(.systemBackground))
             .cornerRadius(24)
             .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 6)
+    }
+
+    private func cardLabel(icon: String, title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(Color.primary)
+                Spacer()
+            }
+
+            Text(title)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.secondary)
+
+            Text(value)
+                .font(.title3)
+                .fontWeight(.regular)
+                .foregroundColor(.primary)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
         }
-        .buttonStyle(.plain)
     }
 
     private var continueButton: some View {
@@ -476,12 +482,6 @@ struct AboutYouView: View {
         }
     }
 
-    private func prepareSexState() {
-        if let option = SexOption(rawValue: viewModel.gender.lowercased()) {
-            tempSex = option
-        }
-    }
-
     private func prepareHeightState() {
         if viewModel.heightCm > 0 {
             let totalInches = viewModel.heightCm / 2.54
@@ -569,14 +569,16 @@ struct AboutYouView: View {
                     switch sex {
                     case .female:
                         self.viewModel.gender = SexOption.female.rawValue
+                        self.tempSex = .female
                     case .male:
                         self.viewModel.gender = SexOption.male.rawValue
-                    case .other:
-                        fallthrough
-                    case .notSet:
+                        self.tempSex = .male
+                    case .other, .notSet:
                         self.viewModel.gender = SexOption.other.rawValue
+                        self.tempSex = .other
                     @unknown default:
                         self.viewModel.gender = SexOption.other.rawValue
+                        self.tempSex = .other
                     }
                     UserDefaults.standard.set(self.viewModel.gender, forKey: "gender")
                 }

@@ -23,7 +23,7 @@ struct StartupView: View {
                     VStack(spacing: 10) {
                         Button {
                             viewModel.newOnboardingStepIndex = 1
-                            viewModel.currentStep = .fitnessGoal
+                            viewModel.currentStep = .enterName
                         } label: {
                             Text("Get started")
                                 .font(.headline)
