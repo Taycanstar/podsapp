@@ -20,7 +20,9 @@ struct GreetingView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
+            VStack {
+                Spacer()
+
                 VStack(spacing: 24) {
                     Image(systemName: "laser.burst")
                         .font(.system(size: 40, weight: .semibold))
@@ -41,10 +43,17 @@ struct GreetingView: View {
                             .padding(.horizontal, 32)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(backgroundColor.ignoresSafeArea())
 
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(backgroundColor.ignoresSafeArea())
+            .safeAreaInset(edge: .bottom) {
                 continueButton
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
+                    .background(backgroundColor.ignoresSafeArea())
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
@@ -69,8 +78,6 @@ struct GreetingView: View {
                 .foregroundColor(Color(.systemBackground))
                 .cornerRadius(36)
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 32)
     }
 
     private var progressView: some View {
