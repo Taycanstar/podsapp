@@ -17,42 +17,45 @@ struct EnterNameView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
-                VStack(spacing: 32) {
-                    Spacer()
+            VStack {
+                Spacer()
 
-                    VStack(spacing: 16) {
-                        Text("What's your name?")
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                VStack(spacing: 16) {
+                    Text("What's your name?")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 24)
+
+                    VStack(spacing: 8) {
+                        TextField("Enter your name", text: $name)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
                             .multilineTextAlignment(.center)
-                            .foregroundColor(.primary)
+                            .font(.title3)
                             .padding(.horizontal, 24)
+                            .padding(.bottom, 5)
+                            .padding(.top, 12)
+                            .focused($isNameFieldFocused)
 
-                        VStack(spacing: 8) {
-                            TextField("Enter your name", text: $name)
-                                .textInputAutocapitalization(.words)
-                                .autocorrectionDisabled()
-                                .multilineTextAlignment(.center)
-                                .font(.title3)
-                                .padding(.horizontal, 24)
-                                .padding(.bottom, 5)
-                                .padding(.top, 12)
-                                .focused($isNameFieldFocused)
-
-                            Rectangle()
-                                .fill(Color.primary.opacity(0.2))
-                                .frame(height: 1)
-                                .padding(.horizontal, 24)
-                        }
+                        Rectangle()
+                            .fill(Color.primary.opacity(0.2))
+                            .frame(height: 1)
+                            .padding(.horizontal, 24)
                     }
-
-                    Spacer()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(backgroundColor.ignoresSafeArea())
 
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(backgroundColor.ignoresSafeArea())
+            .safeAreaInset(edge: .bottom) {
                 continueButton
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
+                    .background(backgroundColor.ignoresSafeArea())
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
@@ -80,8 +83,6 @@ struct EnterNameView: View {
                 .foregroundColor(Color(.systemBackground))
                 .cornerRadius(36)
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 32)
         .disabled(trimmedName.isEmpty)
         .opacity(trimmedName.isEmpty ? 0.5 : 1)
     }

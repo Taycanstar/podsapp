@@ -398,7 +398,7 @@ struct AboutYouView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
+                viewModel.newOnboardingStepIndex = 10
                 viewModel.currentStep = .allowHealth
             } label: {
                 Image(systemName: "chevron.left")
@@ -460,6 +460,10 @@ struct AboutYouView: View {
     }
 
     private func setupInitialState() {
+        if !UserDefaults.standard.bool(forKey: "hasSelectedUnits") {
+            viewModel.unitsSystem = .imperial
+        }
+
         if let dob = viewModel.dateOfBirth {
             dobInput = digitsString(from: dob)
         } else {
