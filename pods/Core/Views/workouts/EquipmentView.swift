@@ -432,7 +432,7 @@ struct EquipmentSelectionButton: View {
             .frame(height: 85) // Ensure uniform card height across grid
             .padding(.horizontal, 8)
             .padding(.vertical, 10)
-            .background(Color(.systemBackground))
+            .background(Color.onboardingCardBackground)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)

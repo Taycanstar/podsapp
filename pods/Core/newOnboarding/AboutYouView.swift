@@ -339,7 +339,7 @@ struct AboutYouView: View {
         content()
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.systemBackground))
+            .background(Color.onboardingCardBackground)
             .cornerRadius(24)
             .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 6)
     }
@@ -385,6 +385,7 @@ struct AboutYouView: View {
         .padding(.horizontal, 24)
         .padding(.bottom, 32)
         .disabled(!canContinue)
+        .opacity(canContinue ? 1.0 : 0.5)
     }
 
     private var progressView: some View {

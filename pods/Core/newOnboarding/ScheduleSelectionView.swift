@@ -125,7 +125,7 @@ struct ScheduleSelectionView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))
+        .background(Color.onboardingCardBackground)
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
         .padding(.horizontal, 24)
@@ -153,7 +153,7 @@ struct ScheduleSelectionView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))
+        .background(Color.onboardingCardBackground)
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
         .padding(.horizontal, 24)

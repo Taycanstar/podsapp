@@ -37,8 +37,8 @@ struct MainOnboardingView: View {
                 AllowHealthView()
             case .aboutYou:
                 AboutYouView()
-            case .signup:
-                SignupView()
+        case .signup:
+                RegisterView(isAuthenticated: $isAuthenticated)
             case .emailVerification:
                 EmailVerificationView()
             case .info:

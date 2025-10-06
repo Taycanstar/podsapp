@@ -131,7 +131,7 @@ struct EnableNotificationsView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))
+        .background(Color.onboardingCardBackground)
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
         .padding(.horizontal, 24)

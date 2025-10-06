@@ -59,7 +59,7 @@ struct ProgramOverviewView: View {
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.leading)
 
-            Text("Review your program details. You can edit these later in the app.")
+            Text("Review your plan details. You can edit these later in the app.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -74,7 +74,7 @@ struct ProgramOverviewView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground))
+        .background(Color.onboardingCardBackground)
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 6)
     }
@@ -108,7 +108,7 @@ struct ProgramOverviewView: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemBackground))
+            .background(Color.onboardingCardBackground)
             .cornerRadius(24)
             .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 6)
         }
@@ -124,11 +124,11 @@ struct ProgramOverviewView: View {
                     MacroRow(title: "Calories", value: Int(goals.calories), unit: "kcal", color: Color("brightOrange"), icon: "flame.fill")
                     MacroRow(title: "Protein", value: Int(goals.protein), unit: "g", color: .blue, icon: "fish")
                     MacroRow(title: "Carbs", value: Int(goals.carbs), unit: "g", color: Color("darkYellow"), icon: "laurel.leading")
-                    MacroRow(title: "Fat", value: Int(goals.fat), unit: "g", color: .pink, icon: "drop")
+                    MacroRow(title: "Fat", value: Int(goals.fat), unit: "g", color: .pink, icon: "drop.fill")
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.secondarySystemBackground))
+                .background(Color.onboardingCardBackground)
                 .cornerRadius(24)
                 .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 6)
             } else {
@@ -142,7 +142,7 @@ struct ProgramOverviewView: View {
             viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
             viewModel.currentStep = .signup
         } label: {
-            Text("Continue")
+            Text("Start Plan")
                 .font(.headline)
                 .fontWeight(.semibold)
                 .frame(maxWidth: .infinity)
@@ -230,7 +230,7 @@ struct ProgramOverviewView: View {
 
     private func loadingCard(height: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: 24)
-            .fill(Color(.secondarySystemBackground))
+            .fill(Color.onboardingCardBackground)
             .frame(height: height)
             .overlay(
                 ShimmerView()
@@ -247,7 +247,7 @@ struct ProgramOverviewView: View {
             .foregroundColor(.secondary)
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemBackground))
+            .background(Color.onboardingCardBackground)
             .cornerRadius(24)
     }
 

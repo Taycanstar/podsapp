@@ -278,6 +278,7 @@
 		36D3A51A2E90E5E100AD6B94 /* GreetingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5192E90E5E100AD6B94 /* GreetingView.swift */; };
 		36D3A51C2E91A19600AD6B94 /* YourProgramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A51B2E91A18E00AD6B94 /* YourProgramView.swift */; };
 		36D3A5202E9396DC00AD6B94 /* ShimmerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A51F2E9396D700AD6B94 /* ShimmerView.swift */; };
+		36D3A5222E942B7300AD6B94 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5212E942B6400AD6B94 /* RegisterView.swift */; };
 		36D3A5982E95B0AA00AD6B94 /* ProgramOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5972E95B0AA00AD6B94 /* ProgramOverviewView.swift */; };
 		36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D647D02C092A1C002F1047 /* SplashScreenView.swift */; };
 		36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */; };
@@ -638,6 +639,7 @@
 		36D3A5192E90E5E100AD6B94 /* GreetingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreetingView.swift; sourceTree = "<group>"; };
 		36D3A51B2E91A18E00AD6B94 /* YourProgramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YourProgramView.swift; sourceTree = "<group>"; };
 		36D3A51F2E9396D700AD6B94 /* ShimmerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerView.swift; sourceTree = "<group>"; };
+		36D3A5212E942B6400AD6B94 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
 		36D3A5972E95B0AA00AD6B94 /* ProgramOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramOverviewView.swift; sourceTree = "<group>"; };
 		36D647D02C092A1C002F1047 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
 		36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -1238,6 +1240,7 @@
 		36D3A4FC2E8C2C7500AD6B94 /* newOnboarding */ = {
 			isa = PBXGroup;
 			children = (
+				36D3A5212E942B6400AD6B94 /* RegisterView.swift */,
 				36D3A51B2E91A18E00AD6B94 /* YourProgramView.swift */,
 				36D3A5192E90E5E100AD6B94 /* GreetingView.swift */,
 				36D3A5172E90E5C000AD6B94 /* EnterNameView.swift */,
@@ -1669,6 +1672,7 @@
 				361FF3412E288D9D00B7F68E /* MuscleRecoveryService.swift in Sources */,
 				361FF3392E23090000B7F68E /* StartWorkoutView.swift in Sources */,
 				36D3A5142E8EDC6F00AD6B94 /* AllowHealthView.swift in Sources */,
+				36D3A5222E942B7300AD6B94 /* RegisterView.swift in Sources */,
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,

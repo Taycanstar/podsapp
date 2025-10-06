@@ -88,7 +88,7 @@ struct GymLocationView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color(.systemBackground))
+                    .fill(Color.onboardingCardBackground)
                     .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
             )
             .overlay(
