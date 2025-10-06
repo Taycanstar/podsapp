@@ -30,7 +30,6 @@ struct StartupView: View {
                                 .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
-                                // .background(Color.accentColor)
                                 .background(.black)
                                 .foregroundColor(.white)
                                 .cornerRadius(36)

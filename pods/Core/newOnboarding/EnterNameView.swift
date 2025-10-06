@@ -96,6 +96,21 @@ struct EnterNameView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                isNameFieldFocused = false
+                viewModel.newOnboardingStepIndex = 0
+                viewModel.currentStep = .landing
+                viewModel.isShowingOnboarding = false
+                UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+                UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+            }
+        }
+
         ToolbarItem(placement: .principal) {
             progressView
         }

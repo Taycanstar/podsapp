@@ -57,8 +57,10 @@ struct LandingView: View {
                                     .frame(height: 20) // Adjust based on your design needs
                                 
                                 Text("Sign in with Google")
-                                .font(.system(size: 21))
-                                .fontWeight(.medium)
+                                // .font(.system(size: 21))
+                                // .fontWeight(.medium)
+                                .font(.headline)
+                                .fontWeight(.semibold)
                             }
                         }
                         .buttonStyle(AuthenticationButtonStyle())
@@ -73,8 +75,10 @@ struct LandingView: View {
                                         .font(.system(size: 18)) // Adjust the size as needed
                                     
                                     Text("Sign up with Email")
-                                    .font(.system(size: 21))
-                                    .fontWeight(.medium)
+                                    // .font(.system(size: 21))
+                                    // .fontWeight(.medium)
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
                                 }
                             }
                             .buttonStyle(AuthenticationButtonStyle())
@@ -88,8 +92,10 @@ struct LandingView: View {
                                 Image(systemName: "envelope.fill")
                                     .font(.system(size: 18))
                                 Text("Sign in with Email")
-                                  .font(.system(size: 21))
-                                  .fontWeight(.medium)
+                                  // .font(.system(size: 21))
+                                  // .fontWeight(.medium)
+                                  .font(.headline)
+                                  .fontWeight(.semibold)
                             }
                         }
                         .buttonStyle(AuthenticationButtonStyle())
