@@ -97,7 +97,7 @@ struct AboutYouView: View {
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
             setupInitialState()
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 11)
             saveProgressMarker()
             prefillFromHealthKitIfNeeded()
         }
@@ -370,7 +370,7 @@ struct AboutYouView: View {
     private var continueButton: some View {
         Button {
             persistCurrentValues()
-            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 12)
             viewModel.currentStep = .desiredWeight
         } label: {
             Text("Continue")

@@ -142,6 +142,11 @@ struct OnboardingPlanOverview: View {
         }
     }
     
+    private func persistPreviewGoals(_ goals: NutritionGoals, defaults: UserDefaults) {
+        guard let data = try? JSONEncoder().encode(goals) else { return }
+        defaults.set(data, forKey: "nutritionGoalsPreviewData")
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // Title
@@ -410,22 +415,31 @@ struct OnboardingPlanOverview: View {
             UserDefaults.standard.set(16, forKey: "onboardingFlowStep") // Set as final step
             UserDefaults.standard.synchronize()
             
-            // Get nutrition goals from previous view
-            if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData") {
-                let decoder = JSONDecoder()
-                self.nutritionGoals = try? decoder.decode(NutritionGoals.self, from: data)
-                
-                if let goals = self.nutritionGoals {
-                    print("📝 DEBUG: Loaded nutrition goals from UserDefaults: Calories=\(goals.calories), Protein=\(goals.protein)g, Carbs=\(goals.carbs)g, Fat=\(goals.fat)g")
-                } else {
-                    print("⚠️ Failed to decode NutritionGoals from UserDefaults data")
-                }
+            // Load nutrition preview or server-backed goals
+            let defaults = UserDefaults.standard
+            let decoder = JSONDecoder()
+
+            if let data = defaults.data(forKey: "nutritionGoalsData"),
+               let decoded = try? decoder.decode(NutritionGoals.self, from: data) {
+                self.nutritionGoals = decoded
+                print("📝 DEBUG: Loaded server-backed nutrition goals: Calories=\(decoded.calories), Protein=\(decoded.protein)g, Carbs=\(decoded.carbs)g, Fat=\(decoded.fat)g")
+            } else if let preview = viewModel.nutritionPreviewGoals {
+                self.nutritionGoals = preview
+                persistPreviewGoals(preview, defaults: defaults)
+                print("📝 DEBUG: Using locally computed preview goals: Calories=\(preview.calories), Protein=\(preview.protein)g, Carbs=\(preview.carbs)g, Fat=\(preview.fat)g")
+            } else if let previewData = defaults.data(forKey: "nutritionGoalsPreviewData"),
+                      let decoded = try? decoder.decode(NutritionGoals.self, from: previewData) {
+                self.nutritionGoals = decoded
+                print("📝 DEBUG: Loaded cached preview nutrition goals: Calories=\(decoded.calories), Protein=\(decoded.protein)g, Carbs=\(decoded.carbs)g, Fat=\(decoded.fat)g")
             } else {
-                print("⚠️ No nutritionGoalsData found in UserDefaults")
-                
-                // As a fallback, check if we have goals in UserGoalsManager
-                let userGoals = UserGoalsManager.shared.dailyGoals
-                print("🔍 DEBUG: UserGoalsManager has: Calories=\(userGoals.calories), Protein=\(userGoals.protein)g, Carbs=\(userGoals.carbs)g, Fat=\(userGoals.fat)g")
+                let fallback = UserGoalsManager.shared.dailyGoals
+                self.nutritionGoals = NutritionGoals(
+                    calories: Double(fallback.calories),
+                    protein: Double(fallback.protein),
+                    carbs: Double(fallback.carbs),
+                    fat: Double(fallback.fat)
+                )
+                print("⚠️ No nutrition goals found; falling back to UserGoalsManager defaults")
             }
             
             // Calculate weight difference and format
@@ -1279,47 +1293,33 @@ struct WeightProgressCurve: View {
                 }
                         
                         // Weight labels
-                        VStack {
-                            HStack {
-                                if isMaintenanceGoal {
-                                    // For maintenance, show single centered label
-                                    Spacer()
-                                    Text("Maintain \(Int(currentWeight)) \(weightUnit)")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.green)
-                                        .cornerRadius(12)
-                                    Spacer()
-                                } else {
-                                    // For weight change goals, show start and end labels
-                                    
-                                    // Current weight label
-                                    Text("\(Int(currentWeight)) \(weightUnit)")
-                                         .font(.system(size: 14, weight: .semibold))
-                                         .foregroundColor(.white)
-                                         .padding(.horizontal, 12)
-                                         .padding(.vertical, 6)
-                                         .background(isGainGoal ? Color.orange : Color.blue)
-                                        .cornerRadius(12)
-                                    
-                                    Spacer()
-                                    
-                                    // Goal weight label  
-                                    Text("\(Int(goalWeight)) \(weightUnit)")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.green)
-                                        .cornerRadius(12)
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.top, 22)
-                            
-                            Spacer()
+                        if isMaintenanceGoal {
+                            Text("Maintain \(Int(currentWeight)) \(weightUnit)")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.green)
+                                .cornerRadius(12)
+                                .position(x: (startX + endX) / 2, y: centerY - 28)
+                        } else {
+                            Text("\(Int(currentWeight)) \(weightUnit)")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(isGainGoal ? Color.orange : Color.blue)
+                                .cornerRadius(12)
+                                .position(x: startX, y: centerY + (isGainGoal ? curveHeight : -curveHeight) - 28)
+
+                            Text("\(Int(goalWeight)) \(weightUnit)")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.green)
+                                .cornerRadius(12)
+                                .position(x: endX, y: centerY + (isGainGoal ? -curveHeight : curveHeight) - 28)
                         }
                         
                         if isMaintenanceGoal {

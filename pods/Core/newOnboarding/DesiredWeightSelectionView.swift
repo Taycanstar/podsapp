@@ -68,7 +68,7 @@ struct DesiredWeightSelectionView: View {
         .onAppear {
             NavigationBarStyler.beginOnboardingAppearance()
             loadInitialWeight()
-            viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 12)
             UserDefaults.standard.set("DesiredWeightSelectionView", forKey: "currentOnboardingStep")
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
             UserDefaults.standard.synchronize()
@@ -149,13 +149,13 @@ struct DesiredWeightSelectionView: View {
             currentWeightKg = weightInKg
         }
 
-        let difference = weightInKg - currentWeightKg
+        let differenceKg = weightInKg - currentWeightKg
         let fitnessGoal: String
         let serverDietGoal: String
-        if abs(difference) < 0.45 { // roughly 1 lb
+        if abs(differenceKg) < 0.45 { // roughly 1 lb
             fitnessGoal = "maintain"
             serverDietGoal = "maintain"
-        } else if difference < 0 {
+        } else if differenceKg < 0 {
             fitnessGoal = "loseWeight"
             serverDietGoal = "lose"
         } else {
@@ -166,6 +166,31 @@ struct DesiredWeightSelectionView: View {
         defaults.set(serverDietGoal, forKey: "serverDietGoal")
         viewModel.dietGoal = fitnessGoal
         viewModel.primaryWellnessGoal = fitnessGoal
+
+        // Default weekly progress rate to 1.5 lbs per week when a change is needed
+        let differenceLbs = abs(differenceKg) * 2.20462262
+        let recommendedWeeklyChangeLbs = differenceLbs < 1.0 ? 0.0 : 1.5
+        defaults.set(recommendedWeeklyChangeLbs, forKey: "weeklyWeightChange")
+        viewModel.weeklyWeightChange = recommendedWeeklyChangeLbs
+
+        let calendar = Calendar.current
+        if recommendedWeeklyChangeLbs > 0 {
+            let projectedWeeks = max(differenceLbs / recommendedWeeklyChangeLbs, 0)
+            let roundedWeeks = Int(ceil(projectedWeeks))
+            defaults.set(roundedWeeks, forKey: "goalTimeframeWeeks")
+            viewModel.goalTimeframeWeeks = roundedWeeks
+
+            let totalDays = Int(ceil(projectedWeeks * 7))
+            if let completionDate = calendar.date(byAdding: .day, value: totalDays, to: Date()) {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                defaults.set(formatter.string(from: completionDate), forKey: "goalCompletionDate")
+            }
+        } else {
+            defaults.removeObject(forKey: "goalCompletionDate")
+            defaults.set(0, forKey: "goalTimeframeWeeks")
+            viewModel.goalTimeframeWeeks = 0
+        }
     }
 
     private func handleUnitChange(from oldUnit: UnitsSystem, to newUnit: UnitsSystem) {
@@ -190,7 +215,7 @@ struct DesiredWeightSelectionView: View {
         Button {
             saveDesiredWeight()
             viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
-            viewModel.currentStep = .signup
+            viewModel.currentStep = .programOverview
         } label: {
             Text("Continue")
                 .font(.headline)
@@ -216,7 +241,7 @@ struct DesiredWeightSelectionView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 11)
                 viewModel.currentStep = .aboutYou
             } label: {
                 Image(systemName: "chevron.left")
@@ -234,7 +259,14 @@ struct DesiredWeightSelectionView: View {
                 viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
                 viewModel.desiredWeight = nil
                 viewModel.desiredWeightKg = 0
-                viewModel.currentStep = .signup
+                viewModel.weeklyWeightChange = 0
+                viewModel.goalTimeframeWeeks = 0
+
+                let defaults = UserDefaults.standard
+                defaults.set(0, forKey: "weeklyWeightChange")
+                defaults.set(0, forKey: "goalTimeframeWeeks")
+                defaults.removeObject(forKey: "goalCompletionDate")
+                viewModel.currentStep = .programOverview
             }
             .font(.headline)
             .foregroundColor(.primary)

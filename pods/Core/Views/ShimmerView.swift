@@ -19,6 +19,21 @@ struct CALShimmerOverlay: UIViewRepresentable {
     }
 }
 
+/// Lightweight SwiftUI wrapper for the CALayer-driven shimmer overlay.
+/// Use anywhere you need a reusable shimmer placeholder.
+struct ShimmerView: View {
+    var highlightColor: Color = Color.white.opacity(0.35)
+    var duration: TimeInterval = 1.6
+
+    var body: some View {
+        CALShimmerOverlay(
+            highlightColor: UIColor(highlightColor),
+            duration: duration
+        )
+        .allowsHitTesting(false)
+    }
+}
+
 final class CALShimmerUIView: UIView {
     private let gradient = CAGradientLayer()
     private var currentColor: UIColor = UIColor(white: 1.0, alpha: 0.9)

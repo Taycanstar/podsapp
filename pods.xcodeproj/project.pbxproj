@@ -54,7 +54,6 @@
 		3625329D2E629512003C3B8D /* DurationExerciseTimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3625329C2E629508003C3B8D /* DurationExerciseTimerSheet.swift */; };
 		3625329F2E629D1A003C3B8D /* CircularProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3625329E2E629D12003C3B8D /* CircularProgressView.swift */; };
 		362532A12E63805D003C3B8D /* ModernFoodLoadingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */; };
-		362532A32E6A0BEC003C3B8D /* ShimmerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A22E6A0BE8003C3B8D /* ShimmerView.swift */; };
 		362532A52E6CBA78003C3B8D /* ManageExercisesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A42E6CBA71003C3B8D /* ManageExercisesView.swift */; };
 		362532A72E6CD98B003C3B8D /* RestTimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A62E6CD987003C3B8D /* RestTimerSheet.swift */; };
 		36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36291B7F2B8166F9000B5F38 /* CarouselView.swift */; };
@@ -277,6 +276,9 @@
 		36D3A5162E90110D00AD6B94 /* AboutYouView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5152E90110600AD6B94 /* AboutYouView.swift */; };
 		36D3A5182E90E5C000AD6B94 /* EnterNameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5172E90E5C000AD6B94 /* EnterNameView.swift */; };
 		36D3A51A2E90E5E100AD6B94 /* GreetingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5192E90E5E100AD6B94 /* GreetingView.swift */; };
+		36D3A51C2E91A19600AD6B94 /* YourProgramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A51B2E91A18E00AD6B94 /* YourProgramView.swift */; };
+		36D3A5202E9396DC00AD6B94 /* ShimmerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A51F2E9396D700AD6B94 /* ShimmerView.swift */; };
+		36D3A5982E95B0AA00AD6B94 /* ProgramOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5972E95B0AA00AD6B94 /* ProgramOverviewView.swift */; };
 		36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D647D02C092A1C002F1047 /* SplashScreenView.swift */; };
 		36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */; };
 		36DA42A62C21F33600BFEB52 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DA42A52C21F33600BFEB52 /* ForgotPasswordView.swift */; };
@@ -414,7 +416,6 @@
 		3625329C2E629508003C3B8D /* DurationExerciseTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DurationExerciseTimerSheet.swift; sourceTree = "<group>"; };
 		3625329E2E629D12003C3B8D /* CircularProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircularProgressView.swift; sourceTree = "<group>"; };
 		362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModernFoodLoadingCard.swift; sourceTree = "<group>"; };
-		362532A22E6A0BE8003C3B8D /* ShimmerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerView.swift; sourceTree = "<group>"; };
 		362532A42E6CBA71003C3B8D /* ManageExercisesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageExercisesView.swift; sourceTree = "<group>"; };
 		362532A62E6CD987003C3B8D /* RestTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerSheet.swift; sourceTree = "<group>"; };
 		36291B7F2B8166F9000B5F38 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
@@ -635,6 +636,9 @@
 		36D3A5152E90110600AD6B94 /* AboutYouView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutYouView.swift; sourceTree = "<group>"; };
 		36D3A5172E90E5C000AD6B94 /* EnterNameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnterNameView.swift; sourceTree = "<group>"; };
 		36D3A5192E90E5E100AD6B94 /* GreetingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreetingView.swift; sourceTree = "<group>"; };
+		36D3A51B2E91A18E00AD6B94 /* YourProgramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YourProgramView.swift; sourceTree = "<group>"; };
+		36D3A51F2E9396D700AD6B94 /* ShimmerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerView.swift; sourceTree = "<group>"; };
+		36D3A5972E95B0AA00AD6B94 /* ProgramOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramOverviewView.swift; sourceTree = "<group>"; };
 		36D647D02C092A1C002F1047 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
 		36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		36DA42A52C21F33600BFEB52 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
@@ -991,7 +995,7 @@
 		3688DBF62BDEAE54001E244C /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				362532A22E6A0BE8003C3B8D /* ShimmerView.swift */,
+				36D3A51F2E9396D700AD6B94 /* ShimmerView.swift */,
 				36A91DC02E419A8800414543 /* settings */,
 				363068DE2E19E3DA00F2D4EC /* profile */,
 				363068CD2E0CA78200F2D4EC /* biometrics */,
@@ -1234,9 +1238,11 @@
 		36D3A4FC2E8C2C7500AD6B94 /* newOnboarding */ = {
 			isa = PBXGroup;
 			children = (
+				36D3A51B2E91A18E00AD6B94 /* YourProgramView.swift */,
 				36D3A5192E90E5E100AD6B94 /* GreetingView.swift */,
 				36D3A5172E90E5C000AD6B94 /* EnterNameView.swift */,
 				36D3A5152E90110600AD6B94 /* AboutYouView.swift */,
+				36D3A5972E95B0AA00AD6B94 /* ProgramOverviewView.swift */,
 				36D3A5132E8EDC6900AD6B94 /* AllowHealthView.swift */,
 				36D3A5112E8EBD2700AD6B94 /* DietPreferencesView.swift */,
 				36D3A50F2E8E2EB900AD6B94 /* OnboardingColors.swift */,
@@ -1746,7 +1752,6 @@
 				36D3A5102E8E2EC000AD6B94 /* OnboardingColors.swift in Sources */,
 				36A85CEB2DB41EF300DD4266 /* ObstaclesView.swift in Sources */,
 				369474672CD5365400CD197F /* GracieView.swift in Sources */,
-				362532A32E6A0BEC003C3B8D /* ShimmerView.swift in Sources */,
 				363068DD2E132EE400F2D4EC /* MyProfileView.swift in Sources */,
 				36A85CFB2DB693D800DD4266 /* OnboardingFlowContainer.swift in Sources */,
 				36CB03392D5E4B2A006A74E9 /* FoodManager.swift in Sources */,
@@ -1772,6 +1777,7 @@
 				363AFA012D223EAF00C91A14 /* MinimizedActivityView.swift in Sources */,
 				3637F0A62CE13F3F0010624A /* DatePickerWheel.swift in Sources */,
 				36D3A5162E90110D00AD6B94 /* AboutYouView.swift in Sources */,
+				36D3A5982E95B0AA00AD6B94 /* ProgramOverviewView.swift in Sources */,
 				36C458EA2B746D650060355F /* ProfileView.swift in Sources */,
 				36ED35B02DD675B900D174FB /* WeightProgressView.swift in Sources */,
 				361FF31A2E20615200B7F68E /* WorkoutSyncService.swift in Sources */,
@@ -1789,6 +1795,7 @@
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,
 				36A85CD92DB1CC4500DD4266 /* WorkoutDaysView.swift in Sources */,
 				36A85CE32DB2ECFD00DD4266 /* GoalInfoView.swift in Sources */,
+				36D3A5202E9396DC00AD6B94 /* ShimmerView.swift in Sources */,
 				3642C2272B9D3C1800D059B9 /* HomeViewModel.swift in Sources */,
 				3682C8672BBAE45200B350E2 /* PodItemView.swift in Sources */,
 				363201332C96257100BC1815 /* TeamInfoView.swift in Sources */,
@@ -1827,6 +1834,7 @@
 				363068CB2E0B571000F2D4EC /* CameraProgressView.swift in Sources */,
 				36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */,
 				36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */,
+				36D3A51C2E91A19600AD6B94 /* YourProgramView.swift in Sources */,
 				36A851A12E5ABFBD004E5CED /* FlexibilityPickerView.swift in Sources */,
 				361FF3132E1D999C00B7F68E /* CardioExercisesView.swift in Sources */,
 				367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */,

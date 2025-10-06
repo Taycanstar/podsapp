@@ -17,6 +17,14 @@ enum UnitsSystem: String, CaseIterable, Codable {
 
 @MainActor
 class OnboardingViewModel: ObservableObject {
+    struct OnboardingNutritionPlan {
+        let bmr: Double
+        let tdee: Double
+        let calories: Int
+        let protein: Int
+        let carbs: Int
+        let fat: Int
+    }
     // Original enum for core navigation states
     enum OnboardingStep {
         case landing
@@ -24,6 +32,7 @@ class OnboardingViewModel: ObservableObject {
         case greeting
         case fitnessGoal
         case strengthExperience
+        case programOverview
         case desiredWeight
         case gymLocation
         case reviewEquipment
@@ -80,7 +89,7 @@ class OnboardingViewModel: ObservableObject {
                 return .liftMoreWeight
             case "hypertrophy":
                 return .leanAndToned
-            case "circuit_training":
+            case "circuit_training", "general":
                 return .leanAndToned
             default:
                 return nil
@@ -309,8 +318,14 @@ class OnboardingViewModel: ObservableObject {
     @Published var notificationPreviewTimeISO8601: String = ""
     @Published var newOnboardingStepIndex: Int = 1
 
-    let newOnboardingTotalSteps: Int = 12
+    let newOnboardingTotalSteps: Int = 13
     private let notificationTimeDefaultsKey = "notificationPreviewTimeISO8601"
+    private let nutritionPreviewDefaultsKey = "nutritionGoalsPreviewData"
+    private lazy var dobFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        return formatter
+    }()
 
     var newOnboardingProgress: Double {
         guard newOnboardingTotalSteps > 0 else { return 0 }
@@ -319,6 +334,84 @@ class OnboardingViewModel: ObservableObject {
 
     var strengthExperienceLevel: ExperienceLevel? {
         selectedStrengthExperience?.experienceLevel
+    }
+
+    var programTitleDisplay: String {
+        selectedFitnessGoal?.rawValue ?? "Your Program"
+    }
+
+    var trainingStyleDisplay: String {
+        switch fitnessGoal {
+        case "strength":
+            return "Strength Training"
+        case "hypertrophy":
+            return "Hypertrophy"
+        case "circuit_training":
+            return "Circuit Training"
+        default:
+            return selectedFitnessGoal?.rawValue ?? "General Fitness"
+        }
+    }
+
+    var trainingSplitDisplay: String {
+        switch trainingSplit {
+        case "full_body": return "Full Body"
+        case "upper_lower": return "Upper/Lower"
+        case "push_pull_lower": return "Push/Pull/Lower"
+        case "fresh": return "Fresh Muscle Groups"
+        default: return "Push/Pull/Lower"
+        }
+    }
+
+    var equipmentProfileDisplay: String {
+        selectedGymLocation?.title ?? "Not set"
+    }
+
+    var exerciseDifficultyDisplay: String {
+        strengthExperienceLevel?.displayName ?? "Not set"
+    }
+
+    var nutritionPreviewGoals: NutritionGoals? {
+        guard let plan = nutritionPreviewPlan else { return nil }
+        return NutritionGoals(
+            bmr: plan.bmr,
+            tdee: plan.tdee,
+            calories: Double(plan.calories),
+            protein: Double(plan.protein),
+            carbs: Double(plan.carbs),
+            fat: Double(plan.fat)
+        )
+    }
+
+    private func updateNutritionPreviewCache() {
+        let plan = calculateNutritionPreview()
+        nutritionPreviewPlan = plan
+        persistNutritionPreview(plan: plan)
+    }
+
+    private func persistNutritionPreview(plan: OnboardingNutritionPlan?) {
+        let defaults = UserDefaults.standard
+
+        guard let plan else {
+            defaults.removeObject(forKey: nutritionPreviewDefaultsKey)
+            return
+        }
+
+        let goals = NutritionGoals(
+            bmr: plan.bmr,
+            tdee: plan.tdee,
+            calories: Double(plan.calories),
+            protein: Double(plan.protein),
+            carbs: Double(plan.carbs),
+            fat: Double(plan.fat)
+        )
+
+        do {
+            let data = try JSONEncoder().encode(goals)
+            defaults.set(data, forKey: nutritionPreviewDefaultsKey)
+        } catch {
+            print("⚠️ Failed to persist nutrition preview: \(error)")
+        }
     }
 
     func equipmentForGymLocation(_ location: GymLocationOption?) -> Set<Equipment> {
@@ -458,6 +551,204 @@ class OnboardingViewModel: ObservableObject {
         fitnessGoal = mappedValue
     }
 
+    private func calculateNutritionPreview() -> OnboardingNutritionPlan? {
+        let weight = weightKg
+        let height = heightCm
+        guard weight > 0, height > 0 else { return nil }
+
+        guard let age = calculatePreviewAge() else { return nil }
+
+        let genderValue = gender.isEmpty ? "other" : gender.lowercased()
+        let bmr = calculatePreviewBMR(weightKg: weight, heightCm: height, age: age, gender: genderValue)
+
+        let activityLevel = resolveActivityLevel()
+        let multiplier: Double
+        switch activityLevel {
+        case "low": multiplier = 1.2
+        case "high": multiplier = 1.725
+        default: multiplier = 1.55
+        }
+        let tdee = Double(round(100 * (bmr * multiplier)) / 100)
+
+        let previewDietGoal = resolveDietGoal()
+        let calorieTarget = calculatePreviewCalories(tdee: tdee, dietGoal: previewDietGoal, gender: genderValue)
+        let macros = calculatePreviewMacros(calories: calorieTarget, weightKg: weight, dietGoal: previewDietGoal, dietPreference: dietPreference.isEmpty ? "balanced" : dietPreference, fitnessGoal: fitnessGoal, activityLevel: activityLevel, age: age)
+
+        guard let macros else { return nil }
+
+        let macroCalories = (macros.protein * 4) + (macros.carbs * 4) + (macros.fat * 9)
+
+        return OnboardingNutritionPlan(
+            bmr: bmr,
+            tdee: tdee,
+            calories: macroCalories,
+            protein: macros.protein,
+            carbs: macros.carbs,
+            fat: macros.fat
+        )
+    }
+
+    private func calculatePreviewAge() -> Int? {
+        guard let dob = dateOfBirth else { return nil }
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year], from: dob, to: Date())
+        guard let years = components.year, years > 0 else { return nil }
+        return years
+    }
+
+    private func calculatePreviewBMR(weightKg: Double, heightCm: Double, age: Int, gender: String) -> Double {
+        let rawValue: Double
+
+        switch gender {
+        case "male":
+            rawValue = (10 * weightKg) + (6.25 * heightCm) - (5 * Double(age)) + 5
+        case "female":
+            rawValue = (10 * weightKg) + (6.25 * heightCm) - (5 * Double(age)) - 161
+        default:
+            let male = (10 * weightKg) + (6.25 * heightCm) - (5 * Double(age)) + 5
+            let female = (10 * weightKg) + (6.25 * heightCm) - (5 * Double(age)) - 161
+            rawValue = (male + female) / 2
+        }
+
+        return (rawValue * 100).rounded() / 100
+    }
+
+    private func resolveActivityLevel() -> String {
+        let normalized = workoutFrequency.lowercased()
+        if ["low", "medium", "high"].contains(normalized) {
+            return normalized
+        }
+
+        if let daysValue = Int(normalized) {
+            return activityLevel(forDays: daysValue)
+        }
+
+        if workoutDaysPerWeek > 0 {
+            return activityLevel(forDays: workoutDaysPerWeek)
+        }
+
+        return "medium"
+    }
+
+    private func activityLevel(forDays days: Int) -> String {
+        switch days {
+        case ...2: return "low"
+        case 3...5: return "medium"
+        default: return "high"
+        }
+    }
+
+    private func resolveDietGoal() -> String {
+        let normalized = dietGoal.lowercased()
+        if ["lose", "gain", "maintain"].contains(normalized) {
+            return normalized
+        }
+
+        switch normalized {
+        case "loseweight": return "lose"
+        case "gainweight": return "gain"
+        default:
+            if desiredWeightKg > 0, weightKg > 0 {
+                if abs(desiredWeightKg - weightKg) < 0.45 { return "maintain" }
+                return desiredWeightKg < weightKg ? "lose" : "gain"
+            }
+            return "maintain"
+        }
+    }
+
+    private func calculatePreviewCalories(tdee: Double, dietGoal: String, gender: String) -> Double {
+        switch dietGoal {
+        case "lose":
+            let minimum = gender == "male" ? 1500.0 : 1200.0
+            return max(minimum, tdee - 500.0)
+        case "gain":
+            return tdee + 500.0
+        default:
+            return tdee
+        }
+    }
+
+    private func calculatePreviewMacros(calories: Double,
+                                        weightKg: Double,
+                                        dietGoal: String,
+                                        dietPreference: String,
+                                        fitnessGoal: String,
+                                        activityLevel: String,
+                                        age: Int) -> (protein: Int, carbs: Int, fat: Int)? {
+        guard calories > 0, weightKg > 0 else { return nil }
+
+        var baseProteinPerKg: Double
+        switch dietGoal {
+        case "lose": baseProteinPerKg = 1.8
+        case "gain": baseProteinPerKg = 2.0
+        default: baseProteinPerKg = 1.4
+        }
+        if age >= 40 { baseProteinPerKg += 0.1 }
+
+        let proteinGrams = clamp(weightKg * baseProteinPerKg, min: 0.8 * weightKg, max: 2.2 * weightKg)
+
+        let fatFloorGrams = max(0.8 * weightKg, 0.25 * calories / 9.0)
+        var fatGrams = fatFloorGrams
+
+        let remainingCalories = calories - (proteinGrams * 4.0 + fatGrams * 9.0)
+        var carbGrams: Double
+
+        if dietPreference.lowercased() == "keto" {
+            carbGrams = 50.0
+            fatGrams += (remainingCalories - carbGrams * 4.0) / 9.0
+            fatGrams = min(fatGrams, 0.75 * calories / 9.0)
+        } else {
+            let carbCap = min(0.55 * calories / 4.0, 6.0 * weightKg)
+            let carbFloor: Double
+            if ["endurance", "circuit_training"].contains(fitnessGoal) && activityLevel == "high" {
+                carbFloor = max(5.0 * weightKg, 130.0)
+            } else {
+                carbFloor = 130.0
+            }
+            carbGrams = clamp(remainingCalories / 4.0, min: carbFloor, max: carbCap)
+            fatGrams += max(0.0, (remainingCalories - carbGrams * 4.0) / 9.0)
+        }
+
+        fatGrams = clamp(fatGrams, min: 0.0, max: 0.35 * calories / 9.0)
+
+        if carbGrams < 0 { return nil }
+
+        var protein = Int(round(proteinGrams))
+        var carbs = Int(round(carbGrams))
+        var fat = Int(round(fatGrams))
+
+        let totalCalories = Double(protein * 4 + carbs * 4 + fat * 9)
+        let calorieDiff = calories - totalCalories
+
+        if abs(calorieDiff) >= 1 {
+            var macros: [(value: Int, caloriesPerGram: Int, key: String)] = [
+                (protein, 4, "protein"),
+                (carbs, 4, "carbs"),
+                (fat, 9, "fat")
+            ]
+            macros.sort { $0.value * $0.caloriesPerGram > $1.value * $1.caloriesPerGram }
+
+            let primary = macros[0]
+            let adjustment = Int(round(calorieDiff / Double(primary.caloriesPerGram)))
+
+            switch primary.key {
+            case "protein": protein += adjustment
+            case "carbs": carbs += adjustment
+            default: fat += adjustment
+            }
+        }
+
+        protein = max(protein, 0)
+        carbs = max(carbs, 0)
+        fat = max(fat, 0)
+
+        return (protein, carbs, fat)
+    }
+
+    private func clamp(_ value: Double, min: Double, max: Double) -> Double {
+        return Swift.max(min, Swift.min(max, value))
+    }
+
     enum Weekday: String, CaseIterable, Identifiable {
         case sunday = "Sunday"
         case monday = "Monday"
@@ -499,9 +790,11 @@ class OnboardingViewModel: ObservableObject {
     
     // Server-reported onboarding completion status
     @Published var serverOnboardingCompleted: Bool = false
-    
+
     // Add this property with the others
     @Published var isShowingOnboarding = false
+
+    @Published private(set) var nutritionPreviewPlan: OnboardingNutritionPlan?
     
     // MARK: - Profile Data
     @Published var profileData: ProfileDataResponse?
@@ -519,33 +812,100 @@ class OnboardingViewModel: ObservableObject {
     }
     
     // MARK: - Onboarding Data Properties
-    @Published var gender: String = ""
-    @Published var dateOfBirth: Date?
-    @Published var heightCm: Double = 0.0
-    @Published var weightKg: Double = 0.0
-    @Published var desiredWeightKg: Double = 0.0
-    @Published var dietGoal: String = ""
+    @Published var gender: String = "" {
+        didSet {
+            guard gender != oldValue else { return }
+            if gender.isEmpty {
+                UserDefaults.standard.removeObject(forKey: "gender")
+            } else {
+                UserDefaults.standard.set(gender, forKey: "gender")
+            }
+            updateNutritionPreviewCache()
+        }
+    }
+    @Published var dateOfBirth: Date? {
+        didSet {
+            guard dateOfBirth != oldValue else { return }
+            if let dob = dateOfBirth {
+                UserDefaults.standard.set(dobFormatter.string(from: dob), forKey: "dateOfBirth")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "dateOfBirth")
+            }
+            updateNutritionPreviewCache()
+        }
+    }
+    @Published var heightCm: Double = 0.0 {
+        didSet {
+            guard heightCm != oldValue else { return }
+            UserDefaults.standard.set(heightCm, forKey: "heightCentimeters")
+            updateNutritionPreviewCache()
+        }
+    }
+    @Published var weightKg: Double = 0.0 {
+        didSet {
+            guard weightKg != oldValue else { return }
+            UserDefaults.standard.set(weightKg, forKey: "weightKilograms")
+            updateNutritionPreviewCache()
+        }
+    }
+    @Published var desiredWeightKg: Double = 0.0 {
+        didSet {
+            guard desiredWeightKg != oldValue else { return }
+            UserDefaults.standard.set(desiredWeightKg, forKey: "desiredWeightKilograms")
+            updateNutritionPreviewCache()
+        }
+    }
+    @Published var dietGoal: String = "" {
+        didSet {
+            guard dietGoal != oldValue else { return }
+            if dietGoal.isEmpty {
+                UserDefaults.standard.removeObject(forKey: "dietGoal")
+            } else {
+                UserDefaults.standard.set(dietGoal, forKey: "dietGoal")
+            }
+            updateNutritionPreviewCache()
+        }
+    }
     @Published var fitnessGoal: String = "" {
         didSet {
+            guard fitnessGoal != oldValue else { return }
             if fitnessGoal.isEmpty {
                 UserDefaults.standard.removeObject(forKey: "fitnessGoal")
             } else {
                 UserDefaults.standard.set(fitnessGoal, forKey: "fitnessGoal")
             }
+            updateNutritionPreviewCache()
         }
     }
     @Published var goalTimeframeWeeks: Int = 0
     @Published var weeklyWeightChange: Double = 0.0
-    @Published var workoutFrequency: String = ""
+    @Published var workoutFrequency: String = "" {
+        didSet {
+            guard workoutFrequency != oldValue else { return }
+            if workoutFrequency.isEmpty {
+                UserDefaults.standard.removeObject(forKey: "workoutFrequency")
+            } else {
+                UserDefaults.standard.set(workoutFrequency, forKey: "workoutFrequency")
+            }
+            updateNutritionPreviewCache()
+        }
+    }
     @Published var dietPreference: String = "" {
         didSet {
+            guard dietPreference != oldValue else { return }
             if dietPreference.isEmpty {
                 if selectedDietPreference != nil {
                     selectedDietPreference = nil
                 }
+                UserDefaults.standard.removeObject(forKey: "dietPreference")
             } else if let option = DietPreferenceOption(rawValue: dietPreference), option != selectedDietPreference {
                 selectedDietPreference = option
+                UserDefaults.standard.set(dietPreference, forKey: "dietPreference")
+            } else if !dietPreference.isEmpty {
+                UserDefaults.standard.set(dietPreference, forKey: "dietPreference")
             }
+
+            updateNutritionPreviewCache()
         }
     }
     @Published var primaryWellnessGoal: String = ""
@@ -555,7 +915,12 @@ class OnboardingViewModel: ObservableObject {
     @Published var availableEquipment: [String] = []
     @Published var workoutLocation: String = ""
     @Published var preferredWorkoutDuration: Int = 0
-    @Published var workoutDaysPerWeek: Int = 0
+    @Published var workoutDaysPerWeek: Int = 0 {
+        didSet {
+            guard workoutDaysPerWeek != oldValue else { return }
+            updateNutritionPreviewCache()
+        }
+    }
     @Published var restDays: [String] = []
     @Published var trainingSplit: String = "push_pull_lower" {
         didSet {
@@ -664,6 +1029,7 @@ class OnboardingViewModel: ObservableObject {
 
         setNotificationTime(notificationPreviewTime)
         syncWorkoutSchedule()
+        updateNutritionPreviewCache()
     }
 
     func bindRepositories(for email: String) {
@@ -902,6 +1268,8 @@ class OnboardingViewModel: ObservableObject {
             currentStep = .allowHealth
         case "AboutYouView":
             currentStep = .aboutYou
+        case "ProgramOverviewView":
+            currentStep = .programOverview
         case "SignupView":
             currentStep = .signup
         default:
@@ -938,7 +1306,8 @@ class OnboardingViewModel: ObservableObject {
         case .enableNotifications: return 9
         case .allowHealth: return 10
         case .aboutYou: return 11
-        case .desiredWeight, .signup: return 12
+        case .desiredWeight: return 12
+        case .programOverview, .signup: return 13
         default: return 1
         }
     }

@@ -19,6 +19,8 @@ struct MainOnboardingView: View {
                 GreetingView()
             case .strengthExperience:
                 StrengthExperienceView()
+            case .programOverview:
+                ProgramOverviewView()
             case .desiredWeight:
                 DesiredWeightSelectionView()
             case .gymLocation:
