@@ -231,11 +231,12 @@ struct ContentView: View {
                 MainOnboardingView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
             }
         }
-  
-        .fullScreenCover(isPresented: $viewModel.isShowingOnboarding) {
-            OnboardingFlowContainer(viewModel: viewModel)
-                .environmentObject(viewModel)
-        }
+
+        // REMOVED: Old onboarding system (OnboardingFlowContainer) - now using new onboarding in RegisterView
+        // .fullScreenCover(isPresented: $viewModel.isShowingOnboarding) {
+        //     OnboardingFlowContainer(viewModel: viewModel)
+        //         .environmentObject(viewModel)
+        // }
         .id(forceRefresh)
         .onAppear {
             print("⚠️ ContentView appeared: Force checking onboarding status")
@@ -392,40 +393,13 @@ struct ContentView: View {
         // Get all relevant onboarding state
         self.isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
         
+        // REMOVED: Old onboarding trigger logic - now using new onboarding in RegisterView
+        // The new onboarding system handles user registration and profile setup directly
+        // No need to trigger the old OnboardingFlowContainer
+
         // Use viewModel for onboarding state
         viewModel.onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
-        let onboardingInProgress = UserDefaults.standard.bool(forKey: "onboardingInProgress")
-        let hasSavedStep = UserDefaults.standard.string(forKey: "currentOnboardingStep") != nil
-        
-        print("Onboarding state check: isAuthenticated=\(isAuthenticated), completed=\(viewModel.onboardingCompleted), inProgress=\(onboardingInProgress), hasSavedStep=\(hasSavedStep)")
-        
-        if isAuthenticated && !viewModel.onboardingCompleted && (onboardingInProgress || hasSavedStep) {
-            // Need to resume onboarding
-            print("Resuming onboarding flow...")
-            
-            // Restore the last saved onboarding step if available
-            if let savedStep = UserDefaults.standard.string(forKey: "currentOnboardingStep") {
-                viewModel.restoreOnboardingProgress(step: savedStep)
-                print("Restored to step: \(savedStep)")
-            }
-            
-            // Set the flag that onboarding is in progress
-            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
-            
-            // Show the onboarding flow - need delay to ensure view is ready
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                viewModel.isShowingOnboarding = true
-            }
-        } else if isAuthenticated && !viewModel.onboardingCompleted && !hasSavedStep {
-            // New user who needs to start onboarding
-            print("Starting new onboarding flow...")
-            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
-            viewModel.currentFlowStep = .gender
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                viewModel.isShowingOnboarding = true
-            }
-        }
+        print("Onboarding state check: isAuthenticated=\(isAuthenticated), completed=\(viewModel.onboardingCompleted)")
         
         // Load user data if authenticated
         if isAuthenticated {
@@ -547,75 +521,15 @@ struct ContentView: View {
         print("🟥 CURRENT STEP: \(currentStep ?? "none")")
         print("🟥 FLOW STEP RAW: \(flowStepRaw)")
 
-        // IMPORTANT: If server says onboarding is not completed but local state says it is,
-        // trust the server and override the local state
-        if isAuthenticated && !viewModel.serverOnboardingCompleted && viewModel.onboardingCompleted {
-            print("⚠️ Mismatch detected! Server says onboarding not completed but local state says completed.")
-            print("⚠️ Overriding local state to match server...")
-            viewModel.onboardingCompleted = false
-            UserDefaults.standard.set(false, forKey: "onboardingCompleted")
-            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
-            // Reset onboarding state to start fresh
-            viewModel.currentFlowStep = .gender
-            UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
-        }
+        // REMOVED: Server onboarding sync logic
+        // The new onboarding system doesn't need to sync local/server onboarding state
+        // since RegisterView handles everything during account creation
 
-        // IMPORTANT: If server says onboarding IS completed but local state says it's not,
-        // trust the server and override the local state
-        if isAuthenticated && viewModel.serverOnboardingCompleted && !viewModel.onboardingCompleted {
-            print("⚠️ Mismatch detected! Server says onboarding IS completed but local state says not completed.")
-            print("⚠️ Overriding local state to match server...")
-            viewModel.onboardingCompleted = true
-            UserDefaults.standard.set(true, forKey: "onboardingCompleted")
-            UserDefaults.standard.set(false, forKey: "onboardingInProgress")
-            // Save the current email as the one who completed onboarding
-            if !viewModel.email.isEmpty {
-                UserDefaults.standard.set(viewModel.email, forKey: "emailWithCompletedOnboarding")
-            }
-        }
+        // REMOVED: Old server-based onboarding resume logic
+        // The new onboarding system (RegisterView) handles all registration and profile setup
+        // No need to check server onboarding status or resume old flow
 
-        // CRITICAL FIX: Resume onboarding if server indicates incomplete OR there's a saved step OR onboarding is marked in progress
-        // Server status takes priority over local flags which might be corrupted
-        if isAuthenticated && (!viewModel.serverOnboardingCompleted || currentStep != nil || onboardingInProgress) && !viewModel.onboardingCompleted {
-            print("🚨 RESUMING ONBOARDING NOW - Server indicates incomplete or found saved step/in-progress flag")
-            
-            // If the server says onboarding is incomplete, make sure the local state reflects this
-            if !viewModel.serverOnboardingCompleted {
-                viewModel.onboardingCompleted = false
-                UserDefaults.standard.set(false, forKey: "onboardingCompleted")
-            }
-            
-            // Set the flag first to track we're handling it
-            UserDefaults.standard.set(true, forKey: "onboardingInProgress")
-            
-            // Force synchronize
-            UserDefaults.standard.synchronize()
-            
-            // Force unset and reset showingOnboarding to trigger the fullScreenCover
-            viewModel.isShowingOnboarding = false
-            
-            // If we have a saved step, restore it
-            if let savedStep = UserDefaults.standard.string(forKey: "currentOnboardingStep") {
-                viewModel.restoreOnboardingProgress(step: savedStep)
-                print("🔄 Restored to step: \(savedStep)")
-            } else {
-                viewModel.currentFlowStep = .gender
-                print("🔄 Starting new from gender")
-            }
-            
-            // Force a UI refresh to ensure changes take effect
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.forceRefresh.toggle()
-                
-                // Then force show the onboarding
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    print("🚀 SHOWING ONBOARDING FLOW")
-                    viewModel.isShowingOnboarding = true
-                }
-            }
-        } else {
-            print("✅ No need to resume onboarding: isAuth=\(isAuthenticated), completed=\(viewModel.onboardingCompleted), serverCompleted=\(viewModel.serverOnboardingCompleted)")
-        }
+        print("✅ Using new onboarding system - old flow disabled")
 
         // Add observer for authentication completion notification
         NotificationCenter.default.addObserver(forName: Notification.Name("AuthenticationCompleted"), object: nil, queue: .main) { _ in

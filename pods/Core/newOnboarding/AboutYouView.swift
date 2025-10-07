@@ -161,6 +161,8 @@ struct AboutYouView: View {
                     isDobFieldFocused = true
                 }
             }
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.clear, for: .navigationBar)
             .presentationDetents([.fraction(0.35)])
         }
         .sheet(isPresented: $isShowingHeightPicker) {
@@ -220,6 +222,8 @@ struct AboutYouView: View {
                     }
                 }
             }
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.clear, for: .navigationBar)
             .presentationDetents([.fraction(0.6), .large])
         }
         .sheet(isPresented: $isShowingWeightPicker) {
@@ -267,6 +271,8 @@ struct AboutYouView: View {
                     }
                 }
             }
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.clear, for: .navigationBar)
             .presentationDetents([.fraction(0.6), .large])
         }
     }

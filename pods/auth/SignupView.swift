@@ -2,19 +2,23 @@ import SwiftUI
 import Foundation
 
 struct SignupView: View {
+    @Binding var isAuthenticated: Bool
     @State private var password: String = ""
     @State private var email: String = ""
     @State private var showPassword: Bool = false
     @State private var errorMessage: String? = nil
-    @State private var navigateToEmailVerification = false
     @EnvironmentObject var viewModel: OnboardingViewModel
-    @Environment(\.presentationMode) var presentationMode
     @State private var isLoading = false
+    @Environment(\.dismiss) private var dismiss
     
     // Debouncer for email and password input
     private var emailDebouncer = Debouncer(delay: 0.5)
     private var passwordDebouncer = Debouncer(delay: 0.5)
-    
+
+    init(isAuthenticated: Binding<Bool>) {
+        self._isAuthenticated = isAuthenticated
+    }
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -134,18 +138,83 @@ struct SignupView: View {
         } else {
             self.errorMessage = nil
             let networkManager = NetworkManager()
-            networkManager.signup(email: email, password: password) { success, message in
-                if success {
-                    DispatchQueue.main.async {
-                        // Skip email verification and go directly to info screen
-                        self.viewModel.currentStep = .info
-                        self.viewModel.email = self.email
-                        self.viewModel.password = self.password
-                        isLoading = false
+            let onboardingPayload = viewModel.signupOnboardingPayload()
+            let trimmedName = viewModel.name.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            networkManager.completeEmailSignup(
+                email: currentEmail,
+                password: currentPassword,
+                name: trimmedName.isEmpty ? nil : trimmedName,
+                onboarding: onboardingPayload
+            ) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
+                DispatchQueue.main.async {
+                    self.isLoading = false
+
+                    guard success else {
+                        self.errorMessage = message ?? "Signup failed"
+                        return
                     }
-                } else {
-                    self.errorMessage = message
-                    isLoading = false
+
+                    self.errorMessage = nil
+
+                    let isOnboardingComplete = onboardingCompleted ?? false
+
+                    UserDefaults.standard.set(true, forKey: "isAuthenticated")
+                    if let email = email {
+                        UserDefaults.standard.set(email, forKey: "userEmail")
+                    }
+                    if let username = username {
+                        UserDefaults.standard.set(username, forKey: "username")
+                    }
+                    if let userId = userId {
+                        UserDefaults.standard.set(userId, forKey: "userId")
+                    }
+
+                    viewModel.email = email ?? currentEmail
+                    viewModel.username = username ?? ""
+                    if let userId = userId {
+                        viewModel.userId = userId
+                    }
+                    viewModel.onboardingCompleted = isOnboardingComplete
+                    viewModel.serverOnboardingCompleted = isOnboardingComplete
+
+                    UserDefaults.standard.set(isOnboardingComplete, forKey: "onboardingCompleted")
+                    UserDefaults.standard.set(isOnboardingComplete, forKey: "serverOnboardingCompleted")
+
+                    if isOnboardingComplete {
+                        UserDefaults.standard.set(false, forKey: "onboardingInProgress")
+                        UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
+                        if let email = email, !email.isEmpty {
+                            UserDefaults.standard.set(email, forKey: "emailWithCompletedOnboarding")
+                        }
+                    } else {
+                        UserDefaults.standard.set(true, forKey: "onboardingInProgress")
+                        UserDefaults.standard.removeObject(forKey: "emailWithCompletedOnboarding")
+                    }
+
+                    if let profileInitial = profileInitial {
+                        viewModel.profileInitial = profileInitial
+                        UserDefaults.standard.set(profileInitial, forKey: "profileInitial")
+                    }
+
+                    if let profileColor = profileColor {
+                        viewModel.profileColor = profileColor
+                        UserDefaults.standard.set(profileColor, forKey: "profileColor")
+                    }
+
+                    viewModel.updateSubscriptionInfo(
+                        status: subscriptionStatus ?? "none",
+                        plan: subscriptionPlan,
+                        expiresAt: subscriptionExpiresAt,
+                        renews: subscriptionRenews,
+                        seats: subscriptionSeats,
+                        canCreateNewTeam: nil
+                    )
+
+                    UserDefaults.standard.synchronize()
+
+                    self.isAuthenticated = true
+                    dismiss()
                 }
             }
         }
@@ -174,6 +243,7 @@ class Debouncer {
 
 struct SignupView_Previews: PreviewProvider {
     static var previews: some View {
-        SignupView()
+        SignupView(isAuthenticated: .constant(false))
+            .environmentObject(OnboardingViewModel())
     }
 }

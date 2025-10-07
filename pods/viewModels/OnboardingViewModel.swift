@@ -1139,6 +1139,77 @@ class OnboardingViewModel: ObservableObject {
         print("✅ OnboardingViewModel: Validation passed")
         return true
     }
+
+    func signupOnboardingPayload() -> [String: Any]? {
+        guard validateOnboardingData(), let dob = dateOfBirth else {
+            print("❌ OnboardingViewModel: Cannot build signup payload - missing DOB or validation failed")
+            return nil
+        }
+
+        let resolvedDietGoal = dietGoal
+        let resolvedWorkoutFrequency = workoutFrequency.isEmpty ? "medium" : workoutFrequency
+        let resolvedDietPreference = dietPreference.isEmpty ? "balanced" : dietPreference
+        let resolvedWorkoutLocation = workoutLocation.isEmpty ? "gym" : workoutLocation
+
+        var payload: [String: Any] = [
+            "gender": gender,
+            "date_of_birth": dobFormatter.string(from: dob),
+            "height_cm": heightCm,
+            "weight_kg": weightKg,
+            "desired_weight_kg": desiredWeightKg,
+            "fitness_goal": fitnessGoal,
+            "workout_frequency": resolvedWorkoutFrequency,
+            "diet_preference": resolvedDietPreference,
+            "add_calories_burned": addCaloriesBurned,
+            "rollover_calories": rolloverCalories,
+            "available_equipment": availableEquipment,
+            "workout_location": resolvedWorkoutLocation,
+            "rest_days": restDays,
+            "units_system": unitsSystem.rawValue
+        ]
+
+        if !resolvedDietGoal.isEmpty {
+            payload["diet_goal"] = resolvedDietGoal
+        }
+
+        if !primaryWellnessGoal.isEmpty {
+            payload["primary_wellness_goal"] = primaryWellnessGoal
+        }
+
+        if goalTimeframeWeeks > 0 {
+            payload["goal_timeframe_weeks"] = goalTimeframeWeeks
+        }
+
+        if weeklyWeightChange > 0 {
+            payload["weekly_weight_change"] = weeklyWeightChange
+        }
+
+        if workoutDaysPerWeek > 0 {
+            payload["workout_days_per_week"] = workoutDaysPerWeek
+        }
+
+        if preferredWorkoutDuration > 0 {
+            payload["preferred_workout_duration"] = preferredWorkoutDuration
+        }
+
+        if !obstacles.isEmpty {
+            payload["obstacles"] = obstacles
+        }
+
+        if let level = strengthExperienceLevel?.rawValue {
+            payload["fitness_level"] = level
+        }
+
+        if !trainingSplit.isEmpty {
+            payload["training_split"] = trainingSplit
+        }
+
+        if let sportType = UserDefaults.standard.string(forKey: "sportType"), !sportType.isEmpty {
+            payload["sport_type"] = sportType
+        }
+
+        return payload
+    }
     
     func completeOnboarding() {
         print("🎯 OnboardingViewModel: Starting onboarding completion process")

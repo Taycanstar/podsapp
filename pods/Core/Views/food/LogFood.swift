@@ -30,10 +30,7 @@ struct LogFood: View {
     // Add callback that will be called when an item is added
     var onItemAdded: ((Food) -> Void)?
     @State private var showQuickLogSheet = false
-    @State private var showFoodFlowSheet = false 
-    @State private var showMealFlowSheet = false 
-    @State private var showAllFlowSheet = false // Corrected initialization from true to false
-    
+
     // Create Food sheets
     @State private var showCreateFoodWithVoice = false
     @State private var showCreateFoodWithScan = false
@@ -110,9 +107,6 @@ struct LogFood: View {
             .modifier(NavigationModifiers(mode: mode, selectedTab: $selectedTab, dismiss: dismiss))
             .modifier(SheetModifiers(
                 showQuickLogSheet: $showQuickLogSheet,
-                showFoodFlowSheet: $showFoodFlowSheet,
-                showMealFlowSheet: $showMealFlowSheet,
-                showAllFlowSheet: $showAllFlowSheet,
                 showConfirmFoodView: $showConfirmFoodView,
                 showCreateFoodWithVoice: $showCreateFoodWithVoice,
                 showCreateFoodWithScan: $showCreateFoodWithScan,
@@ -120,9 +114,6 @@ struct LogFood: View {
             ))
             .modifier(LifecycleModifiers(
                 selectedFoodTab: selectedFoodTab,
-                showAllFlowSheet: $showAllFlowSheet,
-                showMealFlowSheet: $showMealFlowSheet,
-                showFoodFlowSheet: $showFoodFlowSheet,
                 safeAreaInset: $safeAreaInset,
                 keyboardHeight: $keyboardHeight,
                 foodManager: foodManager
@@ -130,9 +121,6 @@ struct LogFood: View {
             .modifier(ChangeModifiers(
                 searchText: searchText,
                 selectedFoodTab: selectedFoodTab,
-                showAllFlowSheet: $showAllFlowSheet,
-                showMealFlowSheet: $showMealFlowSheet,
-                showFoodFlowSheet: $showFoodFlowSheet,
                 showConfirmFoodView: $showConfirmFoodView,
                 foodManager: foodManager,
                 searchFoods: searchFoods
@@ -2660,27 +2648,15 @@ struct NavigationModifiers: ViewModifier {
 
 struct SheetModifiers: ViewModifier {
     @Binding var showQuickLogSheet: Bool
-    @Binding var showFoodFlowSheet: Bool
-    @Binding var showMealFlowSheet: Bool
-    @Binding var showAllFlowSheet: Bool
     @Binding var showConfirmFoodView: Bool
     @Binding var showCreateFoodWithVoice: Bool
     @Binding var showCreateFoodWithScan: Bool
     @ObservedObject var foodManager: FoodManager
-    
+
     func body(content: Content) -> some View {
         content
             .sheet(isPresented: $showQuickLogSheet) {
                 QuickLogFood(isPresented: $showQuickLogSheet)
-            }
-            .sheet(isPresented: $showFoodFlowSheet) { 
-                FoodFlowContainerView()
-            }
-            .sheet(isPresented: $showMealFlowSheet) { 
-                MealFlowContainerView()
-            }
-            .sheet(isPresented: $showAllFlowSheet) {
-                AllFlowContainerView()
             }
             .sheet(isPresented: $showConfirmFoodView, onDismiss: {
                 foodManager.lastGeneratedFood = nil
@@ -2704,13 +2680,10 @@ struct SheetModifiers: ViewModifier {
 
 struct LifecycleModifiers: ViewModifier {
     let selectedFoodTab: LogFood.FoodTab
-    @Binding var showAllFlowSheet: Bool
-    @Binding var showMealFlowSheet: Bool
-    @Binding var showFoodFlowSheet: Bool
     @Binding var safeAreaInset: CGFloat
     @Binding var keyboardHeight: CGFloat
     @ObservedObject var foodManager: FoodManager
-    
+
     func body(content: Content) -> some View {
         content
             .onAppear {
@@ -2720,26 +2693,6 @@ struct LifecycleModifiers: ViewModifier {
                     foodManager.prefetchMealImages()
                 }
 
-                // Show flow based on current tab if user hasn't seen it yet
-                if selectedFoodTab == .all && !UserDefaults.standard.hasSeenAllFlow {
-                    print("🔍 LogFood onAppear - showing All flow")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showAllFlowSheet = true
-                    }
-                } else if selectedFoodTab == .meals && !UserDefaults.standard.hasSeenMealFlow {
-                    print("🔍 LogFood onAppear - showing Meal flow")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showMealFlowSheet = true
-                    }
-                } else if selectedFoodTab == .foods && !UserDefaults.standard.hasSeenFoodFlow {
-                    print("🔍 LogFood onAppear - showing Food flow")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showFoodFlowSheet = true
-                    }
-                } else {
-                    print("🔍 LogFood onAppear - user has seen current tab flow or no flow needed")
-                }
-                
                 // Set up keyboard observers
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                    let window = windowScene.windows.first {
@@ -2767,52 +2720,16 @@ struct LifecycleModifiers: ViewModifier {
 struct ChangeModifiers: ViewModifier {
     let searchText: String
     let selectedFoodTab: LogFood.FoodTab
-    @Binding var showAllFlowSheet: Bool
-    @Binding var showMealFlowSheet: Bool
-    @Binding var showFoodFlowSheet: Bool
     @Binding var showConfirmFoodView: Bool
     @ObservedObject var foodManager: FoodManager
     let searchFoods: () async -> Void
-    
+
     func body(content: Content) -> some View {
         content
             .onChange(of: searchText) { _ in
                 Task {
                     try? await Task.sleep(nanoseconds: 500_000_000)
                     await searchFoods()
-                }
-            }
-            .onChange(of: selectedFoodTab) { _, newTabValue in
-                print("🔍 selectedFoodTab changed to: \(newTabValue)")
-                print("🔍 UserDefaults - hasSeenAllFlow: \(UserDefaults.standard.hasSeenAllFlow), hasSeenFoodFlow: \(UserDefaults.standard.hasSeenFoodFlow), hasSeenMealFlow: \(UserDefaults.standard.hasSeenMealFlow)")
-                
-                if newTabValue == .all {
-                    if !UserDefaults.standard.hasSeenAllFlow {
-                        showAllFlowSheet = true
-                        print("🔍 Set to show All flow - showAllFlowSheet: \(showAllFlowSheet)")
-                    } else {
-                        print("🔍 User has already seen All flow, not showing")
-                    }
-                    showMealFlowSheet = false
-                    showFoodFlowSheet = false
-                } else if newTabValue == .foods {
-                    if !UserDefaults.standard.hasSeenFoodFlow {
-                        showFoodFlowSheet = true
-                        print("🔍 Set to show Food flow - showFoodFlowSheet: \(showFoodFlowSheet)")
-                    } else {
-                        print("🔍 User has already seen Food flow, not showing")
-                    }
-                    showAllFlowSheet = false
-                    showMealFlowSheet = false
-                } else if newTabValue == .meals {
-                    if !UserDefaults.standard.hasSeenMealFlow {
-                        showMealFlowSheet = true
-                        print("🔍 Set to show Meal flow - showMealFlowSheet: \(showMealFlowSheet)")
-                    } else {
-                        print("🔍 User has already seen Meal flow, not showing")
-                    }
-                    showAllFlowSheet = false
-                    showFoodFlowSheet = false
                 }
             }
             .onChange(of: foodManager.lastGeneratedFood) { _, newFood in

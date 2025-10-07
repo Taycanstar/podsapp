@@ -115,14 +115,6 @@ struct EnterNameView: View {
             progressView
         }
 
-        ToolbarItem(placement: .topBarTrailing) {
-            Button("Skip") {
-                viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
-                viewModel.currentStep = .signup
-            }
-            .font(.headline)
-            .foregroundColor(.primary)
-        }
     }
 
     private var trimmedName: String {

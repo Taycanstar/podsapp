@@ -49,8 +49,8 @@ struct RegisterView: View {
                             onRequest: configureAppleSignIn,
                             onCompletion: handleAppleSignIn
                         )
-                        .signInWithAppleButtonStyle(.white)
-                        .frame(height: 56)
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(height: 50)
                         .frame(maxWidth: .infinity)
                         .cornerRadius(36)
 
@@ -90,7 +90,7 @@ struct RegisterView: View {
                 .edgesIgnoringSafeArea(.bottom)
 
                 NavigationLink(isActive: $showEmailSignup) {
-                    SignupView()
+                    SignupView(isAuthenticated: $isAuthenticated)
                         .environmentObject(viewModel)
                 } label: {
                     EmptyView()
@@ -121,8 +121,11 @@ struct RegisterView: View {
                 return
             }
 
-            let networkManager = NetworkManager()
-            networkManager.sendTokenToBackend(idToken: idTokenString) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
+            let onboardingPayload = viewModel.signupOnboardingPayload()
+            if onboardingPayload == nil {
+                print("⚠️ No onboarding payload available, sending Apple signup without onboarding data")
+            }
+            NetworkManager().completeAppleSignup(idToken: idTokenString, nonce: nonce, onboarding: onboardingPayload) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
                 if success {
                     DispatchQueue.main.async {
                         self.isAuthenticated = true
@@ -168,7 +171,11 @@ struct RegisterView: View {
                 return
             }
 
-            NetworkManager().sendTokenToBackend(idToken: idToken) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
+            let onboardingPayload = viewModel.signupOnboardingPayload()
+            if onboardingPayload == nil {
+                print("⚠️ No onboarding payload available, sending Google signup without onboarding data")
+            }
+            NetworkManager().completeGoogleSignup(idToken: idToken, onboarding: onboardingPayload) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
                 if success {
                     DispatchQueue.main.async {
                         self.isAuthenticated = true

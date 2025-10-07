@@ -178,6 +178,95 @@ class NetworkManager {
         }.resume()
     }
     
+    func completeEmailSignup(
+        email: String,
+        password: String,
+        name: String?,
+        onboarding: [String: Any]?,
+        completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool, Bool) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/email-signup/") else {
+            completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            return
+        }
+
+        var body: [String: Any] = [
+            "email": email,
+            "password": password
+        ]
+
+        let trimmedName = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedName.isEmpty {
+            body["name"] = trimmedName
+        }
+
+        if let onboarding = onboarding {
+            body["onboarding"] = onboarding
+        }
+
+        guard let finalBody = try? JSONSerialization.data(withJSONObject: body) else {
+            completion(false, "Failed to encode request body", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = finalBody
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(false, "Signup failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+                }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+                }
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                    if let errorMessage = json["error"] as? String {
+                        DispatchQueue.main.async {
+                            completion(false, errorMessage, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+                        }
+                        return
+                    }
+
+                    let email = json["email"] as? String
+                    let username = json["username"] as? String
+                    let profileInitial = json["profileInitial"] as? String
+                    let profileColor = json["profileColor"] as? String
+                    let subscriptionStatus = json["subscriptionStatus"] as? String
+                    let subscriptionPlan = json["subscriptionPlan"] as? String
+                    let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
+                    let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
+                    let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
+                    let userId = (json["userId"] as? NSNumber)?.intValue
+                    let onboardingCompleted = json["onboarding_completed"] as? Bool ?? false
+                    let isNewUser = json["isNewUser"] as? Bool ?? false
+
+                    DispatchQueue.main.async {
+                        completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(false, "Unexpected server response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+                }
+            }
+        }.resume()
+    }
+    
     func checkEmailVerified(email: String, completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/check-email-verified/") else {
             completion(false, "Invalid URL")
@@ -1975,6 +2064,140 @@ func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escapi
                 let isNewUser = json["isNewUser"] as? Bool ?? false
                 
                 print("📱 Apple login - isNewUser: \(isNewUser), onboarding_completed: \(onboardingCompleted)")
+
+                DispatchQueue.main.async {
+                    completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser)
+                }
+            }
+        } catch {
+            DispatchQueue.main.async {
+                completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            }
+        }
+    }.resume()
+}
+
+func completeGoogleSignup(idToken: String, onboarding: [String: Any]?, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool, Bool) -> Void) {
+    guard let url = URL(string: "\(baseUrl)/google-signup/") else {
+        completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+        return
+    }
+
+    var body: [String: Any] = ["token": idToken]
+    if let onboarding = onboarding {
+        body["onboarding"] = onboarding
+    }
+
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            DispatchQueue.main.async {
+                completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            }
+            return
+        }
+
+        guard let data = data else {
+            DispatchQueue.main.async {
+                completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            }
+            return
+        }
+
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                if let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(false, errorMessage, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+                    }
+                    return
+                }
+
+                let email = json["email"] as? String
+                let username = json["username"] as? String
+                let profileInitial = json["profileInitial"] as? String
+                let profileColor = json["profileColor"] as? String
+                let subscriptionStatus = json["subscriptionStatus"] as? String
+                let subscriptionPlan = json["subscriptionPlan"] as? String
+                let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
+                let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
+                let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
+                let userId = (json["userId"] as? NSNumber)?.intValue
+                let onboardingCompleted = json["onboarding_completed"] as? Bool ?? false
+                let isNewUser = json["isNewUser"] as? Bool ?? false
+
+                DispatchQueue.main.async {
+                    completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser)
+                }
+            }
+        } catch {
+            DispatchQueue.main.async {
+                completion(false, "Failed to parse response", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            }
+        }
+    }.resume()
+}
+
+func completeAppleSignup(idToken: String, nonce: String, onboarding: [String: Any]?, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool, Bool) -> Void) {
+    guard let url = URL(string: "\(baseUrl)/apple-signup/") else {
+        completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+        return
+    }
+
+    var body: [String: Any] = [
+        "token": idToken,
+        "nonce": nonce
+    ]
+
+    if let onboarding = onboarding {
+        body["onboarding"] = onboarding
+    }
+
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            DispatchQueue.main.async {
+                completion(false, "Request failed: \(error.localizedDescription)", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            }
+            return
+        }
+
+        guard let data = data else {
+            DispatchQueue.main.async {
+                completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+            }
+            return
+        }
+
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                if let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(false, errorMessage, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
+                    }
+                    return
+                }
+
+                let email = json["email"] as? String
+                let username = json["username"] as? String
+                let profileInitial = json["profileInitial"] as? String
+                let profileColor = json["profileColor"] as? String
+                let subscriptionStatus = json["subscriptionStatus"] as? String
+                let subscriptionPlan = json["subscriptionPlan"] as? String
+                let subscriptionExpiresAt = json["subscriptionExpiresAt"] as? String
+                let subscriptionRenews = json["subscriptionRenews"] as? Bool ?? false
+                let subscriptionSeats = (json["subscriptionSeats"] as? NSNumber)?.intValue
+                let userId = (json["userId"] as? NSNumber)?.intValue
+                let onboardingCompleted = json["onboarding_completed"] as? Bool ?? false
+                let isNewUser = json["isNewUser"] as? Bool ?? false
 
                 DispatchQueue.main.async {
                     completion(true, nil, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser)

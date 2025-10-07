@@ -121,7 +121,7 @@ struct ProgramOverviewView: View {
 
             if let goals = nutritionGoals {
                 VStack(spacing: 16) {
-                    MacroRow(title: "Calories", value: Int(goals.calories), unit: "kcal", color: Color("brightOrange"), icon: "flame.fill")
+                    MacroRow(title: "Calories", value: Int(goals.calories), unit: "cal", color: Color("brightOrange"), icon: "flame.fill")
                     MacroRow(title: "Protein", value: Int(goals.protein), unit: "g", color: .blue, icon: "fish")
                     MacroRow(title: "Carbs", value: Int(goals.carbs), unit: "g", color: Color("darkYellow"), icon: "laurel.leading")
                     MacroRow(title: "Fat", value: Int(goals.fat), unit: "g", color: .pink, icon: "drop.fill")
@@ -367,6 +367,7 @@ private struct MacroRow: View {
                     .fontWeight(.medium)
                 Text("\(value) \(unit)")
                     .font(.headline)
+                    .fontWeight(.regular)
                     .foregroundColor(.primary)
             }
 

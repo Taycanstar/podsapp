@@ -33,8 +33,6 @@ struct FoodScannerView: View {
     @State private var isProcessingBarcode = false
     @State private var lastProcessedBarcode: String?
     @State private var isGalleryImageLoaded = false
-    @State private var showScanFlow = false
-    @State private var hasShownScanFlow = false
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     // Callback for when food is scanned via barcode
@@ -312,12 +310,6 @@ struct FoodScannerView: View {
                         }
                     }
             }
-            .sheet(isPresented: $showScanFlow) {
-                ScanFlowContainerView()
-                    .onDisappear {
-                        hasShownScanFlow = true
-                    }
-            }
             .background(Color.black)
         .onAppear {
             print("🔍 CRASH_DEBUG: FoodScannerView onAppear - START")
@@ -332,18 +324,6 @@ struct FoodScannerView: View {
             print("🔍 CRASH_DEBUG: Checking camera permissions")
             checkCameraPermissions()
             print("📱 FoodScannerView appeared - Mode: \(selectedMode)")
-            print("🔍 hasShownScanFlow: \(hasShownScanFlow), hasSeenScanFlow: \(UserDefaults.standard.hasSeenScanFlow)")
-            
-            // Show scan flow on first appearance if user hasn't seen it yet
-            if !hasShownScanFlow && !UserDefaults.standard.hasSeenScanFlow {
-                print("🔍 Scheduling scan flow to show in 0.5 seconds")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    print("🔍 Showing scan flow now - showScanFlow: \(showScanFlow)")
-                    showScanFlow = true
-                }
-            } else {
-                print("🔍 Not showing scan flow - already shown or user has seen it")
-            }
             print("🔍 CRASH_DEBUG: FoodScannerView onAppear - END")
         }
         .onDisappear {

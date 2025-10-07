@@ -10,6 +10,8 @@ struct DashboardView: View {
     @EnvironmentObject var vm: DayLogsViewModel
     @EnvironmentObject private var mealReminderService: MealReminderService
     @AppStorage(WaterUnit.storageKey) private var storedWaterUnitRawValue: String = WaterUnit.defaultUnit.rawValue
+    @ObservedObject private var workoutManager = WorkoutManager.shared
+    @ObservedObject private var userProfileService = UserProfileService.shared
     
     // ─── Health data state ───────────────────────────────────────────────────
     @StateObject private var healthViewModel = HealthKitViewModel()
@@ -17,6 +19,8 @@ struct DashboardView: View {
     // ─── Local UI state ─────────────────────────────────────────────────────
     @State private var showDatePicker = false
     @State private var showWaterLogSheet = false
+    @State private var showWorkoutContainer = false
+    @State private var workoutSelectedTab: Int = 0
     
     // ─── Streak state ─────────────────────────────────────────────────────
     @ObservedObject private var streakManager = StreakManager.shared
@@ -170,6 +174,15 @@ private var remainingCal: Double { vm.remainingCalories }
                             .listRowInsets(EdgeInsets())
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
+
+                        if isToday {
+                            todayWorkoutCard
+                                .padding(.horizontal)
+                                .padding(.top, 8)
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                        }
 
                         // DEBUG: Check which loading states are active
                         let _ = print("🔍 DEBUG Dashboard - foodScanningState: \(foodMgr.foodScanningState), isActive: \(foodMgr.foodScanningState.isActive)")
@@ -374,10 +387,9 @@ private var remainingCal: Double { vm.remainingCalories }
         .animation(.spring(), value: foodMgr.showUnsavedMealToast)
       }
     }
-            
-                 
-            
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color("primarybg"), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar { toolbarContent }
             .sheet(isPresented: $showDatePicker) {
                 DatePickerSheet(date: $vm.selectedDate,
@@ -767,7 +779,73 @@ private extension DashboardView {
         }
         .padding(.horizontal)
     }
-    
+
+    @ViewBuilder
+    var todayWorkoutCard: some View {
+        if let workout = workoutManager.todayWorkout,
+           Calendar.current.isDate(workout.date, inSameDayAs: Date()) {
+            Button {
+                HapticFeedback.generate()
+                workoutSelectedTab = 0
+                showWorkoutContainer = true
+            } label: {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .top, spacing: 16) {
+                        Image(systemName: workoutIconName(for: workout))
+                            .font(.system(size: 30, weight: .semibold))
+                            .foregroundColor(.primary)
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Today's Workout")
+                                .font(.subheadline)
+                                .fontWeight(.regular)
+                                .foregroundColor(.secondary)
+
+                            Text(workoutManager.todayWorkoutDisplayTitle)
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                                .lineLimit(2)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 8) {
+                            summaryChip(icon: "clock", text: formattedDurationLabel(for: workout))
+                            summaryChip(icon: "list.bullet", text: "\(workout.exercises.count) exercises")
+                            summaryChip(icon: "target", text: workout.fitnessGoal.displayName)
+                        }
+
+                        let muscles = primaryMuscleHighlights(for: workout)
+                        if !muscles.isEmpty {
+                            HStack(spacing: 8) {
+                                ForEach(muscles, id: \.self) { muscle in
+                                    summaryChip(text: muscle)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.vertical, 16)
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(cardBackgroundColor)
+                        .shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 8)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(Color.primary.opacity(0.04), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .fullScreenCover(isPresented: $showWorkoutContainer) {
+                WorkoutContainerView(selectedTab: $workoutSelectedTab)
+            }
+        }
+    }
+
     // Remaining calories card
     var remainingCaloriesCard: some View {
         NavigationLink(destination: GoalProgress()) {
@@ -1129,29 +1207,12 @@ private extension DashboardView {
         }
 
         ToolbarItem(placement: .navigationBarTrailing) {
-            HStack(spacing: 16) {
-                // Debug button to reset all flows (remove in production)
-                // Button {
-                //     UserDefaults.standard.resetAllOnboardingFlows()
-                //     print("🔄 All flows reset!")
-                //     print("🔄 hasSeenLogFlow: \(UserDefaults.standard.hasSeenLogFlow)")
-                //     print("🔄 hasSeenAllFlow: \(UserDefaults.standard.hasSeenAllFlow)")
-                //     print("🔄 hasSeenMealFlow: \(UserDefaults.standard.hasSeenMealFlow)")
-                //     print("🔄 hasSeenFoodFlow: \(UserDefaults.standard.hasSeenFoodFlow)")
-                //     print("🔄 hasSeenScanFlow: \(UserDefaults.standard.hasSeenScanFlow)")
-                // } label: {
-                //     Image(systemName: "arrow.clockwise")
-                //         .font(.system(size: 16, weight: .medium))
-                //         .foregroundColor(.red)
-                // }
-
-                Button {
-                    showDatePicker = true
-                } label: {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                }
+            Button {
+                showDatePicker = true
+            } label: {
+                Image(systemName: "calendar")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
             }
         }
     }
@@ -1269,6 +1330,131 @@ private extension DashboardView {
         .background(Color("containerbg"))
         // .cornerRadius(12)
         .cornerRadius(24)
+    }
+}
+
+private extension DashboardView {
+    func primaryMuscleHighlights(for workout: TodayWorkout) -> [String] {
+        var seen = Set<String>()
+        let highlights: [String] = workout.exercises.compactMap { exercise -> String? in
+            let normalized = exercise.exercise.bodyPart.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !normalized.isEmpty else { return nil }
+            let titleCased = normalized.capitalized
+            guard !seen.contains(titleCased) else { return nil }
+            seen.insert(titleCased)
+            return titleCased
+        }
+
+        if let split = currentTrainingSplit {
+            switch split {
+            case .fullBody:
+                return ["Upper Body", "Lower Body", "Core"]
+            case .upperLower:
+                return ["Upper Body", "Lower Body"]
+            case .pushPullLower:
+                return ["Push", "Pull", "Lower Body"]
+            case .fresh:
+                break
+            }
+        }
+
+        if highlights.isEmpty {
+            return []
+        }
+
+        let prioritized: [String]
+        if highlights.count > 3 {
+            let lowerKeywords: Set<String> = ["legs", "hamstrings", "quads", "glutes", "calves", "lower body"]
+            let hasLower = highlights.first { lowerKeywords.contains($0.lowercased()) }
+            var trimmed = Array(highlights.prefix(3))
+            if hasLower == nil,
+               let lower = highlights.first(where: { lowerKeywords.contains($0.lowercased()) }) {
+                trimmed[trimmed.count - 1] = lower
+            }
+            prioritized = trimmed
+        } else {
+            prioritized = highlights
+        }
+
+        return prioritized
+    }
+
+    @ViewBuilder
+    func summaryChip(icon: String? = nil, text: String) -> some View {
+        HStack(spacing: 6) {
+            if let icon = icon {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+            Text(text)
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .background(Color(.systemGray5))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+    
+    var cardBackgroundColor: Color {
+        Color("sheetbg").opacity(0.94)
+    }
+    
+    func formattedDurationLabel(for workout: TodayWorkout) -> String {
+        let minutes: Int
+        if let duration = workoutManager.sessionDuration?.minutes {
+            minutes = duration
+        } else if let preferred = userProfileService.activeWorkoutProfile?.preferredWorkoutDuration {
+            minutes = preferred
+        } else {
+            minutes = workout.estimatedDuration
+        }
+
+        guard minutes > 0 else { return "--" }
+
+        if minutes % 60 == 0 {
+            return "\(minutes / 60)h"
+        }
+
+        if minutes > 60 {
+            let hours = minutes / 60
+            let mins = minutes % 60
+            return "\(hours)h \(mins)m"
+        }
+
+        return "\(minutes)m"
+    }
+
+    func workoutIconName(for workout: TodayWorkout) -> String {
+        let title = workoutManager.todayWorkoutDisplayTitle.lowercased()
+        if title.contains("upper") {
+            return "figure.core.training"
+        }
+        if title.contains("lower") {
+            return "figure.strengthtraining.functional"
+        }
+        switch currentTrainingSplit {
+        case .upperLower:
+            return "figure.highintensity.intervaltraining"
+        case .fullBody:
+            return "figure.mixed.cardio"
+        case .pushPullLower:
+            return "figure.strengthtraining.traditional"
+        case .fresh:
+            return "figure.strengthtraining.functional"
+        case .none:
+            return "figure.highintensity.intervaltraining"
+        }
+    }
+    
+    var currentTrainingSplit: TrainingSplitPreference? {
+        if let raw = userProfileService.activeWorkoutProfile?.trainingSplit,
+           let split = TrainingSplitPreference(rawValue: raw) {
+            return split
+        }
+        return nil
     }
 }
 

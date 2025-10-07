@@ -342,9 +342,17 @@ private func deleteOnServer(_ log: CombinedLog) async throws {
 }
 
 func loadLogs(for date: Date, force: Bool = false) {
+  let newKey = Calendar.current.startOfDay(for: date)
+  let currentKey = logs.isEmpty ? nil : Calendar.current.startOfDay(for: selectedDate)
+
+  // CRITICAL FIX: Clear logs immediately when changing dates to prevent showing stale data
+  if currentKey != newKey {
+    logs = []
+  }
+
   selectedDate = date
 
-  let key = Calendar.current.startOfDay(for: date)
+  let key = newKey
   if !force,
      let lastLoad = lastLoadTimestamps[key], Date().timeIntervalSince(lastLoad) < logsRefreshInterval,
      !logs.isEmpty {
