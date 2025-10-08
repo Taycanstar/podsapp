@@ -13,7 +13,9 @@ struct ProfileView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var viewModel: OnboardingViewModel
     @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
     @State private var showingMail = false
+    @State private var showUpgradeSheet = false
     @Binding var isAuthenticated: Bool
     @Environment(\.isTabBarVisible) var isTabBarVisible
     
@@ -53,10 +55,20 @@ struct ProfileView: View {
                                 Label("Goals and Weight", systemImage: "scalemass")
                                     .foregroundColor(iconColor)
                             }
-                            // NavigationLink(destination: SubscriptionView()) {
-                            //     Label("Subscription", systemImage: "plus.app")
-                            //         .foregroundColor(iconColor)
-                            // }
+
+                            Button {
+                                showUpgradeSheet = true
+                            } label: {
+                                HStack {
+                                    Label("Subscription", systemImage: "crown.fill")
+                                        .foregroundColor(iconColor)
+                                    Spacer()
+                                    Text(subscriptionManager.hasActiveSubscription() ? "Pro" : "Free")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .buttonStyle(PlainButtonStyle())
+
                             NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
                                 Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
                                     .foregroundColor(iconColor)
@@ -262,7 +274,10 @@ struct ProfileView: View {
         .navigationBarTitle("Settings and privacy", displayMode: .inline)
         .sheet(isPresented: $showingMail) {
             MailView(isPresented: self.$showingMail)
-                 }
+        }
+        .sheet(isPresented: $showUpgradeSheet) {
+            HumuliProUpgradeSheet()
+        }
         .onAppear{
             isTabBarVisible.wrappedValue = true
         }

@@ -279,6 +279,7 @@
 		36D3A51C2E91A19600AD6B94 /* YourProgramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A51B2E91A18E00AD6B94 /* YourProgramView.swift */; };
 		36D3A5202E9396DC00AD6B94 /* ShimmerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A51F2E9396D700AD6B94 /* ShimmerView.swift */; };
 		36D3A5222E942B7300AD6B94 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5212E942B6400AD6B94 /* RegisterView.swift */; };
+		36D3A5242E95F27300AD6B94 /* HumuliProUpgradeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5232E95F26900AD6B94 /* HumuliProUpgradeSheet.swift */; };
 		36D3A5982E95B0AA00AD6B94 /* ProgramOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5972E95B0AA00AD6B94 /* ProgramOverviewView.swift */; };
 		36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D647D02C092A1C002F1047 /* SplashScreenView.swift */; };
 		36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */; };
@@ -640,6 +641,7 @@
 		36D3A51B2E91A18E00AD6B94 /* YourProgramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YourProgramView.swift; sourceTree = "<group>"; };
 		36D3A51F2E9396D700AD6B94 /* ShimmerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerView.swift; sourceTree = "<group>"; };
 		36D3A5212E942B6400AD6B94 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
+		36D3A5232E95F26900AD6B94 /* HumuliProUpgradeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HumuliProUpgradeSheet.swift; sourceTree = "<group>"; };
 		36D3A5972E95B0AA00AD6B94 /* ProgramOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramOverviewView.swift; sourceTree = "<group>"; };
 		36D647D02C092A1C002F1047 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
 		36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -1104,6 +1106,7 @@
 		36A91DC02E419A8800414543 /* settings */ = {
 			isa = PBXGroup;
 			children = (
+				36D3A5232E95F26900AD6B94 /* HumuliProUpgradeSheet.swift */,
 				36881DF02E6E04ED00262045 /* WorkoutScheduleSettingsView.swift */,
 				36A91DC12E419A8E00414543 /* NotificationSettingsView.swift */,
 			);
@@ -1890,6 +1893,7 @@
 				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,
 				36ED35D22DDBD4EC00D174FB /* ManageGoalsView.swift in Sources */,
 				3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */,
+				36D3A5242E95F27300AD6B94 /* HumuliProUpgradeSheet.swift in Sources */,
 				3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */,
 				36D3A5122E8EBD5D00AD6B94 /* DietPreferencesView.swift in Sources */,
 				36A85CE12DB2C24A00DD4266 /* DesiredWeightView.swift in Sources */,
