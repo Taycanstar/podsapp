@@ -158,7 +158,7 @@ struct HumuliProUpgradeSheet: View {
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.gray)
                     .frame(width: 60)
-                Text("Plus")
+                Text("Pro")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.blue)
                     .frame(width: 60)
