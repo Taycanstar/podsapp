@@ -60,7 +60,7 @@ struct ProfileView: View {
                                 showUpgradeSheet = true
                             } label: {
                                 HStack {
-                                    Label("Subscription", systemImage: "crown.fill")
+                                    Label("Subscription", systemImage: "plus.app")
                                         .foregroundColor(iconColor)
                                     Spacer()
                                     Text(subscriptionManager.hasActiveSubscription() ? "Pro" : "Free")
