@@ -569,12 +569,6 @@ extension HumuliProUpgradeSheet {
 
     private var planSummary: some View {
         VStack(spacing: 8) {
-            Text(priceText(for: selectedPlan))
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.black)
-            Text(billingInfo(for: selectedPlan))
-                .font(.system(size: 14))
-                .foregroundColor(.gray)
             if let savings = savingsText() {
                 Text(savings)
                     .font(.caption)

@@ -610,7 +610,21 @@ struct MyProfileView: View {
     }
 
     private var allCombinedLogs: [CombinedLog] {
-        combinedLogsRepository.snapshot.logs.sorted { lhs, rhs in
+        var logsById: [String: CombinedLog] = [:]
+
+        for log in combinedLogsRepository.snapshot.logs {
+            logsById[log.id] = log
+        }
+
+        for log in vm.logs {
+            if let existing = logsById[log.id] {
+                logsById[log.id] = preferredLog(existing: existing, candidate: log)
+            } else {
+                logsById[log.id] = log
+            }
+        }
+
+        return logsById.values.sorted { lhs, rhs in
             let lhsDate = canonicalDate(for: lhs) ?? Date.distantPast
             let rhsDate = canonicalDate(for: rhs) ?? Date.distantPast
 
@@ -756,15 +770,14 @@ struct MyProfileView: View {
     }
 
     private func canonicalDate(for log: CombinedLog) -> Date? {
-        if let scheduled = log.scheduledAt {
-            return scheduled
+        if let raw = rawLogDate(for: log) {
+            return raw
         }
-        if let activityDate = log.activity?.startDate {
-            return activityDate
+
+        if vm.logs.contains(where: { $0.id == log.id }) {
+            return Calendar.current.startOfDay(for: vm.selectedDate)
         }
-        if let logDate = log.logDate, let parsed = Self.backendDateFormatter.date(from: logDate) {
-            return parsed
-        }
+
         return nil
     }
 
@@ -858,6 +871,60 @@ struct MyProfileView: View {
         formatter.dateFormat = "M/d/yy"
         return formatter
     }()
+
+    private static let iso8601DateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
+        return formatter
+    }()
+
+    private func rawLogDate(for log: CombinedLog) -> Date? {
+        if let scheduled = log.scheduledAt {
+            return scheduled
+        }
+        if let activityDate = log.activity?.startDate {
+            return activityDate
+        }
+        if let mealDate = log.meal?.scheduledAt {
+            return mealDate
+        }
+        if let recipeDate = log.recipe?.scheduledAt {
+            return recipeDate
+        }
+        if let logDate = log.logDate {
+            if let parsed = Self.backendDateFormatter.date(from: logDate) {
+                return parsed
+            }
+            if let isoParsed = Self.iso8601DateFormatter.date(from: logDate) {
+                return isoParsed
+            }
+        }
+        return nil
+    }
+
+    private func preferredLog(existing: CombinedLog, candidate: CombinedLog) -> CombinedLog {
+        let existingDate = rawLogDate(for: existing)
+        let candidateDate = rawLogDate(for: candidate)
+
+        // Prefer whichever carries a usable date value
+        if existingDate == nil, let candidateDate {
+            return candidate
+        }
+        if candidateDate == nil, existingDate != nil {
+            return existing
+        }
+
+        // Prefer optimistic entry to keep animation when server copy exists
+        if candidate.isOptimistic && !existing.isOptimistic {
+            return candidate
+        }
+
+        if let candidateDate, let existingDate, candidateDate > existingDate {
+            return candidate
+        }
+
+        return existing
+    }
     
     private var weightCardView: some View {
         NavigationLink(destination: WeightDataView()) {

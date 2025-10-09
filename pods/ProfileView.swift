@@ -381,6 +381,9 @@ struct ProfileView: View {
         UserDefaults.standard.removeObject(forKey: "subscriptionExpiresAt")
         UserDefaults.standard.removeObject(forKey: "subscriptionRenews")
         UserDefaults.standard.removeObject(forKey: "subscriptionSeats")
+        UserDefaults.standard.removeObject(forKey: "cachedSubscriptionInfo")
+        UserDefaults.standard.removeObject(forKey: "cachedSubscriptionInfoTimestamp")
+        UserDefaults.standard.removeObject(forKey: "cachedSubscriptionEmail")
 
         UserDefaults.standard.set(false, forKey: "onboardingCompleted")
         UserDefaults.standard.set(false, forKey: "onboardingInProgress")
@@ -409,6 +412,10 @@ struct ProfileView: View {
         viewModel.subscriptionExpiresAt = nil
         viewModel.subscriptionRenews = false
         viewModel.subscriptionSeats = nil
+
+        Task {
+            await subscriptionManager.clearSubscriptionState()
+        }
 
         UserDefaults.standard.synchronize()
 

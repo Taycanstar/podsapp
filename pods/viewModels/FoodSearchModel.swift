@@ -1009,6 +1009,7 @@ struct RecipeSummary: Codable {
     let image: String?
     let calories: Double
     let servings: Int
+    let scheduledAt: Date?
     let protein: Double?
     let carbs: Double?
     let fat: Double?

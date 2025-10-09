@@ -11,6 +11,12 @@ enum SubscriptionDuration {
 }
 
 class SubscriptionManager: ObservableObject {
+    private enum CacheKeys {
+        static let info = "cachedSubscriptionInfo"
+        static let timestamp = "cachedSubscriptionInfoTimestamp"
+        static let email = "cachedSubscriptionEmail"
+    }
+
     @Published var products: [Product] = []
     private var onboardingViewModel: OnboardingViewModel?
     @Published var purchasedSubscriptions: [Product] = []
@@ -82,7 +88,7 @@ class SubscriptionManager: ObservableObject {
                 case .success(let info):
                     DispatchQueue.main.async {
                         self.subscriptionInfo = info
-                        self.cacheSubscription(info)
+                        self.cacheSubscription(info, for: email)
                         self.lastFetchedEmail = email
                         self.lastFetchDate = Date()
                         print("Updated subscription info: \(String(describing: info))")
@@ -99,20 +105,58 @@ class SubscriptionManager: ObservableObject {
         }
     }
 
-    private func cacheSubscription(_ info: SubscriptionInfo) {
-        if let encoded = try? JSONEncoder().encode(info) {
-            UserDefaults.standard.set(encoded, forKey: "cachedSubscriptionInfo")
-            UserDefaults.standard.set(Date(), forKey: "cachedSubscriptionInfoTimestamp")
-        }
+    private func cacheSubscription(_ info: SubscriptionInfo, for email: String) {
+        guard let encoded = try? JSONEncoder().encode(info) else { return }
+
+        let defaults = UserDefaults.standard
+        defaults.set(encoded, forKey: CacheKeys.info)
+        defaults.set(Date(), forKey: CacheKeys.timestamp)
+        defaults.set(email, forKey: CacheKeys.email)
     }
 
     private func loadCachedSubscription() {
-        if let data = UserDefaults.standard.data(forKey: "cachedSubscriptionInfo"),
-           let cached = try? JSONDecoder().decode(SubscriptionInfo.self, from: data) {
-            subscriptionInfo = cached
-            lastFetchedEmail = UserDefaults.standard.string(forKey: "userEmail")
-            lastFetchDate = UserDefaults.standard.object(forKey: "cachedSubscriptionInfoTimestamp") as? Date
+        let defaults = UserDefaults.standard
+
+        guard let currentEmail = defaults.string(forKey: "userEmail"),
+              currentEmail.isEmpty == false else {
+            clearCachedSubscription()
+            return
         }
+
+        guard let cachedEmail = defaults.string(forKey: CacheKeys.email),
+              cachedEmail == currentEmail else {
+            if defaults.object(forKey: CacheKeys.info) != nil {
+                print("Warning: subscription cache email mismatch. Clearing stale cache.")
+            }
+            clearCachedSubscription()
+            return
+        }
+
+        guard let data = defaults.data(forKey: CacheKeys.info),
+              let cached = try? JSONDecoder().decode(SubscriptionInfo.self, from: data) else {
+            clearCachedSubscription()
+            return
+        }
+
+        subscriptionInfo = cached
+        lastFetchedEmail = currentEmail
+        lastFetchDate = defaults.object(forKey: CacheKeys.timestamp) as? Date
+    }
+
+    private func clearCachedSubscription() {
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: CacheKeys.info)
+        defaults.removeObject(forKey: CacheKeys.timestamp)
+        defaults.removeObject(forKey: CacheKeys.email)
+    }
+
+    @MainActor
+    func clearSubscriptionState() {
+        subscriptionInfo = nil
+        lastFetchedEmail = nil
+        lastFetchDate = nil
+        purchasedSubscriptions = []
+        clearCachedSubscription()
     }
 
     func hasActiveSubscription() -> Bool {
