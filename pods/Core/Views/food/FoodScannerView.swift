@@ -20,12 +20,13 @@ extension Notification.Name {
 
 // Removed BarcodeFood struct - using onFoodScanned callback instead
 
+@MainActor
 struct FoodScannerView: View {
     @Binding var isPresented: Bool
     let selectedMeal: String
     @State private var selectedMode: ScanMode = .food
     @State private var showPhotosPicker = false
-    @State private var selectedImage: UIImage?
+    @State private var selectedImages: [UIImage] = []
     @State private var flashEnabled = false
     @State private var isAnalyzing = false
     @State private var scannedBarcode: String?
@@ -35,6 +36,7 @@ struct FoodScannerView: View {
     @State private var isGalleryImageLoaded = false
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
     // Callback for when food is scanned via barcode
     var onFoodScanned: ((Food, Int?) -> Void)?
     
@@ -293,22 +295,24 @@ struct FoodScannerView: View {
                 }
             }
             .sheet(isPresented: $showPhotosPicker) {
-                PhotosPickerView(selectedImage: $selectedImage)
+                PhotosPickerView(selectedImages: $selectedImages,
+                                 selectionLimit: proFeatureGate.hasActiveSubscription() ? 0 : 1)
                     .ignoresSafeArea()
-                    .onDisappear {
-                        if let image = selectedImage {
-                            // Check if preview is enabled for gallery import
-                            if galleryImportPreviewEnabled {
-                                print("🖼️ Gallery import preview enabled - will show confirmation screen after analysis")
-                                selectedMode = .food
-                                analyzeImageForPreview(image)
-                            } else {
-                                print("🖼️ Gallery import preview disabled - one-tap logging enabled")
-                                selectedMode = .food
-                                analyzeImageDirectly(image)
-                            }
-                        }
-                    }
+            }
+            .sheet(isPresented: Binding(
+                get: { proFeatureGate.showUpgradeSheet },
+                set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
+            )) {
+                HumuliProUpgradeSheet(
+                    feature: proFeatureGate.blockedFeature,
+                    usageSummary: proFeatureGate.usageSummary,
+                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
+                )
+                .presentationDetents([.medium, .large])
+            }
+            .onChange(of: selectedImages) { images in
+                guard !images.isEmpty else { return }
+                processSelectedImages(images)
             }
             .background(Color.black)
         .onAppear {
@@ -339,6 +343,11 @@ struct FoodScannerView: View {
     
     // MARK: - Functions
     
+    private var currentUserEmail: String? {
+        let email = UserDefaults.standard.string(forKey: "userEmail")
+        return email?.isEmpty == false ? email : nil
+    }
+    
     /// Safely load UserDefaults preferences on main thread to avoid threading race conditions
     private func loadUserDefaultsPreferences() {
         DispatchQueue.main.async {
@@ -363,87 +372,61 @@ struct FoodScannerView: View {
     
 
 private func analyzeImage(_ image: UIImage) {
-  guard !isAnalyzing,
-        let userEmail = UserDefaults.standard.string(forKey: "userEmail")
-  else { return }
-
-  // MODERN: Clean analysis with new state system (eliminates timer race conditions)
-  isPresented = false
-  print("🆕 Starting MODERN pure food image analysis with meal: \(selectedMeal)")
-
-  // Use modern async method that eliminates race conditions
-  Task { @MainActor in
-    do {
-      let combinedLog = try await foodManager.analyzeFoodImageModern(
-        image: image,
-        userEmail: userEmail,
-        mealType: selectedMeal,
-        shouldLog: false
-      )
-      
-      // Pure analysis function - always show preview
-      print("📸 MODERN: Pure image analysis complete - showing preview")
-      
-      if let food = combinedLog.food?.asFood {
-        // Use the callback to trigger ConfirmLogView sheet in ContentView
-        self.onFoodScanned?(food, combinedLog.foodLogId)
-      }
-      
-    } catch {
-      print("❌ MODERN: Pure scan failed:", error.localizedDescription)
-      // Error handling is already done in analyzeFoodImageModern via handleScanFailure
+    guard !isAnalyzing, let userEmail = currentUserEmail else { return }
+    proFeatureGate.checkAccess(for: .foodScans,
+                               userEmail: userEmail,
+                               increment: true) {
+        self.isPresented = false
+        Task { @MainActor in
+            do {
+                let combinedLog = try await foodManager.analyzeFoodImageModern(
+                    image: image,
+                    userEmail: userEmail,
+                    mealType: selectedMeal,
+                    shouldLog: false
+                )
+                if let food = combinedLog.food?.asFood {
+                    self.onFoodScanned?(food, combinedLog.foodLogId)
+                }
+            } catch {
+                print("❌ MODERN: Pure scan failed:", error.localizedDescription)
+            }
+        }
     }
-  }
 }
 
 private func analyzeNutritionLabel(_ image: UIImage) {
-    guard !isAnalyzing,
-          let userEmail = UserDefaults.standard.string(forKey: "userEmail")
-    else { return }
-
-    // Check preference at the start and branch accordingly
-    if foodLabelPreviewEnabled {
-        print("🔍 [DEBUG] PREVIEW MODE: Nutrition label preview enabled - will NOT log automatically")
-        print("🔍 [DEBUG] UserDefaults foodLabelPreviewEnabled = \(foodLabelPreviewEnabled)")
-        print("🔍 [DEBUG] Calling analyzeNutritionLabelForPreview (shouldLog will be FALSE)")
-        print("🔍 [DEBUG] User must tap 'Log' in ConfirmLogView to actually log")
-        analyzeNutritionLabelForPreview(image)
-    } else {
-        print("🔍 [DEBUG] DIRECT MODE: Nutrition label preview disabled - will log immediately")
-        print("🔍 [DEBUG] UserDefaults foodLabelPreviewEnabled = \(foodLabelPreviewEnabled)")
-        print("🔍 [DEBUG] Calling analyzeNutritionLabelDirectly (shouldLog will be TRUE)")
-        analyzeNutritionLabelDirectly(image)
+    guard !isAnalyzing, let userEmail = currentUserEmail else { return }
+    proFeatureGate.checkAccess(for: .foodScans,
+                               userEmail: userEmail,
+                               increment: true) {
+        performAnalyzeNutritionLabel(image, userEmail: userEmail)
     }
 }
 
-private func analyzeNutritionLabelForPreview(_ image: UIImage) {
-    guard !isAnalyzing,
-          let userEmail = UserDefaults.standard.string(forKey: "userEmail")
-    else { return }
+private func performAnalyzeNutritionLabel(_ image: UIImage, userEmail: String) {
+    isAnalyzing = true
+    if foodLabelPreviewEnabled {
+        performNutritionLabelPreview(image, userEmail: userEmail)
+    } else {
+        performNutritionLabelDirect(image, userEmail: userEmail)
+    }
+}
 
-    isPresented                  = false
-    foodManager.scannedImage     = image
-    foodManager.isScanningFood   = true
-    foodManager.loadingMessage   = "Reading nutrition label..."
-    foodManager.uploadProgress   = 0.1
-
-    print("🏷️ Starting nutrition label analysis for preview with meal: \(selectedMeal)")
-
+private func performNutritionLabelPreview(_ image: UIImage, userEmail: String) {
+    isPresented = false
+    foodManager.scannedImage = image
+    foodManager.isScanningFood = true
+    foodManager.loadingMessage = "Reading nutrition label..."
+    foodManager.uploadProgress = 0.1
     foodManager.analyzeNutritionLabel(image: image,
-                                     userEmail: userEmail,
-                                     mealType: selectedMeal,
-                                     shouldLog: false) { result in
+                                      userEmail: userEmail,
+                                      mealType: selectedMeal,
+                                      shouldLog: false) { result in
         switch result {
         case .success(let combinedLog):
-            // Always show confirmation view for preview mode
-            print("🏷️ Nutrition label scan complete - showing preview")
             if let food = combinedLog.food?.asFood {
-                // Debug health analysis preservation
-                print("🩺 [DEBUG] combinedLog.food?.healthAnalysis: \(combinedLog.food?.healthAnalysis?.score ?? -1)")
-                print("🩺 [DEBUG] food.healthAnalysis: \(food.healthAnalysis?.score ?? -1)")
-                
                 DispatchQueue.main.async {
-                    // Use the same NotificationCenter mechanism as barcode scanning
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowFoodConfirmation"),
                         object: nil,
@@ -452,50 +435,38 @@ private func analyzeNutritionLabelForPreview(_ image: UIImage) {
                             "foodLogId": combinedLog.foodLogId ?? NSNull()
                         ]
                     )
-                    print("🔍 DEBUG: Posted ShowFoodConfirmation notification for nutrition label: \(food.description)")
-                    print("🔍 DEBUG: Health analysis in notification food: \(food.healthAnalysis?.score ?? -1)")
                 }
             }
-
+            self.isAnalyzing = false
         case .failure(let error):
             self.handleNutritionLabelError(error)
+            self.isAnalyzing = false
         }
     }
 }
 
-private func analyzeNutritionLabelDirectly(_ image: UIImage) {
-    guard !isAnalyzing,
-          let userEmail = UserDefaults.standard.string(forKey: "userEmail")
-    else { return }
-
-    isPresented                  = false
-    foodManager.scannedImage     = image
-    foodManager.isScanningFood   = true
-    foodManager.loadingMessage   = "Reading nutrition label..."
-    foodManager.uploadProgress   = 0.1
-
-    print("🏷️ Starting nutrition label analysis for one-tap with meal: \(selectedMeal)")
-
+private func performNutritionLabelDirect(_ image: UIImage, userEmail: String) {
+    isPresented = false
+    foodManager.scannedImage = image
+    foodManager.isScanningFood = true
+    foodManager.loadingMessage = "Reading nutrition label..."
+    foodManager.uploadProgress = 0.1
     foodManager.analyzeNutritionLabel(image: image,
-                                     userEmail: userEmail,
-                                     mealType: selectedMeal) { result in
+                                      userEmail: userEmail,
+                                      mealType: selectedMeal) { result in
         switch result {
         case .success(let combinedLog):
-            // Always do instant optimistic insert for direct analysis (one-tap logging)
-            print("🏷️ Nutrition label scan complete - one-tap logging")
-            
             DispatchQueue.main.async {
                 dayLogsVM.addPending(combinedLog)
-                // 1) see if there's an existing entry with that foodLogId
                 if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
                     foodManager.combinedLogs.remove(at: idx)
                 }
-                // 2) prepend the fresh log
                 foodManager.combinedLogs.insert(combinedLog, at: 0)
+                self.isAnalyzing = false
             }
-
         case .failure(let error):
             self.handleNutritionLabelError(error)
+            self.isAnalyzing = false
         }
     }
 }
@@ -519,149 +490,87 @@ private func handleNutritionLabelError(_ error: Error) {
 }
 
 private func analyzeImageForPreview(_ image: UIImage) {
-  guard !isAnalyzing,
-        let userEmail = UserDefaults.standard.string(forKey: "userEmail")
-  else { return }
-
-  // MODERN: Clean scanner dismissal with new state system
-  isPresented = false
-  print("🆕 Starting MODERN food image analysis for preview with meal: \(selectedMeal)")
-
-  // Use new async method that eliminates race conditions
-  Task { @MainActor in
-    do {
-      let combinedLog = try await foodManager.analyzeFoodImageModern(
-        image: image,
-        userEmail: userEmail,
-        mealType: selectedMeal,
-        shouldLog: false
-      )
-      
-      // Handle success - show preview
-      print("📸 MODERN: Image analysis complete - showing preview")
-      print("🔍 DEBUG: combinedLog.food = \(String(describing: combinedLog.food))")
-      
-      if let food = combinedLog.food?.asFood {
-        print("🔍 DEBUG: Converted to Food object: \(food.description), fdcId: \(food.fdcId)")
-        
-        // Use NotificationCenter for clean communication
-        NotificationCenter.default.post(
-          name: NSNotification.Name("ShowFoodConfirmation"),
-          object: nil,
-          userInfo: [
-            "food": food,
-            "foodLogId": combinedLog.foodLogId ?? NSNull()
-          ]
-        )
-        print("🔍 DEBUG: Posted ShowFoodConfirmation notification for food: \(food.description)")
-        
-      } else {
-        print("❌ DEBUG: Failed to convert combinedLog.food to Food object")
-        print("❌ DEBUG: combinedLog.food is nil: \(combinedLog.food == nil)")
-      }
-      
-    } catch {
-      print("❌ MODERN preview scan failed:", error.localizedDescription)
-      // Error handling is already done in analyzeFoodImageModern via handleScanFailure
+    guard !isAnalyzing, let userEmail = currentUserEmail else { return }
+    proFeatureGate.checkAccess(for: .foodScans,
+                               userEmail: userEmail,
+                               increment: true) {
+        performAnalyzeImageForPreview(image, userEmail: userEmail)
     }
-  }
+}
+
+private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) {
+    isAnalyzing = true
+    isPresented = false
+    Task { @MainActor in
+        defer { self.isAnalyzing = false }
+        do {
+            let combinedLog = try await foodManager.analyzeFoodImageModern(
+                image: image,
+                userEmail: userEmail,
+                mealType: selectedMeal,
+                shouldLog: false
+            )
+            if let food = combinedLog.food?.asFood {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShowFoodConfirmation"),
+                    object: nil,
+                    userInfo: [
+                        "food": food,
+                        "foodLogId": combinedLog.foodLogId ?? NSNull()
+                    ]
+                )
+            }
+        } catch {
+            print("❌ MODERN preview scan failed:", error.localizedDescription)
+        }
+    }
 }
 
 private func analyzeImageDirectly(_ image: UIImage) {
-  guard !isAnalyzing,
-        let userEmail = UserDefaults.standard.string(forKey: "userEmail")
-  else { return }
-
-  // MODERN: Clean one-tap analysis with new state system
-  isPresented = false
-  print("🆕 Starting MODERN direct food image analysis (one-tap) with meal: \(selectedMeal)")
-
-  // Use new async method for one-tap logging
-  Task { @MainActor in
-    do {
-      let combinedLog = try await foodManager.analyzeFoodImageModern(
-        image: image,
-        userEmail: userEmail,
-        mealType: selectedMeal,
-        shouldLog: true  // Direct logging
-      )
-      
-      // Handle success - instant optimistic insert
-      print("📸 MODERN: One-tap analysis complete - logging")
-      
-      dayLogsVM.addPending(combinedLog)
-      
-      // Update combined logs
-      if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
-        foodManager.combinedLogs.remove(at: idx)
-      }
-      foodManager.combinedLogs.insert(combinedLog, at: 0)
-      
-    } catch {
-      print("❌ MODERN direct scan failed:", error.localizedDescription)
-      // Error handling is already done in analyzeFoodImageModern via handleScanFailure
+    guard !isAnalyzing, let userEmail = currentUserEmail else { return }
+    proFeatureGate.checkAccess(for: .foodScans,
+                               userEmail: userEmail,
+                               increment: true) {
+        performAnalyzeImageDirectly(image, userEmail: userEmail)
     }
-  }
+}
+
+private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
+    isAnalyzing = true
+    isPresented = false
+    Task { @MainActor in
+        defer { self.isAnalyzing = false }
+        do {
+            let combinedLog = try await foodManager.analyzeFoodImageModern(
+                image: image,
+                userEmail: userEmail,
+                mealType: selectedMeal,
+                shouldLog: true
+            )
+            dayLogsVM.addPending(combinedLog)
+            if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                foodManager.combinedLogs.remove(at: idx)
+            }
+            foodManager.combinedLogs.insert(combinedLog, at: 0)
+        } catch {
+            print("❌ MODERN direct scan failed:", error.localizedDescription)
+        }
+    }
 }
 
 
 
     private func processBarcodeDirectly(_ barcode: String) {
-        guard !isAnalyzing, let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
-            return
-        }
-        
-        print("🧩 Processing barcode directly (without photo): \(barcode)")
-        print("📊 Barcode preview enabled: \(barcodePreviewEnabled)")
-        
-        // ENHANCED: Close scanner immediately and show loading in DashboardView
-        // Set the loading state in FoodManager to show the loading card
-        foodManager.isAnalyzingFood = true  // This triggers FoodAnalysisCard in DashboardView
-        foodManager.loadingMessage = "Looking up barcode..."
-        foodManager.uploadProgress = 0.1
-        
-        // Close the scanner immediately for better UX
-        isPresented = false
-        
-        // Reset local state
-        isAnalyzing = false
-        isProcessingBarcode = false
-        
-        // Check preference to decide between preview and direct logging
-        if barcodePreviewEnabled {
-            print("📊 Barcode preview enabled - will show confirmation sheet")
-            // Start the enhanced barcode lookup process (shows confirmation)
-            foodManager.lookupFoodByBarcodeEnhanced(
-                barcode: barcode,
-                userEmail: userEmail,
-                mealType: selectedMeal
-            ) { success, message in
-                if success {
-                    print("✅ Enhanced barcode lookup success for: \(barcode)")
-                } else {
-                    print("❌ Enhanced barcode lookup failed: \(message ?? "Unknown error")")
-                }
-            }
-        } else {
-            print("📊 Barcode preview disabled - direct logging")
-            // Use direct logging (no confirmation sheet)
-            foodManager.lookupFoodByBarcodeDirect(
-                barcode: barcode,
-                userEmail: userEmail,
-                mealType: selectedMeal
-            ) { success, message in
-                if success {
-                    print("✅ Direct barcode lookup success for: \(barcode)")
-                } else {
-                    print("❌ Direct barcode lookup failed: \(message ?? "Unknown error")")
-                }
-            }
+        guard !isAnalyzing, let userEmail = currentUserEmail else { return }
+        proFeatureGate.checkAccess(for: .foodScans,
+                                   userEmail: userEmail,
+                                   increment: true) {
+            performProcessBarcode(barcode, userEmail: userEmail)
         }
     }
     
     private func openGallery() {
-        // Reset selection state to prevent using old images
-        selectedImage = nil
+        selectedImages.removeAll()
         selectedMode = .gallery
         showPhotosPicker = true
         print("🖼️ Gallery opened - awaiting image selection")
@@ -696,17 +605,79 @@ private func analyzeImageDirectly(_ image: UIImage) {
             print("❓ Unknown camera permission status")
         }
     }
+
+    private func performProcessBarcode(_ barcode: String, userEmail: String) {
+        print("🧩 Processing barcode directly (without photo): \(barcode)")
+        print("📊 Barcode preview enabled: \(barcodePreviewEnabled)")
+
+        foodManager.isAnalyzingFood = true
+        foodManager.loadingMessage = "Looking up barcode..."
+        foodManager.uploadProgress = 0.1
+
+        isPresented = false
+        isAnalyzing = false
+        isProcessingBarcode = false
+
+        if barcodePreviewEnabled {
+            foodManager.lookupFoodByBarcodeEnhanced(
+                barcode: barcode,
+                userEmail: userEmail,
+                mealType: selectedMeal
+            ) { success, message in
+                if success {
+                    print("✅ Enhanced barcode lookup success for: \(barcode)")
+                } else {
+                    print("❌ Enhanced barcode lookup failed: \(message ?? "Unknown error")")
+                }
+            }
+        } else {
+            foodManager.lookupFoodByBarcodeDirect(
+                barcode: barcode,
+                userEmail: userEmail,
+                mealType: selectedMeal
+            ) { success, message in
+                if success {
+                    print("✅ Direct barcode lookup success for: \(barcode)")
+                } else {
+                    print("❌ Direct barcode lookup failed: \(message ?? "Unknown error")")
+                }
+            }
+        }
+    }
+
+    private func processSelectedImages(_ images: [UIImage]) {
+        guard let email = currentUserEmail else { return }
+        let isPro = proFeatureGate.hasActiveSubscription()
+        if images.count > 1 && !isPro {
+            proFeatureGate.requirePro(for: .bulkLogging, userEmail: email) {}
+            selectedImages.removeAll()
+            return
+        }
+
+        selectedImages.removeAll()
+        selectedMode = .food
+
+        Task { @MainActor in
+            for image in images {
+                if galleryImportPreviewEnabled {
+                    analyzeImageForPreview(image)
+                } else {
+                    analyzeImageDirectly(image)
+                }
+            }
+        }
+    }
 }
 
 // PhotosPickerView replacement for the PhotosPicker
 struct PhotosPickerView: UIViewControllerRepresentable {
-    @Binding var selectedImage: UIImage?
+    @Binding var selectedImages: [UIImage]
+    let selectionLimit: Int
     
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
         config.filter = .images
-        config.selectionLimit = 1
-        
+        config.selectionLimit = selectionLimit
         let picker = PHPickerViewController(configuration: config)
         picker.delegate = context.coordinator
         return picker
@@ -726,27 +697,24 @@ struct PhotosPickerView: UIViewControllerRepresentable {
         }
         
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            guard let result = results.first else {
-                // No image selected, dismiss immediately
+            guard !results.isEmpty else {
                 picker.dismiss(animated: true)
                 return
             }
-            
-            // Load the image before dismissing
-            result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] object, error in
-                guard let image = object as? UIImage else {
-                    // Failed to load image, dismiss on main thread
-                    DispatchQueue.main.async {
-                        picker.dismiss(animated: true)
+            let dispatchGroup = DispatchGroup()
+            var images: [UIImage] = []
+            for result in results {
+                dispatchGroup.enter()
+                result.itemProvider.loadObject(ofClass: UIImage.self) { object, _ in
+                    if let image = object as? UIImage {
+                        images.append(image)
                     }
-                    return
+                    dispatchGroup.leave()
                 }
-                
-                // Successfully loaded image, update binding and dismiss
-                DispatchQueue.main.async {
-                    self?.parent.selectedImage = image
-                    picker.dismiss(animated: true)
-                }
+            }
+            dispatchGroup.notify(queue: .main) {
+                self.parent.selectedImages = images
+                picker.dismiss(animated: true)
             }
         }
     }
@@ -1061,4 +1029,4 @@ struct CameraPreviewView: UIViewRepresentable {
             }
         }
     }
-} 
+}

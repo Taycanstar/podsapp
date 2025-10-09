@@ -8,6 +8,19 @@
 import SwiftUI
 import Charts
 
+private enum ProfileTab: Hashable, CaseIterable {
+    case summary, logs, workouts, meals
+
+    var title: String {
+        switch self {
+        case .summary: return "Summary"
+        case .logs: return "Logs"
+        case .workouts: return "Workouts"
+        case .meals: return "Meals"
+        }
+    }
+}
+
 // MARK: - Macro Split Data Models
 enum WeekOption: CaseIterable {
     case thisWeek, lastWeek, twoWeeksAgo, threeWeeksAgo
@@ -39,6 +52,8 @@ struct MyProfileView: View {
     @Binding var isAuthenticated: Bool
     @EnvironmentObject var onboarding: OnboardingViewModel
     @EnvironmentObject var vm: DayLogsViewModel  // Add this to access current weight
+    @ObservedObject private var combinedLogsRepository = CombinedLogsRepository.shared
+    @Namespace private var profileTabNamespace
     
     // Weight data state
     @State private var currentWeightKg: Double? = nil
@@ -59,6 +74,8 @@ struct MyProfileView: View {
     // Pull to refresh state
     @State private var isRefreshing = false
     @State private var hasInitiallyLoaded = false
+    @State private var selectedProfileTab: ProfileTab = .summary
+    @State private var hasConfiguredCombinedLogs = false
     
     // Streak state
     @ObservedObject private var streakManager = StreakManager.shared
@@ -95,8 +112,7 @@ struct MyProfileView: View {
                     }
                     .padding()
                 } else {
-                    // Use our new unified content view
-                    profileContentView
+                    tabbedProfileContent
                         .padding(.horizontal, 20)
                 }
             }
@@ -168,6 +184,7 @@ struct MyProfileView: View {
             // Always fetch weight data and process macro split data
             fetchWeightData()
             fetchMacroSplitData()
+            ensureCombinedLogsReady()
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLoggedNotification"))) { _ in
             // Refresh weight data when a new weight is logged
@@ -182,7 +199,11 @@ struct MyProfileView: View {
             print("🔄 MyProfileView received LogsChangedNotification - refreshing profile data")
             Task {
                 await onboarding.fetchProfileData(force: false)
+                await combinedLogsRepository.refresh(force: true)
             }
+        }
+        .onChange(of: onboarding.profileData?.email) { _ in
+            ensureCombinedLogsReady(force: true)
         }
     }
     
@@ -404,49 +425,439 @@ struct MyProfileView: View {
         .frame(maxWidth: .infinity)
     }
     
-    private var profileContentView: some View {
+    private var summaryTabContent: some View {
+        VStack(spacing: 24) {
+            weightCardView
+
+            runStreakCardView
+
+            if let profileData = onboarding.profileData {
+                bmiGaugeView(profileData: profileData)
+            }
+
+            MacroSplitCardView(
+                selectedWeek: $selectedWeek,
+                data: macroSplitData[selectedWeek] ?? [],
+                weeklyTotal: calculateWeeklyTotal(for: selectedWeek)
+            )
+
+            if let profileData = onboarding.profileData {
+                nutritionGoalsView(profileData: profileData)
+            }
+
+            #if DEBUG
+            debugSectionView
+            #endif
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var tabbedProfileContent: some View {
         GeometryReader { geometry in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 24) {
-                    // Profile header
                     profileHeaderView()
-                    
-                    // Weight card (matching the user's example design)
-                    weightCardView
-                    
-                    // Run Streak card
-                    runStreakCardView
-                    
-                    // BMI gauge
-                    if let profileData = onboarding.profileData {
-                        bmiGaugeView(profileData: profileData)
-                    }
-                    
-                    // Weekly Macronutrient Split
-                    MacroSplitCardView(
-                        selectedWeek: $selectedWeek,
-                        data: macroSplitData[selectedWeek] ?? [],
-                        weeklyTotal: calculateWeeklyTotal(for: selectedWeek)
-                    )
-                    // Nutrition goals
-                    if let profileData = onboarding.profileData {
-                        nutritionGoalsView(profileData: profileData)
-                    }
-                    
-                    // Debug section (only in debug builds)
-                    #if DEBUG
-                    debugSectionView
-                    #endif
-                    
-                    Spacer(minLength: 100)
+                    profileTabSwitcher
+                    selectedTabContent
+                    Spacer(minLength: 80)
                 }
                 .frame(width: geometry.size.width)
+                .padding(.top, 8)
             }
             .refreshable {
-                await refreshProfileData()
+                await refreshForCurrentTab()
             }
         }
     }
+
+    private var profileTabSwitcher: some View {
+        HStack(spacing: 0) {
+            ForEach(ProfileTab.allCases, id: \.self) { tab in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        selectedProfileTab = tab
+                    }
+                    if tab != .summary {
+                        ensureCombinedLogsReady()
+                    }
+                } label: {
+                    VStack(spacing: 6) {
+                        Text(tab.title)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(selectedProfileTab == tab ? .primary : .secondary)
+
+                        Group {
+                            if selectedProfileTab == tab {
+                                Capsule()
+                                    .fill(Color.accentColor)
+                                    .frame(height: 3)
+                                    .matchedGeometryEffect(id: "profileTabUnderline", in: profileTabNamespace)
+                            } else {
+                                Capsule()
+                                    .fill(Color.clear)
+                                    .frame(height: 3)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+    }
+
+    @ViewBuilder
+    private var selectedTabContent: some View {
+        switch selectedProfileTab {
+        case .summary:
+            summaryTabContent
+        case .logs:
+            logsTabContent
+        case .workouts:
+            workoutsTabContent
+        case .meals:
+            mealsTabContent
+        }
+    }
+
+    private var logsTabContent: some View {
+        let logs = allCombinedLogs
+
+        return Group {
+            if combinedLogsRepository.isRefreshing && logs.isEmpty {
+                loadingStateView(title: "Loading logs…")
+            } else if logs.isEmpty {
+                emptyStateView(
+                    title: "No logs yet",
+                    message: "Record meals or workouts to see them here."
+                )
+            } else {
+                LazyVStack(spacing: 16) {
+                    ForEach(logs) { log in
+                        logCardView(for: log)
+                            .onAppear {
+                                maybeLoadMoreLogs(currentLog: log, within: logs)
+                            }
+                    }
+
+                    if combinedLogsRepository.isLoadingNextPage {
+                        ProgressView()
+                            .padding(.vertical, 12)
+                    }
+                }
+            }
+        }
+    }
+
+    private var workoutsTabContent: some View {
+        let logs = workoutLogs
+
+        return Group {
+            if combinedLogsRepository.isRefreshing && allCombinedLogs.isEmpty {
+                loadingStateView(title: "Loading workouts…")
+            } else if logs.isEmpty {
+                emptyStateView(
+                    title: "No workouts logged",
+                    message: "Log a workout to track your training history."
+                )
+            } else {
+                LazyVStack(spacing: 16) {
+                    ForEach(logs) { log in
+                        workoutCardView(for: log)
+                            .onAppear {
+                                maybeLoadMoreLogs(currentLog: log, within: logs)
+                            }
+                    }
+
+                    if combinedLogsRepository.isLoadingNextPage {
+                        ProgressView()
+                            .padding(.vertical, 12)
+                    }
+                }
+            }
+        }
+    }
+
+    private var mealsTabContent: some View {
+        let logs = mealLogs
+
+        return Group {
+            if combinedLogsRepository.isRefreshing && allCombinedLogs.isEmpty {
+                loadingStateView(title: "Loading meals…")
+            } else if logs.isEmpty {
+                emptyStateView(
+                    title: "No meals logged",
+                    message: "Track what you eat to populate this tab."
+                )
+            } else {
+                LazyVStack(spacing: 16) {
+                    ForEach(logs) { log in
+                        logCardView(for: log)
+                            .onAppear {
+                                maybeLoadMoreLogs(currentLog: log, within: logs)
+                            }
+                    }
+
+                    if combinedLogsRepository.isLoadingNextPage {
+                        ProgressView()
+                            .padding(.vertical, 12)
+                    }
+                }
+            }
+        }
+    }
+
+    private var allCombinedLogs: [CombinedLog] {
+        combinedLogsRepository.snapshot.logs.sorted { lhs, rhs in
+            let lhsDate = canonicalDate(for: lhs) ?? Date.distantPast
+            let rhsDate = canonicalDate(for: rhs) ?? Date.distantPast
+
+            if lhsDate == rhsDate {
+                return lhs.id > rhs.id
+            }
+            return lhsDate > rhsDate
+        }
+    }
+
+    private var workoutLogs: [CombinedLog] {
+        allCombinedLogs.filter { $0.type == .activity }
+    }
+
+    private var mealLogs: [CombinedLog] {
+        allCombinedLogs.filter { $0.type == .food || $0.type == .meal }
+    }
+
+    private func logCardView(for log: CombinedLog) -> some View {
+        LogRow(log: log)
+            .overlay(alignment: .topTrailing) {
+                if let date = canonicalDate(for: log) {
+                    Text(formatLogDate(date))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.trailing, 20)
+                        .padding(.top, 12)
+                }
+            }
+    }
+
+    @ViewBuilder
+    private func workoutCardView(for log: CombinedLog) -> some View {
+        if let activity = log.activity {
+            let duration = activity.formattedDuration
+            let distance = activity.formattedDistance
+            let exercises = exerciseCount(from: log)
+
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 16) {
+                    Image(systemName: activity.activityIcon)
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .frame(width: 48, height: 48)
+                        .background(Color("primarybg"))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(activity.displayName)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
+
+                        Text(activity.workoutActivityType.replacingOccurrences(of: "_", with: " "))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+                }
+
+                HStack(spacing: 12) {
+                    workoutMetricChip(icon: "clock", text: duration)
+
+                    if let exercises {
+                        workoutMetricChip(icon: "list.bullet", text: "\(exercises) exercises")
+                    }
+
+                    workoutMetricChip(icon: "flame", text: "\(Int(log.displayCalories)) cal")
+
+                    if let distance {
+                        workoutMetricChip(icon: "location", text: distance)
+                    }
+                }
+            }
+            .padding(.vertical, 20)
+            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(Color("containerbg"))
+                    .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 4)
+            )
+            .overlay(alignment: .topTrailing) {
+                if let date = canonicalDate(for: log) {
+                    Text(formatLogDate(date))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.trailing, 20)
+                        .padding(.top, 12)
+                }
+            }
+        } else {
+            logCardView(for: log)
+        }
+    }
+
+    private func workoutMetricChip(icon: String, text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.accentColor)
+            Text(text)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.primary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color("primarybg"))
+        .clipShape(Capsule())
+    }
+
+    private func loadingStateView(title: String) -> some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+
+    private func emptyStateView(title: String, message: String) -> some View {
+        VStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 18, weight: .semibold))
+            Text(message)
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+
+    private func maybeLoadMoreLogs(currentLog: CombinedLog, within logs: [CombinedLog]) {
+        guard let index = logs.firstIndex(where: { $0.id == currentLog.id }) else { return }
+        if index == logs.count - 1 {
+            Task {
+                await combinedLogsRepository.loadNextPage()
+            }
+        }
+    }
+
+    private func canonicalDate(for log: CombinedLog) -> Date? {
+        if let scheduled = log.scheduledAt {
+            return scheduled
+        }
+        if let activityDate = log.activity?.startDate {
+            return activityDate
+        }
+        if let logDate = log.logDate, let parsed = Self.backendDateFormatter.date(from: logDate) {
+            return parsed
+        }
+        return nil
+    }
+
+    private func formatLogDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+
+        let startOfNow = calendar.startOfDay(for: Date())
+        let startOfDate = calendar.startOfDay(for: date)
+        if let days = calendar.dateComponents([.day], from: startOfDate, to: startOfNow).day,
+           days < 7 {
+            return Self.weekdayFormatter.string(from: date)
+        }
+
+        return Self.shortDateFormatter.string(from: date)
+    }
+
+    private func exerciseCount(from log: CombinedLog) -> Int? {
+        let words = log.message.replacingOccurrences(of: "\n", with: " ")
+            .split(separator: " ")
+
+        for (index, word) in words.enumerated() where index + 1 < words.count {
+            let next = words[index + 1].lowercased()
+            if next.contains("exercise") {
+                let digits = word.filter { $0.isNumber }
+                if let count = Int(digits) {
+                    return count
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func ensureCombinedLogsReady(force: Bool = false) {
+        let email = resolvedUserEmail()
+        guard !email.isEmpty else { return }
+
+        if force || !hasConfiguredCombinedLogs {
+            combinedLogsRepository.configure(email: email)
+            hasConfiguredCombinedLogs = true
+        }
+
+        Task {
+            await combinedLogsRepository.refresh(force: force || combinedLogsRepository.snapshot.logs.isEmpty)
+        }
+    }
+
+    private func resolvedUserEmail() -> String {
+        if let email = onboarding.profileData?.email, !email.isEmpty {
+            return email
+        }
+        if let defaultsEmail = UserDefaults.standard.string(forKey: "userEmail"), !defaultsEmail.isEmpty {
+            return defaultsEmail
+        }
+        return onboarding.email
+    }
+
+    private func refreshForCurrentTab() async {
+        switch selectedProfileTab {
+        case .summary:
+            await refreshProfileData()
+        default:
+            let email = resolvedUserEmail()
+            if !email.isEmpty {
+                if !hasConfiguredCombinedLogs {
+                    combinedLogsRepository.configure(email: email)
+                    hasConfiguredCombinedLogs = true
+                }
+                await combinedLogsRepository.refresh(force: true)
+            }
+        }
+    }
+
+    private static let backendDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    private static let weekdayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE"
+        return formatter
+    }()
+
+    private static let shortDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M/d/yy"
+        return formatter
+    }()
     
     private var weightCardView: some View {
         NavigationLink(destination: WeightDataView()) {

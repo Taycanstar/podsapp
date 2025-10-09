@@ -40,6 +40,7 @@ struct podsApp: App {
     
     // Global workout manager for state synchronization
     @StateObject private var workoutManager = WorkoutManager.shared
+    @StateObject private var proFeatureGate = ProFeatureGate()
       
 
     var body: some Scene {
@@ -63,6 +64,7 @@ struct podsApp: App {
                 .environmentObject(notificationManager)
                 .environmentObject(mealReminderService)
                 .environmentObject(workoutManager)
+                .environmentObject(proFeatureGate)
                 .preferredColorScheme(themeManager.currentTheme == .system ? nil : (themeManager.currentTheme == .dark ? .dark : .light))
 //                .onChange(of: scenePhase) { newPhase in
 //                                   if newPhase == .active {
@@ -78,6 +80,7 @@ struct podsApp: App {
                     FitnessGoalMigrationService.migrateUserDefaults()
                     NetworkManager().determineUserLocation()
                     initializeDataArchitecture()
+                    proFeatureGate.configure(subscriptionManager: subscriptionManager)
                     StartupCoordinator.shared.bootstrapIfNeeded(
                         onboarding: onboardingViewModel,
                         foodManager: foodManager,

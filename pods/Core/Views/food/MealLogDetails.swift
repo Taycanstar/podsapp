@@ -12,6 +12,7 @@ struct MealLogDetails: View {
     @Environment(\.isTabBarVisible) private var isTabBarVisible
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
     let log: CombinedLog
     
     // Editable state
@@ -22,6 +23,8 @@ struct MealLogDetails: View {
     @State private var isUpdating: Bool = false
     @State private var showDatePicker: Bool = false
     @State private var showTimePicker: Bool = false
+    @State private var showScheduleSheet = false
+    @State private var scheduleAlert: ScheduleAlert?
     
     // Editable macronutrients
     @State private var editedCalories: String = ""
@@ -314,6 +317,16 @@ struct MealLogDetails: View {
             }
             .padding(.top, 16)
         }
+        .sheet(isPresented: Binding(
+            get: { proFeatureGate.showUpgradeSheet },
+            set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
+        )) {
+            HumuliProUpgradeSheet(
+                feature: proFeatureGate.blockedFeature,
+                usageSummary: proFeatureGate.usageSummary,
+                onDismiss: { proFeatureGate.dismissUpgradeSheet() }
+            )
+        }
         .background(Color("iosbg"))
         .onAppear {
             // Hide tab bar when meal log details appears
@@ -424,6 +437,35 @@ struct MealLogDetails: View {
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
         }
+        .toolbar {
+            if log.mealLogId != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        triggerSchedule()
+                    } label: {
+                        Image(systemName: "calendar.badge.plus")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showScheduleSheet) {
+            ScheduleMealSheet(initialMealType: editedMealType) { selection in
+                scheduleLog(selection: selection)
+            }
+        }
+        .alert(item: $scheduleAlert) { alert in
+            switch alert {
+            case .success(let message):
+                return Alert(title: Text("Scheduled"), message: Text(message), dismissButton: .default(Text("OK")))
+            case .failure(let message):
+                return Alert(title: Text("Error"), message: Text(message), dismissButton: .default(Text("OK")))
+            }
+        }
+    }
+
+    private var currentUserEmail: String? {
+        let email = UserDefaults.standard.string(forKey: "userEmail")
+        return email?.isEmpty == false ? email : nil
     }
     
     // Helper functions
@@ -511,6 +553,52 @@ struct MealLogDetails: View {
     // Helper function to hide keyboard
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+}
+
+extension MealLogDetails {
+    private func triggerSchedule() {
+        guard let email = currentUserEmail else { return }
+        proFeatureGate.requirePro(for: .scheduledLogging, userEmail: email) {
+            Task {
+                await proFeatureGate.refreshUsageSummary(for: email)
+            }
+            showScheduleSheet = true
+        }
+    }
+    
+    private func scheduleLog(selection: ScheduleMealSelection) {
+        guard let logId = log.mealLogId else { return }
+        guard let email = currentUserEmail else { return }
+        NetworkManager().scheduleMealLog(
+            logId: logId,
+            logType: "meal",
+            scheduleType: selection.scheduleType.rawValue,
+            targetDate: selection.targetDate,
+            mealType: selection.mealType,
+            userEmail: email
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self.scheduleAlert = .success("We'll remind you about this meal on your selected schedule.")
+                case .failure(let error):
+                    self.scheduleAlert = .failure(error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    private enum ScheduleAlert: Identifiable {
+        case success(String)
+        case failure(String)
+        
+        var id: String {
+            switch self {
+            case .success(let message): return "success_\(message)"
+            case .failure(let message): return "failure_\(message)"
+            }
+        }
     }
 }
 

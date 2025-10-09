@@ -1,386 +1,174 @@
-
 import SwiftUI
-import Foundation
 import StoreKit
-
-
+import UIKit
 
 struct SubscriptionView: View {
-    @EnvironmentObject var viewModel: OnboardingViewModel
-    @Environment(\.presentationMode) var presentationMode
-    @Environment(\.isTabBarVisible) var isTabBarVisible
-    @Environment(\.colorScheme) var colorScheme
-//    @StateObject private var subscriptionManager = SubscriptionManager()
-    @EnvironmentObject var subscriptionManager: SubscriptionManager
-    
-    let displayedTiers: [SubscriptionTier] = [.plusMonthly]
-    
+    @EnvironmentObject private var viewModel: OnboardingViewModel
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @Environment(\.presentationMode) private var presentationMode
+    @Environment(\.isTabBarVisible) private var isTabBarVisible
+
     @State private var isLoading = true
- 
+    @State private var showPricingSheet = false
+    @State private var alertContent: AlertContent?
+    @State private var isProcessingAction = false
+
+    private let displayedTier: SubscriptionTier = .humuliProMonthly
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                Color("dkBg").edgesIgnoringSafeArea(.all)
-                
+                Color("dkBg")
+                    .ignoresSafeArea()
+
                 if isLoading {
-                                  ProgressView("Loading subscription info...")
+                    ProgressView("Loading subscription info...")
+                        .progressViewStyle(CircularProgressViewStyle())
                 } else {
                     ScrollView {
-                        VStack(spacing: 20) {
+                        VStack(spacing: 24) {
                             if subscriptionManager.hasActiveSubscription() {
-                            ActiveSubscriptionView(viewModel: _viewModel)
+                                activeSection()
                             } else {
-                                NoSubscriptionView(geometry: geometry)
+                                inactiveSection(in: geometry)
                             }
-
                         }
                         .padding()
                     }
                 }
-                
-
             }
+        }
+        .navigationBarTitle("Subscription", displayMode: .inline)
+        .navigationBarBackButtonHidden(false)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    presentationMode.wrappedValue.dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 20, weight: .semibold))
+                }
+            }
+        }
+        .sheet(isPresented: $showPricingSheet) {
+            PricingView(tier: displayedTier, subscriptionManager: subscriptionManager)
+                .environmentObject(viewModel)
+        }
+        .alert(item: $alertContent) { content in
+            Alert(title: Text(content.title),
+                  message: Text(content.message),
+                  dismissButton: .default(Text("OK")))
         }
         .onAppear {
-                 isTabBarVisible.wrappedValue = false
-                 subscriptionManager.setOnboardingViewModel(viewModel)
-            testDateParsing()
-                 Task {
-                     await fetchSubscriptionInfo()
-                 }
-             }
-    
-        .onReceive(NotificationCenter.default.publisher(for: .subscriptionUpdated)) { _ in
-            Task {
-                await fetchSubscriptionInfo()
-            }
+            isTabBarVisible.wrappedValue = false
+            subscriptionManager.setOnboardingViewModel(viewModel)
+            Task { await fetchSubscriptionInfo(force: true) }
         }
-
-      
+        .onReceive(NotificationCenter.default.publisher(for: .subscriptionUpdated)) { _ in
+            Task { await fetchSubscriptionInfo(force: true) }
+        }
         .onDisappear {
             isTabBarVisible.wrappedValue = true
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
-                    presentationMode.wrappedValue.dismiss()
-                }) {
-                    Image(systemName: "chevron.left")
-                        .foregroundColor(.primary)
-                        .font(.system(size: 20))
-                }
+    }
+
+    private func fetchSubscriptionInfo(force: Bool = false) async {
+        guard let email = await currentEmail() else {
+            await MainActor.run {
+                isLoading = false
+                alertContent = AlertContent(title: "Unavailable",
+                                            message: "Please sign in to manage your subscription.")
             }
-            ToolbarItem(placement: .principal) {
-                Text("Subscription")
+            return
+        }
+
+        await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email, force: force)
+        await MainActor.run {
+            isLoading = false
+        }
+    }
+
+    private func activeSection() -> some View {
+        VStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(subscriptionManager.subscriptionInfo?.plan ?? "Humuli Pro")
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                if let expiresAt = subscriptionManager.subscriptionInfo?.expiresAt {
+                    Text("Renews \(formatDate(expiresAt))")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
+                if let plan = subscriptionManager.subscriptionInfo?.plan,
+                   let tier = SubscriptionTier(rawValue: plan) {
+                    Text(subscriptionManager.monthlyBillingInfo(for: tier))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
+                Divider()
+
+                Text("Included with your plan")
                     .font(.headline)
-            }
-        }
-    }
-    
-    func testDateParsing() {
-        let dateString = "2024-11-17T05:26:20.494385+00:00"
-        if let date = ISO8601DateFormatter.fullFormatter.date(from: dateString) {
-            print("Successfully parsed date: \(date)")
-            let currentDate = Date()
-            print("Current date: \(currentDate)")
-            print("Is future date: \(date > currentDate)")
-        } else {
-            print("Failed to parse date")
-        }
-    }
-    func fetchSubscriptionInfo() async {
-        isLoading = true
-        await subscriptionManager.fetchSubscriptionInfo(for: viewModel.email)
-        isLoading = false
-    }
-}
 
-struct ActiveSubscriptionView: View {
-    @EnvironmentObject var viewModel: OnboardingViewModel
-    @State private var showCancelAlert = false
-    @State private var showUpgradeSheet = false
-    @Environment(\.colorScheme) var colorScheme
-    @EnvironmentObject var subscriptionManager: SubscriptionManager
-    @State private var isManagingSubscriptions = false
-    @State private var showRenewAlert = false
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Image("copy") // Replace with your app icon
-                .resizable()
-                .scaledToFit()
-                .frame(height: 50)
-            
-            Text(subscriptionManager.subscriptionInfo?.plan ?? "Unknown Plan")
-                .font(.title2)
-                .fontWeight(.bold)
-            
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Image(systemName: "creditcard")
-
-                    Text(getCurrentSubscriptionPrice())
-                }
-                HStack {
-                    Image(systemName: "calendar")
-                    Text(getSubscriptionStatusText())
+                if let plan = subscriptionManager.subscriptionInfo?.plan,
+                   let tier = SubscriptionTier(rawValue: plan) {
+                    ForEach(tier.features, id: \.self) { feature in
+                        Label(feature, systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.subheadline)
+                    }
                 }
             }
-            .padding(.bottom, 15)
-//            if let subscriptionInfo = subscriptionManager.subscriptionInfo {
-//                           if subscriptionInfo.plan?.contains("Plus") == true {
-//                               upgradeButton(text: "Upgrade to Podstack Team")
-//                           } else if subscriptionInfo.plan?.contains("Team") == true {
-//                               upgradeButton(text: "Upgrade and add another team")
-//                           }
-//                       }
-            
-//            if viewModel.subscriptionPlan?.contains("Plus") == true {
-//                Button(action: {
-//                    showUpgradeSheet = true
-//                }) {
-//                    Text("Upgrade to Podstack Team")
-//                        .font(.system(size: 16))
-//                        .fontWeight(.semibold)
-//                        .foregroundColor(.white)
-//                        .frame(maxWidth: .infinity)
-//                        .padding()
-//                        .background(Color.blue)
-//                        .cornerRadius(10)
-//                }
-//            } else if viewModel.subscriptionPlan?.contains("Team") == true {
-//                Button(action: {
-//                    showUpgradeSheet = true
-//                }) {
-//                    Text("Upgrade and add another team")
-//                        .font(.system(size: 16))
-//                        .fontWeight(.semibold)
-//                        .foregroundColor(.white)
-//                        .frame(maxWidth: .infinity)
-//                        .padding()
-//                        .background(Color.accentColor)
-//                        .cornerRadius(10)
-//                }
-//            }
-            if subscriptionManager.shouldShowRenewButton() {
-                   Button(action: {
-                       showRenewAlert = true
-                   }) {
-                       Text("Renew Subscription")
-                           .font(.system(size: 16))
-                           .fontWeight(.regular)
-                           .foregroundColor(.blue)
-                           .frame(maxWidth: .infinity)
-                           .padding()
-                           .background(Color.blue.opacity(0.1))
-                           .cornerRadius(10)
-                   }
-                   .alert(isPresented: $showRenewAlert) {
-                       Alert(
-                           title: Text("Renew Subscription"),
-                           message: Text("Are you sure you want to renew your subscription?"),
-                           primaryButton: .default(Text("Renew")) {
-                               renewSubscription()
-                           },
-                           secondaryButton: .cancel()
-                       )
-                   }
-               } else if !subscriptionManager.isSubscriptionCancelled() {
-                   Button(action: {
-                       showCancelAlert = true
-                   }) {
-                       Text("Cancel Subscription")
-                           .font(.system(size: 16))
-                           .fontWeight(.regular)
-                           .foregroundColor(.red)
-                           .frame(maxWidth: .infinity)
-                           .padding()
-                           .background(Color.red.opacity(0.1))
-                           .cornerRadius(10)
-                   }
-                   .alert(isPresented: $showCancelAlert) {
-                       Alert(
-                           title: Text("Cancel Subscription"),
-                           message: Text("Are you sure you want to cancel your subscription? You can still access your subscription until \(formatSubscriptionDate(subscriptionManager.subscriptionInfo?.expiresAt ?? ""))"),
-                           primaryButton: .destructive(Text("Cancel Subscription")) {
-                               cancelSubscription()
-                           },
-                           secondaryButton: .cancel()
-                       )
-                   }
-               }
+            .padding()
+            .background(Color("mdBg"))
+            .cornerRadius(15)
 
-            VStack {
-                HStack {
-                    Text("By continuing, you agree to the ")
-                    
-                    Text("Terms")
-                        .foregroundColor(Color.accentColor)
-                        .underline()
-                        .onTapGesture {
-                            if let url = URL(string: "http://humuli.com/policies/terms") {
-                                UIApplication.shared.open(url)
-                            }
-                        }
-                    
-                    Text(" and ")
-                    
-                    Text("Privacy Policy")
-                        .foregroundColor(Color.accentColor)
-                        .underline()
-                        .onTapGesture {
-                            if let url = URL(string: "https://humuli.com/policies/privacy-policy") {
-                                UIApplication.shared.open(url)
-                            }
-                        }
-                }
-                .font(.footnote)
-                .foregroundColor(.gray)
-            }
-        }
-
-
-        .padding()
-        .background(Color("mdBg"))
-        .cornerRadius(15)
-        .sheet(isPresented: $showUpgradeSheet) {
-                   PricingView(tier: .teamMonthly, subscriptionManager: subscriptionManager)
-               }
-
-    }
-    
-    private func upgradeButton(text: String) -> some View {
-            Button(action: {
-                showUpgradeSheet = true
-            }) {
-                Text(text)
-                    .font(.system(size: 16))
+            Button(action: openManageSubscriptions) {
+                Text("Manage in App Store")
+                    .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.accentColor)
+                    .background(Color.accentColor.opacity(0.15))
+                    .foregroundColor(Color.accentColor)
                     .cornerRadius(10)
             }
-        }
-        
-    private func getCurrentSubscriptionPrice() -> String {
-           if let plan = subscriptionManager.subscriptionInfo?.plan {
-               if plan.contains("Plus") {
-                   return subscriptionManager.monthlyPrice(for: .plusMonthly)
-               } else if plan.contains("Team") {
-                   return subscriptionManager.monthlyPrice(for: .teamMonthly)
-               }
-           }
-           return "Unknown"
-       }
 
-    private func getSubscriptionStatusText() -> String {
-           guard let subscriptionInfo = subscriptionManager.subscriptionInfo,
-                 let expiresAtString = subscriptionInfo.expiresAt,
-                 let expiresAt = ISO8601DateFormatter.fullFormatter.date(from: expiresAtString) else {
-               return "Status unknown"
-           }
-
-           let formattedDate = DateFormatter.subscriptionDateFormatter.string(from: expiresAt)
-           
-           if subscriptionInfo.status == "active" {
-               return subscriptionInfo.renews ? "Renews on \(formattedDate)" : "Expires on \(formattedDate)"
-           } else if subscriptionInfo.status == "cancelled" {
-               return "Active until \(formattedDate)"
-           } else {
-               return "Status unknown"
-           }
-       }
-
-    private func renewSubscription() {
-        Task {
-            do {
-                try await subscriptionManager.renewSubscription(userEmail: viewModel.email)
-                print("Subscription renewed successfully")
-                // Optionally, you can show a success message or update the UI
-            } catch {
-                print("Error renewing subscription: \(error)")
-                
+            if subscriptionManager.shouldShowRenewButton() {
+                actionButton(title: "Renew Subscription") {
+                    await renewSubscription()
+                }
+            } else if subscriptionManager.isSubscriptionCancelled() == false {
+                actionButton(title: "Cancel Subscription", role: .destructive) {
+                    await cancelSubscription()
+                }
             }
+
+            restoreButton()
+
+            termsFooter
         }
     }
-    
-    
-    
-    private func openManageSubscriptions() {
-         if #available(iOS 15.0, *) {
-             if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                 Task {
-                     try? await AppStore.showManageSubscriptions(in: scene)
-                 }
-             }
-         } else {
-             // Fallback for iOS versions before 15.0
-             if let url = URL(string: "itms-apps://apps.apple.com/account/subscriptions") {
-                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
-             }
-         }
-     }
 
-    private func cancelSubscription() {
-
-           Task {
-               do {
-                   try await subscriptionManager.cancelSubscription(userEmail: viewModel.email)
-
-                   print("Subscription cancelled")
-                   // Optionally, you can show a success message or navigate to a different view
-               } catch {
-                   print("error cancelling subscription: \(error)")
-               }
-           }
-       }
-    
-      
-      private func getCancellationMessage() -> String {
-          guard let dateString = viewModel.subscriptionExpiresAt else {
-              return "You can still access your subscription until the end of the billing period."
-          }
-          let formattedDate = formatSubscriptionDate(dateString)
-          return "You can still access your subscription until \(formattedDate)."
-      }
-}
-
-struct NoSubscriptionView: View {
-    let geometry: GeometryProxy
-    @EnvironmentObject var viewModel: OnboardingViewModel
-
-    @State private var showPricingSheet = false
-    let displayedTier: SubscriptionTier = .plusMonthly
-    @StateObject private var subscriptionManager = SubscriptionManager()
-    
-    var body: some View {
-        VStack(spacing: 10) {
-            // Title card
+    private func inactiveSection(in geometry: GeometryProxy) -> some View {
+        VStack(spacing: 16) {
             Text(displayedTier.name)
                 .font(.headline)
                 .fontWeight(.bold)
                 .padding()
+                .frame(maxWidth: .infinity)
                 .background(Color("mdBg"))
                 .cornerRadius(15)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 15)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                )
-                .padding(.horizontal)
-                .padding(.top, 10)
-            
-            // Subscription tier view
-            SubscriptionTierView(tier: .plusMonthly)
-                .padding(.top, 15)
+
+            SubscriptionTierView(tier: displayedTier)
                 .frame(height: geometry.size.height * 0.6)
 
-            Button(action: {
+            Button {
                 showPricingSheet = true
-            }) {
+            } label: {
                 Text("Starting at \(subscriptionManager.startingPrice(for: displayedTier))")
                     .font(.headline)
                     .foregroundColor(.white)
@@ -389,326 +177,337 @@ struct NoSubscriptionView: View {
                     .background(Color.accentColor)
                     .cornerRadius(10)
             }
-            .padding(.horizontal)
-            .padding(.bottom, 20)
-            
-            Spacer()
-            
-            // Terms and Privacy Policy
-            VStack {
-                HStack {
-                    Text("By continuing, you agree to the ")
-                    Text("Terms")
-                        .foregroundColor(Color.accentColor)
-                        .underline()
-                        .onTapGesture {
-                            if let url = URL(string: "http://humuli.com/policies/terms") {
-                                UIApplication.shared.open(url)
-                            }
-                        }
-                    Text(" and ")
-                    Text("Privacy Policy")
-                        .foregroundColor(Color.accentColor)
-                        .underline()
-                        .onTapGesture {
-                            if let url = URL(string: "https://humuli.com/policies/privacy-policy") {
-                                UIApplication.shared.open(url)
-                            }
-                        }
-                }
-                .font(.footnote)
-                .foregroundColor(.gray)
+
+            restoreButton()
+
+            termsFooter
+        }
+    }
+
+    private func actionButton(title: String, role: ButtonRole? = nil, action: @escaping () async -> Void) -> some View {
+        Button(role: role) {
+            Task { await action() }
+        } label: {
+            if isProcessingAction {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding()
+            } else {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding()
             }
         }
-        .sheet(isPresented: $showPricingSheet) {
-            PricingView(tier: displayedTier, subscriptionManager: SubscriptionManager())
+        .buttonStyle(.borderedProminent)
+        .tint(role == .destructive ? .red : .accentColor)
+        .disabled(isProcessingAction)
+    }
+
+    private func restoreButton() -> some View {
+        Button {
+            Task { await restorePurchases() }
+        } label: {
+            Text("Restore Purchases")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
+                .padding()
         }
+        .buttonStyle(.bordered)
+        .disabled(isProcessingAction)
+    }
+
+    private var termsFooter: some View {
+        HStack(spacing: 4) {
+            Text("By continuing, you agree to the")
+                .foregroundColor(.secondary)
+            Button("Terms") {
+                if let url = URL(string: "http://humuli.com/policies/terms") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .font(.footnote)
+
+            Text("and")
+                .foregroundColor(.secondary)
+
+            Button("Privacy Policy") {
+                if let url = URL(string: "https://humuli.com/policies/privacy-policy") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .font(.footnote)
+        }
+        .font(.footnote)
+        .foregroundColor(.secondary)
+    }
+
+    private func openManageSubscriptions() {
+        if let url = URL(string: "itms-apps://apps.apple.com/account/subscriptions") {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        }
+    }
+
+    private func cancelSubscription() async {
+        guard let email = await currentEmail() else { return }
+        await performAction {
+            try await subscriptionManager.cancelSubscription(userEmail: email)
+        } successMessage: {
+            return "Your subscription has been cancelled. You can continue using it until it expires."
+        }
+    }
+
+    private func renewSubscription() async {
+        guard let email = await currentEmail() else { return }
+        await performAction {
+            try await subscriptionManager.renewSubscription(userEmail: email)
+        } successMessage: {
+            return "Your subscription has been renewed successfully."
+        }
+    }
+
+    private func restorePurchases() async {
+        guard let email = await currentEmail() else {
+            await MainActor.run {
+                alertContent = AlertContent(title: "Restore Failed",
+                                            message: "Please sign in to restore purchases.")
+            }
+            return
+        }
+
+        await performAction {
+            try await subscriptionManager.restorePurchases(userEmail: email)
+        } successMessage: {
+            return "Any available purchases have been restored."
+        }
+    }
+
+    private func performAction(_ action: @escaping () async throws -> Void,
+                               successMessage: @escaping () -> String) async {
+        guard isProcessingAction == false else { return }
+        await MainActor.run { isProcessingAction = true }
+        defer {
+            Task { @MainActor in isProcessingAction = false }
+        }
+
+        do {
+            try await action()
+            await MainActor.run {
+                alertContent = AlertContent(title: "Success", message: successMessage())
+            }
+        } catch let error as SubscriptionError {
+            await MainActor.run {
+                alertContent = AlertContent(title: "Error", message: error.localizedDescription)
+            }
+        } catch {
+            await MainActor.run {
+                alertContent = AlertContent(title: "Error", message: error.localizedDescription)
+            }
+        }
+    }
+
+    @MainActor
+    private func currentEmail() -> String? {
+        if viewModel.email.isEmpty == false {
+            return viewModel.email
+        }
+        if let stored = UserDefaults.standard.string(forKey: "userEmail"), stored.isEmpty == false {
+            return stored
+        }
+        return nil
+    }
+
+    private func formatDate(_ isoString: String) -> String {
+        let formatter = ISO8601DateFormatter.fullFormatter
+        guard let date = formatter.date(from: isoString) else {
+            return "soon"
+        }
+        let output = DateFormatter()
+        output.dateStyle = .medium
+        return output.string(from: date)
     }
 }
 
-//struct NoSubscriptionView: View {
-//    let geometry: GeometryProxy
-//    @EnvironmentObject var viewModel: OnboardingViewModel
-//
-//    @State private var selectedTab = 0
-//    @State private var showPricingSheet = false
-//    let displayedTiers: [SubscriptionTier] = [.plusMonthly, .teamMonthly]
-//    @StateObject private var subscriptionManager = SubscriptionManager()
-//
-//    var body: some View {
-//        VStack(spacing: 10) {
-//            // Title card with arrows
-//            HStack {
-//                Button(action: {
-//                    withAnimation {
-//                        selectedTab = max(0, selectedTab - 1)
-//                    }
-//                }) {
-//                    Image(systemName: "chevron.left")
-//                        .foregroundColor(.accentColor)
-//                }
-//                .opacity(selectedTab > 0 ? 1 : 0.3)
-//
-//                Spacer()
-//
-//                Text(displayedTiers[selectedTab].name)
-//                    .font(.headline)
-//                    .fontWeight(.bold)
-//
-//                Spacer()
-//
-//                Button(action: {
-//                    withAnimation {
-//                        selectedTab = min(1, selectedTab + 1)
-//                    }
-//                }) {
-//                    Image(systemName: "chevron.right")
-//                        .foregroundColor(.accentColor)
-//                }
-//                .opacity(selectedTab < 1 ? 1 : 0.3)
-//            }
-//            .padding()
-//            .background(Color("mdBg"))
-//            .cornerRadius(15)
-//            .overlay(
-//                RoundedRectangle(cornerRadius: 15)
-//                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-//            )
-//            .padding(.horizontal)
-//            .padding(.top, 10)
-//
-//            // TabView with subscription tiers
-//            TabView(selection: $selectedTab) {
-//                SubscriptionTierView(tier: .plusMonthly)
-//                    .tag(0)
-//                SubscriptionTierView(tier: .teamMonthly)
-//                    .tag(1)
-//            }
-//            .padding(.top, 15)
-//            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-//            .frame(height: geometry.size.height * 0.6)
-//
-//            PageIndicator(currentPage: selectedTab, pageCount: 2)
-//                .padding()
-//
-//            Button(action: {
-//                showPricingSheet = true
-//            }) {
-//                Text("Starting at \(subscriptionManager.startingPrice(for: displayedTiers[selectedTab]))")
-//                    .font(.headline)
-//                    .foregroundColor(.white)
-//                    .frame(maxWidth: .infinity)
-//                    .padding()
-//                    .background(Color.accentColor)
-//                    .cornerRadius(10)
-//            }
-//            .padding(.horizontal)
-//            .padding(.bottom, 20)
-//
-//            Spacer()
-//            VStack {
-//                HStack {
-//                    Text("By continuing, you agree to the ")
-//
-//                    Text("Terms")
-//                        .foregroundColor(Color.accentColor)
-//                        .underline()
-//                        .onTapGesture {
-//                            if let url = URL(string: "http://humuli.com/policies/terms") {
-//                                UIApplication.shared.open(url)
-//                            }
-//                        }
-//
-//                    Text(" and ")
-//
-//                    Text("Privacy Policy")
-//                        .foregroundColor(Color.accentColor)
-//                        .underline()
-//                        .onTapGesture {
-//                            if let url = URL(string: "https://humuli.com/policies/privacy-policy") {
-//                                UIApplication.shared.open(url)
-//                            }
-//                        }
-//                }
-//                .font(.footnote)
-//                .foregroundColor(.gray)
-//            }
-//        }
-//        .sheet(isPresented: $showPricingSheet) {
-//            PricingView(tier: displayedTiers[selectedTab], subscriptionManager: SubscriptionManager())
-//        }
-//    }
-//}
-
-// Existing SubscriptionTierView, PageIndicator, and PricingView remain unchanged
+private struct AlertContent: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+}
 
 struct SubscriptionTierView: View {
     let tier: SubscriptionTier
-    @Environment(\.colorScheme) var colorScheme
-    
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             ForEach(tier.features, id: \.self) { feature in
                 HStack {
                     Text(feature)
                     Spacer()
-                    Image(systemName: "checkmark")
+                    Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
                 }
+                .font(.subheadline)
             }
         }
         .padding()
         .background(Color("mxdBg"))
         .cornerRadius(15)
-//        .shadow(radius: 5)
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 15)
                 .stroke(borderColor, lineWidth: colorScheme == .dark ? 1 : 0.5)
         )
-        .padding(.horizontal, 20)
     }
-    
+
     private var borderColor: Color {
         colorScheme == .dark ? Color(rgb: 44, 44, 44) : Color(rgb: 230, 230, 230)
     }
 }
 
-struct PageIndicator: View {
-    let currentPage: Int
-    let pageCount: Int
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            ForEach(0..<pageCount, id: \.self) { page in
-                Circle()
-                    .fill(page == currentPage ? Color.blue : Color.gray.opacity(0.5))
-                    .frame(width: 8, height: 8)
-            }
-        }
-    }
-}
-
-
 struct PricingView: View {
     let tier: SubscriptionTier
     @ObservedObject var subscriptionManager: SubscriptionManager
-    @Environment(\.presentationMode) var presentationMode
-    @State private var selectedPlan: PlanType = .annual
+    @Environment(\.presentationMode) private var presentationMode
+    @EnvironmentObject private var viewModel: OnboardingViewModel
+
+    @State private var selectedPlan: PlanType = .yearly
     @State private var showError = false
     @State private var errorMessage = ""
-    @EnvironmentObject var viewModel: OnboardingViewModel
-    
+    @State private var isProcessing = false
+
     enum PlanType {
-        case annual, monthly
-    }
-    
-    var savingsPercentage: Int {
-        switch tier {
-        case .plusMonthly, .plusYearly:
-            return 33
-        case .teamMonthly, .teamYearly:
-            return 22
-        case .none:
-            return 0
+        case monthly
+        case yearly
+
+        var duration: SubscriptionDuration {
+            switch self {
+            case .monthly: return .monthly
+            case .yearly: return .yearly
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .monthly: return "Monthly plan"
+            case .yearly: return "Annual plan"
+            }
         }
     }
-    
+
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
+            VStack(spacing: 24) {
                 Text(tier.name)
                     .font(.title)
                     .fontWeight(.bold)
-                
-                VStack(spacing: 15) {
+
+                VStack(spacing: 16) {
                     PricingOptionView(
-                        title: "Annual plan",
+                        title: PlanType.yearly.title,
                         price: subscriptionManager.annualPrice(for: tier),
-                        savings: "SAVE \(savingsPercentage)%",
+                        savings: savingsDescription(),
                         billingInfo: subscriptionManager.annualBillingInfo(for: tier),
-                        isSelected: selectedPlan == .annual,
-                        action: { selectedPlan = .annual }
-                    )
-                    
+                        isSelected: selectedPlan == .yearly
+                    ) {
+                        selectedPlan = .yearly
+                    }
+
                     PricingOptionView(
-                        title: "Monthly plan",
+                        title: PlanType.monthly.title,
                         price: subscriptionManager.monthlyPrice(for: tier),
                         billingInfo: subscriptionManager.monthlyBillingInfo(for: tier),
-                        isSelected: selectedPlan == .monthly,
-                        action: { selectedPlan = .monthly }
-                    )
-                }
-                .padding()
-                
-                Button(action: {
-
-                    Task {
-                                      do {
-                                          try await subscriptionManager.purchase(
-                                              tier: tier,
-                                              planType: selectedPlan,
-                                              userEmail: viewModel.email, onboardingViewModel: viewModel
-                                          )
-                                          await subscriptionManager.fetchSubscriptionInfo(for: viewModel.email)
-                                          presentationMode.wrappedValue.dismiss()
-                                      } catch {
-                                          errorMessage = error.localizedDescription
-                                          showError = true
-                                      }
-                                  }
-                }) {
-                    Text("Subscribe & Pay")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.accentColor)
-                        .cornerRadius(10)
-                }
-                .padding()
-                
-           
-                
-                VStack {
-                    HStack {
-                        Text("By subscribing, you agree to our  ")
-                        
-                        Text("Terms")
-                            .foregroundColor(Color.accentColor)
-                            .underline()
-                            .onTapGesture {
-                                if let url = URL(string: "http://humuli.com/policies/terms") {
-                                    UIApplication.shared.open(url)
-                                }
-                            }
-                        
-                        Text(" and ")
-                        
-                        Text("Privacy Policy")
-                            .foregroundColor(Color.accentColor)
-                            .underline()
-                            .onTapGesture {
-                                if let url = URL(string: "https://humuli.com/policies/privacy-policy") {
-                                    UIApplication.shared.open(url)
-                                }
-                            }
-                    
+                        isSelected: selectedPlan == .monthly
+                    ) {
+                        selectedPlan = .monthly
                     }
-                    .font(.footnote)
-                    .foregroundColor(.gray)
                 }
 
+                Button {
+                    Task { await purchaseSelectedPlan() }
+                } label: {
+                    if isProcessing {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    } else {
+                        Text(purchaseButtonTitle)
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.accentColor)
+                            .cornerRadius(10)
+                    }
+                }
+                .disabled(isProcessing)
 
-
+                TermsFooter()
             }
+            .padding()
             .navigationBarTitle("Choose a Plan", displayMode: .inline)
             .navigationBarItems(trailing: Button("Close") {
                 presentationMode.wrappedValue.dismiss()
             })
-            .alert(isPresented: $showError) {
-                Alert(title: Text("Purchase Error"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
+            .alert("Purchase Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
             }
         }
+    }
+
+    private var purchaseButtonTitle: String {
+        let price = selectedPlan == .yearly
+            ? subscriptionManager.annualPrice(for: tier)
+            : subscriptionManager.monthlyPrice(for: tier)
+        return "Subscribe for \(price)"
+    }
+
+    private func savingsDescription() -> String? {
+        let percentage = subscriptionManager.savingsPercentage(for: tier)
+        guard percentage > 0 else { return nil }
+        return "SAVE \(percentage)%"
+    }
+
+    private func purchaseSelectedPlan() async {
+        guard isProcessing == false else { return }
+        guard let email = resolvedEmail else {
+            showError = true
+            errorMessage = "Please sign in before purchasing."
+            return
+        }
+
+        isProcessing = true
+        defer { isProcessing = false }
+
+        do {
+            try await subscriptionManager.purchase(
+                tier: tier,
+                duration: selectedPlan.duration,
+                userEmail: email,
+                onboardingViewModel: viewModel
+            )
+            await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email, force: true)
+            presentationMode.wrappedValue.dismiss()
+        } catch let error as SubscriptionError {
+            errorMessage = error.localizedDescription
+            showError = true
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private var resolvedEmail: String? {
+        if viewModel.email.isEmpty == false {
+            return viewModel.email
+        }
+        if let stored = UserDefaults.standard.string(forKey: "userEmail"), stored.isEmpty == false {
+            return stored
+        }
+        return nil
     }
 }
 
@@ -719,57 +518,69 @@ struct PricingOptionView: View {
     let billingInfo: String
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text(title)
                         .font(.headline)
-                    if let savings = savings {
-                        Text(savings)
-                            .font(.subheadline)
-                            .foregroundColor(.green)
-                            .padding(.horizontal, 5)
-                            .background(Color.green.opacity(0.2))
-                            .cornerRadius(5)
-                    }
                     Spacer()
                     Text(price)
                         .font(.headline)
                 }
+
+                if let savings = savings {
+                    Text(savings)
+                        .font(.subheadline)
+                        .foregroundColor(.green)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.green.opacity(0.2))
+                        .cornerRadius(6)
+                }
+
                 Text(billingInfo)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
             .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color("mdBg"))
             .cornerRadius(15)
             .overlay(
                 RoundedRectangle(cornerRadius: 15)
-                    .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: isSelected ? 2 : 1)
+                    .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.2),
+                            lineWidth: isSelected ? 2 : 1)
             )
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
     }
 }
 
-extension DateFormatter {
-    static let subscriptionDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM d, yyyy"
-        return formatter
-    }()
-}
+private struct TermsFooter: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("By subscribing, you agree to our")
+                .foregroundColor(.secondary)
+            Button("Terms") {
+                if let url = URL(string: "http://humuli.com/policies/terms") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .font(.footnote)
 
-func formatSubscriptionDate(_ dateString: String) -> String {
-    let dateFormatter = ISO8601DateFormatter()
-    dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    
-    if let date = dateFormatter.date(from: dateString) {
-        return DateFormatter.subscriptionDateFormatter.string(from: date)
+            Text("and")
+                .foregroundColor(.secondary)
+
+            Button("Privacy Policy") {
+                if let url = URL(string: "https://humuli.com/policies/privacy-policy") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .font(.footnote)
+        }
+        .font(.footnote)
+        .foregroundColor(.secondary)
     }
-    return "Unknown"
 }
-
-

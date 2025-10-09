@@ -14,9 +14,11 @@
 
 import SwiftUI
 
+@MainActor
 struct StartWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
     let todayWorkout: TodayWorkout
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
     
     @State private var currentExerciseIndex = 0
     @State private var isWorkoutStarted = false
@@ -280,6 +282,18 @@ struct StartWorkoutView: View {
     }
     
     private func startWorkout() {
+        guard !isWorkoutStarted else { return }
+        guard let email = currentUserEmail else {
+            beginWorkoutSession()
+            return
+        }
+        proFeatureGate.checkAccess(for: .workouts, userEmail: email) {
+            Task { await proFeatureGate.refreshUsageSummary(for: email) }
+            beginWorkoutSession()
+        }
+    }
+    
+    private func beginWorkoutSession() {
         isWorkoutStarted = true
         workoutStartTime = Date()
         startTimer()
@@ -311,6 +325,11 @@ struct StartWorkoutView: View {
         if currentExerciseIndex > 0 {
             currentExerciseIndex -= 1
         }
+    }
+    
+    private var currentUserEmail: String? {
+        let email = UserDefaults.standard.string(forKey: "userEmail")
+        return email?.isEmpty == false ? email : nil
     }
     
     private func completeWorkout() {

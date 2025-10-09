@@ -16,325 +16,384 @@ struct ProfileView: View {
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @State private var showingMail = false
     @State private var showUpgradeSheet = false
+    @State private var showManageSheet = false
     @Binding var isAuthenticated: Bool
     @Environment(\.isTabBarVisible) var isTabBarVisible
-    
+
     var body: some View {
         ZStack {
-            formBackgroundColor.edgesIgnoringSafeArea(.all)
-                Form {
-                        Section(header: Text("Account")) {
-                            HStack {
-                                Label("Email", systemImage: "envelope")
-                                    .foregroundColor(iconColor)
-                                Spacer()
-                                Text(viewModel.email)
-                                    .foregroundColor(iconColor)
-                            }
-                            
-                            NavigationLink(destination: EditNameView()) {
-                                HStack {
-                                    Label("Name", systemImage: "person.text.rectangle")
-                                        .foregroundColor(iconColor)
-                                    Spacer()
-                                    Text(viewModel.profileData?.name.isEmpty == false ? viewModel.profileData!.name : (viewModel.name.isEmpty ? "Add name" : viewModel.name))
-                                        .foregroundColor(iconColor)
-                                }
-                            }
-                            
-                            NavigationLink(destination: EditUsernameView()) {
-                                HStack {
-                                    Label("Username", systemImage: "person")
-                                        .foregroundColor(iconColor)
-                                    Spacer()
-                                    Text(viewModel.username)
-                                        .foregroundColor(iconColor)
-                                }
-                            }
-                              NavigationLink(destination: ManageGoalsView()) {
-                                Label("Goals and Weight", systemImage: "scalemass")
-                                    .foregroundColor(iconColor)
-                            }
-
-                            Button {
-                                showUpgradeSheet = true
-                            } label: {
-                                HStack {
-                                    Label("Subscription", systemImage: "plus.app")
-                                        .foregroundColor(iconColor)
-                                    Spacer()
-                                    Text(subscriptionManager.hasActiveSubscription() ? "Pro" : "Free")
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .buttonStyle(PlainButtonStyle())
-
-                            NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
-                                Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
-                                    .foregroundColor(iconColor)
-                            }
-                          
-                            
-                        }
-                        .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                        
-                        Section(header: Text("Data Sharing")) {
-                            NavigationLink(destination: AppleHealthSettingsView()) {
-                                Label("Apple Health", systemImage: "heart.text.square")
-                                    .foregroundColor(iconColor)
-                            }
-                        }
-                        .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                        
-                        Section(header: Text("Preferences")) {
-                              
-                           
-                              
-                              HStack {
-                                  Label("Theme", systemImage: "paintbrush")
-                                      .foregroundColor(iconColor)
-                                  Spacer()
-                                  
-                                  Menu {
-                                      ForEach(ThemeOption.allCases, id: \.self) { theme in
-                                          Button(action: {
-                                              themeManager.setTheme(theme)
-                                          }) {
-                                              HStack {
-                                                  Text(theme.rawValue)
-                                                  if themeManager.currentTheme == theme {
-                                                      Image(systemName: "checkmark")
-                                                  }
-                                              }
-                                          }
-                                      }
-                                  } label: {
-                                      HStack {
-                                          Text(themeManager.currentTheme.rawValue)
-                                              .foregroundColor(.secondary)
-                                          Image(systemName: "chevron.up.chevron.down")
-                                              .font(.caption2)
-                                              .foregroundColor(.secondary)
-                                      }
-                                  }
-                              }
-                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                              
-                              NavigationLink(destination: NotificationSettingsView()) {
-                                  Label("Notifications", systemImage: "bell")
-                                      .foregroundColor(iconColor)
-                              }
-                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                              
-                              // Units selection row
-                              HStack {
-                                  Label("Units", systemImage: "globe")
-                                      .foregroundColor(iconColor)
-                                  Spacer()
-                                  
-                                  Menu {
-                                      ForEach(UnitsSystem.allCases, id: \.self) { unit in
-                                          Button(action: {
-                                              viewModel.unitsSystem = unit
-                                          }) {
-                                              HStack {
-                                                  Text(unit.displayName)
-                                                  if viewModel.unitsSystem == unit {
-                                                      Image(systemName: "checkmark")
-                                                  }
-                                              }
-                                          }
-                                      }
-                                  } label: {
-                                      HStack {
-                                          Text(viewModel.unitsSystem.displayName)
-                                              .foregroundColor(.secondary)
-                                          Image(systemName: "chevron.up.chevron.down")
-                                              .font(.caption2)
-                                              .foregroundColor(.secondary)
-                                      }
-                                  }
-                              }
-                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                              
-                              NavigationLink(destination: ScanLogView()) {
-                                  Label("Scan and Log Preview", systemImage: "viewfinder")
-                                      .foregroundColor(iconColor)
-                              }
-                              
-                              NavigationLink(destination: ManageExercisesView()) {
-                                  Label("Manage Exercises", systemImage: "figure.run.square.stack")
-                                      .foregroundColor(iconColor)
-                              }
-                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                              
-                              // Workout Schedule settings
-                              NavigationLink(destination: WorkoutScheduleSettingsView()) {
-                                  Label("Workout Frequency", systemImage: "calendar.badge.clock")
-                                      .foregroundColor(iconColor)
-                              }
-                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                              
-                                // Fitness Goal
-                              HStack {
-                                  HStack(spacing: 12) {
-                                      Image(systemName: "target")
-                                          .font(.system(size: 16))
-                                          .fontWeight(.semibold)
-                                          .foregroundColor(iconColor)
-                                      Text("Fitness Goal")
-                                          .font(.system(size: 15))
-                                          .foregroundColor(iconColor)
-                                  }
-                                  Spacer()
-                                  Menu {
-                                      ForEach(FitnessGoal.allCases.filter { !["tone", "endurance", "power", "sport"].contains($0.rawValue) }, id: \.self) { goal in
-                                          Button(action: {
-                                              UserDefaults.standard.set(goal.rawValue, forKey: "fitnessGoal")
-                                              
-                                              // Send update to server
-                                              let email = viewModel.email.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : viewModel.email
-                                              if !email.isEmpty {
-                                                  NetworkManagerTwo.shared.updateWorkoutPreferences(email: email, workoutData: ["preferred_fitness_goal": goal.rawValue]) { result in
-                                                      switch result {
-                                                      case .success:
-                                                          print("✅ Fitness goal updated on server")
-                                                      case .failure(let error):
-                                                          print("❌ Failed to update fitness goal: \(error)")
-                                                      }
-                                                  }
-                                              }
-                                          }) {
-                                              HStack {
-                                                  Text(goal.displayName)
-                                                  if currentFitnessGoal.normalized == goal.normalized { Image(systemName: "checkmark") }
-                                              }
-                                          }
-                                      }
-                                  } label: {
-                                      HStack {
-                                          Text(currentFitnessGoal.displayName)
-                                              .foregroundColor(.secondary)
-                                          Image(systemName: "chevron.up.chevron.down")
-                                              .font(.caption2)
-                                              .foregroundColor(.secondary)
-                                      }
-                                  }
-                              }
-                              .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                              
-                          }
-                        .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                        Section(header: Text("Support & About")) {
-                            Button(action: {
-                                self.showingMail = true
-                            }) {
-                                Label("Send feedback", systemImage: "message")
-                                    .foregroundColor(iconColor)
-                            }
-                            Link(destination: URL(string: "https://www.humuli.com/policies/terms")!) {
-                                Label("Terms of Use", systemImage: "doc.plaintext")
-                                    .foregroundColor(iconColor)
-                            }
-                            Link(destination: URL(string: "https://www.humuli.com/policies/privacy-policy")!) {
-                                Label("Privacy Policy", systemImage: "lock")
-                                    .foregroundColor(iconColor)
-                            }
-//                            Button(action: {
-//                                self.showTourView = true
-//                            }) {
-//                                Label("App tour guide", systemImage: "safari")
-//                                    .foregroundColor(iconColor)
-//                            }
-                        }
-                        .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                        
-                        Section() {
-                            
-                            Button(action: {
-                                logOut()
-                            }) {
-                                Label("Log out", systemImage: "rectangle.portrait.and.arrow.right")
-                                    .foregroundColor(iconColor)
-                                    .foregroundColor(.red)
-                            }
-                            
-                        }
-                        .listRowBackground(colorScheme == .dark ? Color(rgb:44,44,44) : .white)
-                        
-                    }
-                    .scrollContentBackground(.hidden)
-                    .safeAreaInset(edge: .bottom) {
-                        // Dynamic spacing that only appears when tab bar is visible
-                        if isTabBarVisible.wrappedValue {
-                            Color.clear.frame(height: 50)
-                        }
-                    }
+            formBackgroundColor.ignoresSafeArea()
+            Form {
+                accountSection
+                dataSharingSection
+                preferencesSection
+                supportSection
+                logoutSection
+            }
+            .scrollContentBackground(.hidden)
+            .safeAreaInset(edge: .bottom) {
+                if isTabBarVisible.wrappedValue {
+                    Color.clear.frame(height: 50)
+                }
+            }
         }
         .navigationBarTitle("Settings and privacy", displayMode: .inline)
         .sheet(isPresented: $showingMail) {
-            MailView(isPresented: self.$showingMail)
+            MailView(isPresented: $showingMail)
         }
         .sheet(isPresented: $showUpgradeSheet) {
-            HumuliProUpgradeSheet()
+            HumuliProUpgradeSheet(
+                feature: nil,
+                usageSummary: nil,
+                onDismiss: { showUpgradeSheet = false }
+            )
+            .environmentObject(subscriptionManager)
+            .environmentObject(viewModel)
         }
-        .onAppear{
+        .sheet(isPresented: $showManageSheet) {
+            ManageSubscriptionSheet(
+                subscriptionManager: subscriptionManager,
+                viewModel: viewModel,
+                onDismiss: { showManageSheet = false }
+            )
+        }
+        .onAppear {
             isTabBarVisible.wrappedValue = true
+            refreshSubscriptionState()
         }
-     
+    }
+
+    private var accountSection: some View {
+        Section(header: Text("Account")) {
+            HStack {
+                Label("Email", systemImage: "envelope")
+                    .foregroundColor(iconColor)
+                Spacer()
+                Text(viewModel.email)
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            NavigationLink(destination: EditNameView()) {
+                HStack {
+                    Label("Name", systemImage: "person.text.rectangle")
+                        .foregroundColor(iconColor)
+                    Spacer()
+                    Text(displayName)
+                        .foregroundColor(iconColor)
+                }
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            NavigationLink(destination: EditUsernameView()) {
+                HStack {
+                    Label("Username", systemImage: "person")
+                        .foregroundColor(iconColor)
+                    Spacer()
+                    Text(viewModel.username)
+                        .foregroundColor(iconColor)
+                }
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            NavigationLink(destination: ManageGoalsView()) {
+                Label("Goals and Weight", systemImage: "scalemass")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            Button {
+                if isUserSubscribed {
+                    showManageSheet = true
+                } else {
+                    showUpgradeSheet = true
+                }
+            } label: {
+                HStack {
+                    Label("Subscription", systemImage: "plus.app")
+                        .foregroundColor(iconColor)
+                    Spacer()
+                    Text(subscriptionLabelText)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .listRowBackground(rowBackgroundColor)
+
+            NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
+                Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+        }
+    }
+
+    private var dataSharingSection: some View {
+        Section(header: Text("Data Sharing")) {
+            NavigationLink(destination: AppleHealthSettingsView()) {
+                Label("Apple Health", systemImage: "heart.text.square")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+        }
+    }
+
+    private var preferencesSection: some View {
+        Section(header: Text("Preferences")) {
+            HStack {
+                Label("Theme", systemImage: "paintbrush")
+                    .foregroundColor(iconColor)
+                Spacer()
+                Menu {
+                    ForEach(ThemeOption.allCases, id: \.self) { theme in
+                        Button(action: {
+                            themeManager.setTheme(theme)
+                        }) {
+                            HStack {
+                                Text(theme.rawValue)
+                                if themeManager.currentTheme == theme {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(themeManager.currentTheme.rawValue)
+                            .foregroundColor(.secondary)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            NavigationLink(destination: NotificationSettingsView()) {
+                Label("Notifications", systemImage: "bell")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            HStack {
+                Label("Units", systemImage: "globe")
+                    .foregroundColor(iconColor)
+                Spacer()
+                Menu {
+                    ForEach(UnitsSystem.allCases, id: \.self) { unit in
+                        Button(action: {
+                            viewModel.unitsSystem = unit
+                        }) {
+                            HStack {
+                                Text(unit.displayName)
+                                if viewModel.unitsSystem == unit {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(viewModel.unitsSystem.displayName)
+                            .foregroundColor(.secondary)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            NavigationLink(destination: ScanLogView()) {
+                Label("Scan and Log Preview", systemImage: "viewfinder")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            NavigationLink(destination: ManageExercisesView()) {
+                Label("Manage Exercises", systemImage: "figure.run.square.stack")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            NavigationLink(destination: WorkoutScheduleSettingsView()) {
+                Label("Workout Frequency", systemImage: "calendar.badge.clock")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            HStack {
+                HStack(spacing: 12) {
+                    Image(systemName: "target")
+                        .font(.system(size: 16))
+                        .fontWeight(.semibold)
+                        .foregroundColor(iconColor)
+                    Text("Fitness Goal")
+                        .font(.system(size: 15))
+                        .foregroundColor(iconColor)
+                }
+                Spacer()
+                Menu {
+                    ForEach(FitnessGoal.allCases.filter { !["tone", "endurance", "power", "sport"].contains($0.rawValue) }, id: \.self) { goal in
+                        Button(action: {
+                            updateFitnessGoal(goal)
+                        }) {
+                            HStack {
+                                Text(goal.displayName)
+                                if currentFitnessGoal.normalized == goal.normalized {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(currentFitnessGoal.displayName)
+                            .foregroundColor(.secondary)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .listRowBackground(rowBackgroundColor)
+        }
+    }
+
+    private var supportSection: some View {
+        Section(header: Text("Support & About")) {
+            Button {
+                showingMail = true
+            } label: {
+                Label("Send feedback", systemImage: "message")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            Link(destination: URL(string: "https://www.humuli.com/policies/terms")!) {
+                Label("Terms of Use", systemImage: "doc.plaintext")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            Link(destination: URL(string: "https://www.humuli.com/policies/privacy-policy")!) {
+                Label("Privacy Policy", systemImage: "lock")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+        }
+    }
+
+    private var logoutSection: some View {
+        Section {
+            Button(role: .destructive) {
+                logOut()
+            } label: {
+                Label("Log out", systemImage: "rectangle.portrait.and.arrow.right")
+                    .foregroundColor(.red)
+            }
+            .listRowBackground(rowBackgroundColor)
+        }
+    }
+
+    private var displayName: String {
+        let profileName = viewModel.profileData?.name ?? ""
+        let fallbackName = viewModel.name
+        let candidate = profileName.isEmpty ? fallbackName : profileName
+        return candidate.isEmpty ? "Add name" : candidate
     }
     
+    private var subscriptionLabelText: String {
+        isUserSubscribed ? "Humuli Pro" : "Free"
+    }
+
+    private var isUserSubscribed: Bool {
+        if subscriptionManager.hasActiveSubscription() {
+            return true
+        }
+
+        let status = viewModel.subscriptionStatus.lowercased()
+        guard let expires = viewModel.subscriptionExpiresAt,
+              let expiryDate = ISO8601DateFormatter.fullFormatter.date(from: expires) else {
+            return false
+        }
+
+        if status == "active" {
+            return true
+        }
+
+        if status == "cancelled" {
+            return expiryDate > Date()
+        }
+
+        return false
+    }
+
     private var iconColor: Color {
         colorScheme == .dark ? .white : .black
     }
-    
+
     private var currentFitnessGoal: FitnessGoal {
         let goalString = UserDefaults.standard.string(forKey: "fitnessGoal") ?? "strength"
         return FitnessGoal.from(string: goalString)
     }
-    
-    
-    private var formBackgroundColor: Color {
-           colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242)
-       }
 
-       
-    
+    private var formBackgroundColor: Color {
+        colorScheme == .dark ? Color(rgb: 14, 14, 14) : Color(rgb: 242, 242, 242)
+    }
+
+    private var rowBackgroundColor: Color {
+        colorScheme == .dark ? Color(rgb: 44, 44, 44) : .white
+    }
+
+    private func updateFitnessGoal(_ goal: FitnessGoal) {
+        UserDefaults.standard.set(goal.rawValue, forKey: "fitnessGoal")
+
+        let savedEmail = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+        let email = viewModel.email.isEmpty ? savedEmail : viewModel.email
+
+        guard !email.isEmpty else { return }
+
+        NetworkManagerTwo.shared.updateWorkoutPreferences(
+            email: email,
+            workoutData: ["preferred_fitness_goal": goal.rawValue]
+        ) { result in
+            switch result {
+            case .success:
+                print("✅ Fitness goal updated on server")
+            case .failure(let error):
+                print("❌ Failed to update fitness goal: \(error)")
+            }
+        }
+    }
+
     private func logOut() {
-        // Clear authentication state and set to false first
         UserDefaults.standard.set(false, forKey: "isAuthenticated")
-        
-        // Clear ALL user-related information
         UserDefaults.standard.removeObject(forKey: "userEmail")
         UserDefaults.standard.removeObject(forKey: "username")
         UserDefaults.standard.removeObject(forKey: "userId")
         UserDefaults.standard.removeObject(forKey: "userName")
         UserDefaults.standard.removeObject(forKey: "profileInitial")
         UserDefaults.standard.removeObject(forKey: "profileColor")
-        
-        // Clear subscription information
+
         UserDefaults.standard.removeObject(forKey: "subscriptionStatus")
         UserDefaults.standard.removeObject(forKey: "subscriptionPlan")
         UserDefaults.standard.removeObject(forKey: "subscriptionExpiresAt")
         UserDefaults.standard.removeObject(forKey: "subscriptionRenews")
         UserDefaults.standard.removeObject(forKey: "subscriptionSeats")
-        
-        // Reset ALL onboarding flags - make sure to set booleans to false not just remove them
+
         UserDefaults.standard.set(false, forKey: "onboardingCompleted")
         UserDefaults.standard.set(false, forKey: "onboardingInProgress")
-        UserDefaults.standard.set(false, forKey: "serverOnboardingCompleted") // This is critical!
+        UserDefaults.standard.set(false, forKey: "serverOnboardingCompleted")
         UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
         UserDefaults.standard.removeObject(forKey: "onboardingFlowStep")
         UserDefaults.standard.removeObject(forKey: "emailWithCompletedOnboarding")
-        
-        // Clear active teams and workspaces
+
         UserDefaults.standard.removeObject(forKey: "activeTeamId")
         UserDefaults.standard.removeObject(forKey: "activeWorkspaceId")
-        
-        // Sign out from Google
+
         GIDSignIn.sharedInstance.signOut()
-        
-        // Reset view model state
+
         isAuthenticated = false
         viewModel.email = ""
         viewModel.username = ""
@@ -345,18 +404,28 @@ struct ProfileView: View {
         viewModel.serverOnboardingCompleted = false
         viewModel.currentStep = .landing
         viewModel.currentFlowStep = .gender
-        
-        // Reset subscription info in viewModel
         viewModel.subscriptionStatus = "none"
         viewModel.subscriptionPlan = nil
         viewModel.subscriptionExpiresAt = nil
         viewModel.subscriptionRenews = false
         viewModel.subscriptionSeats = nil
-        
-        // Force synchronize to ensure changes take effect immediately
+
         UserDefaults.standard.synchronize()
-        
+
         print("✅ User logged out successfully - all state cleared")
+    }
+    
+    private func refreshSubscriptionState() {
+        let savedEmail = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+        let email = viewModel.email.isEmpty ? savedEmail : viewModel.email
+
+        guard !email.isEmpty else { return }
+
+        viewModel.bindRepositories(for: email)
+
+        Task {
+            await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email, force: true)
+        }
     }
 }
 

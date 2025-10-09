@@ -336,6 +336,8 @@ struct HistoryMetricCard: View {
     let color: Color
     let exercise: TodayWorkoutExercise
     @EnvironmentObject var onboarding: OnboardingViewModel
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
+    @State private var navigateToChart = false
     
     enum ChartType {
         case line, bar
@@ -352,116 +354,38 @@ struct HistoryMetricCard: View {
     }
     
     var body: some View {
-        NavigationLink(destination: ExerciseChart(exercise: exercise, metric: chartMetric)) {
+        ZStack {
+            NavigationLink(destination: ExerciseChart(exercise: exercise, metric: chartMetric), isActive: $navigateToChart) {
+                EmptyView()
+            }
+            .hidden()
             VStack(alignment: .leading, spacing: 20) {
-                // Header with title and chevron
                 HStack {
                     Text(title)
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.primary)
-                    
                     Spacer()
-                    
                     Image(systemName: "chevron.right")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.secondary)
                 }
-            
-            // Chart Card with integrated labels
-            VStack(alignment: .leading, spacing: 0) {
-                // Top section with value and description
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .lastTextBaseline, spacing: 4) {
-                        Text(currentValue)
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
-                            .foregroundColor(.primary)
-                        
-                        if title == "Reps" {
-                            Text("reps in 1 set")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.secondary)
-                        } else if title == "Volume" {
-                            Text(onboarding.unitsSystem == .imperial ? "lbs" : "kg")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.secondary)
-                        } else if title == "Weight" {
-                            let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
-                            Text("\(unit) in 1 set")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.secondary)
-                        } else if title == "Est. 1 Rep Max" {
-                            let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
-                            Text("\(unit) in 1 rep")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .lastTextBaseline, spacing: 4) {
+                            Text(currentValue)
+                                .font(.system(size: 36, weight: .bold, design: .rounded))
+                                .foregroundColor(.primary)
+                            supplementaryLabel
                         }
+                        Text(loggedAgo)
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundColor(.secondary)
+                            .padding(.top, 4)
                     }
-                    
-                    Text(loggedAgo)
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundColor(.secondary)
-                        .padding(.top, 4)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    chartContent
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                
-                // Chart with Y-axis labels
-                HStack(alignment: .top, spacing: 8) {
-                    // Chart
-                    ZStack {
-                        // Horizontal gridlines
-                        GeometryReader { geometry in
-                            Path { path in
-                                let positions = [0.0, 0.5, 1.0]
-                                for position in positions {
-                                    let y = geometry.size.height * CGFloat(position)
-                                    path.move(to: CGPoint(x: 0, y: y))
-                                    path.addLine(to: CGPoint(x: geometry.size.width, y: y))
-                                }
-                            }
-                            .stroke(Color.gray.opacity(0.2), lineWidth: 0.5)
-                        }
-                        
-                        // Chart content
-                        if chartType == .line {
-                            HistoryLineChart(data: data, color: color)
-                                .frame(height: 100)
-                        } else {
-                            HistoryBarChart(data: data, color: color)
-                                .frame(height: 100)
-                        }
-                    }
-                    .padding(.leading, 16)
-                    
-                    // Y-axis labels on the right
-                    VStack(alignment: .leading, spacing: 0) {
-                        let maxValue = data.map { $0.1 }.max() ?? 1
-                        let minValue = data.map { $0.1 }.min() ?? 0
-                        
-                        Text(formatAxisValue(maxValue))
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        Text(formatAxisValue((maxValue + minValue) / 2))
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        Text(formatAxisValue(minValue))
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(width: 30, height: 100)
-                    .padding(.trailing, 8)
-                }
-                .padding(.top, 16)
-                .padding(.bottom, 8)
-                
-                // Bottom label
                 Text("Most Recent Performances")
                     .font(.system(size: 12, weight: .regular))
                     .foregroundColor(.secondary)
@@ -470,9 +394,100 @@ struct HistoryMetricCard: View {
             }
             .background(Color(.systemGray6))
             .cornerRadius(12)
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .onTapGesture { attemptNavigation() }
+    }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    @ViewBuilder
+    private var supplementaryLabel: some View {
+        switch title {
+        case "Reps":
+            Text("reps in 1 set")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.secondary)
+        case "Volume":
+            Text(onboarding.unitsSystem == .imperial ? "lbs" : "kg")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.secondary)
+        case "Weight":
+            let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
+            Text("\(unit) in 1 set")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.secondary)
+        case "Est. 1 Rep Max":
+            let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
+            Text("\(unit) in 1 rep")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.secondary)
+        default:
+            EmptyView()
         }
-        .padding(.horizontal, 16)
+    }
+    
+    private var chartContent: some View {
+        HStack(alignment: .top, spacing: 8) {
+            ZStack {
+                GeometryReader { geometry in
+                    Path { path in
+                        let positions = [0.0, 0.5, 1.0]
+                        for position in positions {
+                            let y = geometry.size.height * CGFloat(position)
+                            path.move(to: CGPoint(x: 0, y: y))
+                            path.addLine(to: CGPoint(x: geometry.size.width, y: y))
+                        }
+                    }
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 0.5)
+                }
+                if data.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .font(.system(size: 24))
+                            .foregroundColor(.secondary)
+                        Text("Not enough data")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    if chartType == .line {
+                        HistoryLineChart(data: data, color: color)
+                            .frame(height: 100)
+                    } else {
+                        HistoryBarChart(data: data, color: color)
+                            .frame(height: 100)
+                    }
+                }
+            }
+            .padding(.leading, 16)
+            VStack(alignment: .leading, spacing: 0) {
+                let maxValue = data.map { $0.1 }.max() ?? 1
+                let minValue = data.map { $0.1 }.min() ?? 0
+                Text(formatAxisValue(maxValue))
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text(formatAxisValue((maxValue + minValue) / 2))
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text(formatAxisValue(minValue))
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+            .frame(width: 30, height: 100)
+            .padding(.trailing, 8)
+        }
+        .padding(.top, 16)
+        .padding(.bottom, 8)
+    }
+    
+    private func attemptNavigation() {
+        guard let email = UserDefaults.standard.string(forKey: "userEmail"), !email.isEmpty else { return }
+        proFeatureGate.requirePro(for: .analytics, userEmail: email) {
+            navigateToChart = true
+        }
     }
     
     private func formatAxisValue(_ value: Double) -> String {

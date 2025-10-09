@@ -5,6 +5,11 @@ import StoreKit
 import Foundation
 import Mixpanel
 
+enum SubscriptionDuration {
+    case monthly
+    case yearly
+}
+
 class SubscriptionManager: ObservableObject {
     @Published var products: [Product] = []
     private var onboardingViewModel: OnboardingViewModel?
@@ -181,22 +186,20 @@ class SubscriptionManager: ObservableObject {
     @MainActor
     func fetchProducts() async {
         do {
-            let productIdentifiers = [
-                "com.humuli.pods.plus.month",
-                "com.humuli.pods.plus.year",
-                "com.humuli.pods.team.month",
-                "com.humuli.pods.team.year"
-            ]
-            
-          
-            
-            let storeProducts = try await Product.products(for: productIdentifiers)
-            
+            let identifiers = SubscriptionTier.allProductIdentifiers
+
+            guard identifiers.isEmpty == false else {
+                print("No product identifiers configured for subscription tiers.")
+                products = []
+                return
+            }
+
+            let storeProducts = try await Product.products(for: identifiers)
+
             if storeProducts.isEmpty {
                 print("No products were fetched from the App Store.")
             } else {
-                self.products = storeProducts
-
+                products = storeProducts.sorted(by: { $0.displayName < $1.displayName })
             }
         } catch {
             print("Failed to fetch products. Error: \(error)")
@@ -252,10 +255,10 @@ class SubscriptionManager: ObservableObject {
     @MainActor
     func updatePurchasedSubscriptions() async {
         for await result in Transaction.currentEntitlements {
-            if case .verified(let transaction) = result {
-                if let product = self.products.first(where: { $0.id == transaction.productID }) {
-                    self.purchasedSubscriptions.append(product)
-                }
+            if case .verified(let transaction) = result,
+               let product = products.first(where: { $0.id == transaction.productID }),
+               purchasedSubscriptions.contains(where: { $0.id == product.id }) == false {
+                purchasedSubscriptions.append(product)
             }
         }
     }
@@ -271,8 +274,9 @@ class SubscriptionManager: ObservableObject {
 
     @MainActor
     func handleVerifiedTransaction(_ transaction: StoreKit.Transaction) async {
-        if let product = self.products.first(where: { $0.id == transaction.productID }) {
-            self.purchasedSubscriptions.append(product)
+        if let product = products.first(where: { $0.id == transaction.productID }),
+           purchasedSubscriptions.contains(where: { $0.id == product.id }) == false {
+            purchasedSubscriptions.append(product)
         }
         await transaction.finish()
         
@@ -281,12 +285,18 @@ class SubscriptionManager: ObservableObject {
  
 
     @MainActor
-    func purchase(tier: SubscriptionTier, planType: PricingView.PlanType, userEmail: String, onboardingViewModel: OnboardingViewModel) async throws {
-        let productIdSuffix = planType == .annual ? "year" : "month"
-        let productId = "\(tier.productIdPrefix).\(productIdSuffix)"
+    func purchase(tier: SubscriptionTier,
+                  duration: SubscriptionDuration,
+                  userEmail: String,
+                  onboardingViewModel: OnboardingViewModel) async throws {
+        guard let productId = tier.productIdentifier(for: duration) else {
+            print("No product identifier configured for \(tier) and duration \(duration).")
+            throw SubscriptionError.productNotFound
+        }
+
         print("Attempting to purchase product with ID: \(productId)")
         
-        guard let product = self.products.first(where: { $0.id == productId }) else {
+        guard let product = products.first(where: { $0.id == productId }) else {
             print("Product not found for ID: \(productId)")
             throw SubscriptionError.productNotFound
         }
@@ -316,7 +326,7 @@ class SubscriptionManager: ObservableObject {
                             )
                             
                             Mixpanel.mainInstance().track(event: "Subscription Purchase", properties: [
-                                "Plan": planType == .annual ? "Annual" : "Monthly",
+                                "Plan": duration == .yearly ? "Annual" : "Monthly",
                                 "Tier": tier.rawValue,
                             ])
 
@@ -370,6 +380,17 @@ class SubscriptionManager: ObservableObject {
         
         print("Backend sync result: \(purchaseResult)")
         await updateSubscriptionStatus()
+    }
+
+    @MainActor
+    func restorePurchases(userEmail: String) async throws {
+        print("Restoring purchases for \(userEmail)")
+        try await AppStore.sync()
+        await updateSubscriptionStatus()
+        await fetchSubscriptionInfoIfNeeded(for: userEmail, force: true)
+        Mixpanel.mainInstance().track(event: "Subscription Restore", properties: [
+            "User Email": userEmail
+        ])
     }
 
 
@@ -465,60 +486,70 @@ class SubscriptionManager: ObservableObject {
         }
     }
 
-    func startingPrice(for tier: SubscriptionTier) -> String {
-        switch tier {
-        case .none:
-            return "Free"
-        case .plusMonthly, .plusYearly:
-            return "$5.99/month"
-        case .teamMonthly, .teamYearly:
-//            return "$6.99 per seat/month"
-            return "$44.99/month for 5 seats"
+    private func product(for tier: SubscriptionTier, duration: SubscriptionDuration) -> Product? {
+        guard let productId = tier.productIdentifier(for: duration) else {
+            return nil
         }
+        return products.first(where: { $0.id == productId })
+    }
+
+    func storeProduct(for tier: SubscriptionTier, duration: SubscriptionDuration) -> Product? {
+        product(for: tier, duration: duration)
+    }
+
+    private func priceString(for tier: SubscriptionTier, duration: SubscriptionDuration) -> String {
+        if tier == .none {
+            return "Free"
+        }
+
+        if let product = product(for: tier, duration: duration) {
+            return product.displayPrice
+        }
+
+        return tier.fallbackPrice(for: duration) ?? "Price unavailable"
+    }
+
+    func startingPrice(for tier: SubscriptionTier) -> String {
+        let price = priceString(for: tier, duration: .monthly)
+        return tier == .none ? price : "\(price)/month"
     }
       
     func annualPrice(for tier: SubscriptionTier) -> String {
-        switch tier {
-        case .none:
-            return "Free"
-        case .plusMonthly, .plusYearly:
-            return "$47.90 per year"
-        case .teamMonthly, .teamYearly:
-            return "$6.99 per seat/month"
-        }
+        let price = priceString(for: tier, duration: .yearly)
+        return tier == .none ? price : "\(price)/year"
     }
       
     func monthlyPrice(for tier: SubscriptionTier) -> String {
-        switch tier {
-        case .none:
-            return "Free"
-        case .plusMonthly, .plusYearly:
-            return "$5.99/month"
-        case .teamMonthly, .teamYearly:
-            return "$8.99 per seat/month"
-        }
+        let price = priceString(for: tier, duration: .monthly)
+        return tier == .none ? price : "\(price)/month"
     }
       
     func annualBillingInfo(for tier: SubscriptionTier) -> String {
-        switch tier {
-        case .none:
-            return "Free"
-        case .plusMonthly, .plusYearly:
-            return "$47.90 per year billed annually"
-        case .teamMonthly, .teamYearly:
-            return "$419.99 per year billed annually starting with 5 team members"
-        }
+        let price = priceString(for: tier, duration: .yearly)
+        return tier == .none ? price : "\(price) billed annually"
     }
       
     func monthlyBillingInfo(for tier: SubscriptionTier) -> String {
-        switch tier {
-        case .none:
-            return "Free"
-        case .plusMonthly, .plusYearly:
-            return "$71.88 per year billed monthly"
-        case .teamMonthly, .teamYearly:
-            return "$539.40 per year billed monthly starting with 5 team members"
+        let price = priceString(for: tier, duration: .monthly)
+        return tier == .none ? price : "\(price) billed monthly"
+    }
+
+    func savingsPercentage(for tier: SubscriptionTier) -> Int {
+        guard
+            let monthlyProduct = product(for: tier, duration: .monthly),
+            let yearlyProduct = product(for: tier, duration: .yearly)
+        else {
+            return 0
         }
+
+        let monthlyPrice = NSDecimalNumber(decimal: monthlyProduct.price).doubleValue
+        let yearlyPrice = NSDecimalNumber(decimal: yearlyProduct.price).doubleValue
+
+        guard monthlyPrice > 0 else { return 0 }
+
+        let annualisedMonthly = monthlyPrice * 12.0
+        let savingsRatio = max(0, (annualisedMonthly - yearlyPrice) / annualisedMonthly)
+        return Int((savingsRatio * 100).rounded())
     }
 }
 
@@ -554,59 +585,84 @@ enum SubscriptionError: Error {
 
 enum SubscriptionTier: String, CaseIterable {
     case none = "None"
-    case plusMonthly = "Pods Plus Monthly"
-    case plusYearly = "Pods Plus Yearly"
+    case humuliProMonthly = "Humuli Pro Monthly"
+    case humuliProYearly = "Humuli Pro Yearly"
     case teamMonthly = "Pods Team Monthly"
     case teamYearly = "Pods Team Yearly"
-    
+
+    static var allProductIdentifiers: [String] {
+        var identifiers = Set<String>()
+        for tier in SubscriptionTier.allCases {
+            if let monthly = tier.productIdentifier(for: .monthly) {
+                identifiers.insert(monthly)
+            }
+            if let yearly = tier.productIdentifier(for: .yearly) {
+                identifiers.insert(yearly)
+            }
+        }
+        return Array(identifiers)
+    }
+
     var name: String {
         switch self {
-        case .none: return "Free"
-        case .plusMonthly, .plusYearly: return "Pods+"
-        case .teamMonthly, .teamYearly: return "Pods Team"
+        case .none:
+            return "Free"
+        case .humuliProMonthly, .humuliProYearly:
+            return "Humuli Pro"
+        case .teamMonthly, .teamYearly:
+            return "Pods Team"
         }
     }
-    
-    var productIdPrefix: String {
+
+    func productIdentifier(for duration: SubscriptionDuration) -> String? {
         switch self {
-        case .none: return ""
-        case .plusMonthly, .plusYearly: return "com.humuli.pods.plus"
-        case .teamMonthly, .teamYearly: return "com.humuli.pods.team"
+        case .humuliProMonthly, .humuliProYearly:
+            return duration == .monthly ? "humuli_pro_monthly" : "humuli_pro_yearly"
+        case .teamMonthly, .teamYearly, .none:
+            return nil
         }
     }
-    
+
+    func fallbackPrice(for duration: SubscriptionDuration) -> String? {
+        switch (self, duration) {
+        case (.humuliProMonthly, .monthly), (.humuliProYearly, .monthly):
+            return "$19.99"
+        case (.humuliProMonthly, .yearly), (.humuliProYearly, .yearly):
+            return "$95.99"
+        case (.teamMonthly, .monthly), (.teamYearly, .monthly):
+            return "$44.99"
+        case (.teamMonthly, .yearly), (.teamYearly, .yearly):
+            return "$419.99"
+        case (.none, _):
+            return "Free"
+        }
+    }
+
     var features: [String] {
         switch self {
         case .none:
-            return ["Limited features"]
-        case .plusMonthly, .plusYearly:
             return [
-                "Unlimited pods",
-                "Unlimited items",
-                "Unlimited workspaces",
-                "AI automation features",
-                "Activity logs from up to 2 weeks",
-                "Data tracking and analysis",
-                "Customize column colors",
-                "Video integration",
-                "Collaboration features",
-                "Free templates"
+                "Limited AI scans",
+                "Basic meal logging",
+                "Standard insights"
+            ]
+        case .humuliProMonthly, .humuliProYearly:
+            return [
+                "Unlimited food scans",
+                "Voice & barcode logging",
+                "Advanced nutrition analytics",
+                "AI-generated meal plans",
+                "Workout and Health integrations",
+                "Priority support"
             ]
         case .teamMonthly, .teamYearly:
             return [
-                "Create a new team",
-                "Team dashboard with analytics",
-                "Individual team members' analytics",
-                "Activity logs from up to 1 month",
-                "Unlimited pods",
-                "Unlimited items",
-                "Unlimited workspaces",
-                "AI Automation features",
-                "Data tracking and analysis",
-                "Customize column colors",
-                "Video integration",
-                "Collaboration features",
-                "Free templates"
+                "Team dashboards & analytics",
+                "Per-seat billing with shared credits",
+                "Advanced collaboration tools",
+                "Extended activity history",
+                "Custom branding & exports",
+                "Priority onboarding"
             ]
         }
     }

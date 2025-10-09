@@ -21,6 +21,7 @@ struct DashboardView: View {
     @State private var showWaterLogSheet = false
     @State private var showWorkoutContainer = false
     @State private var workoutSelectedTab: Int = 0
+    @State private var isTodayWorkoutDismissed = false
     
     // ─── Streak state ─────────────────────────────────────────────────────
     @ObservedObject private var streakManager = StreakManager.shared
@@ -175,7 +176,7 @@ private var remainingCal: Double { vm.remainingCalories }
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        if isToday {
+                        if isToday && !isTodayWorkoutDismissed {
                             todayWorkoutCard
                                 .padding(.horizontal)
                                 .padding(.top, 8)
@@ -194,6 +195,7 @@ private var remainingCal: Double { vm.remainingCalories }
                             let _ = print("🔍 DEBUG Dashboard - Using MODERN STATE with progress: \(foodMgr.foodScanningState.progress)")
                             ModernFoodLoadingCard(state: foodMgr.foodScanningState)
                                 .padding(.horizontal)
+                                .padding(.top, 16)
                                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
                                 .listRowInsets(EdgeInsets())
                                 .listRowBackground(Color.clear)
@@ -807,6 +809,23 @@ private extension DashboardView {
                                 .foregroundColor(.primary)
                                 .lineLimit(2)
                         }
+
+                        Spacer()
+
+                        Button {
+                            HapticFeedback.generate()
+                            withAnimation {
+                                isTodayWorkoutDismissed = true
+                            }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.secondary)
+                                .frame(width: 28, height: 28)
+                                .background(Color(.systemGray5))
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     VStack(alignment: .leading, spacing: 12) {

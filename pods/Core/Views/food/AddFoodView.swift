@@ -35,6 +35,7 @@ struct AddFoodView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var foodManager: FoodManager
     @EnvironmentObject private var navState: FoodNavigationState
+    @EnvironmentObject private var proFeatureGate: ProFeatureGate
     
     @Binding var path: NavigationPath
     @Binding var selectedFoods: [Food]
@@ -64,6 +65,7 @@ struct AddFoodView: View {
     @State private var showCreateFoodWithVoice = false
     @State private var showCreateFoodWithScan = false
     @State private var showCreateFood = false
+    @State private var showProSearch = false
     
     // Confirmation sheet for scanned foods
     @State private var scannedFoodForConfirmation: Food? = nil
@@ -138,7 +140,12 @@ struct AddFoodView: View {
                         .font(.headline)
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    Button {
+                        openProSearch()
+                    } label: {
+                        Image(systemName: "sparkles")
+                    }
                     Button("Done") {
                         addSelectedFoodsToMeal()
                     }
@@ -203,6 +210,12 @@ struct AddFoodView: View {
                     
                     // Track as recently added
                     foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                }
+            }
+            .sheet(isPresented: $showProSearch) {
+                if let email = currentUserEmail {
+                    ProFoodSearchView(userEmail: email)
+                        .environmentObject(proFeatureGate)
                 }
             }
 
@@ -679,7 +692,18 @@ struct AddFoodView: View {
         HapticFeedback.generate()
     }
     
-
+    private var currentUserEmail: String? {
+        let email = UserDefaults.standard.string(forKey: "userEmail")
+        return email?.isEmpty == false ? email : nil
+    }
+    
+    private func openProSearch() {
+        guard let email = currentUserEmail else { return }
+        proFeatureGate.requirePro(for: .proSearch, userEmail: email) {
+            Task { await proFeatureGate.refreshUsageSummary(for: email) }
+            showProSearch = true
+        }
+    }
     
     // Add function to handle the Done button
     // This will add all selected foods to the meal when Done is tapped

@@ -60,6 +60,21 @@ class NetworkManager {
 //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 //   let baseUrl = "http://192.168.1.92:8000"  
     let baseUrl = "http://172.20.10.4:8000" 
+    
+    private let iso8601FractionalFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    
+    private let iso8601Formatter = ISO8601DateFormatter()
+    private let dateOnlyFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .iso8601)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 
 
     // ### STAGING ###
@@ -5283,6 +5298,26 @@ func completeAppleSignup(idToken: String, nonce: String, onboarding: [String: An
         }
         task.resume()
     }
+
+    private func makeJSONDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder -> Date in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            if let date = self.iso8601FractionalFormatter.date(from: value) {
+                return date
+            }
+            if let date = self.iso8601Formatter.date(from: value) {
+                return date
+            }
+            if let date = self.dateOnlyFormatter.date(from: value) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container,
+                                                   debugDescription: "Invalid ISO8601 date string: \(value)")
+        }
+        return decoder
+    }
     
     func updatePodVisited(podId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
        guard let url = URL(string: "\(baseUrl)/update-pod-visited/\(podId)/") else {
@@ -8208,6 +8243,252 @@ func analyzeNutritionLabel(image: UIImage, userEmail: String, mealType: String =
     
     // Start the request
     task.resume()
+} 
+
+// MARK: - Pro Feature APIs
+
+func checkFeatureAccess(featureKey: String,
+                        increment: Bool,
+                        userEmail: String,
+                        completion: @escaping (Result<FeatureAccessResponse, Error>) -> Void) {
+    guard let url = URL(string: "\(baseUrl)/pro/check-feature-access/") else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    let payload: [String: Any] = [
+        "feature_key": featureKey,
+        "increment": increment,
+        "user_email": userEmail
+    ]
+    
+    do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+    } catch {
+        completion(.failure(error))
+        return
+    }
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            DispatchQueue.main.async {
+                completion(.failure(error))
+            }
+            return
+        }
+        
+        guard let data = data else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.noData))
+            }
+            return
+        }
+        
+        do {
+            let decoder = self.makeJSONDecoder()
+            let access = try decoder.decode(FeatureAccessResponse.self, from: data)
+            DispatchQueue.main.async {
+                completion(.success(access))
+            }
+        } catch {
+            DispatchQueue.main.async {
+                completion(.failure(error))
+            }
+        }
+    }.resume()
+}
+
+func fetchUsageSummary(userEmail: String,
+                       completion: @escaping (Result<UsageSummary, Error>) -> Void) {
+    guard var components = URLComponents(string: "\(baseUrl)/pro/usage-summary/") else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    components.queryItems = [
+        URLQueryItem(name: "user_email", value: userEmail)
+    ]
+    
+    guard let url = components.url else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    URLSession.shared.dataTask(with: url) { data, response, error in
+        if let error = error {
+            DispatchQueue.main.async {
+                completion(.failure(error))
+            }
+            return
+        }
+        guard let data = data else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.noData))
+            }
+            return
+        }
+        do {
+            let decoder = self.makeJSONDecoder()
+            let summary = try decoder.decode(UsageSummary.self, from: data)
+            DispatchQueue.main.async {
+                completion(.success(summary))
+            }
+        } catch {
+            DispatchQueue.main.async {
+                completion(.failure(error))
+            }
+        }
+    }.resume()
+}
+
+func searchFoodPro(query: String,
+                   userEmail: String,
+                   completion: @escaping (Result<ProFoodSearchResult, Error>) -> Void) {
+    guard let url = URL(string: "\(baseUrl)/pro/search-food/") else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    let payload: [String: Any] = [
+        "query": query,
+        "user_email": userEmail
+    ]
+    
+    do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+    } catch {
+        completion(.failure(error))
+        return
+    }
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            DispatchQueue.main.async {
+                completion(.failure(error))
+            }
+            return
+        }
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.invalidResponse))
+            }
+            return
+        }
+        
+        guard let data = data else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.noData))
+            }
+            return
+        }
+        
+        if httpResponse.statusCode == 403 {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.serverError("Humuli Pro subscription required")))
+            }
+            return
+        }
+        
+        do {
+            let decoder = self.makeJSONDecoder()
+            let result = try decoder.decode(ProFoodSearchResult.self, from: data)
+            DispatchQueue.main.async {
+                completion(.success(result))
+            }
+        } catch {
+            DispatchQueue.main.async {
+                completion(.failure(error))
+            }
+        }
+    }.resume()
+}
+
+func scheduleMealLog(logId: Int,
+                     logType: String,
+                     scheduleType: String,
+                     targetDate: Date,
+                     mealType: String?,
+                     userEmail: String,
+                     completion: @escaping (Result<ScheduleMealResponse, Error>) -> Void) {
+    guard let url = URL(string: "\(baseUrl)/schedule-meal-log/") else {
+        completion(.failure(NetworkError.invalidURL))
+        return
+    }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withFullDate]
+    
+    var payload: [String: Any] = [
+        "user_email": userEmail,
+        "log_id": logId,
+        "log_type": logType,
+        "schedule_type": scheduleType,
+        "target_date": formatter.string(from: targetDate)
+    ]
+    if let mealType = mealType {
+        payload["meal_type"] = mealType
+    }
+    
+    do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+    } catch {
+        completion(.failure(error))
+        return
+    }
+    
+    URLSession.shared.dataTask(with: request) { data, response, error in
+        if let error = error {
+            DispatchQueue.main.async {
+                completion(.failure(error))
+            }
+            return
+        }
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.invalidResponse))
+            }
+            return
+        }
+        
+        guard let data = data else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.noData))
+            }
+            return
+        }
+        
+        if httpResponse.statusCode == 403 {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.serverError("Humuli Pro subscription required")))
+            }
+            return
+        }
+        
+        do {
+            let decoder = self.makeJSONDecoder()
+            let response = try decoder.decode(ScheduleMealResponse.self, from: data)
+            DispatchQueue.main.async {
+                completion(.success(response))
+            }
+        } catch {
+            DispatchQueue.main.async {
+                completion(.failure(error))
+            }
+        }
+    }.resume()
 }
 
 

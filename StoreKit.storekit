@@ -1,0 +1,87 @@
+{
+  "appPolicies": {
+    "eula": "",
+    "policies": [
+      {
+        "locale": "en_US",
+        "policyText": "",
+        "policyURL": ""
+      }
+    ]
+  },
+  "identifier": "CFF0AF84",
+  "nonRenewingSubscriptions": [],
+  "products": [],
+  "settings": {
+    "_applicationInternalID": "6504493649",
+    "_askToBuyEnabled": false,
+    "_billingGracePeriodEnabled": false,
+    "_billingIssuesEnabled": false,
+    "_developerTeamID": "TN4N9K5B77",
+    "_disableDialogs": false,
+    "_failTransactionsEnabled": false,
+    "_lastSynchronizedDate": 781650031.95536,
+    "_locale": "en_US",
+    "_renewalBillingIssuesEnabled": false,
+    "_storefront": "USA",
+    "_storeKitErrors": [],
+    "_timeRate": 0
+  },
+  "subscriptionGroups": [
+    {
+      "id": "21800282",
+      "localizations": [],
+      "name": "Humuli Pro",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "19.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "6753729190",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Calorie and workout tracker",
+              "displayName": "Humuli",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "humuli_pro_monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Humuli Pro Monthly",
+          "subscriptionGroupID": "21800282",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "95.99",
+          "familyShareable": false,
+          "groupNumber": 2,
+          "internalID": "6753738923",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Calorie and workout tracker",
+              "displayName": "Humuli",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "humuli_pro_yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Humuli Pro Yearly",
+          "subscriptionGroupID": "21800282",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}

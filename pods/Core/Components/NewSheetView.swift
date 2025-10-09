@@ -21,11 +21,11 @@ struct NewSheetView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
 
     let options = [
-        ("Log Food", "magnifyingglass"),
+        ("Food", "magnifyingglass"),
         ("Voice Log", "mic"),
         ("Scan Food", "barcode.viewfinder"),
         ("Saved Meals", "bookmark"),
-        ("Log Workout", "dumbbell")
+        ("Workout", "dumbbell")
     ]
 
     var body: some View {
@@ -34,27 +34,27 @@ struct NewSheetView: View {
                 .frame(width: 36, height: 2)
                 .foregroundColor(Color("grabber"))
                 .padding(.top, 12)
-            
+
             Menu {
-                     
-                Button("Snacks") { 
+
+                Button("Snacks") {
                     selectedMeal = "Snacks"
                     print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
                 }
-                 Button("Dinner") { 
+                 Button("Dinner") {
                     selectedMeal = "Dinner"
                     print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
                 }
-                        Button("Lunch") { 
+                        Button("Lunch") {
                     selectedMeal = "Lunch"
                     print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
                 }
-          
-                Button("Breakfast") { 
+
+                Button("Breakfast") {
                     selectedMeal = "Breakfast"
                     print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
                 }
-         
+
             } label: {
                 HStack(spacing: 4) {
                     Text(selectedMeal)
@@ -66,67 +66,67 @@ struct NewSheetView: View {
                 }
             }
             .padding(.top, 24)
-            .padding(.bottom, 8)
-            
-            Divider()
-            
-            ForEach(options, id: \.0) { option in
-                HStack(spacing: 0) {
-                    HStack(spacing: 12) {
-                        Image(systemName: option.1)
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.primary)
-                            .frame(width: 30)
-                            .padding(.leading)
-                        
+            .padding(.bottom, 24)
+
+            // Grid layout
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 20),
+                GridItem(.flexible(), spacing: 20),
+                GridItem(.flexible(), spacing: 20)
+            ], spacing: 32) {
+                ForEach(options, id: \.0) { option in
+                    VStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.black.opacity(0.5))
+                                .frame(width: 70, height: 70)
+
+                            Image(systemName: option.1)
+                                .font(.system(size: 28, weight: .medium))
+                                .foregroundColor(.white)
+                        }
+
                         Text(option.0)
-                            .font(.system(size: 15))
-                            .padding(.vertical, 16)
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.primary)
+                            .multilineTextAlignment(.center)
                     }
-                    Spacer()
-                }
-                .background(Color("sheetbg"))
-                .onTapGesture {
-                    // Handle tap
-                    switch option.0 {
-                      case "Pod":
-                          isPresented = false  
-                          showQuickPodView = true
-                      case "Log Food":
-                        HapticFeedback.generate()
-                        isPresented = false
-                        viewModel.showFoodContainer(selectedMeal: selectedMeal)
-                      case "Voice Log":
-                        HapticFeedback.generate()
-                        print("🍽️ NewSheetView: Tapping Voice Log with selectedMeal: \(selectedMeal)")
-                        isPresented = false
-                        showVoiceLog = true
-                      case "Scan Food":
-                        HapticFeedback.generate()
-                        isPresented = false
-                        showFoodScanner = true
-                      case "Saved Meals":
-                        HapticFeedback.generate()
-                        isPresented = false
-                        viewModel.showFoodContainer(selectedMeal: selectedMeal, initialTab: "savedMeals")
-                      case "Log Workout":
-                        HapticFeedback.generate()
-                        isPresented = false
-                        showLogWorkoutView = true
-                      default:
-                          break
-                      }
-                }
-                
-                if option.0 != options.last?.0 {
-                    Divider()
-                        .frame(height: 0.5)
-                        .padding(.leading, 65)
-                        .opacity(0.5)
+                    .onTapGesture {
+                        // Handle tap
+                        switch option.0 {
+                          case "Pod":
+                              isPresented = false
+                              showQuickPodView = true
+                          case "Log Food":
+                            HapticFeedback.generate()
+                            isPresented = false
+                            viewModel.showFoodContainer(selectedMeal: selectedMeal)
+                          case "Voice Log":
+                            HapticFeedback.generate()
+                            print("🍽️ NewSheetView: Tapping Voice Log with selectedMeal: \(selectedMeal)")
+                            isPresented = false
+                            showVoiceLog = true
+                          case "Scan Food":
+                            HapticFeedback.generate()
+                            isPresented = false
+                            showFoodScanner = true
+                          case "Saved Meals":
+                            HapticFeedback.generate()
+                            isPresented = false
+                            viewModel.showFoodContainer(selectedMeal: selectedMeal, initialTab: "savedMeals")
+                          case "Log Workout":
+                            HapticFeedback.generate()
+                            isPresented = false
+                            showLogWorkoutView = true
+                          default:
+                              break
+                          }
+                    }
                 }
             }
-            
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
+
             Spacer()
         }
         .padding(.horizontal, 0)
