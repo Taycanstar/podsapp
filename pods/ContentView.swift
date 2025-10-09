@@ -76,6 +76,13 @@ struct ContentView: View {
         }
     }
 
+    private var proOnboardingBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.showProOnboarding },
+            set: { viewModel.showProOnboarding = $0 }
+        )
+    }
+
     var body: some View {
         Group {
             if isAuthenticated {
@@ -206,6 +213,10 @@ struct ContentView: View {
                 .fullScreenCover(item: $deepLinkHandler.activeTeamInvitation) { invitation in
                                  TeamInvitationView(invitation: invitation)
                              }
+
+                .fullScreenCover(isPresented: proOnboardingBinding) {
+                    ProOnboardingView(isPresented: proOnboardingBinding)
+                }
                 
                 // Add presentation for ConfirmLogView when food is scanned
                 .sheet(isPresented: $showConfirmFoodView, onDismiss: {

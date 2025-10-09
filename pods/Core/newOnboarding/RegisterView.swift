@@ -128,6 +128,7 @@ struct RegisterView: View {
             NetworkManager().completeAppleSignup(idToken: idTokenString, nonce: nonce, onboarding: onboardingPayload) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
                 if success {
                     DispatchQueue.main.async {
+                        viewModel.showProOnboarding = isNewUser
                         self.isAuthenticated = true
                         viewModel.email = email ?? ""
                         viewModel.username = username ?? ""
@@ -178,6 +179,7 @@ struct RegisterView: View {
             NetworkManager().completeGoogleSignup(idToken: idToken, onboarding: onboardingPayload) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
                 if success {
                     DispatchQueue.main.async {
+                        viewModel.showProOnboarding = isNewUser
                         self.isAuthenticated = true
                         viewModel.email = email ?? ""
                         viewModel.username = username ?? ""

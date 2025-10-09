@@ -120,6 +120,17 @@ struct ProfileView: View {
             .buttonStyle(.plain)
             .listRowBackground(rowBackgroundColor)
 
+            if !isUserSubscribed {
+                Button {
+                    showUpgradeSheet = true
+                } label: {
+                    Label("Upgrade to Humuli Pro", systemImage: "arrow.up.circle")
+                        .foregroundColor(iconColor)
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(rowBackgroundColor)
+            }
+
             NavigationLink(destination: DataControlsView(isAuthenticated: $isAuthenticated)) {
                 Label("Data Controls", systemImage: "tablecells.badge.ellipsis")
                     .foregroundColor(iconColor)

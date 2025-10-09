@@ -213,6 +213,7 @@ struct SignupView: View {
 
                     UserDefaults.standard.synchronize()
 
+                    viewModel.showProOnboarding = isNewUser
                     self.isAuthenticated = true
                     dismiss()
                 }

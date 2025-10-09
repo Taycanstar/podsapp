@@ -1612,7 +1612,6 @@ struct DatePickerSheet: View {
                 // Calendar picker
                 DatePicker("Select a date",
                            selection: $date,
-                           in: ...Date(),
                            displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .padding()

@@ -794,6 +794,8 @@ class OnboardingViewModel: ObservableObject {
     // Add this property with the others
     @Published var isShowingOnboarding = false
 
+    @Published var showProOnboarding: Bool = false
+
     @Published private(set) var nutritionPreviewPlan: OnboardingNutritionPlan?
     
     // MARK: - Profile Data
