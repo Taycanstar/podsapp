@@ -1689,8 +1689,9 @@ struct ProgressBar: View {
 
 struct LogRow: View {
     let log: CombinedLog
+    var hideTimeLabel: Bool = false
     @State private var isHighlighted = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Top row: Meal icon, Name and time
@@ -1698,13 +1699,13 @@ struct LogRow: View {
                 Image(systemName: mealTimeSymbol)
                     .font(.system(size: 18, weight: .medium))
                     .foregroundColor(.secondary)
-                
+
                 Text(displayName)
                     .font(.system(size: 16, weight: .regular))
                     .foregroundColor(.primary)
                     // .lineLimit(1)
                 Spacer()
-                if let timeLabel = getTimeLabel() {
+                if !hideTimeLabel, let timeLabel = getTimeLabel() {
                     Text(timeLabel)
                         .font(.system(size: 13, weight: .regular))
                         .foregroundColor(Color(.systemGray2))
@@ -1859,6 +1860,11 @@ struct LogRow: View {
     }
     private func getTimeLabel() -> String? {
         guard let date = log.scheduledAt else { return nil }
+
+        // Only show time if log is from today
+        let calendar = Calendar.current
+        guard calendar.isDateInToday(date) else { return nil }
+
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         return formatter.string(from: date)

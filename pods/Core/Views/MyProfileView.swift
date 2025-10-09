@@ -644,16 +644,7 @@ struct MyProfileView: View {
     }
 
     private func logCardView(for log: CombinedLog) -> some View {
-        LogRow(log: log)
-            .overlay(alignment: .topTrailing) {
-                if let date = canonicalDate(for: log) {
-                    Text(formatLogDate(date))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.trailing, 20)
-                        .padding(.top, 12)
-                }
-            }
+        return ProfileLogRow(log: log)
     }
 
     @ViewBuilder
@@ -707,13 +698,13 @@ struct MyProfileView: View {
                     .fill(Color("containerbg"))
                     .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 4)
             )
-            .overlay(alignment: .topTrailing) {
-                if let date = canonicalDate(for: log) {
-                    Text(formatLogDate(date))
+            .overlay(alignment: .bottomTrailing) {
+                if shouldShowDateBadge(for: log), let label = logLabel(for: log) {
+                    Text(label)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.trailing, 20)
-                        .padding(.top, 12)
+                        .padding(.bottom, 12)
                 }
             }
         } else {
@@ -774,26 +765,56 @@ struct MyProfileView: View {
             return raw
         }
 
-        if vm.logs.contains(where: { $0.id == log.id }) {
-            return Calendar.current.startOfDay(for: vm.selectedDate)
+        if log.isOptimistic {
+            return Date()
         }
 
         return nil
     }
 
-    private func formatLogDate(_ date: Date) -> String {
+    private func shouldShowDateBadge(for log: CombinedLog) -> Bool {
+        guard let date = canonicalDate(for: log) else {
+            print("⏰ shouldShowDateBadge - No canonical date for log \(log.id)")
+            return false
+        }
         let calendar = Calendar.current
-        if calendar.isDateInToday(date) { return "Today" }
-        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        let isToday = calendar.isDateInToday(date)
+        print("⏰ shouldShowDateBadge - Log \(log.id): date=\(date), isToday=\(isToday), shouldShow=\(!isToday)")
+        // Only show badge for non-today logs (Yesterday, weekday, or date)
+        return !isToday
+    }
+
+    private func logLabel(for log: CombinedLog) -> String? {
+        guard let date = canonicalDate(for: log) else {
+            print("📅 logLabel - Log \(log.id): No canonical date")
+            return nil
+        }
+
+        print("📅 logLabel - Log \(log.id): canonical date = \(date)")
+
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            let time = Self.timeFormatter.string(from: date)
+            print("📅 logLabel - Returning TODAY time: \(time)")
+            return time
+        }
+        if calendar.isDateInYesterday(date) {
+            print("📅 logLabel - Returning YESTERDAY")
+            return "Yesterday"
+        }
 
         let startOfNow = calendar.startOfDay(for: Date())
         let startOfDate = calendar.startOfDay(for: date)
         if let days = calendar.dateComponents([.day], from: startOfDate, to: startOfNow).day,
            days < 7 {
-            return Self.weekdayFormatter.string(from: date)
+            let weekday = Self.weekdayFormatter.string(from: date)
+            print("📅 logLabel - Returning WEEKDAY: \(weekday)")
+            return weekday
         }
 
-        return Self.shortDateFormatter.string(from: date)
+        let shortDate = Self.shortDateFormatter.string(from: date)
+        print("📅 logLabel - Returning SHORT DATE: \(shortDate)")
+        return shortDate
     }
 
     private func exerciseCount(from log: CombinedLog) -> Int? {
@@ -878,27 +899,50 @@ struct MyProfileView: View {
         return formatter
     }()
 
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
     private func rawLogDate(for log: CombinedLog) -> Date? {
-        if let scheduled = log.scheduledAt {
-            return scheduled
-        }
-        if let activityDate = log.activity?.startDate {
-            return activityDate
-        }
-        if let mealDate = log.meal?.scheduledAt {
-            return mealDate
-        }
-        if let recipeDate = log.recipe?.scheduledAt {
-            return recipeDate
-        }
+        print("🔍 rawLogDate for log \(log.id):")
+        print("   log.logDate = \(log.logDate ?? "nil")")
+        print("   log.scheduledAt = \(log.scheduledAt?.description ?? "nil")")
+        print("   log.activity?.startDate = \(log.activity?.startDate.description ?? "nil")")
+        print("   log.meal?.scheduledAt = \(log.meal?.scheduledAt?.description ?? "nil")")
+
+        // PRIORITY 1: Check logDate first (YYYY-MM-DD format) - this tells us the actual day
         if let logDate = log.logDate {
             if let parsed = Self.backendDateFormatter.date(from: logDate) {
+                print("   ✅ Using logDate (backend format): \(parsed)")
                 return parsed
             }
             if let isoParsed = Self.iso8601DateFormatter.date(from: logDate) {
+                print("   ✅ Using logDate (ISO format): \(isoParsed)")
                 return isoParsed
             }
         }
+
+        // PRIORITY 2: Check scheduledAt (has time, but also has the day)
+        if let scheduled = log.scheduledAt {
+            print("   ✅ Using scheduledAt: \(scheduled)")
+            return scheduled
+        }
+        if let activityDate = log.activity?.startDate {
+            print("   ✅ Using activity.startDate: \(activityDate)")
+            return activityDate
+        }
+        if let mealDate = log.meal?.scheduledAt {
+            print("   ✅ Using meal.scheduledAt: \(mealDate)")
+            return mealDate
+        }
+        if let recipeDate = log.recipe?.scheduledAt {
+            print("   ✅ Using recipe.scheduledAt: \(recipeDate)")
+            return recipeDate
+        }
+
+        print("   ❌ No date found")
         return nil
     }
 
@@ -2179,6 +2223,225 @@ extension MyProfileView {
 
 // Remove any BarMark .clipShape(UnevenRoundedRectangle(...)) in MacroSplitCardView (if present)
 
+// MARK: - ProfileLogRow (dedicated component for MyProfileView logs)
+
+struct ProfileLogRow: View {
+    let log: CombinedLog
+    @State private var isHighlighted = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Top row: Meal icon, Name and optional time (ONLY for today)
+            HStack {
+                Image(systemName: mealTimeSymbol)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                Text(displayName)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                // Show time ONLY if log is from today
+                if let timeLabel = getTimeLabel() {
+                    Text(timeLabel)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color(.systemGray2))
+                }
+            }
+            Spacer(minLength: 0)
+
+            // Bottom row: Calories (left) and Macros/Activity Info (right)
+            HStack(alignment: .bottom) {
+                HStack(spacing: 6) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(Color("brightOrange"))
+
+                    HStack(alignment: .bottom, spacing: 1) {
+                        Text("\(Int(log.displayCalories))")
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+                        Text("cal")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                // Show different info based on log type
+                if log.type == .activity {
+                    // Activity-specific info: Duration and Distance
+                    HStack(spacing: 24) {
+                        VStack(spacing: 0) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.blue)
+                            Text(log.activity?.formattedDuration ?? "0 min")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundColor(.primary)
+                        }
+
+                        if let activity = log.activity, activity.isDistanceActivity, let distance = activity.formattedDistance {
+                            VStack(spacing: 0) {
+                                Image(systemName: "location")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.green)
+                                Text(distance)
+                                    .font(.system(size: 15, weight: .regular))
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                    }
+                } else {
+                    // Food/Meal/Recipe macros
+                    HStack(spacing: 24) {
+                        VStack(spacing: 0) {
+                            Text("Protein")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(.blue)
+                            Text("\(Int(protein))g")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundColor(.primary)
+                        }
+                        VStack(spacing: 0) {
+                            Text("Carbs")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(Color("darkYellow", bundle: nil) ?? .orange)
+                            Text("\(Int(carbs))g")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundColor(.primary)
+                        }
+                        VStack(spacing: 0) {
+                            Text("Fat")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(.pink)
+                            Text("\(Int(fat))g")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(minHeight: 80)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color("containerbg"))
+                .shadow(color: Color(.black).opacity(0.04), radius: 4, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(Color.accentColor.opacity(isHighlighted ? 0.5 : 0), lineWidth: 2)
+                )
+        )
+        .cornerRadius(24)
+        .onAppear {
+            if log.isOptimistic {
+                withAnimation(.easeInOut(duration: 0.5).repeatCount(3, autoreverses: true)) {
+                    isHighlighted = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    withAnimation { isHighlighted = false }
+                }
+            }
+        }
+    }
+
+    // Helper properties
+    private var displayName: String {
+        switch log.type {
+        case .food:
+            return log.food?.displayName ?? "Food"
+        case .meal:
+            return log.meal?.title ?? "Meal"
+        case .recipe:
+            return log.recipe?.title ?? "Recipe"
+        case .activity:
+            return log.activity?.displayName ?? "Activity"
+        }
+    }
+
+    private var mealTimeSymbol: String {
+        switch log.type {
+        case .activity:
+            return log.activity?.activityIcon ?? "figure.strengthtraining.traditional"
+        default:
+            guard let mealType = log.mealType?.lowercased() else { return "popcorn.fill" }
+
+            switch mealType {
+            case "breakfast":
+                return "sunrise.fill"
+            case "lunch":
+                return "sun.max.fill"
+            case "dinner":
+                return "moon.fill"
+            case "snacks", "snack":
+                return "popcorn.fill"
+            default:
+                return "popcorn.fill"
+            }
+        }
+    }
+
+    private func getTimeLabel() -> String? {
+        // Determine what date this log is from
+        guard let logDateString = log.logDate,
+              let logDate = dateFromLogDateString(logDateString) else {
+            return nil
+        }
+
+        let calendar = Calendar.current
+
+        // TODAY: Show time (e.g., "11:11 AM")
+        if calendar.isDateInToday(logDate) {
+            guard let scheduledAt = log.scheduledAt else { return nil }
+            let formatter = DateFormatter()
+            formatter.timeStyle = .short
+            return formatter.string(from: scheduledAt)
+        }
+
+        // YESTERDAY: Show "Yesterday"
+        if calendar.isDateInYesterday(logDate) {
+            return "Yesterday"
+        }
+
+        // LAST 7 DAYS: Show weekday (e.g., "Saturday")
+        let startOfNow = calendar.startOfDay(for: Date())
+        let startOfDate = calendar.startOfDay(for: logDate)
+        if let days = calendar.dateComponents([.day], from: startOfDate, to: startOfNow).day,
+           days < 7 {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE"
+            return formatter.string(from: logDate)
+        }
+
+        // OLDER: Show short date (e.g., "9/5/25")
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        return formatter.string(from: logDate)
+    }
+
+    private func dateFromLogDateString(_ dateString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: dateString)
+    }
+
+    // Macro helpers
+    private var protein: Double {
+        log.food?.protein ?? log.meal?.protein ?? log.recipe?.protein ?? 0
+    }
+    private var carbs: Double {
+        log.food?.carbs ?? log.meal?.carbs ?? log.recipe?.carbs ?? 0
+    }
+    private var fat: Double {
+        log.food?.fat ?? log.meal?.fat ?? log.recipe?.fat ?? 0
+    }
+}
 
 #Preview {
     MyProfileView(isAuthenticated: .constant(true))
