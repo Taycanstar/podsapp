@@ -644,7 +644,12 @@ struct MyProfileView: View {
     }
 
     private func logCardView(for log: CombinedLog) -> some View {
-        return ProfileLogRow(log: log)
+        // Use workout card styling for activities
+        if log.type == .activity {
+            return AnyView(workoutCardView(for: log))
+        } else {
+            return AnyView(ProfileLogRow(log: log))
+        }
     }
 
     @ViewBuilder
@@ -674,19 +679,29 @@ struct MyProfileView: View {
                     }
 
                     Spacer()
+
+                    // Date/Time label in top-trailing
+                    if let timeLabel = getWorkoutTimeLabel(for: log) {
+                        Text(timeLabel)
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(Color(.systemGray2))
+                    }
                 }
 
                 HStack(spacing: 12) {
-                    workoutMetricChip(icon: "clock", text: duration)
+                    // CALORIES FIRST - Orange flame.fill
+                    workoutMetricChip(icon: "flame.fill", text: "\(Int(log.displayCalories)) cal", color: Color("brightOrange"))
+
+                    // DURATION - Blue clock
+                    workoutMetricChip(icon: "clock", text: duration, color: .blue)
 
                     if let exercises {
-                        workoutMetricChip(icon: "list.bullet", text: "\(exercises) exercises")
+                        workoutMetricChip(icon: "list.bullet", text: "\(exercises) exercises", color: .accentColor)
                     }
 
-                    workoutMetricChip(icon: "flame", text: "\(Int(log.displayCalories)) cal")
-
+                    // DISTANCE - Green location
                     if let distance {
-                        workoutMetricChip(icon: "location", text: distance)
+                        workoutMetricChip(icon: "location", text: distance, color: .green)
                     }
                 }
             }
@@ -698,25 +713,16 @@ struct MyProfileView: View {
                     .fill(Color("containerbg"))
                     .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 4)
             )
-            .overlay(alignment: .bottomTrailing) {
-                if shouldShowDateBadge(for: log), let label = logLabel(for: log) {
-                    Text(label)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 12)
-                }
-            }
         } else {
             logCardView(for: log)
         }
     }
 
-    private func workoutMetricChip(icon: String, text: String) -> some View {
+    private func workoutMetricChip(icon: String, text: String, color: Color) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.accentColor)
+                .foregroundColor(color)
             Text(text)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.primary)
@@ -725,6 +731,50 @@ struct MyProfileView: View {
         .padding(.vertical, 8)
         .background(Color("primarybg"))
         .clipShape(Capsule())
+    }
+
+    private func getWorkoutTimeLabel(for log: CombinedLog) -> String? {
+        // Same logic as ProfileLogRow - show date/time based on log date
+        guard let logDateString = log.logDate,
+              let logDate = dateFromString(logDateString) else {
+            return nil
+        }
+
+        let calendar = Calendar.current
+
+        // TODAY: Show time
+        if calendar.isDateInToday(logDate) {
+            guard let scheduledAt = log.scheduledAt else { return nil }
+            let formatter = DateFormatter()
+            formatter.timeStyle = .short
+            return formatter.string(from: scheduledAt)
+        }
+
+        // YESTERDAY: Show "Yesterday"
+        if calendar.isDateInYesterday(logDate) {
+            return "Yesterday"
+        }
+
+        // LAST 7 DAYS: Show weekday
+        let startOfNow = calendar.startOfDay(for: Date())
+        let startOfDate = calendar.startOfDay(for: logDate)
+        if let days = calendar.dateComponents([.day], from: startOfDate, to: startOfNow).day,
+           days < 7 {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE"
+            return formatter.string(from: logDate)
+        }
+
+        // OLDER: Show short date
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        return formatter.string(from: logDate)
+    }
+
+    private func dateFromString(_ dateString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: dateString)
     }
 
     private func loadingStateView(title: String) -> some View {
