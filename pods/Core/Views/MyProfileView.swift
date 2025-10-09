@@ -705,13 +705,12 @@ struct MyProfileView: View {
                     }
                 }
             }
-            .padding(.vertical, 20)
-            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(Color("containerbg"))
-                    .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 4)
             )
         } else {
             logCardView(for: log)
