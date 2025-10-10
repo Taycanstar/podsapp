@@ -87,9 +87,9 @@ struct ScheduleMealSheet: View {
     private var schedulingCard: some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
-                Text("Date & Time")
+                Text("Date and Time")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.primary)
 
                 Spacer()
 
@@ -110,7 +110,7 @@ struct ScheduleMealSheet: View {
             HStack {
                 Text("Meal Type")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.primary)
 
                 Spacer()
 
