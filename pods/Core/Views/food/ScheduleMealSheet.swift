@@ -55,10 +55,17 @@ struct ScheduleMealSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.primary)
+                            .imageScale(.medium)
+                    }
+                    .accessibilityLabel("Cancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button {
                         let selection = ScheduleMealSelection(
                             scheduleType: scheduleType,
                             targetDate: targetDate,
@@ -66,51 +73,61 @@ struct ScheduleMealSheet: View {
                         )
                         onComplete(selection)
                         dismiss()
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .foregroundColor(.accentColor)
+                            .imageScale(.medium)
                     }
+                    .accessibilityLabel("Save")
                 }
             }
         }
     }
 
     private var schedulingCard: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             HStack(spacing: 12) {
                 Text("Date & Time")
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundColor(.secondary)
 
                 Spacer()
 
-                DatePicker("", selection: $targetDate, displayedComponents: .date)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                    .disabled(scheduleType == .daily)
-                    .opacity(scheduleType == .daily ? 0.5 : 1)
+                if scheduleType == .once {
+                    DatePicker("", selection: $targetDate, displayedComponents: .date)
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                }
 
                 DatePicker("", selection: $targetDate, displayedComponents: .hourAndMinute)
                     .labelsHidden()
                     .datePickerStyle(.compact)
             }
+            .padding(.vertical, 2)
 
             Divider()
 
             HStack {
-                Text("Meal Time")
-                    .font(.subheadline)
+                Text("Meal Type")
+                    .font(.body)
                     .foregroundColor(.secondary)
 
                 Spacer()
 
-                Picker("Meal Time", selection: $mealType) {
+                Picker("Meal Type", selection: $mealType) {
                     ForEach(mealTypeOptions, id: \.self) { option in
-                        Text(option).tag(option)
+                        Text(option)
+                            .foregroundColor(.primary)
+                            .tag(option)
                     }
                 }
                 .labelsHidden()
                 .pickerStyle(.menu)
             }
+            .padding(.vertical, 2)
         }
-        .padding(20)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color("containerbg"))
         .cornerRadius(20)
