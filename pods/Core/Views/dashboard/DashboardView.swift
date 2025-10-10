@@ -348,22 +348,22 @@ private var remainingCal: Double { vm.remainingCalories }
                                 }
                             }
                             .swipeActions(edge: .trailing) {
+                                // Delete action with trash icon (keep furthest trailing)
+                                Button {
+                                    deleteLogItem(log: log)
+                                } label: {
+                                    Image(systemName: "trash.fill")
+                                }
+                                .tint(.red)
+
                                 if canSchedule(log) {
                                     Button {
                                         handleScheduleAction(for: log)
                                     } label: {
                                         Image(systemName: "calendar.badge.plus")
                                     }
-                                    .tint(Color(.systemPurple))
+                                    .tint(.indigo)
                                 }
-
-                                // Delete action with trash icon
-                                Button(action: {
-                                    deleteLogItem(log: log)
-                                }) {
-                                    Image(systemName: "trash.fill")
-                                }
-                                .tint(.red)
                             }
                             .id("\(log.id)_\(foodMgr.savedLogIds.count)")
                         }
