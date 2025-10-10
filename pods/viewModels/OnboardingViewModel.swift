@@ -482,7 +482,7 @@ class OnboardingViewModel: ObservableObject {
     func syncWorkoutSchedule() {
         let effectiveCount = selectedTrainingDays.isEmpty ? trainingDaysPerWeek : selectedTrainingDays.count
         let normalized = min(max(effectiveCount, 1), Weekday.allCases.count)
-        workoutFrequency = String(normalized)
+        workoutFrequency = activityLevel(forDays: normalized)
         workoutDaysPerWeek = normalized
         preferredWorkoutDays = selectedTrainingDays
             .sorted { $0.sortOrder < $1.sortOrder }
@@ -503,8 +503,6 @@ class OnboardingViewModel: ObservableObject {
         let restDayNames = restIndices.map { Weekday.allCases[$0].rawValue }
         restDays = restDayNames
         UserDefaults.standard.set(restDayNames, forKey: "rest_days")
-
-        UserDefaults.standard.set(workoutFrequency, forKey: "workoutFrequency")
 
         updateTrainingSplit(for: normalized)
     }
@@ -571,8 +569,17 @@ class OnboardingViewModel: ObservableObject {
         let tdee = Double(round(100 * (bmr * multiplier)) / 100)
 
         let previewDietGoal = resolveDietGoal()
+        let previewDietPreference = normalizedDietPreference(dietPreference).isEmpty ? "balanced" : normalizedDietPreference(dietPreference)
         let calorieTarget = calculatePreviewCalories(tdee: tdee, dietGoal: previewDietGoal, gender: genderValue)
-        let macros = calculatePreviewMacros(calories: calorieTarget, weightKg: weight, dietGoal: previewDietGoal, dietPreference: dietPreference.isEmpty ? "balanced" : dietPreference, fitnessGoal: fitnessGoal, activityLevel: activityLevel, age: age)
+        let macros = calculatePreviewMacros(
+            calories: calorieTarget,
+            weightKg: weight,
+            dietGoal: previewDietGoal,
+            dietPreference: previewDietPreference,
+            fitnessGoal: fitnessGoal,
+            activityLevel: activityLevel,
+            age: age
+        )
 
         guard let macros else { return nil }
 
@@ -614,13 +621,9 @@ class OnboardingViewModel: ObservableObject {
     }
 
     private func resolveActivityLevel() -> String {
-        let normalized = workoutFrequency.lowercased()
-        if ["low", "medium", "high"].contains(normalized) {
+        let normalized = normalizedFrequencyValue(workoutFrequency)
+        if normalized.isEmpty == false {
             return normalized
-        }
-
-        if let daysValue = Int(normalized) {
-            return activityLevel(forDays: daysValue)
         }
 
         if workoutDaysPerWeek > 0 {
@@ -636,6 +639,57 @@ class OnboardingViewModel: ObservableObject {
         case 3...5: return "medium"
         default: return "high"
         }
+    }
+
+    private func normalizedFrequencyValue(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return "" }
+
+        let lowercased = trimmed.lowercased()
+        if ["low", "medium", "high"].contains(lowercased) {
+            return lowercased
+        }
+
+        if let days = Int(lowercased) {
+            return activityLevel(forDays: days)
+        }
+
+        return "medium"
+    }
+
+    private func normalizedDietPreference(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return "" }
+
+        let lower = trimmed.lowercased()
+        let canonicalMap: [String: String] = [
+            "balanced": "balanced",
+            "general": "balanced",
+            "standard": "balanced",
+            "keto": "keto",
+            "vegetarian": "vegetarian",
+            "vegan": "vegan",
+            "paleo": "paleo",
+            "mediterranean": "mediterranean",
+            "pescatarian": "pescatarian",
+            "pescetarian": "pescatarian",
+            "seafood": "pescatarian",
+            "fish": "pescatarian",
+            "lowcarb": "lowCarb",
+            "low-carb": "lowCarb",
+            "low_carbs": "lowCarb",
+            "low carbs": "lowCarb",
+            "glutenfree": "glutenFree",
+            "gluten-free": "glutenFree",
+            "gluten_free": "glutenFree"
+        ]
+
+        if let mapped = canonicalMap[lower] {
+            return mapped
+        }
+
+        // Preserve any newer or custom preferences without forcing them into legacy values.
+        return trimmed
     }
 
     private func resolveDietGoal() -> String {
@@ -884,10 +938,17 @@ class OnboardingViewModel: ObservableObject {
     @Published var workoutFrequency: String = "" {
         didSet {
             guard workoutFrequency != oldValue else { return }
-            if workoutFrequency.isEmpty {
+            let normalized = normalizedFrequencyValue(workoutFrequency)
+
+            if normalized != workoutFrequency {
+                workoutFrequency = normalized
+                return
+            }
+
+            if normalized.isEmpty {
                 UserDefaults.standard.removeObject(forKey: "workoutFrequency")
             } else {
-                UserDefaults.standard.set(workoutFrequency, forKey: "workoutFrequency")
+                UserDefaults.standard.set(normalized, forKey: "workoutFrequency")
             }
             updateNutritionPreviewCache()
         }
@@ -1149,8 +1210,10 @@ class OnboardingViewModel: ObservableObject {
         }
 
         let resolvedDietGoal = dietGoal
-        let resolvedWorkoutFrequency = workoutFrequency.isEmpty ? "medium" : workoutFrequency
-        let resolvedDietPreference = dietPreference.isEmpty ? "balanced" : dietPreference
+        let sanitizedFrequency = normalizedFrequencyValue(workoutFrequency)
+        let resolvedWorkoutFrequency = sanitizedFrequency.isEmpty ? "medium" : sanitizedFrequency
+        let sanitizedDietPreference = normalizedDietPreference(dietPreference)
+        let resolvedDietPreference = sanitizedDietPreference.isEmpty ? "balanced" : sanitizedDietPreference
         let resolvedWorkoutLocation = workoutLocation.isEmpty ? "gym" : workoutLocation
 
         var payload: [String: Any] = [
@@ -1226,6 +1289,9 @@ class OnboardingViewModel: ObservableObject {
         isLoading = true
         
         // Prepare onboarding data for DataLayer
+        let sanitizedFrequency = normalizedFrequencyValue(workoutFrequency)
+        let sanitizedDietPreference = normalizedDietPreference(dietPreference)
+
         let onboardingData: [String: Any] = [
             "email": email,
             "gender": gender,
@@ -1237,8 +1303,8 @@ class OnboardingViewModel: ObservableObject {
             "fitness_goal": fitnessGoal,
             "goal_timeframe_weeks": goalTimeframeWeeks,
             "weekly_weight_change": weeklyWeightChange,
-            "workout_frequency": workoutFrequency,
-            "diet_preference": dietPreference,
+            "workout_frequency": sanitizedFrequency.isEmpty ? "medium" : sanitizedFrequency,
+            "diet_preference": sanitizedDietPreference.isEmpty ? "balanced" : sanitizedDietPreference,
             "primary_wellness_goal": primaryWellnessGoal,
             "obstacles": obstacles.joined(separator: ","),
             "add_calories_burned": addCaloriesBurned,

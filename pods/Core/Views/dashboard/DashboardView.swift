@@ -9,6 +9,7 @@ struct DashboardView: View {
     @Environment(\.isTabBarVisible) private var isTabBarVisible
     @EnvironmentObject var vm: DayLogsViewModel
     @EnvironmentObject private var mealReminderService: MealReminderService
+    @EnvironmentObject private var proFeatureGate: ProFeatureGate
     @AppStorage(WaterUnit.storageKey) private var storedWaterUnitRawValue: String = WaterUnit.defaultUnit.rawValue
     @ObservedObject private var workoutManager = WorkoutManager.shared
     @ObservedObject private var userProfileService = UserProfileService.shared
@@ -29,6 +30,8 @@ struct DashboardView: View {
 
     @State private var selectedFoodLogId: String? = nil
     @State private var selectedMealLogId: String? = nil
+    @State private var scheduleSheetLog: CombinedLog?
+    @State private var scheduleAlert: ScheduleAlert?
     
     // ─── Nutrition label name input ────────────────────────────────────────
     @State private var nutritionProductName = ""
@@ -44,6 +47,18 @@ struct DashboardView: View {
             switch self {
             case .date: return "calendar"
             case .meal: return "fork.knife"
+            }
+        }
+    }
+
+    private enum ScheduleAlert: Identifiable {
+        case success(String)
+        case failure(String)
+
+        var id: String {
+            switch self {
+            case .success(let message): return "success_\(message)"
+            case .failure(let message): return "failure_\(message)"
             }
         }
     }
@@ -112,6 +127,16 @@ private var remainingCal: Double { vm.remainingCalories }
         if isYesterday  { return "Yesterday" }
         let f = DateFormatter(); f.dateFormat = "EEEE, MMM d"
         return f.string(from: vm.selectedDate)
+    }
+
+    private var currentUserEmail: String? {
+        if onboarding.email.isEmpty == false {
+            return onboarding.email
+        }
+        if let stored = UserDefaults.standard.string(forKey: "userEmail"), stored.isEmpty == false {
+            return stored
+        }
+        return nil
     }
     
     // ─── Units system helpers ──────────────────────────────────────────────
@@ -323,6 +348,15 @@ private var remainingCal: Double { vm.remainingCalories }
                                 }
                             }
                             .swipeActions(edge: .trailing) {
+                                if canSchedule(log) {
+                                    Button {
+                                        handleScheduleAction(for: log)
+                                    } label: {
+                                        Image(systemName: "calendar.badge.plus")
+                                    }
+                                    .tint(Color(.systemPurple))
+                                }
+
                                 // Delete action with trash icon
                                 Button(action: {
                                     deleteLogItem(log: log)
@@ -388,11 +422,27 @@ private var remainingCal: Double { vm.remainingCalories }
         .transition(.opacity)
         .animation(.spring(), value: foodMgr.showUnsavedMealToast)
       }
+      else if workoutManager.showWorkoutLogCard, let workout = workoutManager.lastCompletedWorkout {
+        VStack {
+          Spacer()
+          WorkoutLogCard(summary: workout)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 90)
+        }
+        .zIndex(1)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: workoutManager.showWorkoutLogCard)
+      }
     }
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color("primarybg"), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar { toolbarContent }
+            .sheet(item: $scheduleSheetLog) { log in
+                ScheduleMealSheet(initialMealType: initialMealType(for: log)) { selection in
+                    scheduleLog(selection: selection, for: log)
+                }
+            }
             .sheet(isPresented: $showDatePicker) {
                 DatePickerSheet(date: $vm.selectedDate,
                                 isPresented: $showDatePicker)
@@ -426,6 +476,14 @@ private var remainingCal: Double { vm.remainingCalories }
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(foodMgr.scanFailureMessage)
+            }
+            .alert(item: $scheduleAlert) { alert in
+                switch alert {
+                case .success(let message):
+                    return Alert(title: Text("Scheduled"), message: Text(message), dismissButton: .default(Text("OK")))
+                case .failure(let message):
+                    return Alert(title: Text("Error"), message: Text(message), dismissButton: .default(Text("OK")))
+                }
             }
             .onAppear {
                 configureOnAppear() 
@@ -720,6 +778,83 @@ private var remainingCal: Double { vm.remainingCalories }
             HapticFeedback.generate()
             Task { await vm.removeLog(log) }
         }
+    }
+
+    private func handleScheduleAction(for log: CombinedLog) {
+        guard canSchedule(log) else { return }
+
+        guard let email = currentUserEmail else {
+            scheduleAlert = .failure("Please sign in again before scheduling.")
+            return
+        }
+
+        proFeatureGate.requirePro(for: .scheduledLogging, userEmail: email) {
+            Task { await proFeatureGate.refreshUsageSummary(for: email) }
+            scheduleSheetLog = log
+        }
+    }
+
+    private func scheduleLog(selection: ScheduleMealSelection, for log: CombinedLog) {
+        guard let email = currentUserEmail else {
+            scheduleAlert = .failure("Please sign in again before scheduling.")
+            return
+        }
+
+        let (logType, logId): (String, Int?) = {
+            switch log.type {
+            case .meal: return ("meal", log.mealLogId)
+            case .food: return ("food", log.foodLogId)
+            default: return ("", nil)
+            }
+        }()
+
+        guard let resolvedId = logId else {
+            scheduleAlert = .failure("We couldn't schedule this entry. Please try again.")
+            return
+        }
+
+        NetworkManager().scheduleMealLog(
+            logId: resolvedId,
+            logType: logType,
+            scheduleType: selection.scheduleType.rawValue,
+            targetDate: selection.targetDate,
+            mealType: selection.mealType,
+            userEmail: email
+        ) { result in
+            DispatchQueue.main.async {
+                scheduleSheetLog = nil
+                switch result {
+                case .success:
+                    let message = log.type == .meal ?
+                        "We'll remind you about this meal on your selected schedule." :
+                        "We'll remind you to log this meal on your selected schedule."
+                    scheduleAlert = .success(message)
+                case .failure(let error):
+                    scheduleAlert = .failure(error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private func canSchedule(_ log: CombinedLog) -> Bool {
+        switch log.type {
+        case .meal:
+            return log.mealLogId != nil
+        case .food:
+            return log.foodLogId != nil
+        default:
+            return false
+        }
+    }
+
+    private func initialMealType(for log: CombinedLog) -> String {
+        if let mealType = log.mealType, mealType.isEmpty == false {
+            return mealType
+        }
+        if let mealTime = log.mealTime, mealTime.isEmpty == false {
+            return mealTime
+        }
+        return "Lunch"
     }
 }
 
@@ -2360,4 +2495,88 @@ private struct DashboardLoadingView: View {
     }
 
     // Replaced by CALayer-driven ShimmerView to ensure reliability inside Lists
+}
+
+// MARK: - Workout Log Card (displayed after workout completion)
+struct WorkoutLogCard: View {
+    let summary: CompletedWorkoutSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                Image(systemName: "figure.strengthtraining.traditional")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .frame(width: 48, height: 48)
+                    .background(Color("primarybg"))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(summary.workout.title)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+
+                    Text("Workout completed")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+            }
+
+            HStack(spacing: 12) {
+                // CALORIES FIRST - Orange flame.fill
+                workoutMetricChip(icon: "flame.fill",
+                                 text: "\(summary.stats.estimatedCalories) cal",
+                                 color: Color("brightOrange"))
+
+                // DURATION - Blue clock
+                workoutMetricChip(icon: "clock",
+                                 text: formattedDuration(summary.stats.duration),
+                                 color: .blue)
+
+                // EXERCISES - Accent color
+                let exerciseCount = summary.exerciseBreakdown.count
+                workoutMetricChip(icon: "list.bullet",
+                                 text: "\(exerciseCount) exercise\(exerciseCount == 1 ? "" : "s")",
+                                 color: .accentColor)
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color("containerbg"))
+                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+        )
+    }
+
+    private func workoutMetricChip(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(color)
+            Text(text)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.primary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color("primarybg"))
+        .clipShape(Capsule())
+    }
+
+    private func formattedDuration(_ duration: TimeInterval) -> String {
+        let totalMinutes = Int(duration / 60)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
 }

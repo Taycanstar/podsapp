@@ -127,6 +127,9 @@ struct MyProfileView: View {
                     }
                 }
             }
+            .toolbarBackground(Color("primarybg"), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
         }
         .navigationViewStyle(StackNavigationViewStyle()) // Force stack style for older iOS versions
         .sheet(isPresented: $showEditWeightSheet) {

@@ -2092,7 +2092,10 @@ func sendAppleTokenToBackend(idToken: String, nonce: String, completion: @escapi
     }.resume()
 }
 
-func completeGoogleSignup(idToken: String, onboarding: [String: Any]?, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool, Bool) -> Void) {
+func completeGoogleSignup(idToken: String,
+                          onboarding: [String: Any]?,
+                          name: String?,
+                          completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool, Bool) -> Void) {
     guard let url = URL(string: "\(baseUrl)/google-signup/") else {
         completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
         return
@@ -2101,6 +2104,10 @@ func completeGoogleSignup(idToken: String, onboarding: [String: Any]?, completio
     var body: [String: Any] = ["token": idToken]
     if let onboarding = onboarding {
         body["onboarding"] = onboarding
+    }
+    let trimmedName = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    if !trimmedName.isEmpty {
+        body["name"] = trimmedName
     }
 
     var request = URLRequest(url: url)
@@ -2157,7 +2164,11 @@ func completeGoogleSignup(idToken: String, onboarding: [String: Any]?, completio
     }.resume()
 }
 
-func completeAppleSignup(idToken: String, nonce: String, onboarding: [String: Any]?, completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool, Bool) -> Void) {
+func completeAppleSignup(idToken: String,
+                         nonce: String,
+                         onboarding: [String: Any]?,
+                         name: String?,
+                         completion: @escaping (Bool, String?, String?, String?, String?, String?, String?, String?, String?, Bool?, Int?, Int?, Bool, Bool) -> Void) {
     guard let url = URL(string: "\(baseUrl)/apple-signup/") else {
         completion(false, "Invalid URL", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
         return
@@ -2170,6 +2181,10 @@ func completeAppleSignup(idToken: String, nonce: String, onboarding: [String: An
 
     if let onboarding = onboarding {
         body["onboarding"] = onboarding
+    }
+    let trimmedName = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    if !trimmedName.isEmpty {
+        body["name"] = trimmedName
     }
 
     var request = URLRequest(url: url)

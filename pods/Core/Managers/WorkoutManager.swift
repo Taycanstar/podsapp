@@ -110,6 +110,10 @@ class WorkoutManager: ObservableObject {
     @Published private(set) var completedWorkoutSummary: CompletedWorkoutSummary?
     @Published private(set) var isDisplayingSummary: Bool = false
     @Published private(set) var isWorkoutViewActive: Bool = false
+
+    // MARK: - Workout Log Card Display (similar to FoodManager pattern)
+    @Published var showWorkoutLogCard = false
+    @Published var lastCompletedWorkout: CompletedWorkoutSummary?
     
     // MARK: - Session Preferences (separate concern)
     @Published var sessionDuration: WorkoutDuration?
@@ -2321,6 +2325,19 @@ class WorkoutManager: ObservableObject {
     }
 
     func dismissWorkoutSummary() {
+        // Store the completed workout before clearing it
+        if let summary = completedWorkoutSummary {
+            lastCompletedWorkout = summary
+            showWorkoutLogCard = true
+
+            // Auto-hide the card after 3 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                withAnimation {
+                    self?.showWorkoutLogCard = false
+                }
+            }
+        }
+
         completedWorkoutSummary = nil
         isDisplayingSummary = false
 

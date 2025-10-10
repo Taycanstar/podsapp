@@ -94,10 +94,7 @@ struct NewSheetView: View {
                     .onTapGesture {
                         // Handle tap
                         switch option.0 {
-                          case "Pod":
-                              isPresented = false
-                              showQuickPodView = true
-                          case "Log Food":
+                          case "Food":
                             HapticFeedback.generate()
                             isPresented = false
                             viewModel.showFoodContainer(selectedMeal: selectedMeal)
@@ -114,7 +111,7 @@ struct NewSheetView: View {
                             HapticFeedback.generate()
                             isPresented = false
                             viewModel.showFoodContainer(selectedMeal: selectedMeal, initialTab: "savedMeals")
-                          case "Log Workout":
+                          case "Workout":
                             HapticFeedback.generate()
                             isPresented = false
                             showLogWorkoutView = true

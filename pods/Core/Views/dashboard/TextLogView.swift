@@ -44,7 +44,7 @@ struct TextLogView: View {
                             .padding(.vertical, 12)
                             .focused($isInputFocused)
                             .background(Color.clear)
-                        
+
                         // Bottom border
                         Rectangle()
                             .frame(height: 1)
@@ -53,7 +53,8 @@ struct TextLogView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 20)
                 }
-                
+                .background(Color(.systemBackground))
+
                 Spacer()
                 
                 // Bottom action buttons

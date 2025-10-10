@@ -121,21 +121,44 @@ struct RegisterView: View {
                 return
             }
 
+            if let credentialEmail = appleIDCredential.email, !credentialEmail.isEmpty {
+                viewModel.email = credentialEmail
+            }
+
             let onboardingPayload = viewModel.signupOnboardingPayload()
             if onboardingPayload == nil {
                 print("⚠️ No onboarding payload available, sending Apple signup without onboarding data")
             }
-            NetworkManager().completeAppleSignup(idToken: idTokenString, nonce: nonce, onboarding: onboardingPayload) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
+            NetworkManager().completeAppleSignup(
+                idToken: idTokenString,
+                nonce: nonce,
+                onboarding: onboardingPayload,
+                name: viewModel.name
+            ) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
                 if success {
                     DispatchQueue.main.async {
                         viewModel.showProOnboarding = isNewUser
                         self.isAuthenticated = true
-                        viewModel.email = email ?? ""
-                        viewModel.username = username ?? ""
-                        viewModel.profileInitial = profileInitial ?? ""
+                        if let resolvedEmail = email, !resolvedEmail.isEmpty {
+                            viewModel.email = resolvedEmail
+                        }
+
+                        let onboardingName = viewModel.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let backendName = username?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                        let resolvedName = onboardingName.isEmpty ? backendName : onboardingName
+
+                        viewModel.username = resolvedName
+                        viewModel.name = resolvedName
+
+                        let derivedInitial = resolvedName.isEmpty ? "" : String(resolvedName.prefix(1)).uppercased()
+                        let resolvedInitial = derivedInitial.isEmpty ? (profileInitial ?? "") : derivedInitial
+                        viewModel.profileInitial = resolvedInitial
+
                         viewModel.profileColor = profileColor ?? ""
                         UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                        UserDefaults.standard.set(email, forKey: "userEmail")
+                        UserDefaults.standard.set(viewModel.email, forKey: "userEmail")
+                        UserDefaults.standard.set(resolvedName, forKey: "userName")
+                        UserDefaults.standard.set(resolvedInitial, forKey: "profileInitial")
                         UserDefaults.standard.synchronize()
                     }
                 } else {
@@ -172,21 +195,43 @@ struct RegisterView: View {
                 return
             }
 
+            if let googleEmail = result.user.profile?.email, !googleEmail.isEmpty {
+                viewModel.email = googleEmail
+            }
+
             let onboardingPayload = viewModel.signupOnboardingPayload()
             if onboardingPayload == nil {
                 print("⚠️ No onboarding payload available, sending Google signup without onboarding data")
             }
-            NetworkManager().completeGoogleSignup(idToken: idToken, onboarding: onboardingPayload) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
+            NetworkManager().completeGoogleSignup(
+                idToken: idToken,
+                onboarding: onboardingPayload,
+                name: viewModel.name
+            ) { success, message, email, username, profileInitial, profileColor, subscriptionStatus, subscriptionPlan, subscriptionExpiresAt, subscriptionRenews, subscriptionSeats, userId, onboardingCompleted, isNewUser in
                 if success {
                     DispatchQueue.main.async {
                         viewModel.showProOnboarding = isNewUser
                         self.isAuthenticated = true
-                        viewModel.email = email ?? ""
-                        viewModel.username = username ?? ""
-                        viewModel.profileInitial = profileInitial ?? ""
+                        if let resolvedEmail = email, !resolvedEmail.isEmpty {
+                            viewModel.email = resolvedEmail
+                        }
+
+                        let onboardingName = viewModel.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let backendName = username?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                        let resolvedName = onboardingName.isEmpty ? backendName : onboardingName
+
+                        viewModel.username = resolvedName
+                        viewModel.name = resolvedName
+
+                        let derivedInitial = resolvedName.isEmpty ? "" : String(resolvedName.prefix(1)).uppercased()
+                        let resolvedInitial = derivedInitial.isEmpty ? (profileInitial ?? "") : derivedInitial
+                        viewModel.profileInitial = resolvedInitial
+
                         viewModel.profileColor = profileColor ?? ""
                         UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                        UserDefaults.standard.set(email, forKey: "userEmail")
+                        UserDefaults.standard.set(viewModel.email, forKey: "userEmail")
+                        UserDefaults.standard.set(resolvedName, forKey: "userName")
+                        UserDefaults.standard.set(resolvedInitial, forKey: "profileInitial")
                         UserDefaults.standard.synchronize()
                     }
                 } else {
