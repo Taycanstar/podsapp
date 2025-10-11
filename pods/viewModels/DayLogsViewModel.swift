@@ -456,6 +456,19 @@ func loadLogs(for date: Date, force: Bool = false) {
     logs = []
     scheduledPreviews = []
 
+    let overridePreviews = localScheduledOverrides.values.filter { preview in
+      Calendar.current.isDate(preview.normalizedTargetDate, inSameDayAs: date)
+    }
+
+    if overridePreviews.isEmpty == false {
+      scheduledPreviews = overridePreviews.sorted { lhs, rhs in
+        if lhs.normalizedTargetDate == rhs.normalizedTargetDate {
+          return (lhs.targetTime ?? "") < (rhs.targetTime ?? "")
+        }
+        return lhs.normalizedTargetDate < rhs.normalizedTargetDate
+      }
+    }
+
     // Clear pending cache for the date we're leaving to prevent stale data
     if let currentKey = currentKey {
       pendingByDate.removeValue(forKey: currentKey)
@@ -960,6 +973,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       scheduledPlaceholderIds.removeAll()
       scheduledResolvedLogIds.removeAll()
       hiddenScheduledIds.removeAll()
+      localScheduledOverrides.removeAll()
       scheduledPreviews = []
       print("[DayLogsVM] Cleared pending cache")
   }
@@ -987,10 +1001,10 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       }
 
       for key in keysToRemove {
-          pendingByDate.removeValue(forKey: key)
-          print("[DayLogsVM] Removed all stale pending logs for \(key)")
-      }
+      pendingByDate.removeValue(forKey: key)
+      print("[DayLogsVM] Removed all stale pending logs for \(key)")
   }
+}
   
   // MARK: - Activity Log Helpers
   

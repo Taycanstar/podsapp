@@ -1429,15 +1429,12 @@ private extension DashboardView {
                 }
 
                 Button {
-                    if !isToday {
-                        vm.selectedDate.addDays(+1)
-                    }
+                    vm.selectedDate.addDays(+1)
                 } label: {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(isToday ? .gray : .primary)
+                        .foregroundColor(.primary)
                 }
-                .disabled(isToday)
             }
         }
 
