@@ -563,8 +563,10 @@ private var remainingCal: Double { vm.remainingCalories }
                 }
             }
             .onChange(of: vm.selectedDate) { newDate in
-                vm.loadLogs(for: newDate)   // fetch fresh ones
-                
+                // Force refresh to ensure correct data for the selected date
+                // This prevents stale cache from showing wrong date's logs
+                vm.loadLogs(for: newDate, force: true)
+
                 // Update health data for the selected date
                 healthViewModel.reloadHealthData(for: newDate)
             }
@@ -859,6 +861,8 @@ private var remainingCal: Double { vm.remainingCalories }
                 scheduleSheetLog = nil
                 switch result {
                 case .success(let response):
+                    vm.upsertScheduledPreview(from: response, sourceLog: log)
+
                     let mealName = mealName(for: log)
                     NotificationManager.shared.scheduleScheduledMealNotification(
                         id: response.id,
@@ -1945,12 +1949,12 @@ struct LogRow: View {
                             .font(.system(size: 22, weight: .semibold, design: .rounded))
                             .foregroundColor(.primary)
                             .onAppear {
-                                print("🎯 DashboardView LogRow - Log ID: \(log.id), displayCalories: \(log.displayCalories), calories: \(log.calories)")
+                            
                                 if let food = log.food {
-                                    print("   Food calories: \(food.calories), servings: \(food.numberOfServings), calculated: \(food.calories * food.numberOfServings)")
+                                  
                                 }
                                 if let meal = log.meal {
-                                    print("   Meal calories: \(meal.calories), servings: \(meal.servings), calculated: \(meal.calories * meal.servings)")
+                             
                                 }
                             }
                         Text("cal")

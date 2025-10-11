@@ -5,7 +5,7 @@ struct RepositoryTTL {
     static let profile: TimeInterval = 5 * 60
     static let subscription: TimeInterval = 5 * 60
     static let foodFeed: TimeInterval = 2 * 60
-    static let dayLogs: TimeInterval = 60
+    static let dayLogs: TimeInterval = 15  // Reduced from 60s to 15s for better date change responsiveness
     static let health: TimeInterval = 5 * 60
     static let combinedLogs: TimeInterval = 2 * 60
     static let meals: TimeInterval = 2 * 60

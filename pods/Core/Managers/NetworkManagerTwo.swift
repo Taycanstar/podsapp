@@ -2546,14 +2546,14 @@ let baseUrl = "http://172.20.10.4:8000"
             
             // Debug: Parse JSON manually first
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                print("🔍 FRONTEND DEBUG - Parsed JSON keys: \(json.keys)")
+             
                 if let savedMealsArray = json["saved_meals"] as? [[String: Any]] {
-                    print("🔍 FRONTEND DEBUG - saved_meals array count: \(savedMealsArray.count)")
+
                 } else {
-                    print("🔍 FRONTEND DEBUG - saved_meals is not an array or missing")
+ 
                 }
                 if let hasMore = json["has_more"] {
-                    print("🔍 FRONTEND DEBUG - has_more type: \(type(of: hasMore)), value: \(hasMore)")
+
                 }
             }
             

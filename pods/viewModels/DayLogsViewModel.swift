@@ -31,6 +31,8 @@ final class DayLogsViewModel: ObservableObject {
   private var activeScheduledIds: Set<Int> = []
   private var scheduledPlaceholderIds: [Int: String] = [:]
   private var scheduledResolvedLogIds: [Int: String] = [:]
+  private var hiddenScheduledIds: Set<Int> = []
+  private var localScheduledOverrides: [Int: ScheduledLogPreview] = [:]
 
   // Daily totals
   @Published var totalCalories: Double = 0
@@ -206,7 +208,12 @@ final class DayLogsViewModel: ObservableObject {
       throw NetworkManagerTwo.NetworkError.serverError(message: "Unable to update scheduled log")
     }
 
+    #if DEBUG
+    print("[DayLogsVM] processScheduledLog response – id:\(preview.id) action:\(response.action) scheduleType:\(response.scheduleType) isActive:\(response.isActive) nextDate:\(String(describing: response.nextTargetDate))")
+    #endif
+
     scheduledPreviews.removeAll { $0.id == preview.id }
+    localScheduledOverrides.removeValue(forKey: preview.id)
 
     if action == .log {
       if let placeholderIdentifier {
@@ -216,6 +223,24 @@ final class DayLogsViewModel: ObservableObject {
       if let logType = response.logType,
          let loggedId = response.loggedLogId {
         scheduledResolvedLogIds[preview.id] = combinedIdentifier(for: logType, logId: loggedId)
+      }
+
+      if response.isActive {
+        let updatedPreview = ScheduledLogPreview(
+          id: preview.id,
+          scheduleType: response.scheduleType,
+          targetDate: response.nextTargetDate ?? preview.targetDate,
+          targetTime: response.nextTargetTime ?? preview.targetTime,
+          mealType: preview.mealType,
+          sourceType: preview.sourceType,
+          logId: preview.logId,
+          summary: preview.summary
+        )
+
+        localScheduledOverrides[updatedPreview.id] = updatedPreview
+        scheduledPreviews.append(updatedPreview)
+        scheduledPreviews.sort { $0.normalizedTargetDate < $1.normalizedTargetDate }
+        activeScheduledIds.insert(updatedPreview.id)
       }
     } else {
       if let placeholderIdentifier {
@@ -430,17 +455,21 @@ func loadLogs(for date: Date, force: Bool = false) {
   if currentKey != newKey {
     logs = []
     scheduledPreviews = []
+
+    // Clear pending cache for the date we're leaving to prevent stale data
+    if let currentKey = currentKey {
+      pendingByDate.removeValue(forKey: currentKey)
+      print("[DayLogsVM] Cleared pending cache for date: \(currentKey)")
+    }
   }
 
   selectedDate = date
 
-  let key = newKey
-  if !force,
-     let lastLoad = lastLoadTimestamps[key], Date().timeIntervalSince(lastLoad) < logsRefreshInterval,
-     !logs.isEmpty {
-    return
-  }
+  // Clean up stale pending logs (older than 5 minutes)
+  cleanupStalePendingLogs()
 
+  // Always load fresh data when date changes to ensure correctness
+  // TTL check removed to prevent race condition where selectedDate updates but logs don't
   isLoading = true
   error = nil
 
@@ -475,12 +504,41 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
     return date1 > date2
   }
 
-  scheduledPreviews = snapshot.scheduled.sorted { lhs, rhs in
+  let sortedScheduled = snapshot.scheduled.sorted { lhs, rhs in
     if lhs.targetDate == rhs.targetDate {
       return (lhs.targetTime ?? "") < (rhs.targetTime ?? "")
     }
     return lhs.targetDate < rhs.targetDate
   }
+
+  var serverIds = Set(sortedScheduled.map { $0.id })
+  hiddenScheduledIds = hiddenScheduledIds.intersection(serverIds)
+
+  // Drop local overrides that the server now owns
+  for id in serverIds {
+    localScheduledOverrides.removeValue(forKey: id)
+  }
+
+  var combinedScheduled: [ScheduledLogPreview] = []
+  combinedScheduled.reserveCapacity(sortedScheduled.count + localScheduledOverrides.count)
+
+  for preview in sortedScheduled where !hiddenScheduledIds.contains(preview.id) {
+    combinedScheduled.append(preview)
+  }
+
+  for override in localScheduledOverrides.values where !hiddenScheduledIds.contains(override.id) {
+    combinedScheduled.append(override)
+    serverIds.insert(override.id)
+  }
+
+  combinedScheduled.sort { lhs, rhs in
+    if lhs.normalizedTargetDate == rhs.normalizedTargetDate {
+      return (lhs.targetTime ?? "") < (rhs.targetTime ?? "")
+    }
+    return lhs.normalizedTargetDate < rhs.normalizedTargetDate
+  }
+
+  scheduledPreviews = combinedScheduled
 
   #if DEBUG
   let debugPreviews = scheduledPreviews.map {
@@ -894,15 +952,44 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
     }
 
   // MARK: - Cache Management
-  
+
   /// Clear the pending logs cache to prevent showing stale data
   private func clearPendingCache() {
       pendingByDate.removeAll()
       activeScheduledIds.removeAll()
       scheduledPlaceholderIds.removeAll()
       scheduledResolvedLogIds.removeAll()
+      hiddenScheduledIds.removeAll()
       scheduledPreviews = []
       print("[DayLogsVM] Cleared pending cache")
+  }
+
+  /// Clean up stale pending logs older than 5 minutes to prevent accumulation
+  private func cleanupStalePendingLogs() {
+      let staleThreshold: TimeInterval = 5 * 60 // 5 minutes
+      let now = Date()
+
+      var keysToRemove: [Date] = []
+
+      for (dateKey, logs) in pendingByDate {
+          // Filter out logs older than 5 minutes
+          let freshLogs = logs.filter { log in
+              guard let scheduledAt = log.scheduledAt else { return false }
+              return now.timeIntervalSince(scheduledAt) < staleThreshold
+          }
+
+          if freshLogs.isEmpty {
+              keysToRemove.append(dateKey)
+          } else if freshLogs.count != logs.count {
+              pendingByDate[dateKey] = freshLogs
+              print("[DayLogsVM] Cleaned up \(logs.count - freshLogs.count) stale pending logs for \(dateKey)")
+          }
+      }
+
+      for key in keysToRemove {
+          pendingByDate.removeValue(forKey: key)
+          print("[DayLogsVM] Removed all stale pending logs for \(key)")
+      }
   }
   
   // MARK: - Activity Log Helpers
@@ -955,10 +1042,54 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
     if let index = scheduledPreviews.firstIndex(where: { $0.id == id }) {
       scheduledPreviews.remove(at: index)
     }
+    activeScheduledIds.remove(id)
+    hiddenScheduledIds.insert(id)
+    localScheduledOverrides.removeValue(forKey: id)
+  }
+
+  func upsertScheduledPreview(from response: ScheduleMealResponse, sourceLog: CombinedLog) {
+    let mealType = response.mealType ?? sourceLog.mealType ?? sourceLog.mealTime
+
+    let summary = ScheduledLogSummary(
+      title: summaryTitle(for: sourceLog),
+      calories: summaryCalories(for: sourceLog),
+      servings: summaryServings(for: sourceLog),
+      mealType: mealType,
+      image: summaryImage(for: sourceLog),
+      protein: summaryProtein(for: sourceLog),
+      carbs: summaryCarbs(for: sourceLog),
+      fat: summaryFat(for: sourceLog)
+    )
+
+    let preview = ScheduledLogPreview(
+      id: response.id,
+      scheduleType: response.scheduleType,
+      targetDate: response.targetDate,
+      targetTime: response.targetTime,
+      mealType: mealType,
+      sourceType: response.sourceType,
+      logId: response.logId,
+      summary: summary
+    )
+
+    localScheduledOverrides[preview.id] = preview
+    scheduledPreviews.removeAll { $0.id == preview.id }
+    scheduledPreviews.append(preview)
+    scheduledPreviews.sort { lhs, rhs in
+      if lhs.normalizedTargetDate == rhs.normalizedTargetDate {
+        return (lhs.targetTime ?? "") < (rhs.targetTime ?? "")
+      }
+      return lhs.normalizedTargetDate < rhs.normalizedTargetDate
+    }
+
+    activeScheduledIds.insert(preview.id)
+    hiddenScheduledIds.remove(preview.id)
   }
 
   func restoreScheduledPreview(_ preview: ScheduledLogPreview) {
     guard scheduledPreviews.contains(where: { $0.id == preview.id }) == false else { return }
+    hiddenScheduledIds.remove(preview.id)
+    localScheduledOverrides.removeValue(forKey: preview.id)
     scheduledPreviews.append(preview)
     scheduledPreviews.sort { lhs, rhs in
       if lhs.targetDate == rhs.targetDate {
@@ -966,6 +1097,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       }
       return lhs.targetDate < rhs.targetDate
     }
+    activeScheduledIds.insert(preview.id)
   }
 
   @discardableResult
@@ -1162,6 +1294,96 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       return "activity_\(logId)"
     default:
       return "\(logType.lowercased())_\(logId)"
+    }
+  }
+
+  private func summaryTitle(for log: CombinedLog) -> String {
+    switch log.type {
+    case .food:
+      return log.food?.displayName ?? log.message
+    case .meal:
+      return log.meal?.title ?? log.message
+    case .recipe:
+      return log.recipe?.title ?? log.message
+    case .activity:
+      return log.message
+    }
+  }
+
+  private func summaryCalories(for log: CombinedLog) -> Double? {
+    switch log.type {
+    case .food, .meal, .recipe:
+      return log.displayCalories
+    case .activity:
+      return nil
+    }
+  }
+
+  private func summaryServings(for log: CombinedLog) -> Double? {
+    switch log.type {
+    case .food:
+      return log.food?.numberOfServings
+    case .meal:
+      return log.meal?.servings
+    case .recipe:
+      if let servings = log.recipe?.servings {
+        return Double(servings)
+      }
+      return nil
+    case .activity:
+      return nil
+    }
+  }
+
+  private func summaryProtein(for log: CombinedLog) -> Double? {
+    switch log.type {
+    case .food:
+      return log.food?.protein
+    case .meal:
+      return log.meal?.protein
+    case .recipe:
+      return log.recipe?.protein
+    case .activity:
+      return nil
+    }
+  }
+
+  private func summaryCarbs(for log: CombinedLog) -> Double? {
+    switch log.type {
+    case .food:
+      return log.food?.carbs
+    case .meal:
+      return log.meal?.carbs
+    case .recipe:
+      return log.recipe?.carbs
+    case .activity:
+      return nil
+    }
+  }
+
+  private func summaryFat(for log: CombinedLog) -> Double? {
+    switch log.type {
+    case .food:
+      return log.food?.fat
+    case .meal:
+      return log.meal?.fat
+    case .recipe:
+      return log.recipe?.fat
+    case .activity:
+      return nil
+    }
+  }
+
+  private func summaryImage(for log: CombinedLog) -> String? {
+    switch log.type {
+    case .food:
+      return nil
+    case .meal:
+      return log.meal?.image
+    case .recipe:
+      return log.recipe?.image
+    case .activity:
+      return nil
     }
   }
 }

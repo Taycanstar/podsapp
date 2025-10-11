@@ -24,8 +24,7 @@ struct ModernFoodLoadingCard: View {
     private let shimmerColorLight = Color.black.opacity(0.05)
     
     var body: some View {
-        // DEBUG: Print current state and progress
-        let _ = print("🔍 DEBUG ModernFoodLoadingCard - State: \(state), Progress: \(state.progress)")
+
         
         // Safe environment access inside view body
         let shimmerColor = colorScheme == .dark ? shimmerColorDark : shimmerColorLight
