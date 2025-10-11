@@ -66,9 +66,10 @@ struct ScheduleMealSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
+                        let normalizedDate = Calendar.current.startOfDay(for: targetDate)
                         let selection = ScheduleMealSelection(
                             scheduleType: scheduleType,
-                            targetDate: targetDate,
+                            targetDate: normalizedDate,
                             mealType: mealType
                         )
                         onComplete(selection)
@@ -87,21 +88,20 @@ struct ScheduleMealSheet: View {
     private var schedulingCard: some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
-                Text("Date and Time")
+                Text("Date")
                     .font(.body)
                     .foregroundColor(.primary)
 
                 Spacer()
 
-                if scheduleType == .once {
-                    DatePicker("", selection: $targetDate, displayedComponents: .date)
-                        .labelsHidden()
-                        .datePickerStyle(.compact)
-                }
-
-                DatePicker("", selection: $targetDate, displayedComponents: .hourAndMinute)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
+                DatePicker(
+                    "",
+                    selection: $targetDate,
+                    in: Date()...,
+                    displayedComponents: .date
+                )
+                .labelsHidden()
+                .datePickerStyle(.compact)
             }
             .padding(.vertical, 2)
 

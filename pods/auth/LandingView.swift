@@ -41,7 +41,7 @@ struct LandingView: View {
                             onRequest: configureAppleSignIn,
                             onCompletion: handleAppleSignIn
                         )
-                        .signInWithAppleButtonStyle(.white)
+                        .signInWithAppleButtonStyle(.black)
                         .frame(height: 56)
                         .frame(maxWidth: .infinity)
                         .cornerRadius(36)

@@ -102,6 +102,28 @@ let baseUrl = "http://172.20.10.4:8000"
         let workouts: [WorkoutResponse.Workout]
     }
 
+    struct ProcessScheduledMealResponse: Codable {
+        let status: String
+        let action: String
+        let scheduleType: String
+        let nextTargetDate: Date?
+        let nextTargetTime: String?
+        let isActive: Bool
+        let logType: String?
+        let loggedLogId: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case status
+            case action
+            case scheduleType = "schedule_type"
+            case nextTargetDate = "next_target_date"
+            case nextTargetTime = "next_target_time"
+            case isActive = "is_active"
+            case logType = "log_type"
+            case loggedLogId = "logged_log_id"
+        }
+    }
+
     struct WorkoutResponse: Codable {
         struct Workout: Codable {
             let id: Int
@@ -4007,6 +4029,101 @@ let baseUrl = "http://172.20.10.4:8000"
             print("❌ Failed to encode get flexibility preferences request: \(error)")
             completion(.failure(error))
         }
+    }
+
+    func processScheduledMealLog(userEmail: String,
+                                 scheduledId: Int,
+                                 action: String,
+                                 targetDate: Date,
+                                 timezoneOffset: Int,
+                                 completion: @escaping (Result<ProcessScheduledMealResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/scheduled-meal-log-action/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.timeZone = TimeZone.current
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        let payload: [String: Any] = [
+            "user_email": userEmail,
+            "scheduled_id": scheduledId,
+            "action": action,
+            "target_date": dateFormatter.string(from: targetDate),
+            "timezone_offset": timezoneOffset,
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  let data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+
+            guard (200..<300).contains(httpResponse.statusCode) else {
+                if let errorMessage = String(data: data, encoding: .utf8) {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(message: errorMessage)))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
+                    }
+                }
+                return
+            }
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .custom { decoder -> Date in
+                let container = try decoder.singleValueContainer()
+                let value = try container.decode(String.self)
+                if let date = self.iso8601FractionalFormatter.date(from: value) ?? self.iso8601BasicFormatter.date(from: value) {
+                    return date
+                }
+                let formatter = DateFormatter()
+                formatter.calendar = Calendar(identifier: .gregorian)
+                formatter.timeZone = TimeZone.current
+                formatter.dateFormat = "yyyy-MM-dd"
+                if let date = formatter.date(from: value) {
+                    return date
+                }
+                throw DecodingError.dataCorruptedError(in: container,
+                                                       debugDescription: "Invalid date string: \(value)")
+            }
+
+            do {
+                let responsePayload = try decoder.decode(ProcessScheduledMealResponse.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(responsePayload))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
     }
 
 }

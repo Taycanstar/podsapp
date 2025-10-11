@@ -8442,15 +8442,17 @@ func scheduleMealLog(logId: Int,
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withFullDate]
-    
+    let dateFormatter = DateFormatter()
+    dateFormatter.calendar = Calendar(identifier: .gregorian)
+    dateFormatter.timeZone = TimeZone.current
+    dateFormatter.dateFormat = "yyyy-MM-dd"
+
     var payload: [String: Any] = [
         "user_email": userEmail,
         "log_id": logId,
         "log_type": logType,
         "schedule_type": scheduleType,
-        "target_date": formatter.string(from: targetDate)
+        "target_date": dateFormatter.string(from: targetDate)
     ]
     if let mealType = mealType {
         payload["meal_type"] = mealType

@@ -7,6 +7,7 @@ struct DayLogsSnapshot: Codable {
     var water: [WaterLogResponse]
     var userData: UserData?
     var goals: NutritionGoals?
+    var scheduled: [ScheduledLogPreview] = []
 }
 
 @MainActor
@@ -73,7 +74,8 @@ final class DayLogsRepository: ObservableObject {
                             combined: response.logs,
                             water: response.waterLogs,
                             userData: response.userData,
-                            goals: response.goals
+                            goals: response.goals,
+                            scheduled: response.scheduledLogs
                         )
                         self.snapshots[key] = snapshot
                         self.lastFetchTimestamps[key] = Date()

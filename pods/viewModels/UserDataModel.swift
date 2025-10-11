@@ -27,6 +27,7 @@ struct LogsByDateResponse: Codable {
     var adjacentDaysIncluded: Bool
     var goals: NutritionGoals?
     var userData: UserData?
+    var scheduledLogs: [ScheduledLogPreview] = []
     
     enum CodingKeys: String, CodingKey {
         case logs
@@ -35,6 +36,88 @@ struct LogsByDateResponse: Codable {
         case adjacentDaysIncluded = "adjacent_days_included"
         case goals
         case userData = "user_data"
+        case scheduledLogs = "scheduled_logs"
+    }
+}
+
+struct ScheduledLogSummary: Codable {
+    let title: String
+    let calories: Double?
+    let servings: Double?
+    let mealType: String?
+    let image: String?
+    let protein: Double?
+    let carbs: Double?
+    let fat: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case title
+        case calories
+        case servings
+        case mealType = "meal_type"
+        case image
+        case protein
+        case carbs
+        case fat
+    }
+}
+
+struct ScheduledLogPreview: Codable, Identifiable {
+    let id: Int
+    let scheduleType: String
+    let targetDate: Date
+    let targetTime: String?
+    let mealType: String?
+    let sourceType: String
+    let logId: Int
+    let summary: ScheduledLogSummary
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case scheduleType = "schedule_type"
+        case targetDate = "target_date"
+        case targetTime = "target_time"
+        case mealType = "meal_type"
+        case sourceType = "source_type"
+        case logId = "log_id"
+        case summary
+    }
+
+    var displayMealType: String {
+        mealType ?? summary.mealType ?? "Meal"
+    }
+
+    var displayTime: String? {
+        guard let targetTime else { return nil }
+        var components = targetTime.split(separator: ":").map { String($0) }
+        guard components.count >= 2,
+              let hour = Int(components[0]),
+              let minute = Int(components[1]) else { return nil }
+
+        var calendar = Calendar.current
+        calendar.locale = Locale.current
+        var dateComponents = calendar.dateComponents([.year, .month, .day], from: Date())
+        dateComponents.hour = hour
+        dateComponents.minute = minute
+
+        if let date = calendar.date(from: dateComponents) {
+            let formatter = DateFormatter()
+            formatter.timeStyle = .short
+            return formatter.string(from: date)
+        }
+        return nil
+    }
+
+    /// Returns the scheduled date normalized to the user's current time zone (start of day).
+    var normalizedTargetDate: Date {
+        let utcTimeZone = TimeZone(secondsFromGMT: 0) ?? TimeZone(abbreviation: "UTC")!
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = utcTimeZone
+        let components = utcCalendar.dateComponents([.year, .month, .day], from: targetDate)
+
+        var localCalendar = Calendar.current
+        localCalendar.timeZone = TimeZone.current
+        return localCalendar.date(from: components) ?? localCalendar.startOfDay(for: targetDate)
     }
 }
 

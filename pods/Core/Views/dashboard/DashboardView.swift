@@ -10,6 +10,7 @@ struct DashboardView: View {
     @EnvironmentObject var vm: DayLogsViewModel
     @EnvironmentObject private var mealReminderService: MealReminderService
     @EnvironmentObject private var proFeatureGate: ProFeatureGate
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @AppStorage(WaterUnit.storageKey) private var storedWaterUnitRawValue: String = WaterUnit.defaultUnit.rawValue
     @ObservedObject private var workoutManager = WorkoutManager.shared
     @ObservedObject private var userProfileService = UserProfileService.shared
@@ -23,7 +24,6 @@ struct DashboardView: View {
     @State private var showWorkoutContainer = false
     @State private var workoutSelectedTab: Int = 0
     @State private var isTodayWorkoutDismissed = false
-    
     // ─── Streak state ─────────────────────────────────────────────────────
     @ObservedObject private var streakManager = StreakManager.shared
 
@@ -121,6 +121,13 @@ private var remainingCal: Double { vm.remainingCalories }
         }
     }
 
+    private var scheduledPreviewsForSelectedDate: [ScheduledLogPreview] {
+        let calendar = Calendar.current
+        return vm.scheduledPreviews
+            .filter { calendar.isDate($0.normalizedTargetDate, inSameDayAs: vm.selectedDate) }
+            .sorted { $0.normalizedTargetDate < $1.normalizedTargetDate }
+    }
+
 
     private var navTitle: String {
         if isToday      { return "Today" }
@@ -185,7 +192,7 @@ private var remainingCal: Double { vm.remainingCalories }
     // ────────────────────────────────────────────────────────────────────────
 
     var body: some View {
-        let _ = print("🔍 DEBUG Dashboard BODY rendered at \(Date()) - foodScanningState: \(foodMgr.foodScanningState)")
+
         
         NavigationView {
             ZStack {
@@ -210,14 +217,11 @@ private var remainingCal: Double { vm.remainingCalories }
                                 .listRowSeparator(.hidden)
                         }
 
-                        // DEBUG: Check which loading states are active
-                        let _ = print("🔍 DEBUG Dashboard - foodScanningState: \(foodMgr.foodScanningState), isActive: \(foodMgr.foodScanningState.isActive)")
-                        let _ = print("🔍 DEBUG Dashboard - isGeneratingMacros: \(foodMgr.isGeneratingMacros), isLoading: \(foodMgr.isLoading)")
-                        let _ = print("🔍 DEBUG Dashboard - FoodManager instance: \(ObjectIdentifier(foodMgr))")
+
                         
                         // UNIFIED: Single modern loader with dynamic progress (legacy states now synchronized)
                         if foodMgr.foodScanningState.isActive {
-                            let _ = print("🔍 DEBUG Dashboard - Using MODERN STATE with progress: \(foodMgr.foodScanningState.progress)")
+
                             ModernFoodLoadingCard(state: foodMgr.foodScanningState)
                                 .padding(.horizontal)
                                 .padding(.top, 16)
@@ -226,7 +230,7 @@ private var remainingCal: Double { vm.remainingCalories }
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
                         } else {
-                            let _ = print("🔍 DEBUG Dashboard - Modern state NOT active, no loader shown")
+
                         }
                     }
                     
@@ -285,6 +289,24 @@ private var remainingCal: Double { vm.remainingCalories }
                             .listRowInsets(EdgeInsets())
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
+                        }
+
+                        if !scheduledPreviewsForSelectedDate.isEmpty {
+                            Section {
+                                ForEach(scheduledPreviewsForSelectedDate) { preview in
+                                    #if DEBUG
+                                    print("[Dashboard] Rendering scheduled preview id:\(preview.id) normalized:\(preview.normalizedTargetDate) selected:\(vm.selectedDate)")
+                                    #endif
+                                    ScheduledLogPreviewCard(
+                                        preview: preview,
+                                        onAccept: { handleScheduled(preview: preview, action: .log) },
+                                        onSkip: { handleScheduled(preview: preview, action: .skip) }
+                                    )
+                                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                }
+                            }
                         }
                         
                         ForEach(sortedLogs) { log in
@@ -443,6 +465,16 @@ private var remainingCal: Double { vm.remainingCalories }
                     scheduleLog(selection: selection, for: log)
                 }
             }
+            .sheet(isPresented: Binding(
+                get: { proFeatureGate.showUpgradeSheet },
+                set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
+            )) {
+                HumuliProUpgradeSheet(
+                    feature: proFeatureGate.blockedFeature,
+                    usageSummary: proFeatureGate.usageSummary,
+                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
+                )
+            }
             .sheet(isPresented: $showDatePicker) {
                 DatePickerSheet(date: $vm.selectedDate,
                                 isPresented: $showDatePicker)
@@ -537,7 +569,7 @@ private var remainingCal: Double { vm.remainingCalories }
                 healthViewModel.reloadHealthData(for: newDate)
             }
             .onChange(of: foodMgr.foodScanningState) { oldState, newState in
-                print("🔍 DEBUG Dashboard detected foodScanningState change: \(oldState) (\(oldState.progress)) → \(newState) (\(newState.progress))")
+
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("WaterLoggedNotification"))) { _ in
                 print("💧 DashboardView received WaterLoggedNotification - refreshing logs for \(vm.selectedDate)")
@@ -788,9 +820,11 @@ private var remainingCal: Double { vm.remainingCalories }
             return
         }
 
-        proFeatureGate.requirePro(for: .scheduledLogging, userEmail: email) {
-            Task { await proFeatureGate.refreshUsageSummary(for: email) }
-            scheduleSheetLog = log
+        Task { @MainActor in
+            await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email)
+            proFeatureGate.requirePro(for: .scheduledLogging, userEmail: email) {
+                scheduleSheetLog = log
+            }
         }
     }
 
@@ -824,7 +858,21 @@ private var remainingCal: Double { vm.remainingCalories }
             DispatchQueue.main.async {
                 scheduleSheetLog = nil
                 switch result {
-                case .success:
+                case .success(let response):
+                    let mealName = mealName(for: log)
+                    NotificationManager.shared.scheduleScheduledMealNotification(
+                        id: response.id,
+                        scheduleType: response.scheduleType,
+                        targetDate: response.targetDate,
+                        targetTimeString: response.targetTime,
+                        mealName: mealName
+                    )
+
+                    let calendar = Calendar.current
+                    if calendar.isDate(response.targetDate, inSameDayAs: vm.selectedDate) {
+                        vm.loadLogs(for: vm.selectedDate, force: true)
+                    }
+
                     let message = log.type == .meal ?
                         "We'll remind you about this meal on your selected schedule." :
                         "We'll remind you to log this meal on your selected schedule."
@@ -855,6 +903,45 @@ private var remainingCal: Double { vm.remainingCalories }
             return mealTime
         }
         return "Lunch"
+    }
+
+    private func mealName(for log: CombinedLog) -> String {
+        switch log.type {
+        case .meal:
+            return log.meal?.title ?? "Meal"
+        case .food:
+            return log.food?.displayName ?? "Meal"
+        default:
+            return "Meal"
+        }
+    }
+
+    private func handleScheduled(preview: ScheduledLogPreview, action: DayLogsViewModel.ScheduledLogAction) {
+        vm.removeScheduledPreview(id: preview.id)
+
+        var placeholderIdentifier: String?
+
+        if action == .log {
+            placeholderIdentifier = vm.addOptimisticScheduledLog(from: preview)
+        }
+
+        Task {
+            do {
+                try await vm.processScheduledLog(
+                    preview,
+                    action: action,
+                    placeholderIdentifier: placeholderIdentifier
+                )
+            } catch {
+                await MainActor.run {
+                    if let placeholder = placeholderIdentifier {
+                        vm.removePlaceholderLog(withIdentifier: placeholder)
+                    }
+                    vm.restoreScheduledPreview(preview)
+                    vm.error = error
+                }
+            }
+        }
     }
 }
 
@@ -2495,6 +2582,144 @@ private struct DashboardLoadingView: View {
     }
 
     // Replaced by CALayer-driven ShimmerView to ensure reliability inside Lists
+}
+
+private struct ScheduledLogPreviewCard: View {
+    let preview: ScheduledLogPreview
+    let isProcessing: Bool
+    let onAccept: () -> Void
+    let onSkip: () -> Void
+
+    init(
+        preview: ScheduledLogPreview,
+        isProcessing: Bool = false,
+        onAccept: @escaping () -> Void,
+        onSkip: @escaping () -> Void
+    ) {
+        self.preview = preview
+        self.isProcessing = isProcessing
+        self.onAccept = onAccept
+        self.onSkip = onSkip
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: mealTimeSymbol)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(preview.summary.title)
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundColor(.primary)
+                }
+
+                Spacer()
+
+                if isProcessing {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.accentColor)
+                } else {
+                    HStack(spacing: 12) {
+                        Button(action: onSkip) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(Color.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Skip")
+
+                        Button(action: onAccept) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Log")
+                    }
+                }
+            }
+
+            HStack(alignment: .bottom) {
+                HStack(spacing: 6) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.secondary)
+
+                    HStack(alignment: .bottom, spacing: 1) {
+                        Text("\(caloriesText)")
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+                        Text("cal")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                HStack(spacing: 24) {
+                    MacroColumn(title: "Protein", valueText: macroText(preview.summary.protein))
+                    MacroColumn(title: "Carbs", valueText: macroText(preview.summary.carbs))
+                    MacroColumn(title: "Fat", valueText: macroText(preview.summary.fat))
+                }
+            }
+        }
+        .frame(minHeight: 80)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color("containerbg"))
+                .shadow(color: Color(.black).opacity(0.04), radius: 4, x: 0, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+    }
+
+    private var caloriesText: Int {
+        Int((preview.summary.calories ?? 0).rounded())
+    }
+
+    private var mealTimeSymbol: String {
+        switch preview.displayMealType.lowercased() {
+        case "breakfast":
+            return "sunrise.fill"
+        case "lunch":
+            return "fork.knife.circle.fill"
+        case "dinner":
+            return "moon.stars.fill"
+        case "snack":
+            return "takeoutbag.and.cup.and.straw.fill"
+        default:
+            return "fork.knife"
+        }
+    }
+
+    private func macroText(_ value: Double?) -> String {
+        guard let value else { return "–" }
+        return "\(Int(value.rounded()))g"
+    }
+
+    private struct MacroColumn: View {
+        let title: String
+        let valueText: String
+
+        var body: some View {
+            VStack(spacing: 0) {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary)
+                Text(valueText)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
 }
 
 // MARK: - Workout Log Card (displayed after workout completion)

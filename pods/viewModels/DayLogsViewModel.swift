@@ -28,6 +28,9 @@ final class DayLogsViewModel: ObservableObject {
   private var lastEmail: String?
   private var lastLoadTimestamps: [Date: Date] = [:]
   private let logsRefreshInterval: TimeInterval = 60
+  private var activeScheduledIds: Set<Int> = []
+  private var scheduledPlaceholderIds: [Int: String] = [:]
+  private var scheduledResolvedLogIds: [Int: String] = [:]
 
   // Daily totals
   @Published var totalCalories: Double = 0
@@ -62,6 +65,7 @@ final class DayLogsViewModel: ObservableObject {
   
   // Water logs for the current day
   @Published var waterLogs: [WaterLogResponse] = []
+  @Published var scheduledPreviews: [ScheduledLogPreview] = []
   
   // Navigation properties
   @Published var navigateToEditHeight: Bool = false
@@ -73,6 +77,13 @@ final class DayLogsViewModel: ObservableObject {
   private(set) var email = ""
   private weak var healthViewModel: HealthKitViewModel?
   private var cancellables: Set<AnyCancellable> = []
+
+  enum ScheduledLogAction: String {
+    case log
+    case skip
+
+    var requestValue: String { rawValue }
+  }
 
   init(email: String = "", healthViewModel: HealthKitViewModel? = nil) {
     self.email = email
@@ -163,6 +174,76 @@ final class DayLogsViewModel: ObservableObject {
     }
     remainingCalories = max(0, calorieGoal - totalCalories)
 }
+
+  func processScheduledLog(
+    _ preview: ScheduledLogPreview,
+    action: ScheduledLogAction,
+    placeholderIdentifier: String? = nil
+  ) async throws {
+    guard !email.isEmpty else { return }
+
+    let timezoneOffset = TimeZone.current.secondsFromGMT() / 60
+    let requestDate = Calendar.current.startOfDay(for: preview.targetDate)
+
+    let response = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<NetworkManagerTwo.ProcessScheduledMealResponse, Error>) in
+      NetworkManagerTwo.shared.processScheduledMealLog(
+        userEmail: email,
+        scheduledId: preview.id,
+        action: action.requestValue,
+        targetDate: requestDate,
+        timezoneOffset: timezoneOffset
+      ) { result in
+        switch result {
+        case .success(let payload):
+          continuation.resume(returning: payload)
+        case .failure(let error):
+          continuation.resume(throwing: error)
+        }
+      }
+    }
+
+    guard response.status.lowercased() == "success" else {
+      throw NetworkManagerTwo.NetworkError.serverError(message: "Unable to update scheduled log")
+    }
+
+    scheduledPreviews.removeAll { $0.id == preview.id }
+
+    if action == .log {
+      if let placeholderIdentifier {
+        markPlaceholderSettled(identifier: placeholderIdentifier)
+      }
+
+      if let logType = response.logType,
+         let loggedId = response.loggedLogId {
+        scheduledResolvedLogIds[preview.id] = combinedIdentifier(for: logType, logId: loggedId)
+      }
+    } else {
+      if let placeholderIdentifier {
+        removePlaceholderLog(withIdentifier: placeholderIdentifier)
+      }
+      scheduledResolvedLogIds.removeValue(forKey: preview.id)
+      scheduledPlaceholderIds.removeValue(forKey: preview.id)
+    }
+
+    await repository.refresh(date: preview.targetDate, force: true)
+    if Calendar.current.isDate(preview.targetDate, inSameDayAs: selectedDate),
+       let snapshot = repository.snapshot(for: selectedDate) {
+      applySnapshot(snapshot)
+    }
+
+    if response.scheduleType.lowercased() == "once" || response.isActive == false {
+      NotificationManager.shared.cancelScheduledMealNotification(id: preview.id)
+    } else if response.scheduleType.lowercased() == "daily",
+              let nextDate = response.nextTargetDate {
+      NotificationManager.shared.scheduleScheduledMealNotification(
+        id: preview.id,
+        scheduleType: response.scheduleType,
+        targetDate: nextDate,
+        targetTimeString: response.nextTargetTime ?? preview.targetTime,
+        mealName: preview.summary.title
+      )
+    }
+  }
 
  func fetchNutritionGoals() {
     // First try to fetch the calorie goal (keeps existing logic)
@@ -348,6 +429,7 @@ func loadLogs(for date: Date, force: Bool = false) {
   // CRITICAL FIX: Clear logs immediately when changing dates to prevent showing stale data
   if currentKey != newKey {
     logs = []
+    scheduledPreviews = []
   }
 
   selectedDate = date
@@ -377,6 +459,7 @@ func loadLogs(for date: Date, force: Bool = false) {
 private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   let key = Calendar.current.startOfDay(for: snapshot.date)
   let serverLogs = snapshot.combined
+  reconcilePlaceholders(with: serverLogs)
   let pending = pendingByDate[key] ?? []
   let dedupedPending = pending.filter { item in
     !serverLogs.contains(where: { $0.id == item.id })
@@ -390,6 +473,37 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
     let date1 = log1.scheduledAt ?? Date.distantPast
     let date2 = log2.scheduledAt ?? Date.distantPast
     return date1 > date2
+  }
+
+  scheduledPreviews = snapshot.scheduled.sorted { lhs, rhs in
+    if lhs.targetDate == rhs.targetDate {
+      return (lhs.targetTime ?? "") < (rhs.targetTime ?? "")
+    }
+    return lhs.targetDate < rhs.targetDate
+  }
+
+  #if DEBUG
+  let debugPreviews = scheduledPreviews.map {
+    "[Scheduled] id:\($0.id) targetDate:\($0.targetDate) normalized:\($0.normalizedTargetDate)"
+  }.joined(separator: "\n")
+  print("[DayLogsVM] Applied scheduled previews for \(snapshot.date):\n\(debugPreviews)")
+  #endif
+
+  let newIds = Set(scheduledPreviews.map { $0.id })
+  let removedIds = activeScheduledIds.subtracting(newIds)
+  for identifier in removedIds {
+    NotificationManager.shared.cancelScheduledMealNotification(id: identifier)
+  }
+  activeScheduledIds = newIds
+
+  for preview in scheduledPreviews {
+    NotificationManager.shared.scheduleScheduledMealNotification(
+      id: preview.id,
+      scheduleType: preview.scheduleType,
+      targetDate: preview.targetDate,
+      targetTimeString: preview.targetTime,
+      mealName: preview.summary.title
+    )
   }
 
   lastLoadTimestamps[key] = Date()
@@ -784,6 +898,10 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   /// Clear the pending logs cache to prevent showing stale data
   private func clearPendingCache() {
       pendingByDate.removeAll()
+      activeScheduledIds.removeAll()
+      scheduledPlaceholderIds.removeAll()
+      scheduledResolvedLogIds.removeAll()
+      scheduledPreviews = []
       print("[DayLogsVM] Cleared pending cache")
   }
   
@@ -829,5 +947,221 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       let formatter = DateFormatter()
       formatter.dateFormat = "EEEE"
       return formatter.string(from: date)
+  }
+
+  // MARK: - Scheduled Log Helpers
+
+  func removeScheduledPreview(id: Int) {
+    if let index = scheduledPreviews.firstIndex(where: { $0.id == id }) {
+      scheduledPreviews.remove(at: index)
+    }
+  }
+
+  func restoreScheduledPreview(_ preview: ScheduledLogPreview) {
+    guard scheduledPreviews.contains(where: { $0.id == preview.id }) == false else { return }
+    scheduledPreviews.append(preview)
+    scheduledPreviews.sort { lhs, rhs in
+      if lhs.targetDate == rhs.targetDate {
+        return (lhs.targetTime ?? "") < (rhs.targetTime ?? "")
+      }
+      return lhs.targetDate < rhs.targetDate
+    }
+  }
+
+  @discardableResult
+  func addOptimisticScheduledLog(from preview: ScheduledLogPreview) -> String? {
+    let scheduledAt = resolvedScheduledDate(for: preview)
+    let logDate = formatDateForLog(scheduledAt)
+    let dayName = formatDayOfWeek(scheduledAt)
+    let mealType = preview.displayMealType
+    let calories = preview.summary.calories ?? 0
+    let servings = max(preview.summary.servings ?? 1, 1)
+    let message = "\(preview.summary.title) – \(mealType)"
+    let placeholderId = -preview.id
+
+    let combined: CombinedLog
+
+    if preview.sourceType.lowercased() == "food" {
+      let loggedFood = LoggedFoodItem(
+        foodLogId: placeholderId,
+        fdcId: preview.logId,
+        displayName: preview.summary.title,
+        calories: calories,
+        servingSizeText: servings == 1 ? "1 serving" : "\(servings) servings",
+        numberOfServings: servings,
+        brandText: nil,
+        protein: preview.summary.protein,
+        carbs: preview.summary.carbs,
+        fat: preview.summary.fat,
+        healthAnalysis: nil,
+        foodNutrients: nil
+      )
+
+      combined = CombinedLog(
+        type: .food,
+        status: "pending",
+        calories: calories,
+        message: message,
+        foodLogId: placeholderId,
+        food: loggedFood,
+        mealType: mealType,
+        mealLogId: nil,
+        meal: nil,
+        mealTime: mealType,
+        scheduledAt: scheduledAt,
+        recipeLogId: nil,
+        recipe: nil,
+        servingsConsumed: nil,
+        activityId: nil,
+        activity: nil,
+        logDate: logDate,
+        dayOfWeek: dayName,
+        isOptimistic: true
+      )
+    } else {
+      let mealSummary = MealSummary(
+        mealLogId: placeholderId,
+        mealId: preview.logId,
+        title: preview.summary.title,
+        description: nil,
+        image: preview.summary.image,
+        calories: calories,
+        servings: servings,
+        protein: preview.summary.protein,
+        carbs: preview.summary.carbs,
+        fat: preview.summary.fat,
+        scheduledAt: scheduledAt
+      )
+
+      combined = CombinedLog(
+        type: .meal,
+        status: "pending",
+        calories: calories,
+        message: message,
+        foodLogId: nil,
+        food: nil,
+        mealType: mealType,
+        mealLogId: placeholderId,
+        meal: mealSummary,
+        mealTime: mealType,
+        scheduledAt: scheduledAt,
+        recipeLogId: nil,
+        recipe: nil,
+        servingsConsumed: nil,
+        activityId: nil,
+        activity: nil,
+        logDate: logDate,
+        dayOfWeek: dayName,
+        isOptimistic: true
+      )
+    }
+
+    addPending(combined)
+    scheduledPlaceholderIds[preview.id] = combined.id
+    return combined.id
+  }
+
+  func removePlaceholderLog(withIdentifier identifier: String) {
+    var scheduledIdsToRemove: [Int] = []
+    for (scheduledId, placeholderId) in scheduledPlaceholderIds where placeholderId == identifier {
+      scheduledIdsToRemove.append(scheduledId)
+    }
+
+    for scheduledId in scheduledIdsToRemove {
+      scheduledPlaceholderIds.removeValue(forKey: scheduledId)
+      scheduledResolvedLogIds.removeValue(forKey: scheduledId)
+    }
+
+    var keysToClear: [Date] = []
+    for key in Array(pendingByDate.keys) {
+      var pending = pendingByDate[key] ?? []
+      let originalCount = pending.count
+      pending.removeAll { $0.id == identifier }
+      if pending.isEmpty && originalCount > 0 {
+        keysToClear.append(key)
+      } else if pending.count != originalCount {
+        pendingByDate[key] = pending
+      }
+    }
+
+    for key in keysToClear {
+      pendingByDate.removeValue(forKey: key)
+    }
+
+    if logs.contains(where: { $0.id == identifier }) {
+      logs.removeAll { $0.id == identifier }
+    }
+
+    triggerProfileDataRefresh()
+  }
+
+  private func markPlaceholderSettled(identifier: String) {
+    var updatedLogs = logs
+    if let index = updatedLogs.firstIndex(where: { $0.id == identifier }) {
+      updatedLogs[index].isOptimistic = false
+      logs = updatedLogs
+    }
+
+    for key in Array(pendingByDate.keys) {
+      var pending = pendingByDate[key] ?? []
+      if let index = pending.firstIndex(where: { $0.id == identifier }) {
+        pending[index].isOptimistic = false
+        pendingByDate[key] = pending
+      }
+    }
+    triggerProfileDataRefresh()
+  }
+
+  private func reconcilePlaceholders(with serverLogs: [CombinedLog]) {
+    guard scheduledPlaceholderIds.isEmpty == false else { return }
+
+    let serverIds = Set(serverLogs.map(\.id))
+    var placeholderIds: Set<String> = []
+    var scheduledIdsToClear: [Int] = []
+
+    for (scheduledId, placeholderId) in scheduledPlaceholderIds {
+      guard let resolvedId = scheduledResolvedLogIds[scheduledId] else { continue }
+      if serverIds.contains(resolvedId) {
+        placeholderIds.insert(placeholderId)
+        scheduledIdsToClear.append(scheduledId)
+      }
+    }
+
+    guard placeholderIds.isEmpty == false else { return }
+
+    for key in Array(pendingByDate.keys) {
+      var pending = pendingByDate[key] ?? []
+      let originalCount = pending.count
+      pending.removeAll { placeholderIds.contains($0.id) }
+      if pending.isEmpty && originalCount > 0 {
+        pendingByDate.removeValue(forKey: key)
+      } else if pending.count != originalCount {
+        pendingByDate[key] = pending
+      }
+    }
+
+    for scheduledId in scheduledIdsToClear {
+      scheduledPlaceholderIds.removeValue(forKey: scheduledId)
+      scheduledResolvedLogIds.removeValue(forKey: scheduledId)
+    }
+  }
+
+  private func resolvedScheduledDate(for preview: ScheduledLogPreview) -> Date {
+    preview.normalizedTargetDate
+  }
+
+  private func combinedIdentifier(for logType: String, logId: Int) -> String {
+    switch logType.lowercased() {
+    case "food":
+      return "food_\(logId)"
+    case "meal":
+      return "meal_\(logId)"
+    case "recipe":
+      return "recipe_\(logId)"
+    case "activity":
+      return "activity_\(logId)"
+    default:
+      return "\(logType.lowercased())_\(logId)"
+    }
   }
 }

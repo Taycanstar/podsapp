@@ -77,6 +77,7 @@ struct ScheduleMealResponse: Codable {
     let id: Int
     let scheduleType: String
     let targetDate: Date
+    let targetTime: String?
     let mealType: String?
     let sourceType: String
     let logId: Int
@@ -85,6 +86,7 @@ struct ScheduleMealResponse: Codable {
         case id
         case scheduleType = "schedule_type"
         case targetDate = "target_date"
+        case targetTime = "target_time"
         case mealType = "meal_type"
         case sourceType = "source_type"
         case logId = "log_id"

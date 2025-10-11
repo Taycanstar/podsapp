@@ -590,7 +590,21 @@ extension FoodLogDetails {
         ) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success:
+                case .success(let response):
+                    let mealName = log.food?.displayName ?? "Meal"
+                    NotificationManager.shared.scheduleScheduledMealNotification(
+                        id: response.id,
+                        scheduleType: response.scheduleType,
+                        targetDate: response.targetDate,
+                        targetTimeString: response.targetTime,
+                        mealName: mealName
+                    )
+
+                    let calendar = Calendar.current
+                    if calendar.isDate(response.targetDate, inSameDayAs: dayLogsVM.selectedDate) {
+                        dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
+                    }
+
                     self.scheduleAlert = .success("We'll remind you to log this meal on your selected schedule.")
                 case .failure(let error):
                     self.scheduleAlert = .failure(error.localizedDescription)

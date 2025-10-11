@@ -118,6 +118,7 @@ class NotificationManager: NSObject, ObservableObject {
     private let lunchIndexKey = "notification_lunch_copy_index"
     private let dinnerIndexKey = "notification_dinner_copy_index"
     private let activityIndexKey = "notification_activity_copy_index"
+    private let scheduledMealIdentifierPrefix = "scheduled_meal_"
     
     // MARK: - Initialization
     override init() {
@@ -326,6 +327,76 @@ class NotificationManager: NSObject, ObservableObject {
         }
     }
 
+    func scheduleScheduledMealNotification(
+        id: Int,
+        scheduleType: String,
+        targetDate: Date,
+        targetTimeString: String?,
+        mealName: String
+    ) {
+        let identifier = "\(scheduledMealIdentifierPrefix)\(id)"
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+
+        if authorizationStatus == .notDetermined {
+            Task { _ = await self.requestPermissions() }
+        }
+
+        guard authorizationStatus != .denied else {
+            print("📱 Skipping scheduled meal notification – not authorized")
+            return
+        }
+
+        setupNotificationCategories()
+
+        guard let timeComponents = timeComponents(from: targetTimeString) else {
+            print("📱 Skipping scheduled meal notification – invalid time components")
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Log \(mealName)"
+        content.body = "Tap to keep your streak going."
+        content.sound = .default
+        content.categoryIdentifier = "MEAL_REMINDER"
+
+        let calendar = Calendar.current
+        let isDaily = scheduleType.lowercased() == "daily"
+        let trigger: UNNotificationTrigger
+
+        if isDaily {
+            var components = DateComponents()
+            components.hour = timeComponents.hour
+            components.minute = timeComponents.minute
+            trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        } else {
+            var components = calendar.dateComponents([.year, .month, .day], from: targetDate)
+            components.hour = timeComponents.hour
+            components.minute = timeComponents.minute
+
+            if let fireDate = calendar.date(from: components), fireDate > Date() {
+                trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            } else {
+                print("📱 Skipping scheduled meal notification – fire date already passed")
+                return
+            }
+        }
+
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error {
+                print("❌ Failed to schedule meal notification: \(error)")
+            } else {
+                print("✅ Scheduled meal notification (\(scheduleType)) for \(mealName)")
+            }
+        }
+    }
+
+    func cancelScheduledMealNotification(id: Int) {
+        let identifier = "\(scheduledMealIdentifierPrefix)\(id)"
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [identifier])
+    }
+
     /// Schedule a one-off workout plan notification
     func scheduleWorkoutPlanNotification(after delay: TimeInterval) {
         let identifier = "workout_plan_notification"
@@ -413,6 +484,23 @@ class NotificationManager: NSObject, ObservableObject {
         )
         
         UNUserNotificationCenter.current().setNotificationCategories([mealReminderCategory])
+    }
+
+    private func timeComponents(from timeString: String?) -> (hour: Int, minute: Int)? {
+        if let timeString, timeString.isEmpty == false {
+            let parts = timeString.split(separator: ":")
+            if parts.count >= 2,
+               let hour = Int(parts[0]),
+               let minute = Int(parts[1]) {
+                return (hour, minute)
+            }
+        }
+
+        let calendar = Calendar.current
+        let defaultDate = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
+        let hour = calendar.component(.hour, from: defaultDate)
+        let minute = calendar.component(.minute, from: defaultDate)
+        return (hour, minute)
     }
 }
 
