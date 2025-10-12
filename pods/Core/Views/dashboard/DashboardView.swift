@@ -132,21 +132,28 @@ private var remainingCal: Double { vm.remainingCalories }
     private var scheduledPreviewsSection: some View {
         if !scheduledPreviewsForSelectedDate.isEmpty {
             Section {
-                ForEach(scheduledPreviewsForSelectedDate) { preview in
-                    let _ = print("[Dashboard] scheduled card", preview.id, preview.summary.title, preview.normalizedTargetDate, vm.selectedDate)
-                    #if DEBUG
-                    let _ = print("[Dashboard] Rendering scheduled preview id:\(preview.id) normalized:\(preview.normalizedTargetDate) selected:\(vm.selectedDate)")
-                    #endif
-                    ScheduledLogPreviewCard(
-                        preview: preview,
-                        onAccept: { handleScheduled(preview: preview, action: .log) },
-                        onSkip: { handleScheduled(preview: preview, action: .skip) }
-                    )
-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
-            }
+                                ForEach(scheduledPreviewsForSelectedDate) { preview in
+                                    let _ = print("[Dashboard] scheduled card", preview.id, preview.summary.title, preview.normalizedTargetDate, vm.selectedDate)
+#if DEBUG
+                                    let _ = print("[Dashboard] Rendering scheduled preview id:\(preview.id) normalized:\(preview.normalizedTargetDate) selected:\(vm.selectedDate)")
+#endif
+                                    ScheduledLogPreviewCard(
+                                        preview: preview,
+                                        onAccept: { handleScheduled(preview: preview, action: .log) },
+                                        onSkip: { handleScheduled(preview: preview, action: .skip) }
+                                    )
+                                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            handleCancelScheduled(preview: preview)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash.fill")
+                                        }
+                                    }
+                                }
+                            }
         }
     }
 
@@ -959,6 +966,25 @@ private var remainingCal: Double { vm.remainingCalories }
                     if let placeholder = placeholderIdentifier {
                         vm.removePlaceholderLog(withIdentifier: placeholder)
                     }
+                    vm.restoreScheduledPreview(preview)
+                    vm.error = error
+                }
+            }
+        }
+    }
+
+    private func handleCancelScheduled(preview: ScheduledLogPreview) {
+        vm.removeScheduledPreview(preview, recordSkip: false)
+
+        Task {
+            do {
+                try await vm.processScheduledLog(
+                    preview,
+                    action: .cancel,
+                    placeholderIdentifier: nil
+                )
+            } catch {
+                await MainActor.run {
                     vm.restoreScheduledPreview(preview)
                     vm.error = error
                 }

@@ -84,6 +84,7 @@ final class DayLogsViewModel: ObservableObject {
   enum ScheduledLogAction: String {
     case log
     case skip
+    case cancel
 
     var requestValue: String { rawValue }
   }
@@ -215,7 +216,7 @@ final class DayLogsViewModel: ObservableObject {
 
     scheduledPreviews.removeAll { $0.id == preview.id }
     localScheduledOverrides.removeValue(forKey: preview.id)
-    if action == .log {
+    if action != .skip {
       skippedScheduledDates.removeValue(forKey: preview.id)
     }
 
@@ -252,6 +253,9 @@ final class DayLogsViewModel: ObservableObject {
       }
       scheduledResolvedLogIds.removeValue(forKey: preview.id)
       scheduledPlaceholderIds.removeValue(forKey: preview.id)
+      if action == .cancel {
+        activeScheduledIds.remove(preview.id)
+      }
     }
 
     await repository.refresh(date: preview.targetDate, force: true)
@@ -1062,14 +1066,18 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
 
   // MARK: - Scheduled Log Helpers
 
-  func removeScheduledPreview(_ preview: ScheduledLogPreview) {
+  func removeScheduledPreview(_ preview: ScheduledLogPreview, recordSkip: Bool = true) {
     let id = preview.id
     if let index = scheduledPreviews.firstIndex(where: { $0.id == id }) {
       scheduledPreviews.remove(at: index)
     }
     activeScheduledIds.remove(id)
     hiddenScheduledIds.insert(id)
-    skippedScheduledDates[id] = preview.normalizedTargetDate
+    if recordSkip {
+      skippedScheduledDates[id] = preview.normalizedTargetDate
+    } else {
+      skippedScheduledDates.removeValue(forKey: id)
+    }
     localScheduledOverrides.removeValue(forKey: id)
   }
 
