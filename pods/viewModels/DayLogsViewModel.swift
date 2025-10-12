@@ -264,18 +264,6 @@ final class DayLogsViewModel: ObservableObject {
       applySnapshot(snapshot)
     }
 
-    if response.scheduleType.lowercased() == "once" || response.isActive == false {
-      NotificationManager.shared.cancelScheduledMealNotification(id: preview.id)
-    } else if response.scheduleType.lowercased() == "daily",
-              let nextDate = response.nextTargetDate {
-      NotificationManager.shared.scheduleScheduledMealNotification(
-        id: preview.id,
-        scheduleType: response.scheduleType,
-        targetDate: nextDate,
-        targetTimeString: response.nextTargetTime ?? preview.targetTime,
-        mealName: preview.summary.title
-      )
-    }
   }
 
  func fetchNutritionGoals() {
@@ -574,21 +562,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   #endif
 
   let newIds = Set(scheduledPreviews.map { $0.id })
-  let removedIds = activeScheduledIds.subtracting(newIds)
-  for identifier in removedIds {
-    NotificationManager.shared.cancelScheduledMealNotification(id: identifier)
-  }
   activeScheduledIds = newIds
-
-  for preview in scheduledPreviews {
-    NotificationManager.shared.scheduleScheduledMealNotification(
-      id: preview.id,
-      scheduleType: preview.scheduleType,
-      targetDate: preview.targetDate,
-      targetTimeString: preview.targetTime,
-      mealName: preview.summary.title
-    )
-  }
 
   lastLoadTimestamps[key] = Date()
   isLoading = false

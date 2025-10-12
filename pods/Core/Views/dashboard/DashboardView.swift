@@ -142,7 +142,7 @@ private var remainingCal: Double { vm.remainingCalories }
                                         onAccept: { handleScheduled(preview: preview, action: .log) },
                                         onSkip: { handleScheduled(preview: preview, action: .skip) }
                                     )
-                                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                                     .listRowBackground(Color.clear)
                                     .listRowSeparator(.hidden)
                                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -375,7 +375,7 @@ private var remainingCal: Double { vm.remainingCalories }
                         if isToday && !isTodayWorkoutDismissed {
                             todayWorkoutCard
                                 .padding(.horizontal)
-                                .padding(.top, 8)
+                                // .padding(.top, 8)
                                 .listRowInsets(EdgeInsets())
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
@@ -888,23 +888,12 @@ private var remainingCal: Double { vm.remainingCalories }
                 case .success(let response):
                     vm.upsertScheduledPreview(from: response, sourceLog: log)
 
-                    let mealName = mealName(for: log)
-                    NotificationManager.shared.scheduleScheduledMealNotification(
-                        id: response.id,
-                        scheduleType: response.scheduleType,
-                        targetDate: response.targetDate,
-                        targetTimeString: response.targetTime,
-                        mealName: mealName
-                    )
-
                     let calendar = Calendar.current
                     if calendar.isDate(response.targetDate, inSameDayAs: vm.selectedDate) {
                         vm.loadLogs(for: vm.selectedDate, force: true)
                     }
 
-                    let message = log.type == .meal ?
-                        "We'll remind you about this meal on your selected schedule." :
-                        "We'll remind you to log this meal on your selected schedule."
+                    let message = "This meal will appear in your scheduled previews for the selected day."
                     scheduleAlert = .success(message)
                 case .failure(let error):
                     scheduleAlert = .failure(error.localizedDescription)
