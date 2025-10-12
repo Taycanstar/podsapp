@@ -128,6 +128,163 @@ private var remainingCal: Double { vm.remainingCalories }
             .sorted { $0.normalizedTargetDate < $1.normalizedTargetDate }
     }
 
+    @ViewBuilder
+    private var scheduledPreviewsSection: some View {
+        if !scheduledPreviewsForSelectedDate.isEmpty {
+            Section {
+                ForEach(scheduledPreviewsForSelectedDate) { preview in
+                    let _ = print("[Dashboard] scheduled card", preview.id, preview.summary.title, preview.normalizedTargetDate, vm.selectedDate)
+                    #if DEBUG
+                    let _ = print("[Dashboard] Rendering scheduled preview id:\(preview.id) normalized:\(preview.normalizedTargetDate) selected:\(vm.selectedDate)")
+                    #endif
+                    ScheduledLogPreviewCard(
+                        preview: preview,
+                        onAccept: { handleScheduled(preview: preview, action: .log) },
+                        onSkip: { handleScheduled(preview: preview, action: .skip) }
+                    )
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var logsSection: some View {
+        if !vm.logs.isEmpty {
+            Section {
+                HStack {
+                    Text("Recent Logs")
+                        .font(.title)
+                        .fontWeight(.bold)
+                    Spacer()
+
+                    Menu {
+                        ForEach(LogSortOption.allCases, id: \.self) { option in
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    sortOption = option
+                                }
+                            }) {
+                                HStack {
+                                    Text(option.rawValue)
+                                    Spacer()
+                                    Image(systemName: option.iconName)
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .font(.system(size: 17))
+                            .foregroundColor(.primary)
+                    }
+                }
+                .padding(.horizontal)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+
+            ForEach(sortedLogs) { log in
+                ZStack {
+                    LogRow(log: log)
+                        .id(log.id)
+                        .onTapGesture {
+                            if log.type == .food {
+                                selectedFoodLogId = log.id
+                            } else if log.type == .meal {
+                                selectedMealLogId = log.id
+                            }
+                        }
+                    // NavigationLink for food logs
+                    if log.type == .food {
+                        NavigationLink(
+                            destination: FoodLogDetails(log: log),
+                            tag: log.id,
+                            selection: $selectedFoodLogId
+                        ) {
+                            EmptyView()
+                        }
+                        .opacity(0)
+                        .frame(width: 0, height: 0)
+                    }
+
+                    // NavigationLink for meal logs
+                    if log.type == .meal {
+                        NavigationLink(
+                            destination: MealLogDetails(log: log),
+                            tag: log.id,
+                            selection: $selectedMealLogId
+                        ) {
+                            EmptyView()
+                        }
+                        .opacity(0)
+                        .frame(width: 0, height: 0)
+                    }
+                }
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .swipeActions(edge: .leading) {
+                    // Save/Unsave action - only for meal logs and food logs
+                    if log.type == .meal || log.type == .food {
+                        let isSaved = foodMgr.isLogSaved(
+                            foodLogId: log.type == .food ? log.foodLogId : nil,
+                            mealLogId: log.type == .meal ? log.mealLogId : nil
+                        )
+
+                        Button(action: {
+                            if isSaved {
+                                unsaveMealAction(log: log)
+                            } else {
+                                saveMealAction(log: log)
+                            }
+                        }) {
+                            Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                        }
+                        .tint(.accentColor)
+                    }
+                }
+                .swipeActions(edge: .trailing) {
+                    // Delete action with trash icon (keep furthest trailing)
+                    Button {
+                        deleteLogItem(log: log)
+                    } label: {
+                        Image(systemName: "trash.fill")
+                    }
+                    .tint(.red)
+
+                    if canSchedule(log) {
+                        Button {
+                            handleScheduleAction(for: log)
+                        } label: {
+                            Image(systemName: "calendar.badge.plus")
+                        }
+                        .tint(.indigo)
+                    }
+                }
+                .id("\(log.id)_\(foodMgr.savedLogIds.count)")
+            }
+            .onDelete { indexSet in
+                deleteLogItems(at: indexSet)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var emptyStateSection: some View {
+        if vm.logs.isEmpty && scheduledPreviewsForSelectedDate.isEmpty {
+            Section {
+                emptyState
+                    .padding(.horizontal)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
+    }
+
 
     private var navTitle: String {
         if isToday      { return "Today" }
@@ -249,149 +406,10 @@ private var remainingCal: Double { vm.remainingCalories }
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
                         }
-                    } else if vm.logs.isEmpty {
-                        Section {
-                            emptyState
-                                .padding(.horizontal)
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        }
                     } else {
-                        Section {
-                            HStack {
-                                Text("Recent Logs")
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                                Spacer()
-                                
-                                Menu {
-                                    ForEach(LogSortOption.allCases, id: \.self) { option in
-                                        Button(action: {
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                sortOption = option
-                                            }
-                                        }) {
-                                            HStack {
-                                                Text(option.rawValue)
-                                                Spacer()
-                                                Image(systemName: option.iconName)
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    Image(systemName: "arrow.up.arrow.down")
-                                        .font(.system(size: 17))
-                                        .foregroundColor(.primary)
-                                }
-                            }
-                            .padding(.horizontal)
-                            .listRowInsets(EdgeInsets())
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                        }
-
-                        if !scheduledPreviewsForSelectedDate.isEmpty {
-                            Section {
-                                ForEach(scheduledPreviewsForSelectedDate) { preview in
-                                    #if DEBUG
-                                    print("[Dashboard] Rendering scheduled preview id:\(preview.id) normalized:\(preview.normalizedTargetDate) selected:\(vm.selectedDate)")
-                                    #endif
-                                    ScheduledLogPreviewCard(
-                                        preview: preview,
-                                        onAccept: { handleScheduled(preview: preview, action: .log) },
-                                        onSkip: { handleScheduled(preview: preview, action: .skip) }
-                                    )
-                                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                                    .listRowBackground(Color.clear)
-                                    .listRowSeparator(.hidden)
-                                }
-                            }
-                        }
-                        
-                        ForEach(sortedLogs) { log in
-                            ZStack {
-                                LogRow(log: log)
-                                    .id(log.id)
-                                    .onTapGesture {
-                                        if log.type == .food {
-                                            selectedFoodLogId = log.id
-                                        } else if log.type == .meal {
-                                            selectedMealLogId = log.id
-                                        }
-                                    }
-                                // NavigationLink for food logs
-                                if log.type == .food {
-                                    NavigationLink(
-                                        destination: FoodLogDetails(log: log),
-                                        tag: log.id,
-                                        selection: $selectedFoodLogId
-                                    ) {
-                                        EmptyView()
-                                    }
-                                    .opacity(0)
-                                    .frame(width: 0, height: 0)
-                                }
-                                
-                                // NavigationLink for meal logs
-                                if log.type == .meal {
-                                    NavigationLink(
-                                        destination: MealLogDetails(log: log),
-                                        tag: log.id,
-                                        selection: $selectedMealLogId
-                                    ) {
-                                        EmptyView()
-                                    }
-                                    .opacity(0)
-                                    .frame(width: 0, height: 0)
-                                }
-                            }
-                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .swipeActions(edge: .leading) {
-                                // Save/Unsave action - only for meal logs and food logs
-                                if log.type == .meal || log.type == .food {
-                                    let isSaved = foodMgr.isLogSaved(
-                                        foodLogId: log.type == .food ? log.foodLogId : nil,
-                                        mealLogId: log.type == .meal ? log.mealLogId : nil
-                                    )
-                                    
-                                    Button(action: {
-                                        if isSaved {
-                                            unsaveMealAction(log: log)
-                                        } else {
-                                            saveMealAction(log: log)
-                                        }
-                                    }) {
-                                        Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
-                                    }
-                                    .tint(.accentColor)
-                                }
-                            }
-                            .swipeActions(edge: .trailing) {
-                                // Delete action with trash icon (keep furthest trailing)
-                                Button {
-                                    deleteLogItem(log: log)
-                                } label: {
-                                    Image(systemName: "trash.fill")
-                                }
-                                .tint(.red)
-
-                                if canSchedule(log) {
-                                    Button {
-                                        handleScheduleAction(for: log)
-                                    } label: {
-                                        Image(systemName: "calendar.badge.plus")
-                                    }
-                                    .tint(.indigo)
-                                }
-                            }
-                            .id("\(log.id)_\(foodMgr.savedLogIds.count)")
-                        }
-                        .onDelete { indexSet in
-                            deleteLogItems(at: indexSet)
-                        }
+                        scheduledPreviewsSection
+                        logsSection
+                        emptyStateSection
                     }
                     }
                 .listStyle(PlainListStyle())
@@ -921,7 +939,7 @@ private var remainingCal: Double { vm.remainingCalories }
     }
 
     private func handleScheduled(preview: ScheduledLogPreview, action: DayLogsViewModel.ScheduledLogAction) {
-        vm.removeScheduledPreview(id: preview.id)
+        vm.removeScheduledPreview(preview)
 
         var placeholderIdentifier: String?
 

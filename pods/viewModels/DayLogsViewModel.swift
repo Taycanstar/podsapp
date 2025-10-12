@@ -32,6 +32,7 @@ final class DayLogsViewModel: ObservableObject {
   private var scheduledPlaceholderIds: [Int: String] = [:]
   private var scheduledResolvedLogIds: [Int: String] = [:]
   private var hiddenScheduledIds: Set<Int> = []
+  private var skippedScheduledDates: [Int: Date] = [:]
   private var localScheduledOverrides: [Int: ScheduledLogPreview] = [:]
 
   // Daily totals
@@ -214,6 +215,9 @@ final class DayLogsViewModel: ObservableObject {
 
     scheduledPreviews.removeAll { $0.id == preview.id }
     localScheduledOverrides.removeValue(forKey: preview.id)
+    if action == .log {
+      skippedScheduledDates.removeValue(forKey: preview.id)
+    }
 
     if action == .log {
       if let placeholderIdentifier {
@@ -454,20 +458,6 @@ func loadLogs(for date: Date, force: Bool = false) {
   // CRITICAL FIX: Clear logs immediately when changing dates to prevent showing stale data
   if currentKey != newKey {
     logs = []
-    scheduledPreviews = []
-
-    let overridePreviews = localScheduledOverrides.values.filter { preview in
-      Calendar.current.isDate(preview.normalizedTargetDate, inSameDayAs: date)
-    }
-
-    if overridePreviews.isEmpty == false {
-      scheduledPreviews = overridePreviews.sorted { lhs, rhs in
-        if lhs.normalizedTargetDate == rhs.normalizedTargetDate {
-          return (lhs.targetTime ?? "") < (rhs.targetTime ?? "")
-        }
-        return lhs.normalizedTargetDate < rhs.normalizedTargetDate
-      }
-    }
 
     // Clear pending cache for the date we're leaving to prevent stale data
     if let currentKey = currentKey {
@@ -517,6 +507,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
     return date1 > date2
   }
 
+  let calendar = Calendar.current
   let sortedScheduled = snapshot.scheduled.sorted { lhs, rhs in
     if lhs.targetDate == rhs.targetDate {
       return (lhs.targetTime ?? "") < (rhs.targetTime ?? "")
@@ -525,6 +516,9 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   }
 
   var serverIds = Set(sortedScheduled.map { $0.id })
+  if !serverIds.isEmpty {
+    skippedScheduledDates = skippedScheduledDates.filter { serverIds.contains($0.key) }
+  }
   hiddenScheduledIds = hiddenScheduledIds.intersection(serverIds)
 
   // Drop local overrides that the server now owns
@@ -536,10 +530,24 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   combinedScheduled.reserveCapacity(sortedScheduled.count + localScheduledOverrides.count)
 
   for preview in sortedScheduled where !hiddenScheduledIds.contains(preview.id) {
+    if let skippedDate = skippedScheduledDates[preview.id] {
+      if calendar.isDate(skippedDate, inSameDayAs: preview.normalizedTargetDate) {
+        continue
+      } else {
+        skippedScheduledDates.removeValue(forKey: preview.id)
+      }
+    }
     combinedScheduled.append(preview)
   }
 
   for override in localScheduledOverrides.values where !hiddenScheduledIds.contains(override.id) {
+    if let skippedDate = skippedScheduledDates[override.id] {
+      if calendar.isDate(skippedDate, inSameDayAs: override.normalizedTargetDate) {
+        continue
+      } else {
+        skippedScheduledDates.removeValue(forKey: override.id)
+      }
+    }
     combinedScheduled.append(override)
     serverIds.insert(override.id)
   }
@@ -552,6 +560,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   }
 
   scheduledPreviews = combinedScheduled
+  print("[DEBUG] scheduled previews for \(snapshot.date):", scheduledPreviews.map { ($0.id, $0.normalizedTargetDate) })
 
   #if DEBUG
   let debugPreviews = scheduledPreviews.map {
@@ -973,6 +982,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       scheduledPlaceholderIds.removeAll()
       scheduledResolvedLogIds.removeAll()
       hiddenScheduledIds.removeAll()
+      skippedScheduledDates.removeAll()
       localScheduledOverrides.removeAll()
       scheduledPreviews = []
       print("[DayLogsVM] Cleared pending cache")
@@ -1052,12 +1062,14 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
 
   // MARK: - Scheduled Log Helpers
 
-  func removeScheduledPreview(id: Int) {
+  func removeScheduledPreview(_ preview: ScheduledLogPreview) {
+    let id = preview.id
     if let index = scheduledPreviews.firstIndex(where: { $0.id == id }) {
       scheduledPreviews.remove(at: index)
     }
     activeScheduledIds.remove(id)
     hiddenScheduledIds.insert(id)
+    skippedScheduledDates[id] = preview.normalizedTargetDate
     localScheduledOverrides.removeValue(forKey: id)
   }
 
@@ -1098,11 +1110,13 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
 
     activeScheduledIds.insert(preview.id)
     hiddenScheduledIds.remove(preview.id)
+    skippedScheduledDates.removeValue(forKey: preview.id)
   }
 
   func restoreScheduledPreview(_ preview: ScheduledLogPreview) {
     guard scheduledPreviews.contains(where: { $0.id == preview.id }) == false else { return }
     hiddenScheduledIds.remove(preview.id)
+    skippedScheduledDates.removeValue(forKey: preview.id)
     localScheduledOverrides.removeValue(forKey: preview.id)
     scheduledPreviews.append(preview)
     scheduledPreviews.sort { lhs, rhs in
