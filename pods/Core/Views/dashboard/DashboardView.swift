@@ -2709,13 +2709,13 @@ private struct ScheduledLogPreviewCard: View {
         case "breakfast":
             return "sunrise.fill"
         case "lunch":
-            return "fork.knife.circle.fill"
+            return "sun.max.fill"
         case "dinner":
-            return "moon.stars.fill"
-        case "snack":
-            return "takeoutbag.and.cup.and.straw.fill"
+            return "moon.fill"
+        case "snack", "snacks":
+            return "popcorn.fill"
         default:
-            return "fork.knife"
+            return "popcorn.fill"
         }
     }
 
