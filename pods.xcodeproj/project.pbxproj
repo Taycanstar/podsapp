@@ -57,6 +57,7 @@
 		3625329D2E629512003C3B8D /* DurationExerciseTimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3625329C2E629508003C3B8D /* DurationExerciseTimerSheet.swift */; };
 		3625329F2E629D1A003C3B8D /* CircularProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3625329E2E629D12003C3B8D /* CircularProgressView.swift */; };
 		362532A12E63805D003C3B8D /* ModernFoodLoadingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */; };
+		50FB9842CD464A8F9D9E63AB /* ProFoodSearchLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */; };
 		362532A52E6CBA78003C3B8D /* ManageExercisesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A42E6CBA71003C3B8D /* ManageExercisesView.swift */; };
 		362532A72E6CD98B003C3B8D /* RestTimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A62E6CD987003C3B8D /* RestTimerSheet.swift */; };
 		36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36291B7F2B8166F9000B5F38 /* CarouselView.swift */; };
@@ -427,6 +428,7 @@
 		3625329C2E629508003C3B8D /* DurationExerciseTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DurationExerciseTimerSheet.swift; sourceTree = "<group>"; };
 		3625329E2E629D12003C3B8D /* CircularProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircularProgressView.swift; sourceTree = "<group>"; };
 		362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModernFoodLoadingCard.swift; sourceTree = "<group>"; };
+		78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFoodSearchLoader.swift; sourceTree = "<group>"; };
 		362532A42E6CBA71003C3B8D /* ManageExercisesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageExercisesView.swift; sourceTree = "<group>"; };
 		362532A62E6CD987003C3B8D /* RestTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerSheet.swift; sourceTree = "<group>"; };
 		36291B7F2B8166F9000B5F38 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
@@ -985,6 +987,7 @@
 			children = (
 				362532A62E6CD987003C3B8D /* RestTimerSheet.swift */,
 				362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */,
+				78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */,
 				3625329E2E629D12003C3B8D /* CircularProgressView.swift */,
 				36A851B42E60CF4C004E5CED /* FlexibleExerciseInputs.swift */,
 				36A851A22E5AC0A7004E5CED /* CollapsibleSection.swift */,
@@ -1924,6 +1927,7 @@
 				364A83CA2DAB0F82009D2620 /* FoodScannerView.swift in Sources */,
 				36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */,
 				362532A12E63805D003C3B8D /* ModernFoodLoadingCard.swift in Sources */,
+				50FB9842CD464A8F9D9E63AB /* ProFoodSearchLoader.swift in Sources */,
 				363068D52E1078EB00F2D4EC /* AddFoodWithVoice.swift in Sources */,
 				36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */,
 				36ED35DF2DDE52B400D174FB /* GenerateLogView.swift in Sources */,

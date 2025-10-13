@@ -71,6 +71,17 @@ struct ProFoodSearchResult: Codable {
     let macros: Macros?
     let micros: [Micro]?
     let sources: [String]?
+    let brand: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case name
+        case serving
+        case calories
+        case macros
+        case micros
+        case sources
+        case brand
+    }
 }
 
 struct ScheduleMealResponse: Codable {

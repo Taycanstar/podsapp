@@ -39,10 +39,12 @@ struct ProFoodSearchView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 
-                if let result {
-                    ResultCard(result: result)
-                } else {
-                    Spacer()
+                Group {
+                    if let result {
+                        ResultCard(result: result)
+                    } else {
+                        Spacer()
+                    }
                 }
             }
             .padding()
@@ -77,57 +79,154 @@ struct ProFoodSearchView: View {
         let result: ProFoodSearchResult
         
         var body: some View {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 20) {
+                headerSection
+                
+                if let macros = result.macros {
+                    macroSection(macros: macros)
+                }
+                
+                if let micros = result.micros, !micros.isEmpty {
+                    microSection(micros: micros)
+                }
+                
+                if let sources = result.sources, !sources.isEmpty {
+                    sourceSection(sources: sources)
+                }
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(Color("iosfit"))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+            )
+        }
+        
+        @ViewBuilder
+        private var headerSection: some View {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(result.name ?? "Result")
-                    .font(.title3.weight(.semibold))
-                if let serving = result.serving {
-                    Text(serving)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.primary)
+                
+                if let brand = result.brand, !brand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(brand)
+                        .font(.subheadline.weight(.medium))
                         .foregroundColor(.secondary)
                 }
+                
+                if let serving = result.serving, !serving.isEmpty {
+                    Text(serving)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
                 if let calories = result.calories {
-                    Text("Calories: \(Int(calories))")
+                    Text("\(Int(calories.rounded())) kcal")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundColor(.primary)
+                        .padding(.top, 4)
                 }
-                if let macros = result.macros {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Protein: \(format(macros.proteinG)) g")
-                        Text("Carbs: \(format(macros.carbsG)) g")
-                        Text("Fat: \(format(macros.fatG)) g")
-                    }
+            }
+        }
+        
+        @ViewBuilder
+        private func macroSection(macros: ProFoodSearchResult.Macros) -> some View {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Macronutrients")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.secondary)
+                
+                HStack(spacing: 12) {
+                    MacroTile(label: "Protein", value: macros.proteinG, tint: .pink)
+                    MacroTile(label: "Carbs", value: macros.carbsG, tint: .orange)
+                    MacroTile(label: "Fat", value: macros.fatG, tint: .purple)
                 }
-                if let micros = result.micros, !micros.isEmpty {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Micronutrients")
-                            .font(.subheadline.weight(.medium))
-                        ForEach(Array(micros.enumerated()), id: \.offset) { _, item in
-                            Text("• \(item.name): \(item.amount)")
+            }
+        }
+        
+        @ViewBuilder
+        private func microSection(micros: [ProFoodSearchResult.Micro]) -> some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Micronutrients")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.secondary)
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(micros.enumerated()), id: \.offset) { _, item in
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Circle()
+                                .fill(Color.accentColor.opacity(0.2))
+                                .frame(width: 6, height: 6)
+                            Text("\(item.name): \(item.amount)")
                                 .font(.footnote)
-                        }
-                    }
-                }
-                if let sources = result.sources, !sources.isEmpty {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Sources")
-                            .font(.subheadline.weight(.medium))
-                        ForEach(sources, id: \.self) { source in
-                            if let url = URL(string: source) {
-                                Link(source, destination: url)
-                                    .font(.footnote)
-                            } else {
-                                Text(source)
-                                    .font(.footnote)
-                                    .foregroundColor(.secondary)
-                            }
+                                .foregroundColor(.primary)
                         }
                     }
                 }
             }
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.systemGray6)))
         }
         
-        private func format(_ value: Double?) -> String {
-            guard let value else { return "--" }
-            return String(format: "%.1f", value)
+        @ViewBuilder
+        private func sourceSection(sources: [String]) -> some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Sources")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.secondary)
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(sources, id: \.self) { source in
+                        if let url = URL(string: source) {
+                            Link(destination: url) {
+                                Text(source)
+                                    .font(.footnote)
+                                    .foregroundColor(.accentColor)
+                                    .multilineTextAlignment(.leading)
+                            }
+                        } else {
+                            Text(source)
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        
+        private struct MacroTile: View {
+            let label: String
+            let value: Double?
+            let tint: Color
+            
+            var body: some View {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(label.uppercased())
+                        .font(.caption2.weight(.heavy))
+                        .foregroundColor(tint.opacity(0.9))
+                    Text("\(format(value)) g")
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(.primary)
+                    Text("per serving")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 14)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(tint.opacity(0.12))
+                )
+            }
+            
+            private func format(_ value: Double?) -> String {
+                guard let value else { return "--" }
+                return String(format: "%.1f", value)
+            }
         }
     }
 }

@@ -134,6 +134,8 @@ struct FoodMeasure: Codable, Hashable {
 class FoodService {
     static let shared = FoodService()
     
+    private let networkManager = NetworkManager()
+    
     private init() {}
     
     func searchFoods(query: String) async throws -> FoodSearchResponse {
@@ -147,7 +149,70 @@ class FoodService {
         return try JSONDecoder().decode(FoodSearchResponse.self, from: data)
     }
 
+    func searchFoodsPro(query: String, userEmail: String) async throws -> FoodSearchResponse {
+        let proResult = try await withCheckedThrowingContinuation { continuation in
+            networkManager.searchFoodPro(query: query,
+                                         userEmail: userEmail) { result in
+                switch result {
+                case .success(let response):
+                    continuation.resume(returning: response)
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+        
+        let syntheticFood = convert(proResult: proResult, fallbackQuery: query)
+        return FoodSearchResponse(foods: [syntheticFood])
+    }
+    
+    private func convert(proResult: ProFoodSearchResult, fallbackQuery: String) -> Food {
+        let name = proResult.name?.isEmpty == false ? proResult.name! : fallbackQuery
+        let servingText = proResult.serving?.isEmpty == false ? proResult.serving! : "1 serving"
+        let caloriesValue = proResult.calories
+        let macros = proResult.macros
+        let trimmedBrand = proResult.brand?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedBrand = trimmedBrand?.isEmpty == false ? trimmedBrand! : "Humuli Intelligence"
+        
+        var nutrients: [Nutrient] = []
+        nutrients.append(Nutrient(nutrientName: "Energy",
+                                  value: caloriesValue,
+                                  unitName: "kcal"))
+        nutrients.append(Nutrient(nutrientName: "Protein",
+                                  value: macros?.proteinG,
+                                  unitName: "g"))
+        nutrients.append(Nutrient(nutrientName: "Carbohydrate, by difference",
+                                  value: macros?.carbsG,
+                                  unitName: "g"))
+        nutrients.append(Nutrient(nutrientName: "Total lipid (fat)",
+                                  value: macros?.fatG,
+                                  unitName: "g"))
+        
+        let syntheticId = 9_000_000_000 + Int.random(in: 0...999_999)
+        
+        let measure = FoodMeasure(
+            disseminationText: servingText,
+            gramWeight: 0,
+            id: syntheticId,
+            modifier: nil,
+            measureUnitName: servingText,
+            rank: 1
+        )
 
+        return Food(
+            fdcId: syntheticId,
+            description: name,
+            brandOwner: resolvedBrand,
+            brandName: resolvedBrand,
+            servingSize: nil,
+            numberOfServings: 1,
+            servingSizeUnit: nil,
+            householdServingFullText: servingText,
+            foodNutrients: nutrients,
+            foodMeasures: [measure],
+            healthAnalysis: nil
+        )
+    }
 }
 
 struct FacetSet: Codable {

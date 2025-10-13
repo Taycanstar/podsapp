@@ -5,6 +5,7 @@ struct LogFood: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
     @Binding var selectedMeal: String
     @Binding var selectedTab: Int
     
@@ -38,7 +39,13 @@ struct LogFood: View {
     
     // Nutrition label name input
     @State private var nutritionProductName = ""
+    @State private var isProSearchResult = false
 
+    private var currentUserEmail: String? {
+        let email = UserDefaults.standard.string(forKey: "userEmail")
+        return email?.isEmpty == false ? email : nil
+    }
+    
     
     enum FoodTab: Hashable {
         case all, meals, foods, savedMeals
@@ -118,13 +125,6 @@ struct LogFood: View {
                 keyboardHeight: $keyboardHeight,
                 foodManager: foodManager
             ))
-            .modifier(ChangeModifiers(
-                searchText: searchText,
-                selectedFoodTab: selectedFoodTab,
-                showConfirmFoodView: $showConfirmFoodView,
-                foodManager: foodManager,
-                searchFoods: searchFoods
-            ))
             .alert("Product Name Required", isPresented: $foodManager.showNutritionNameInputForCreation) {
                 TextField("Enter product name", text: $nutritionProductName)
                     .textInputAutocapitalization(.words)
@@ -192,6 +192,21 @@ struct LogFood: View {
             } message: {
                 Text(foodManager.scanFailureMessage)
             }
+            .onSubmit(of: .search) {
+                submitSearch()
+            }
+            .onChange(of: searchText) { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty {
+                    searchResults = []
+                    isProSearchResult = false
+                }
+            }
+            .onChange(of: foodManager.lastGeneratedFood) { newFood in
+                if newFood != nil && !foodManager.showNutritionNameInput && !foodManager.showNutritionNameInputForCreation {
+                    showConfirmFoodView = true
+                }
+            }
     }
     
     private var coreContent: some View {
@@ -257,6 +272,7 @@ struct LogFood: View {
                     isSearching: isSearching,
                     searchText: searchText,
                     selectedFoodTab: selectedFoodTab,
+                    isProSearchResult: isProSearchResult,
                     selectedMeal: $selectedMeal,
                     mode: mode,
                     selectedFoods: $selectedFoods,
@@ -296,11 +312,15 @@ struct LogFood: View {
         Group {
             if mode != .addToMeal && mode != .addToRecipe {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button {
                         selectedTab = 0
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
                     }
-                    .foregroundColor(.accentColor)
+                    .accessibilityLabel("Close")
                 }
             }
             
@@ -367,20 +387,51 @@ struct LogFood: View {
     }
     
     // MARK: - Search
-    private func searchFoods() async {
-        guard !searchText.isEmpty else {
+    private func submitSearch() {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            searchResults = []
+            isProSearchResult = false
+            return
+        }
+        isProSearchResult = false
+        Task { await searchFoods(query: trimmed) }
+    }
+    
+    @MainActor
+    private func searchFoods(query: String) async {
+        guard !query.isEmpty else {
             searchResults = []
             return
         }
         isSearching = true
+        defer { isSearching = false }
+        
+        if proFeatureGate.hasActiveSubscription(),
+           let email = currentUserEmail {
+            do {
+                let response = try await FoodService.shared.searchFoodsPro(query: query,
+                                                                            userEmail: email)
+                searchResults = response.foods
+                isProSearchResult = true
+                return
+            } catch {
+                print("Pro search error:", error)
+                isProSearchResult = false
+            }
+        }
+        
         do {
-            let response = try await FoodService.shared.searchFoods(query: searchText)
+            let response = try await FoodService.shared.searchFoods(query: query)
             searchResults = response.foods
+            isProSearchResult = false
         } catch {
             print("Search error:", error)
             searchResults = []
+            isProSearchResult = false
+            errorMessage = "We couldn't find results. Please try again."
+            showErrorAlert = true
         }
-        isSearching = false
     }
 }
 
@@ -439,10 +490,12 @@ private struct MealPickerMenu: View {
 private struct FoodListView: View {
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     let searchResults: [Food]
     let isSearching: Bool
     let searchText: String
     let selectedFoodTab: LogFood.FoodTab
+    let isProSearchResult: Bool
     @Binding var selectedMeal: String
     let mode: LogFoodMode
     @Binding var selectedFoods: [Food]
@@ -463,7 +516,6 @@ private struct FoodListView: View {
     var onItemAdded: ((Food) -> Void)?
     
     @State private var isShowingMinimumLoader = false
-    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     
     var body: some View {
         VStack(spacing: 12) {
@@ -866,54 +918,68 @@ private struct FoodListView: View {
                         foodManager.loadUserFoods(refresh: true)
                     }
                 }
-            } else if searchResults.isEmpty && isSearching && selectedFoodTab != .all {
-                ProgressView()
-                    .padding()
+            } else if searchResults.isEmpty && isSearching {
+                if selectedFoodTab == .all {
+                    ProFoodSearchLoader()
+                        .padding(.horizontal, 16)
+                } else {
+                    ProgressView()
+                        .padding()
+                }
             } else {
                 // Search results - using List for native swipe-to-delete
-                
-                VStack(spacing: 0) {
-                    // Main content List with native swipe-to-delete
-                    if !searchResults.isEmpty {
-                         let searchCardHeight = min(CGFloat(searchResults.count) * 60, UIScreen.main.bounds.height * 0.7) // Reduced multiplier to 60
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color("bg"))
-                              
-                            
-                            List {
-                                ForEach(searchResults, id: \.fdcId) { food in
-                                    FoodRow(
-                                        food: food,
-                                        selectedMeal: $selectedMeal,
-                                        mode: mode,
-                                        selectedFoods: $selectedFoods,
-                                        path: $path,
-                                        onItemAdded: onItemAdded
-                                    )
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                                    // .listRowBackground(Color.clear)
-                                    .listRowBackground(Color("iosfit"))
-                                    .listRowSeparator(.hidden)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
+                if isProSearchResult, let proFood = searchResults.first {
+                    ProFoodResultCard(
+                        food: proFood,
+                        selectedMeal: $selectedMeal,
+                        mode: mode,
+                        selectedFoods: $selectedFoods,
+                        path: $path,
+                        onItemAdded: onItemAdded
+                    )
+                    .padding(.horizontal, 16)
+                    .transition(.opacity.combined(with: .scale))
+                } else {
+                    VStack(spacing: 0) {
+                        if !searchResults.isEmpty {
+                             let searchCardHeight = min(CGFloat(searchResults.count) * 60, UIScreen.main.bounds.height * 0.7)
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color("bg"))
+                                
+                                List {
+                                    ForEach(searchResults, id: \.fdcId) { food in
+                                        FoodRow(
+                                            food: food,
+                                            selectedMeal: $selectedMeal,
+                                            mode: mode,
+                                            selectedFoods: $selectedFoods,
+                                            path: $path,
+                                            onItemAdded: onItemAdded
+                                        )
+                                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                                        .listRowBackground(Color("iosfit"))
+                                        .listRowSeparator(.hidden)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
+                                    }
+                                    .onDelete { indexSet in
+                                        deleteSearchResults(at: indexSet)
+                                    }
                                 }
-                                .onDelete { indexSet in
-                                    deleteSearchResults(at: indexSet)
-                                }
+                                .listStyle(PlainListStyle())
+                                .scrollContentBackground(.hidden)
                             }
-                            .listStyle(PlainListStyle())
-                            .scrollContentBackground(.hidden)
+                            .frame(maxHeight: searchCardHeight, alignment: .top)
+                            .cornerRadius(12)
+                            .padding(.horizontal, 16)
+                        } else {
+                            Text("No results found")
+                                .foregroundColor(.secondary)
+                                .frame(height: 100)
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 20)
                         }
-                        .frame(maxHeight: searchCardHeight, alignment: .top)
-                        .cornerRadius(12)
-                        .padding(.horizontal, 16)
-                    } else {
-                        Text("No results found")
-                            .foregroundColor(.secondary)
-                            .frame(height: 100)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 20)
                     }
                 }
             }
@@ -1677,6 +1743,261 @@ struct FoodRow: View {
                     }
                 }
                 self.showLoggingErrorAlert = true
+            }
+        }
+    }
+}
+
+private struct ProFoodResultCard: View {
+    @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
+    @Environment(\.dismiss) private var dismiss
+    
+    let food: Food
+    @Binding var selectedMeal: String
+    let mode: LogFoodMode
+    @Binding var selectedFoods: [Food]
+    @Binding var path: NavigationPath
+    var onItemAdded: ((Food) -> Void)?
+    
+    @State private var showLoggingErrorAlert = false
+    
+    private var alreadyLogged: Bool {
+        foodManager.lastLoggedFoodId == food.fdcId ||
+        foodManager.recentlyAddedFoodIds.contains(food.fdcId)
+    }
+    
+    private var servingText: String {
+        let text = food.servingSizeText
+        return text.isEmpty ? "Per serving" : text
+    }
+    
+    private var brandText: String? {
+        let brand = food.brandText ?? ""
+        return brand.isEmpty ? nil : brand
+    }
+    
+    private var calorieDisplayText: String {
+        guard let calories = food.calories else { return "–" }
+        return "\(Int(calories.rounded()))"
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            header
+            macroSummary
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(Color("iosfit"))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard mode == .logFood else { return }
+            HapticFeedback.generate()
+            path.append(FoodNavigationDestination.foodDetails(food, $selectedMeal))
+        }
+        .alert("Logging Error", isPresented: $showLoggingErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please try again.")
+        }
+    }
+    
+    private var header: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(food.displayName)
+                    .font(.title2.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.leading)
+                
+                if let combined = brandServingLine {
+                    Text(combined)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            logButton
+        }
+    }
+    
+    private var macroSummary: some View {
+        HStack(alignment: .center, spacing: 24) {
+            HStack(spacing: 6) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color("brightOrange"))
+                HStack(alignment: .bottom, spacing: 2) {
+                    Text(calorieDisplayText)
+                        .font(.system(size: 22, weight: .semibold, design: .rounded))
+                        .foregroundColor(.primary)
+                    Text("cal")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            HStack(spacing: 24) {
+                MacroColumn(title: "Protein", valueText: macroText(for: food.protein))
+                MacroColumn(title: "Carbs", valueText: macroText(for: food.carbs))
+                MacroColumn(title: "Fat", valueText: macroText(for: food.fat))
+            }
+        }
+    }
+    
+    private var logButton: some View {
+        Button {
+            HapticFeedback.generate()
+            handleFoodTap()
+        } label: {
+            HStack(spacing: 6) {
+                if alreadyLogged {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                Text(alreadyLogged ? "Added" : "Log")
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .foregroundColor(alreadyLogged ? .green : .accentColor)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill((alreadyLogged ? Color.green : Color.accentColor).opacity(0.12))
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(alreadyLogged)
+    }
+    
+    private var brandServingLine: String? {
+        let brand = brandText?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let serving = servingText.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        switch (brand?.isEmpty == false, serving.isEmpty == false) {
+        case (true, true):
+            return "\(brand!) • \(serving)"
+        case (true, false):
+            return brand
+        case (false, true):
+            return serving
+        default:
+            return nil
+        }
+    }
+    
+    private func macroText(for value: Double?) -> String {
+        guard let value else { return "–" }
+        return "\(Int(value.rounded()))g"
+    }
+    
+    private func handleFoodTap() {
+        if alreadyLogged { return }
+        HapticFeedback.generate()
+        switch mode {
+        case .logFood:
+            logFood()
+        case .addToMeal, .addToRecipe:
+            let newFood = Food(
+                fdcId: food.fdcId,
+                description: food.description,
+                brandOwner: food.brandOwner,
+                brandName: food.brandName,
+                servingSize: food.servingSize,
+                numberOfServings: 1,
+                servingSizeUnit: food.servingSizeUnit,
+                householdServingFullText: food.householdServingFullText,
+                foodNutrients: food.foodNutrients,
+                foodMeasures: food.foodMeasures
+            )
+            
+            var updatedFoods = selectedFoods
+            updatedFoods.append(newFood)
+            selectedFoods = updatedFoods
+            foodManager.trackRecentlyAdded(foodId: food.fdcId)
+            
+            if let callback = onItemAdded {
+                callback(newFood)
+            } else if !path.isEmpty {
+                path.removeLast()
+            }
+        }
+    }
+    
+    private func logFood() {
+        viewModel.isShowingFoodContainer = false
+        
+        foodManager.logFood(
+            email: viewModel.email,
+            food: food,
+            meal: selectedMeal,
+            servings: 1,
+            date: Date(),
+            notes: nil
+        ) { result in
+            switch result {
+            case .success(let loggedFood):
+                let combinedLog = CombinedLog(
+                    type: .food,
+                    status: loggedFood.status,
+                    calories: Double(loggedFood.food.calories),
+                    message: "\(loggedFood.food.displayName) – \(loggedFood.mealType)",
+                    foodLogId: loggedFood.foodLogId,
+                    food: loggedFood.food,
+                    mealType: loggedFood.mealType,
+                    mealLogId: nil,
+                    meal: nil,
+                    mealTime: nil,
+                    scheduledAt: Date(),
+                    recipeLogId: nil,
+                    recipe: nil,
+                    servingsConsumed: nil,
+                    isOptimistic: true
+                )
+                
+                DispatchQueue.main.async {
+                    dayLogsVM.addPending(combinedLog)
+                    if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                        foodManager.combinedLogs.remove(at: idx)
+                    }
+                    foodManager.combinedLogs.insert(combinedLog, at: 0)
+                }
+            case .failure:
+                withAnimation {
+                    if foodManager.lastLoggedFoodId == food.fdcId {
+                        foodManager.lastLoggedFoodId = nil
+                    }
+                }
+                showLoggingErrorAlert = true
+            }
+        }
+    }
+    
+    private struct MacroColumn: View {
+        let title: String
+        let valueText: String
+        
+        var body: some View {
+            VStack(spacing: 0) {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary)
+                Text(valueText)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.secondary)
             }
         }
     }
@@ -2713,29 +3034,6 @@ struct LifecycleModifiers: ViewModifier {
                 // Remove keyboard observers
                 NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
                 NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
-            }
-    }
-}
-
-struct ChangeModifiers: ViewModifier {
-    let searchText: String
-    let selectedFoodTab: LogFood.FoodTab
-    @Binding var showConfirmFoodView: Bool
-    @ObservedObject var foodManager: FoodManager
-    let searchFoods: () async -> Void
-
-    func body(content: Content) -> some View {
-        content
-            .onChange(of: searchText) { _ in
-                Task {
-                    try? await Task.sleep(nanoseconds: 500_000_000)
-                    await searchFoods()
-                }
-            }
-            .onChange(of: foodManager.lastGeneratedFood) { _, newFood in
-                if newFood != nil && !foodManager.showNutritionNameInput && !foodManager.showNutritionNameInputForCreation {
-                    showConfirmFoodView = true
-                }
-            }
+        }
     }
 }

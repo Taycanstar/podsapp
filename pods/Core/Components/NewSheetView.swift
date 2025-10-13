@@ -19,6 +19,7 @@ struct NewSheetView: View {
     @Binding var showLogWorkoutView: Bool
     @Binding var selectedMeal: String
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @Environment(\.colorScheme) private var colorScheme
 
     let options = [
         ("Food", "magnifyingglass"),
@@ -78,12 +79,12 @@ struct NewSheetView: View {
                     VStack(spacing: 12) {
                         ZStack {
                             Circle()
-                                .fill(Color.black.opacity(0.5))
+                                .fill(circleBackgroundColor)
                                 .frame(width: 70, height: 70)
 
                             Image(systemName: option.1)
                                 .font(.system(size: 28, weight: .medium))
-                                .foregroundColor(.white)
+                                .foregroundColor(circleIconColor)
                         }
 
                         Text(option.0)
@@ -132,5 +133,19 @@ struct NewSheetView: View {
                 .foregroundColor(Color("sheetbg"))
                 .ignoresSafeArea()
         )
+    }
+}
+
+private extension NewSheetView {
+    var circleBackgroundColor: Color {
+        if colorScheme == .dark {
+            return Color.black.opacity(0.5)
+        }
+
+        return Color(red: 222.0 / 255.0, green: 222.0 / 255.0, blue: 222.0 / 255.0)
+    }
+
+    var circleIconColor: Color {
+        colorScheme == .dark ? .white : .primary
     }
 }
