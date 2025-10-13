@@ -1180,17 +1180,9 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
             switch result {
             case .success(let loggedFood):
                 print("✅ Successfully logged food with foodLogId: \(loggedFood.foodLogId)")
-                
-                // Track food logging in Mixpanel
-                Mixpanel.mainInstance().track(event: "Log Food", properties: [
-                    "food_name": loggedFood.food.displayName,
-                    "meal_type": loggedFood.mealType,
-                    "calories": loggedFood.food.calories,
-                    "servings": servings,
-                    "log_method": "manual",
-                    "user_email": email
-                ])
-                
+
+                // Mixpanel tracking removed - now handled by backend
+
                 // Create a new CombinedLog from the logged food
                 let combinedLog = CombinedLog(
                     type: .food,
@@ -2225,26 +2217,9 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
         switch result {
         case .success(let loggedFood):
             print("✅ AI macros generated successfully: \(loggedFood.food.displayName)")
-            
-            // Track AI macro generation in Mixpanel
-            Mixpanel.mainInstance().track(event: "AI Text Food Log", properties: [
-                "food_name": loggedFood.food.displayName,
-                "meal_type": loggedFood.mealType,
-                "calories": loggedFood.food.calories ?? 0,
-                "food_description": foodDescription,
-                "user_email": self.userEmail ?? "unknown"
-            ])
-            
-            // Track universal food logging
-            Mixpanel.mainInstance().track(event: "Log Food", properties: [
-                "food_name": loggedFood.food.displayName,
-                "meal_type": loggedFood.mealType,
-                "calories": loggedFood.food.calories ?? 0,
-                "servings": 1,
-                "log_method": "ai_text",
-                "user_email": self.userEmail ?? "unknown"
-            ])
-            
+
+            // Mixpanel tracking removed - now handled by backend
+
             self.aiGeneratedFood = loggedFood.food
             self.lastLoggedItem = (name: loggedFood.food.displayName, calories: loggedFood.food.calories ?? 0)
             
@@ -3002,23 +2977,7 @@ trackTimer(progressTimer)
            MealReminderService.shared.mealWasLogged(mealType: combined.mealType ?? "Lunch")
         }
    
-        // Track image scanning in Mixpanel
-        Mixpanel.mainInstance().track(event: "Image Scan", properties: [
-            "food_name": combined.food?.displayName ?? "Unknown Food",
-            "meal_type": combined.mealType ?? "Lunch",
-            "calories": combined.calories,
-            "user_email": userEmail
-        ])
-        
-        // Track universal food logging
-        Mixpanel.mainInstance().track(event: "Log Food", properties: [
-            "food_name": combined.food?.displayName ?? "Unknown Food",
-            "meal_type": combined.mealType ?? "Lunch",
-            "calories": combined.calories,
-            "servings": 1,
-            "log_method": "image_scan",
-            "user_email": userEmail
-        ])
+        // Mixpanel tracking removed - now handled by backend
         
       } catch {
         //── 7) On decode error, print the bad JSON + error
@@ -3332,23 +3291,7 @@ func analyzeNutritionLabel(
          MealReminderService.shared.mealWasLogged(mealType: combinedLog.mealType ?? "Lunch")
        }
        
-       // Track nutrition label scanning in Mixpanel
-       Mixpanel.mainInstance().track(event: "Nutrition Label Scan", properties: [
-           "food_name": combinedLog.food?.displayName ?? "Unknown Food",
-           "meal_type": combinedLog.mealType ?? "Lunch",
-           "calories": combinedLog.calories,
-           "user_email": userEmail
-       ])
-       
-       // Track universal food logging
-       Mixpanel.mainInstance().track(event: "Log Food", properties: [
-           "food_name": combinedLog.food?.displayName ?? "Unknown Food",
-           "meal_type": combinedLog.mealType ?? "Lunch",
-           "calories": combinedLog.calories,
-           "servings": 1,
-           "log_method": "nutrition_label_scan",
-           "user_email": userEmail
-       ])
+       // Mixpanel tracking removed - now handled by backend
 
     } catch {
       //── 7) On decode error, print the bad JSON + error
@@ -4010,23 +3953,8 @@ func analyzeNutritionLabel(
                         // CRITICAL: Stop the timer to prevent interference with auto-reset
                         self.stopVoiceTimer()
                         
-                        // Track voice logging in Mixpanel
-                        Mixpanel.mainInstance().track(event: "Voice Log", properties: [
-                            "food_name": loggedFood.food.displayName,
-                            "meal_type": loggedFood.mealType,
-                            "calories": loggedFood.calories,
-                            "user_email": self.userEmail ?? "unknown"
-                        ])
-                        
-                        // Track universal food logging
-                        Mixpanel.mainInstance().track(event: "Log Food", properties: [
-                            "food_name": loggedFood.food.displayName,
-                            "meal_type": loggedFood.mealType,
-                            "calories": loggedFood.calories,
-                            "servings": 1,
-                            "log_method": "voice",
-                            "user_email": self.userEmail ?? "unknown"
-                        ])
+                        // Mixpanel tracking removed - now handled by backend
+
                         // Check if this is an "Unknown food" with no nutritional value
                         // This happens when the server couldn't identify a food from the transcription
                         if loggedFood.food.displayName.lowercased().contains("unknown food") || 
@@ -4199,17 +4127,9 @@ func analyzeNutritionLabel(
                 switch result {
                 case .success(let loggedFood):
                     print("✅ Successfully logged food with foodLogId: \(loggedFood.foodLogId)")
-                    
-                    // Track food logging in Mixpanel
-                    Mixpanel.mainInstance().track(event: "Log Food", properties: [
-                        "food_name": loggedFood.food.displayName,
-                        "meal_type": loggedFood.mealType,
-                        "calories": loggedFood.food.calories,
-                        "servings": 1,
-                        "log_method": "confirmation",
-                        "user_email": email
-                    ])
-                    
+
+                    // Mixpanel tracking removed - now handled by backend
+
                     // Create a new CombinedLog from the logged food
                     let combinedLog = CombinedLog(
                         type: .food,
