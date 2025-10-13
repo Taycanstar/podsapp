@@ -404,6 +404,10 @@ struct LogFood: View {
             searchResults = []
             return
         }
+        foodManager.animatedProgress = 0.05
+        withAnimation(.easeInOut(duration: 0.5)) {
+            foodManager.animatedProgress = 0.6
+        }
         isSearching = true
         defer { isSearching = false }
         
@@ -414,6 +418,12 @@ struct LogFood: View {
                                                                             userEmail: email)
                 searchResults = response.foods
                 isProSearchResult = true
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    foodManager.animatedProgress = 1.0
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    foodManager.animatedProgress = 0.0
+                }
                 return
             } catch {
                 print("Pro search error:", error)
@@ -425,12 +435,19 @@ struct LogFood: View {
             let response = try await FoodService.shared.searchFoods(query: query)
             searchResults = response.foods
             isProSearchResult = false
+            withAnimation(.easeInOut(duration: 0.35)) {
+                foodManager.animatedProgress = 1.0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                foodManager.animatedProgress = 0.0
+            }
         } catch {
             print("Search error:", error)
             searchResults = []
             isProSearchResult = false
             errorMessage = "We couldn't find results. Please try again."
             showErrorAlert = true
+            foodManager.animatedProgress = 0.0
         }
     }
 }
@@ -612,7 +629,7 @@ private struct FoodListView: View {
                 .padding(.top, 0)
             } 
             // Show AI Generate Macros button when there's search text in the .all tab
-            else if selectedFoodTab == .all {
+            else if selectedFoodTab == .all && !isProSearchResult {
                 Button(action: {
                     print("AI tapped for: \(searchText)")
                     HapticFeedback.generateLigth()
@@ -1788,7 +1805,7 @@ private struct ProFoodResultCard: View {
             header
             macroSummary
         }
-        .padding(24)
+        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
@@ -1813,7 +1830,7 @@ private struct ProFoodResultCard: View {
     
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text(food.displayName)
                     .font(.title2.weight(.semibold))
                     .foregroundColor(.primary)
@@ -1851,11 +1868,12 @@ private struct ProFoodResultCard: View {
             Spacer()
             
             HStack(spacing: 24) {
-                MacroColumn(title: "Protein", valueText: macroText(for: food.protein))
-                MacroColumn(title: "Carbs", valueText: macroText(for: food.carbs))
-                MacroColumn(title: "Fat", valueText: macroText(for: food.fat))
+                MacroColumn(title: "Protein", valueText: macroText(for: food.protein), titleTint: .blue)
+                MacroColumn(title: "Carbs", valueText: macroText(for: food.carbs), titleTint: Color("darkYellow"))
+                MacroColumn(title: "Fat", valueText: macroText(for: food.fat), titleTint: .pink)
             }
         }
+        .padding(.top, 16)
     }
     
     private var logButton: some View {
@@ -1863,21 +1881,15 @@ private struct ProFoodResultCard: View {
             HapticFeedback.generate()
             handleFoodTap()
         } label: {
-            HStack(spacing: 6) {
-                if alreadyLogged {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                }
-                Text(alreadyLogged ? "Added" : "Log")
-                    .font(.system(size: 15, weight: .semibold))
-            }
-            .foregroundColor(alreadyLogged ? .green : .accentColor)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill((alreadyLogged ? Color.green : Color.accentColor).opacity(0.12))
-            )
+            Text(alreadyLogged ? "Added" : "Log")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(Color(.systemBackground))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(Color.primary)
+                )
         }
         .buttonStyle(.plain)
         .disabled(alreadyLogged)
@@ -1989,15 +2001,16 @@ private struct ProFoodResultCard: View {
     private struct MacroColumn: View {
         let title: String
         let valueText: String
+        let titleTint: Color
         
         var body: some View {
             VStack(spacing: 0) {
                 Text(title)
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(titleTint)
                 Text(valueText)
                     .font(.system(size: 15, weight: .regular))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.primary)
             }
         }
     }
@@ -2949,11 +2962,15 @@ struct NavigationModifiers: ViewModifier {
                 Group {
                     if mode != .addToMeal && mode != .addToRecipe {
                         ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Cancel") {
+                            Button {
                                 selectedTab = 0
                                 dismiss()
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.primary)
                             }
-                            .foregroundColor(.accentColor)
+                            .accessibilityLabel("Close")
                         }
                     }
                     

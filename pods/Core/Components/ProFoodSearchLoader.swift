@@ -1,12 +1,11 @@
 import SwiftUI
 
 struct ProFoodSearchLoader: View {
-    @State private var pulseOpacity: Double = 0.7
     @State private var shimmerOffset: CGFloat = -200
-    @State private var progress: Double = 0.2
     
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject private var foodManager: FoodManager
     
     var body: some View {
         let shimmerColor = colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05)
@@ -57,20 +56,15 @@ struct ProFoodSearchLoader: View {
                 
                 RoundedRectangle(cornerRadius: 4)
                     .fill(Color.accentColor)
-                    .frame(width: geometry.size.width * progress, height: 4)
-                    .opacity(pulseOpacity)
-                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: pulseOpacity)
+                    .frame(width: geometry.size.width * foodManager.animatedProgress, height: 4)
+                    .animation(.easeInOut(duration: 0.45), value: foodManager.animatedProgress)
             }
         }
         .frame(height: 4)
         .onAppear {
             if reduceMotion {
-                progress = 0.6
+                // No animation; rely on static progress updates
             } else {
-                pulseOpacity = 1.0
-                withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                    progress = 0.95
-                }
                 startShimmerAnimation()
             }
         }
