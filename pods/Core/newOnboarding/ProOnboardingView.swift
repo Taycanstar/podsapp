@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct ProOnboardingView: View {
     @Binding var isPresented: Bool
@@ -109,7 +110,11 @@ struct ProOnboardingView: View {
         } message: {
             Text(errorMessage)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .subscriptionUpdated)) { _ in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: .subscriptionUpdated)
+                .receive(on: RunLoop.main)
+        ) { _ in
             if isSubscribed {
                 isPresented = false
             }
@@ -296,4 +301,3 @@ struct ProOnboardingView: View {
         return nil
     }
 }
-

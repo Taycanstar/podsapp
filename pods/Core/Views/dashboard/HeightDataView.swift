@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Charts
+import Combine
 
 struct HeightDataView: View {
     enum Timeframe: String, CaseIterable {
@@ -139,7 +140,11 @@ struct HeightDataView: View {
         .onDisappear {
             isTabBarVisible.wrappedValue = true
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HeightLogDeletedNotification"))) { _ in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("HeightLogDeletedNotification"))
+                .receive(on: RunLoop.main)
+        ) { _ in
             // Refresh data when a height log is deleted
             refreshDataFromNetwork()
         }

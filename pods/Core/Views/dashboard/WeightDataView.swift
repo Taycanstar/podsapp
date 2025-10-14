@@ -8,6 +8,7 @@
 import SwiftUI
 import Charts
 import HealthKit
+import Combine
 
 struct WeightDataView: View {
     enum Timeframe: String, CaseIterable {
@@ -345,19 +346,35 @@ struct WeightDataView: View {
         .onDisappear {
             isTabBarVisible.wrappedValue = true
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLoggedNotification"))) { _ in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("WeightLoggedNotification"))
+                .receive(on: RunLoop.main)
+        ) { _ in
             // Refresh data when a new weight is logged
             refreshFromNetwork()
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLogDeletedNotification"))) { _ in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("WeightLogDeletedNotification"))
+                .receive(on: RunLoop.main)
+        ) { _ in
             // Refresh data when a weight log is deleted
             refreshFromNetwork()
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLogUpdatedNotification"))) { notification in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("WeightLogUpdatedNotification"))
+                .receive(on: RunLoop.main)
+        ) { notification in
             // Refresh data when a weight log is updated
             refreshFromNetwork()
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AppleHealthWeightSynced"))) { _ in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("AppleHealthWeightSynced"))
+                .receive(on: RunLoop.main)
+        ) { _ in
             // Refresh data when Apple Health weights are synced
             print("🍎 Apple Health weights synced - refreshing weight data")
             showSyncIndicator = false
@@ -368,7 +385,11 @@ struct WeightDataView: View {
                 refreshFromNetwork()
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HealthKitPermissionsChanged"))) { _ in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("HealthKitPermissionsChanged"))
+                .receive(on: RunLoop.main)
+        ) { _ in
             // Check for new weights when HealthKit permissions change
             Task {
                 let hasNewWeights = await weightSyncService.hasNewWeightsToSync()

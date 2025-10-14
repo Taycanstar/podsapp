@@ -40,6 +40,7 @@ struct LogFood: View {
     // Nutrition label name input
     @State private var nutritionProductName = ""
     @State private var isProSearchResult = false
+    @State private var searchProgressTimer: Timer?
 
     private var currentUserEmail: String? {
         let email = UserDefaults.standard.string(forKey: "userEmail")
@@ -200,12 +201,16 @@ struct LogFood: View {
                 if trimmed.isEmpty {
                     searchResults = []
                     isProSearchResult = false
+                    resetSearchProgress()
                 }
             }
             .onChange(of: foodManager.lastGeneratedFood) { newFood in
                 if newFood != nil && !foodManager.showNutritionNameInput && !foodManager.showNutritionNameInputForCreation {
                     showConfirmFoodView = true
                 }
+            }
+            .onDisappear {
+                resetSearchProgress()
             }
     }
     
@@ -402,12 +407,10 @@ struct LogFood: View {
     private func searchFoods(query: String) async {
         guard !query.isEmpty else {
             searchResults = []
+            resetSearchProgress()
             return
         }
-        foodManager.animatedProgress = 0.05
-        withAnimation(.easeInOut(duration: 0.5)) {
-            foodManager.animatedProgress = 0.6
-        }
+        startSearchProgress()
         isSearching = true
         defer { isSearching = false }
         
@@ -418,12 +421,13 @@ struct LogFood: View {
                                                                             userEmail: email)
                 searchResults = response.foods
                 isProSearchResult = true
-                withAnimation(.easeInOut(duration: 0.35)) {
+                withAnimation(.easeInOut(duration: 0.3)) {
                     foodManager.animatedProgress = 1.0
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     foodManager.animatedProgress = 0.0
                 }
+                stopSearchProgressTimer()
                 return
             } catch {
                 print("Pro search error:", error)
@@ -435,12 +439,13 @@ struct LogFood: View {
             let response = try await FoodService.shared.searchFoods(query: query)
             searchResults = response.foods
             isProSearchResult = false
-            withAnimation(.easeInOut(duration: 0.35)) {
+            withAnimation(.easeInOut(duration: 0.3)) {
                 foodManager.animatedProgress = 1.0
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 foodManager.animatedProgress = 0.0
             }
+            stopSearchProgressTimer()
         } catch {
             print("Search error:", error)
             searchResults = []
@@ -448,7 +453,33 @@ struct LogFood: View {
             errorMessage = "We couldn't find results. Please try again."
             showErrorAlert = true
             foodManager.animatedProgress = 0.0
+            stopSearchProgressTimer()
         }
+    }
+
+    private func startSearchProgress() {
+        stopSearchProgressTimer()
+        foodManager.animatedProgress = 0.05
+        searchProgressTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { timer in
+            let next = min(self.foodManager.animatedProgress + 0.1, 0.85)
+            withAnimation(.easeInOut(duration: 0.3)) {
+                self.foodManager.animatedProgress = next
+            }
+            if next >= 0.85 {
+                timer.invalidate()
+                self.searchProgressTimer = nil
+            }
+        }
+    }
+    
+    private func stopSearchProgressTimer() {
+        searchProgressTimer?.invalidate()
+        searchProgressTimer = nil
+    }
+    
+    private func resetSearchProgress() {
+        stopSearchProgressTimer()
+        foodManager.animatedProgress = 0.0
     }
 }
 
@@ -1830,7 +1861,7 @@ private struct ProFoodResultCard: View {
     
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(food.displayName)
                     .font(.title2.weight(.semibold))
                     .foregroundColor(.primary)
@@ -1873,7 +1904,7 @@ private struct ProFoodResultCard: View {
                 MacroColumn(title: "Fat", valueText: macroText(for: food.fat), titleTint: .pink)
             }
         }
-        .padding(.top, 16)
+        .padding(.top, 20)
     }
     
     private var logButton: some View {

@@ -24,6 +24,10 @@ final class SubscriptionRepository: ObservableObject {
         manager.setOnboardingViewModel(onboarding)
 
         guard currentEmail != email else { return }
+
+        manager.clearSubscriptionState()
+        subscription = nil
+        lastUpdated = nil
         currentEmail = email
 
         if let cached: CachedEntry<SubscriptionInfo> = store.load(SubscriptionInfo.self,

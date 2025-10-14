@@ -468,14 +468,13 @@ func loadLogs(for date: Date, force: Bool = false) {
   isLoading = true
   error = nil
 
-  Task {
-    await repository.refresh(date: date, force: force)
-    if let snapshot = repository.snapshot(for: date) {
-      applySnapshot(snapshot)
+  Task { @MainActor [weak self] in
+    guard let self else { return }
+    await self.repository.refresh(date: date, force: force)
+    if let snapshot = self.repository.snapshot(for: date) {
+      self.applySnapshot(snapshot)
     } else {
-      await MainActor.run {
-        self.isLoading = false
-      }
+      self.isLoading = false
     }
   }
 }

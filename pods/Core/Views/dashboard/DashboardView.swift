@@ -1,5 +1,6 @@
 import SwiftUI
 import HealthKit
+import Combine
 
 struct DashboardView: View {
 
@@ -598,12 +599,20 @@ private var remainingCal: Double { vm.remainingCalories }
             .onChange(of: foodMgr.foodScanningState) { oldState, newState in
 
             }
-            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("WaterLoggedNotification"))) { _ in
+            .onReceive(
+                NotificationCenter.default
+                    .publisher(for: NSNotification.Name("WaterLoggedNotification"))
+                    .receive(on: RunLoop.main)
+            ) { _ in
                 print("💧 DashboardView received WaterLoggedNotification - refreshing logs for \(vm.selectedDate)")
                 // Refresh logs data when water is logged (for current selected date)
                 vm.loadLogs(for: vm.selectedDate, force: true)
             }
-            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("FoodLogUpdated"))) { notification in
+            .onReceive(
+                NotificationCenter.default
+                    .publisher(for: NSNotification.Name("FoodLogUpdated"))
+                    .receive(on: RunLoop.main)
+            ) { notification in
                 print("🍎 DashboardView received FoodLogUpdated notification")
                 if let userInfo = notification.userInfo,
                    let updatedLog = userInfo["updatedLog"] as? CombinedLog,
@@ -616,15 +625,21 @@ private var remainingCal: Double { vm.remainingCalories }
                     }
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthDataAvailableNotification"))) { _ in
+            .onReceive(
+                NotificationCenter.default
+                    .publisher(for: NSNotification.Name("HealthDataAvailableNotification"))
+                    .receive(on: RunLoop.main)
+            ) { _ in
                 print("📊 Health data available - reloading dashboard")
                 vm.loadLogs(for: vm.selectedDate)
             }
-            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LogsChangedNotification"))) { _ in
+            .onReceive(
+                NotificationCenter.default
+                    .publisher(for: NSNotification.Name("LogsChangedNotification"))
+                    .receive(on: RunLoop.main)
+            ) { _ in
                 print("🔄 DashboardView received LogsChangedNotification - refreshing preloaded profile data")
-                DispatchQueue.main.async {
-                    refreshPreloadedProfileData()
-                }
+                refreshPreloadedProfileData()
             }
 
 

@@ -113,6 +113,8 @@ struct LandingView: View {
             .padding(.bottom, 1)
             .preferredColorScheme(.light)
             .ignoresSafeArea()
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
     func handleGoogleSignIn() {

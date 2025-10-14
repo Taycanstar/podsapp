@@ -78,10 +78,6 @@ struct ProFoodSearchLoader: View {
             Text("Sourcing verified nutrition data…")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.secondary)
-                .overlay(
-                    shimmerGradient(shimmerColor)
-                        .opacity(0.7)
-                )
             
             Spacer()
         }

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Charts
+import Combine
 
 private enum ProfileTab: Hashable, CaseIterable {
     case summary, logs, workouts, meals
@@ -188,7 +189,11 @@ struct MyProfileView: View {
             fetchMacroSplitData()
             ensureCombinedLogsReady()
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("WeightLoggedNotification"))) { _ in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("WeightLoggedNotification"))
+                .receive(on: RunLoop.main)
+        ) { _ in
             // Refresh weight data when a new weight is logged
             print("🏋️ Received WeightLoggedNotification - refreshing weight data")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -196,7 +201,11 @@ struct MyProfileView: View {
                 fetchWeightData()
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LogsChangedNotification"))) { _ in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("LogsChangedNotification"))
+                .receive(on: RunLoop.main)
+        ) { _ in
             // Refresh profile data when logs change (food added/removed/updated)
             print("🔄 MyProfileView received LogsChangedNotification - refreshing profile data")
             Task {

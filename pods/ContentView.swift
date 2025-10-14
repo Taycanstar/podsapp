@@ -1,6 +1,7 @@
 import AVFoundation
 import SwiftUI
 import MicrosoftCognitiveServicesSpeech
+import Combine
 
 struct TabBarVisibilityKey: EnvironmentKey {
     static let defaultValue: Binding<Bool> = .constant(true)
@@ -316,10 +317,18 @@ struct ContentView: View {
         } message: {
             Text("Get gentle meal reminders and activity celebrations to help maintain your streak. You can configure these in Settings.")
         }
-        .onReceive(NotificationCenter.default.publisher(for: .subscriptionPurchased)) { _ in
-             fetchSubscriptionInfo(force: true)
-         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowFoodConfirmation"))) { notification in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: .subscriptionPurchased)
+                .receive(on: RunLoop.main)
+        ) { _ in
+            fetchSubscriptionInfo(force: true)
+        }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: NSNotification.Name("ShowFoodConfirmation"))
+                .receive(on: RunLoop.main)
+        ) { notification in
             // Handle scan completion - show confirmation view (works for both barcode and photo scanning)
             print("🔍 DEBUG NotificationCenter: Received ShowFoodConfirmation notification")
             if let userInfo = notification.userInfo,
@@ -346,7 +355,11 @@ struct ContentView: View {
                 print("❌ DEBUG NotificationCenter: Failed to extract food from notification userInfo")
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowNewSheetFromDashboard"))) { _ in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: NSNotification.Name("ShowNewSheetFromDashboard"))
+                .receive(on: RunLoop.main)
+        ) { _ in
             // Handle request from DashboardView to show NewSheetView
             print("📱 Received ShowNewSheetFromDashboard notification")
             showNewSheet = true

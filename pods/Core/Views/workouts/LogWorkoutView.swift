@@ -27,6 +27,7 @@
 import SwiftUI
 import AVKit
 import AVFoundation
+import Combine
 
 struct LogWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
@@ -257,7 +258,11 @@ struct LogWorkoutView: View {
                 // Cleanup if needed - WorkoutManager handles persistence
                 workoutManager.setWorkoutViewActive(false)
             }
-            .onReceive(NotificationCenter.default.publisher(for: .workoutCompletedNeedsFeedback)) { _ in
+            .onReceive(
+                NotificationCenter.default
+                    .publisher(for: .workoutCompletedNeedsFeedback)
+                    .receive(on: RunLoop.main)
+            ) { _ in
                 if workoutManager.completedWorkoutSummary != nil {
                     pendingWorkoutFeedback = true
                 } else {

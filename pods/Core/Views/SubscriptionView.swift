@@ -1,6 +1,7 @@
 import SwiftUI
 import StoreKit
 import UIKit
+import Combine
 
 struct SubscriptionView: View {
     @EnvironmentObject private var viewModel: OnboardingViewModel
@@ -64,7 +65,11 @@ struct SubscriptionView: View {
             subscriptionManager.setOnboardingViewModel(viewModel)
             Task { await fetchSubscriptionInfo(force: true) }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .subscriptionUpdated)) { _ in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: .subscriptionUpdated)
+                .receive(on: RunLoop.main)
+        ) { _ in
             Task { await fetchSubscriptionInfo(force: true) }
         }
         .onDisappear {

@@ -893,7 +893,7 @@ class FoodManager: ObservableObject {
 
     private func resetAndFetchFoods(force: Bool = false) {
         print("🍔 FoodManager: Reset and fetch foods called")
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
             await self.refreshFoods(force: force)
         }
@@ -902,7 +902,7 @@ class FoodManager: ObservableObject {
         guard !isFetchingCombinedLogs else { return }
         isFetchingCombinedLogs = true
 
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
             let success = await self.combinedLogsRepository.refresh(force: force)
             if success {
@@ -916,7 +916,7 @@ class FoodManager: ObservableObject {
 func loadMoreFoods(refresh: Bool = false) {
     guard userEmail != nil else { return }
 
-    Task { [weak self] in
+    Task { @MainActor [weak self] in
         guard let self else { return }
         if refresh {
             await self.refreshFoods(force: true)
@@ -954,7 +954,7 @@ func loadMoreLogs(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
         return
     }
 
-    Task { [weak self] in
+    Task { @MainActor [weak self] in
         guard let self else {
             await MainActor.run { completion?(false) }
             return
@@ -1030,7 +1030,7 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
             return
         }
 
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else {
                 await MainActor.run { completion?(false) }
                 return
@@ -1076,7 +1076,7 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
         guard !isFetchingUserFoods else { return }
         isFetchingUserFoods = true
 
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
             let success = await self.userFoodsRepository.refresh(force: force)
             if success {
@@ -1372,7 +1372,7 @@ func createMeal(
                 print("📊 Meal has \(meal.mealItems.count) food items")
                 
                 self?.meals.insert(meal, at: 0)
-                Task { [weak self] in
+                Task { @MainActor [weak self] in
                     guard let self else { return }
                     await self.mealsRepository.refresh(force: true)
                 }
@@ -1399,7 +1399,7 @@ private func resetAndFetchMeals(force: Bool = false) {
     guard !isFetchingMeals else { return }
     isFetchingMeals = true
 
-    Task { [weak self] in
+    Task { @MainActor [weak self] in
         guard let self else { return }
         let success = await self.mealsRepository.refresh(force: force)
         if success {
@@ -1421,7 +1421,7 @@ func loadMoreMeals(refresh: Bool = false, completion: ((Bool) -> Void)? = nil) {
         return
     }
 
-    Task { [weak self] in
+    Task { @MainActor [weak self] in
         guard let self else {
             await MainActor.run { completion?(false) }
             return
@@ -1664,7 +1664,7 @@ func updateMeal(
                     // Update the meals array if this meal exists in it
                     if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
                         self?.meals[index] = updatedMeal
-                        Task { [weak self] in
+                        Task { @MainActor [weak self] in
                             guard let self else { return }
                             await self.mealsRepository.refresh(force: true)
                         }
@@ -1758,7 +1758,7 @@ func updateMeal(
                     // Update the meals array if this meal exists in it
                     if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
                         self?.meals[index] = updatedMeal
-                        Task { [weak self] in
+                        Task { @MainActor [weak self] in
                             guard let self else { return }
                             await self.mealsRepository.refresh(force: true)
                         }
@@ -1823,7 +1823,7 @@ private func resetAndFetchRecipes(force: Bool = false) {
     guard !isFetchingRecipes else { return }
     isFetchingRecipes = true
 
-    Task { [weak self] in
+    Task { @MainActor [weak self] in
         guard let self else { return }
         let success = await self.recipesRepository.refresh(force: force)
         if success {
@@ -1840,7 +1840,7 @@ func loadMoreRecipes(refresh: Bool = false, completion: ((Bool) -> Void)? = nil)
         return
     }
 
-    Task { [weak self] in
+    Task { @MainActor [weak self] in
         guard let self else {
             await MainActor.run { completion?(false) }
             return
@@ -1947,7 +1947,7 @@ func createRecipe(
                     self.recipes.insert(recipe, at: 0)
                 }
                 
-                Task { [weak self] in
+                Task { @MainActor [weak self] in
                     guard let self else { return }
                     await self.recipesRepository.refresh(force: true)
                 }
@@ -4221,7 +4221,7 @@ func analyzeNutritionLabel(
         hasMoreSavedMeals = true
         isFetchingSavedMeals = true
 
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
             let success = await self.savedMealsRepository.refresh(force: force)
             if success {
@@ -4244,7 +4244,7 @@ func analyzeNutritionLabel(
             return
         }
 
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else {
                 await MainActor.run { completion?(false) }
                 return

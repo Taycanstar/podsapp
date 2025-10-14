@@ -8,6 +8,7 @@
 import SwiftUI
 import MessageUI
 import GoogleSignIn
+import Combine
 
 struct ProfileView: View {
     @Environment(\.colorScheme) var colorScheme
@@ -626,7 +627,11 @@ struct AppleHealthSettingsView: View {
             // Check current authorization status
             isHealthKitEnabled = healthViewModel.isAuthorized
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HealthKitPermissionsChanged"))) { _ in
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: NSNotification.Name("HealthKitPermissionsChanged"))
+                .receive(on: RunLoop.main)
+        ) { _ in
             // Update toggle when permissions change
             isHealthKitEnabled = healthViewModel.isAuthorized
         }

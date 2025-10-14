@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct SplashScreenView: View {
     @State private var isActive = false
@@ -53,7 +54,11 @@ struct SplashScreenView: View {
                     preloadAppData()
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("AuthenticationCompleted"))) { _ in
+            .onReceive(
+                NotificationCenter.default
+                    .publisher(for: Notification.Name("AuthenticationCompleted"))
+                    .receive(on: RunLoop.main)
+            ) { _ in
                 // Also try when authentication completes
                 if !hasTriedDataLoading {
                     hasTriedDataLoading = true
