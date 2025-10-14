@@ -210,6 +210,7 @@ struct WorkoutProfile: Codable, Identifiable, Equatable {
     var workoutFrequency: String
     var sport: String
     var availableEquipment: [String]
+    var bodyweightOnlyWorkout: Bool
     var workoutLocation: String
     var preferredWorkoutDuration: Int
     var workoutDaysPerWeek: Int
@@ -240,6 +241,7 @@ struct WorkoutProfile: Codable, Identifiable, Equatable {
         case workoutFrequency = "workout_frequency"
         case sport
         case availableEquipment = "available_equipment"
+        case bodyweightOnlyWorkout = "bodyweight_only_workout"
         case workoutLocation = "workout_location"
         case preferredWorkoutDuration = "preferred_workout_duration"
         case workoutDaysPerWeek = "workout_days_per_week"
@@ -274,6 +276,7 @@ struct WorkoutProfile: Codable, Identifiable, Equatable {
         workoutFrequency = try container.decodeIfPresent(String.self, forKey: .workoutFrequency) ?? "medium"
         sport = try container.decodeIfPresent(String.self, forKey: .sport) ?? ""
         availableEquipment = try container.decodeIfPresent([String].self, forKey: .availableEquipment) ?? []
+        bodyweightOnlyWorkout = try container.decodeIfPresent(Bool.self, forKey: .bodyweightOnlyWorkout) ?? false
         workoutLocation = try container.decodeIfPresent(String.self, forKey: .workoutLocation) ?? "large_gym"
         preferredWorkoutDuration = try container.decodeIfPresent(Int.self, forKey: .preferredWorkoutDuration) ?? 60
         workoutDaysPerWeek = try container.decodeIfPresent(Int.self, forKey: .workoutDaysPerWeek) ?? 3
@@ -306,6 +309,7 @@ struct WorkoutProfile: Codable, Identifiable, Equatable {
         try container.encode(workoutFrequency, forKey: .workoutFrequency)
         try container.encode(sport, forKey: .sport)
         try container.encode(availableEquipment, forKey: .availableEquipment)
+        try container.encode(bodyweightOnlyWorkout, forKey: .bodyweightOnlyWorkout)
         try container.encode(workoutLocation, forKey: .workoutLocation)
         try container.encode(preferredWorkoutDuration, forKey: .preferredWorkoutDuration)
         try container.encode(workoutDaysPerWeek, forKey: .workoutDaysPerWeek)

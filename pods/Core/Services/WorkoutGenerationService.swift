@@ -51,7 +51,7 @@ class WorkoutGenerationService {
         print("🎯 Optimal exercise count: \(optimalExerciseCount.total) total, \(optimalExerciseCount.perMuscle) per muscle")
 
         // Generate exercises directly using optimal count with proper distribution
-        let exercises = generateOptimizedExercisesWithTotalBudget(
+        var exercises = generateOptimizedExercisesWithTotalBudget(
             muscleGroups: muscleGroups,
             totalExercises: optimalExerciseCount.total,
             basePerMuscle: optimalExerciseCount.perMuscle,
@@ -60,6 +60,8 @@ class WorkoutGenerationService {
             customEquipment: customEquipment,
             flexibilityPreferences: flexibilityPreferences
         )
+        let userProfile = UserProfileService.shared
+        exercises = exercises.filter { userProfile.canPerformExercise($0.exercise) }
 
         // Calculate actual time with single buffer (no double buffering)
         let totalExerciseTime = calculateActualExerciseTime(exercises: exercises, fitnessGoal: fitnessGoal)

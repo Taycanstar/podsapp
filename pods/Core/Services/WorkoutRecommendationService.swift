@@ -1113,11 +1113,12 @@ class WorkoutRecommendationService {
     // MARK: - Goal × Equipment weighting (prevents bodyweight dominance for hypertrophy/strength when weights exist)
     private func getEquipmentPreferenceScore(_ exercise: ExerciseData, userProfile: UserProfileService) -> Int {
         let goal = userProfile.fitnessGoal.normalized
+        let availableEquipment = userProfile.bodyweightOnlyWorkouts ? [] : userProfile.availableEquipment
         let equip = exercise.equipment.lowercased()
-        let hasBarbell = userProfile.availableEquipment.contains(.barbells)
-        let hasDumbbell = userProfile.availableEquipment.contains(.dumbbells)
-        let hasCable = userProfile.availableEquipment.contains(.cable) || userProfile.availableEquipment.contains(.latPulldownCable)
-        let hasMachines = userProfile.availableEquipment.contains(.hammerstrengthMachine) || userProfile.availableEquipment.contains(.legPress) || userProfile.availableEquipment.contains(.smithMachine)
+        let hasBarbell = availableEquipment.contains(.barbells)
+        let hasDumbbell = availableEquipment.contains(.dumbbells)
+        let hasCable = availableEquipment.contains(.cable) || availableEquipment.contains(.latPulldownCable)
+        let hasMachines = availableEquipment.contains(.hammerstrengthMachine) || availableEquipment.contains(.legPress) || availableEquipment.contains(.smithMachine)
         let hasWeightedOptions = hasBarbell || hasDumbbell || hasCable || hasMachines
 
         func isBodyweight() -> Bool {

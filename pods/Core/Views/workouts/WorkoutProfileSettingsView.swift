@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct WorkoutProfileSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
@@ -18,6 +19,9 @@ struct WorkoutProfileSettingsView: View {
     @State private var profilePendingDeletion: WorkoutProfile?
     @State private var isDeletingProfile = false
     @State private var deletionError: String?
+    @State private var showEquipmentSheet = false
+    @State private var equipmentSelection: Set<Equipment> = []
+    @State private var equipmentSelectionBackup: Set<Equipment> = []
 
     private var rowBackground: Color { Color("altcard") }
     private var iconColor: Color { colorScheme == .dark ? .white : .primary }
@@ -41,6 +45,14 @@ struct WorkoutProfileSettingsView: View {
         if h > 0 && m > 0 { return String(format: "%dh %02dm", h, m) }
         if h > 0 { return String(format: "%dh", h) }
         return String(format: "%dm", m)
+    }
+
+    private var equipmentSelectionSummary: String {
+        if profile.bodyweightOnlyWorkouts {
+            return "Bodyweight only"
+        }
+        let count = profile.availableEquipment.count
+        return count == 0 ? "Select" : "\(count) selected"
     }
 
     private func syncInitialDuration() {
@@ -78,6 +90,60 @@ struct WorkoutProfileSettingsView: View {
 
     var body: some View {
         Form {
+            Section(header: Text("Gym Equipment")) {
+                Button {
+                    let currentSelection = Set(profile.availableEquipment)
+                    equipmentSelection = currentSelection
+                    equipmentSelectionBackup = currentSelection
+                    showEquipmentSheet = true
+                } label: {
+                    HStack {
+                        HStack(spacing: 12) {
+                            Image(systemName: "dumbbell")
+                                .font(.system(size: 16))
+                                .fontWeight(.semibold)
+                                .foregroundColor(iconColor)
+                            Text("Available Equipment")
+                                .font(.system(size: 15))
+                                .foregroundColor(iconColor)
+                        }
+                        Spacer()
+                        Text(equipmentSelectionSummary)
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 15))
+                    }
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(rowBackground)
+
+                Toggle(isOn: Binding(
+                    get: { profile.bodyweightOnlyWorkouts },
+                    set: { newValue in
+                        profile.bodyweightOnlyWorkouts = newValue
+                        sendPreferenceUpdate(["bodyweight_only_workout": newValue])
+                        if newValue {
+                            let bodyweightEquipment = EquipmentView.EquipmentType.bodyweightOnly.equipmentList
+                            workoutManager.customEquipment = bodyweightEquipment
+                        } else {
+                            workoutManager.customEquipment = nil
+                        }
+                        Task { await workoutManager.generateTodayWorkout() }
+                    }
+                )) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.system(size: 16))
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                        Text("Bodyweight Only Workout")
+                            .font(.system(size: 15))
+                            .foregroundColor(iconColor)
+                    }
+                }
+                .tint(.accentColor)
+                .listRowBackground(rowBackground)
+            }
+
             Section(header: Text("Workout Settings")) {
                 // Fitness Goal
                 HStack {
@@ -379,6 +445,7 @@ struct WorkoutProfileSettingsView: View {
         }
         .sheet(isPresented: $showNewProfileSheet) { newProfileSheet() }
         .sheet(isPresented: $showSwitchProfileSheet) { switchProfileSheet() }
+        .sheet(isPresented: $showEquipmentSheet) { equipmentSelectionSheet() }
         .alert("Delete Gym Profile?", isPresented: $showDeleteProfileAlert, presenting: profilePendingDeletion) { pending in
             Button("Delete", role: .destructive) {
                 Task { await deleteProfile(pending) }
@@ -504,6 +571,30 @@ extension WorkoutProfileSettingsView {
         }
     }
 
+    private func persistEquipmentSelection(_ selection: Set<Equipment>) {
+        let ordered = Equipment.allCases.filter { selection.contains($0) && $0 != .bodyWeight }
+        equipmentSelection = Set(ordered)
+        equipmentSelectionBackup = Set(ordered)
+        profile.availableEquipment = ordered
+        sendPreferenceUpdate(["available_equipment": ordered.map { $0.rawValue }])
+        showEquipmentSheet = false
+        Task {
+            await workoutManager.generateTodayWorkout()
+        }
+    }
+
+    @ViewBuilder
+    private func equipmentSelectionSheet() -> some View {
+        GymEquipmentSelectionSheet(
+            selection: $equipmentSelection,
+            onSave: { persistEquipmentSelection($0) },
+            onCancel: {
+                equipmentSelection = equipmentSelectionBackup
+                showEquipmentSheet = false
+            }
+        )
+    }
+
     @MainActor
     private func createProfile() async {
         let trimmed = newProfileName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -558,6 +649,105 @@ extension WorkoutProfileSettingsView {
             get: { deletionError != nil },
             set: { if !$0 { deletionError = nil } }
         )
+    }
+}
+
+private struct GymEquipmentSelectionSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selection: Set<Equipment>
+    let onSave: (Set<Equipment>) -> Void
+    let onCancel: () -> Void
+
+    private var equipmentSections: [(title: String, items: [Equipment])] {
+        let allEquipment = Set(Equipment.allCases)
+
+        func filtered(_ equipments: [Equipment]) -> [Equipment] {
+            equipments
+                .filter { allEquipment.contains($0) && $0 != .bodyWeight }
+                .sorted { $0.rawValue < $1.rawValue }
+        }
+
+        return [
+            ("Small Weights", filtered([.dumbbells, .kettlebells])),
+            ("Bars & Plates", filtered([.barbells, .ezBar])),
+            ("Benches & Racks", filtered([.flatBench, .inclineBench, .declineBench, .squatRack, .preacherCurlBench])),
+            ("Cable Machines", filtered([.cable, .latPulldownCable, .rowMachine])),
+            ("Resistance Bands", filtered([.resistanceBands])),
+            ("Exercise Balls & More", filtered([.stabilityBall, .medicineBalls, .bosuBalanceTrainer, .box, .pvc])),
+            ("Plated Machines", filtered([.hammerstrengthMachine, .legPress, .hackSquatMachine, .sled])),
+            ("Weight Machines", filtered([
+                .smithMachine, .legExtensionMachine, .legCurlMachine, .calfRaiseMachine,
+                .shoulderPressMachine, .tricepsExtensionMachine, .bicepsCurlMachine,
+                .abCrunchMachine, .preacherCurlMachine
+            ])),
+            ("Specialties", filtered([
+                .pullupBar, .dipBar, .battleRopes, .rings, .platforms
+            ]))
+        ]
+        .filter { !$0.items.isEmpty }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    Text("Pick the equipment available at your gym. We use this to tailor workouts to what you can actually use.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 8)
+
+                    ForEach(equipmentSections, id: \.title) { section in
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(section.title)
+                                .font(.headline)
+                                .foregroundColor(.primary)
+
+                            let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+
+                            LazyVGrid(columns: columns, spacing: 16) {
+                                ForEach(section.items, id: \.self) { equipment in
+                                    EquipmentSelectionButton(
+                                        equipment: equipment,
+                                        isSelected: selection.contains(equipment),
+                                        onTap: { toggleSelection(for: equipment) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 32)
+            }
+            .background(Color("altbg").ignoresSafeArea())
+            .navigationTitle("Gym Equipment")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onCancel()
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(selection)
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private func toggleSelection(for equipment: Equipment) {
+        HapticFeedback.generate()
+        UISelectionFeedbackGenerator().selectionChanged()
+        if selection.contains(equipment) {
+            selection.remove(equipment)
+        } else {
+            selection.insert(equipment)
+        }
     }
 }
 

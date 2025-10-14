@@ -152,6 +152,7 @@ class WorkoutManager: ObservableObject {
     private var todayWorkoutRecoverySnapshot: [String: Double]?
     private var todayWorkoutMuscleGroups: [String] = []
     private var todayWorkoutTrainingSplit: String?
+    private var todayWorkoutBodyweightOnly: Bool?
     private var sessionMonitorTimer: Timer?
     private var activeWorkoutState: ActiveWorkoutState?
     private let sessionTimeoutInterval: TimeInterval = 3 * 60 * 60
@@ -184,6 +185,7 @@ class WorkoutManager: ObservableObject {
     private let todayWorkoutRecoverySnapshotKey = "todayWorkoutRecoverySnapshot"
     private let todayWorkoutMusclesKey = "todayWorkoutMuscles"
     private let todayWorkoutTrainingSplitKey = "todayWorkoutTrainingSplit"
+    private let todayWorkoutBodyweightOnlyKey = "todayWorkoutBodyweightOnly"
     private let activeWorkoutStateKey = "activeWorkoutState"
     private let customWorkoutsKey = "custom_workouts"
     private let customWorkoutIdCounterKey = "customWorkoutIdCounter"
@@ -470,6 +472,7 @@ class WorkoutManager: ObservableObject {
             self.todayWorkoutMuscleGroups = baseResult.muscleGroups
             self.todayWorkoutRecoverySnapshot = captureCurrentRecoverySnapshot()
             self.todayWorkoutTrainingSplit = userProfileService.trainingSplit.rawValue
+            self.todayWorkoutBodyweightOnly = userProfileService.bodyweightOnlyWorkouts
             // REMOVED: self.sessionPhase = dynamicParams.sessionPhase (this was overriding our sync!)
 
             saveTodayWorkout()
@@ -516,6 +519,8 @@ class WorkoutManager: ObservableObject {
             todayWorkout = sanitized
             todayWorkoutMuscleGroups = result.muscleGroups
             todayWorkoutRecoverySnapshot = captureCurrentRecoverySnapshot()
+            todayWorkoutTrainingSplit = userProfileService.trainingSplit.rawValue
+            todayWorkoutBodyweightOnly = userProfileService.bodyweightOnlyWorkouts
             generationError = nil
             saveTodayWorkout()
             
@@ -2269,6 +2274,7 @@ class WorkoutManager: ObservableObject {
             resolvedContext = cachedContext
         } else {
             print("❌ WorkoutManager: Missing ModelContext for completing workout")
+            cleanupAfterIncompleteCompletion()
             return
         }
 
@@ -2341,6 +2347,17 @@ class WorkoutManager: ObservableObject {
             pendingSummaryRegeneration = true
             isDisplayingSummary = true
         }
+    }
+
+    private func cleanupAfterIncompleteCompletion() {
+        currentWorkout = nil
+        clearActiveWorkoutState()
+        clearSessionOverrides()
+        todayWorkout = nil
+        todayWorkoutMuscleGroups = []
+        todayWorkoutRecoverySnapshot = nil
+        todayWorkoutBodyweightOnly = nil
+        clearTodayWorkoutStorage()
     }
 
     func dismissWorkoutSummary() {
@@ -2732,6 +2749,9 @@ class WorkoutManager: ObservableObject {
         if hasTrainingSplitChanged() {
             return true
         }
+        if hasBodyweightPreferenceChanged() {
+            return true
+        }
         return false
     }
 
@@ -2744,6 +2764,15 @@ class WorkoutManager: ObservableObject {
             return true
         }
         return false
+    }
+
+    private func hasBodyweightPreferenceChanged() -> Bool {
+        let currentPreference = userProfileService.bodyweightOnlyWorkouts
+        if let storedPreference = todayWorkoutBodyweightOnly {
+            return storedPreference != currentPreference
+        }
+        // If we have an existing workout but no stored preference, regenerate only when bodyweight mode is enabled.
+        return currentPreference
     }
 
     private func setupSessionMonitoring() {
@@ -2767,16 +2796,14 @@ class WorkoutManager: ObservableObject {
     }
 
     private func autoCompleteAbandonedWorkout() {
-        if currentWorkout == nil,
-           let workout = todayWorkout,
-           let state = activeWorkoutState,
-           workout.id == state.workoutId {
-            currentWorkout = workout
-        }
-        guard currentWorkout != nil else {
+        guard let workout = todayWorkout,
+              let state = activeWorkoutState,
+              workout.id == state.workoutId else {
             clearActiveWorkoutState()
             return
         }
+        // Complete using the cached workout without presenting the in-progress UI
+        // (currentWorkout is intentionally left nil to avoid auto-launching the logging surface)
         completeWorkout(autoComplete: true)
     }
 
@@ -2962,6 +2989,13 @@ class WorkoutManager: ObservableObject {
         } else {
             defaults.removeObject(forKey: splitKey)
         }
+
+        let bodyweightKey = profileStorageKey(todayWorkoutBodyweightOnlyKey)
+        if let preference = todayWorkoutBodyweightOnly {
+            defaults.set(preference, forKey: bodyweightKey)
+        } else {
+            defaults.removeObject(forKey: bodyweightKey)
+        }
     }
     
     private func loadTodayWorkoutMetadata() {
@@ -2969,6 +3003,7 @@ class WorkoutManager: ObservableObject {
         let snapshotKey = profileStorageKey(todayWorkoutRecoverySnapshotKey)
         let musclesKey = profileStorageKey(todayWorkoutMusclesKey)
         let splitKey = profileStorageKey(todayWorkoutTrainingSplitKey)
+        let bodyweightKey = profileStorageKey(todayWorkoutBodyweightOnlyKey)
 
         if let data = defaults.data(forKey: snapshotKey),
            let snapshot = try? JSONDecoder().decode([String: Double].self, from: data) {
@@ -2985,6 +3020,12 @@ class WorkoutManager: ObservableObject {
 
         todayWorkoutTrainingSplit = defaults.string(forKey: splitKey)
 
+        if defaults.object(forKey: bodyweightKey) != nil {
+            todayWorkoutBodyweightOnly = defaults.bool(forKey: bodyweightKey)
+        } else {
+            todayWorkoutBodyweightOnly = nil
+        }
+
         activeWorkoutState = loadActiveWorkoutState()
     }
     
@@ -2994,6 +3035,8 @@ class WorkoutManager: ObservableObject {
         defaults.removeObject(forKey: profileStorageKey(todayWorkoutRecoverySnapshotKey))
         defaults.removeObject(forKey: profileStorageKey(todayWorkoutMusclesKey))
         defaults.removeObject(forKey: profileStorageKey(todayWorkoutTrainingSplitKey))
+        defaults.removeObject(forKey: profileStorageKey(todayWorkoutBodyweightOnlyKey))
+        todayWorkoutBodyweightOnly = nil
     }
 
     private func loadActiveWorkoutState() -> ActiveWorkoutState? {

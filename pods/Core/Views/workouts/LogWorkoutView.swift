@@ -47,6 +47,7 @@ struct LogWorkoutView: View {
     @EnvironmentObject var onboarding: OnboardingViewModel
     @Environment(\.modelContext) private var modelContext
     private let userProfileService = UserProfileService.shared
+    @ObservedObject private var userProfile = UserProfileService.shared
     
     // Local UI state
     @State private var showingDurationPicker = false
@@ -257,6 +258,10 @@ struct LogWorkoutView: View {
             .onDisappear {
                 // Cleanup if needed - WorkoutManager handles persistence
                 workoutManager.setWorkoutViewActive(false)
+            }
+            .onChange(of: userProfile.bodyweightOnlyWorkouts) { _, newValue in
+                print("🏋️‍♀️ Bodyweight-only preference toggled to \(newValue) – scheduling workout regeneration")
+                shouldRegenerateWorkout = true
             }
             .onReceive(
                 NotificationCenter.default
@@ -1092,7 +1097,7 @@ struct LogWorkoutView: View {
                         onPresentLogSheet: onPresentLogSheet,
                         onRefresh: {
                             HapticFeedback.generate()
-                            shouldRegenerateWorkout = true
+                            Task { await workoutManager.generateTodayWorkout() }
                         },
                         onRenameWorkout: {
                             HapticFeedback.generate()

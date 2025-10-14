@@ -709,19 +709,95 @@ class UserProfileService: ObservableObject {
 
     var availableEquipment: [Equipment] {
         get {
-            // Try server data first
+            let scopedKey = scopedDefaultsKey("availableEquipment")
+            if let stored = UserDefaults.standard.array(forKey: scopedKey) as? [String] {
+                return stored.compactMap { Equipment(rawValue: $0) }
+            }
+
+            if let legacy = UserDefaults.standard.array(forKey: "availableEquipment") as? [String] {
+                UserDefaults.standard.set(legacy, forKey: scopedKey)
+                UserDefaults.standard.removeObject(forKey: "availableEquipment")
+                return legacy.compactMap { Equipment(rawValue: $0) }
+            }
+
             if let workoutProfile = activeWorkoutProfile {
                 let equipmentStrings = workoutProfile.availableEquipment
+                if !equipmentStrings.isEmpty {
+                    UserDefaults.standard.set(equipmentStrings, forKey: scopedKey)
+                }
                 return equipmentStrings.compactMap { Equipment(rawValue: $0) }
             }
-            
-            // Fallback to UserDefaults
-            let equipmentStrings = UserDefaults.standard.stringArray(forKey: "availableEquipment") ?? []
-            return equipmentStrings.compactMap { Equipment(rawValue: $0) }
+
+            return []
         }
         set {
             let equipmentStrings = newValue.map { $0.rawValue }
-            UserDefaults.standard.set(equipmentStrings, forKey: "availableEquipment")
+            let scopedKey = scopedDefaultsKey("availableEquipment")
+            UserDefaults.standard.set(equipmentStrings, forKey: scopedKey)
+
+            if let resolvedId = activeWorkoutProfile?.id ?? activeWorkoutProfileId,
+               let index = workoutProfiles.firstIndex(where: { $0.id == resolvedId }) {
+                workoutProfiles[index].availableEquipment = equipmentStrings
+            } else if workoutProfiles.count == 1 {
+                workoutProfiles[0].availableEquipment = equipmentStrings
+            }
+
+            if var data = profileData {
+                if let resolvedId = data.activeWorkoutProfileId ?? activeWorkoutProfileId,
+                   let index = data.workoutProfiles.firstIndex(where: { $0.id == resolvedId }) {
+                    data.workoutProfiles[index].availableEquipment = equipmentStrings
+                } else if !data.workoutProfiles.isEmpty {
+                    data.workoutProfiles[0].availableEquipment = equipmentStrings
+                }
+                profileData = data
+            }
+
+            publishChange()
+        }
+    }
+
+    var bodyweightOnlyWorkouts: Bool {
+        get {
+            let scopedKey = scopedDefaultsKey("bodyweightOnlyWorkouts")
+            if UserDefaults.standard.object(forKey: scopedKey) != nil {
+                return UserDefaults.standard.bool(forKey: scopedKey)
+            }
+
+            if let workoutProfile = activeWorkoutProfile {
+                return workoutProfile.bodyweightOnlyWorkout
+            }
+
+            if UserDefaults.standard.object(forKey: "bodyweightOnlyWorkouts") != nil {
+                let legacyValue = UserDefaults.standard.bool(forKey: "bodyweightOnlyWorkouts")
+                UserDefaults.standard.set(legacyValue, forKey: scopedKey)
+                UserDefaults.standard.removeObject(forKey: "bodyweightOnlyWorkouts")
+                return legacyValue
+            }
+
+            return false
+        }
+        set {
+            let scopedKey = scopedDefaultsKey("bodyweightOnlyWorkouts")
+            UserDefaults.standard.set(newValue, forKey: scopedKey)
+
+            if let resolvedId = activeWorkoutProfile?.id ?? activeWorkoutProfileId,
+               let index = workoutProfiles.firstIndex(where: { $0.id == resolvedId }) {
+                workoutProfiles[index].bodyweightOnlyWorkout = newValue
+            } else if workoutProfiles.count == 1 {
+                workoutProfiles[0].bodyweightOnlyWorkout = newValue
+            }
+
+            if var data = profileData {
+                if let resolvedId = data.activeWorkoutProfileId ?? activeWorkoutProfileId,
+                   let index = data.workoutProfiles.firstIndex(where: { $0.id == resolvedId }) {
+                    data.workoutProfiles[index].bodyweightOnlyWorkout = newValue
+                } else if !data.workoutProfiles.isEmpty {
+                    data.workoutProfiles[0].bodyweightOnlyWorkout = newValue
+                }
+                profileData = data
+            }
+
+            publishChange()
         }
     }
     
@@ -960,11 +1036,18 @@ class UserProfileService: ObservableObject {
     // MARK: - Equipment Filtering
     
     func hasEquipment(_ equipment: Equipment) -> Bool {
+        if bodyweightOnlyWorkouts {
+            return equipment == .bodyWeight
+        }
         return availableEquipment.contains(equipment)
     }
     
     func canPerformExercise(_ exercise: ExerciseData) -> Bool {
         let equipmentNeeded = mapExerciseToEquipment(exercise)
+
+        if bodyweightOnlyWorkouts {
+            return equipmentNeeded.isEmpty
+        }
         
         // If no specific equipment needed, assume bodyweight
         if equipmentNeeded.isEmpty {
@@ -976,8 +1059,11 @@ class UserProfileService: ObservableObject {
     }
     
     private func mapExerciseToEquipment(_ exercise: ExerciseData) -> [Equipment] {
+        if let override = equipmentOverride(for: exercise) {
+            return override
+        }
         let equipmentName = exercise.equipment.lowercased()
-        
+
         switch equipmentName {
         case let name where name.contains("dumbbell"):
             return [.dumbbells]
@@ -1009,6 +1095,17 @@ class UserProfileService: ObservableObject {
             return [] // No equipment needed
         default:
             return [] // Assume bodyweight if unknown
+        }
+    }
+
+    private func equipmentOverride(for exercise: ExerciseData) -> [Equipment]? {
+        switch exercise.id {
+        case 5696: // Cheat Curl
+            return [.barbells]
+        case 9695: // Landmine Half Kneeling Shoulders Press misclassified as bodyweight
+            return [.barbells]
+        default:
+            return nil
         }
     }
     
