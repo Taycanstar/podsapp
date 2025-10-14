@@ -3,6 +3,7 @@ import SwiftUI
 struct WorkoutProfileSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var profile = UserProfileService.shared
+    @ObservedObject private var workoutManager = WorkoutManager.shared
 
     @State private var showDurationPicker = false
     @State private var durationHours: Int = 0
@@ -296,10 +297,18 @@ struct WorkoutProfileSettingsView: View {
                     Spacer()
                     Menu {
                         ForEach(TrainingSplitPreference.allCases, id: \.self) { split in
-                            Button(action: { profile.trainingSplit = split }) {
+                            Button(action: {
+                                profile.trainingSplit = split
+                                sendPreferenceUpdate(["training_split": split.rawValue])
+
+                                // Directly regenerate workout (no race condition)
+                                Task {
+                                    await workoutManager.generateTodayWorkout()
+                                }
+                            }) {
                                 HStack {
                                     Text(split.displayName)
-                        
+
                                     if profile.trainingSplit == split { Image(systemName: "checkmark") }
                                 }
                             }

@@ -446,16 +446,6 @@ struct LogWorkoutView: View {
                     await workoutManager.generateTodayWorkout()
                 }
             },
-            onSetAsDefault: { newMuscles, split in
-                print("🎯 Default muscles set to \(newMuscles) for \(split.rawValue)")
-                workoutManager.setDefaultMuscleSelection(type: split.rawValue, muscles: newMuscles)
-                updateTrainingSplitPreference(for: split)
-                showingTargetMusclesPicker = false
-
-                Task {
-                    await workoutManager.generateTodayWorkout()
-                }
-            },
             currentCustomMuscles: workoutManager.baselineCustomMuscles,
             currentMuscleType: selectedMuscleType
         )
@@ -1287,25 +1277,6 @@ struct LogWorkoutView: View {
         case .olympicWeightlifting: return 240
         case .general: return 75
         default: return 75
-        }
-    }
-
-    private func updateTrainingSplitPreference(for split: TargetMusclesView.MuscleSplitType) {
-        let newPreference: TrainingSplitPreference
-
-        switch split {
-        case .recoveredMuscles, .customMuscleGroup:
-            newPreference = .fresh
-        case .pushMuscles, .pullMuscles:
-            newPreference = .pushPullLower
-        case .upperBody, .lowerBody:
-            newPreference = .upperLower
-        case .fullBody:
-            newPreference = .fullBody
-        }
-
-        if userProfileService.trainingSplit != newPreference {
-            userProfileService.trainingSplit = newPreference
         }
     }
 

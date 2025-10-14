@@ -12,9 +12,8 @@ struct TargetMusclesView: View {
     @State private var selectedSplit: MuscleSplitType = .recoveredMuscles
     @State private var showingMuscleGroups = false
     @State private var selectedMuscles: Set<String> = []
-    
+
     let onSetForWorkout: ([String], MuscleSplitType) -> Void
-    let onSetAsDefault: ([String], MuscleSplitType) -> Void
     let currentCustomMuscles: [String]? // Current custom muscle selection
     let currentMuscleType: String // Current muscle type
     
@@ -266,44 +265,24 @@ struct TargetMusclesView: View {
             Divider()
                 .padding(.bottom, 12)
 
-            HStack(spacing: 0) {
-                Button("Set as default") {
-                    HapticFeedback.generate()
-                    onSetAsDefault(Array(selectedMuscles), selectedSplit)
-                    dismiss()
-                }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(canSetDefault ? .primary : .primary.opacity(0.4))
-                .disabled(!canSetDefault)
-
-                Spacer(minLength: 12)
-
-                Button("Set for workout") {
-                    HapticFeedback.generate()
-                    onSetForWorkout(Array(selectedMuscles), selectedSplit)
-                    dismiss()
-                }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(Color(.systemBackground))
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(canSetForWorkout ? Color.primary : Color.gray.opacity(0.4))
-                .cornerRadius(24)
-                .disabled(!canSetForWorkout)
+            Button("Set for workout") {
+                HapticFeedback.generate()
+                onSetForWorkout(Array(selectedMuscles), selectedSplit)
+                dismiss()
             }
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(Color(.systemBackground))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(canSetForWorkout ? Color.primary : Color.gray.opacity(0.4))
+            .cornerRadius(24)
+            .disabled(!canSetForWorkout)
             .padding(.horizontal, 24)
             .padding(.bottom, 30)
         }
     }
 
     private var canSetForWorkout: Bool {
-        if selectedSplit == .customMuscleGroup {
-            return !selectedMuscles.isEmpty
-        }
-        return true
-    }
-
-    private var canSetDefault: Bool {
         if selectedSplit == .customMuscleGroup {
             return !selectedMuscles.isEmpty
         }
@@ -357,9 +336,6 @@ struct MuscleSplitButton: View {
     TargetMusclesView(
         onSetForWorkout: { muscles, split in
             print("Set for workout: \(muscles) - \(split.rawValue)")
-        },
-        onSetAsDefault: { muscles, split in
-            print("Set default: \(muscles) - \(split.rawValue)")
         },
         currentCustomMuscles: ["Chest", "Triceps"],
         currentMuscleType: "Recovered Muscles"

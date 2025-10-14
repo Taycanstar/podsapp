@@ -151,6 +151,7 @@ class WorkoutManager: ObservableObject {
     private var manualWarmupExerciseIDs: Set<Int> = []
     private var todayWorkoutRecoverySnapshot: [String: Double]?
     private var todayWorkoutMuscleGroups: [String] = []
+    private var todayWorkoutTrainingSplit: String?
     private var sessionMonitorTimer: Timer?
     private var activeWorkoutState: ActiveWorkoutState?
     private let sessionTimeoutInterval: TimeInterval = 3 * 60 * 60
@@ -182,6 +183,7 @@ class WorkoutManager: ObservableObject {
     private let sessionEquipmentTypeKey = "currentWorkoutEquipmentType"
     private let todayWorkoutRecoverySnapshotKey = "todayWorkoutRecoverySnapshot"
     private let todayWorkoutMusclesKey = "todayWorkoutMuscles"
+    private let todayWorkoutTrainingSplitKey = "todayWorkoutTrainingSplit"
     private let activeWorkoutStateKey = "activeWorkoutState"
     private let customWorkoutsKey = "custom_workouts"
     private let customWorkoutIdCounterKey = "customWorkoutIdCounter"
@@ -409,7 +411,23 @@ class WorkoutManager: ObservableObject {
     }
 
     // MARK: - Core Public Methods
-    
+
+    /// Check if workout should be regenerated and regenerate if needed
+    func checkAndRegenerateIfNeeded() {
+        guard let workout = todayWorkout else {
+            // No workout exists, generate one
+            Task { await generateTodayWorkout() }
+            return
+        }
+
+        if shouldRegenerateWorkout(using: workout) {
+            print("🔄 WorkoutManager: Regeneration needed, generating new workout")
+            Task { await generateTodayWorkout() }
+        } else {
+            print("✅ WorkoutManager: Workout is up to date, no regeneration needed")
+        }
+    }
+
     /// Generate today's workout with dynamic programming (1 second simple loading)
     func generateTodayWorkout() async {
         let startTime = Date()
@@ -451,6 +469,7 @@ class WorkoutManager: ObservableObject {
             self.todayWorkout = sanitized
             self.todayWorkoutMuscleGroups = baseResult.muscleGroups
             self.todayWorkoutRecoverySnapshot = captureCurrentRecoverySnapshot()
+            self.todayWorkoutTrainingSplit = userProfileService.trainingSplit.rawValue
             // REMOVED: self.sessionPhase = dynamicParams.sessionPhase (this was overriding our sync!)
 
             saveTodayWorkout()
@@ -2480,9 +2499,10 @@ class WorkoutManager: ObservableObject {
             muscleGroups = customMuscles
             print("🎯 WorkoutManager: Using CUSTOM muscle selection: \(muscleGroups)")
         } else {
-            // Use schedule-aware + recovery optimization for selection
-            muscleGroups = recoveryService.getScheduleOptimizedMuscleGroups(targetCount: 4)
-            print("🧠 WorkoutManager: Using schedule-optimized muscles: \(muscleGroups)")
+            // Use schedule-aware + recovery optimization for selection with training split
+            let trainingSplit = userProfileService.trainingSplit
+            muscleGroups = recoveryService.getScheduleOptimizedMuscleGroups(targetCount: 4, trainingSplit: trainingSplit)
+            print("🧠 WorkoutManager: Using split-optimized muscles (\(trainingSplit.displayName)): \(muscleGroups)")
         }
         
         guard !muscleGroups.isEmpty else {
@@ -2709,6 +2729,20 @@ class WorkoutManager: ObservableObject {
         if hasSignificantRecoveryChange(for: workout) {
             return true
         }
+        if hasTrainingSplitChanged() {
+            return true
+        }
+        return false
+    }
+
+    private func hasTrainingSplitChanged() -> Bool {
+        let currentSplit = userProfileService.trainingSplit.rawValue
+        let savedSplit = todayWorkoutTrainingSplit
+
+        if currentSplit != savedSplit {
+            print("🔄 Training split changed from \(savedSplit ?? "nil") to \(currentSplit), regenerating workout")
+            return true
+        }
         return false
     }
 
@@ -2908,18 +2942,25 @@ class WorkoutManager: ObservableObject {
         let defaults = UserDefaults.standard
         let snapshotKey = profileStorageKey(todayWorkoutRecoverySnapshotKey)
         let musclesKey = profileStorageKey(todayWorkoutMusclesKey)
-        
+        let splitKey = profileStorageKey(todayWorkoutTrainingSplitKey)
+
         if let snapshot = todayWorkoutRecoverySnapshot,
            let data = try? JSONEncoder().encode(snapshot) {
             defaults.set(data, forKey: snapshotKey)
         } else {
             defaults.removeObject(forKey: snapshotKey)
         }
-        
+
         if !todayWorkoutMuscleGroups.isEmpty {
             defaults.set(todayWorkoutMuscleGroups, forKey: musclesKey)
         } else {
             defaults.removeObject(forKey: musclesKey)
+        }
+
+        if let split = todayWorkoutTrainingSplit {
+            defaults.set(split, forKey: splitKey)
+        } else {
+            defaults.removeObject(forKey: splitKey)
         }
     }
     
@@ -2927,20 +2968,23 @@ class WorkoutManager: ObservableObject {
         let defaults = UserDefaults.standard
         let snapshotKey = profileStorageKey(todayWorkoutRecoverySnapshotKey)
         let musclesKey = profileStorageKey(todayWorkoutMusclesKey)
-        
+        let splitKey = profileStorageKey(todayWorkoutTrainingSplitKey)
+
         if let data = defaults.data(forKey: snapshotKey),
            let snapshot = try? JSONDecoder().decode([String: Double].self, from: data) {
             todayWorkoutRecoverySnapshot = snapshot
         } else {
             todayWorkoutRecoverySnapshot = nil
         }
-        
+
         if let muscles = defaults.array(forKey: musclesKey) as? [String] {
             todayWorkoutMuscleGroups = muscles
         } else {
             todayWorkoutMuscleGroups = []
         }
-        
+
+        todayWorkoutTrainingSplit = defaults.string(forKey: splitKey)
+
         activeWorkoutState = loadActiveWorkoutState()
     }
     
@@ -2949,6 +2993,7 @@ class WorkoutManager: ObservableObject {
         defaults.removeObject(forKey: profileStorageKey(todayWorkoutKey))
         defaults.removeObject(forKey: profileStorageKey(todayWorkoutRecoverySnapshotKey))
         defaults.removeObject(forKey: profileStorageKey(todayWorkoutMusclesKey))
+        defaults.removeObject(forKey: profileStorageKey(todayWorkoutTrainingSplitKey))
     }
 
     private func loadActiveWorkoutState() -> ActiveWorkoutState? {

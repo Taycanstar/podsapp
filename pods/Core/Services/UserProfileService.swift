@@ -1080,6 +1080,8 @@ enum TrainingSplitPreference: String, CaseIterable, Codable {
     case upperLower = "upper_lower"
     case fullBody = "full_body"
     case pushPullLower = "push_pull_lower"
+    case bodyPart = "body_part"
+    case pushPull = "push_pull"
 
     var displayName: String {
         switch self {
@@ -1087,6 +1089,8 @@ enum TrainingSplitPreference: String, CaseIterable, Codable {
         case .upperLower: return "Upper/Lower Split"
         case .fullBody: return "Full Body"
         case .pushPullLower: return "Push/Pull/Lower Split"
+        case .bodyPart: return "Body Part (Bro Split)"
+        case .pushPull: return "Push/Pull"
         }
     }
 }

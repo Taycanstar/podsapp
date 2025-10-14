@@ -1670,6 +1670,10 @@ private extension DashboardView {
                 return ["Upper Body", "Lower Body"]
             case .pushPullLower:
                 return ["Push", "Pull", "Lower Body"]
+            case .bodyPart:
+                return ["Chest", "Back", "Legs", "Shoulders", "Arms"]
+            case .pushPull:
+                return ["Push", "Pull"]
             case .fresh:
                 break
             }
@@ -1759,6 +1763,10 @@ private extension DashboardView {
             return "figure.mixed.cardio"
         case .pushPullLower:
             return "figure.strengthtraining.traditional"
+        case .bodyPart:
+            return "figure.strengthtraining.traditional"
+        case .pushPull:
+            return "figure.highintensity.intervaltraining"
         case .fresh:
             return "figure.strengthtraining.functional"
         case .none:

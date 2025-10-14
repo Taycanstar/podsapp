@@ -605,7 +605,15 @@ class MuscleRecoveryService: ObservableObject {
     ///   3) Target frequency per muscle = 1 if <=3 days/week else 2.
     ///   4) Prefer muscles that are below target AND recovered >= 80%.
     ///   5) Fill remaining slots by recovery recommendation to keep flow resilient.
-    func getScheduleOptimizedMuscleGroups(targetCount: Int) -> [String] {
+    func getScheduleOptimizedMuscleGroups(targetCount: Int, trainingSplit: TrainingSplitPreference? = nil) -> [String] {
+        // If training split is specified, use split-specific logic
+        if let split = trainingSplit {
+            let splitMuscles = selectMusclesForSplit(split)
+            print("🧭 Split-based muscles (\(split.displayName)): \(splitMuscles)")
+            return splitMuscles
+        }
+
+        // Fallback to recovery-based logic (Fresh Muscle Groups)
         let daysPerWeek = readWorkoutDaysPerWeek()
         let targetPerMuscle = daysPerWeek <= 3 ? 1 : 2
 
@@ -652,6 +660,137 @@ class MuscleRecoveryService: ObservableObject {
 
         print("🧭 Schedule-optimized muscles: \(result)")
         return result
+    }
+
+    // MARK: - Training Split Logic
+
+    private func selectMusclesForSplit(_ split: TrainingSplitPreference) -> [String] {
+        switch split {
+        case .bodyPart:
+            return selectSingleMuscleForToday()
+        case .pushPull:
+            return selectPushOrPullForToday()
+        case .pushPullLower:
+            return selectFromPushPullLegsCycle()
+        case .upperLower:
+            return selectUpperOrLowerForToday()
+        case .fullBody:
+            return selectFullBodyMuscles()
+        case .fresh:
+            // Use recovery-based logic (will be handled by caller)
+            return []
+        }
+    }
+
+    private func selectSingleMuscleForToday() -> [String] {
+        // Bro split rotation: one major muscle group per day
+        // Ordered to minimize synergistic muscle overlap between consecutive days
+        let broSplitRotation: [String] = ["Chest", "Back", "Quadriceps", "Shoulders", "Biceps"]
+        let workoutCount = getTotalWorkoutsLast7Days()
+        let index = workoutCount % broSplitRotation.count
+
+        let scheduledMuscle = broSplitRotation[index]
+        let recovery = getMuscleRecoveryPercentage(for: scheduledMuscle)
+
+        // If scheduled muscle is at least 75% recovered, train it
+        if recovery >= 75.0 {
+            if scheduledMuscle == "Quadriceps" {
+                return ["Quadriceps", "Hamstrings", "Glutes"]
+            }
+            return [scheduledMuscle]
+        }
+
+        // If scheduled muscle isn't ready, find the most recovered muscle that's ready (80%+)
+        let muscleRecoveryPairs = broSplitRotation.map { muscle -> (String, Double) in
+            return (muscle, getMuscleRecoveryPercentage(for: muscle))
+        }
+
+        // Sort by recovery percentage descending
+        let sortedByRecovery = muscleRecoveryPairs.sorted { $0.1 > $1.1 }
+
+        // Pick first muscle that's 80%+ recovered, or most recovered if none are 80%+
+        if let bestMuscle = sortedByRecovery.first(where: { $0.1 >= 80.0 })?.0 {
+            print("⚠️ Bro Split: Scheduled \(scheduledMuscle) (\(Int(recovery))% recovered) not ready, training \(bestMuscle) instead")
+            if bestMuscle == "Quadriceps" {
+                return ["Quadriceps", "Hamstrings", "Glutes"]
+            }
+            return [bestMuscle]
+        }
+
+        // Last resort: train most recovered muscle even if below 80%
+        if let mostRecovered = sortedByRecovery.first {
+            print("⚠️ Bro Split: All muscles fatigued, training most recovered: \(mostRecovered.0) (\(Int(mostRecovered.1))%)")
+            if mostRecovered.0 == "Quadriceps" {
+                return ["Quadriceps", "Hamstrings", "Glutes"]
+            }
+            return [mostRecovered.0]
+        }
+
+        // Final fallback (should never happen)
+        if scheduledMuscle == "Quadriceps" {
+            return ["Quadriceps", "Hamstrings", "Glutes"]
+        }
+        return [scheduledMuscle]
+    }
+
+    private func selectPushOrPullForToday() -> [String] {
+        let workoutCount = getTotalWorkoutsLast7Days()
+        let isPushDay = workoutCount % 2 == 0
+
+        if isPushDay {
+            let pushMuscles = ["Chest", "Shoulders", "Triceps"]
+            return pushMuscles.filter { getMuscleRecoveryPercentage(for: $0) >= 60.0 }
+        } else {
+            let pullMuscles = ["Back", "Biceps"]
+            return pullMuscles.filter { getMuscleRecoveryPercentage(for: $0) >= 60.0 }
+        }
+    }
+
+    private func selectFromPushPullLegsCycle() -> [String] {
+        let cycle: [[String]] = [
+            ["Chest", "Shoulders", "Triceps"],  // Push
+            ["Back", "Biceps"],                  // Pull
+            ["Quadriceps", "Hamstrings", "Glutes"] // Lower
+        ]
+
+        let workoutCount = getTotalWorkoutsLast7Days()
+        let cycleIndex = workoutCount % 3
+
+        return cycle[cycleIndex].filter { getMuscleRecoveryPercentage(for: $0) >= 60.0 }
+    }
+
+    private func selectUpperOrLowerForToday() -> [String] {
+        let workoutCount = getTotalWorkoutsLast7Days()
+        let isUpperDay = workoutCount % 2 == 0
+
+        if isUpperDay {
+            let upperMuscles = ["Chest", "Back", "Shoulders", "Biceps", "Triceps"]
+            return upperMuscles.filter { getMuscleRecoveryPercentage(for: $0) >= 60.0 }
+        } else {
+            let lowerMuscles = ["Quadriceps", "Hamstrings", "Glutes", "Calves"]
+            return lowerMuscles.filter { getMuscleRecoveryPercentage(for: $0) >= 60.0 }
+        }
+    }
+
+    private func selectFullBodyMuscles() -> [String] {
+        let allMajorGroups = ["Chest", "Back", "Shoulders", "Quadriceps", "Hamstrings", "Glutes"]
+        return allMajorGroups.filter { getMuscleRecoveryPercentage(for: $0) >= 60.0 }
+    }
+
+    private func getTotalWorkoutsLast7Days() -> Int {
+        let calendar = Calendar.current
+        let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+
+        // Query workout history count for last 7 days
+        let history = UserDefaults.standard.data(forKey: "workoutHistory")
+            .flatMap { try? JSONDecoder().decode([String: [Date]].self, from: $0) } ?? [:]
+
+        var totalWorkouts = 0
+        for (_, dates) in history {
+            totalWorkouts += dates.filter { $0 >= sevenDaysAgo }.count
+        }
+
+        return totalWorkouts
     }
 
     // MARK: - Helpers (Schedule)
