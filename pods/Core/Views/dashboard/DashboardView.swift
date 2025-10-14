@@ -25,6 +25,7 @@ struct DashboardView: View {
     @State private var showWorkoutContainer = false
     @State private var workoutSelectedTab: Int = 0
     @State private var isTodayWorkoutDismissed = false
+    @AppStorage("hideWorkoutPreviews") private var hideWorkoutPreviews = false
     // ─── Streak state ─────────────────────────────────────────────────────
     @ObservedObject private var streakManager = StreakManager.shared
 
@@ -373,7 +374,7 @@ private var remainingCal: Double { vm.remainingCalories }
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        if isToday && !isTodayWorkoutDismissed {
+                        if isToday && !isTodayWorkoutDismissed && !hideWorkoutPreviews {
                             todayWorkoutCard
                                 .padding(.horizontal)
                                 // .padding(.top, 8)
@@ -1086,20 +1087,46 @@ private extension DashboardView {
 
                         Spacer()
 
-                        Button {
-                            HapticFeedback.generate()
-                            withAnimation {
-                                isTodayWorkoutDismissed = true
+                        HStack(alignment: .center, spacing: 12) {
+                            Menu {
+                                ShareLink(item: generateWorkoutShareURL(workout)) {
+                                    Label("Share", systemImage: "square.and.arrow.up")
+                                }
+
+                                Button {
+                                    HapticFeedback.generate()
+                                    showWorkoutContainer = true
+                                } label: {
+                                    Label("See Details", systemImage: "info.circle")
+                                }
+
+                                Button(role: .destructive) {
+                                    HapticFeedback.generate()
+                                    withAnimation {
+                                        hideWorkoutPreviews = true
+                                    }
+                                } label: {
+                                    Label("Stop Showing", systemImage: "nosign")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.primary)
                             }
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.secondary)
-                                .frame(width: 28, height: 28)
-                                .background(Color(.systemGray5))
-                                .clipShape(Circle())
+                            .buttonStyle(.plain)
+
+                            Button {
+                                HapticFeedback.generate()
+                                withAnimation {
+                                    isTodayWorkoutDismissed = true
+                                }
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.primary)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -1753,6 +1780,36 @@ private extension DashboardView {
 // ────────────────────────────────────────────────────────────────────────────
 
 private extension DashboardView {
+    /// Save today's workout to user's custom workouts
+    func saveWorkoutToMyWorkouts(_ workout: TodayWorkout) async {
+        guard let todayWorkout = workoutManager.todayWorkout else {
+            return
+        }
+
+        do {
+            _ = try await workoutManager.saveTodayWorkoutAsCustom()
+            HapticFeedback.generate()
+        } catch {
+            print("Error saving workout: \(error.localizedDescription)")
+        }
+    }
+
+    /// Generate shareable URL for workout
+    func generateWorkoutShareURL(_ workout: TodayWorkout) -> URL {
+        // Create deep link URL for the workout
+        let workoutId = workout.id.uuidString
+        let workoutTitle = workout.title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let urlString = "podsapp://workout?id=\(workoutId)&title=\(workoutTitle)"
+
+        // If deep link creation fails, return a fallback URL
+        if let url = URL(string: urlString) {
+            return url
+        } else {
+            // Fallback to sharing as text
+            return URL(string: "https://fitbod.me")!
+        }
+    }
+
     /// Initialise e-mail + first load
    
     func configureOnAppear() {

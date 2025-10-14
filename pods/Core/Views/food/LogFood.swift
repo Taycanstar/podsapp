@@ -47,7 +47,6 @@ struct LogFood: View {
         return email?.isEmpty == false ? email : nil
     }
     
-    
     enum FoodTab: Hashable {
         case all, meals, foods, savedMeals
         
@@ -565,6 +564,42 @@ private struct FoodListView: View {
     
     @State private var isShowingMinimumLoader = false
     
+    private var trimmedSearchQuery: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private var recentLogMatches: [CombinedLog] {
+        guard selectedFoodTab == .all else { return [] }
+        let query = trimmedSearchQuery.lowercased()
+        guard !query.isEmpty else { return [] }
+        
+        var seen = Set<String>()
+        
+        return foodManager.combinedLogs.compactMap { log in
+            guard log.type == .food, let foodItem = log.food else { return nil }
+            
+            let candidates = [
+                foodItem.displayName,
+                foodItem.brandText ?? "",
+                log.mealType ?? "",
+                log.message
+            ]
+            
+            guard candidates.contains(where: { $0.lowercased().contains(query) }) else { return nil }
+            
+            let dedupeKey = "\(foodItem.fdcId)-\(foodItem.displayName.lowercased())"
+            guard seen.insert(dedupeKey).inserted else { return nil }
+            
+            return log
+        }
+    }
+    
+    private var shouldShowCreateFoodMenu: Bool {
+        trimmedSearchQuery.isEmpty &&
+        selectedFoodTab == .foods &&
+        !foodManager.foodScanningState.isActive
+    }
+    
     var body: some View {
         VStack(spacing: 12) {
             // Add invisible spacing at the top to prevent overlap with header
@@ -572,7 +607,7 @@ private struct FoodListView: View {
 
           
             // Show Create Food dropdown in Foods tab when there's no search text and not generating food
-            if searchText.isEmpty && selectedFoodTab == .foods && !foodManager.foodScanningState.isActive {
+            if shouldShowCreateFoodMenu {
                 Menu {
                     Button(action: {
                         print("Tapped Manual Create Food")
@@ -660,7 +695,7 @@ private struct FoodListView: View {
                 .padding(.top, 0)
             } 
             // Show AI Generate Macros button when there's search text in the .all tab
-            else if selectedFoodTab == .all && !isProSearchResult {
+            else if selectedFoodTab == .all && !isProSearchResult && !isSearching {
                 Button(action: {
                     print("AI tapped for: \(searchText)")
                     HapticFeedback.generateLigth()
@@ -970,6 +1005,7 @@ private struct FoodListView: View {
                 if selectedFoodTab == .all {
                     ProFoodSearchLoader()
                         .padding(.horizontal, 16)
+                        .padding(.vertical, 20)
                 } else {
                     ProgressView()
                         .padding()
@@ -986,7 +1022,21 @@ private struct FoodListView: View {
                         onItemAdded: onItemAdded
                     )
                     .padding(.horizontal, 16)
+                    .padding(.top, 20)
                     .transition(.opacity.combined(with: .scale))
+                    
+                    let recentMatches = recentLogMatches
+                    if !recentMatches.isEmpty {
+                        RecentLogsSection(
+                            logs: recentMatches,
+                            selectedMeal: $selectedMeal,
+                            mode: mode,
+                            selectedFoods: $selectedFoods,
+                            path: $path,
+                            onItemAdded: onItemAdded
+                        )
+                        .padding(.top, 16)
+                    }
                 } else {
                     VStack(spacing: 0) {
                         if !searchResults.isEmpty {
@@ -2798,6 +2848,58 @@ private struct SavedMealListView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Recent Logs Section
+private struct RecentLogsSection: View {
+    let logs: [CombinedLog]
+    @Binding var selectedMeal: String
+    let mode: LogFoodMode
+    @Binding var selectedFoods: [Food]
+    @Binding var path: NavigationPath
+    var onItemAdded: ((Food) -> Void)?
+    
+    private var limitedLogs: [CombinedLog] {
+        Array(logs.prefix(5))
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Recent Logs")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+                // .padding(.horizontal, 16)
+            
+            VStack(spacing: 0) {
+                ForEach(Array(limitedLogs.enumerated()), id: \.element.id) { index, log in
+                    if let foodItem = log.food {
+                        FoodRow(
+                            food: foodItem.asFood,
+                            selectedMeal: $selectedMeal,
+                            mode: mode,
+                            selectedFoods: $selectedFoods,
+                            path: $path,
+                            onItemAdded: onItemAdded
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        
+                        if index < limitedLogs.count - 1 {
+                            Divider()
+                                .padding(.leading, 16)
+                                .padding(.trailing, 16)
+                        }
+                    }
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color("bg"))
+            )
+        }
+        .padding(.horizontal, 16)
     }
 }
 
