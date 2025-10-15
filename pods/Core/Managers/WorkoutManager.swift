@@ -1788,8 +1788,13 @@ class WorkoutManager: ObservableObject {
             warmUpExercises: workout.warmUpExercises,
             coolDownExercises: workout.coolDownExercises
         )
+        let normalizedWorkout = sanitizeWarmupsIfNeeded(sanitizedWorkout)
 
-        todayWorkout = sanitizeWarmupsIfNeeded(sanitizedWorkout)
+        if let current = todayWorkout, current == normalizedWorkout {
+            return
+        }
+
+        todayWorkout = normalizedWorkout
         saveTodayWorkout()
         print("📅 WorkoutManager: Set today's workout - \(sanitizedTitle)")
     }
@@ -2191,6 +2196,18 @@ class WorkoutManager: ObservableObject {
         persistActiveWorkoutState(state)
         print("🏃‍♂️ WorkoutManager: Started workout - \(sanitized.title)")
     }
+
+    /// Cancel the active workout session without logging it.
+    /// Keeps today's workout so the user can restart later.
+    func cancelActiveWorkout(discardSessionOverrides: Bool = false) {
+        guard currentWorkout != nil || activeWorkoutState != nil else { return }
+        currentWorkout = nil
+        clearActiveWorkoutState()
+
+        if discardSessionOverrides {
+            clearSessionOverrides()
+        }
+    }
     
     func registerWorkoutActivity() {
         let now = Date()
@@ -2364,14 +2381,6 @@ class WorkoutManager: ObservableObject {
         // Store the completed workout before clearing it
         if let summary = completedWorkoutSummary {
             lastCompletedWorkout = summary
-            showWorkoutLogCard = true
-
-            // Auto-hide the card after 3 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-                withAnimation {
-                    self?.showWorkoutLogCard = false
-                }
-            }
         }
 
         completedWorkoutSummary = nil
@@ -2381,6 +2390,9 @@ class WorkoutManager: ObservableObject {
             pendingSummaryRegeneration = false
             scheduleNextWorkoutGeneration()
         }
+
+        // Note: Both DayLogsRepository and CombinedLogsRepository refreshes
+        // moved to LogWorkoutView after dismiss to avoid re-render loop
     }
 
     func setWorkoutViewActive(_ active: Bool) {
@@ -2511,7 +2523,7 @@ class WorkoutManager: ObservableObject {
     
     private func createIntelligentWorkout(_ parameters: WorkoutGenerationParameters) throws -> GeneratedWorkoutResult {
         // Get muscle groups based on recovery or custom selection
-        let muscleGroups: [String]
+        var muscleGroups: [String]
         if let customMuscles = parameters.customTargetMuscles, !customMuscles.isEmpty {
             muscleGroups = customMuscles
             print("🎯 WorkoutManager: Using CUSTOM muscle selection: \(muscleGroups)")
@@ -2519,9 +2531,16 @@ class WorkoutManager: ObservableObject {
             // Use schedule-aware + recovery optimization for selection with training split
             let trainingSplit = userProfileService.trainingSplit
             muscleGroups = recoveryService.getScheduleOptimizedMuscleGroups(targetCount: 4, trainingSplit: trainingSplit)
+
+            // FALLBACK: If recovery service returns empty, use default muscles to prevent errors
+            if muscleGroups.isEmpty {
+                print("⚠️ Recovery service returned empty muscles, using fallback for \(trainingSplit.displayName)")
+                muscleGroups = ["Chest", "Back", "Quadriceps", "Shoulders"]
+            }
+
             print("🧠 WorkoutManager: Using split-optimized muscles (\(trainingSplit.displayName)): \(muscleGroups)")
         }
-        
+
         guard !muscleGroups.isEmpty else {
             throw WorkoutGenerationError.noMuscleGroups
         }

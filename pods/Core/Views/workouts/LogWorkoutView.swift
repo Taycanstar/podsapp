@@ -93,6 +93,8 @@ struct LogWorkoutView: View {
                     if pendingWorkoutFeedback {
                         pendingWorkoutFeedback = false
                         showingWorkoutFeedback = true
+                    } else {
+                        dismiss()
                     }
                 }
             }
@@ -310,7 +312,12 @@ struct LogWorkoutView: View {
                 WorkoutInProgressView(
                     isPresented: Binding(
                         get: { currentWorkout != nil },
-                        set: { if !$0 { currentWorkout = nil } }
+                        set: { isPresented in
+                            if !isPresented {
+                                currentWorkout = nil
+                                workoutManager.cancelActiveWorkout()
+                            }
+                        }
                     ),
                     workout: workout
                 )
@@ -1478,8 +1485,16 @@ private struct TodayWorkoutView: View {
     
     
     private func loadOrGenerateTodayWorkout() {
-        if let activeWorkout = workoutManager.currentWorkout {
-            currentWorkout = activeWorkout
+        // CRITICAL: Don't regenerate if in error state to prevent infinite loop
+        if workoutManager.generationError != nil {
+            print("⚠️ Skipping generation - error state exists: \(workoutManager.generationError?.localizedDescription ?? "unknown")")
+            return
+        }
+
+        // Ensure we only surface the logging sheet when a workout is in progress
+        currentWorkout = nil
+
+        if workoutManager.todayWorkout != nil {
             return
         }
 
