@@ -318,7 +318,7 @@ struct MealLogDetails: View {
             .padding(.top, 16)
         }
         .sheet(isPresented: Binding(
-            get: { proFeatureGate.showUpgradeSheet },
+            get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts },
             set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
         )) {
             HumuliProUpgradeSheet(

@@ -195,6 +195,54 @@ class WorkoutGenerationService {
             print("✅ After backfill: \(exercises.count) exercises")
         }
 
+        if exercises.count < totalExercises {
+            let remainingNeeded = totalExercises - exercises.count
+            print("⚠️ Still missing \(remainingNeeded) exercises – pulling from high-recovery fallback muscles")
+
+            let readyFallback = recoveryService
+                .getMuscleRecoveryData()
+                .filter { $0.recoveryPercentage >= 70 }
+                .filter { data in !muscleGroups.contains(data.muscleGroup.displayName) }
+                .sorted { $0.recoveryPercentage > $1.recoveryPercentage }
+
+            for fallback in readyFallback {
+                let muscleName = fallback.muscleGroup.displayName
+                var remaining = totalExercises - exercises.count
+                guard remaining > 0 else { break }
+
+                let fallbackExercises = recommendationService.getDurationOptimizedExercises(
+                    for: muscleName,
+                    count: remaining,
+                    duration: targetDuration,
+                    fitnessGoal: fitnessGoal,
+                    customEquipment: customEquipment,
+                    flexibilityPreferences: flexibilityPreferences
+                )
+
+                if fallbackExercises.isEmpty {
+                    continue
+                }
+
+                print("🪄 Fallback \(muscleName): adding \(fallbackExercises.count) exercises at \(Int(fallback.recoveryPercentage))% recovery")
+
+                for exercise in fallbackExercises where !usedIds.contains(exercise.id) {
+                    let built = makeWorkoutExercise(
+                        for: exercise,
+                        targetDuration: targetDuration,
+                        fitnessGoal: fitnessGoal,
+                        recoveryPercentage: fallback.recoveryPercentage
+                    )
+                    guard built.sets > 0 else { continue }
+                    exercises.append(built)
+                    usedIds.insert(exercise.id)
+                    remaining -= 1
+                    if remaining <= 0 { break }
+                }
+            }
+
+            print("✅ After fallback fill: \(exercises.count) exercises (target \(totalExercises))")
+        }
+
         return exercises
     }
 
@@ -299,10 +347,10 @@ class WorkoutGenerationService {
         case 45..<60:
             return 0.2
         case 30..<45:
-            return 0.05
+            return 0.1
         default:
-            // Under ~30% recovery we should avoid allocating volume entirely (Fitbod-style red zone)
-            return 0.0
+            // Recovery under 30%: still allocate a small weight so we never zero-out an entire workout
+            return 0.1
         }
     }
 
@@ -321,7 +369,8 @@ class WorkoutGenerationService {
         case 30..<45:
             return 0.25
         default:
-            return 0.0
+            // Allow a minimum stimulus even when recovery metrics are unavailable or very low
+            return 0.3
         }
     }
 

@@ -131,9 +131,10 @@ class WorkoutManager: ObservableObject {
     @Published var sessionRestTimerEnabled: Bool = false
     @Published var sessionRestWarmupSeconds: Int = 60
     @Published var sessionRestWorkingSeconds: Int = 60
-    
+
     // MARK: - Debug Flags
     @Published var debugForceIncludeDurationExercise = true // Debug: Always include a duration-based exercise
+    @Published var syncErrorMessage: String?
     
     // MARK: - Workout History State (for routines view)
     @Published private(set) var hasWorkouts: Bool = false
@@ -288,6 +289,22 @@ class WorkoutManager: ObservableObject {
         loadTodayWorkout()
         setupSessionMonitoring()
         setupDynamicProgramming()  // Initialize dynamic programming
+
+        workoutDataManager.$syncError
+            .receive(on: RunLoop.main)
+            .sink { [weak self] message in
+                guard let self else { return }
+                self.syncErrorMessage = message
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .workoutSyncRateLimited)
+            .compactMap { $0.userInfo?["message"] as? String }
+            .receive(on: RunLoop.main)
+            .sink { [weak self] message in
+                self?.syncErrorMessage = message
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Dynamic Programming Properties
@@ -336,6 +353,11 @@ class WorkoutManager: ObservableObject {
         )
         
         return try await backgroundWorkoutGeneration(parameters)
+    }
+
+    func clearSyncErrorMessage() {
+        syncErrorMessage = nil
+        workoutDataManager.syncError = nil
     }
     
     /// Apply dynamic programming to base workout
@@ -413,6 +435,29 @@ class WorkoutManager: ObservableObject {
     }
 
     // MARK: - Core Public Methods
+
+    /// Reset workout state when user logs out/in to prevent data leakage between accounts
+    func resetForUserChange() {
+        print("🔄 WorkoutManager: Resetting state for user change")
+
+        // Clear all workout state
+        todayWorkout = nil
+        currentWorkout = nil
+        todayWorkoutRecoverySnapshot = nil
+        todayWorkoutMuscleGroups = []
+        activeWorkoutState = nil
+        completedWorkoutSummary = nil
+        isDisplayingSummary = false
+        lastCompletedWorkout = nil
+
+        // Reset session preferences
+        resetSessionStateForActiveProfile()
+
+        // Reload data for new user
+        loadSessionData()
+        loadDefaultMusclePreferences()
+        loadTodayWorkout()
+    }
 
     /// Check if workout should be regenerated and regenerate if needed
     func checkAndRegenerateIfNeeded() {
@@ -2322,6 +2367,10 @@ class WorkoutManager: ObservableObject {
                                                          duration: duration,
                                                          context: resolvedContext)
                 try await workoutDataManager.saveWorkout(workoutSession, context: resolvedContext)
+
+                // Sync immediately so workout appears in dashboard before user dismisses summary
+                await workoutDataManager.syncNow(context: resolvedContext)
+
                 let status = autoComplete ? "Auto-completed" : "Completed"
                 print("✅ WorkoutManager: \(status) and saved workout")
             } catch {
@@ -2357,6 +2406,7 @@ class WorkoutManager: ObservableObject {
             pendingSummaryRegeneration = false
             scheduleNextWorkoutGeneration()
             Task { @MainActor [resolvedContext] in
+                try? await Task.sleep(nanoseconds: 300_000_000)
                 await workoutDataManager.syncNow(context: resolvedContext)
             }
         } else {
@@ -2391,6 +2441,7 @@ class WorkoutManager: ObservableObject {
             scheduleNextWorkoutGeneration()
         }
 
+        // Note: Sync already happened immediately in completeWorkout(), no need to sync again here
         // Note: Both DayLogsRepository and CombinedLogsRepository refreshes
         // moved to LogWorkoutView after dismiss to avoid re-render loop
     }

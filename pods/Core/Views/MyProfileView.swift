@@ -647,7 +647,7 @@ struct MyProfileView: View {
     }
 
     private var workoutLogs: [CombinedLog] {
-        allCombinedLogs.filter { $0.type == .activity }
+        allCombinedLogs.filter { $0.type == .activity || $0.type == .workout }
     }
 
     private var mealLogs: [CombinedLog] {
@@ -656,7 +656,7 @@ struct MyProfileView: View {
 
     private func logCardView(for log: CombinedLog) -> some View {
         // Use workout card styling for activities
-        if log.type == .activity {
+        if log.type == .activity || log.type == .workout {
             return AnyView(workoutCardView(for: log))
         } else {
             return AnyView(ProfileLogRow(log: log))
@@ -666,66 +666,96 @@ struct MyProfileView: View {
     @ViewBuilder
     private func workoutCardView(for log: CombinedLog) -> some View {
         if let activity = log.activity {
-            let duration = activity.formattedDuration
-            let distance = activity.formattedDistance
-            let exercises = exerciseCount(from: log)
+            workoutCardContent(
+                icon: activity.activityIcon,
+                title: activity.displayName,
+                subtitle: activity.workoutActivityType.replacingOccurrences(of: "_", with: " "),
+                duration: activity.formattedDuration,
+                distance: activity.formattedDistance,
+                exercisesCount: exerciseCount(from: log),
+                calories: Int(log.displayCalories),
+                timeLabel: getWorkoutTimeLabel(for: log)
+            )
+        } else if let workout = log.workout {
+            let statusText = workout.status.trimmingCharacters(in: .whitespacesAndNewlines)
+            workoutCardContent(
+                icon: "figure.strengthtraining.traditional",
+                title: workout.title,
+                subtitle: statusText.isEmpty ? nil : statusText.capitalized,
+                duration: workout.formattedDuration,
+                distance: nil,
+                exercisesCount: workout.exercisesCount > 0 ? workout.exercisesCount : exerciseCount(from: log),
+                calories: Int(log.displayCalories),
+                timeLabel: getWorkoutTimeLabel(for: log)
+            )
+        } else {
+            ProfileLogRow(log: log)
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top, spacing: 16) {
-                    Image(systemName: activity.activityIcon)
-                        .font(.system(size: 28, weight: .semibold))
+    private func workoutCardContent(
+        icon: String,
+        title: String,
+        subtitle: String?,
+        duration: String?,
+        distance: String?,
+        exercisesCount: Int?,
+        calories: Int,
+        timeLabel: String?
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                Image(systemName: icon)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .frame(width: 48, height: 48)
+                    .background(Color("primarybg"))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.primary)
-                        .frame(width: 48, height: 48)
-                        .background(Color("primarybg"))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(activity.displayName)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.primary)
-
-                        Text(activity.workoutActivityType.replacingOccurrences(of: "_", with: " "))
+                    if let subtitle {
+                        Text(subtitle)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.secondary)
                     }
-
-                    Spacer()
-
-                    // Date/Time label in top-trailing
-                    if let timeLabel = getWorkoutTimeLabel(for: log) {
-                        Text(timeLabel)
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(Color(.systemGray2))
-                    }
                 }
 
-                HStack(spacing: 12) {
-                    // CALORIES FIRST - Orange flame.fill
-                    workoutMetricChip(icon: "flame.fill", text: "\(Int(log.displayCalories)) cal", color: Color("brightOrange"))
+                Spacer()
 
-                    // DURATION - Blue clock
-                    workoutMetricChip(icon: "clock", text: duration, color: .blue)
-
-                    if let exercises {
-                        workoutMetricChip(icon: "list.bullet", text: "\(exercises) exercises", color: .accentColor)
-                    }
-
-                    // DISTANCE - Green location
-                    if let distance {
-                        workoutMetricChip(icon: "location", text: distance, color: .green)
-                    }
+                if let timeLabel {
+                    Text(timeLabel)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color(.systemGray2))
                 }
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color("containerbg"))
-            )
-        } else {
-            logCardView(for: log)
+
+            HStack(spacing: 12) {
+                workoutMetricChip(icon: "flame.fill", text: "\(calories) cal", color: Color("brightOrange"))
+
+                if let duration {
+                    workoutMetricChip(icon: "clock", text: duration, color: .blue)
+                }
+
+                if let exercisesCount, exercisesCount > 0 {
+                    workoutMetricChip(icon: "list.bullet", text: "\(exercisesCount) exercises", color: .accentColor)
+                }
+
+                if let distance {
+                    workoutMetricChip(icon: "location", text: distance, color: .green)
+                }
+            }
         }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color("containerbg"))
+        )
     }
 
     private func workoutMetricChip(icon: String, text: String, color: Color) -> some View {
@@ -878,6 +908,10 @@ struct MyProfileView: View {
     }
 
     private func exerciseCount(from log: CombinedLog) -> Int? {
+        if let workoutCount = log.workout?.exercisesCount, workoutCount > 0 {
+            return workoutCount
+        }
+
         let words = log.message.replacingOccurrences(of: "\n", with: " ")
             .split(separator: " ")
 
@@ -2422,6 +2456,8 @@ struct ProfileLogRow: View {
             return log.recipe?.title ?? "Recipe"
         case .activity:
             return log.activity?.displayName ?? "Activity"
+        case .workout:
+            return log.workout?.title ?? "Workout"
         }
     }
 
@@ -2429,6 +2465,8 @@ struct ProfileLogRow: View {
         switch log.type {
         case .activity:
             return log.activity?.activityIcon ?? "figure.strengthtraining.traditional"
+        case .workout:
+            return "figure.strengthtraining.traditional"
         default:
             guard let mealType = log.mealType?.lowercased() else { return "popcorn.fill" }
 

@@ -22,6 +22,7 @@ import CryptoKit
 struct ExerciseLoggingView: View {
     @EnvironmentObject var onboarding: OnboardingViewModel
     @EnvironmentObject var workoutManager: WorkoutManager
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
     let exercise: TodayWorkoutExercise
     @State private var allExercises: [TodayWorkoutExercise]? // Make it @State so we can update it
     let onSetLogged: ((TodayWorkoutExercise, Int, Double?) -> Void)? // Callback to notify when sets are logged with the active exercise, count and optional RIR
@@ -1398,18 +1399,37 @@ struct ExerciseLoggingView: View {
     
     
     private func startWorkout() {
-        // Prefer the authoritative workout from WorkoutManager so grouped sections stay intact
-        var resolvedWorkout: TodayWorkout?
+        guard !workoutStarted else { return }
+        if proFeatureGate.isCheckingAccess {
+            return
+        }
+        guard let workoutToPresent = resolveWorkoutForStart() else {
+            print("❌ Unable to resolve workout to start from ExerciseLoggingView")
+            return
+        }
 
+        guardWorkoutQuotaIfNeeded {
+            logWorkoutStartDetails(for: workoutToPresent)
+            workoutManager.startWorkout(workoutToPresent)
+            presentedWorkout = workoutToPresent
+            workoutStarted = true
+
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.prepare()
+            impactFeedback.impactOccurred()
+        }
+    }
+
+    private func resolveWorkoutForStart() -> TodayWorkout? {
         if let todayWorkout = workoutManager.todayWorkout {
-            resolvedWorkout = todayWorkout
-            print("🏋️ Starting workout from todayWorkout with \(todayWorkout.exercises.count) main exercises")
-        } else if let currentWorkout = workoutManager.currentWorkout {
-            resolvedWorkout = currentWorkout
-            print("🏋️ Starting workout from existing currentWorkout with \(currentWorkout.exercises.count) main exercises")
-        } else if let exercises = allExercises {
+            return todayWorkout
+        }
+        if let currentWorkout = workoutManager.currentWorkout {
+            return currentWorkout
+        }
+        if let exercises = allExercises {
             print("⚠️ WorkoutManager has no workout - using local exercise snapshot (circuits/supersets may be missing)")
-            resolvedWorkout = TodayWorkout(
+            return TodayWorkout(
                 id: UUID(),
                 date: Date(),
                 title: "Current Workout",
@@ -1421,22 +1441,60 @@ struct ExerciseLoggingView: View {
                 coolDownExercises: nil
             )
         }
+        return nil
+    }
 
-        guard let workoutToPresent = resolvedWorkout else {
-            print("❌ Unable to resolve workout to start from ExerciseLoggingView")
+    private func logWorkoutStartDetails(for workout: TodayWorkout) {
+        print("🏋️ Starting workout with \(workout.exercises.count) exercises")
+        for (index, exercise) in workout.exercises.enumerated() {
+            print("🏋️ Exercise \(index): \(exercise.exercise.name)")
+        }
+    }
+
+    private func resolvedUserEmail() -> String? {
+        if !onboarding.email.isEmpty {
+            return onboarding.email
+        }
+        if let stored = UserDefaults.standard.string(forKey: "userEmail"), !stored.isEmpty {
+            return stored
+        }
+        return nil
+    }
+
+    private func ensureUserDefaultsEmail(_ email: String) {
+        let current = UserDefaults.standard.string(forKey: "userEmail")
+        if current != email {
+            UserDefaults.standard.set(email, forKey: "userEmail")
+        }
+    }
+
+    private func guardWorkoutQuotaIfNeeded(onAllowed: @escaping () -> Void) {
+        if proFeatureGate.hasActiveSubscription() {
+            WorkoutDataManager.shared.clearRateLimitCooldown(trigger: "pro_user_start")
+            onAllowed()
             return
         }
-
-        workoutManager.startWorkout(workoutToPresent)
-        presentedWorkout = workoutToPresent
-        workoutStarted = true
-
-        // Generate haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.prepare()
-        impactFeedback.impactOccurred()
+        if proFeatureGate.isCheckingAccess {
+            return
+        }
+        guard let email = resolvedUserEmail(), !email.isEmpty else {
+            onAllowed()
+            return
+        }
+        ensureUserDefaultsEmail(email)
+        proFeatureGate.blockedFeature = .workouts
+        proFeatureGate.checkAccess(for: .workouts,
+                                   userEmail: email,
+                                   increment: false,
+                                   onAllowed: {
+                                       onAllowed()
+                                   },
+                                   onBlocked: {
+                                       HapticFeedback.generate()
+                                       dismiss()
+                                   })
     }
-    
+
     private func logCurrentSet() {
         guard currentSetIndex < flexibleSets.count else { 
             print("❌ ERROR: currentSetIndex \(currentSetIndex) >= flexibleSets.count \(flexibleSets.count)")

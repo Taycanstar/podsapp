@@ -34,6 +34,7 @@ final class DayLogsViewModel: ObservableObject {
   private var hiddenScheduledIds: Set<Int> = []
   private var skippedScheduledDates: [Int: Date] = [:]
   private var localScheduledOverrides: [Int: ScheduledLogPreview] = [:]
+  private var pendingNotificationReload = false
 
   // Daily totals
   @Published var totalCalories: Double = 0
@@ -440,6 +441,11 @@ private func deleteOnServer(_ log: CombinedLog) async throws {
                 }
             }
         }
+
+    case .workout:
+        // Workouts are permanent records - do not allow deletion from dashboard
+        print("[DayLogsVM] Workout deletion not implemented - completed workouts are permanent records")
+        throw NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Workout logs cannot be deleted"])
     }
 }
 
@@ -475,6 +481,7 @@ func loadLogs(for date: Date, force: Bool = false) {
       self.applySnapshot(snapshot)
     } else {
       self.isLoading = false
+      self.pendingNotificationReload = false
     }
   }
 }
@@ -601,17 +608,20 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   }
 
   remainingCalories = max(0, calorieGoal - totalCalories)
-  triggerProfileDataRefresh()
+  if pendingNotificationReload {
+    pendingNotificationReload = false
+    loadLogs(for: selectedDate, force: true)
+  }
 }
 
 
 
 
     private func recalculateTotals() {
-      // Only count food/meal/recipe calories for intake (exclude activities)
+      // Only count food/meal/recipe calories for intake (exclude activities and workouts)
       totalCalories = logs.reduce(0.0) { sum, log in
-        // Activities burn calories, they don't contribute to calorie intake
-        guard log.type != .activity else { return sum }
+        // Activities and workouts burn calories, they don't contribute to calorie intake
+        guard log.type != .activity && log.type != .workout else { return sum }
         return sum + log.displayCalories
       }
 
@@ -648,9 +658,9 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
 
     func updateLog(log: CombinedLog, servings: Double, date: Date, mealType: String, calories: Double? = nil, protein: Double? = nil, carbs: Double? = nil, fat: Double? = nil, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let foodLogId = log.foodLogId else {
-            completion(.failure(NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid log ID"])))
-            return
-        }
+    completion(.failure(NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid log ID"])))
+    return
+  }
 
         // Call the repository to update the log
         logNetwork.updateLog(userEmail: email, logId: foodLogId, servings: servings, date: date, mealType: mealType, calories: calories, protein: protein, carbs: carbs, fat: fat) { result in
@@ -791,6 +801,15 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                     completion(.failure(error))
                 }
             }
+        }
+    }
+
+    func requestLogsReloadFromNotification() {
+        if isLoading {
+            pendingNotificationReload = true
+        } else {
+            pendingNotificationReload = false
+            loadLogs(for: selectedDate, force: true)
         }
     }
 
@@ -1292,107 +1311,123 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   }
 
   private func combinedIdentifier(for logType: String, logId: Int) -> String {
-    switch logType.lowercased() {
-    case "food":
-      return "food_\(logId)"
-    case "meal":
-      return "meal_\(logId)"
-    case "recipe":
-      return "recipe_\(logId)"
-    case "activity":
-      return "activity_\(logId)"
-    default:
-      return "\(logType.lowercased())_\(logId)"
-    }
+  switch logType.lowercased() {
+  case "food":
+    return "food_\(logId)"
+  case "meal":
+    return "meal_\(logId)"
+  case "recipe":
+    return "recipe_\(logId)"
+  case "activity":
+    return "activity_\(logId)"
+  case "workout":
+    return "workout_\(logId)"
+  default:
+    return "\(logType.lowercased())_\(logId)"
   }
+}
 
   private func summaryTitle(for log: CombinedLog) -> String {
-    switch log.type {
-    case .food:
-      return log.food?.displayName ?? log.message
-    case .meal:
-      return log.meal?.title ?? log.message
-    case .recipe:
-      return log.recipe?.title ?? log.message
-    case .activity:
-      return log.message
-    }
+  switch log.type {
+  case .food:
+    return log.food?.displayName ?? log.message
+  case .meal:
+    return log.meal?.title ?? log.message
+  case .recipe:
+    return log.recipe?.title ?? log.message
+  case .activity:
+    return log.message
+  case .workout:
+    return log.workout?.title ?? log.message
   }
+}
 
-  private func summaryCalories(for log: CombinedLog) -> Double? {
-    switch log.type {
-    case .food, .meal, .recipe:
-      return log.displayCalories
-    case .activity:
-      return nil
-    }
+private func summaryCalories(for log: CombinedLog) -> Double? {
+  switch log.type {
+  case .food, .meal, .recipe:
+    return log.displayCalories
+  case .activity:
+    return nil
+  case .workout:
+    return nil
   }
+}
 
-  private func summaryServings(for log: CombinedLog) -> Double? {
-    switch log.type {
+private func summaryServings(for log: CombinedLog) -> Double? {
+  switch log.type {
     case .food:
       return log.food?.numberOfServings
     case .meal:
       return log.meal?.servings
-    case .recipe:
-      if let servings = log.recipe?.servings {
-        return Double(servings)
-      }
-      return nil
-    case .activity:
-      return nil
+  case .recipe:
+    if let servings = log.recipe?.servings {
+      return Double(servings)
     }
+    return nil
+  case .activity:
+    return nil
+  case .workout:
+    return nil
   }
+}
 
-  private func summaryProtein(for log: CombinedLog) -> Double? {
-    switch log.type {
+private func summaryProtein(for log: CombinedLog) -> Double? {
+  switch log.type {
     case .food:
       return log.food?.protein
     case .meal:
       return log.meal?.protein
-    case .recipe:
-      return log.recipe?.protein
-    case .activity:
-      return nil
-    }
+  case .recipe:
+    return log.recipe?.protein
+  case .activity:
+    return nil
+  case .workout:
+    return nil
   }
+}
 
-  private func summaryCarbs(for log: CombinedLog) -> Double? {
-    switch log.type {
+private func summaryCarbs(for log: CombinedLog) -> Double? {
+  switch log.type {
     case .food:
       return log.food?.carbs
     case .meal:
       return log.meal?.carbs
-    case .recipe:
-      return log.recipe?.carbs
-    case .activity:
-      return nil
-    }
+  case .recipe:
+    return log.recipe?.carbs
+  case .activity:
+    return nil
+  case .workout:
+    return nil
   }
+}
 
-  private func summaryFat(for log: CombinedLog) -> Double? {
-    switch log.type {
+private func summaryFat(for log: CombinedLog) -> Double? {
+  switch log.type {
     case .food:
       return log.food?.fat
     case .meal:
       return log.meal?.fat
-    case .recipe:
-      return log.recipe?.fat
-    case .activity:
-      return nil
-    }
+  case .recipe:
+    return log.recipe?.fat
+  case .activity:
+    return nil
+  case .workout:
+    return nil
   }
+}
 
-  private func summaryImage(for log: CombinedLog) -> String? {
-    switch log.type {
-    case .food:
-      return nil
-    case .meal:
-      return log.meal?.image
-    case .recipe:
-      return log.recipe?.image
-    case .activity:
-      return nil
-    }
+private func summaryImage(for log: CombinedLog) -> String? {
+  switch log.type {
+  case .food:
+    return nil
+  case .meal:
+    return log.meal?.image
+  case .recipe:
+    return log.recipe?.image
+  case .activity:
+    return nil
+  case .workout:
+    return nil
   }
+}
 }

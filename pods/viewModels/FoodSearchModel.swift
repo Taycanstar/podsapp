@@ -655,6 +655,7 @@ enum LogType: String, Codable {
     case meal
     case recipe
     case activity
+    case workout
 }
 
 // MARK: - Activity Data Structures
@@ -670,15 +671,19 @@ struct ActivitySummary: Codable, Identifiable {
     
     // Helper computed properties
     var formattedDuration: String {
-        let hours = Int(duration) / 3600
-        let minutes = (Int(duration) % 3600) / 60
+        let totalSeconds = Int(duration.rounded())
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
         
         if hours > 0 {
             return "\(hours) hr \(minutes) min"
         } else if minutes > 0 {
             return "\(minutes) min"
+        } else if seconds > 0 {
+            return "\(seconds)s"
         } else {
-            return "< 1 min"
+            return "0s"
         }
     }
     
@@ -729,6 +734,55 @@ struct ActivitySummary: Codable, Identifiable {
     }
 }
 
+// MARK: - Workout Data Structures
+struct WorkoutSummary: Codable, Identifiable, Equatable {
+    let id: Int
+    let title: String
+    let durationMinutes: Int?
+    let durationSeconds: Int?  // For showing seconds on very short workouts
+    let exercisesCount: Int
+    let status: String
+    let scheduledAt: Date?
+
+    var workoutLogId: Int { id }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case durationMinutes = "duration_minutes"
+        case durationSeconds = "duration_seconds"
+        case exercisesCount = "exercises_count"
+        case status
+        case scheduledAt
+    }
+
+    // Helper computed properties
+    var formattedDuration: String {
+        // For very short workouts (< 1 minute), show seconds
+        if let seconds = durationSeconds, seconds > 0, (durationMinutes ?? 0) == 0 {
+            return "\(seconds)s"
+        }
+
+        guard let duration = durationMinutes, duration > 0 else { return "< 1 min" }
+
+        if duration < 60 {
+            return "\(duration) min"
+        } else {
+            let hours = duration / 60
+            let mins = duration % 60
+            if mins > 0 {
+                return "\(hours) hr \(mins) min"
+            } else {
+                return "\(hours) hr"
+            }
+        }
+    }
+
+    var exercisesText: String {
+        exercisesCount == 1 ? "1 exercise" : "\(exercisesCount) exercises"
+    }
+}
+
 struct CombinedLog: Codable, Identifiable, Equatable {
     // MARK: - Common Properties
     let type: LogType
@@ -756,7 +810,11 @@ struct CombinedLog: Codable, Identifiable, Equatable {
     // MARK: - Activity-specific properties
     let activityId: String?
     var activity: ActivitySummary?
-    
+
+    // MARK: - Workout-specific properties
+    let workoutLogId: Int?
+    var workout: WorkoutSummary?
+
     // MARK: - Date properties for date-based views
     var logDate: String?      // The date of the log in YYYY-MM-DD format
     var dayOfWeek: String?    // The day of the week (Monday, Tuesday, etc.)
@@ -804,6 +862,8 @@ struct CombinedLog: Codable, Identifiable, Equatable {
             return "recipe_\(recipeLogId ?? 0)"
         case .activity:
             return "activity_\(activityId ?? "unknown")"
+        case .workout:
+            return "workout_\(workoutLogId ?? 0)"
         }
     }
     
@@ -814,9 +874,10 @@ struct CombinedLog: Codable, Identifiable, Equatable {
         case mealLogId, meal, mealTime, scheduledAt
         case recipeLogId, recipe, servingsConsumed
         case activityId, activity
+        case workoutLogId, workout
         case logDate, dayOfWeek
         // This field exists in the JSON but we don't want to use it directly
-        case backendId = "id" 
+        case backendId = "id"
     }
     
     // Custom init to handle the backend ID field
@@ -849,11 +910,15 @@ struct CombinedLog: Codable, Identifiable, Equatable {
         // Activity-specific properties
         activityId = try container.decodeIfPresent(String.self, forKey: .activityId)
         activity = try container.decodeIfPresent(ActivitySummary.self, forKey: .activity)
-        
+
+        // Workout-specific properties
+        workoutLogId = try container.decodeIfPresent(Int.self, forKey: .workoutLogId)
+        workout = try container.decodeIfPresent(WorkoutSummary.self, forKey: .workout)
+
         // Date properties
         logDate = try container.decodeIfPresent(String.self, forKey: .logDate)
         dayOfWeek = try container.decodeIfPresent(String.self, forKey: .dayOfWeek)
-        
+
         // We explicitly ignore the "id" field from the backend
         // by using a special coding key (backendId) that we don't store
     }
@@ -888,11 +953,15 @@ struct CombinedLog: Codable, Identifiable, Equatable {
         // Activity-specific properties
         try container.encodeIfPresent(activityId, forKey: .activityId)
         try container.encodeIfPresent(activity, forKey: .activity)
-        
+
+        // Workout-specific properties
+        try container.encodeIfPresent(workoutLogId, forKey: .workoutLogId)
+        try container.encodeIfPresent(workout, forKey: .workout)
+
         // Date properties
         try container.encodeIfPresent(logDate, forKey: .logDate)
         try container.encodeIfPresent(dayOfWeek, forKey: .dayOfWeek)
-        
+
         // For the backend ID, use the appropriate ID based on type
         switch type {
         case .food:
@@ -903,6 +972,8 @@ struct CombinedLog: Codable, Identifiable, Equatable {
             try container.encode(recipeLogId, forKey: .backendId)
         case .activity:
             try container.encode(activityId, forKey: .backendId)
+        case .workout:
+            try container.encode(workoutLogId, forKey: .backendId)
         }
     }
 }
@@ -915,6 +986,7 @@ extension CombinedLog {
          mealLogId: Int? = nil, meal: MealSummary? = nil, mealTime: String? = nil, scheduledAt: Date? = nil,
          recipeLogId: Int? = nil, recipe: RecipeSummary? = nil, servingsConsumed: Int? = nil,
          activityId: String? = nil, activity: ActivitySummary? = nil,
+         workoutLogId: Int? = nil, workout: WorkoutSummary? = nil,
          logDate: String? = nil, dayOfWeek: String? = nil, isOptimistic: Bool = false) {
         
         self.type = type
@@ -938,6 +1010,9 @@ extension CombinedLog {
         
         self.activityId = activityId
         self.activity = activity
+        
+        self.workoutLogId = workoutLogId
+        self.workout = workout
         
         self.logDate = logDate
         self.dayOfWeek = dayOfWeek

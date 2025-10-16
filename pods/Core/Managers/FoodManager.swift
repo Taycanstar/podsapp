@@ -1565,6 +1565,7 @@ private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
     var seenFoodLogIds = Set<Int>()
     var seenMealLogIds = Set<Int>()
     var seenRecipeLogIds = Set<Int>()
+    var seenWorkoutLogIds = Set<Int>()
     var uniqueLogs: [CombinedLog] = []
     
     for log in logs {
@@ -1589,6 +1590,11 @@ private func uniqueCombinedLogs(from logs: [CombinedLog]) -> [CombinedLog] {
         case .activity:
             // Activity logs are always unique since they come from Apple Health
             isUnique = true
+        case .workout:
+            if let workoutLogId = log.workoutLogId, !seenWorkoutLogIds.contains(workoutLogId) {
+                seenWorkoutLogIds.insert(workoutLogId)
+                isUnique = true
+            }
         }
         
         if isUnique {

@@ -13,6 +13,7 @@ struct WorkoutContainerView: View {
     @State private var exerciseReplacementCallback: ((Int, ExerciseData) -> Void)?
     @State private var exerciseUpdateCallback: ((Int, TodayWorkoutExercise) -> Void)?
     @State private var loggingContext: LogExerciseSheetContext?
+    @EnvironmentObject private var proFeatureGate: ProFeatureGate
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -72,6 +73,22 @@ struct WorkoutContainerView: View {
                         }
                     )
                 }
+        }
+        .sheet(isPresented: Binding(
+            get: { proFeatureGate.showUpgradeSheet },
+            set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
+        )) {
+            if proFeatureGate.blockedFeature == .workouts {
+                WorkoutUpgradeSheet(usageSummary: proFeatureGate.usageSummary) {
+                    proFeatureGate.dismissUpgradeSheet()
+                }
+            } else {
+                HumuliProUpgradeSheet(
+                    feature: proFeatureGate.blockedFeature,
+                    usageSummary: proFeatureGate.usageSummary,
+                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
+                )
+            }
         }
     }
 }

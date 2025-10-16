@@ -13,12 +13,29 @@ struct HumuliProUpgradeSheet: View {
     let feature: ProFeatureGate.ProFeature?
     let usageSummary: UsageSummary?
     let onDismiss: () -> Void
+    let titleOverride: String?
+    let messageOverride: String?
+    let showUsageDetail: Bool
     @State private var selectedPlan: SubscriptionPlan = .yearly
     @State private var isProcessing = false
     @State private var showError = false
     @State private var errorMessage = ""
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var viewModel: OnboardingViewModel
+
+    init(feature: ProFeatureGate.ProFeature?,
+         usageSummary: UsageSummary?,
+         onDismiss: @escaping () -> Void,
+         titleOverride: String? = nil,
+         messageOverride: String? = nil,
+         showUsageDetail: Bool = true) {
+        self.feature = feature
+        self.usageSummary = usageSummary
+        self.onDismiss = onDismiss
+        self.titleOverride = titleOverride
+        self.messageOverride = messageOverride
+        self.showUsageDetail = showUsageDetail
+    }
 
     enum SubscriptionPlan: String, CaseIterable, Identifiable {
         case monthly
@@ -487,14 +504,19 @@ extension HumuliProUpgradeSheet {
                         .font(.system(size: 35))
                         .foregroundColor(.blue)
 
-                    Text("Humuli Pro")
+                    Text(titleOverride ?? "Humuli Pro")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.black)
 
                     VStack(spacing: 6) {
-                        if let usageSummary = usageSummary,
+                        if showUsageDetail,
+                           let usageSummary = usageSummary,
                            let detail = usageDetail(for: feature, summary: usageSummary) {
                             Text(detail)
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        } else if let messageOverride {
+                            Text(messageOverride)
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         } else {

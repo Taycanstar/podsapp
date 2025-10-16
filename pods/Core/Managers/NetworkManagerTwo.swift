@@ -27,8 +27,8 @@ class NetworkManagerTwo {
     
 
 // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-// let baseUrl = "http://172.20.10.4:8000"
+//   let baseUrl = "http://192.168.1.92:8000"
+let baseUrl = "http://172.20.10.4:8000"
 // 
 
   // ### STAGING ###
@@ -256,7 +256,7 @@ class NetworkManagerTwo {
     
     // MARK: - Workout Sync API
 
-    func fetchServerWorkouts(userEmail: String, pageSize: Int = 200, isTemplateOnly: Bool? = nil) async throws -> WorkoutListResponse {
+    func fetchServerWorkouts(userEmail: String, pageSize: Int = 200, isTemplateOnly: Bool? = nil, daysBack: Int? = nil) async throws -> WorkoutListResponse {
         var components = URLComponents(string: "\(baseUrl)/get-user-workouts/")
         components?.queryItems = [
             URLQueryItem(name: "user_email", value: userEmail),
@@ -266,6 +266,10 @@ class NetworkManagerTwo {
 
         if let isTemplateOnly = isTemplateOnly {
             components?.queryItems?.append(URLQueryItem(name: "is_template", value: isTemplateOnly ? "true" : "false"))
+        }
+
+        if let daysBack = daysBack {
+            components?.queryItems?.append(URLQueryItem(name: "days_back", value: "\(daysBack)"))
         }
 
         guard let url = components?.url else { throw NetworkError.invalidURL }

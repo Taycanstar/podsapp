@@ -42,7 +42,8 @@ final class ProFeatureGate: ObservableObject {
     func checkAccess(for feature: ProFeature,
                      userEmail: String,
                      increment: Bool = true,
-                     onAllowed: @escaping () -> Void) {
+                     onAllowed: @escaping () -> Void,
+                     onBlocked: (() -> Void)? = nil) {
         isCheckingAccess = true
         networkManager.checkFeatureAccess(featureKey: feature.apiKey,
                                           increment: increment,
@@ -57,6 +58,7 @@ final class ProFeatureGate: ObservableObject {
                     } else {
                         self.blockedFeature = feature
                         self.showUpgradeSheet = true
+                        onBlocked?()
                         await self.refreshUsageSummary(for: userEmail)
                     }
                 case .failure:

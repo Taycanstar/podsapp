@@ -300,7 +300,7 @@ struct FoodScannerView: View {
                     .ignoresSafeArea()
             }
             .sheet(isPresented: Binding(
-                get: { proFeatureGate.showUpgradeSheet },
+                get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature == .foodScans },
                 set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
             )) {
                 HumuliProUpgradeSheet(
@@ -375,7 +375,8 @@ private func analyzeImage(_ image: UIImage) {
     guard !isAnalyzing, let userEmail = currentUserEmail else { return }
     proFeatureGate.checkAccess(for: .foodScans,
                                userEmail: userEmail,
-                               increment: true) {
+                               increment: true,
+                               onAllowed: {
         self.isPresented = false
         Task { @MainActor in
             do {
@@ -392,16 +393,19 @@ private func analyzeImage(_ image: UIImage) {
                 print("❌ MODERN: Pure scan failed:", error.localizedDescription)
             }
         }
-    }
+    },
+                               onBlocked: nil)
 }
 
 private func analyzeNutritionLabel(_ image: UIImage) {
     guard !isAnalyzing, let userEmail = currentUserEmail else { return }
     proFeatureGate.checkAccess(for: .foodScans,
                                userEmail: userEmail,
-                               increment: true) {
+                               increment: true,
+                               onAllowed: {
         performAnalyzeNutritionLabel(image, userEmail: userEmail)
-    }
+    },
+                               onBlocked: nil)
 }
 
 private func performAnalyzeNutritionLabel(_ image: UIImage, userEmail: String) {
@@ -493,9 +497,11 @@ private func analyzeImageForPreview(_ image: UIImage) {
     guard !isAnalyzing, let userEmail = currentUserEmail else { return }
     proFeatureGate.checkAccess(for: .foodScans,
                                userEmail: userEmail,
-                               increment: true) {
+                               increment: true,
+                               onAllowed: {
         performAnalyzeImageForPreview(image, userEmail: userEmail)
-    }
+    },
+                               onBlocked: nil)
 }
 
 private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) {
@@ -530,9 +536,11 @@ private func analyzeImageDirectly(_ image: UIImage) {
     guard !isAnalyzing, let userEmail = currentUserEmail else { return }
     proFeatureGate.checkAccess(for: .foodScans,
                                userEmail: userEmail,
-                               increment: true) {
+                               increment: true,
+                               onAllowed: {
         performAnalyzeImageDirectly(image, userEmail: userEmail)
-    }
+    },
+                               onBlocked: nil)
 }
 
 private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
@@ -564,9 +572,11 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
         guard !isAnalyzing, let userEmail = currentUserEmail else { return }
         proFeatureGate.checkAccess(for: .foodScans,
                                    userEmail: userEmail,
-                                   increment: true) {
+                                   increment: true,
+                                   onAllowed: {
             performProcessBarcode(barcode, userEmail: userEmail)
-        }
+        },
+                                   onBlocked: nil)
     }
     
     private func openGallery() {

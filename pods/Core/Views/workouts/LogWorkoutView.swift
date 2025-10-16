@@ -45,6 +45,7 @@ struct LogWorkoutView: View {
     // Use global WorkoutManager from environment
     @EnvironmentObject var workoutManager: WorkoutManager
     @EnvironmentObject var onboarding: OnboardingViewModel
+    @EnvironmentObject private var proFeatureGate: ProFeatureGate
     @Environment(\.modelContext) private var modelContext
     private let userProfileService = UserProfileService.shared
     @ObservedObject private var userProfile = UserProfileService.shared
@@ -71,6 +72,7 @@ struct LogWorkoutView: View {
     @FocusState private var isRenameFieldFocused: Bool
     @State private var isSavingTodayWorkout = false
     @State private var saveWorkoutToast: SaveWorkoutToast?
+    @State private var actionError: String?
     
     
     // Properties that delegate to WorkoutManager but are accessed locally
@@ -264,6 +266,12 @@ struct LogWorkoutView: View {
             .onChange(of: userProfile.bodyweightOnlyWorkouts) { _, newValue in
                 print("🏋️‍♀️ Bodyweight-only preference toggled to \(newValue) – scheduling workout regeneration")
                 shouldRegenerateWorkout = true
+            }
+            .onChange(of: workoutManager.syncErrorMessage) { _, message in
+                if let message, !message.isEmpty {
+                    actionError = message
+                    workoutManager.clearSyncErrorMessage()
+                }
             }
             .onReceive(
                 NotificationCenter.default
@@ -1076,60 +1084,78 @@ struct LogWorkoutView: View {
         .buttonStyle(PlainButtonStyle())
     }
     
+    @ViewBuilder
     private var mainContentView: some View {
-        Group {
-            switch selectedWorkoutTab {
-            case .today:
-                if isGeneratingWorkout {
-                    ModernWorkoutLoadingView(message: generationMessage)
-                        .transition(.opacity.combined(with: .scale))
-                        .id("loading") // Force view refresh
+        switch selectedWorkoutTab {
+        case .today:
+            todayTabContent
+        case .workouts:
+            workoutsTabContent
+        }
+    }
 
-                        Spacer()
-                } else {
-                    TodayWorkoutView(
-                        navigationPath: $navigationPath,
-                        userEmail: userEmail,
-                        selectedDuration: effectiveDuration,
-                        shouldRegenerate: $shouldRegenerateWorkout,
-                        customTargetMuscles: customTargetMuscles,
-                        customEquipment: customEquipment,
-                        effectiveFitnessGoal: effectiveFitnessGoal,
-                        effectiveFitnessLevel: workoutManager.effectiveFitnessLevel,
-                        onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
-                        onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
-                        currentWorkout: $currentWorkout,
-                        effectiveFlexibilityPreferences: effectiveFlexibilityPreferences,
-                        showAddExerciseSheet: $showingAddExerciseSheet,
-                        onPresentLogSheet: onPresentLogSheet,
-                        onRefresh: {
-                            HapticFeedback.generate()
-                            Task { await workoutManager.generateTodayWorkout() }
-                        },
-                        onRenameWorkout: {
-                            HapticFeedback.generate()
-                            renameWorkoutTitle = workoutManager.todayWorkoutDisplayTitle
-                            isRenamingWorkout = workoutManager.todayWorkout != nil
-                        },
-                        onSaveWorkout: handleSaveTodayWorkout,
-                        canShowSupersetMenu: userProfileService.circuitsAndSupersetsEnabled && (workoutManager.todayWorkout?.exercises.count ?? 0) >= 2,
-                        onShowSuperset: {
-                            HapticFeedback.generate()
-                            showingSupersetCircuitSheet = true
-                        }
-                    )
+    @ViewBuilder
+    private var todayTabContent: some View {
+        if isGeneratingWorkout {
+            VStack {
+                ModernWorkoutLoadingView(message: generationMessage)
                     .transition(.opacity.combined(with: .scale))
-                }
-            case .workouts:
-                RoutinesWorkoutView(
-                    navigationPath: $navigationPath,
-                    workoutManager: workoutManager,
-                    searchText: $workoutSearchText,
-                    currentWorkout: $currentWorkout
-                )
-                .padding(.top)
+                    .id("loading") // Force view refresh
                 Spacer()
             }
+        } else {
+            TodayWorkoutView(
+                navigationPath: $navigationPath,
+                userEmail: userEmail,
+                selectedDuration: effectiveDuration,
+                shouldRegenerate: $shouldRegenerateWorkout,
+                customTargetMuscles: customTargetMuscles,
+                customEquipment: customEquipment,
+                effectiveFitnessGoal: effectiveFitnessGoal,
+                effectiveFitnessLevel: workoutManager.effectiveFitnessLevel,
+                onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
+                onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
+                currentWorkout: $currentWorkout,
+                effectiveFlexibilityPreferences: effectiveFlexibilityPreferences,
+                showAddExerciseSheet: $showingAddExerciseSheet,
+                onPresentLogSheet: onPresentLogSheet,
+                onRefresh: {
+                    HapticFeedback.generate()
+                    Task { await workoutManager.generateTodayWorkout() }
+                },
+                onRenameWorkout: {
+                    HapticFeedback.generate()
+                    renameWorkoutTitle = workoutManager.todayWorkoutDisplayTitle
+                    isRenamingWorkout = workoutManager.todayWorkout != nil
+                },
+                onSaveWorkout: handleSaveTodayWorkout,
+                canShowSupersetMenu: userProfileService.circuitsAndSupersetsEnabled && (workoutManager.todayWorkout?.exercises.count ?? 0) >= 2,
+                onShowSuperset: {
+                    HapticFeedback.generate()
+                    showingSupersetCircuitSheet = true
+                },
+                onStartWorkout: { workout in
+                    handleStartTodayWorkout(workout)
+                }
+            )
+            .transition(.opacity.combined(with: .scale))
+        }
+    }
+
+    @ViewBuilder
+    private var workoutsTabContent: some View {
+        VStack {
+            RoutinesWorkoutView(
+                navigationPath: $navigationPath,
+                workoutManager: workoutManager,
+                searchText: $workoutSearchText,
+                currentWorkout: $currentWorkout,
+                onCustomWorkoutStart: { workout, completion in
+                    handleStartCustomWorkout(workout, onSuccess: completion)
+                }
+            )
+            .padding(.top)
+            Spacer()
         }
     }
 
@@ -1194,6 +1220,76 @@ struct LogWorkoutView: View {
                     saveWorkoutToast = nil
                 }
             }
+        }
+    }
+    
+    private func resolvedUserEmail() -> String? {
+        if !onboarding.email.isEmpty {
+            return onboarding.email
+        }
+        if !userEmail.isEmpty {
+            return userEmail
+        }
+        if let stored = UserDefaults.standard.string(forKey: "userEmail"), !stored.isEmpty {
+            userEmail = stored
+            return stored
+        }
+        return nil
+    }
+
+    private func ensureUserDefaultsEmail(_ email: String) {
+        let current = UserDefaults.standard.string(forKey: "userEmail")
+        if current != email {
+            UserDefaults.standard.set(email, forKey: "userEmail")
+        }
+    }
+
+    private func guardWorkoutQuota(onAllowed: @escaping () -> Void) {
+        if proFeatureGate.hasActiveSubscription() {
+            WorkoutDataManager.shared.clearRateLimitCooldown(trigger: "pro_user_start")
+            onAllowed()
+            return
+        }
+        if proFeatureGate.isCheckingAccess {
+            return
+        }
+        guard let email = resolvedUserEmail(), !email.isEmpty else {
+            onAllowed()
+            return
+        }
+        ensureUserDefaultsEmail(email)
+        proFeatureGate.blockedFeature = .workouts
+        proFeatureGate.checkAccess(for: .workouts,
+                                   userEmail: email,
+                                   increment: false,
+                                   onAllowed: {
+                                       onAllowed()
+                                   },
+                                   onBlocked: {
+                                       HapticFeedback.generate()
+                                   })
+    }
+
+    private func handleStartTodayWorkout(_ workout: TodayWorkout, onSuccess: (() -> Void)? = nil) {
+        guardWorkoutQuota {
+            print("🚀 Starting workout with \(workout.exercises.count) exercises")
+            for (index, exercise) in workout.exercises.enumerated() {
+                print("🚀 Exercise \(index): \(exercise.exercise.name)")
+            }
+            HapticFeedback.generate()
+            workoutManager.startWorkout(workout)
+            currentWorkout = workoutManager.currentWorkout ?? workout
+            onSuccess?()
+        }
+    }
+
+    private func handleStartCustomWorkout(_ workout: Workout, onSuccess: @escaping () -> Void = {}) {
+        guardWorkoutQuota {
+            print("🚀 Starting custom workout '\(workout.name)' with \(workout.exercises.count) exercises")
+            HapticFeedback.generate()
+            let todayWorkout = workoutManager.startCustomWorkout(workout)
+            currentWorkout = workoutManager.currentWorkout ?? todayWorkout
+            onSuccess()
         }
     }
     
@@ -1369,6 +1465,7 @@ private struct TodayWorkoutView: View {
     let onSaveWorkout: () -> Void
     let canShowSupersetMenu: Bool
     let onShowSuperset: () -> Void
+    let onStartWorkout: (TodayWorkout) -> Void
     
     
     @State private var userProfile = UserProfileService.shared
@@ -1421,14 +1518,7 @@ private struct TodayWorkoutView: View {
         .overlay(alignment: .bottom) {
             if let workout = workoutManager.todayWorkout {
                 HStack {
-                    Button(action: {
-                        print("🚀 Starting workout with \(workout.exercises.count) exercises")
-                        for (index, exercise) in workout.exercises.enumerated() {
-                            print("🚀 Exercise \(index): \(exercise.exercise.name)")
-                        }
-                        workoutManager.startWorkout(workout)
-                        currentWorkout = workoutManager.currentWorkout ?? workout
-                    }) {
+                    Button(action: { onStartWorkout(workout) }) {
                         Text("Start Workout")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(Color(.systemBackground))
@@ -2102,6 +2192,7 @@ private struct RoutinesWorkoutView: View {
     @ObservedObject var workoutManager: WorkoutManager
     @Binding var searchText: String
     @Binding var currentWorkout: TodayWorkout?
+    let onCustomWorkoutStart: (Workout, @escaping () -> Void) -> Void
 
     @State private var selectedWorkout: Workout?
 
@@ -2201,10 +2292,9 @@ private struct RoutinesWorkoutView: View {
                     selectedWorkout = nil
                 },
                 onStart: { updatedWorkout in
-                    HapticFeedback.generate()
-                    let todayWorkout = workoutManager.startCustomWorkout(updatedWorkout)
-                    currentWorkout = workoutManager.currentWorkout ?? todayWorkout
-                    selectedWorkout = nil
+                    onCustomWorkoutStart(updatedWorkout) {
+                        selectedWorkout = nil
+                    }
                 },
                 onRefreshWorkouts: {
                     Task { await workoutManager.fetchCustomWorkouts(force: true) }
@@ -2250,9 +2340,7 @@ private struct RoutinesWorkoutView: View {
             workout: workout,
             durationMinutes: workout.duration ?? estimatedDuration(for: workout),
             onStart: {
-                HapticFeedback.generate()
-                let todayWorkout = workoutManager.startCustomWorkout(workout)
-                currentWorkout = workoutManager.currentWorkout ?? todayWorkout
+                onCustomWorkoutStart(workout) {}
             },
             onEdit: {
                 HapticFeedback.generate()
@@ -2846,6 +2934,7 @@ private struct WorkoutDetailFullScreenView: View {
     }
 
     private func startWorkout() {
+        onDismiss()
         syncWorkoutExercises()
         onStart(displayWorkout)
     }

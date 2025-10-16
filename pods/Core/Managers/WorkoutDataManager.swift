@@ -157,6 +157,8 @@ class WorkoutDataManager: ObservableObject {
     private var syncTimer: Timer?
     private var lastKnownContext: ModelContext?
     private var hasDeferredSync = false
+    private var rateLimitCooldown: Date?
+    private var subscriptionObserver: NSObjectProtocol?
     
     @Published var isSyncing = false
     @Published var lastSyncDate: Date?
@@ -164,6 +166,19 @@ class WorkoutDataManager: ObservableObject {
     
     private init() {
         setupSyncTimer()
+        subscriptionObserver = NotificationCenter.default.addObserver(
+            forName: .subscriptionUpdated,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.clearRateLimitCooldown(trigger: "subscriptionUpdated")
+        }
+    }
+
+    deinit {
+        if let observer = subscriptionObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
     
     // MARK: - Public API
@@ -209,6 +224,18 @@ class WorkoutDataManager: ObservableObject {
         registerContext(context)
         await syncPendingData(context: context)
     }
+
+    func clearRateLimitCooldown(trigger: String = "manual") {
+        if let cooldown = rateLimitCooldown {
+            print("🔓 Workout sync cooldown cleared (\(trigger)) – previous cooldown was \(cooldown)")
+        }
+        rateLimitCooldown = nil
+        hasDeferredSync = false
+        guard !isSyncing else { return }
+        Task { [weak                                                                                                                                                                     self] in
+            await self?.syncPendingDataUsingStoredContext()
+        }
+    }
     
     // MARK: - Private Methods
     
@@ -227,6 +254,11 @@ class WorkoutDataManager: ObservableObject {
     private func syncPendingData(context: ModelContext) async {
         guard !isSyncing else { return }
 
+        if let cooldown = rateLimitCooldown, cooldown > Date() {
+            print("⏳ Workout sync skipped – in cooldown until \(cooldown)")
+            return
+        }
+
         if WorkoutManager.shared.isDisplayingSummary || WorkoutManager.shared.isWorkoutViewActive {
             hasDeferredSync = true
             return
@@ -244,6 +276,7 @@ class WorkoutDataManager: ObservableObject {
 
         do {
             let localChanges = try getUnsyncedChanges(context: context)
+            var didSync = !localChanges.isEmpty
 
             for change in localChanges {
                 if let workout = try fetchWorkout(by: change.id, context: context) {
@@ -251,19 +284,30 @@ class WorkoutDataManager: ObservableObject {
                 }
             }
 
-            let userEmail = localChanges.first?.userEmail ?? UserDefaults.standard.string(forKey: "userEmail")
-
-            if let userEmail {
-                let serverChanges = try await cloudSync.fetchServerChanges(for: userEmail)
-                try applyChanges(serverChanges, context: context)
-            }
-
-            try await cloudSync.pushQueuedChanges()
+            // Push local changes to server (no fetch needed - matches food logging pattern)
+            // This prevents fetching all 200 workouts and creating duplicates
+            let syncedWorkouts = try await cloudSync.pushQueuedChanges()
+            didSync = didSync || !syncedWorkouts.isEmpty
             try saveContextIfNeeded(context)
             lastSyncDate = Date()
+            rateLimitCooldown = nil
+
+            if didSync {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("LogsChangedNotification"),
+                    object: nil
+                )
+                // Post workout-specific notification with workout data for optimistic UI update
+                if !syncedWorkouts.isEmpty {
+                    NotificationCenter.default.post(
+                        name: .workoutDataChanged,
+                        object: nil,
+                        userInfo: ["workouts": syncedWorkouts]
+                    )
+                }
+            }
         } catch {
-            syncError = error.localizedDescription
-            hasDeferredSync = true
+            handleSyncError(error)
         }
 
         isSyncing = false
@@ -276,6 +320,37 @@ class WorkoutDataManager: ObservableObject {
 
     private func registerContext(_ context: ModelContext) {
         lastKnownContext = context
+    }
+
+    private func handleSyncError(_ error: Error) {
+        syncError = error.localizedDescription
+
+        if let networkError = error as? NetworkManagerTwo.NetworkError {
+            switch networkError {
+            case .serverError(let message) where message.lowercased().contains("workout limit"):
+                rateLimitCooldown = Date().addingTimeInterval(3600) // retry after an hour
+                hasDeferredSync = false
+                postRateLimitNotification(message)
+                return
+            case .requestFailed(statusCode: 429):
+                rateLimitCooldown = Date().addingTimeInterval(3600)
+                hasDeferredSync = false
+                postRateLimitNotification("Workout limit reached. Please try again later.")
+                return
+            default:
+                break
+            }
+        }
+
+        hasDeferredSync = true
+    }
+
+    private func postRateLimitNotification(_ message: String) {
+        NotificationCenter.default.post(
+            name: .workoutSyncRateLimited,
+            object: nil,
+            userInfo: ["message": message]
+        )
     }
 
     private func insertIfNeeded(_ workout: WorkoutSession, context: ModelContext) {
@@ -384,12 +459,99 @@ class WorkoutCloudSync {
     }
 
     func fetchServerChanges(for userEmail: String) async throws -> [SyncableWorkoutSession] {
-        let response = try await networkManager.fetchServerWorkouts(userEmail: userEmail)
+        // Only fetch recent workouts (last 30 days) to prevent syncing all 200+ historical workouts
+        // This prevents creating duplicate workouts and reduces network overhead
+        // NOTE: This method is kept for explicit sync operations (e.g., app launch, pull-to-refresh)
+        // but is NO LONGER called during routine workout completion sync
+        let response = try await networkManager.fetchServerWorkouts(userEmail: userEmail, daysBack: 30)
         return response.workouts.map { SyncableWorkoutSession(serverWorkout: $0) }
     }
 
-    func pushQueuedChanges() async throws {
-        guard !syncQueue.isEmpty else { return }
+    private func currentUnitsSystem() -> UnitsSystem {
+        if let saved = UserDefaults.standard.string(forKey: "unitsSystem"),
+           let units = UnitsSystem(rawValue: saved) {
+            return units
+        }
+        return .imperial
+    }
+
+    /// Convert a WorkoutSession to a CombinedLog for optimistic UI updates
+    /// Matches the food logging pattern where we create CombinedLog from server response
+    private func workoutToCombinedLog(_ workout: WorkoutSession) -> CombinedLog {
+        let rawDuration = workout.totalDuration ?? workout.duration ?? 0
+        let roundedDuration = rawDuration.rounded()
+        let durationMinutes = Int(roundedDuration / 60)
+        let durationSeconds = Int(roundedDuration)
+
+        // Calculate total volume from exercises (sum of reps * weight for all sets)
+        let totalVolume = workout.exercises.reduce(0.0) { total, exercise in
+            let exerciseVolume = exercise.sets.reduce(0.0) { setTotal, set in
+                let reps = Double(set.actualReps ?? set.targetReps ?? 0)
+                let weight = set.actualWeight ?? set.targetWeight ?? 0
+                return setTotal + (reps * weight)
+            }
+            return total + exerciseVolume
+        }
+
+        let unitsSystem = currentUnitsSystem()
+
+        // Estimate calories burned using same calculation as WorkoutSummary
+        let profile = UserProfileService.shared.profileData
+        let estimatedCalories = WorkoutCalculationService.shared.estimateCaloriesBurned(
+            volume: totalVolume,
+            duration: roundedDuration,
+            profile: profile,
+            unitsSystem: unitsSystem
+        )
+
+        // Debug logging to compare with WorkoutSummary calculation
+        print("🔥 workoutToCombinedLog Calories Calculation:")
+        print("   - Workout: \(workout.name)")
+        print("   - Total Volume: \(String(format: "%.1f", totalVolume)) \(unitsSystem == .metric ? "kg" : "lbs")")
+        print("   - Duration: \(Int(roundedDuration))s (\(Int(roundedDuration / 60))min)")
+        print("   - Body Weight: \(profile?.currentWeightKg ?? 0)kg")
+        print("   - Units System: \(unitsSystem)")
+        print("   - Estimated Calories: \(estimatedCalories)")
+
+        let workoutSummary = WorkoutSummary(
+            id: workout.remoteId ?? -1,  // Use remoteId from server, or -1 if not synced yet
+            title: workout.name,
+            durationMinutes: durationMinutes,
+            durationSeconds: durationSeconds,  // Pass seconds for < 1 min display
+            exercisesCount: workout.exercises.count,
+            status: workout.completedAt != nil ? "completed" : "in_progress",
+            scheduledAt: workout.startedAt
+        )
+
+        return CombinedLog(
+            type: .workout,
+            status: "success",
+            calories: Double(estimatedCalories),  // Use calculated calories, not 0
+            message: workout.name,
+            foodLogId: nil,
+            food: nil,
+            mealType: nil,
+            mealLogId: nil,
+            meal: nil,
+            mealTime: nil,
+            scheduledAt: workout.startedAt,
+            recipeLogId: nil,
+            recipe: nil,
+            servingsConsumed: nil,
+            activityId: nil,
+            activity: nil,
+            workoutLogId: workout.remoteId,
+            workout: workoutSummary,
+            logDate: nil,
+            dayOfWeek: nil,
+            isOptimistic: workout.remoteId == nil  // Mark as optimistic until server confirms
+        )
+    }
+
+    func pushQueuedChanges() async throws -> [CombinedLog] {
+        guard !syncQueue.isEmpty else { return [] }
+
+        var syncedWorkouts: [CombinedLog] = []
 
         for workout in syncQueue {
             if workout.isDeleted {
@@ -415,9 +577,14 @@ class WorkoutCloudSync {
             workout.updatedAt = syncable.updatedAt
             workout.remoteId = response.id
             workout.needsSync = false
+
+            // Convert to CombinedLog for optimistic UI update (matches food logging pattern)
+            let combinedLog = workoutToCombinedLog(workout)
+            syncedWorkouts.append(combinedLog)
         }
 
         syncQueue.removeAll()
+        return syncedWorkouts
     }
 
     private func makePayload(from workout: WorkoutSession) -> NetworkManagerTwo.WorkoutRequest {
@@ -457,8 +624,12 @@ class WorkoutCloudSync {
             )
         }
 
+        // Use current user's email from UserDefaults to prevent syncing to wrong account
+        // Fallback to workout's stored email only if UserDefaults is empty (shouldn't happen)
+        let currentUserEmail = UserDefaults.standard.string(forKey: "userEmail") ?? workout.userEmail
+
         return NetworkManagerTwo.WorkoutRequest(
-            userEmail: workout.userEmail,
+            userEmail: currentUserEmail,
             name: workout.name,
             status: status,
             isTemplate: nil,
@@ -471,6 +642,11 @@ class WorkoutCloudSync {
             exercises: exercises
         )
     }
+}
+
+extension Notification.Name {
+    static let workoutSyncRateLimited = Notification.Name("WorkoutSyncRateLimited")
+    static let workoutDataChanged = Notification.Name("WorkoutDataChanged")
 }
 
 // MARK: - Conflict Resolution

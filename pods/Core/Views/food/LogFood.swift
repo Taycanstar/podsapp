@@ -951,8 +951,8 @@ private struct FoodListView: View {
                                             }
                                         case .recipe:
                                             EmptyView()
-                                        case .activity:
-                                            EmptyView() // Activities are not shown in LogFood view
+                                        case .activity, .workout:
+                                            EmptyView() // Activities and workouts are not shown in LogFood view
                                         }
                                     }
                                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
@@ -1167,8 +1167,8 @@ private struct FoodListView: View {
             
             case .recipe:
                 return log.recipe != nil && selectedFoodTab == .all
-            case .activity:
-                return false // Activities are not shown in LogFood view
+            case .activity, .workout:
+                return false // Activities and workouts are not shown in LogFood view
             }
         }
     }
@@ -1230,6 +1230,14 @@ private struct FoodListView: View {
                 print("    - Activity ID: \(log.activityId ?? "unknown")")
                 if let activity = log.activity {
                     print("    - Activity name: \(activity.displayName)")
+                }
+            case .workout:
+                print("  • Workout log details:")
+                print("    - Workout log ID: \(log.workoutLogId ?? -1)")
+                if let workout = log.workout {
+                    print("    - Workout title: \(workout.title)")
+                    print("    - Duration minutes: \(workout.durationMinutes ?? 0)")
+                    print("    - Exercises: \(workout.exercisesCount)")
                 }
             }
             print("  • Current tab: \(selectedFoodTab)")
@@ -1301,6 +1309,8 @@ private struct FoodListView: View {
                 }
             case .activity:
                 print("🏃 Activity logs cannot be deleted (they come from Apple Health)")
+            case .workout:
+                print("🏋️ Workout logs cannot be deleted from LogFood (completed sessions are permanent)")
             }
         }
     }
@@ -2135,10 +2145,8 @@ struct HistoryRow: View {
                         onItemAdded: onItemAdded
                     )
                 }
-            case .recipe:
-                EmptyView()
-            case .activity:
-                EmptyView() // Activities are not shown in LogFood view
+            case .recipe, .activity, .workout:
+                EmptyView() // These log types are not shown in LogFood view
             }
         }
     }

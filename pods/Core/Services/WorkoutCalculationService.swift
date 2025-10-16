@@ -121,6 +121,14 @@ final class WorkoutCalculationService {
                                               profile: profile,
                                               unitsSystem: unitsSystem)
 
+        // Debug logging to compare with workoutToCombinedLog calculation
+        print("🔥 buildSummary Calories Calculation:")
+        print("   - Total Volume: \(String(format: "%.1f", totalVolume)) \(unitsSystem == .metric ? "kg" : "lbs")")
+        print("   - Duration: \(Int(roundedDuration))s (\(Int(roundedDuration/60))min)")
+        print("   - Body Weight: \(profile?.currentWeightKg ?? 0)kg")
+        print("   - Units System: \(unitsSystem)")
+        print("   - Estimated Calories: \(calories)")
+
         return WorkoutStats(duration: roundedDuration,
                             totalVolume: totalVolume,
                             estimatedCalories: calories,

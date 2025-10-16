@@ -493,7 +493,7 @@ private var remainingCal: Double { vm.remainingCalories }
                 }
             }
             .sheet(isPresented: Binding(
-                get: { proFeatureGate.showUpgradeSheet },
+                get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts },
                 set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
             )) {
                 HumuliProUpgradeSheet(
@@ -641,6 +641,24 @@ private var remainingCal: Double { vm.remainingCalories }
             ) { _ in
                 print("🔄 DashboardView received LogsChangedNotification - refreshing preloaded profile data")
                 refreshPreloadedProfileData()
+                vm.requestLogsReloadFromNotification()
+            }
+            .onReceive(
+                NotificationCenter.default
+                    .publisher(for: .workoutDataChanged)
+                    .receive(on: RunLoop.main)
+            ) { notification in
+                print("🔄 DashboardView received WorkoutDataChanged - adding workouts to UI")
+                // Extract workout data from notification (matches food logging pattern)
+                if let workouts = notification.userInfo?["workouts"] as? [CombinedLog] {
+                    print("✅ Adding \(workouts.count) workout(s) to dashboard via addPending")
+                    for workout in workouts {
+                        vm.addPending(workout)
+                    }
+                } else {
+                    // Fallback: refresh logs if no workout data in notification
+                    vm.requestLogsReloadFromNotification()
+                }
             }
 
 
@@ -697,6 +715,14 @@ private var remainingCal: Double { vm.remainingCalories }
                     print("    - Activity type: \(activity.workoutActivityType)")
                     print("    - Activity name: \(activity.displayName)")
                 }
+            case .workout:
+                print("  • Workout log details:")
+                print("    - Workout log ID: \(log.workoutLogId ?? -1)")
+                if let workout = log.workout {
+                    print("    - Workout title: \(workout.title)")
+                    print("    - Duration: \(workout.durationMinutes ?? 0) min")
+                    print("    - Exercises: \(workout.exercisesCount)")
+                }
             }
         }
         
@@ -713,6 +739,8 @@ private var remainingCal: Double { vm.remainingCalories }
             case .food, .meal, .recipe:
                 HapticFeedback.generate()
                 Task { await vm.removeLog(log) }
+            case .workout:
+                print("🏋️ Workout logs cannot be deleted from the dashboard (completed sessions are permanent)")
             }
         }
     }
@@ -784,6 +812,8 @@ private var remainingCal: Double { vm.remainingCalories }
             print("📝 Recipe saving not yet implemented")
         case .activity:
             print("🏃 Activity logs cannot be saved (they come from Apple Health)")
+        case .workout:
+            print("🏋️ Workout logs cannot be saved from the dashboard")
         }
     }
     
@@ -834,6 +864,8 @@ private var remainingCal: Double { vm.remainingCalories }
             print("📝 Recipe unsaving not yet implemented")
         case .activity:
             print("🏃 Activity logs cannot be unsaved (they come from Apple Health)")
+        case .workout:
+            print("🏋️ Workout logs cannot be unsaved from the dashboard")
         }
     }
     
@@ -852,6 +884,8 @@ private var remainingCal: Double { vm.remainingCalories }
         case .food, .meal, .recipe:
             HapticFeedback.generate()
             Task { await vm.removeLog(log) }
+        case .workout:
+            print("🏋️ Workout logs cannot be deleted from the dashboard (completed sessions are permanent)")
         }
     }
 
@@ -2088,7 +2122,7 @@ struct LogRow: View {
                                 .font(.system(size: 15, weight: .regular))
                                 .foregroundColor(.primary)
                         }
-                        
+
                         // Distance (only for distance-based activities)
                         if let activity = log.activity, activity.isDistanceActivity, let distance = activity.formattedDistance {
                             VStack(spacing: 0) {
@@ -2096,6 +2130,33 @@ struct LogRow: View {
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(.green)
                                 Text(distance)
+                                    .font(.system(size: 15, weight: .regular))
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                    }
+                } else if log.type == .workout {
+                    // Workout-specific info: Duration and Exercises
+                    HStack(spacing: 24) {
+                        // Duration
+                        if let workout = log.workout, let duration = workout.durationMinutes {
+                            VStack(spacing: 0) {
+                                Image(systemName: "clock")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.blue)
+                                Text(workout.formattedDuration)
+                                    .font(.system(size: 15, weight: .regular))
+                                    .foregroundColor(.primary)
+                            }
+                        }
+
+                        // Exercises count
+                        if let workout = log.workout {
+                            VStack(spacing: 0) {
+                                Image(systemName: "list.bullet")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.green)
+                                Text(workout.exercisesText)
                                     .font(.system(size: 15, weight: .regular))
                                     .foregroundColor(.primary)
                             }
@@ -2169,6 +2230,8 @@ struct LogRow: View {
             return log.recipe?.title ?? "Recipe"
         case .activity:
             return log.activity?.displayName ?? "Activity"
+        case .workout:
+            return log.workout?.title ?? "Workout"
         }
     }
     
@@ -2176,9 +2239,11 @@ struct LogRow: View {
         switch log.type {
         case .activity:
             return log.activity?.activityIcon ?? "figure.strengthtraining.traditional"
+        case .workout:
+            return "figure.strengthtraining.traditional"
         default:
             guard let mealType = log.mealType?.lowercased() else { return "popcorn.fill" }
-            
+
             switch mealType {
             case "breakfast":
                 return "sunrise.fill"
@@ -2908,12 +2973,17 @@ struct WorkoutLogCard: View {
     }
 
     private func formattedDuration(_ duration: TimeInterval) -> String {
-        let totalMinutes = Int(duration / 60)
+        let totalSeconds = Int(duration.rounded())
+        if totalSeconds < 60 {
+            return "\(max(totalSeconds, 0))s"
+        }
+
+        let totalMinutes = totalSeconds / 60
         let hours = totalMinutes / 60
         let minutes = totalMinutes % 60
 
         if hours > 0 {
-            return "\(hours)h \(minutes)m"
+            return minutes > 0 ? "\(hours)h \(minutes)m" : "\(hours)h"
         } else {
             return "\(minutes)m"
         }

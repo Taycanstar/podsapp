@@ -57,7 +57,6 @@
 		3625329D2E629512003C3B8D /* DurationExerciseTimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3625329C2E629508003C3B8D /* DurationExerciseTimerSheet.swift */; };
 		3625329F2E629D1A003C3B8D /* CircularProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3625329E2E629D12003C3B8D /* CircularProgressView.swift */; };
 		362532A12E63805D003C3B8D /* ModernFoodLoadingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */; };
-		50FB9842CD464A8F9D9E63AB /* ProFoodSearchLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */; };
 		362532A52E6CBA78003C3B8D /* ManageExercisesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A42E6CBA71003C3B8D /* ManageExercisesView.swift */; };
 		362532A72E6CD98B003C3B8D /* RestTimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362532A62E6CD987003C3B8D /* RestTimerSheet.swift */; };
 		36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36291B7F2B8166F9000B5F38 /* CarouselView.swift */; };
@@ -288,6 +287,7 @@
 		36D3A5272E97086600AD6B94 /* StoreKit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 36D3A5252E97086600AD6B94 /* StoreKit.storekit */; };
 		36D3A5282E97086600AD6B94 /* StoreKit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 36D3A5252E97086600AD6B94 /* StoreKit.storekit */; };
 		36D3A52A2E986BF500AD6B94 /* ProOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5292E986BF000AD6B94 /* ProOnboardingView.swift */; };
+		36D3A52C2EA008CE00AD6B94 /* WorkoutUpgradeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A52B2EA008C900AD6B94 /* WorkoutUpgradeSheet.swift */; };
 		36D3A5982E95B0AA00AD6B94 /* ProgramOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5972E95B0AA00AD6B94 /* ProgramOverviewView.swift */; };
 		36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D647D02C092A1C002F1047 /* SplashScreenView.swift */; };
 		36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */; };
@@ -352,6 +352,7 @@
 		36F722862DE52E2C009C1CA0 /* ScanFoodHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F722852DE52E2C009C1CA0 /* ScanFoodHelper.swift */; };
 		36F722882DE52E53009C1CA0 /* BarcodeHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F722872DE52E53009C1CA0 /* BarcodeHelper.swift */; };
 		36F7228A2DE52E60009C1CA0 /* GalleryHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F722892DE52E60009C1CA0 /* GalleryHelper.swift */; };
+		50FB9842CD464A8F9D9E63AB /* ProFoodSearchLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */; };
 		6DF1182C44BE49149F12E422 /* ProFoodSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678276B9D0A646E8AD3315C6 /* ProFoodSearchView.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
 		E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */; };
@@ -428,7 +429,6 @@
 		3625329C2E629508003C3B8D /* DurationExerciseTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DurationExerciseTimerSheet.swift; sourceTree = "<group>"; };
 		3625329E2E629D12003C3B8D /* CircularProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircularProgressView.swift; sourceTree = "<group>"; };
 		362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModernFoodLoadingCard.swift; sourceTree = "<group>"; };
-		78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFoodSearchLoader.swift; sourceTree = "<group>"; };
 		362532A42E6CBA71003C3B8D /* ManageExercisesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageExercisesView.swift; sourceTree = "<group>"; };
 		362532A62E6CD987003C3B8D /* RestTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerSheet.swift; sourceTree = "<group>"; };
 		36291B7F2B8166F9000B5F38 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
@@ -655,6 +655,7 @@
 		36D3A5232E95F26900AD6B94 /* HumuliProUpgradeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HumuliProUpgradeSheet.swift; sourceTree = "<group>"; };
 		36D3A5252E97086600AD6B94 /* StoreKit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = StoreKit.storekit; sourceTree = "<group>"; };
 		36D3A5292E986BF000AD6B94 /* ProOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProOnboardingView.swift; sourceTree = "<group>"; };
+		36D3A52B2EA008C900AD6B94 /* WorkoutUpgradeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutUpgradeSheet.swift; sourceTree = "<group>"; };
 		36D3A5972E95B0AA00AD6B94 /* ProgramOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramOverviewView.swift; sourceTree = "<group>"; };
 		36D647D02C092A1C002F1047 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
 		36D647D22C0CDE17002F1047 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -726,6 +727,7 @@
 		63B50C70F2DA21A1E4B1519E /* Pods-pods.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pods.release.xcconfig"; path = "Target Support Files/Pods-pods/Pods-pods.release.xcconfig"; sourceTree = "<group>"; };
 		678276B9D0A646E8AD3315C6 /* ProFoodSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProFoodSearchView.swift; path = Pods/Core/Views/food/ProFoodSearchView.swift; sourceTree = SOURCE_ROOT; };
 		72915B93F931472588ADFD26 /* WaterUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterUnit.swift; sourceTree = "<group>"; };
+		78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFoodSearchLoader.swift; sourceTree = "<group>"; };
 		7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Podstack.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		828AD9036235BA1CC3FDB722 /* Pods-Podstack-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.release.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
 		83EDB7BB4B1CA39393C90454 /* Pods-podsTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-podsTests.debug.xcconfig"; path = "Target Support Files/Pods-podsTests/Pods-podsTests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -905,6 +907,7 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				36D3A52B2EA008C900AD6B94 /* WorkoutUpgradeSheet.swift */,
 				36D3A4F82E7F4E4D00AD6B94 /* WorkoutSummarySheet.swift */,
 				367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */,
 				36881DFC2E77405C00262045 /* ExerciseLoggingSheet.swift */,
@@ -1639,6 +1642,7 @@
 				36ED35E32DDE52F300D174FB /* AddQuickLogDetailsView.swift in Sources */,
 				36CB03302D5B04DD006A74E9 /* FoodSearchModel.swift in Sources */,
 				36DBFBDD2C8BA7A200958BF4 /* AddWorkspaceView.swift in Sources */,
+				36D3A52C2EA008CE00AD6B94 /* WorkoutUpgradeSheet.swift in Sources */,
 				363AFA0B2D345D2400C91A14 /* FullActivitySummaryView.swift in Sources */,
 				368A27392B9818330001BBCA /* InfoView.swift in Sources */,
 				36CB033F2D659B11006A74E9 /* VersionManager.swift in Sources */,

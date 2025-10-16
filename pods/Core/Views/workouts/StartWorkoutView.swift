@@ -287,9 +287,21 @@ struct StartWorkoutView: View {
             beginWorkoutSession()
             return
         }
-        proFeatureGate.checkAccess(for: .workouts, userEmail: email) {
-            Task { await proFeatureGate.refreshUsageSummary(for: email) }
-            beginWorkoutSession()
+        ensureUserDefaultsEmail(email)
+        proFeatureGate.checkAccess(for: .workouts,
+                                   userEmail: email,
+                                   onAllowed: {
+                                       WorkoutDataManager.shared.clearRateLimitCooldown(trigger: "pro_user_start")
+                                       Task { await proFeatureGate.refreshUsageSummary(for: email) }
+                                       beginWorkoutSession()
+                                   },
+                                   onBlocked: nil)
+    }
+
+    private func ensureUserDefaultsEmail(_ email: String) {
+        let current = UserDefaults.standard.string(forKey: "userEmail")
+        if current != email {
+            UserDefaults.standard.set(email, forKey: "userEmail")
         }
     }
     
