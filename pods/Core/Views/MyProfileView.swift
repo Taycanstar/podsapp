@@ -677,11 +677,10 @@ struct MyProfileView: View {
                 timeLabel: getWorkoutTimeLabel(for: log)
             )
         } else if let workout = log.workout {
-            let statusText = workout.status.trimmingCharacters(in: .whitespacesAndNewlines)
             workoutCardContent(
                 icon: "figure.strengthtraining.traditional",
                 title: workout.title,
-                subtitle: statusText.isEmpty ? nil : statusText.capitalized,
+                subtitle: nil,
                 duration: workout.formattedDuration,
                 distance: nil,
                 exercisesCount: workout.exercisesCount > 0 ? workout.exercisesCount : exerciseCount(from: log),
@@ -706,22 +705,13 @@ struct MyProfileView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 16) {
                 Image(systemName: icon)
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .frame(width: 48, height: 48)
-                    .background(Color("primarybg"))
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.secondary)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 16, weight: .regular))
                         .foregroundColor(.primary)
-
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
                 }
 
                 Spacer()
@@ -733,19 +723,21 @@ struct MyProfileView: View {
                 }
             }
 
-            HStack(spacing: 12) {
-                workoutMetricChip(icon: "flame.fill", text: "\(calories) cal", color: Color("brightOrange"))
+            HStack(spacing: 24) {
+                workoutCaloriesView(calories)
+
+                Spacer(minLength: 16)
 
                 if let duration {
-                    workoutMetricChip(icon: "clock", text: duration, color: .blue)
+                    workoutMetricInline(icon: "clock", text: duration, color: .blue)
                 }
 
                 if let exercisesCount, exercisesCount > 0 {
-                    workoutMetricChip(icon: "list.bullet", text: "\(exercisesCount) exercises", color: .accentColor)
+                    workoutMetricInline(icon: "list.bullet", text: "\(exercisesCount) exercises", color: .green)
                 }
 
                 if let distance {
-                    workoutMetricChip(icon: "location", text: distance, color: .green)
+                    workoutMetricInline(icon: "location", text: distance, color: .green)
                 }
             }
         }
@@ -758,19 +750,32 @@ struct MyProfileView: View {
         )
     }
 
-    private func workoutMetricChip(icon: String, text: String, color: Color) -> some View {
+    private func workoutCaloriesView(_ calories: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 20))
+                .foregroundColor(Color("brightOrange"))
+
+            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                Text("\(calories)")
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+                Text("cal")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private func workoutMetricInline(icon: String, text: String, color: Color) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(color)
             Text(text)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 15, weight: .regular))
                 .foregroundColor(.primary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color("primarybg"))
-        .clipShape(Capsule())
     }
 
     private func getWorkoutTimeLabel(for log: CombinedLog) -> String? {

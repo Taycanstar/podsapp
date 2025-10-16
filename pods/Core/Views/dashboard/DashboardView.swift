@@ -2112,9 +2112,8 @@ struct LogRow: View {
                 // Show different info based on log type
                 if log.type == .activity {
                     // Activity-specific info: Duration and Distance
-                    HStack(spacing: 24) {
-                        // Duration
-                        VStack(spacing: 0) {
+                    HStack(spacing: 16) {
+                        HStack(spacing: 6) {
                             Image(systemName: "clock")
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.blue)
@@ -2123,9 +2122,8 @@ struct LogRow: View {
                                 .foregroundColor(.primary)
                         }
 
-                        // Distance (only for distance-based activities)
                         if let activity = log.activity, activity.isDistanceActivity, let distance = activity.formattedDistance {
-                            VStack(spacing: 0) {
+                            HStack(spacing: 6) {
                                 Image(systemName: "location")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(.green)
@@ -2137,10 +2135,9 @@ struct LogRow: View {
                     }
                 } else if log.type == .workout {
                     // Workout-specific info: Duration and Exercises
-                    HStack(spacing: 24) {
-                        // Duration
-                        if let workout = log.workout, let duration = workout.durationMinutes {
-                            VStack(spacing: 0) {
+                    HStack(spacing: 16) {
+                        if let workout = log.workout, let _ = workout.durationMinutes {
+                            HStack(spacing: 6) {
                                 Image(systemName: "clock")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(.blue)
@@ -2150,9 +2147,8 @@ struct LogRow: View {
                             }
                         }
 
-                        // Exercises count
                         if let workout = log.workout {
-                            VStack(spacing: 0) {
+                            HStack(spacing: 6) {
                                 Image(systemName: "list.bullet")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundColor(.green)
