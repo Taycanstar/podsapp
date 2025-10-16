@@ -188,6 +188,10 @@ struct MyProfileView: View {
             fetchWeightData()
             fetchMacroSplitData()
             ensureCombinedLogsReady()
+            let email = resolvedUserEmail()
+            if !email.isEmpty {
+                vm.preloadForStartup(email: email)
+            }
         }
         .onReceive(
             NotificationCenter.default
@@ -1011,19 +1015,7 @@ struct MyProfileView: View {
         print("   log.activity?.startDate = \(log.activity?.startDate.description ?? "nil")")
         print("   log.meal?.scheduledAt = \(log.meal?.scheduledAt?.description ?? "nil")")
 
-        // PRIORITY 1: Check logDate first (YYYY-MM-DD format) - this tells us the actual day
-        if let logDate = log.logDate {
-            if let parsed = Self.backendDateFormatter.date(from: logDate) {
-                print("   ✅ Using logDate (backend format): \(parsed)")
-                return parsed
-            }
-            if let isoParsed = Self.iso8601DateFormatter.date(from: logDate) {
-                print("   ✅ Using logDate (ISO format): \(isoParsed)")
-                return isoParsed
-            }
-        }
-
-        // PRIORITY 2: Check scheduledAt (has time, but also has the day)
+        // PRIORITY 1: Use scheduledAt when available (includes exact time)
         if let scheduled = log.scheduledAt {
             print("   ✅ Using scheduledAt: \(scheduled)")
             return scheduled
@@ -1039,6 +1031,18 @@ struct MyProfileView: View {
         if let recipeDate = log.recipe?.scheduledAt {
             print("   ✅ Using recipe.scheduledAt: \(recipeDate)")
             return recipeDate
+        }
+
+        // PRIORITY 2: Fallback to logDate (date only)
+        if let logDate = log.logDate {
+            if let parsed = Self.backendDateFormatter.date(from: logDate) {
+                print("   ✅ Using logDate (backend format): \(parsed)")
+                return parsed
+            }
+            if let isoParsed = Self.iso8601DateFormatter.date(from: logDate) {
+                print("   ✅ Using logDate (ISO format): \(isoParsed)")
+                return isoParsed
+            }
         }
 
         print("   ❌ No date found")
