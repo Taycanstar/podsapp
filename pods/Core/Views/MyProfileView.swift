@@ -192,6 +192,7 @@ struct MyProfileView: View {
             if !email.isEmpty {
                 vm.preloadForStartup(email: email)
             }
+            vm.setHealthViewModel(HealthKitViewModel.shared)
         }
         .onReceive(
             NotificationCenter.default
@@ -947,7 +948,7 @@ struct MyProfileView: View {
         }
 
         Task {
-            await combinedLogsRepository.refresh(force: force || combinedLogsRepository.snapshot.logs.isEmpty)
+            await combinedLogsRepository.refresh(force: true)
         }
     }
 

@@ -756,6 +756,34 @@ struct WorkoutSummary: Codable, Identifiable, Equatable {
         case scheduledAt
     }
 
+    init(id: Int,
+         title: String,
+         durationMinutes: Int?,
+         durationSeconds: Int?,
+         exercisesCount: Int,
+         status: String,
+         scheduledAt: Date?) {
+        self.id = id
+        self.title = title
+        self.durationMinutes = durationMinutes
+        self.durationSeconds = durationSeconds
+        self.exercisesCount = exercisesCount
+        self.status = status
+        self.scheduledAt = scheduledAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(Int.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        durationMinutes = try container.decodeIfPresent(Int.self, forKey: .durationMinutes)
+        durationSeconds = try container.decodeIfPresent(Int.self, forKey: .durationSeconds)
+        exercisesCount = try container.decodeIfPresent(Int.self, forKey: .exercisesCount) ?? 0
+        status = try container.decodeIfPresent(String.self, forKey: .status) ?? ""
+        scheduledAt = try container.decodeIfPresent(Date.self, forKey: .scheduledAt)
+    }
+
     // Helper computed properties
     var formattedDuration: String {
         // For very short workouts (< 1 minute), show seconds
