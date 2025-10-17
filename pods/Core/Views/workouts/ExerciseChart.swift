@@ -13,6 +13,9 @@ enum ChartMetric: String, CaseIterable {
     case weight = "Weight"
     case volume = "Volume"
     case estOneRepMax = "Est. 1 Rep Max"
+    case duration = "Duration"
+    case totalDuration = "Total Duration"
+    case distance = "Distance"
 }
 
 enum TimePeriod: String, CaseIterable {
@@ -61,6 +64,12 @@ struct ExerciseChart: View {
             return metrics?.totalVolume ?? 0
         case .estOneRepMax:
             return metrics?.estimatedOneRepMax ?? 0
+        case .duration:
+            return chartData.map { $0.1 }.max() ?? 0
+        case .totalDuration:
+            return chartData.map { $0.1 }.max() ?? 0
+        case .distance:
+            return chartData.map { $0.1 }.max() ?? 0
         }
     }
     
@@ -74,6 +83,10 @@ struct ExerciseChart: View {
             return metrics?.averageVolume ?? 0
         case .estOneRepMax:
             return metrics?.estimatedOneRepMax ?? 0
+        case .duration, .totalDuration, .distance:
+            let values = chartData.map { $0.1 }
+            guard !values.isEmpty else { return 0 }
+            return values.reduce(0, +) / Double(values.count)
         }
     }
     
@@ -88,6 +101,14 @@ struct ExerciseChart: View {
     
     private var totalPeriodVolume: Double {
         metrics?.totalVolume ?? 0
+    }
+
+    private var totalPeriodDuration: Double {
+        metrics?.totalDurationSeconds ?? 0
+    }
+    
+    private var totalPeriodDistance: Double {
+        metrics?.totalDistanceMeters ?? 0
     }
     
     private var periodName: String {
@@ -112,6 +133,12 @@ struct ExerciseChart: View {
         case .estOneRepMax:
             // Peak estimated 1RM
             return formatValue(maxPeriodValue)
+        case .duration:
+            return formatValue(maxPeriodValue)
+        case .totalDuration:
+            return formatValue(totalPeriodDuration)
+        case .distance:
+            return formatValue(totalPeriodDistance)
         }
     }
     
@@ -121,6 +148,9 @@ struct ExerciseChart: View {
         case .weight: return "Weight"
         case .volume: return "Volume"
         case .estOneRepMax: return "Est. 1 Rep Max"
+        case .duration: return "Time (Best Set)"
+        case .totalDuration: return "Total Time"
+        case .distance: return "Distance"
         }
     }
     
@@ -134,6 +164,12 @@ struct ExerciseChart: View {
             return "Total volume"
         case .estOneRepMax:
             return "Est. 1 rep max"
+        case .duration:
+            return "Best set time"
+        case .totalDuration:
+            return "Total time"
+        case .distance:
+            return "Total distance"
         }
     }
     
@@ -171,6 +207,9 @@ struct ExerciseChart: View {
         case .weight: return .blue
         case .volume: return .red
         case .estOneRepMax: return .orange
+        case .duration: return .orange
+        case .totalDuration: return .red
+        case .distance: return .blue
         }
     }
     
@@ -361,7 +400,7 @@ struct ExerciseChart: View {
                 // Use native Charts framework for iOS 16+
                 Chart {
                     ForEach(chartData, id: \.0) { item in
-                        if metric == .volume {
+                        if metric == .volume || metric == .totalDuration {
                             BarMark(
                                 x: .value("Date", item.0),
                                 y: .value("Value", item.1)
@@ -463,7 +502,7 @@ struct ExerciseChart: View {
                 CustomChartView(
                     data: chartData,
                     color: chartColor,
-                    isBarChart: metric == .volume,
+                    isBarChart: metric == .volume || metric == .totalDuration,
                     showingPersonalRecord: showingPersonalRecord,
                     showingYourAverage: showingYourAverage,
                     personalRecord: personalRecord,
@@ -481,29 +520,82 @@ struct ExerciseChart: View {
         return formatValue(latestValue)
     }
     
+    private var weightUnitSymbol: String {
+        onboarding.unitsSystem == .imperial ? "lb" : "kg"
+    }
+    
+    private var distanceUnitSymbol: String {
+        onboarding.unitsSystem == .imperial ? "mi" : "km"
+    }
+    
+    private func convertWeightForDisplay(_ value: Double) -> Double {
+        onboarding.unitsSystem == .imperial ? value : (value / 2.20462)
+    }
+    
+    private func convertDistanceToDisplay(_ meters: Double) -> Double {
+        onboarding.unitsSystem == .imperial ? (meters * 0.000621371) : (meters / 1000.0)
+    }
+    
+    private func formatDurationString(_ seconds: Double) -> String {
+        let totalSeconds = max(0, Int(seconds.rounded()))
+        let minutes = totalSeconds / 60
+        let remainder = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, remainder)
+    }
+    
+    private func formatDistanceString(_ meters: Double) -> String {
+        let display = convertDistanceToDisplay(meters)
+        let formatted = display >= 10 ? String(format: "%.1f", display) : String(format: "%.2f", display)
+        return "\(formatted) \(distanceUnitSymbol)"
+    }
+    
+    private func formatNumber(_ value: Double) -> String {
+        if value >= 1000 {
+            return String(format: "%.0fk", value / 1000)
+        } else if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(format: "%.0f", value)
+        } else {
+            return String(format: "%.1f", value)
+        }
+    }
+    
     private func formatValue(_ value: Double) -> String {
         switch metric {
         case .reps:
             return String(format: "%.0f", value)
         case .weight:
-            return String(format: "%.1f %@", value, onboarding.unitsSystem == .imperial ? "lb" : "kg")
+            let display = convertWeightForDisplay(value)
+            return String(format: "%.1f %@", display, weightUnitSymbol)
         case .volume:
-            return String(format: "%.0f %@", value, onboarding.unitsSystem == .imperial ? "lb" : "kg")
+            let display = convertWeightForDisplay(value)
+            return String(format: "%.0f %@", display, weightUnitSymbol)
         case .estOneRepMax:
-            return String(format: "%.1f %@", value, onboarding.unitsSystem == .imperial ? "lb" : "kg")
+            let display = convertWeightForDisplay(value)
+            return String(format: "%.1f %@", display, weightUnitSymbol)
+        case .duration, .totalDuration:
+            return formatDurationString(value)
+        case .distance:
+            return formatDistanceString(value)
         }
     }
     
     private var unitString: String {
+        let pluralWeightUnit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
         switch metric {
         case .reps:
             return "reps in 1 set"
         case .weight:
-            return "\(onboarding.unitsSystem == .imperial ? "lbs" : "kg") in 1 set"
+            return "\(pluralWeightUnit) in 1 set"
         case .volume:
-            return onboarding.unitsSystem == .imperial ? "lbs" : "kg"
+            return pluralWeightUnit
         case .estOneRepMax:
-            return "\(onboarding.unitsSystem == .imperial ? "lbs" : "kg") in 1 rep"
+            return "\(pluralWeightUnit) in 1 rep"
+        case .duration:
+            return "per set"
+        case .totalDuration:
+            return "total time"
+        case .distance:
+            return distanceUnitSymbol
         }
     }
     
@@ -526,20 +618,20 @@ struct ExerciseChart: View {
     }
     
     private func yAxisLabel(for value: Double) -> String {
-        // Convert for display if using metric
-        let displayValue: Double
         switch metric {
         case .reps:
-            displayValue = value
+            return formatNumber(value)
         case .weight, .volume, .estOneRepMax:
-            displayValue = onboarding.unitsSystem == .imperial ? value : (value / 2.20462)
-        }
-        if displayValue >= 1000 {
-            return String(format: "%.0fk", displayValue / 1000)
-        } else if displayValue.truncatingRemainder(dividingBy: 1) == 0 {
-            return String(format: "%.0f", displayValue)
-        } else {
-            return String(format: "%.1f", displayValue)
+            return formatNumber(convertWeightForDisplay(value))
+        case .duration, .totalDuration:
+            return formatDurationString(value)
+        case .distance:
+            let display = convertDistanceToDisplay(value)
+            if display >= 10 {
+                return String(format: "%.1f", display)
+            } else {
+                return String(format: "%.2f", display)
+            }
         }
     }
     

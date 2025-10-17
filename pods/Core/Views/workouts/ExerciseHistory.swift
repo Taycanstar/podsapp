@@ -20,19 +20,48 @@ struct ExerciseHistory: View {
         case records = "Records"
     }
     
+    private var isDurationBasedExercise: Bool {
+        guard let tracking = exercise.trackingType else { return false }
+        switch tracking {
+        case .timeOnly, .holdTime, .timeDistance, .rounds:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    private var availableTabs: [HistoryTab] {
+        isDurationBasedExercise ? [.trends, .results] : HistoryTab.allCases
+    }
+    
     var body: some View {
+        let tabs = availableTabs
+        
         VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+                .padding(.vertical, 12)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            
             // Native iOS Segmented Picker
             Picker("", selection: $selectedTab) {
-                ForEach(HistoryTab.allCases, id: \.self) { tab in
+                ForEach(tabs, id: \.self) { tab in
                     Text(tab.rawValue)
                         .tag(tab)
                 }
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom)
+            .padding(.bottom, 8)
+            .onAppear { ensureValidSelection() }
+            .onChange(of: exercise.trackingType) { _ in ensureValidSelection() }
             
             // Content
             switch selectedTab {
@@ -41,7 +70,11 @@ struct ExerciseHistory: View {
             case .results:
                 ExerciseResultsView(exercise: exercise)
             case .records:
-                ExerciseRecordsView(exercise: exercise)
+                if tabs.contains(.records) {
+                    ExerciseRecordsView(exercise: exercise)
+                } else {
+                    EmptyView()
+                }
             }
         }
         .navigationTitle(exercise.exercise.name)
@@ -59,6 +92,13 @@ struct ExerciseHistory: View {
             }
         }
     }
+    
+    private func ensureValidSelection() {
+        let tabs = availableTabs
+        if !tabs.contains(selectedTab) {
+            selectedTab = tabs.first ?? .trends
+        }
+    }
 }
 
 // MARK: - Trends View
@@ -72,6 +112,9 @@ struct ExerciseTrendsView: View {
     @State private var weightData: [(Date, Double)] = []
     @State private var volumeData: [(Date, Double)] = []
     @State private var oneRepMaxData: [(Date, Double)] = []
+    @State private var durationData: [(Date, Double)] = []
+    @State private var totalDurationData: [(Date, Double)] = []
+    @State private var distanceData: [(Date, Double)] = []
     @State private var isLoading = true
     @State private var selectedPeriod: TimePeriod = .month
     @EnvironmentObject var onboarding: OnboardingViewModel
@@ -88,45 +131,100 @@ struct ExerciseTrendsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 LazyVStack(spacing: 24) {
-                    HistoryMetricCard(
-                        title: "Reps",
-                        currentValue: formatCurrentValue(Double(metrics?.maxReps ?? 0), unit: ""),
-                        loggedAgo: getLastLoggedTime(),
-                        data: repsData,
-                        chartType: .line,
-                        color: .red,
-                        exercise: exercise
-                    )
-                    
-                    HistoryMetricCard(
-                        title: "Volume",
-                        currentValue: formatCurrentValue(metrics?.totalVolume, unit: onboarding.unitsSystem == .imperial ? " lb" : " kg"),
-                        loggedAgo: getLastLoggedTime(),
-                        data: volumeData,
-                        chartType: .bar,
-                        color: .red,
-                        exercise: exercise
-                    )
-                    
-                    HistoryMetricCard(
-                        title: "Weight",
-                        currentValue: formatCurrentValue(metrics?.maxWeight, unit: onboarding.unitsSystem == .imperial ? " lb" : " kg"),
-                        loggedAgo: getLastLoggedTime(),
-                        data: weightData,
-                        chartType: .line,
-                        color: .blue,
-                        exercise: exercise
-                    )
-                    
-                    HistoryMetricCard(
-                        title: "Est. 1 Rep Max",
-                        currentValue: formatCurrentValue(metrics?.estimatedOneRepMax, unit: onboarding.unitsSystem == .imperial ? " lb" : " kg"),
-                        loggedAgo: getLastLoggedTime(),
-                        data: oneRepMaxData,
-                        chartType: .line,
-                        color: .orange,
-                        exercise: exercise
-                    )
+                    if hasDurationMetricsAvailable {
+                        HistoryMetricCard(
+                            title: "Time (Best Set)",
+                            currentValue: formatDurationValue(metrics?.maxDurationSeconds),
+                            loggedAgo: getLastLoggedTime(),
+                            data: durationData,
+                            chartType: .line,
+                            color: .orange,
+                            metric: .duration,
+                            unitLabel: nil,
+                            axisFormatter: durationAxisFormatter,
+                            exercise: exercise
+                        )
+                        
+                        HistoryMetricCard(
+                            title: "Total Time",
+                            currentValue: formatDurationValue(metrics?.totalDurationSeconds),
+                            loggedAgo: getLastLoggedTime(),
+                            data: totalDurationData,
+                            chartType: .bar,
+                            color: .red,
+                            metric: .totalDuration,
+                            unitLabel: nil,
+                            axisFormatter: durationAxisFormatter,
+                            exercise: exercise
+                        )
+                        
+                        if hasDistanceMetricsAvailable {
+                            HistoryMetricCard(
+                                title: "Distance",
+                                currentValue: formatDistanceValue(metrics?.totalDistanceMeters),
+                                loggedAgo: getLastLoggedTime(),
+                                data: distanceData,
+                                chartType: .line,
+                                color: .blue,
+                                metric: .distance,
+                                unitLabel: distanceUnitSymbol,
+                                axisFormatter: distanceAxisFormatter,
+                                exercise: exercise
+                            )
+                        }
+                    } else {
+                        HistoryMetricCard(
+                            title: "Reps",
+                            currentValue: formatRepsValue(metrics?.maxReps),
+                            loggedAgo: getLastLoggedTime(),
+                            data: repsData,
+                            chartType: .line,
+                            color: .red,
+                            metric: .reps,
+                            unitLabel: nil,
+                            axisFormatter: numberAxisFormatter,
+                            exercise: exercise
+                        )
+                   
+                        HistoryMetricCard(
+                            title: "Volume",
+                            currentValue: formatVolumeValue(metrics?.totalVolume),
+                            loggedAgo: getLastLoggedTime(),
+                            data: volumeData,
+                            chartType: .bar,
+                            color: .red,
+                            metric: .volume,
+                            unitLabel: onboarding.unitsSystem == .imperial ? "lbs" : "kg",
+                            axisFormatter: weightAxisFormatter,
+                            exercise: exercise
+                        )
+                        
+                        HistoryMetricCard(
+                            title: "Weight",
+                            currentValue: formatWeightValue(metrics?.maxWeight),
+                            loggedAgo: getLastLoggedTime(),
+                            data: weightData,
+                            chartType: .line,
+                            color: .blue,
+                            metric: .weight,
+                            unitLabel: weightUnitSymbol,
+                            axisFormatter: weightAxisFormatter,
+                            exercise: exercise
+                        )
+                        
+                        HistoryMetricCard(
+                            title: "Est. 1 Rep Max",
+                            currentValue: formatWeightValue(metrics?.estimatedOneRepMax),
+                            loggedAgo: getLastLoggedTime(),
+                            data: oneRepMaxData,
+                            chartType: .line,
+                            color: .orange,
+                            metric: .estOneRepMax,
+                            unitLabel: weightUnitSymbol,
+                            axisFormatter: weightAxisFormatter,
+                            exercise: exercise
+                        )
+                    }
                 }
                 .padding(.top, 20)
             }
@@ -144,54 +242,195 @@ struct ExerciseTrendsView: View {
     private func loadExerciseData() async {
         print("🔄 ExerciseTrendsView: Starting to load data for exercise \(exercise.exercise.id)")
         isLoading = true
+        defer { isLoading = false }
+        
+        durationData = []
+        totalDurationData = []
+        distanceData = []
         
         do {
-            // Load metrics and chart data concurrently
-            async let metricsTask = dataService.getExerciseMetrics(exerciseId: exercise.exercise.id, period: selectedPeriod, context: modelContext)
-            async let repsTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .reps, period: selectedPeriod, context: modelContext)
-            async let weightTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .weight, period: selectedPeriod, context: modelContext)
-            async let volumeTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .volume, period: selectedPeriod, context: modelContext)
-            async let oneRepMaxTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .estOneRepMax, period: selectedPeriod, context: modelContext)
+            let fetchedMetrics = try await dataService.getExerciseMetrics(
+                exerciseId: exercise.exercise.id,
+                period: selectedPeriod,
+                context: modelContext
+            )
+            metrics = fetchedMetrics
             
-            metrics = try await metricsTask
-            repsData = try await repsTask
-            weightData = try await weightTask
-            volumeData = try await volumeTask
-            oneRepMaxData = try await oneRepMaxTask
+            let hasDuration = (fetchedMetrics.maxDurationSeconds > 0) || (fetchedMetrics.totalDurationSeconds > 0)
+            let hasDistance = fetchedMetrics.totalDistanceMeters > 0
+            
+            if hasDuration {
+                let durationSeries = try await dataService.getChartData(
+                    exerciseId: exercise.exercise.id,
+                    metric: .duration,
+                    period: selectedPeriod,
+                    context: modelContext
+                )
+                durationData = trimToRecent(durationSeries)
+                let totalDurationSeries = try await dataService.getChartData(
+                    exerciseId: exercise.exercise.id,
+                    metric: .totalDuration,
+                    period: selectedPeriod,
+                    context: modelContext
+                )
+                totalDurationData = trimToRecent(totalDurationSeries)
+                if hasDistance {
+                    let rawDistance = try await dataService.getChartData(
+                        exerciseId: exercise.exercise.id,
+                        metric: .distance,
+                        period: selectedPeriod,
+                        context: modelContext
+                    )
+                    distanceData = trimToRecent(rawDistance).map { ($0.0, convertDistanceToDisplay($0.1)) }
+                } else {
+                    distanceData = []
+                }
+                
+                // Clear weight-based datasets for duration-focused exercises
+                repsData = []
+                weightData = []
+                volumeData = []
+                oneRepMaxData = []
+            } else {
+                async let repsTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .reps, period: selectedPeriod, context: modelContext)
+                async let weightTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .weight, period: selectedPeriod, context: modelContext)
+                async let volumeTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .volume, period: selectedPeriod, context: modelContext)
+                async let oneRepMaxTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: .estOneRepMax, period: selectedPeriod, context: modelContext)
+                
+                let repsSeries = try await repsTask
+                let weightSeries = try await weightTask
+                let volumeSeries = try await volumeTask
+                let oneRmSeries = try await oneRepMaxTask
+                
+                repsData = trimToRecent(repsSeries)
+                weightData = trimToRecent(weightSeries)
+                volumeData = trimToRecent(volumeSeries)
+                oneRepMaxData = trimToRecent(oneRmSeries)
+            }
             
             print("✅ ExerciseTrendsView: Data loaded successfully")
-            print("   - Metrics: maxReps=\(metrics?.maxReps ?? 0), maxWeight=\(metrics?.maxWeight ?? 0)")
-            print("   - Chart data points: reps=\(repsData.count), weight=\(weightData.count)")
+            print("   - Metrics: maxReps=\(metrics?.maxReps ?? 0), maxWeight=\(metrics?.maxWeight ?? 0), maxDuration=\(metrics?.maxDurationSeconds ?? 0)")
             
         } catch {
             print("❌ ExerciseTrendsView: Error loading data - \(error)")
-            // Fallback to empty data
             metrics = nil
             repsData = []
             weightData = []
             volumeData = []
             oneRepMaxData = []
+            durationData = []
+            totalDurationData = []
+            distanceData = []
         }
-        
-        isLoading = false
     }
     
-    private func formatCurrentValue(_ value: Double?, unit: String) -> String {
-        guard let raw = value, raw > 0 else { return "--" }
-        let isKg = unit.contains("kg")
-        let display = isKg ? (raw / 2.20462) : raw
-        if unit.contains("lb") {
-            return String(format: "%.1f", display)
-        } else if unit.contains("kg") {
-            return String(format: "%.1f", display)
+    private var hasDurationMetricsAvailable: Bool {
+        guard let metrics else { return false }
+        return metrics.maxDurationSeconds > 0 || metrics.totalDurationSeconds > 0
+    }
+    
+    private var hasDistanceMetricsAvailable: Bool {
+        guard let metrics else { return false }
+        return metrics.totalDistanceMeters > 0
+    }
+    
+    private var weightUnitSymbol: String {
+        onboarding.unitsSystem == .imperial ? "lbs" : "kg"
+    }
+    
+    private var distanceUnitSymbol: String {
+        onboarding.unitsSystem == .imperial ? "mi" : "km"
+    }
+    
+    private func weightDisplayValue(_ value: Double?) -> Double? {
+        guard let value, value > 0 else { return nil }
+        if onboarding.unitsSystem == .imperial {
+            return value
         } else {
-            return String(format: "%.0f", display)
+            return value / 2.20462
         }
+    }
+    
+    private func formatWeightValue(_ value: Double?) -> String {
+        guard let display = weightDisplayValue(value) else { return "--" }
+        return String(format: "%.1f %@", display, weightUnitSymbol)
+    }
+    
+    private func formatVolumeValue(_ value: Double?) -> String {
+        guard let display = weightDisplayValue(value) else { return "--" }
+        return String(format: "%.0f %@", display, weightUnitSymbol)
+    }
+    
+    private func formatRepsValue(_ value: Int?) -> String {
+        guard let value, value > 0 else { return "--" }
+        return "\(value)"
+    }
+    
+    private func formatDurationValue(_ value: Double?) -> String {
+        guard let value, value > 0 else { return "--" }
+        let totalSeconds = Int(value.rounded())
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+    
+    private func convertDistanceToDisplay(_ meters: Double) -> Double {
+        if onboarding.unitsSystem == .imperial {
+            return meters * 0.000621371
+        } else {
+            return meters / 1000.0
+        }
+    }
+    
+    private func formatDistanceValue(_ meters: Double?) -> String {
+        guard let meters, meters > 0 else { return "--" }
+        let display = convertDistanceToDisplay(meters)
+        if display >= 10 {
+            return String(format: "%.1f %@", display, distanceUnitSymbol)
+        } else {
+            return String(format: "%.2f %@", display, distanceUnitSymbol)
+        }
+    }
+    
+    private func numberAxisFormatter(_ value: Double) -> String {
+        let display = value
+        if display >= 1000 {
+            return String(format: "%.1fk", display / 1000)
+        } else if display.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(format: "%.0f", display)
+        } else {
+            return String(format: "%.1f", display)
+        }
+    }
+    
+    private func weightAxisFormatter(_ value: Double) -> String {
+        guard let converted = weightDisplayValue(value) else { return "0" }
+        return numberAxisFormatter(converted)
+    }
+    
+    private func durationAxisFormatter(_ value: Double) -> String {
+        let totalSeconds = max(0, Int(value.rounded()))
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+    
+    private func distanceAxisFormatter(_ value: Double) -> String {
+        if value >= 10 {
+            return String(format: "%.1f", value)
+        } else {
+            return String(format: "%.2f", value)
+        }
+    }
+
+    private func trimToRecent(_ data: [(Date, Double)]) -> [(Date, Double)] {
+        let trimmed = Array(data.suffix(5))
+        return trimmed
     }
     
     private func getLastLoggedTime() -> String {
         // Get the most recent workout date
-        let allData = [repsData, weightData, volumeData, oneRepMaxData].flatMap { $0 }
+        let allData = [repsData, weightData, volumeData, oneRepMaxData, durationData, totalDurationData, distanceData].flatMap { $0 }
         guard let latestDate = allData.map({ $0.0 }).max() else {
             return "No recent data"
         }
@@ -280,23 +519,42 @@ struct ExerciseResultsView: View {
     
     private func convertToHistoryItem(_ session: WorkoutSessionSummary, previousSession: WorkoutSessionSummary?) -> ExerciseHistoryItem {
         let sets = session.sets.map { set in
-            HistoryWorkoutSet(reps: set.reps, weight: set.weight ?? 0.0)
+            HistoryWorkoutSet(
+                reps: set.reps,
+                weight: set.weight,
+                durationSeconds: set.durationSeconds,
+                distanceMeters: set.distanceMeters,
+                trackingType: set.trackingType ?? session.trackingType
+            )
         }
         
         // Calculate trend compared to previous session
         let trend: String?
         if let previousSession = previousSession {
-            let currentMaxReps = session.maxReps
-            let previousMaxReps = previousSession.maxReps
-            
-            if currentMaxReps > previousMaxReps {
-                let diff = currentMaxReps - previousMaxReps
-                trend = "+\(diff) more rep\(diff == 1 ? "" : "s")"
-            } else if currentMaxReps < previousMaxReps {
-                let diff = previousMaxReps - currentMaxReps
-                trend = "-\(diff) rep\(diff == 1 ? "" : "s")"
+            if isDurationBased(session.trackingType) {
+                let currentDuration = session.maxDurationSeconds
+                let previousDuration = previousSession.maxDurationSeconds
+                let diff = currentDuration - previousDuration
+                if diff > 1 {
+                    trend = "+\(formattedDurationDifference(diff)) longer"
+                } else if diff < -1 {
+                    trend = "-\(formattedDurationDifference(abs(diff))) shorter"
+                } else {
+                    trend = nil
+                }
             } else {
-                trend = nil
+                let currentMaxReps = session.maxReps
+                let previousMaxReps = previousSession.maxReps
+                
+                if currentMaxReps > previousMaxReps {
+                    let diff = currentMaxReps - previousMaxReps
+                    trend = "+\(diff) more rep\(diff == 1 ? "" : "s")"
+                } else if currentMaxReps < previousMaxReps {
+                    let diff = previousMaxReps - currentMaxReps
+                    trend = "-\(diff) rep\(diff == 1 ? "" : "s")"
+                } else {
+                    trend = nil
+                }
             }
         } else {
             trend = nil
@@ -306,8 +564,26 @@ struct ExerciseResultsView: View {
             date: session.date,
             sets: sets,
             estimatedOneRepMax: session.estimatedOneRepMax,
-            trend: trend
+            trend: trend,
+            trackingType: session.trackingType
         )
+    }
+    
+    private func isDurationBased(_ trackingType: ExerciseTrackingType?) -> Bool {
+        guard let trackingType else { return false }
+        switch trackingType {
+        case .timeOnly, .holdTime, .timeDistance, .rounds:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    private func formattedDurationDifference(_ diff: Double) -> String {
+        let totalSeconds = Int(abs(diff).rounded())
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }
 
@@ -318,11 +594,15 @@ struct ExerciseHistoryItem {
     let sets: [HistoryWorkoutSet]
     let estimatedOneRepMax: Double
     let trend: String?
+    let trackingType: ExerciseTrackingType?
 }
 
 struct HistoryWorkoutSet {
-    let reps: Int
-    let weight: Double
+    let reps: Int?
+    let weight: Double?
+    let durationSeconds: Int?
+    let distanceMeters: Double?
+    let trackingType: ExerciseTrackingType?
 }
 
 // MARK: - Metric Card Component
@@ -334,6 +614,9 @@ struct HistoryMetricCard: View {
     let data: [(Date, Double)]
     let chartType: ChartType
     let color: Color
+    let metric: ChartMetric
+    let unitLabel: String?
+    let axisFormatter: (Double) -> String
     let exercise: TodayWorkoutExercise
     @EnvironmentObject var onboarding: OnboardingViewModel
     @EnvironmentObject var proFeatureGate: ProFeatureGate
@@ -343,19 +626,9 @@ struct HistoryMetricCard: View {
         case line, bar
     }
     
-    private var chartMetric: ChartMetric {
-        switch title {
-        case "Reps": return .reps
-        case "Weight": return .weight
-        case "Volume": return .volume
-        case "Est. 1 Rep Max": return .estOneRepMax
-        default: return .weight
-        }
-    }
-    
     var body: some View {
         ZStack {
-            NavigationLink(destination: ExerciseChart(exercise: exercise, metric: chartMetric), isActive: $navigateToChart) {
+            NavigationLink(destination: ExerciseChart(exercise: exercise, metric: metric), isActive: $navigateToChart) {
                 EmptyView()
             }
             .hidden()
@@ -369,6 +642,7 @@ struct HistoryMetricCard: View {
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.secondary)
                 }
+                .padding()
                 VStack(alignment: .leading, spacing: 0) {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .lastTextBaseline, spacing: 4) {
@@ -398,32 +672,51 @@ struct HistoryMetricCard: View {
             .padding(.vertical, 8)
             .onTapGesture { attemptNavigation() }
     }
+  
         .buttonStyle(PlainButtonStyle())
     }
 
     @ViewBuilder
     private var supplementaryLabel: some View {
-        switch title {
-        case "Reps":
+        switch metric {
+        case .reps:
             Text("reps in 1 set")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
-        case "Volume":
-            Text(onboarding.unitsSystem == .imperial ? "lbs" : "kg")
+        case .volume:
+            if let unitLabel {
+                Text("\(unitLabel) total")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
+            } else {
+                EmptyView()
+            }
+        case .weight:
+            let label = unitLabel.map { "\($0) in 1 set" } ?? ""
+            Text(label)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
-        case "Weight":
-            let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
-            Text("\(unit) in 1 set")
+        case .estOneRepMax:
+            let label = unitLabel.map { "\($0) in 1 rep" } ?? ""
+            Text(label)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
-        case "Est. 1 Rep Max":
-            let unit = onboarding.unitsSystem == .imperial ? "lbs" : "kg"
-            Text("\(unit) in 1 rep")
+        case .duration:
+            Text("per set")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
-        default:
-            EmptyView()
+        case .totalDuration:
+            Text("total time")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.secondary)
+        case .distance:
+            if let unitLabel {
+                Text("\(unitLabel) total")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
+            } else {
+                EmptyView()
+            }
         }
     }
     
@@ -464,15 +757,15 @@ struct HistoryMetricCard: View {
             VStack(alignment: .leading, spacing: 0) {
                 let maxValue = data.map { $0.1 }.max() ?? 1
                 let minValue = data.map { $0.1 }.min() ?? 0
-                Text(formatAxisValue(maxValue))
+                Text(axisFormatter(maxValue))
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
                 Spacer()
-                Text(formatAxisValue((maxValue + minValue) / 2))
+                Text(axisFormatter((maxValue + minValue) / 2))
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
                 Spacer()
-                Text(formatAxisValue(minValue))
+                Text(axisFormatter(minValue))
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
@@ -484,19 +777,12 @@ struct HistoryMetricCard: View {
     }
     
     private func attemptNavigation() {
-        guard let email = UserDefaults.standard.string(forKey: "userEmail"), !email.isEmpty else { return }
-        proFeatureGate.requirePro(for: .analytics, userEmail: email) {
-            navigateToChart = true
-        }
-    }
-    
-    private func formatAxisValue(_ value: Double) -> String {
-        if value >= 1000 {
-            return String(format: "%.1fk", value / 1000)
-        } else if value.truncatingRemainder(dividingBy: 1) == 0 {
-            return String(format: "%.0f", value)
+        if let email = UserDefaults.standard.string(forKey: "userEmail"), !email.isEmpty {
+            proFeatureGate.requirePro(for: .analytics, userEmail: email) {
+                navigateToChart = true
+            }
         } else {
-            return String(format: "%.1f", value)
+            navigateToChart = true
         }
     }
 }
@@ -506,6 +792,7 @@ struct HistoryMetricCard: View {
 struct ExerciseHistoryCard: View {
     let workout: ExerciseHistoryItem
     let isToday: Bool
+    @EnvironmentObject var onboarding: OnboardingViewModel
     @State private var showingRIRSheet = false
     @State private var rirValue: Double = 0 // Store RIR rating
     @State private var hasRatedRIR = false // Track if RIR has been set
@@ -529,6 +816,103 @@ struct ExerciseHistoryCard: View {
             let formatter = DateFormatter()
             formatter.dateFormat = "MMM d"
             return formatter.string(from: workout.date)
+        }
+    }
+    
+    private var weightUnitSymbol: String {
+        onboarding.unitsSystem == .imperial ? "lb" : "kg"
+    }
+    
+    private var distanceUnitSymbol: String {
+        onboarding.unitsSystem == .imperial ? "mi" : "km"
+    }
+    
+    private func weightDisplayValue(_ value: Double?) -> Double? {
+        guard let value, value > 0 else { return nil }
+        if onboarding.unitsSystem == .imperial {
+            return value
+        } else {
+            return value / 2.20462
+        }
+    }
+    
+    private func formatWeightValue(_ value: Double?) -> String? {
+        guard let display = weightDisplayValue(value) else { return nil }
+        return String(format: "%.1f %@", display, weightUnitSymbol)
+    }
+    
+    private func formatWeightValue(_ value: Double) -> String {
+        formatWeightValue(Optional(value)) ?? "--"
+    }
+    
+    private func formatDuration(_ seconds: Int?) -> String? {
+        guard let seconds, seconds > 0 else { return nil }
+        let minutes = seconds / 60
+        let remainder = seconds % 60
+        return String(format: "%d:%02d", minutes, remainder)
+    }
+    
+    private func formatDistance(_ meters: Double?) -> String? {
+        guard let meters, meters > 0 else { return nil }
+        let display: Double
+        if onboarding.unitsSystem == .imperial {
+            display = meters * 0.000621371
+        } else {
+            display = meters / 1000.0
+        }
+        if display >= 10 {
+            return String(format: "%.1f %@", display, distanceUnitSymbol)
+        } else {
+            return String(format: "%.2f %@", display, distanceUnitSymbol)
+        }
+    }
+    
+    private func setSummaryText(for set: HistoryWorkoutSet) -> String {
+        if isDurationBased(set.trackingType) {
+            let durationString = formatDuration(set.durationSeconds) ?? "0:00"
+            switch set.trackingType {
+            case .timeDistance:
+                if let distanceString = formatDistance(set.distanceMeters) {
+                    return "\(durationString) @ \(distanceString)"
+                } else {
+                    return durationString
+                }
+            case .rounds:
+                let rounds = set.reps ?? 0
+                if rounds > 0, let duration = formatDuration(set.durationSeconds) {
+                    return "\(rounds) round\(rounds == 1 ? "" : "s") in \(duration)"
+                } else if rounds > 0 {
+                    return "\(rounds) round\(rounds == 1 ? "" : "s")"
+                } else {
+                    return durationString
+                }
+            default:
+                return durationString
+            }
+        } else {
+            let repsPart = set.reps.map { "\($0) reps" }
+            let weightPart = formatWeightValue(set.weight)
+            
+            switch (repsPart, weightPart) {
+            case let (reps?, weight?):
+                return "\(reps) × \(weight)"
+            case let (reps?, nil):
+                return reps
+            case let (nil, weight?):
+                return weight
+            default:
+                return "Logged set"
+            }
+        }
+    }
+    
+    private func isDurationBased(_ trackingType: ExerciseTrackingType?) -> Bool {
+        guard let trackingType else { return false }
+        switch trackingType {
+        case .timeOnly, .holdTime, .timeDistance, .rounds:
+            return true
+        default:
+            return false
         }
     }
     
@@ -594,7 +978,7 @@ struct ExerciseHistoryCard: View {
                         }
                         .frame(width: 32, height: 32)
                         
-                        Text("\(set.reps) reps x \(Int(set.weight)) lb")
+                        Text(setSummaryText(for: set))
                             .font(.system(size: 16, weight: .regular))
                             .foregroundColor(.primary)
                         
@@ -604,20 +988,22 @@ struct ExerciseHistoryCard: View {
             }
             
             // Est. 1 Rep Max
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Est. 1 Rep Max")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
-                
-                HStack {
-                    Image(systemName: "figure.strengthtraining.traditional")
-                        .font(.system(size: 16))
+            if workout.estimatedOneRepMax > 0 {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Est. 1 Rep Max")
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.secondary)
                     
-                    Text("\(workout.estimatedOneRepMax, specifier: "%.1f") lb")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundColor(.primary)
-        
+                    HStack {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary)
+                        
+                        Text(formatWeightValue(workout.estimatedOneRepMax))
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.primary)
+            
+                    }
                 }
             }
         }
@@ -758,6 +1144,19 @@ struct ExerciseRecordsView: View {
     @Environment(\.modelContext) private var modelContext
     
     var body: some View {
+        if isDurationBasedExercise {
+            VStack(spacing: 16) {
+                Image(systemName: "stopwatch")
+                    .font(.system(size: 48))
+                    .foregroundColor(.secondary)
+                Text("Personal records are coming soon for time-based exercises.")
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 32)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
         ScrollView {
             if isLoading {
                 VStack {
@@ -802,9 +1201,9 @@ struct ExerciseRecordsView: View {
                 .padding(.bottom, 40)
             } else {
                 VStack {
-                    Image(systemName: "trophy")
+                    Image(systemName: "medal.fill")
                         .font(.system(size: 48))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.primary)
                     Text("No records found")
                         .font(.headline)
                         .foregroundColor(.secondary)
@@ -822,9 +1221,20 @@ struct ExerciseRecordsView: View {
         .refreshable {
             await loadPersonalRecords()
         }
+        }
     }
     
     // MARK: - Private Methods
+    
+    private var isDurationBasedExercise: Bool {
+        guard let tracking = exercise.trackingType else { return false }
+        switch tracking {
+        case .timeOnly, .holdTime, .timeDistance, .rounds:
+            return true
+        default:
+            return false
+        }
+    }
     
     private func loadPersonalRecords() async {
         isLoading = true
@@ -873,10 +1283,10 @@ struct RecordRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Trophy icon
-            Image(systemName: "trophy.fill")
+            // Highlight the record with a medal icon to match empty state styling
+            Image(systemName: "medal.fill")
                 .font(.system(size: 24))
-                .foregroundColor(.yellow)
+                .foregroundColor(.primary)
                 .frame(width: 32)
             
             // Label and value

@@ -263,7 +263,9 @@ private struct WorkoutLogExerciseRow: View {
         )
         .sheet(isPresented: $showHistory) {
             if let payload = historyPayload {
-                ExerciseHistory(exercise: payload)
+                NavigationStack {
+                    ExerciseHistory(exercise: payload)
+                }
             }
         }
         .alert("Workout detail", isPresented: $isShowingAlert, actions: {

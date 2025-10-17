@@ -13,10 +13,12 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @MainActor
 struct StartWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     let todayWorkout: TodayWorkout
     @EnvironmentObject var proFeatureGate: ProFeatureGate
     
@@ -346,72 +348,117 @@ struct StartWorkoutView: View {
     
     private func completeWorkout() {
         stopTimer()
-        
-        // Save workout to history - break down complex expression
-        let completedExercises = todayWorkout.exercises.map { exercise in
-            let completedSets = Array(1...exercise.sets).map { _ in
-                CompletedSet(
-                    reps: exercise.reps,
-                    weight: exercise.weight ?? 0,
-                    restTime: TimeInterval(exercise.restTime),
-                    completed: true
-                )
-            }
-            
-            return CompletedExercise(
-                exerciseId: exercise.exercise.id,
-                exerciseName: exercise.exercise.name,
-                sets: completedSets
-            )
+
+        Task {
+            await persistWorkoutSession()
+            LogWorkoutView.clearWorkoutSessionDuration()
+            dismiss()
         }
-        
-        // Convert to WorkoutExercise for compatibility - break down expression
-        let workoutExercises: [WorkoutExercise] = completedExercises.compactMap { completedExercise in
-            guard let todayExercise = todayWorkout.exercises.first(where: { $0.exercise.id == completedExercise.exerciseId }) else {
-                return nil
-            }
-            
-            let workoutSets = completedExercise.sets.map { completedSet in
-                WorkoutSet(
-                    id: Int.random(in: 1000...9999),
-                    reps: completedSet.reps,
-                    weight: completedSet.weight,
-                    duration: nil,
-                    distance: nil,
-                    restTime: nil
-                )
-            }
-            
-            return WorkoutExercise(
-                id: Int.random(in: 1000...9999),
-                exercise: LegacyExercise(
-                    id: todayExercise.exercise.id,
-                    name: todayExercise.exercise.name,
-                    category: todayExercise.exercise.category,
-                    description: nil,
-                    instructions: todayExercise.exercise.instructions
-                ),
-                sets: workoutSets,
-                notes: nil
-            )
-        }
-        
-        WorkoutHistoryService.shared.completeFullWorkout(
-            workoutExercises,
-            duration: elapsedTime,
-            notes: "Today's AI-generated workout"
-        )
-        
-        // Clear the session duration since the workout is completed
-        LogWorkoutView.clearWorkoutSessionDuration()
-        
-        dismiss()
     }
     
     private func formatTime(_ timeInterval: TimeInterval) -> String {
         let minutes = Int(timeInterval) / 60
         let seconds = Int(timeInterval) % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    private func persistWorkoutSession() async {
+        let startDate = workoutStartTime ?? Date().addingTimeInterval(-elapsedTime)
+        let completionDate = startDate.addingTimeInterval(elapsedTime)
+        let email = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+        let session = WorkoutSession(name: todayWorkout.title, userEmail: email)
+        session.startedAt = startDate
+        session.completedAt = completionDate
+        session.totalDuration = elapsedTime
+
+        var exerciseInstances: [ExerciseInstance] = []
+
+        for (index, exercise) in todayWorkout.exercises.enumerated() {
+            let instance = ExerciseInstance(from: exercise.exercise, orderIndex: index)
+            instance.workoutSession = session
+            var setInstances: [SetInstance] = []
+            var flexibleSets: [FlexibleSetData] = []
+
+            let trackingType: ExerciseTrackingType = {
+                if let explicit = exercise.trackingType {
+                    return explicit
+                }
+                if let weight = exercise.weight, weight > 0 {
+                    return .repsWeight
+                }
+                return .repsOnly
+            }()
+
+            let setCount = max(exercise.sets, 1)
+            for setNumber in 1...setCount {
+                let set = SetInstance(setNumber: setNumber,
+                                      targetReps: exercise.reps,
+                                      targetWeight: exercise.weight)
+                set.actualReps = exercise.reps
+                set.actualWeight = exercise.weight
+                set.isCompleted = true
+                set.completedAt = completionDate
+                set.trackingType = trackingType
+                set.exerciseInstance = instance
+                setInstances.append(set)
+
+                var flex = FlexibleSetData(trackingType: trackingType)
+                flex.reps = String(exercise.reps)
+                if let weight = exercise.weight {
+                    flex.weight = formattedWeight(weight)
+                    flex.baselineWeight = weight
+                }
+                flex.baselineReps = exercise.reps
+                flex.isCompleted = true
+                flex.wasLogged = true
+                flex.isWarmupSet = false
+                flexibleSets.append(flex)
+            }
+
+            instance.sets = setInstances
+            if !flexibleSets.isEmpty,
+               let encoded = try? JSONEncoder().encode(flexibleSets) {
+                instance.flexibleSetsData = encoded
+            }
+            exerciseInstances.append(instance)
+        }
+
+        session.exercises = exerciseInstances
+
+        do {
+            try await WorkoutDataManager.shared.saveWorkout(session, context: modelContext)
+            await WorkoutDataManager.shared.syncNow(context: modelContext)
+            let completedExercises = todayWorkout.exercises.map { exercise -> CompletedExercise in
+                let setCount = max(exercise.sets, 1)
+                let completedSets: [CompletedSet] = (0..<setCount).map { _ in
+                    CompletedSet(
+                        reps: exercise.reps,
+                        weight: exercise.weight ?? 0,
+                        restTime: TimeInterval(exercise.restTime),
+                        completed: true
+                    )
+                }
+                return CompletedExercise(
+                    exerciseId: exercise.exercise.id,
+                    exerciseName: exercise.exercise.name,
+                    sets: completedSets
+                )
+            }
+            MuscleRecoveryService.shared.recordWorkout(completedExercises)
+            let exerciseIds = Set(todayWorkout.exercises.map { $0.exercise.id })
+            for id in exerciseIds {
+                await ExerciseHistoryDataService.shared.invalidateCache(for: id)
+            }
+        } catch {
+            print("❌ StartWorkoutView: Failed to save workout session - \(error)")
+        }
+    }
+
+    private func formattedWeight(_ weight: Double) -> String {
+        if abs(weight.rounded() - weight) < 0.0001 {
+            return String(format: "%.0f", weight)
+        }
+        return String(format: "%.2f", weight)
     }
 }
 

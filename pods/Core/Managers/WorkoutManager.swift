@@ -2329,6 +2329,26 @@ class WorkoutManager: ObservableObject {
         }
     }
 
+    private func makeCompletedExercises(from workout: TodayWorkout) -> [CompletedExercise] {
+        let exercises = convertToWorkoutExercises(from: workout)
+        return exercises.map { workoutExercise in
+            let completedSets = workoutExercise.sets.map { set in
+                CompletedSet(
+                    reps: set.reps ?? 0,
+                    weight: set.weight ?? 0,
+                    restTime: set.restTime.map { TimeInterval($0) },
+                    completed: true
+                )
+            }
+
+            return CompletedExercise(
+                exerciseId: workoutExercise.exercise.id,
+                exerciseName: workoutExercise.exercise.name,
+                sets: completedSets
+            )
+        }
+    }
+
     func registerManualWarmup(for exerciseId: Int) {
         manualWarmupExerciseIDs.insert(exerciseId)
     }
@@ -2491,13 +2511,18 @@ class WorkoutManager: ObservableObject {
             }
         }
 
-        // Maintain legacy workout history analytics
-        let historyExercises = convertToWorkoutExercises(from: workout)
-        WorkoutHistoryService.shared.completeFullWorkout(
-            historyExercises,
-            duration: duration,
-            notes: nil
-        )
+        // Invalidate history caches so SwiftUI surfaces the new session immediately
+        Task {
+            let ids = Set(workout.exercises.map { $0.exercise.id })
+            for id in ids {
+                await ExerciseHistoryDataService.shared.invalidateCache(for: id)
+            }
+        }
+
+        let completedExercises = makeCompletedExercises(from: workout)
+        recoveryService.recordWorkout(completedExercises)
+
+        LogWorkoutView.clearWorkoutSessionDuration()
 
         if !autoComplete, dynamicParameters != nil {
             NotificationCenter.default.post(

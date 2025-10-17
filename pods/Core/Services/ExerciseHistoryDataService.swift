@@ -41,10 +41,30 @@ struct ExerciseMetrics: Codable {
     let averageReps: Double
     let averageWeight: Double
     let averageVolume: Double
+    let maxDurationSeconds: Double
+    let totalDurationSeconds: Double
+    let averageDurationSeconds: Double
+    let maxDistanceMeters: Double
+    let totalDistanceMeters: Double
+    let averageDistanceMeters: Double
     let period: TimePeriod
     let dateRange: DateRangeCodable
     
-    init(maxReps: Int, maxWeight: Double, totalVolume: Double, estimatedOneRepMax: Double, averageReps: Double, averageWeight: Double, averageVolume: Double, period: TimePeriod, dateRange: (start: Date, end: Date)) {
+    init(maxReps: Int,
+         maxWeight: Double,
+         totalVolume: Double,
+         estimatedOneRepMax: Double,
+         averageReps: Double,
+         averageWeight: Double,
+         averageVolume: Double,
+         maxDurationSeconds: Double,
+         totalDurationSeconds: Double,
+         averageDurationSeconds: Double,
+         maxDistanceMeters: Double,
+         totalDistanceMeters: Double,
+         averageDistanceMeters: Double,
+         period: TimePeriod,
+         dateRange: (start: Date, end: Date)) {
         self.maxReps = maxReps
         self.maxWeight = maxWeight
         self.totalVolume = totalVolume
@@ -52,6 +72,12 @@ struct ExerciseMetrics: Codable {
         self.averageReps = averageReps
         self.averageWeight = averageWeight
         self.averageVolume = averageVolume
+        self.maxDurationSeconds = maxDurationSeconds
+        self.totalDurationSeconds = totalDurationSeconds
+        self.averageDurationSeconds = averageDurationSeconds
+        self.maxDistanceMeters = maxDistanceMeters
+        self.totalDistanceMeters = totalDistanceMeters
+        self.averageDistanceMeters = averageDistanceMeters
         self.period = period
         self.dateRange = DateRangeCodable(start: dateRange.start, end: dateRange.end)
     }
@@ -65,12 +91,20 @@ struct WorkoutSessionSummary: Codable {
     let totalVolume: Double
     let maxWeight: Double
     let maxReps: Int
+    let maxDurationSeconds: Double
+    let totalDurationSeconds: Double
+    let maxDistanceMeters: Double
+    let totalDistanceMeters: Double
+    let trackingType: ExerciseTrackingType?
 }
 
 struct SetSummary: Codable {
     let id: UUID
-    let reps: Int
+    let reps: Int?
     let weight: Double?
+    let durationSeconds: Int?
+    let distanceMeters: Double?
+    let trackingType: ExerciseTrackingType?
     let isCompleted: Bool
     let completedAt: Date?
 }
@@ -273,35 +307,57 @@ class ExerciseHistoryDataService: ObservableObject {
         var maxWeight = 0.0
         var totalVolume = 0.0
         var estimatedOneRepMaxValues: [Double] = []
+        var maxDurationSeconds = 0.0
+        var totalDurationSeconds = 0.0
+        var durationSamples = 0
+        var maxDistanceMeters = 0.0
+        var totalDistanceMeters = 0.0
+        var distanceSamples = 0
         
         for session in historyData.workoutSessions {
             allSets.append(contentsOf: session.sets)
             
             for set in session.sets where set.isCompleted {
-                if set.reps > maxReps {
-                    maxReps = set.reps
+                if let reps = set.reps, reps > maxReps {
+                    maxReps = reps
                 }
                 
                 if let weight = set.weight, weight > maxWeight {
                     maxWeight = weight
                 }
                 
-                if let weight = set.weight {
-                    let volume = weight * Double(set.reps)
+                if let weight = set.weight, let reps = set.reps {
+                    let volume = weight * Double(reps)
                     totalVolume += volume
                     
                     // Calculate estimated 1RM using Epley formula: weight * (1 + reps/30)
-                    let estimatedOneRM = weight * (1 + Double(set.reps) / 30.0)
+                    let estimatedOneRM = weight * (1 + Double(reps) / 30.0)
                     estimatedOneRepMaxValues.append(estimatedOneRM)
+                }
+                
+                if let duration = set.durationSeconds {
+                    let durationValue = Double(duration)
+                    maxDurationSeconds = max(maxDurationSeconds, durationValue)
+                    totalDurationSeconds += durationValue
+                    durationSamples += 1
+                }
+                
+                if let distance = set.distanceMeters {
+                    maxDistanceMeters = max(maxDistanceMeters, distance)
+                    totalDistanceMeters += distance
+                    distanceSamples += 1
                 }
             }
         }
         
-        let completedSets = allSets.filter { $0.isCompleted && $0.weight != nil }
-        let averageReps = completedSets.isEmpty ? 0.0 : Double(completedSets.map { $0.reps }.reduce(0, +)) / Double(completedSets.count)
-        let averageWeight = completedSets.isEmpty ? 0.0 : completedSets.compactMap { $0.weight }.reduce(0, +) / Double(completedSets.count)
+        let weightSets = allSets.filter { $0.isCompleted && $0.weight != nil && ($0.reps ?? 0) > 0 }
+        let repSets = allSets.filter { $0.isCompleted && ($0.reps ?? 0) > 0 }
+        let averageReps = repSets.isEmpty ? 0.0 : Double(repSets.compactMap { $0.reps }.reduce(0, +)) / Double(repSets.count)
+        let averageWeight = weightSets.isEmpty ? 0.0 : weightSets.compactMap { $0.weight }.reduce(0, +) / Double(weightSets.count)
         let averageVolume = historyData.workoutSessions.isEmpty ? 0.0 : historyData.workoutSessions.map { $0.totalVolume }.reduce(0, +) / Double(historyData.workoutSessions.count)
         let maxEstimatedOneRepMax = estimatedOneRepMaxValues.max() ?? 0.0
+        let averageDurationSeconds = durationSamples == 0 ? 0.0 : totalDurationSeconds / Double(durationSamples)
+        let averageDistanceMeters = distanceSamples == 0 ? 0.0 : totalDistanceMeters / Double(distanceSamples)
         
         let metrics = ExerciseMetrics(
             maxReps: maxReps,
@@ -311,11 +367,17 @@ class ExerciseHistoryDataService: ObservableObject {
             averageReps: averageReps,
             averageWeight: averageWeight,
             averageVolume: averageVolume,
+            maxDurationSeconds: maxDurationSeconds,
+            totalDurationSeconds: totalDurationSeconds,
+            averageDurationSeconds: averageDurationSeconds,
+            maxDistanceMeters: maxDistanceMeters,
+            totalDistanceMeters: totalDistanceMeters,
+            averageDistanceMeters: averageDistanceMeters,
             period: period,
             dateRange: (start: historyData.dateRange.start, end: historyData.dateRange.end)
         )
         
-        print("✅ ExerciseHistoryDataService: Calculated metrics - maxReps: \(maxReps), maxWeight: \(maxWeight), totalVolume: \(totalVolume)")
+        print("✅ ExerciseHistoryDataService: Calculated metrics - maxReps: \(maxReps), maxWeight: \(maxWeight), totalVolume: \(totalVolume), maxDuration: \(maxDurationSeconds), totalDuration: \(totalDurationSeconds), maxDistance: \(maxDistanceMeters)")
         return metrics
     }
     
@@ -392,6 +454,12 @@ class ExerciseHistoryDataService: ObservableObject {
                 value = session.totalVolume
             case .estOneRepMax:
                 value = session.estimatedOneRepMax
+            case .duration:
+                value = session.maxDurationSeconds
+            case .totalDuration:
+                value = session.totalDurationSeconds
+            case .distance:
+                value = session.totalDistanceMeters
             }
             
             chartData.append((session.date, value))
@@ -459,12 +527,50 @@ class ExerciseHistoryDataService: ObservableObject {
                 
                 // Check if workout contains the exercise we're looking for
                 if let matchingExercise = workout.exercises.first(where: { $0.exerciseId == exerciseId }) {
+                    let flexibleSets: [FlexibleSetData] = {
+                        guard let data = matchingExercise.flexibleSetsData,
+                              let decoded = try? JSONDecoder().decode([FlexibleSetData].self, from: data) else {
+                            return []
+                        }
+                        return decoded.filter { !$0.isWarmupSet }
+                    }()
+                    
                     // Convert sets to SetSummary format
-                    let setSummaries = matchingExercise.sets.map { set in
-                        SetSummary(
+                    let setSummaries: [SetSummary] = matchingExercise.sets.enumerated().map { index, set in
+                        let flex = index < flexibleSets.count ? flexibleSets[index] : nil
+                        
+                        let resolvedReps: Int? = {
+                            if let actual = set.actualReps, actual > 0 { return actual }
+                            if set.targetReps > 0 { return set.targetReps }
+                            if let repsString = flex?.reps, let parsed = parseNumericString(repsString) {
+                                return Int(parsed.rounded())
+                            }
+                            if let baseline = flex?.baselineReps, baseline > 0 { return baseline }
+                            return nil
+                        }()
+                        
+                        let resolvedDurationSeconds: Int? = {
+                            if let duration = set.durationSeconds, duration > 0 { return duration }
+                            if let duration = flex?.duration, duration > 0 { return Int(duration.rounded()) }
+                            if let baseline = flex?.baselineDuration, baseline > 0 { return Int(baseline.rounded()) }
+                            return nil
+                        }()
+                        
+                        let resolvedDistanceMeters: Double? = {
+                            if let distance = set.distanceMeters, distance > 0 { return distance }
+                            guard let distance = flex?.distance, distance > 0 else { return nil }
+                            return convertDistanceToMeters(distance, unit: flex?.distanceUnit)
+                        }()
+                        
+                        let resolvedTrackingType = set.trackingType ?? flex?.trackingType
+                        
+                        return SetSummary(
                             id: set.id,
-                            reps: set.actualReps ?? set.targetReps,
+                            reps: resolvedReps,
                             weight: set.actualWeight ?? set.targetWeight,
+                            durationSeconds: resolvedDurationSeconds,
+                            distanceMeters: resolvedDistanceMeters,
+                            trackingType: resolvedTrackingType,
                             isCompleted: set.isCompleted,
                             completedAt: set.completedAt
                         )
@@ -472,20 +578,35 @@ class ExerciseHistoryDataService: ObservableObject {
                     
                     // Calculate session metrics
                     let completedSets = setSummaries.filter { $0.isCompleted }
-                    let maxReps = completedSets.map { $0.reps }.max() ?? 0
+                    let maxReps = completedSets.compactMap { $0.reps }.max() ?? 0
                     let maxWeight = completedSets.compactMap { $0.weight }.max() ?? 0.0
+                    let maxDurationSeconds = completedSets.compactMap { $0.durationSeconds }.map { Double($0) }.max() ?? 0.0
+                    let totalDurationSeconds = completedSets.reduce(0.0) { total, set in
+                        total + Double(set.durationSeconds ?? 0)
+                    }
+                    let maxDistanceMeters = completedSets.compactMap { $0.distanceMeters }.max() ?? 0.0
+                    let totalDistanceMeters = completedSets.reduce(0.0) { total, set in
+                        total + (set.distanceMeters ?? 0)
+                    }
                     
                     // Calculate total volume
                     let totalVolume = completedSets.reduce(0.0) { total, set in
                         let weight = set.weight ?? 0.0
-                        return total + (weight * Double(set.reps))
+                        return total + (weight * Double(set.reps ?? 0))
                     }
                     
                     // Calculate estimated 1RM using Epley formula: weight * (1 + reps/30)
                     let estimatedOneRepMax = completedSets.compactMap { set -> Double? in
-                        guard let weight = set.weight, weight > 0 else { return nil }
-                        return weight * (1 + Double(set.reps) / 30.0)
+                        guard let weight = set.weight, weight > 0,
+                              let reps = set.reps, reps > 0 else { return nil }
+                        return weight * (1 + Double(reps) / 30.0)
                     }.max() ?? 0.0
+                    
+                    var trackingType = completedSets.compactMap { $0.trackingType }.first
+                    if trackingType == nil,
+                       let flexFirst = flexibleSets.compactMap({ $0.trackingType }).first {
+                        trackingType = flexFirst
+                    }
                     
                     let workoutSummary = WorkoutSessionSummary(
                         id: workout.id,
@@ -494,7 +615,12 @@ class ExerciseHistoryDataService: ObservableObject {
                         estimatedOneRepMax: estimatedOneRepMax,
                         totalVolume: totalVolume,
                         maxWeight: maxWeight,
-                        maxReps: maxReps
+                        maxReps: maxReps,
+                        maxDurationSeconds: maxDurationSeconds,
+                        totalDurationSeconds: totalDurationSeconds,
+                        maxDistanceMeters: maxDistanceMeters,
+                        totalDistanceMeters: totalDistanceMeters,
+                        trackingType: trackingType
                     )
                     
                     matchingWorkouts.append(workoutSummary)
@@ -510,6 +636,25 @@ class ExerciseHistoryDataService: ObservableObject {
         } catch {
             print("❌ Error fetching workouts from SwiftData: \(error)")
             throw error
+        }
+    }
+    
+    private func parseNumericString(_ value: String?) -> Double? {
+        guard let value else { return nil }
+        let filtered = value.filter { "0123456789.,".contains($0) }.replacingOccurrences(of: ",", with: ".")
+        guard !filtered.isEmpty else { return nil }
+        return Double(filtered)
+    }
+    
+    private func convertDistanceToMeters(_ value: Double, unit: DistanceUnit?) -> Double {
+        guard let unit else { return value }
+        switch unit {
+        case .kilometers:
+            return value * 1000.0
+        case .miles:
+            return value * 1609.34
+        case .meters:
+            return value
         }
     }
     
