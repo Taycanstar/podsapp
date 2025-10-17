@@ -14,6 +14,7 @@ class ExerciseInstance {
     var sets: [SetInstance]
     var workoutSession: WorkoutSession?
     var orderIndex: Int
+    var flexibleSetsData: Data?
     
     init(exerciseId: Int, exerciseName: String, exerciseType: String, bodyPart: String, equipment: String, target: String, orderIndex: Int) {
         self.id = UUID()
@@ -25,6 +26,7 @@ class ExerciseInstance {
         self.target = target
         self.sets = []
         self.orderIndex = orderIndex
+        self.flexibleSetsData = nil
     }
     
     // Convenience initializer from ExerciseData

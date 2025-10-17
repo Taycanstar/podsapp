@@ -2066,8 +2066,13 @@ class WorkoutManager: ObservableObject {
             context.insert(instance)
             instance.workoutSession = session
 
-            let loggedSets = makeLoggedSets(from: exercise, units: preferredUnitsSystem)
+            let (loggedSets, loggedFlexibleSets) = makeLoggedSets(from: exercise, units: preferredUnitsSystem)
             guard !loggedSets.isEmpty else { continue }
+
+            if !loggedFlexibleSets.isEmpty,
+               let encoded = try? JSONEncoder().encode(loggedFlexibleSets) {
+                instance.flexibleSetsData = encoded
+            }
 
             loggedSets.enumerated().forEach { offset, set in
                 set.setNumber = offset + 1
@@ -2085,68 +2090,176 @@ class WorkoutManager: ObservableObject {
         return session
     }
 
-    private func makeLoggedSets(from exercise: TodayWorkoutExercise, units: UnitsSystem) -> [SetInstance] {
-        guard let flexibleSets = exercise.flexibleSets else { return [] }
+    private func makeLoggedSets(from exercise: TodayWorkoutExercise, units: UnitsSystem) -> ([SetInstance], [FlexibleSetData]) {
+        guard let flexibleSets = exercise.flexibleSets else { return ([], []) }
 
         var results: [SetInstance] = []
+        var capturedFlexibleSets: [FlexibleSetData] = []
+
         for setData in flexibleSets where !setData.isWarmupSet {
             let wasLogged = setData.wasLogged ?? setData.isCompleted
             guard wasLogged else { continue }
 
-            switch setData.trackingType {
-            case .repsWeight, .repsOnly:
-                guard let repsValue = parseInt(setData.reps), repsValue > 0 else { continue }
-                let weightValue = parseWeight(setData.weight, units: units)
+            var sanitizedSet = setData
+            sanitizedSet.wasLogged = true
+            sanitizedSet.isWarmupSet = false
+            sanitizedSet.restTime = setData.restTime
+            sanitizedSet.notes = setData.notes
+
+            if (sanitizedSet.reps?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
+               let baselineReps = sanitizedSet.baselineReps,
+               baselineReps > 0 {
+                sanitizedSet.reps = String(baselineReps)
+            }
+
+            if sanitizedSet.trackingType == .rounds, sanitizedSet.rounds == nil {
+                if let resolvedRounds = resolveRounds(from: sanitizedSet) {
+                    sanitizedSet.rounds = resolvedRounds
+                }
+            }
+
+            if let resolvedDuration = resolveDuration(for: sanitizedSet) {
+                sanitizedSet.duration = resolvedDuration
+                if sanitizedSet.durationString?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+                    sanitizedSet.durationString = formatDurationString(resolvedDuration)
+                }
+            }
+
+            switch sanitizedSet.trackingType {
+            case .repsWeight:
+                guard let repsValue = parseInt(sanitizedSet.reps) ?? sanitizedSet.baselineReps, repsValue > 0 else { continue }
+                let weightValue = parseWeight(sanitizedSet.weight, units: units) ?? sanitizedSet.baselineWeight
 
                 let set = SetInstance(setNumber: 0, targetReps: repsValue, targetWeight: weightValue)
                 set.actualReps = repsValue
                 set.actualWeight = weightValue
                 set.isCompleted = true
                 set.completedAt = Date()
-                set.notes = setData.notes
+                set.notes = sanitizedSet.notes
+                set.trackingType = .repsWeight
+                results.append(set)
+
+            case .repsOnly:
+                guard let repsValue = parseInt(sanitizedSet.reps) ?? sanitizedSet.baselineReps, repsValue > 0 else { continue }
+                let set = SetInstance(setNumber: 0, targetReps: repsValue, targetWeight: nil)
+                set.actualReps = repsValue
+                set.actualWeight = nil
+                set.isCompleted = true
+                set.completedAt = Date()
+                set.notes = sanitizedSet.notes
+                set.trackingType = .repsOnly
                 results.append(set)
 
             case .timeOnly, .holdTime:
-                guard let duration = setData.duration, duration > 0 else { continue }
+                guard let duration = sanitizedSet.duration, duration > 0 else { continue }
                 let set = SetInstance(setNumber: 0, targetReps: 0, targetWeight: nil)
-                set.actualReps = nil
-                set.actualWeight = nil
                 set.isCompleted = true
                 set.completedAt = Date()
-                set.notes = setData.notes
+                set.notes = sanitizedSet.notes
                 set.durationSeconds = Int(duration.rounded())
+                set.trackingType = sanitizedSet.trackingType
                 results.append(set)
 
             case .timeDistance:
-                guard (setData.duration ?? 0) > 0 || (setData.distance ?? 0) > 0 else { continue }
+                let distanceUnit = sanitizedSet.distanceUnit ?? defaultDistanceUnit(for: units)
+                let distanceMeters = sanitizedSet.distance.map { convertDistance($0, unit: distanceUnit) }
+                let duration = sanitizedSet.duration
+                guard (duration ?? 0) > 0 || (distanceMeters ?? 0) > 0 else { continue }
+                sanitizedSet.distanceUnit = distanceUnit
+
                 let set = SetInstance(setNumber: 0, targetReps: 0, targetWeight: nil)
-                set.actualReps = nil
-                set.actualWeight = nil
                 set.isCompleted = true
                 set.completedAt = Date()
-                set.notes = setData.notes
-                if let duration = setData.duration {
+                set.notes = sanitizedSet.notes
+                if let duration {
                     set.durationSeconds = Int(duration.rounded())
                 }
-                if let distance = setData.distance {
-                    set.distanceMeters = convertDistance(distance, unit: setData.distanceUnit)
+                if let distanceMeters {
+                    set.distanceMeters = distanceMeters
                 }
+                set.trackingType = .timeDistance
                 results.append(set)
 
             case .rounds:
-                guard let rounds = setData.rounds, rounds > 0 else { continue }
+                guard let rounds = sanitizedSet.rounds ?? sanitizedSet.baselineReps ?? parseInt(sanitizedSet.reps), rounds > 0 else { continue }
                 let set = SetInstance(setNumber: 0, targetReps: rounds, targetWeight: nil)
                 set.actualReps = rounds
-                set.actualWeight = nil
                 set.isCompleted = true
                 set.completedAt = Date()
-                set.notes = setData.notes
-                set.durationSeconds = Int((setData.duration ?? 0).rounded())
+                set.notes = sanitizedSet.notes
+                if let duration = sanitizedSet.duration, duration > 0 {
+                    set.durationSeconds = Int(duration.rounded())
+                }
+                set.trackingType = .rounds
+                sanitizedSet.rounds = rounds
                 results.append(set)
             }
+
+            sanitizedSet.isCompleted = true
+            capturedFlexibleSets.append(sanitizedSet)
         }
 
-        return results
+        return (results, capturedFlexibleSets)
+    }
+
+    private func resolveRounds(from set: FlexibleSetData) -> Int? {
+        if let rounds = set.rounds, rounds > 0 {
+            return rounds
+        }
+        if let repsString = set.reps, let reps = parseInt(repsString), reps > 0 {
+            return reps
+        }
+        if let baseline = set.baselineReps, baseline > 0 {
+            return baseline
+        }
+        return nil
+    }
+
+    private func resolveDuration(for set: FlexibleSetData) -> TimeInterval? {
+        if let duration = set.duration, duration > 0 {
+            return duration
+        }
+        if let baseline = set.baselineDuration, baseline > 0 {
+            return baseline
+        }
+        if let durationString = set.durationString,
+           let parsed = parseDurationString(durationString),
+           parsed > 0 {
+            return parsed
+        }
+        return nil
+    }
+
+    private func parseDurationString(_ value: String) -> TimeInterval? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let components = trimmed.split(separator: ":")
+        guard !components.isEmpty else { return nil }
+
+        var totalSeconds = 0
+        for component in components {
+            guard let number = Int(component) else { return nil }
+            totalSeconds = totalSeconds * 60 + number
+        }
+
+        return TimeInterval(totalSeconds)
+    }
+
+    private func formatDurationString(_ duration: TimeInterval) -> String {
+        let totalSeconds = max(0, Int(duration.rounded()))
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    private func defaultDistanceUnit(for units: UnitsSystem) -> DistanceUnit {
+        switch units {
+        case .metric:
+            return .kilometers
+        case .imperial:
+            return .miles
+        }
     }
 
     private func parseInt(_ string: String?) -> Int? {

@@ -15,6 +15,7 @@ class SetInstance {
     var exerciseInstance: ExerciseInstance?
     var durationSeconds: Int?
     var distanceMeters: Double?
+    var trackingTypeRawValue: String?
 
     // Additional properties for sync compatibility
     var completed: Bool { isCompleted } // Computed property for backward compatibility
@@ -30,6 +31,7 @@ class SetInstance {
         self.completedAt = nil
         self.durationSeconds = nil
         self.distanceMeters = nil
+        self.trackingTypeRawValue = nil
     }
     
     var displayWeight: String {
@@ -55,6 +57,11 @@ class SetInstance {
         self.completedAt = Date()
     }
 
+    var trackingType: ExerciseTrackingType? {
+        get { trackingTypeRawValue.flatMap(ExerciseTrackingType.init(rawValue:)) }
+        set { trackingTypeRawValue = newValue?.rawValue }
+    }
+
     // Helper method to reset set
     func resetSet() {
         self.actualReps = nil
@@ -64,6 +71,7 @@ class SetInstance {
         self.completedAt = nil
         self.durationSeconds = nil
         self.distanceMeters = nil
+        self.trackingTypeRawValue = nil
     }
     
     // Helper method to update target values

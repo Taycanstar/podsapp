@@ -32,6 +32,7 @@ struct DashboardView: View {
 
     @State private var selectedFoodLogId: String? = nil
     @State private var selectedMealLogId: String? = nil
+    @State private var selectedWorkoutLogId: String? = nil
     @State private var scheduleSheetLog: CombinedLog?
     @State private var scheduleAlert: ScheduleAlert?
     
@@ -204,6 +205,8 @@ private var remainingCal: Double { vm.remainingCalories }
                                 selectedFoodLogId = log.id
                             } else if log.type == .meal {
                                 selectedMealLogId = log.id
+                            } else if log.type == .workout {
+                                selectedWorkoutLogId = log.id
                             }
                         }
                     // NavigationLink for food logs
@@ -225,6 +228,18 @@ private var remainingCal: Double { vm.remainingCalories }
                             destination: MealLogDetails(log: log),
                             tag: log.id,
                             selection: $selectedMealLogId
+                        ) {
+                            EmptyView()
+                        }
+                        .opacity(0)
+                        .frame(width: 0, height: 0)
+                    }
+
+                    if log.type == .workout {
+                        NavigationLink(
+                            destination: WorkoutLogDetailView(log: log),
+                            tag: log.id,
+                            selection: $selectedWorkoutLogId
                         ) {
                             EmptyView()
                         }

@@ -202,11 +202,12 @@ private struct WorkoutLogExerciseRow: View {
     @State private var showHistory = false
     @State private var alertMessage: String?
     @State private var isShowingAlert = false
-    @State private var historyExercise: TodayWorkoutExercise?
+    @State private var historyPayload: TodayWorkoutExercise?
 
     init(exercise: WorkoutLogDetailDisplay.Exercise, unitsSymbol: String) {
         self.exercise = exercise
         self.unitsSymbol = unitsSymbol
+        _historyPayload = State(initialValue: exercise.historyExercise)
     }
 
     var body: some View {
@@ -238,7 +239,7 @@ private struct WorkoutLogExerciseRow: View {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(exercise.setDisplays.sorted(by: { $0.summary.index < $1.summary.index })) { set in
                             VStack(alignment: .leading, spacing: 4) {
-                                if let line = setLine(for: set.summary) {
+                                if let line = setLine(for: set) {
                                     Text(line)
                                         .font(.subheadline)
                                         .foregroundStyle(.primary)
@@ -261,7 +262,7 @@ private struct WorkoutLogExerciseRow: View {
                 .fill(Color("altbg"))
         )
         .sheet(isPresented: $showHistory) {
-            if let payload = historyExercise {
+            if let payload = historyPayload {
                 ExerciseHistory(exercise: payload)
             }
         }
@@ -270,6 +271,9 @@ private struct WorkoutLogExerciseRow: View {
         }, message: {
             Text(alertMessage ?? "")
         })
+        .onChange(of: exercise.historyExercise) { newValue in
+            historyPayload = newValue
+        }
     }
 
     private var thumbnail: some View {
@@ -301,12 +305,12 @@ private struct WorkoutLogExerciseRow: View {
             Button("Exercise History") {
                 alertMessage = nil
                 isShowingAlert = false
-                guard let payload = makeHistoryExercise() else {
+                guard let payload = exercise.historyExercise else {
                     alertMessage = "Exercise history is unavailable for this entry."
                     isShowingAlert = true
                     return
                 }
-                historyExercise = payload
+                historyPayload = payload
                 showHistory = true
             }
 
@@ -357,33 +361,8 @@ private struct WorkoutLogExerciseRow: View {
         .contentShape(Rectangle())
     }
 
-    private func makeHistoryExercise() -> TodayWorkoutExercise? {
-        guard let data = exercise.exerciseData else { return nil }
-
-        let setsCount = max(exercise.setDisplays.count, 1)
-        let repsSamples = exercise.setDisplays.compactMap { display -> Int? in
-            guard let reps = display.summary.reps else { return nil }
-            let rounded = Int(round(reps))
-            return rounded > 0 ? rounded : nil
-        }
-        let repsValue = repsSamples.first ?? 0
-        let weightValue = exercise.setDisplays.compactMap { $0.summary.weight }.first
-        let trackingType = exercise.setDisplays.first?.summary.trackingType
-
-        return TodayWorkoutExercise(
-            exercise: data,
-            sets: setsCount,
-            reps: repsValue,
-            weight: weightValue,
-            restTime: 60,
-            notes: exercise.notes,
-            warmupSets: nil,
-            flexibleSets: nil,
-            trackingType: trackingType
-        )
-    }
-
-    private func setLine(for summary: ExerciseSetSummary) -> String? {
+    private func setLine(for set: WorkoutLogDetailDisplay.Exercise.SetDisplay) -> String? {
+        let summary = set.summary
         let repsValue = summary.reps.map { Int(round($0)) }
 
         switch summary.trackingType {
@@ -406,7 +385,10 @@ private struct WorkoutLogExerciseRow: View {
                 let formatter = NumberFormatter()
                 formatter.numberStyle = .decimal
                 formatter.maximumFractionDigits = 2
-                let value = formatter.string(from: NSNumber(value: distance)) ?? "\(distance)"
+                var value = formatter.string(from: NSNumber(value: distance)) ?? "\(distance)"
+                if let unit = set.distanceUnit {
+                    value += " \(unit.symbol)"
+                }
                 components.append(value)
             }
             return components.isEmpty ? nil : components.joined(separator: " · ")
@@ -484,21 +466,32 @@ final class WorkoutLogDetailViewModel: ObservableObject {
             return
         }
 
-        guard let workoutId = resolveWorkoutId() else {
+        let resolvedWorkoutId = resolveWorkoutId()
+
+        if resolvedWorkoutId == nil {
+            if let fallback = try? detailFromApproximateLocal(context: context) {
+                detail = fallback
+                return
+            }
             if !log.isOptimistic {
                 errorMessage = DetailError.missingWorkoutIdentifier.errorDescription
             }
-            detail = nil
+            detail = WorkoutLogDetailDisplay.makeFallback(from: log, units: unitsSystem)
             return
         }
 
         do {
-            if let localDetail = try detailFromLocal(context: context, remoteId: workoutId) {
+            if let localDetail = try detailFromLocal(context: context, remoteId: resolvedWorkoutId!) {
                 detail = localDetail
                 return
             }
 
-            let remoteDetail = try await detailFromRemote(workoutId: workoutId)
+            if let fallback = try detailFromApproximateLocal(context: context) {
+                detail = fallback
+                return
+            }
+
+            let remoteDetail = try await detailFromRemote(workoutId: resolvedWorkoutId!)
             detail = remoteDetail
         } catch {
             errorMessage = error.localizedDescription
@@ -514,6 +507,38 @@ final class WorkoutLogDetailViewModel: ObservableObject {
             log: log,
             units: unitsSystem
         )
+    }
+
+    private func detailFromApproximateLocal(context: ModelContext) throws -> WorkoutLogDetailDisplay? {
+        let userEmail = WorkoutLogDetailViewModel.resolveUserEmail()
+        let predicate: Predicate<WorkoutSession>? = userEmail.map { email in
+            #Predicate { session in
+                session.userEmail == email && session.isDeleted == false
+            }
+        }
+
+        let descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\.completedAt, order: .reverse), SortDescriptor(\.startedAt, order: .reverse)]
+        )
+
+        let sessions = try context.fetch(descriptor)
+        guard !sessions.isEmpty else { return nil }
+
+        if let scheduled = log.workout?.scheduledAt ?? log.scheduledAt {
+            let window: TimeInterval = 15 * 60
+            if let match = sessions.first(where: { session in
+                guard let completed = session.completedAt else { return false }
+                return abs(completed.timeIntervalSince(scheduled)) <= window
+            }) {
+                return WorkoutLogDetailDisplay(workout: match, log: log, units: unitsSystem)
+            }
+        }
+
+        if let first = sessions.first {
+            return WorkoutLogDetailDisplay(workout: first, log: log, units: unitsSystem)
+        }
+        return nil
     }
 
     private func detailFromRemote(workoutId: Int) async throws -> WorkoutLogDetailDisplay {
@@ -576,6 +601,7 @@ struct WorkoutLogDetailDisplay {
             let summary: ExerciseSetSummary
             let note: String?
             let isCompleted: Bool
+            let distanceUnit: DistanceUnit?
         }
 
         let id: String
@@ -583,6 +609,7 @@ struct WorkoutLogDetailDisplay {
         let name: String
         let exerciseData: ExerciseData?
         let setDisplays: [SetDisplay]
+        let historyExercise: TodayWorkoutExercise?
         let notes: String?
 
         var trimmedNotes: String? {
@@ -693,15 +720,17 @@ struct WorkoutLogDetailDisplay {
         let sortedExercises = workout.exercises.sorted { $0.orderIndex < $1.orderIndex }
 
         for exercise in sortedExercises {
-            let (setDisplays, exerciseVolumeKg) = WorkoutLogDetailDisplay.buildSetDisplays(for: exercise, units: units)
+            let (setDisplays, exerciseVolumeKg, historyExercise) = WorkoutLogDetailDisplay.buildSetDisplays(for: exercise, units: units)
             totalVolumeKg += exerciseVolumeKg
 
+            let exerciseData = historyExercise?.exercise ?? WorkoutLogDetailDisplay.exerciseData(for: exercise.exerciseId)
             let display = Exercise(
                 id: exercise.id.uuidString,
                 exerciseId: exercise.exerciseId,
                 name: exercise.exerciseName,
-                exerciseData: WorkoutLogDetailDisplay.exerciseData(for: exercise.exerciseId),
+                exerciseData: exerciseData,
                 setDisplays: setDisplays,
+                historyExercise: historyExercise,
                 notes: nil
             )
 
@@ -735,15 +764,17 @@ struct WorkoutLogDetailDisplay {
         let sortedExercises = workout.exercises.sorted { ($0.orderIndex ?? 0) < ($1.orderIndex ?? 0) }
 
         for exercise in sortedExercises {
-            let (setDisplays, exerciseVolumeKg) = WorkoutLogDetailDisplay.buildSetDisplays(for: exercise, units: units)
+            let (setDisplays, exerciseVolumeKg, historyExercise) = WorkoutLogDetailDisplay.buildSetDisplays(for: exercise, units: units)
             totalVolumeKg += exerciseVolumeKg
 
+            let exerciseData = historyExercise?.exercise ?? WorkoutLogDetailDisplay.exerciseData(for: exercise.exerciseId)
             let display = Exercise(
                 id: "\(exercise.id)",
                 exerciseId: exercise.exerciseId,
                 name: exercise.exerciseName,
-                exerciseData: WorkoutLogDetailDisplay.exerciseData(for: exercise.exerciseId),
+                exerciseData: exerciseData,
                 setDisplays: setDisplays,
+                historyExercise: historyExercise,
                 notes: WorkoutLogDetailDisplay.trimmedOrNil(exercise.notes)
             )
 
@@ -796,125 +827,277 @@ struct WorkoutLogDetailDisplay {
         return exerciseLookup[id]
     }
 
-    private static func buildSetDisplays(for exercise: ExerciseInstance, units: UnitsSystem) -> ([Exercise.SetDisplay], Double) {
-        let sortedSets = exercise.sets.sorted { $0.setNumber < $1.setNumber }
-        var displays: [Exercise.SetDisplay] = []
-        var exerciseVolumeKg: Double = 0
+    private static func buildSetDisplays(for exercise: ExerciseInstance, units: UnitsSystem) -> ([Exercise.SetDisplay], Double, TodayWorkoutExercise?) {
+        let exerciseData = exerciseData(for: exercise.exerciseId)
+        let decodedFlexibleSets: [FlexibleSetData] = {
+            guard let data = exercise.flexibleSetsData else { return [] }
+            return (try? JSONDecoder().decode([FlexibleSetData].self, from: data)) ?? []
+        }()
 
-        for set in sortedSets {
-            if let result = summaryForLocalSet(set, units: units) {
-                displays.append(result.display)
-                exerciseVolumeKg += result.volumeContributionKg
+        var flexSets = decodedFlexibleSets
+        if flexSets.isEmpty {
+            flexSets = exercise.sets.sorted { $0.setNumber < $1.setNumber }
+                .compactMap { makeFlexibleSet(from: $0, units: units) }
+        }
+
+        return makeDisplayPayload(
+            flexSets: flexSets,
+            exerciseData: exerciseData,
+            notes: nil,
+            units: units
+        )
+    }
+
+    private static func buildSetDisplays(for exercise: NetworkManagerTwo.WorkoutResponse.Exercise, units: UnitsSystem) -> ([Exercise.SetDisplay], Double, TodayWorkoutExercise?) {
+        let exerciseData = exerciseData(for: exercise.exerciseId)
+        let flexSets = exercise.sets
+            .compactMap { makeFlexibleSet(from: $0, units: units) }
+
+        return makeDisplayPayload(
+            flexSets: flexSets,
+            exerciseData: exerciseData,
+            notes: trimmedOrNil(exercise.notes),
+            units: units
+        )
+    }
+
+    private struct SetSummaryEntry {
+        let summary: ExerciseSetSummary
+        let flex: FlexibleSetData
+    }
+
+    private static func makeDisplayPayload(flexSets: [FlexibleSetData],
+                                           exerciseData: ExerciseData?,
+                                           notes: String?,
+                                           units: UnitsSystem) -> ([Exercise.SetDisplay], Double, TodayWorkoutExercise?) {
+        guard !flexSets.isEmpty else {
+            let history = exerciseData.map { data in
+                TodayWorkoutExercise(
+                    exercise: data,
+                    sets: 0,
+                    reps: 0,
+                    weight: nil,
+                    restTime: 60,
+                    notes: notes,
+                    warmupSets: nil,
+                    flexibleSets: [],
+                    trackingType: nil
+                )
+            }
+            return ([], 0, history)
+        }
+
+        let activeFlexSets = flexSets.filter { !$0.isWarmupSet }
+        let summaries = loggedSummaries(from: activeFlexSets)
+        var displays: [Exercise.SetDisplay] = []
+        var volumeKg: Double = 0
+
+        for entry in summaries {
+            let summary = entry.summary
+            if summary.trackingType == .repsWeight,
+               let reps = summary.reps,
+               let weight = summary.weight {
+                let weightKg = units == .metric ? weight : weight / 2.2046226218
+                volumeKg += reps * weightKg
+            }
+
+            let display = Exercise.SetDisplay(
+                id: entry.flex.id.uuidString,
+                summary: summary,
+                note: entry.flex.notes,
+                isCompleted: entry.flex.isActuallyCompleted,
+                distanceUnit: entry.flex.distanceUnit
+            )
+            displays.append(display)
+        }
+
+        let historyExercise: TodayWorkoutExercise? = exerciseData.map { data in
+            let loggedSetsCount = summaries.count
+            let repsValue = summaries.compactMap { $0.summary.reps.map { Int(round($0)) } }.first ?? 0
+            let weightValue = summaries.compactMap { $0.summary.weight }.first
+            let restTime = (activeFlexSets.first?.restTime ?? flexSets.first?.restTime) ?? 60
+            let trackingType = (activeFlexSets.first ?? flexSets.first)?.trackingType
+
+            return TodayWorkoutExercise(
+                exercise: data,
+                sets: loggedSetsCount,
+                reps: repsValue,
+                weight: weightValue,
+                restTime: restTime,
+                notes: notes,
+                warmupSets: nil,
+                flexibleSets: activeFlexSets,
+                trackingType: trackingType
+            )
+        }
+
+        return (displays, volumeKg, historyExercise)
+    }
+
+    private static func loggedSummaries(from flexSets: [FlexibleSetData]) -> [SetSummaryEntry] {
+        var results: [SetSummaryEntry] = []
+        for flex in flexSets where !flex.isWarmupSet {
+            let index = results.count + 1
+            let trackingType = flex.trackingType
+
+            switch trackingType {
+            case .repsWeight:
+                guard let reps = parseDouble(flex.reps), reps > 0,
+                      let weight = parseDouble(flex.weight), weight > 0 else { continue }
+                let summary = ExerciseSetSummary(index: index,
+                                                  trackingType: .repsWeight,
+                                                  reps: reps,
+                                                  weight: weight,
+                                                  duration: nil,
+                                                  distance: nil)
+                results.append(SetSummaryEntry(summary: summary, flex: flex))
+
+            case .repsOnly:
+                guard let reps = parseDouble(flex.reps), reps > 0 else { continue }
+                let summary = ExerciseSetSummary(index: index,
+                                                  trackingType: .repsOnly,
+                                                  reps: reps,
+                                                  weight: nil,
+                                                  duration: nil,
+                                                  distance: nil)
+                results.append(SetSummaryEntry(summary: summary, flex: flex))
+
+            case .timeOnly, .holdTime:
+                guard let duration = flex.duration, duration > 0 else { continue }
+                let summary = ExerciseSetSummary(index: index,
+                                                  trackingType: trackingType,
+                                                  reps: nil,
+                                                  weight: nil,
+                                                  duration: duration,
+                                                  distance: nil)
+                results.append(SetSummaryEntry(summary: summary, flex: flex))
+
+            case .timeDistance:
+                let duration = flex.duration
+                let distance = flex.distance
+                guard (duration ?? 0) > 0 || (distance ?? 0) > 0 else { continue }
+                let summary = ExerciseSetSummary(index: index,
+                                                  trackingType: .timeDistance,
+                                                  reps: nil,
+                                                  weight: nil,
+                                                  duration: duration,
+                                                  distance: distance)
+                results.append(SetSummaryEntry(summary: summary, flex: flex))
+
+            case .rounds:
+                let rounds = flex.rounds ?? parseDouble(flex.reps).map { Int(round($0)) }
+                guard let rounds, rounds > 0 else { continue }
+                let summary = ExerciseSetSummary(index: index,
+                                                  trackingType: .rounds,
+                                                  reps: Double(rounds),
+                                                  weight: nil,
+                                                  duration: flex.duration,
+                                                  distance: nil)
+                results.append(SetSummaryEntry(summary: summary, flex: flex))
+            }
+        }
+        return results
+    }
+
+    private static func makeFlexibleSet(from set: SetInstance, units: UnitsSystem) -> FlexibleSetData? {
+        let trackingType = detectTrackingType(reps: set.actualReps ?? set.targetReps,
+                                              weightKg: set.actualWeight ?? set.targetWeight,
+                                              durationSeconds: set.durationSeconds,
+                                              distanceMeters: set.distanceMeters,
+                                              trackingHint: set.trackingTypeRawValue)
+        var flex = FlexibleSetData(trackingType: trackingType)
+        if let explicitType = set.trackingType {
+            flex.trackingType = explicitType
+        }
+
+        let repsValue = set.actualReps ?? set.targetReps
+        if repsValue > 0 {
+            flex.reps = String(repsValue)
+            if flex.trackingType == .rounds {
+                flex.rounds = repsValue
             }
         }
 
-        return (displays, exerciseVolumeKg)
-    }
-
-    private static func buildSetDisplays(for exercise: NetworkManagerTwo.WorkoutResponse.Exercise, units: UnitsSystem) -> ([Exercise.SetDisplay], Double) {
-        let sortedSets = exercise.sets.enumerated()
-        var displays: [Exercise.SetDisplay] = []
-        var exerciseVolumeKg: Double = 0
-
-        for (index, set) in sortedSets {
-            if let result = summaryForRemoteSet(set, fallbackIndex: index, units: units) {
-                displays.append(result.display)
-                exerciseVolumeKg += result.volumeContributionKg
-            }
+        if let weightValue = set.actualWeight ?? set.targetWeight, weightValue > 0 {
+            let displayWeight = units == .metric ? weightValue : weightValue
+            flex.weight = formattedNumber(displayWeight)
         }
 
-        return (displays, exerciseVolumeKg)
-    }
+        if let duration = set.durationSeconds, duration > 0 {
+            let durationValue = TimeInterval(duration)
+            flex.duration = durationValue
+            flex.durationString = clockDurationString(durationValue)
+        }
 
-    private static func summaryForLocalSet(_ set: SetInstance, units: UnitsSystem) -> (display: Exercise.SetDisplay, volumeContributionKg: Double)? {
-        let repsValue = set.actualReps ?? set.targetReps ?? 0
-        let weightKg = set.actualWeight ?? set.targetWeight
-        let durationSeconds = set.durationSeconds
-        let distanceMeters = set.distanceMeters
+        if let distance = set.distanceMeters, distance > 0 {
+            let converted = convertDistanceToDisplay(distance, units: units)
+            flex.distance = converted.value
+            flex.distanceUnit = converted.unit
+        }
 
-        let hasReps = repsValue > 0
-        let hasWeight = (weightKg ?? 0) > 0
-        let hasDuration = (durationSeconds ?? 0) > 0
-        let hasDistance = (distanceMeters ?? 0) > 0
+        flex.isCompleted = set.isCompleted
+        flex.wasLogged = set.completed
+        flex.isWarmupSet = false
+        flex.notes = set.notes
 
-        guard hasReps || hasWeight || hasDuration || hasDistance else { return nil }
-
-        let trackingType = trackingTypeForLocalSet(weightKg: weightKg, reps: repsValue, durationSeconds: durationSeconds, distanceMeters: distanceMeters)
-        let displayWeight = convertWeightForDisplay(weightKg, units: units)
-        let displayReps = hasReps ? Double(repsValue) : nil
-        let displayDuration = durationSeconds.flatMap { $0 > 0 ? TimeInterval($0) : nil }
-        let displayDistance = distanceMeters.flatMap { $0 > 0 ? $0 : nil }
-
-        if displayReps == nil && displayWeight == nil && displayDuration == nil && displayDistance == nil {
+        if flex.reps == nil && flex.weight == nil && flex.duration == nil && flex.distance == nil && (flex.rounds ?? 0) <= 0 {
             return nil
         }
 
-        let summary = ExerciseSetSummary(
-            index: set.setNumber,
-            trackingType: trackingType,
-            reps: displayReps,
-            weight: displayWeight,
-            duration: displayDuration,
-            distance: displayDistance
-        )
-
-        let display = Exercise.SetDisplay(
-            id: set.id.uuidString,
-            summary: summary,
-            note: trimmedOrNil(set.notes),
-            isCompleted: set.isCompleted
-        )
-
-        let volumeContribution = (weightKg ?? 0) > 0 && hasReps ? Double(repsValue) * (weightKg ?? 0) : 0
-
-        return (display, volumeContribution)
+        return flex
     }
 
-    private static func summaryForRemoteSet(_ set: NetworkManagerTwo.WorkoutResponse.ExerciseSet, fallbackIndex: Int, units: UnitsSystem) -> (display: Exercise.SetDisplay, volumeContributionKg: Double)? {
-        let repsValue = set.reps ?? 0
-        let weightKg = set.weightKg
-        let durationSeconds = set.durationSeconds
-        let distanceMeters = set.distanceMeters
+    private static func makeFlexibleSet(from set: NetworkManagerTwo.WorkoutResponse.ExerciseSet, units: UnitsSystem) -> FlexibleSetData? {
+        let trackingType = detectTrackingType(reps: set.reps,
+                                              weightKg: set.weightKg,
+                                              durationSeconds: set.durationSeconds,
+                                              distanceMeters: set.distanceMeters,
+                                              trackingHint: set.trackingType)
+        var flex = FlexibleSetData(trackingType: trackingType)
 
-        let hasReps = repsValue > 0
-        let hasWeight = (weightKg ?? 0) > 0
-        let hasDuration = (durationSeconds ?? 0) > 0
-        let hasDistance = (distanceMeters ?? 0) > 0
+        if let reps = set.reps, reps > 0 {
+            flex.reps = String(reps)
+        }
 
-        guard hasReps || hasWeight || hasDuration || hasDistance else { return nil }
+        if let weightKg = set.weightKg, weightKg > 0 {
+            let displayWeight = units == .metric ? weightKg : weightKg * 2.2046226218
+            flex.weight = formattedNumber(displayWeight)
+        }
 
-        let trackingType = trackingTypeForRemoteSet(rawValue: set.trackingType, weightKg: weightKg, reps: repsValue, durationSeconds: durationSeconds, distanceMeters: distanceMeters)
-        let displayWeight = convertWeightForDisplay(weightKg, units: units)
-        let displayReps = hasReps ? Double(repsValue) : nil
-        let displayDuration = durationSeconds.flatMap { $0 > 0 ? TimeInterval($0) : nil }
-        let displayDistance = distanceMeters.flatMap { $0 > 0 ? $0 : nil }
+        if let duration = set.durationSeconds, duration > 0 {
+            let durationValue = TimeInterval(duration)
+            flex.duration = durationValue
+            flex.durationString = clockDurationString(durationValue)
+        }
 
-        if displayReps == nil && displayWeight == nil && displayDuration == nil && displayDistance == nil {
+        if let distance = set.distanceMeters, distance > 0 {
+            let converted = convertDistanceToDisplay(distance, units: units)
+            flex.distance = converted.value
+            flex.distanceUnit = converted.unit
+        }
+
+        if let rounds = set.roundsCompleted, rounds > 0 {
+            flex.rounds = rounds
+        }
+
+        flex.isCompleted = set.isCompleted ?? false
+        flex.wasLogged = set.isCompleted
+        flex.isWarmupSet = set.isWarmup ?? false
+        flex.notes = trimmedOrNil(set.notes)
+        flex.restTime = set.restSeconds
+
+        if flex.reps == nil && flex.weight == nil && flex.duration == nil && flex.distance == nil && (flex.rounds ?? 0) <= 0 {
             return nil
         }
 
-        let summary = ExerciseSetSummary(
-            index: set.setNumber ?? fallbackIndex + 1,
-            trackingType: trackingType,
-            reps: displayReps,
-            weight: displayWeight,
-            duration: displayDuration,
-            distance: displayDistance
-        )
-
-        let display = Exercise.SetDisplay(
-            id: "\(summary.index)",
-            summary: summary,
-            note: trimmedOrNil(set.notes),
-            isCompleted: set.isCompleted ?? false
-        )
-
-        let volumeContribution = (weightKg ?? 0) > 0 && hasReps ? Double(repsValue) * (weightKg ?? 0) : 0
-
-        return (display, volumeContribution)
+        return flex
     }
 
-    private static func trackingTypeForLocalSet(weightKg: Double?, reps: Int, durationSeconds: Int?, distanceMeters: Double?) -> ExerciseTrackingType {
+    private static func detectTrackingType(reps: Int?, weightKg: Double?, durationSeconds: Int?, distanceMeters: Double?, trackingHint: String?) -> ExerciseTrackingType {
+        if let hint = trackingHint, let type = ExerciseTrackingType(rawValue: hint) {
+            return type
+        }
+
         if let durationSeconds, durationSeconds > 0, let distanceMeters, distanceMeters > 0 {
             return .timeDistance
         }
@@ -924,10 +1107,10 @@ struct WorkoutLogDetailDisplay {
         if let distanceMeters, distanceMeters > 0 {
             return .timeDistance
         }
-        if let weightKg, weightKg > 0, reps > 0 {
+        if let weightKg, weightKg > 0, let reps, reps > 0 {
             return .repsWeight
         }
-        if reps > 0 {
+        if let reps, reps > 0 {
             return .repsOnly
         }
         if let weightKg, weightKg > 0 {
@@ -936,16 +1119,42 @@ struct WorkoutLogDetailDisplay {
         return .repsOnly
     }
 
-    private static func trackingTypeForRemoteSet(rawValue: String?, weightKg: Double?, reps: Int, durationSeconds: Int?, distanceMeters: Double?) -> ExerciseTrackingType {
-        if let rawValue, let type = ExerciseTrackingType(rawValue: rawValue) {
-            return type
-        }
-        return trackingTypeForLocalSet(weightKg: weightKg, reps: reps, durationSeconds: durationSeconds, distanceMeters: distanceMeters)
+    private static func parseDouble(_ value: String?) -> Double? {
+        guard let raw = value?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
+        let filtered = raw.filter { "0123456789.,-".contains($0) }
+        guard !filtered.isEmpty else { return nil }
+        let normalized = filtered.replacingOccurrences(of: ",", with: ".")
+        return Double(normalized)
     }
 
-    private static func convertWeightForDisplay(_ weightKg: Double?, units: UnitsSystem) -> Double? {
-        guard let weightKg, weightKg > 0 else { return nil }
-        return units.convertWeight(fromKilograms: weightKg)
+    private static func formattedNumber(_ value: Double) -> String {
+        if abs(value.rounded() - value) < 0.0001 {
+            return String(format: "%.0f", value)
+        }
+        return String(format: "%.2f", value)
+    }
+
+    private static func convertDistanceToDisplay(_ meters: Double, units: UnitsSystem) -> (value: Double, unit: DistanceUnit) {
+        switch units {
+        case .metric:
+            return (meters / 1000.0, .kilometers)
+        case .imperial:
+            return (meters * 0.000621371, .miles)
+        }
+    }
+
+    private static func clockDurationString(_ duration: TimeInterval) -> String {
+        let totalSeconds = Int(duration.rounded())
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        }
+        if minutes > 0 {
+            return String(format: "%d:%02d", minutes, seconds)
+        }
+        return String(format: "0:%02d", seconds)
     }
 
     private static func formatDuration(seconds: TimeInterval?) -> String {
