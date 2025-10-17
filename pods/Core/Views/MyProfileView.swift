@@ -670,6 +670,17 @@ struct MyProfileView: View {
 
     @ViewBuilder
     private func workoutCardView(for log: CombinedLog) -> some View {
+        NavigationLink {
+            WorkoutLogDetailView(log: log)
+        } label: {
+            workoutCardLabel(for: log)
+                .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func workoutCardLabel(for log: CombinedLog) -> some View {
         if let activity = log.activity {
             workoutCardContent(
                 icon: activity.activityIcon,

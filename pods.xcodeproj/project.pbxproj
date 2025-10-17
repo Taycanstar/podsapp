@@ -16,6 +16,7 @@
 		3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615072D2B7EE48E0060974A /* CreatePodView.swift */; };
 		3617B93C2C58A0A4008FB5FA /* AddSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3617B93B2C58A0A4008FB5FA /* AddSheetView.swift */; };
 		3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */; };
+		361919152EA17778007CAA0D /* WorkoutLogDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361919142EA17769007CAA0D /* WorkoutLogDetailView.swift */; };
 		361FF30B2E1D930600B7F68E /* EquipmentExercisesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF30A2E1D930600B7F68E /* EquipmentExercisesView.swift */; };
 		361FF30D2E1D96E900B7F68E /* BodyweightExercisesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF30C2E1D96E900B7F68E /* BodyweightExercisesView.swift */; };
 		361FF30F2E1D96F900B7F68E /* WeightedExercisesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361FF30E2E1D96F900B7F68E /* WeightedExercisesView.swift */; };
@@ -388,6 +389,7 @@
 		3615072D2B7EE48E0060974A /* CreatePodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePodView.swift; sourceTree = "<group>"; };
 		3617B93B2C58A0A4008FB5FA /* AddSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSheetView.swift; sourceTree = "<group>"; };
 		3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPodView.swift; sourceTree = "<group>"; };
+		361919142EA17769007CAA0D /* WorkoutLogDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLogDetailView.swift; sourceTree = "<group>"; };
 		361FF30A2E1D930600B7F68E /* EquipmentExercisesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentExercisesView.swift; sourceTree = "<group>"; };
 		361FF30C2E1D96E900B7F68E /* BodyweightExercisesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyweightExercisesView.swift; sourceTree = "<group>"; };
 		361FF30E2E1D96F900B7F68E /* WeightedExercisesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightedExercisesView.swift; sourceTree = "<group>"; };
@@ -907,6 +909,7 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				361919142EA17769007CAA0D /* WorkoutLogDetailView.swift */,
 				36D3A52B2EA008C900AD6B94 /* WorkoutUpgradeSheet.swift */,
 				36D3A4F82E7F4E4D00AD6B94 /* WorkoutSummarySheet.swift */,
 				367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */,
@@ -1886,6 +1889,7 @@
 				36ED35ED2DDE533F00D174FB /* NameMealView.swift in Sources */,
 				36ED35B42DD7F27900D174FB /* EditWeightView.swift in Sources */,
 				36ED35B62DD7F28900D174FB /* EditHeightView.swift in Sources */,
+				361919152EA17778007CAA0D /* WorkoutLogDetailView.swift in Sources */,
 				364A83CE2DAEC017009D2620 /* VoiceLogView.swift in Sources */,
 				36ED35F32DDE537400D174FB /* GenerateFoodView.swift in Sources */,
 				362516672C6E8EB2009CA5B0 /* ItemOptionsView.swift in Sources */,

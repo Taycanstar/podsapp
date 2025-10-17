@@ -213,6 +213,16 @@ class WorkoutDataManager: ObservableObject {
         return localWorkouts
     }
 
+    func workoutSession(remoteId: Int, context: ModelContext) throws -> WorkoutSession? {
+        let descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: #Predicate<WorkoutSession> { workout in
+                workout.remoteId == remoteId && workout.isDeleted == false
+            },
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+        )
+        return try context.fetch(descriptor).first
+    }
+
     /// Manual sync trigger
     func syncNow(context: ModelContext) async {
         registerContext(context)

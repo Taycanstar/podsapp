@@ -27,8 +27,8 @@ class NetworkManagerTwo {
     
 
 // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-//   let baseUrl = "http://192.168.1.92:8000"
-let baseUrl = "http://172.20.10.4:8000"
+  let baseUrl = "http://192.168.1.92:8000"
+// let baseUrl = "http://172.20.10.4:8000"
 // 
 
   // ### STAGING ###
@@ -100,6 +100,10 @@ let baseUrl = "http://172.20.10.4:8000"
 
     struct WorkoutListResponse: Codable {
         let workouts: [WorkoutResponse.Workout]
+    }
+
+    struct WorkoutDetailResponse: Codable {
+        let workout: WorkoutResponse.Workout
     }
 
     struct ProcessScheduledMealResponse: Codable {
@@ -288,6 +292,32 @@ let baseUrl = "http://172.20.10.4:8000"
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO8601 date: \(value)")
         }
         return try decoder.decode(WorkoutListResponse.self, from: data)
+    }
+
+    func fetchWorkoutDetail(sessionId: Int, userEmail: String) async throws -> WorkoutResponse.Workout {
+        var components = URLComponents(string: "\(baseUrl)/get-workout-session/\(sessionId)/")
+        components?.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail)
+        ]
+
+        guard let url = components?.url else { throw NetworkError.invalidURL }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .custom { decoder -> Date in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            if let date = self.iso8601FractionalFormatter.date(from: value) ?? self.iso8601BasicFormatter.date(from: value) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO8601 date: \(value)")
+        }
+
+        let responsePayload = try decoder.decode(WorkoutDetailResponse.self, from: data)
+        return responsePayload.workout
     }
 
     func createWorkout(payload: WorkoutRequest) async throws -> WorkoutResponse.Workout {
