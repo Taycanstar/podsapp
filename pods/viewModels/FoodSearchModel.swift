@@ -830,6 +830,20 @@ struct WorkoutSummary: Codable, Identifiable, Equatable {
     }
 }
 
+extension WorkoutSummary {
+    func withExercisesCount(_ newCount: Int) -> WorkoutSummary {
+        WorkoutSummary(
+            id: id,
+            title: title,
+            durationMinutes: durationMinutes,
+            durationSeconds: durationSeconds,
+            exercisesCount: newCount,
+            status: status,
+            scheduledAt: scheduledAt
+        )
+    }
+}
+
 struct CombinedLog: Codable, Identifiable, Equatable {
     // MARK: - Common Properties
     let type: LogType

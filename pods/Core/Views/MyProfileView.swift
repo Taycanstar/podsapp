@@ -681,27 +681,58 @@ struct MyProfileView: View {
 
     @ViewBuilder
     private func workoutCardLabel(for log: CombinedLog) -> some View {
-        let durationLabel = resolvedWorkoutDuration(for: log)
+        let directCount = log.workout?.exercisesCount
+        let fallbackCount = exerciseCount(from: log)
+        let resolvedCountForPrint: Int? = {
+            if let direct = directCount, direct > 0 {
+                return direct
+            }
+            return fallbackCount
+        }()
+#if DEBUG
+        print(
+            "📦 log",
+            log.id,
+            "type:",
+            String(describing: log.type),
+            "optimistic:",
+            log.isOptimistic,
+            "workoutCount:",
+            directCount as Any,
+            "fallbackCount:",
+            fallbackCount as Any,
+            "resolvedCount:",
+            resolvedCountForPrint as Any,
+            "message:",
+            log.message
+        )
+#endif
 
         if let activity = log.activity {
             workoutCardContent(
                 icon: activity.activityIcon,
                 title: activity.displayName,
                 subtitle: activity.workoutActivityType.replacingOccurrences(of: "_", with: " "),
-                duration: durationLabel,
+                duration: resolvedWorkoutDuration(for: log),
                 distance: activity.formattedDistance,
-                exercisesCount: exerciseCount(from: log),
+                exercisesCount: fallbackCount,
                 calories: Int(log.displayCalories),
                 timeLabel: getWorkoutTimeLabel(for: log)
             )
         } else if let workout = log.workout {
+            let resolvedCount: Int? = {
+                if let direct = directCount, direct > 0 {
+                    return direct
+                }
+                return fallbackCount
+            }()
             workoutCardContent(
                 icon: "figure.strengthtraining.traditional",
                 title: workout.title,
                 subtitle: nil,
-                duration: durationLabel,
+                duration: resolvedWorkoutDuration(for: log),
                 distance: nil,
-                exercisesCount: workout.exercisesCount > 0 ? workout.exercisesCount : exerciseCount(from: log),
+                exercisesCount: resolvedCount,
                 calories: Int(log.displayCalories),
                 timeLabel: getWorkoutTimeLabel(for: log)
             )
@@ -761,6 +792,18 @@ struct MyProfileView: View {
                     Text(title)
                         .font(.system(size: 16, weight: .regular))
                         .foregroundColor(.primary)
+
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
+
+                    if let exercisesCount {
+                        Text("\(exercisesCount) exercise\(exercisesCount == 1 ? "" : "s")")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
                 }
 
                 Spacer()
@@ -781,12 +824,16 @@ struct MyProfileView: View {
                     workoutMetricInline(icon: "clock", text: duration, color: .blue)
                 }
 
-                if let exercisesCount, exercisesCount > 0 {
-                    workoutMetricInline(icon: "list.bullet", text: "\(exercisesCount) exercises", color: .green)
-                }
-
                 if let distance {
                     workoutMetricInline(icon: "location", text: distance, color: .green)
+                }
+
+                if let exercisesCount {
+                    workoutMetricInline(
+                        icon: "list.bullet",
+                        text: "\(exercisesCount) exercise\(exercisesCount == 1 ? "" : "s")",
+                        color: .green
+                    )
                 }
             }
         }
@@ -1097,6 +1144,51 @@ struct MyProfileView: View {
     private func preferredLog(existing: CombinedLog, candidate: CombinedLog) -> CombinedLog {
         let existingDate = rawLogDate(for: existing)
         let candidateDate = rawLogDate(for: candidate)
+
+        if existing.type == .workout || candidate.type == .workout {
+            let existingWorkout = existing.workout
+            let candidateWorkout = candidate.workout
+            let existingCount = existingWorkout?.exercisesCount ?? 0
+            let candidateCount = candidateWorkout?.exercisesCount ?? 0
+
+            if existingWorkout == nil, candidateWorkout != nil {
+                print("⚖️ preferredLog choosing candidate \(candidate.id) because it has workout details and existing does not")
+                return candidate
+            }
+
+            if candidateWorkout == nil, existingWorkout != nil {
+                return existing
+            }
+
+            if candidateCount > existingCount {
+                print(
+                    "⚖️ preferredLog choosing candidate",
+                    candidate.id,
+                    "because exercisesCount improved",
+                    existingCount,
+                    "→",
+                    candidateCount
+                )
+                return candidate
+            }
+
+            print(
+                "⚖️ preferredLog comparing",
+                existing.id,
+                "existingCount:",
+                existing.workout?.exercisesCount as Any,
+                "candidateCount:",
+                candidate.workout?.exercisesCount as Any,
+                "existingOptimistic:",
+                existing.isOptimistic,
+                "candidateOptimistic:",
+                candidate.isOptimistic,
+                "existingDate:",
+                existingDate as Any,
+                "candidateDate:",
+                candidateDate as Any
+            )
+        }
 
         // Prefer whichever carries a usable date value
         if existingDate == nil, let candidateDate {
