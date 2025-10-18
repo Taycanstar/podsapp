@@ -643,7 +643,8 @@ struct WorkoutLogDetailDisplay {
     }
 
     var completedDateString: String? {
-        guard let completedAt else { return nil }
+        guard let completedAt,
+              completedAt.timeIntervalSince1970 > 0 else { return nil }
         return WorkoutLogDetailDisplay.dateFormatter.string(from: completedAt)
     }
 
@@ -698,7 +699,7 @@ struct WorkoutLogDetailDisplay {
          fallbackSetCount: Int?,
          isHealthKitImport: Bool) {
         self.title = title
-        self.completedAt = completedAt
+        self.completedAt = WorkoutLogDetailDisplay.sanitizedDate(completedAt)
         self.durationSeconds = durationSeconds
         self.calories = calories
         self.totalVolumeKg = totalVolumeKg
@@ -712,7 +713,7 @@ struct WorkoutLogDetailDisplay {
 
     init(workout: WorkoutSession, log: CombinedLog, units: UnitsSystem) {
         title = workout.name
-        completedAt = workout.completedAt
+        completedAt = WorkoutLogDetailDisplay.sanitizedDate(workout.completedAt)
         durationSeconds = workout.totalDuration ?? workout.duration
         calories = Int(log.displayCalories.rounded())
         unitsSystem = units
@@ -750,7 +751,7 @@ struct WorkoutLogDetailDisplay {
 
     init(workout: NetworkManagerTwo.WorkoutResponse.Workout, log: CombinedLog, units: UnitsSystem) {
         title = workout.name
-        completedAt = workout.completedAt
+        completedAt = WorkoutLogDetailDisplay.sanitizedDate(workout.completedAt)
         if let actualMinutes = workout.actualDurationMinutes {
             durationSeconds = TimeInterval(actualMinutes * 60)
         } else if let startedAt = workout.startedAt, let completedAt = workout.completedAt {
@@ -804,7 +805,7 @@ struct WorkoutLogDetailDisplay {
             durationSeconds = activityDuration
         }
 
-        let completedAt = workout?.scheduledAt ?? log.activity?.endDate
+        let completedAt = WorkoutLogDetailDisplay.sanitizedDate(workout?.scheduledAt ?? log.activity?.endDate)
         let exercisesCount = workout?.exercisesCount
 
         return WorkoutLogDetailDisplay(
@@ -1217,6 +1218,13 @@ struct WorkoutLogDetailDisplay {
         guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
               !trimmed.isEmpty else { return nil }
         return trimmed
+    }
+
+    private static func sanitizedDate(_ date: Date?) -> Date? {
+        guard let date else { return nil }
+        // Treat near-epoch values as missing to avoid showing "Dec 31, 1969"
+        let minimumValidTimestamp: TimeInterval = 60 // one minute past epoch to account for offsets
+        return date.timeIntervalSince1970 >= minimumValidTimestamp ? date : nil
     }
 }
 

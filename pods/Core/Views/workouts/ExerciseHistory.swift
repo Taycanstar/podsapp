@@ -1250,6 +1250,11 @@ struct RecordRow: View {
     let record: RecordItem
     
     private var dateString: String {
+        let minimumValidTimestamp: TimeInterval = 60
+        guard record.date.timeIntervalSince1970 >= minimumValidTimestamp else {
+            return "—"
+        }
+
         let calendar = Calendar.current
         let now = Date()
         
