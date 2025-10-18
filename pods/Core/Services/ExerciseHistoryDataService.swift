@@ -381,8 +381,10 @@ class ExerciseHistoryDataService: ObservableObject {
                         )
                     }
 
-                let date = session.startedAt ?? session.completedAt ?? session.scheduledDate ?? Date()
+                let date = session.completedAt ?? session.startedAt ?? session.scheduledDate ?? Date()
                 let trackingType = session.trackingType.flatMap(ExerciseTrackingType.init(rawValue:))
+
+                print("📥 Remote history session \(session.workoutSessionId) started=\(session.startedAt?.description ?? "nil") completed=\(session.completedAt?.description ?? "nil") scheduled=\(session.scheduledDate?.description ?? "nil")")
 
                 return makeWorkoutSessionSummary(
                     id: UUID(),
@@ -390,6 +392,10 @@ class ExerciseHistoryDataService: ObservableObject {
                     setSummaries: setSummaries,
                     trackingType: trackingType
                 )
+            }
+
+            summaries.forEach { summary in
+                print("🧮 Summary session \(summary.id) date=\(summary.date) maxReps=\(summary.maxReps) maxWeight=\(summary.maxWeight)")
             }
 
             lastRemoteHistoryFetch[fetchKey] = Date()
@@ -752,7 +758,7 @@ class ExerciseHistoryDataService: ObservableObject {
                         trackingType = flexFirst
                     }
                     
-                    let sessionDate = workout.startedAt
+                    let sessionDate = workout.completedAt ?? workout.startedAt
                     
                     let workoutSummary = makeWorkoutSessionSummary(
                         id: workout.id,

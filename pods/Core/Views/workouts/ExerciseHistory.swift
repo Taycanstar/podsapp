@@ -1248,6 +1248,7 @@ struct RecordItem {
 
 struct RecordRow: View {
     let record: RecordItem
+    @State private var didLogAppearance = false
     
     private var dateString: String {
         let minimumValidTimestamp: TimeInterval = 60
@@ -1306,6 +1307,12 @@ struct RecordRow: View {
         .padding(.horizontal, 16)
         .background(Color(.systemGray6))
         .cornerRadius(12)
+        .onAppear {
+            if !didLogAppearance {
+                didLogAppearance = true
+                print("🏅 Record row", record.label, "raw date:", record.date, "display:", dateString)
+            }
+        }
     }
 }
 

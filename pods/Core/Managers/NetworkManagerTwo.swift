@@ -329,11 +329,14 @@ class NetworkManagerTwo {
 
     func fetchExerciseHistory(userEmail: String, exerciseId: Int, daysBack: Int) async throws -> ExerciseHistoryResponse {
         var components = URLComponents(string: "\(baseUrl)/get-exercise-history/")
-        components?.queryItems = [
+        var queryItems = [
             URLQueryItem(name: "user_email", value: userEmail),
             URLQueryItem(name: "exercise_id", value: "\(exerciseId)"),
             URLQueryItem(name: "days_back", value: "\(max(1, daysBack))")
         ]
+        let offsetMinutes = TimeZone.current.secondsFromGMT() / 60
+        queryItems.append(URLQueryItem(name: "tz_offset_minutes", value: "\(offsetMinutes)"))
+        components?.queryItems = queryItems
 
         guard let url = components?.url else { throw NetworkError.invalidURL }
 
