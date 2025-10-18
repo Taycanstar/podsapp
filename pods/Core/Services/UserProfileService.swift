@@ -858,6 +858,10 @@ class UserProfileService: ObservableObject {
         publishChange()
     }
 
+    func isExerciseAvoided(_ exerciseId: Int) -> Bool {
+        avoidedExercises.contains(exerciseId)
+    }
+
     func addToAvoided(_ exerciseId: Int) {
         var avoided = avoidedExercises
         if !avoided.contains(exerciseId) {

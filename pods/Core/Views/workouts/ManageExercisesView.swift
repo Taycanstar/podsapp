@@ -211,8 +211,11 @@ struct ManageExercisesView: View {
     private func setLessOften(_ ex: ExerciseData) { ups.setExercisePreferenceLessOften(exerciseId: ex.id) }
     private func doNotRecommend(_ ex: ExerciseData) {
         withAnimation {
-            if ups.avoidedExercises.contains(ex.id) { ups.removeFromAvoided(ex.id) }
-            else { ups.addToAvoided(ex.id) }
+            if ups.isExerciseAvoided(ex.id) {
+                ups.removeFromAvoided(ex.id)
+            } else {
+                ups.addToAvoided(ex.id)
+            }
         }
     }
 
@@ -253,7 +256,7 @@ private struct ManageExerciseRow: View {
                 Button("Exercise History", action: onHistory)
                 Button("Recommend more often", action: onMoreOften)
                 Button("Recommend less often", action: onLessOften)
-                if UserProfileService.shared.avoidedExercises.contains(exercise.id) {
+                if UserProfileService.shared.isExerciseAvoided(exercise.id) {
                     Button("Allow again", action: onDoNotRecommend)
                 } else {
                     Button("Don't recommend again", role: .destructive, action: onDoNotRecommend)

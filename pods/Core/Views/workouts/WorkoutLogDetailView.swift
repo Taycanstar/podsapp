@@ -28,7 +28,7 @@ struct WorkoutLogDetailView: View {
                 detailContent
             }
         }
-        .navigationTitle("Workout Detail")
+        .navigationTitle("Workout Details")
         .navigationBarTitleDisplayMode(.inline)
         .background(Color("primarybg").ignoresSafeArea())
         .task {
@@ -318,22 +318,33 @@ private struct WorkoutLogExerciseRow: View {
             }
 
             if let exerciseId = exercise.exerciseId {
+                let userProfile = UserProfileService.shared
+                let isAvoided = userProfile.isExerciseAvoided(exerciseId)
+
                 Button("Recommend more often") {
-                    UserProfileService.shared.setExercisePreferenceMoreOften(exerciseId: exerciseId)
+                    userProfile.setExercisePreferenceMoreOften(exerciseId: exerciseId)
                     alertMessage = "We'll recommend \(exercise.name) more frequently."
                     isShowingAlert = true
                 }
 
                 Button("Recommend less often") {
-                    UserProfileService.shared.setExercisePreferenceLessOften(exerciseId: exerciseId)
+                    userProfile.setExercisePreferenceLessOften(exerciseId: exerciseId)
                     alertMessage = "We'll recommend \(exercise.name) less often."
                     isShowingAlert = true
                 }
 
-                Button("Don't recommend again", role: .destructive) {
-                    UserProfileService.shared.addToAvoided(exerciseId)
-                    alertMessage = "\(exercise.name) won't be recommended again."
-                    isShowingAlert = true
+                if isAvoided {
+                    Button("Allow again") {
+                        userProfile.removeFromAvoided(exerciseId)
+                        alertMessage = "\(exercise.name) will be recommended again."
+                        isShowingAlert = true
+                    }
+                } else {
+                    Button("Don't recommend again", role: .destructive) {
+                        userProfile.addToAvoided(exerciseId)
+                        alertMessage = "\(exercise.name) won't be recommended again."
+                        isShowingAlert = true
+                    }
                 }
             } else {
                 Button("Recommend more often") {
