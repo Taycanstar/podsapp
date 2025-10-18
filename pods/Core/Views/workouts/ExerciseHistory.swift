@@ -38,18 +38,6 @@ struct ExerciseHistory: View {
         let tabs = availableTabs
         
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.primary)
-                }
-                .padding(.vertical, 12)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            
             // Native iOS Segmented Picker
             Picker("", selection: $selectedTab) {
                 ForEach(tabs, id: \.self) { tab in
@@ -233,6 +221,7 @@ struct ExerciseTrendsView: View {
             await loadExerciseData()
         }
         .refreshable {
+            await dataService.invalidateCache(for: exercise.exercise.id)
             await loadExerciseData()
         }
     }
@@ -493,6 +482,7 @@ struct ExerciseResultsView: View {
             await loadWorkoutHistory()
         }
         .refreshable {
+            await dataService.invalidateCache(for: exercise.exercise.id)
             await loadWorkoutHistory()
         }
     }

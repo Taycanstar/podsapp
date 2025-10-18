@@ -176,7 +176,9 @@ class ExerciseHistoryDataService: ObservableObject {
     private var recordsCache: [Int: PersonalRecords] = [:]
     private var chartDataCache: [String: [(Date, Double)]] = [:]
     private var lastKnownContext: ModelContext?
-    
+    private var lastRemoteHistoryFetch: [String: Date] = [:]
+    private let remoteRefreshInterval: TimeInterval = 300
+   
     private init() {}
 
     func setModelContext(_ context: ModelContext) {
@@ -261,15 +263,19 @@ class ExerciseHistoryDataService: ObservableObject {
         do {
             let resolvedContext = try resolveContext(context)
             let cacheKey = "exercise_history_\(exerciseId)_\(period.rawValue)"
+            let needsRemoteRefresh = shouldRefreshRemoteHistory(exerciseId: exerciseId, period: period)
 
-            // Check simple cache first
-            if let cached = historyCache[cacheKey] {
+            if let cached = historyCache[cacheKey], !needsRemoteRefresh {
                 print("✅ ExerciseHistoryDataService: Found cached data for exercise \(exerciseId)")
                 return cached
             }
 
-            // Fetch from local data
-            let workoutSessions = try await fetchWorkoutSessionsFromLocal(exerciseId: exerciseId, period: period, context: resolvedContext)
+            let workoutSessions = try await fetchWorkoutSessions(
+                exerciseId: exerciseId,
+                period: period,
+                context: resolvedContext,
+                forceRemote: needsRemoteRefresh
+            )
             let (startDate, endDate) = getDateRange(for: period)
             
             let exerciseName = getExerciseName(exerciseId: exerciseId)
@@ -295,6 +301,163 @@ class ExerciseHistoryDataService: ObservableObject {
         }
     }
     
+    private func remoteHistoryKey(exerciseId: Int, period: TimePeriod) -> String {
+        return "\(exerciseId)_\(period.rawValue)"
+    }
+
+    private func shouldRefreshRemoteHistory(exerciseId: Int, period: TimePeriod) -> Bool {
+        let key = remoteHistoryKey(exerciseId: exerciseId, period: period)
+        guard let lastFetch = lastRemoteHistoryFetch[key] else { return true }
+        return Date().timeIntervalSince(lastFetch) >= remoteRefreshInterval
+    }
+
+    private func fetchWorkoutSessions(
+        exerciseId: Int,
+        period: TimePeriod,
+        context: ModelContext,
+        forceRemote: Bool
+    ) async throws -> [WorkoutSessionSummary] {
+        if forceRemote {
+            do {
+                if let remoteSessions = try await fetchWorkoutSessionsFromRemote(
+                    exerciseId: exerciseId,
+                    period: period
+                ) {
+                    return remoteSessions
+                }
+            } catch {
+                print("⚠️ ExerciseHistoryDataService: Remote refresh failed - \(error)")
+            }
+        }
+
+        return try await fetchWorkoutSessionsFromLocal(
+            exerciseId: exerciseId,
+            period: period,
+            context: context
+        )
+    }
+
+    private func fetchWorkoutSessionsFromRemote(
+        exerciseId: Int,
+        period: TimePeriod
+    ) async throws -> [WorkoutSessionSummary]? {
+        guard let currentUserEmail = UserDefaults.standard.string(forKey: "userEmail"), !currentUserEmail.isEmpty else {
+            return nil
+        }
+
+        let fetchKey = remoteHistoryKey(exerciseId: exerciseId, period: period)
+
+        do {
+            let response = try await NetworkManagerTwo.shared.fetchExerciseHistory(
+                userEmail: currentUserEmail,
+                exerciseId: exerciseId,
+                daysBack: period.approximateDays
+            )
+
+            let summaries: [WorkoutSessionSummary] = response.sessions.map { session in
+                let setSummaries: [SetSummary] = session.sets
+                    .filter { !$0.isWarmup }
+                    .map { set in
+                        let weightInPounds: Double? = {
+                            guard let kg = set.weightKg else { return nil }
+                            return kg * 2.20462
+                        }()
+
+                        let resolvedTrackingType = set.trackingType.flatMap(ExerciseTrackingType.init(rawValue:))
+                        let treatedAsCompleted = set.isCompleted
+                            || (set.durationSeconds ?? 0) > 0
+                            || (set.reps ?? 0) > 0
+                            || (weightInPounds ?? 0) > 0
+
+                        return SetSummary(
+                            id: UUID(),
+                            reps: set.reps,
+                            weight: weightInPounds,
+                            durationSeconds: set.durationSeconds,
+                            distanceMeters: set.distanceMeters,
+                            trackingType: resolvedTrackingType,
+                            isCompleted: treatedAsCompleted,
+                            completedAt: set.completedAt
+                        )
+                    }
+
+                let date = session.startedAt ?? session.completedAt ?? session.scheduledDate ?? Date()
+                let trackingType = session.trackingType.flatMap(ExerciseTrackingType.init(rawValue:))
+
+                return makeWorkoutSessionSummary(
+                    id: UUID(),
+                    date: date,
+                    setSummaries: setSummaries,
+                    trackingType: trackingType
+                )
+            }
+
+            lastRemoteHistoryFetch[fetchKey] = Date()
+
+            // Clear cached data for this exercise & period to reflect fresh remote data
+            let historyKey = "exercise_history_\(exerciseId)_\(period.rawValue)"
+            historyCache.removeValue(forKey: historyKey)
+            let metricsKey = "metrics_\(exerciseId)_\(period.rawValue)"
+            metricsCache.removeValue(forKey: metricsKey)
+            ChartMetric.allCases.forEach { metric in
+                let chartKey = "chart_\(exerciseId)_\(metric.rawValue)_\(period.rawValue)"
+                chartDataCache.removeValue(forKey: chartKey)
+            }
+
+            return summaries
+        } catch {
+            print("⚠️ ExerciseHistoryDataService: Remote history fetch failed - \(error)")
+            return nil
+        }
+    }
+
+    private func makeWorkoutSessionSummary(
+        id: UUID,
+        date: Date,
+        setSummaries: [SetSummary],
+        trackingType: ExerciseTrackingType?
+    ) -> WorkoutSessionSummary {
+        let completedSets = setSummaries.filter { $0.isCompleted }
+
+        let maxReps = completedSets.compactMap { $0.reps }.max() ?? 0
+        let maxWeight = completedSets.compactMap { $0.weight }.max() ?? 0.0
+        let maxDurationSeconds = completedSets.compactMap { set -> Double? in
+            guard let duration = set.durationSeconds else { return nil }
+            return Double(duration)
+        }.max() ?? 0.0
+        let totalDurationSeconds = completedSets.reduce(0.0) { total, set in
+            total + Double(set.durationSeconds ?? 0)
+        }
+        let maxDistanceMeters = completedSets.compactMap { $0.distanceMeters }.max() ?? 0.0
+        let totalDistanceMeters = completedSets.reduce(0.0) { total, set in
+            total + (set.distanceMeters ?? 0)
+        }
+        let totalVolume = completedSets.reduce(0.0) { total, set in
+            let weight = set.weight ?? 0.0
+            return total + (weight * Double(set.reps ?? 0))
+        }
+        let estimatedOneRepMax = completedSets.compactMap { set -> Double? in
+            guard let weight = set.weight, weight > 0,
+                  let reps = set.reps, reps > 0 else { return nil }
+            return weight * (1 + Double(reps) / 30.0)
+        }.max() ?? 0.0
+
+        return WorkoutSessionSummary(
+            id: id,
+            date: date,
+            sets: setSummaries,
+            estimatedOneRepMax: estimatedOneRepMax,
+            totalVolume: totalVolume,
+            maxWeight: maxWeight,
+            maxReps: maxReps,
+            maxDurationSeconds: maxDurationSeconds,
+            totalDurationSeconds: totalDurationSeconds,
+            maxDistanceMeters: maxDistanceMeters,
+            totalDistanceMeters: totalDistanceMeters,
+            trackingType: trackingType
+        )
+    }
+
     /// Get calculated metrics for a specific exercise and time period
     func getExerciseMetrics(exerciseId: Int, period: TimePeriod, context: ModelContext? = nil) async throws -> ExerciseMetrics {
         print("📈 ExerciseHistoryDataService: Calculating metrics for exercise \(exerciseId), period: \(period.displayName)")
@@ -495,6 +658,11 @@ class ExerciseHistoryDataService: ObservableObject {
             let metricsKey = "metrics_\(exerciseId)_\(period.rawValue)"
             metricsCache.removeValue(forKey: metricsKey)
         }
+
+        for period in TimePeriod.allCases {
+            let remoteKey = remoteHistoryKey(exerciseId: exerciseId, period: period)
+            lastRemoteHistoryFetch.removeValue(forKey: remoteKey)
+        }
     }
     
     // MARK: - Private Methods
@@ -576,31 +744,7 @@ class ExerciseHistoryDataService: ObservableObject {
                         )
                     }
                     
-                    // Calculate session metrics
                     let completedSets = setSummaries.filter { $0.isCompleted }
-                    let maxReps = completedSets.compactMap { $0.reps }.max() ?? 0
-                    let maxWeight = completedSets.compactMap { $0.weight }.max() ?? 0.0
-                    let maxDurationSeconds = completedSets.compactMap { $0.durationSeconds }.map { Double($0) }.max() ?? 0.0
-                    let totalDurationSeconds = completedSets.reduce(0.0) { total, set in
-                        total + Double(set.durationSeconds ?? 0)
-                    }
-                    let maxDistanceMeters = completedSets.compactMap { $0.distanceMeters }.max() ?? 0.0
-                    let totalDistanceMeters = completedSets.reduce(0.0) { total, set in
-                        total + (set.distanceMeters ?? 0)
-                    }
-                    
-                    // Calculate total volume
-                    let totalVolume = completedSets.reduce(0.0) { total, set in
-                        let weight = set.weight ?? 0.0
-                        return total + (weight * Double(set.reps ?? 0))
-                    }
-                    
-                    // Calculate estimated 1RM using Epley formula: weight * (1 + reps/30)
-                    let estimatedOneRepMax = completedSets.compactMap { set -> Double? in
-                        guard let weight = set.weight, weight > 0,
-                              let reps = set.reps, reps > 0 else { return nil }
-                        return weight * (1 + Double(reps) / 30.0)
-                    }.max() ?? 0.0
                     
                     var trackingType = completedSets.compactMap { $0.trackingType }.first
                     if trackingType == nil,
@@ -608,18 +752,12 @@ class ExerciseHistoryDataService: ObservableObject {
                         trackingType = flexFirst
                     }
                     
-                    let workoutSummary = WorkoutSessionSummary(
+                    let sessionDate = workout.startedAt
+                    
+                    let workoutSummary = makeWorkoutSessionSummary(
                         id: workout.id,
-                        date: workout.startedAt,
-                        sets: setSummaries,
-                        estimatedOneRepMax: estimatedOneRepMax,
-                        totalVolume: totalVolume,
-                        maxWeight: maxWeight,
-                        maxReps: maxReps,
-                        maxDurationSeconds: maxDurationSeconds,
-                        totalDurationSeconds: totalDurationSeconds,
-                        maxDistanceMeters: maxDistanceMeters,
-                        totalDistanceMeters: totalDistanceMeters,
+                        date: sessionDate,
+                        setSummaries: setSummaries,
                         trackingType: trackingType
                     )
                     
@@ -709,3 +847,18 @@ enum DataError: Error, LocalizedError {
 extension TimePeriod: Codable {}
 
 extension ChartMetric: Codable {}
+
+private extension TimePeriod {
+    var approximateDays: Int {
+        switch self {
+        case .week:
+            return 7
+        case .month:
+            return 30
+        case .sixMonths:
+            return 180
+        case .year:
+            return 365
+        }
+    }
+}

@@ -106,6 +106,39 @@ class NetworkManagerTwo {
         let workout: WorkoutResponse.Workout
     }
 
+    struct ExerciseHistoryResponse: Codable {
+        struct Session: Codable {
+            let workoutSessionId: Int
+            let exerciseInstanceId: Int
+            let exerciseId: Int
+            let exerciseName: String
+            let trackingType: String?
+            let scheduledDate: Date?
+            let startedAt: Date?
+            let completedAt: Date?
+            let status: String?
+            let title: String?
+            let sets: [ExerciseSet]
+        }
+
+        struct ExerciseSet: Codable {
+            let id: Int
+            let setNumber: Int
+            let trackingType: String?
+            let weightKg: Double?
+            let reps: Int?
+            let durationSeconds: Int?
+            let distanceMeters: Double?
+            let distanceUnit: String?
+            let isWarmup: Bool
+            let isCompleted: Bool
+            let completedAt: Date?
+            let notes: String?
+        }
+
+        let sessions: [Session]
+    }
+
     struct ProcessScheduledMealResponse: Codable {
         let status: String
         let action: String
@@ -292,6 +325,33 @@ class NetworkManagerTwo {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO8601 date: \(value)")
         }
         return try decoder.decode(WorkoutListResponse.self, from: data)
+    }
+
+    func fetchExerciseHistory(userEmail: String, exerciseId: Int, daysBack: Int) async throws -> ExerciseHistoryResponse {
+        var components = URLComponents(string: "\(baseUrl)/get-exercise-history/")
+        components?.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "exercise_id", value: "\(exerciseId)"),
+            URLQueryItem(name: "days_back", value: "\(max(1, daysBack))")
+        ]
+
+        guard let url = components?.url else { throw NetworkError.invalidURL }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .custom { decoder -> Date in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            if let date = self.iso8601FractionalFormatter.date(from: value) ?? self.iso8601BasicFormatter.date(from: value) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO8601 date: \(value)")
+        }
+
+        return try decoder.decode(ExerciseHistoryResponse.self, from: data)
     }
 
     func fetchWorkoutDetail(sessionId: Int, userEmail: String) async throws -> WorkoutResponse.Workout {

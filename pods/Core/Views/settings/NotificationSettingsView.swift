@@ -279,13 +279,14 @@ struct NotificationSettingsView: View {
             HStack {
                 Spacer()
                 Text(notificationButtonTitle)
-                    .foregroundColor(.white)
                     .fontWeight(.medium)
                 Spacer()
             }
+            .foregroundColor(Color(.systemBackground))
             .padding(.vertical, 12)
-            .background(Color(.systemGray3))
-            .cornerRadius(8)
+            .padding(.horizontal, 16)
+            .background(Color.primary)
+            .cornerRadius(36)
         }
         .buttonStyle(PlainButtonStyle())
         .padding(.horizontal, 16)

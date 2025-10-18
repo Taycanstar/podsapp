@@ -213,6 +213,21 @@ class WorkoutDataManager: ObservableObject {
         return localWorkouts
     }
 
+    /// Fetch recent workouts from the server and merge into the local store.
+    func refreshServerWorkouts(daysBack: Int, context: ModelContext) async throws {
+        registerContext(context)
+
+        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty else {
+            return
+        }
+
+        let remoteWorkouts = try await cloudSync.fetchServerChanges(for: userEmail, daysBack: daysBack)
+        guard !remoteWorkouts.isEmpty else { return }
+
+        try applyChanges(remoteWorkouts, context: context)
+        try saveContextIfNeeded(context)
+    }
+
     func workoutSession(remoteId: Int, context: ModelContext) throws -> WorkoutSession? {
         let descriptor = FetchDescriptor<WorkoutSession>(
             predicate: #Predicate<WorkoutSession> { workout in
@@ -468,12 +483,12 @@ class WorkoutCloudSync {
         }
     }
 
-    func fetchServerChanges(for userEmail: String) async throws -> [SyncableWorkoutSession] {
-        // Only fetch recent workouts (last 30 days) to prevent syncing all 200+ historical workouts
+    func fetchServerChanges(for userEmail: String, daysBack: Int) async throws -> [SyncableWorkoutSession] {
+        // Only fetch recent workouts to prevent syncing all 200+ historical workouts
         // This prevents creating duplicate workouts and reduces network overhead
         // NOTE: This method is kept for explicit sync operations (e.g., app launch, pull-to-refresh)
         // but is NO LONGER called during routine workout completion sync
-        let response = try await networkManager.fetchServerWorkouts(userEmail: userEmail, daysBack: 30)
+        let response = try await networkManager.fetchServerWorkouts(userEmail: userEmail, daysBack: daysBack)
         return response.workouts.map { SyncableWorkoutSession(serverWorkout: $0) }
     }
 
@@ -611,13 +626,37 @@ class WorkoutCloudSync {
                 targetSets: exercise.totalSets,
                 isCompleted: exercise.isCompleted,
                 sets: exercise.sets.sorted { $0.setNumber < $1.setNumber }.map { set in
-                    NetworkManagerTwo.WorkoutRequest.ExerciseSet(
-                        trackingType: nil,
+                    let trackingType = set.trackingType
+                    let repsValue: Int? = {
+                        guard let trackingType else { return set.actualReps ?? set.targetReps }
+                        switch trackingType {
+                        case .repsWeight, .repsOnly:
+                            return set.actualReps ?? set.targetReps
+                        case .rounds:
+                            return set.actualReps ?? set.targetReps
+                        case .timeOnly, .holdTime, .timeDistance:
+                            return nil
+                        }
+                    }()
+
+                    let roundsCompleted: Int? = {
+                        guard let trackingType else { return nil }
+                        if trackingType == .rounds {
+                            return set.actualReps ?? set.targetReps
+                        }
+                        return nil
+                    }()
+
+                    let durationSeconds = set.durationSeconds
+                    let distanceMeters = set.distanceMeters
+
+                    return NetworkManagerTwo.WorkoutRequest.ExerciseSet(
+                        trackingType: trackingType?.rawValue,
                         weightKg: set.actualWeight ?? set.targetWeight,
-                        reps: set.actualReps ?? set.targetReps,
-                        durationSeconds: nil,
+                        reps: repsValue,
+                        durationSeconds: durationSeconds,
                         restSeconds: nil,
-                        distanceMeters: nil,
+                        distanceMeters: distanceMeters,
                         distanceUnit: nil,
                         paceSecondsPerKm: nil,
                         rpe: nil,
@@ -625,7 +664,7 @@ class WorkoutCloudSync {
                         intensityZone: nil,
                         stretchIntensity: nil,
                         rangeOfMotionNotes: nil,
-                        roundsCompleted: nil,
+                        roundsCompleted: roundsCompleted,
                         isWarmup: false,
                         isCompleted: set.completed,
                         notes: set.notes
