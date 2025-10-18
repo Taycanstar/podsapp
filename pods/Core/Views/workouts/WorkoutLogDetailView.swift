@@ -39,7 +39,7 @@ struct WorkoutLogDetailView: View {
     private var detailContent: some View {
         let display = viewModel.detail ?? WorkoutLogDetailDisplay.makeFallback(from: log, units: viewModel.unitsSystem)
 
-        return ScrollView {
+        return ScrollView(showsIndicators: false) {
             VStack(spacing: 24) {
                 headerSection(for: display)
 
@@ -80,6 +80,7 @@ struct WorkoutLogDetailView: View {
             .padding(.bottom, 32)
             .padding(.horizontal, 16)
         }
+        .safeAreaPadding(.bottom, 88)
         .background(Color("primarybg"))
         .refreshable {
             await viewModel.reload(using: modelContext)
@@ -369,9 +370,11 @@ private struct WorkoutLogExerciseRow: View {
 
         switch summary.trackingType {
         case .repsWeight:
-            guard let reps = repsValue, reps > 0,
-                  let weight = summary.weight else { return nil }
-            return "\(reps) reps x \(formattedWeight(weight)) \(unitsSymbol)"
+            guard let reps = repsValue, reps > 0 else { return nil }
+            if let weight = summary.weight, weight > 0 {
+                return "\(reps) reps x \(formattedWeight(weight)) \(unitsSymbol)"
+            }
+            return "\(reps) reps"
         case .repsOnly:
             guard let reps = repsValue, reps > 0 else { return nil }
             return "\(reps) reps"
@@ -944,12 +947,16 @@ struct WorkoutLogDetailDisplay {
 
             switch trackingType {
             case .repsWeight:
-                guard let reps = parseDouble(flex.reps), reps > 0,
-                      let weight = parseDouble(flex.weight), weight > 0 else { continue }
+                guard let reps = parseDouble(flex.reps), reps > 0 else { continue }
+                let rawWeight = parseDouble(flex.weight)
+                let sanitizedWeight: Double? = {
+                    guard let weight = rawWeight, weight > 0 else { return nil }
+                    return weight
+                }()
                 let summary = ExerciseSetSummary(index: index,
                                                   trackingType: .repsWeight,
                                                   reps: reps,
-                                                  weight: weight,
+                                                  weight: sanitizedWeight,
                                                   duration: nil,
                                                   distance: nil)
                 results.append(SetSummaryEntry(summary: summary, flex: flex))
