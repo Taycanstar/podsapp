@@ -786,9 +786,28 @@ struct WorkoutSummary: Codable, Identifiable, Equatable {
 
     // Helper computed properties
     var formattedDuration: String {
-        // For very short workouts (< 1 minute), show seconds
-        if let seconds = durationSeconds, seconds > 0, (durationMinutes ?? 0) == 0 {
-            return "\(seconds)s"
+        if let seconds = durationSeconds, seconds > 0 {
+            if seconds < 60 {
+                return "\(seconds)s"
+            }
+
+            let hours = seconds / 3600
+            let minutes = (seconds % 3600) / 60
+            let remainingSeconds = seconds % 60
+
+            if hours > 0 {
+                if minutes > 0 {
+                    return "\(hours) hr \(minutes) min"
+                }
+                return "\(hours) hr"
+            }
+
+            if minutes > 0 {
+                if remainingSeconds > 0 {
+                    return "\(minutes) min \(remainingSeconds)s"
+                }
+                return "\(minutes) min"
+            }
         }
 
         guard let duration = durationMinutes, duration > 0 else { return "< 1 min" }

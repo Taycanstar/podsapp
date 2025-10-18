@@ -681,12 +681,14 @@ struct MyProfileView: View {
 
     @ViewBuilder
     private func workoutCardLabel(for log: CombinedLog) -> some View {
+        let durationLabel = resolvedWorkoutDuration(for: log)
+
         if let activity = log.activity {
             workoutCardContent(
                 icon: activity.activityIcon,
                 title: activity.displayName,
                 subtitle: activity.workoutActivityType.replacingOccurrences(of: "_", with: " "),
-                duration: activity.formattedDuration,
+                duration: durationLabel,
                 distance: activity.formattedDistance,
                 exercisesCount: exerciseCount(from: log),
                 calories: Int(log.displayCalories),
@@ -697,7 +699,7 @@ struct MyProfileView: View {
                 icon: "figure.strengthtraining.traditional",
                 title: workout.title,
                 subtitle: nil,
-                duration: workout.formattedDuration,
+                duration: durationLabel,
                 distance: nil,
                 exercisesCount: workout.exercisesCount > 0 ? workout.exercisesCount : exerciseCount(from: log),
                 calories: Int(log.displayCalories),
@@ -706,6 +708,37 @@ struct MyProfileView: View {
         } else {
             ProfileLogRow(log: log)
         }
+    }
+
+    private func resolvedWorkoutDuration(for log: CombinedLog) -> String? {
+        if let activity = log.activity {
+            return activity.formattedDuration
+        }
+
+        if let workout = log.workout {
+            let formatted = workout.formattedDuration
+            if formatted != "< 1 min" {
+                return formatted
+            }
+
+            if let seconds = workout.durationSeconds, seconds > 0 {
+                return "\(seconds)s"
+            }
+
+            if let minutes = workout.durationMinutes, minutes > 0 {
+                return "\(minutes) min"
+            }
+        }
+
+        // Fallback: try to extract a duration from the message string (e.g. "Workout - 37s")
+        let components = log.message.components(separatedBy: "-")
+        if let last = components.last {
+            let trimmed = last.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty {
+                return trimmed
+            }
+        }
+        return nil
     }
 
     private func workoutCardContent(
