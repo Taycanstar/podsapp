@@ -583,6 +583,9 @@ final class WorkoutLogDetailViewModel: ObservableObject {
             if let fallback = try? detailFromApproximateLocal(context: context) {
                 detail = fallback
             } else if !log.isOptimistic {
+                #if DEBUG
+                print("[WorkoutDetail] Missing workout identifier for log \(log.id)")
+                #endif
                 errorMessage = DetailError.missingWorkoutIdentifier.errorDescription
                 detail = WorkoutLogDetailDisplay.makeFallback(from: log, units: unitsSystem)
             } else {
@@ -592,24 +595,39 @@ final class WorkoutLogDetailViewModel: ObservableObject {
         }
 
         if let localDetail = try? detailFromLocal(context: context, remoteId: resolvedWorkoutId) {
+            #if DEBUG
+            print("[WorkoutDetail] Using local detail for workout \(resolvedWorkoutId)")
+            #endif
             detail = localDetail
             if !force {
                 return
             }
         } else if let fallback = try? detailFromApproximateLocal(context: context) {
+            #if DEBUG
+            print("[WorkoutDetail] Using approximate local detail for workout \(resolvedWorkoutId)")
+            #endif
             detail = fallback
             if !force {
                 return
             }
         } else if !log.isOptimistic {
+            #if DEBUG
+            print("[WorkoutDetail] No local detail found, using fallback for workout \(resolvedWorkoutId)")
+            #endif
             detail = WorkoutLogDetailDisplay.makeFallback(from: log, units: unitsSystem)
         }
 
         do {
+            #if DEBUG
+            print("[WorkoutDetail] Fetching remote detail workoutId=\(resolvedWorkoutId)")
+            #endif
             let remoteDetail = try await detailFromRemote(workoutId: resolvedWorkoutId)
             detail = remoteDetail
             errorMessage = nil
         } catch {
+            #if DEBUG
+            print("[WorkoutDetail] Remote fetch failed for workoutId=\(resolvedWorkoutId) error=\(error)")
+            #endif
             if detail == nil {
                 if let fallback = try? detailFromApproximateLocal(context: context) {
                     detail = fallback

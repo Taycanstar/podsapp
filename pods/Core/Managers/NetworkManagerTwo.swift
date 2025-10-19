@@ -372,6 +372,9 @@ class NetworkManagerTwo {
     }
 
     func fetchWorkoutDetail(sessionId: Int, userEmail: String) async throws -> WorkoutResponse.Workout {
+        #if DEBUG
+        print("[Network] GET /get-workout-session/\(sessionId)/?user_email=\(userEmail)")
+        #endif
         var components = URLComponents(string: "\(baseUrl)/get-workout-session/\(sessionId)/")
         components?.queryItems = [
             URLQueryItem(name: "user_email", value: userEmail)
@@ -381,6 +384,12 @@ class NetworkManagerTwo {
 
         let (data, response) = try await URLSession.shared.data(from: url)
         try validate(response: response, data: data)
+
+        #if DEBUG
+        if let http = response as? HTTPURLResponse {
+            print("[Network] ← status=\(http.statusCode) bytes=\(data.count)")
+        }
+        #endif
 
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
