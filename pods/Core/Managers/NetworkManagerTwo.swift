@@ -106,6 +106,20 @@ class NetworkManagerTwo {
         let workout: WorkoutResponse.Workout
     }
 
+    struct DeleteWorkoutExerciseResponse: Codable {
+        struct Summary: Codable {
+            let durationSeconds: Int
+            let durationMinutes: Int?
+            let volumeKg: Double
+            let calories: Int
+            let exercisesCount: Int
+        }
+
+        let workout: WorkoutResponse.Workout
+        let combinedLog: CombinedLog
+        let summary: Summary
+    }
+
     struct ExerciseHistoryResponse: Codable {
         struct Session: Codable {
             let workoutSessionId: Int
@@ -446,6 +460,32 @@ class NetworkManagerTwo {
 
         let (_, response) = try await URLSession.shared.data(for: request)
         try validate(response: response, data: nil)
+    }
+
+    func deleteWorkoutExercise(sessionId: Int, exerciseId: Int, userEmail: String) async throws -> DeleteWorkoutExerciseResponse {
+        guard let url = URL(string: "\(baseUrl)/delete-workout-exercise/\(sessionId)/\(exerciseId)/") else { throw NetworkError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = ["user_email": userEmail]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .custom { decoder -> Date in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            if let date = self.iso8601FractionalFormatter.date(from: value) ?? self.iso8601BasicFormatter.date(from: value) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO8601 date: \(value)")
+        }
+
+        return try decoder.decode(DeleteWorkoutExerciseResponse.self, from: data)
     }
 
     private func validate(response: URLResponse, data: Data?) throws {

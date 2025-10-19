@@ -35,6 +35,7 @@ struct DashboardView: View {
     @State private var selectedWorkoutLogId: String? = nil
     @State private var scheduleSheetLog: CombinedLog?
     @State private var scheduleAlert: ScheduleAlert?
+    @State private var pendingLogsReload = false
     
     // ─── Nutrition label name input ────────────────────────────────────────
     @State private var nutritionProductName = ""
@@ -656,7 +657,11 @@ private var remainingCal: Double { vm.remainingCalories }
             ) { _ in
                 print("🔄 DashboardView received LogsChangedNotification - refreshing preloaded profile data")
                 refreshPreloadedProfileData()
-                vm.requestLogsReloadFromNotification()
+                if selectedWorkoutLogId != nil {
+                    pendingLogsReload = true
+                } else {
+                    vm.requestLogsReloadFromNotification()
+                }
             }
             .onReceive(
                 NotificationCenter.default
@@ -672,6 +677,16 @@ private var remainingCal: Double { vm.remainingCalories }
                     }
                 } else {
                     // Fallback: refresh logs if no workout data in notification
+                    if selectedWorkoutLogId != nil {
+                        pendingLogsReload = true
+                    } else {
+                        vm.requestLogsReloadFromNotification()
+                    }
+                }
+            }
+            .onChange(of: selectedWorkoutLogId) { newValue in
+                if newValue == nil, pendingLogsReload {
+                    pendingLogsReload = false
                     vm.requestLogsReloadFromNotification()
                 }
             }

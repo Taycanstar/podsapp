@@ -147,7 +147,10 @@ struct WorkoutLogDetailView: View {
                 ForEach(detail.exercises) { exercise in
                     WorkoutLogExerciseRow(
                         exercise: exercise,
-                        unitsSymbol: detail.unitsSystem.weightSymbol
+                        unitsSymbol: detail.unitsSystem.weightSymbol,
+                        onDelete: exercise.instanceId != nil ? { target in
+                            await viewModel.deleteExercise(exercise: target, context: modelContext)
+                        } : nil
                     )
                 }
             }
@@ -199,15 +202,22 @@ private struct StatCard: View {
 private struct WorkoutLogExerciseRow: View {
     let exercise: WorkoutLogDetailDisplay.Exercise
     let unitsSymbol: String
+    let onDelete: ((WorkoutLogDetailDisplay.Exercise) async -> Result<String, Error>)?
 
     @State private var showHistory = false
     @State private var alertMessage: String?
     @State private var isShowingAlert = false
     @State private var historyPayload: TodayWorkoutExercise?
+    @State private var isDeleting = false
 
-    init(exercise: WorkoutLogDetailDisplay.Exercise, unitsSymbol: String) {
+    init(
+        exercise: WorkoutLogDetailDisplay.Exercise,
+        unitsSymbol: String,
+        onDelete: ((WorkoutLogDetailDisplay.Exercise) async -> Result<String, Error>)? = nil
+    ) {
         self.exercise = exercise
         self.unitsSymbol = unitsSymbol
+        self.onDelete = onDelete
         _historyPayload = State(initialValue: exercise.historyExercise)
     }
 
@@ -361,9 +371,34 @@ private struct WorkoutLogExerciseRow: View {
                 }
             }
 
-            Button("Delete from workout", role: .destructive) {
-                alertMessage = "Completed workouts cannot be edited from this view."
-                isShowingAlert = true
+            if let onDelete {
+                Button(role: .destructive) {
+                    guard !isDeleting else { return }
+                    isDeleting = true
+                    Task {
+                        let result = await onDelete(exercise)
+                        await MainActor.run {
+                            switch result {
+                            case .success:
+                                alertMessage = nil
+                                isShowingAlert = false
+                                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                            case .failure(let error):
+                                alertMessage = error.localizedDescription
+                                isShowingAlert = true
+                                UINotificationFeedbackGenerator().notificationOccurred(.error)
+                            }
+                            isDeleting = false
+                        }
+                    }
+                } label: {
+                    Text(isDeleting ? "Deleting…" : "Delete from workout")
+                }
+            } else {
+                Button("Delete from workout", role: .destructive) {
+                    alertMessage = "Completed workouts cannot be edited from this view."
+                    isShowingAlert = true
+                }
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -464,6 +499,68 @@ final class WorkoutLogDetailViewModel: ObservableObject {
         await loadDetail(using: context, force: true)
     }
 
+    func deleteExercise(exercise: WorkoutLogDetailDisplay.Exercise, context: ModelContext) async -> Result<String, Error> {
+        guard let exerciseInstanceId = exercise.instanceId else {
+            return .failure(DeleteError.missingExerciseIdentifier)
+        }
+
+        guard let workoutId = resolveWorkoutId() else {
+            return .failure(DetailError.missingWorkoutIdentifier)
+        }
+
+        guard let userEmail = WorkoutLogDetailViewModel.resolveUserEmail() else {
+            return .failure(DetailError.missingUserEmail)
+        }
+
+        do {
+            let response = try await networkManager.deleteWorkoutExercise(
+                sessionId: workoutId,
+                exerciseId: exerciseInstanceId,
+                userEmail: userEmail
+            )
+
+            let previousLog = log
+            let syncable = SyncableWorkoutSession(serverWorkout: response.workout)
+            if let existingSession = try workoutDataManager.workoutSession(remoteId: response.workout.id, context: context) {
+                existingSession.updateFromSyncable(syncable)
+            } else {
+                let newSession = WorkoutSession(from: syncable)
+                context.insert(newSession)
+            }
+
+            if context.hasChanges {
+                do {
+                    try context.save()
+                } catch {
+                    print("⚠️ Failed to save workout context after exercise deletion: \(error)")
+                }
+            }
+
+            var mergedLog = response.combinedLog
+            mergedLog.message = previousLog.message
+            mergedLog.logDate = previousLog.logDate
+            mergedLog.scheduledAt = previousLog.scheduledAt
+            if let updatedWorkout = mergedLog.workout {
+                mergedLog.workout = updatedWorkout
+            }
+
+            withAnimation(.easeInOut) {
+                detail = WorkoutLogDetailDisplay(
+                    workout: response.workout,
+                    log: mergedLog,
+                    units: unitsSystem
+                )
+            }
+
+            CombinedLogsRepository.shared.applyExternalUpdate(log: mergedLog)
+            NotificationCenter.default.post(name: Notification.Name("LogsChangedNotification"), object: nil)
+
+            return .success("\(exercise.name) was removed from this workout.")
+        } catch {
+            return .failure(error)
+        }
+    }
+
     private func loadDetail(using context: ModelContext, force: Bool) async {
         unitsSystem = Self.resolveUnitsSystem()
 
@@ -482,34 +579,44 @@ final class WorkoutLogDetailViewModel: ObservableObject {
             return
         }
 
-        let resolvedWorkoutId = resolveWorkoutId()
-
-        if resolvedWorkoutId == nil {
+        guard let resolvedWorkoutId = resolveWorkoutId() else {
             if let fallback = try? detailFromApproximateLocal(context: context) {
                 detail = fallback
-                return
-            }
-            if !log.isOptimistic {
+            } else if !log.isOptimistic {
                 errorMessage = DetailError.missingWorkoutIdentifier.errorDescription
+                detail = WorkoutLogDetailDisplay.makeFallback(from: log, units: unitsSystem)
+            } else {
+                detail = nil
             }
-            detail = WorkoutLogDetailDisplay.makeFallback(from: log, units: unitsSystem)
             return
         }
 
+        if let localDetail = try? detailFromLocal(context: context, remoteId: resolvedWorkoutId) {
+            detail = localDetail
+            if !force {
+                return
+            }
+        } else if let fallback = try? detailFromApproximateLocal(context: context) {
+            detail = fallback
+            if !force {
+                return
+            }
+        } else if !log.isOptimistic {
+            detail = WorkoutLogDetailDisplay.makeFallback(from: log, units: unitsSystem)
+        }
+
         do {
-            if let localDetail = try detailFromLocal(context: context, remoteId: resolvedWorkoutId!) {
-                detail = localDetail
-                return
-            }
-
-            if let fallback = try detailFromApproximateLocal(context: context) {
-                detail = fallback
-                return
-            }
-
-            let remoteDetail = try await detailFromRemote(workoutId: resolvedWorkoutId!)
+            let remoteDetail = try await detailFromRemote(workoutId: resolvedWorkoutId)
             detail = remoteDetail
+            errorMessage = nil
         } catch {
+            if detail == nil {
+                if let fallback = try? detailFromApproximateLocal(context: context) {
+                    detail = fallback
+                } else if !log.isOptimistic {
+                    detail = WorkoutLogDetailDisplay.makeFallback(from: log, units: unitsSystem)
+                }
+            }
             errorMessage = error.localizedDescription
         }
     }
@@ -608,6 +715,17 @@ final class WorkoutLogDetailViewModel: ObservableObject {
             }
         }
     }
+
+    enum DeleteError: LocalizedError {
+        case missingExerciseIdentifier
+
+        var errorDescription: String? {
+            switch self {
+            case .missingExerciseIdentifier:
+                return "Unable to identify this exercise for deletion."
+            }
+        }
+    }
 }
 
 struct WorkoutLogDetailDisplay {
@@ -621,6 +739,7 @@ struct WorkoutLogDetailDisplay {
         }
 
         let id: String
+        let instanceId: Int?
         let exerciseId: Int?
         let name: String
         let exerciseData: ExerciseData?
@@ -743,6 +862,7 @@ struct WorkoutLogDetailDisplay {
             let exerciseData = historyExercise?.exercise ?? WorkoutLogDetailDisplay.exerciseData(for: exercise.exerciseId)
             let display = Exercise(
                 id: exercise.id.uuidString,
+                instanceId: nil,
                 exerciseId: exercise.exerciseId,
                 name: exercise.exerciseName,
                 exerciseData: exerciseData,
@@ -787,6 +907,7 @@ struct WorkoutLogDetailDisplay {
             let exerciseData = historyExercise?.exercise ?? WorkoutLogDetailDisplay.exerciseData(for: exercise.exerciseId)
             let display = Exercise(
                 id: "\(exercise.id)",
+                instanceId: exercise.id,
                 exerciseId: exercise.exerciseId,
                 name: exercise.exerciseName,
                 exerciseData: exerciseData,

@@ -214,6 +214,26 @@ final class CombinedLogsRepository: ObservableObject {
         persist()
     }
 
+    func applyExternalUpdate(log updatedLog: CombinedLog) {
+        var logs = snapshot.logs
+        if let index = logs.firstIndex(where: { $0.id == updatedLog.id }) {
+            logs[index] = updatedLog
+        } else {
+            logs.append(updatedLog)
+        }
+
+        snapshot = CombinedLogsSnapshot(
+            logs: logs,
+            nextPage: snapshot.nextPage,
+            hasMore: snapshot.hasMore
+        )
+        persist()
+
+        if let email = currentEmail {
+            ensureWorkoutCounts(for: [updatedLog], email: email)
+        }
+    }
+
     private func fetchPage(for email: String, page: Int) async throws -> CombinedLogsResponse {
         try await withCheckedThrowingContinuation { continuation in
             network.getCombinedLogs(userEmail: email, page: page) { result in
