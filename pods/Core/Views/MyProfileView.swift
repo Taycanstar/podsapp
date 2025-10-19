@@ -799,11 +799,11 @@ struct MyProfileView: View {
                             .foregroundColor(.secondary)
                     }
 
-                    if let exercisesCount {
-                        Text("\(exercisesCount) exercise\(exercisesCount == 1 ? "" : "s")")
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(.secondary)
-                    }
+                    let exercisesLabel = exercisesCount.map { "\($0) exercise\($0 == 1 ? "" : "s")" } ?? " "
+                    Text(exercisesLabel)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .opacity(exercisesCount == nil ? 0 : 1)
                 }
 
                 Spacer()
@@ -828,13 +828,14 @@ struct MyProfileView: View {
                     workoutMetricInline(icon: "location", text: distance, color: .green)
                 }
 
-                if let exercisesCount {
-                    workoutMetricInline(
-                        icon: "list.bullet",
-                        text: "\(exercisesCount) exercise\(exercisesCount == 1 ? "" : "s")",
-                        color: .green
-                    )
-                }
+                let exercisesMetricLabel = exercisesCount.map { "\($0) exercise\($0 == 1 ? "" : "s")" } ?? " "
+                workoutMetricInline(
+                    icon: "list.bullet",
+                    text: exercisesMetricLabel,
+                    color: .green
+                )
+                .opacity(exercisesCount == nil ? 0 : 1)
+                .accessibilityHidden(exercisesCount == nil)
             }
         }
         .padding(.vertical, 12)
