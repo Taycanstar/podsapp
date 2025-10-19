@@ -654,9 +654,21 @@ private var remainingCal: Double { vm.remainingCalories }
                 NotificationCenter.default
                     .publisher(for: NSNotification.Name("LogsChangedNotification"))
                     .receive(on: RunLoop.main)
-            ) { _ in
-                print("🔄 DashboardView received LogsChangedNotification - refreshing preloaded profile data")
-                refreshPreloadedProfileData()
+            ) { notification in
+                let isLocal = (notification.userInfo?["localOnly"] as? Bool) ?? false
+                let source = notification.userInfo?["source"] as? String
+                print("🔄 DashboardView received LogsChangedNotification - localOnly=\(isLocal), source=\(source ?? "unknown")")
+                if isLocal {
+                    // Optimistic updates already handled; defer heavy refresh until date change
+                    return
+                }
+                if source != "DayLogsViewModel" {
+                    refreshPreloadedProfileData()
+                }
+                if source == "DayLogsViewModel" {
+                    // View model already reconciled with the server; no need to refetch logs again
+                    return
+                }
                 if selectedWorkoutLogId != nil {
                     pendingLogsReload = true
                 } else {

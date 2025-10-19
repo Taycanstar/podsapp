@@ -210,9 +210,10 @@ struct MyProfileView: View {
             NotificationCenter.default
                 .publisher(for: Notification.Name("LogsChangedNotification"))
                 .receive(on: RunLoop.main)
-        ) { _ in
-            // Refresh profile data when logs change (food added/removed/updated)
-            print("🔄 MyProfileView received LogsChangedNotification - refreshing profile data")
+        ) { notification in
+            let isLocal = (notification.userInfo?["localOnly"] as? Bool) ?? false
+            print("🔄 MyProfileView received LogsChangedNotification - localOnly=\(isLocal)")
+            guard !isLocal else { return }
             Task {
                 await onboarding.fetchProfileData(force: false)
                 await combinedLogsRepository.refresh(force: true)

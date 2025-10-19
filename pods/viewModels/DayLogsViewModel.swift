@@ -327,7 +327,7 @@ func addPending(_ log: CombinedLog) {
   }
   
   // Trigger profile data refresh since logs changed
-  triggerProfileDataRefresh()
+  triggerProfileDataRefresh(localOnly: true)
   
   // Update streak when any activity is logged
   StreakManager.shared.updateStreak(activityDate: log.scheduledAt ?? Date())
@@ -352,20 +352,20 @@ func removeLog(_ log: CombinedLog) async {
     }
 
     print("[DayLogsVM] Optimistically removed log \(log.id); remaining = \(logs.map { $0.id })")
-    triggerProfileDataRefresh()
+    triggerProfileDataRefresh(localOnly: true)
 
     // 2) Attempt server deletion
     do {
         try await deleteOnServer(log)
         print("[DayLogsVM] ✅ Server deletion succeeded for log \(log.id)")
-        // Success – nothing else to do
+        triggerProfileDataRefresh(localOnly: false)
     } catch {
         // 3) Rollback on failure and surface error to UI
         print("[DayLogsVM] ❌ Server deletion failed for log \(log.id): \(error.localizedDescription). Rolling back…")
         logs = previousLogs
         pendingByDate = previousPending
         self.error = error
-        triggerProfileDataRefresh()
+        triggerProfileDataRefresh(localOnly: true)
     }
 }
 
@@ -652,8 +652,13 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
     // MARK: - Profile Data Refresh
     
     /// Trigger refresh of preloaded profile data whenever logs change
-    private func triggerProfileDataRefresh() {
-        NotificationCenter.default.post(name: NSNotification.Name("LogsChangedNotification"), object: nil)
+    private func triggerProfileDataRefresh(localOnly: Bool = true) {
+        var info: [String: Any] = ["localOnly": localOnly, "source": "DayLogsViewModel"]
+        NotificationCenter.default.post(
+            name: NSNotification.Name("LogsChangedNotification"),
+            object: nil,
+            userInfo: info
+        )
     }
 
     func updateLog(log: CombinedLog, servings: Double, date: Date, mealType: String, calories: Double? = nil, protein: Double? = nil, carbs: Double? = nil, fat: Double? = nil, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -795,7 +800,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                     }
                     
                     // Trigger profile data refresh since logs changed
-                    self.triggerProfileDataRefresh()
+                    self.triggerProfileDataRefresh(localOnly: false)
                     completion(.success(()))
                 case .failure(let error):
                     completion(.failure(error))
@@ -960,7 +965,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                     }
                     
                     // Trigger profile data refresh since logs changed
-                    self.triggerProfileDataRefresh()
+                    self.triggerProfileDataRefresh(localOnly: false)
                     completion(.success(()))
                 case .failure(let error):
                     completion(.failure(error))
@@ -1252,7 +1257,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       logs.removeAll { $0.id == identifier }
     }
 
-    triggerProfileDataRefresh()
+    triggerProfileDataRefresh(localOnly: true)
   }
 
   private func markPlaceholderSettled(identifier: String) {
@@ -1262,15 +1267,16 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       logs = updatedLogs
     }
 
-    for key in Array(pendingByDate.keys) {
-      var pending = pendingByDate[key] ?? []
-      if let index = pending.firstIndex(where: { $0.id == identifier }) {
-        pending[index].isOptimistic = false
-        pendingByDate[key] = pending
-      }
+  for key in Array(pendingByDate.keys) {
+    var pending = pendingByDate[key] ?? []
+    if let index = pending.firstIndex(where: { $0.id == identifier }) {
+      pending[index].isOptimistic = false
+      pendingByDate[key] = pending
     }
-    triggerProfileDataRefresh()
   }
+  triggerProfileDataRefresh(localOnly: true)
+  triggerProfileDataRefresh(localOnly: false)
+}
 
   private func reconcilePlaceholders(with serverLogs: [CombinedLog]) {
     guard scheduledPlaceholderIds.isEmpty == false else { return }
