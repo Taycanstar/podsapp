@@ -298,9 +298,12 @@ struct TextLogView: View {
     }
 
     private func performAnalysis(description: String, mealType: String) {
+        let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"; formatter.timeZone = .current
+        let dateString = formatter.string(from: dayLogsVM.selectedDate)
         NetworkManagerTwo.shared.analyzeMealOrActivity(
             description: description,
-            mealType: mealType
+            mealType: mealType,
+            date: dateString
         ) { result in
             switch result {
             case .success(let responseData):

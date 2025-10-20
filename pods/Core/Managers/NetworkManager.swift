@@ -8080,7 +8080,7 @@ func updateRecipeWithFoods(
     }
 
     // Function to analyze food image
-func analyzeFoodImage(image: UIImage, userEmail: String, mealType: String = "Lunch", shouldLog: Bool = true, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
+func analyzeFoodImage(image: UIImage, userEmail: String, mealType: String = "Lunch", shouldLog: Bool = true, logDate: String? = nil, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
     // Configure the URL
     guard let url = URL(string: "\(baseUrl)/analyze_food_image/") else {
         completion(false, nil, "Invalid URL")
@@ -8097,12 +8097,15 @@ func analyzeFoodImage(image: UIImage, userEmail: String, mealType: String = "Lun
     let base64Image = imageData.base64EncodedString()
     
     // Create request body
-    let parameters: [String: Any] = [
+    let tzOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
+    var parameters: [String: Any] = [
         "user_email": userEmail,
         "image_data": base64Image,
         "meal_type": mealType,
-        "should_log": shouldLog
+        "should_log": shouldLog,
+        "timezone_offset_minutes": tzOffsetMinutes
     ]
+    if let logDate = logDate { parameters["date"] = logDate }
     
     print("🔍 DEBUG NetworkManager.analyzeFoodImage: Sending should_log = \(shouldLog)")
     
@@ -8167,7 +8170,7 @@ func analyzeFoodImage(image: UIImage, userEmail: String, mealType: String = "Lun
 } 
 
 // Function to analyze nutrition label
-func analyzeNutritionLabel(image: UIImage, userEmail: String, mealType: String = "Lunch", shouldLog: Bool = true, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
+func analyzeNutritionLabel(image: UIImage, userEmail: String, mealType: String = "Lunch", shouldLog: Bool = true, logDate: String? = nil, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
     // Configure the URL
     guard let url = URL(string: "\(baseUrl)/analyze_nutrition_label/") else {
         completion(false, nil, "Invalid URL")
@@ -8184,12 +8187,15 @@ func analyzeNutritionLabel(image: UIImage, userEmail: String, mealType: String =
     let base64Image = imageData.base64EncodedString()
     
     // Create request body
-    let parameters: [String: Any] = [
+    let tzOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
+    var parameters: [String: Any] = [
         "user_email": userEmail,
         "image_data": base64Image,
         "meal_type": mealType,
-        "should_log": shouldLog
+        "should_log": shouldLog,
+        "timezone_offset_minutes": tzOffsetMinutes
     ]
+    if let logDate = logDate { parameters["date"] = logDate }
     
     print("🌐 [DEBUG] ====== NetworkManager.analyzeNutritionLabel START ======")
     print("🌐 [DEBUG] shouldLog parameter: \(shouldLog)")
@@ -8275,10 +8281,12 @@ func checkFeatureAccess(featureKey: String,
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     
+    let tzOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
     let payload: [String: Any] = [
         "feature_key": featureKey,
         "increment": increment,
-        "user_email": userEmail
+        "user_email": userEmail,
+        "timezone_offset_minutes": tzOffsetMinutes
     ]
     
     do {
@@ -8323,8 +8331,10 @@ func fetchUsageSummary(userEmail: String,
         completion(.failure(NetworkError.invalidURL))
         return
     }
+    let tzOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
     components.queryItems = [
-        URLQueryItem(name: "user_email", value: userEmail)
+        URLQueryItem(name: "user_email", value: userEmail),
+        URLQueryItem(name: "timezone_offset_minutes", value: String(tzOffsetMinutes))
     ]
     
     guard let url = components.url else {

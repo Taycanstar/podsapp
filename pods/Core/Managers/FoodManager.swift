@@ -478,11 +478,15 @@ class FoodManager: ObservableObject {
         
         // Make network call with proper error handling
         return try await withCheckedThrowingContinuation { continuation in
+            let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"; df.timeZone = .current
+            let selected = self.dayLogsViewModel?.selectedDate ?? Date()
+            let dateString = df.string(from: selected)
             networkManager.analyzeFoodImage(
                 image: image,
                 userEmail: userEmail,
                 mealType: mealType,
-                shouldLog: shouldLog
+                shouldLog: shouldLog,
+                logDate: dateString
             ) { [weak self] success, payload, errMsg in
                 guard let self = self else {
                     continuation.resume(throwing: FoodScanError.userCancelled)
@@ -2754,7 +2758,10 @@ trackTimer(progressTimer)
 
   // ─── 3) Call backend ─────────────────────────
   print("🔍 CRASH_DEBUG: Calling networkManager.analyzeFoodImage with optimized image")
-  networkManager.analyzeFoodImage(image: optimizedImage, userEmail: userEmail, mealType: mealType, shouldLog: shouldLog) { [weak self] success, payload, errMsg in
+  let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"; df.timeZone = .current
+  let selected = dayLogsViewModel?.selectedDate ?? Date()
+  let dateString = df.string(from: selected)
+  networkManager.analyzeFoodImage(image: optimizedImage, userEmail: userEmail, mealType: mealType, shouldLog: shouldLog, logDate: dateString) { [weak self] success, payload, errMsg in
     print("🔍 CRASH_DEBUG: Network callback received - success: \(success)")
     guard let self = self else { 
       print("🔍 CRASH_DEBUG: Network callback - self is nil, returning early")
@@ -3048,7 +3055,10 @@ func analyzeNutritionLabel(
   }
 
   // ─── 3) Call backend ─────────────────────────
-  networkManager.analyzeNutritionLabel(image: image, userEmail: userEmail, mealType: mealType, shouldLog: shouldLog) { [weak self] success, payload, errMsg in
+  let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"; df.timeZone = .current
+  let selected = dayLogsViewModel?.selectedDate ?? Date()
+  let dateString = df.string(from: selected)
+  networkManager.analyzeNutritionLabel(image: image, userEmail: userEmail, mealType: mealType, shouldLog: shouldLog, logDate: dateString) { [weak self] success, payload, errMsg in
     guard let self = self else { return }
     
     DispatchQueue.main.async {
@@ -3414,12 +3424,16 @@ func analyzeNutritionLabel(
         }
         
         // Call NetworkManagerTwo to look up the barcode
+        let df1 = DateFormatter(); df1.dateFormat = "yyyy-MM-dd"; df1.timeZone = .current
+        let selected1 = dayLogsViewModel?.selectedDate ?? Date()
+        let dateString1 = df1.string(from: selected1)
         NetworkManagerTwo.shared.lookupFoodByBarcode(
             barcode: barcode,
             userEmail: userEmail,
             imageData: imageBase64,
             mealType: "Lunch", // Default meal type since this method doesn't have mealType parameter
-            shouldLog: false
+            shouldLog: false,
+            date: dateString1
         ) { [weak self] result in
             guard let self = self else { return }
             
@@ -3517,12 +3531,16 @@ func analyzeNutritionLabel(
         }
         
         // Call the enhanced barcode lookup endpoint with shouldLog = true
+        let df2 = DateFormatter(); df2.dateFormat = "yyyy-MM-dd"; df2.timeZone = .current
+        let selected2 = dayLogsViewModel?.selectedDate ?? Date()
+        let dateString2 = df2.string(from: selected2)
         NetworkManagerTwo.shared.lookupFoodByBarcode(
             barcode: barcode,
             userEmail: userEmail,
             imageData: nil,
             mealType: mealType,
-            shouldLog: true  // Log directly, no preview
+            shouldLog: true,  // Log directly, no preview
+            date: dateString2
         ) { [weak self] result in
             guard let self = self else {
                 timer.invalidate()
@@ -3671,12 +3689,16 @@ func analyzeNutritionLabel(
         }
         
         // Call the enhanced barcode lookup endpoint
+        let df3 = DateFormatter(); df3.dateFormat = "yyyy-MM-dd"; df3.timeZone = .current
+        let selected3 = dayLogsViewModel?.selectedDate ?? Date()
+        let dateString3 = df3.string(from: selected3)
         NetworkManagerTwo.shared.lookupFoodByBarcode(
             barcode: barcode,
             userEmail: userEmail,
             imageData: nil,  // No image for barcode-only lookup
             mealType: mealType,
-            shouldLog: false  // Don't log automatically, let user confirm first
+            shouldLog: false,  // Don't log automatically, let user confirm first
+            date: dateString3
         ) { [weak self] result in
             guard let self = self else {
                 timer.invalidate()

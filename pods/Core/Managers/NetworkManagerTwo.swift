@@ -566,6 +566,7 @@ let baseUrl = "http://172.20.10.4:8000"
         imageData: String? = nil,
         mealType: String = "Lunch",
         shouldLog: Bool = false,
+        date: String? = nil,
         completion: @escaping (Result<BarcodeLookupResponse, Error>) -> Void
     ) {
         let urlString = "\(baseUrl)/lookup_food_by_barcode/"
@@ -576,12 +577,15 @@ let baseUrl = "http://172.20.10.4:8000"
         }
         
         // Create request body
+        let tzOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
         var parameters: [String: Any] = [
             "user_email": userEmail,
             "barcode": barcode,
             "meal_type": mealType,
-            "should_log": shouldLog
+            "should_log": shouldLog,
+            "timezone_offset_minutes": tzOffsetMinutes
         ]
+        if let date = date { parameters["date"] = date }
         
         // Add optional image data if available
         if let imageData = imageData {
@@ -3584,12 +3588,15 @@ let baseUrl = "http://172.20.10.4:8000"
     ///   - description: The user's text description
     ///   - mealType: The meal type (for food logs)
     ///   - completion: Result callback with response data or error
-    func analyzeMealOrActivity(description: String, mealType: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
-        let parameters: [String: Any] = [
+    func analyzeMealOrActivity(description: String, mealType: String, date: String? = nil, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+        let tzOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
+        var parameters: [String: Any] = [
             "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
             "description": description,
-            "meal_type": mealType
+            "meal_type": mealType,
+            "timezone_offset_minutes": tzOffsetMinutes
         ]
+        if let date = date { parameters["date"] = date }
         
         let urlString = "\(baseUrl)/analyze-meal-or-activity/"
         
@@ -3759,9 +3766,11 @@ let baseUrl = "http://172.20.10.4:8000"
         let base64Image = imageData.base64EncodedString()
         
         // Create request body (no meal_type needed for creation)
+        let tzOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
         let parameters: [String: Any] = [
             "user_email": userEmail,
-            "image_data": base64Image
+            "image_data": base64Image,
+            "timezone_offset_minutes": tzOffsetMinutes
         ]
         
         // Configure the request
@@ -3842,9 +3851,11 @@ let baseUrl = "http://172.20.10.4:8000"
         let base64Image = imageData.base64EncodedString()
         
         // Create request body (no meal_type needed for creation)
+        let tzOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
         let parameters: [String: Any] = [
             "user_email": userEmail,
-            "image_data": base64Image
+            "image_data": base64Image,
+            "timezone_offset_minutes": tzOffsetMinutes
         ]
         
         // Configure the request
