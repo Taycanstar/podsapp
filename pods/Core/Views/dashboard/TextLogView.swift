@@ -22,6 +22,7 @@ struct TextLogView: View {
     @State private var showVoiceLog = false
     @State private var isListening = false
     
+    
     // Speech recognition
     @StateObject private var speechRecognizer = SpeechRecognizer()
     
@@ -232,6 +233,13 @@ struct TextLogView: View {
             // Auto-focus the input immediately when sheet appears
             isInputFocused = true
         }
+        // Dismiss TextLogView whenever the scanner sheet closes
+        .onChange(of: showFoodScanner) { _, newValue in
+            if newValue == false {
+                isPresented = false
+            }
+        }
+        
         .onChange(of: speechRecognizer.transcript) { _, newTranscript in
             if !newTranscript.isEmpty {
                 mealDescription = newTranscript
