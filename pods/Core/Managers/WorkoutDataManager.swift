@@ -504,9 +504,8 @@ class WorkoutCloudSync {
     /// Matches the food logging pattern where we create CombinedLog from server response
     private func workoutToCombinedLog(_ workout: WorkoutSession) -> CombinedLog {
         let rawDuration = workout.totalDuration ?? workout.duration ?? 0
-        let roundedDuration = rawDuration.rounded()
-        let durationMinutes = Int(roundedDuration / 60)
-        let durationSeconds = Int(roundedDuration)
+        let durationMinutes = Int(rawDuration / 60)
+        let durationSeconds = Int(rawDuration)
 
         // Calculate total volume from exercises (sum of reps * weight for all sets)
         let totalVolume = workout.exercises.reduce(0.0) { total, exercise in
@@ -524,7 +523,7 @@ class WorkoutCloudSync {
         let profile = UserProfileService.shared.profileData
         let estimatedCalories = WorkoutCalculationService.shared.estimateCaloriesBurned(
             volume: totalVolume,
-            duration: roundedDuration,
+            duration: rawDuration,
             profile: profile,
             unitsSystem: unitsSystem
         )
@@ -533,7 +532,7 @@ class WorkoutCloudSync {
         print("🔥 workoutToCombinedLog Calories Calculation:")
         print("   - Workout: \(workout.name)")
         print("   - Total Volume: \(String(format: "%.1f", totalVolume)) \(unitsSystem == .metric ? "kg" : "lbs")")
-        print("   - Duration: \(Int(roundedDuration))s (\(Int(roundedDuration / 60))min)")
+        print("   - Duration: \(Int(rawDuration))s (\(Int(rawDuration / 60))min)")
         print("   - Body Weight: \(profile?.currentWeightKg ?? 0)kg")
         print("   - Units System: \(unitsSystem)")
         print("   - Estimated Calories: \(estimatedCalories)")

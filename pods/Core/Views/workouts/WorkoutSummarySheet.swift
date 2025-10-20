@@ -273,7 +273,8 @@ struct WorkoutSummarySheet: View {
     }
 
     private func formattedSummaryDuration(_ duration: TimeInterval) -> String {
-        let totalSeconds = max(Int(duration.rounded()), 0)
+        // Floor to whole seconds for consistency across app and server
+        let totalSeconds = max(Int(duration), 0)
         if totalSeconds < 60 {
             return "\(totalSeconds) sec"
         }
@@ -504,7 +505,8 @@ private struct ExerciseBreakdownRow: View {
 
     private func clockDurationString(_ duration: TimeInterval) -> String {
         guard duration > 0 else { return "0:00" }
-        let totalSeconds = Int(duration.rounded())
+        // Floor to whole seconds to match other displays
+        let totalSeconds = Int(duration)
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
         let seconds = totalSeconds % 60

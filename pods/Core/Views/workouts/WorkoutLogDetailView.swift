@@ -461,7 +461,7 @@ private struct WorkoutLogExerciseRow: View {
 
     private func clockDurationString(_ duration: TimeInterval) -> String {
         guard duration > 0 else { return "0:00" }
-        let totalSeconds = Int(duration.rounded())
+        let totalSeconds = Int(duration)
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
         let seconds = totalSeconds % 60
@@ -1304,7 +1304,7 @@ struct WorkoutLogDetailDisplay {
     }
 
     private static func clockDurationString(_ duration: TimeInterval) -> String {
-        let totalSeconds = Int(duration.rounded())
+        let totalSeconds = Int(duration)
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
         let seconds = totalSeconds % 60

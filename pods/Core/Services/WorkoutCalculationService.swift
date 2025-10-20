@@ -115,21 +115,22 @@ final class WorkoutCalculationService {
         }.rounded()
         let exerciseCount = contributionsByExercise.filter { !$0.isEmpty }.count
         let totalSets = contributionsByExercise.reduce(0) { $0 + $1.count }
-        let roundedDuration = duration.rounded()
+        // Use raw duration (no rounding) for consistency with UI and server
+        let effectiveDuration = duration
         let calories = estimateCaloriesBurned(volume: totalVolume,
-                                              duration: roundedDuration,
+                                              duration: effectiveDuration,
                                               profile: profile,
                                               unitsSystem: unitsSystem)
 
         // Debug logging to compare with workoutToCombinedLog calculation
         print("🔥 buildSummary Calories Calculation:")
         print("   - Total Volume: \(String(format: "%.1f", totalVolume)) \(unitsSystem == .metric ? "kg" : "lbs")")
-        print("   - Duration: \(Int(roundedDuration))s (\(Int(roundedDuration/60))min)")
+        print("   - Duration: \(Int(effectiveDuration))s (\(Int(effectiveDuration/60))min)")
         print("   - Body Weight: \(profile?.currentWeightKg ?? 0)kg")
         print("   - Units System: \(unitsSystem)")
         print("   - Estimated Calories: \(calories)")
 
-        return WorkoutStats(duration: roundedDuration,
+        return WorkoutStats(duration: effectiveDuration,
                             totalVolume: totalVolume,
                             estimatedCalories: calories,
                             exerciseCount: exerciseCount,
