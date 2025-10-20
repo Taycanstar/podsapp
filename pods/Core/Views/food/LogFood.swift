@@ -1804,7 +1804,7 @@ struct FoodRow: View {
             food: food,
             meal: selectedMeal.wrappedValue,
             servings: 1,
-            date: Date(),
+            date: dayLogsVM.selectedDate,
             notes: nil
         ) { result in
             switch result {
@@ -1822,7 +1822,7 @@ struct FoodRow: View {
                     mealLogId:    nil,
                     meal:         nil,
                     mealTime:     nil,
-                    scheduledAt:  Date(),
+                    scheduledAt:  dayLogsVM.selectedDate,
                     recipeLogId:  nil,
                     recipe:       nil,
                     servingsConsumed: nil,
@@ -2048,7 +2048,7 @@ private struct ProFoodResultCard: View {
             food: food,
             meal: selectedMeal,
             servings: 1,
-            date: Date(),
+            date: dayLogsVM.selectedDate,
             notes: nil
         ) { result in
             switch result {
@@ -2064,7 +2064,7 @@ private struct ProFoodResultCard: View {
                     mealLogId: nil,
                     meal: nil,
                     mealTime: nil,
-                    scheduledAt: Date(),
+                    scheduledAt: dayLogsVM.selectedDate,
                     recipeLogId: nil,
                     recipe: nil,
                     servingsConsumed: nil,
@@ -2223,9 +2223,10 @@ struct CombinedLogMealRow: View {
                             totalProtein: meal.protein,
                             totalCarbs: meal.carbs,
                             totalFat: meal.fat,
-                            scheduledAt: Date()
+                            scheduledAt: dayLogsVM.selectedDate
                         ),
                         mealTime: selectedMeal,
+                        date: dayLogsVM.selectedDate,
                         calories: log.displayCalories
                     ) { result in
                         switch result {
@@ -2242,7 +2243,7 @@ struct CombinedLogMealRow: View {
                                 mealLogId:   loggedMeal.mealLogId,
                                 meal:        loggedMeal.meal,
                                 mealTime:    loggedMeal.mealTime,
-                                scheduledAt: Date(),
+                                scheduledAt: dayLogsVM.selectedDate,
                                 recipeLogId: nil,
                                 recipe:      nil,
                                 servingsConsumed: nil,
@@ -2461,6 +2462,7 @@ struct MealRow: View {
                     foodManager.logMeal(
                         meal: meal, 
                         mealTime: selectedMeal,
+                        date: dayLogsVM.selectedDate,
                         calories: displayCalories
                     ) { result in
                         switch result {
@@ -2477,7 +2479,7 @@ struct MealRow: View {
                                 mealLogId:   loggedMeal.mealLogId,
                                 meal:        loggedMeal.meal,
                                 mealTime:    loggedMeal.mealTime,
-                                scheduledAt: Date(),
+                                scheduledAt: dayLogsVM.selectedDate,
                                 recipeLogId: nil,
                                 recipe:      nil,
                                 servingsConsumed: nil,
@@ -2988,7 +2990,7 @@ private struct SavedMealRow: View {
                 food: food,
                 meal: selectedMeal,
                 servings: foodLog.numberOfServings,
-                date: Date(),
+                date: dayLogsVM.selectedDate,
                 notes: nil
             ) { result in
                 switch result {
@@ -3004,12 +3006,12 @@ private struct SavedMealRow: View {
                         mealLogId: nil,
                         meal: nil,
                         mealTime: nil,
-                        scheduledAt: Date(),
-                        recipeLogId: nil,
-                        recipe: nil,
-                        servingsConsumed: nil,
-                        isOptimistic: true
-                    )
+                    scheduledAt: dayLogsVM.selectedDate,
+                    recipeLogId: nil,
+                    recipe: nil,
+                    servingsConsumed: nil,
+                    isOptimistic: true
+                )
 
                     DispatchQueue.main.async {
                         dayLogsVM.addPending(combinedLog)
@@ -3038,12 +3040,13 @@ private struct SavedMealRow: View {
                 totalProtein: mealSummary.protein,
                 totalCarbs: mealSummary.carbs,
                 totalFat: mealSummary.fat,
-                scheduledAt: Date()
+                scheduledAt: dayLogsVM.selectedDate
             )
             
             foodManager.logMeal(
                 meal: meal,
                 mealTime: selectedMeal,
+                date: dayLogsVM.selectedDate,
                 calories: mealSummary.displayCalories
             ) { result in
                 switch result {
@@ -3059,12 +3062,12 @@ private struct SavedMealRow: View {
                         mealLogId: loggedMeal.mealLogId,
                         meal: loggedMeal.meal,
                         mealTime: loggedMeal.mealTime,
-                        scheduledAt: Date(),
-                        recipeLogId: nil,
-                        recipe: nil,
-                        servingsConsumed: nil,
-                        isOptimistic: true
-                    )
+                    scheduledAt: dayLogsVM.selectedDate,
+                    recipeLogId: nil,
+                    recipe: nil,
+                    servingsConsumed: nil,
+                    isOptimistic: true
+                )
                     
                     DispatchQueue.main.async {
                         dayLogsVM.addPending(combinedLog)
