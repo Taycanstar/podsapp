@@ -303,8 +303,7 @@ struct FoodScannerView: View {
                 get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature == .foodScans },
                 set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
             )) {
-                HumuliProUpgradeSheet(
-                    feature: proFeatureGate.blockedFeature,
+                LogProUpgradeSheet(
                     usageSummary: proFeatureGate.usageSummary,
                     onDismiss: { proFeatureGate.dismissUpgradeSheet() }
                 )

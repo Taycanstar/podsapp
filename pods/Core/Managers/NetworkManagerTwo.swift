@@ -41,6 +41,7 @@ let baseUrl = "http://172.20.10.4:8000"
         case invalidResponse
         case decodingError
         case serverError(message: String)
+        case featureLimitExceeded(message: String)
         // Add any other specific error cases you might need
         
         var errorDescription: String? {
@@ -50,6 +51,7 @@ let baseUrl = "http://172.20.10.4:8000"
             case .invalidResponse: return "Invalid response from server"
             case .decodingError: return "Failed to decode response"
             case .serverError(let message): return message // Use the message directly
+            case .featureLimitExceeded(let message): return message
             }
         }
     }
@@ -3621,9 +3623,30 @@ let baseUrl = "http://172.20.10.4:8000"
                 return
             }
             
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+            
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+
+            if httpResponse.statusCode == 429 {
+                let message: String
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = json["error"] as? String {
+                    message = errorMessage
+                } else {
+                    message = "You’ve reached today’s free food scan limit. Upgrade to Humuli Pro for unlimited scans."
+                }
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.featureLimitExceeded(message: message)))
                 }
                 return
             }

@@ -512,11 +512,18 @@ private var remainingCal: Double { vm.remainingCalories }
                 get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts },
                 set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
             )) {
-                HumuliProUpgradeSheet(
-                    feature: proFeatureGate.blockedFeature,
-                    usageSummary: proFeatureGate.usageSummary,
-                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
-                )
+                if proFeatureGate.blockedFeature == .foodScans {
+                    LogProUpgradeSheet(
+                        usageSummary: proFeatureGate.usageSummary,
+                        onDismiss: { proFeatureGate.dismissUpgradeSheet() }
+                    )
+                } else {
+                    HumuliProUpgradeSheet(
+                        feature: proFeatureGate.blockedFeature,
+                        usageSummary: proFeatureGate.usageSummary,
+                        onDismiss: { proFeatureGate.dismissUpgradeSheet() }
+                    )
+                }
             }
             .sheet(isPresented: $showDatePicker) {
                 DatePickerSheet(date: $vm.selectedDate,

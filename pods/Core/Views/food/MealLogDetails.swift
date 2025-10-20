@@ -321,11 +321,18 @@ struct MealLogDetails: View {
             get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts },
             set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
         )) {
-            HumuliProUpgradeSheet(
-                feature: proFeatureGate.blockedFeature,
-                usageSummary: proFeatureGate.usageSummary,
-                onDismiss: { proFeatureGate.dismissUpgradeSheet() }
-            )
+            if proFeatureGate.blockedFeature == .foodScans {
+                LogProUpgradeSheet(
+                    usageSummary: proFeatureGate.usageSummary,
+                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
+                )
+            } else {
+                HumuliProUpgradeSheet(
+                    feature: proFeatureGate.blockedFeature,
+                    usageSummary: proFeatureGate.usageSummary,
+                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
+                )
+            }
         }
         .background(Color("iosbg"))
         .onAppear {

@@ -15,6 +15,7 @@ struct TextLogView: View {
     @FocusState private var isInputFocused: Bool
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
     
     // State for presenting other views
     @State private var showFoodScanner = false
@@ -31,6 +32,10 @@ struct TextLogView: View {
     
     // Animation state for pulsing effect
     @State private var pulseScale: CGFloat = 1.0
+    
+    // Upgrade retry handling
+    @State private var pendingRetryDescription: String?
+    @State private var pendingRetryMealType: String?
     
     var body: some View {
         NavigationView {
@@ -196,6 +201,33 @@ struct TextLogView: View {
                 }
             }
         }
+        .sheet(isPresented: Binding(
+            get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature == .foodScans },
+            set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
+        )) {
+            LogProUpgradeSheet(
+                usageSummary: proFeatureGate.usageSummary,
+                onDismiss: { proFeatureGate.dismissUpgradeSheet() }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .onChange(of: proFeatureGate.showUpgradeSheet) { _, newValue in
+            if !newValue {
+                if let pendingDescription = pendingRetryDescription,
+                   let pendingMealType = pendingRetryMealType,
+                   proFeatureGate.hasActiveSubscription() {
+                    pendingRetryDescription = nil
+                    pendingRetryMealType = nil
+                    DispatchQueue.main.async {
+                        prepareForAnalysisStates()
+                        performAnalysis(description: pendingDescription, mealType: pendingMealType)
+                    }
+                } else {
+                    pendingRetryDescription = nil
+                    pendingRetryMealType = nil
+                }
+            }
+        }
         .onAppear {
             // Auto-focus the input immediately when sheet appears
             isInputFocused = true
@@ -230,101 +262,119 @@ struct TextLogView: View {
     
     private func submitMealDescription() {
         guard !mealDescription.isEmpty else { return }
-        
-        // Clear the input and dismiss IMMEDIATELY (don't wait for network)
         let description = mealDescription
         let selectedMealType = selectedMeal
-        
+        pendingRetryDescription = nil
+        pendingRetryMealType = nil
+
         DispatchQueue.main.async {
             self.mealDescription = ""
             self.isPresented = false
         }
-        
-        // MODERN: Use new state system instead of timers (eliminates race conditions)
+
+        prepareForAnalysisStates()
+        performAnalysis(description: description, mealType: selectedMealType)
+    }
+
+    private func prepareForAnalysisStates() {
         print("🆕 Starting MODERN text analysis with state system - OPTION 1")
-        
-        // OPTION 1: Show loader at 0% FIRST, then progress through all states
-        // Step 1: Make loader visible immediately at 0%
         foodManager.isGeneratingMacros = true
         foodManager.isLoading = true
         foodManager.macroLoadingMessage = "Analyzing description..."
         foodManager.macroLoadingTitle = "Generating with AI"
-        foodManager.updateFoodScanningState(.initializing)  // Start at 0% with loader visible
-        
-        // Step 2: Progress to preparing (0% → 10%)
+        foodManager.updateFoodScanningState(.initializing)
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             foodManager.updateFoodScanningState(.preparing(image: UIImage()))
         }
-        
-        // Step 3: Progress to uploading (10% → 30%)
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             foodManager.updateFoodScanningState(.uploading(progress: 0.5))
         }
-        
-        // Step 4: Progress to analyzing (30% → 60%)  
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
             foodManager.updateFoodScanningState(.analyzing)
         }
-        
-        // Use the new unified endpoint to analyze meal or activity
+    }
+
+    private func performAnalysis(description: String, mealType: String) {
         NetworkManagerTwo.shared.analyzeMealOrActivity(
             description: description,
-            mealType: selectedMealType
+            mealType: mealType
         ) { result in
             switch result {
             case .success(let responseData):
                 print("✅ Successfully analyzed meal or activity")
-                
-                // Step 4: Move to processing state (80% progress)
+
+                self.pendingRetryDescription = nil
+                self.pendingRetryMealType = nil
+
                 DispatchQueue.main.async {
                     self.foodManager.updateFoodScanningState(.processing)
                 }
-                
-                // Check what type of entry this is
+
                 if let entryType = responseData["entry_type"] as? String {
-                    
-                    // MODERN: Update state based on detected type
                     DispatchQueue.main.async {
                         if entryType == "food" {
-                            // Already in processing state
                             self.foodManager.macroLoadingTitle = "Generating Macros with AI"
                             self.foodManager.macroLoadingMessage = "Calculating nutritional data..."
                         } else if entryType == "activity" {
-                            // Keep analyzing state for activities (or create activity state later)
                             self.foodManager.macroLoadingTitle = "Logging Activity with AI"
                             self.foodManager.macroLoadingMessage = "Calculating calories burned..."
                         }
                     }
-                    
+
                     if entryType == "food" {
-                        // Handle food response - extract LoggedFood data
                         self.handleFoodResponse(responseData)
-                        
                     } else if entryType == "activity" {
-                        // Handle activity response
                         self.handleActivityResponse(responseData)
                     }
                 }
-                
-                // REMOVED: Don't reset immediately - let handleFoodResponse show 100% completion first
-                
+
             case .failure(let error):
                 print("❌ Failed to analyze meal or activity: \(error)")
-                
-                // MODERN: Handle failure with proper error state
-                DispatchQueue.main.async {
-                    self.foodManager.handleScanFailure(.networkError(error.localizedDescription))
-                    
-                    // Legacy cleanup during migration
-                    self.foodManager.isGeneratingMacros = false
-                    self.foodManager.isLoading = false
-                    self.foodManager.macroLoadingMessage = ""
-                    self.foodManager.macroLoadingTitle = "Generating Macros with AI" // Reset to default
+                if let netError = error as? NetworkManagerTwo.NetworkError,
+                   case .featureLimitExceeded(let message) = netError {
+                    self.handleFeatureLimitExceeded(message: message,
+                                                    description: description,
+                                                    mealType: mealType)
+                } else {
+                    self.handleAnalysisFailure(error.localizedDescription)
                 }
             }
         }
     }
-    
+
+    private func handleAnalysisFailure(_ message: String) {
+        DispatchQueue.main.async {
+            self.foodManager.handleScanFailure(.networkError(message))
+            self.foodManager.isGeneratingMacros = false
+            self.foodManager.isLoading = false
+            self.foodManager.macroLoadingMessage = ""
+            self.foodManager.macroLoadingTitle = "Generating with AI"
+        }
+    }
+
+    private func handleFeatureLimitExceeded(message: String,
+                                            description: String,
+                                            mealType: String) {
+        pendingRetryDescription = description
+        pendingRetryMealType = mealType
+        handleAnalysisFailure(message)
+        presentFoodScansUpgradeSheet()
+    }
+
+    private func presentFoodScansUpgradeSheet() {
+        let email = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+        if !email.isEmpty {
+            Task { await proFeatureGate.refreshUsageSummary(for: email) }
+        }
+        DispatchQueue.main.async {
+            proFeatureGate.blockedFeature = .foodScans
+            proFeatureGate.showUpgradeSheet = true
+        }
+    }
+
     private func handleFoodResponse(_ responseData: [String: Any]) {
         // FIXED: Use correct case mapping between backend (snake_case) and frontend
         guard let foodLogId = responseData["food_log_id"] as? Int,  // ✅ FIXED: snake_case
@@ -708,4 +758,5 @@ class SpeechRecognizer: ObservableObject {
     TextLogView(isPresented: .constant(true), selectedMeal: "Lunch")
         .environmentObject(FoodManager())
         .environmentObject(DayLogsViewModel())
+        .environmentObject(ProFeatureGate())
 } 
