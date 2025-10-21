@@ -181,6 +181,27 @@ class ExerciseHistoryDataService: ObservableObject {
    
     private init() {}
 
+    // MARK: - Cache Accessors (non-blocking)
+
+    func getCachedExerciseHistory(exerciseId: Int, period: TimePeriod) -> ExerciseHistoryData? {
+        let key = "exercise_history_\(exerciseId)_\(period.rawValue)"
+        return historyCache[key]
+    }
+
+    func getCachedMetrics(exerciseId: Int, period: TimePeriod) -> ExerciseMetrics? {
+        let key = "metrics_\(exerciseId)_\(period.rawValue)"
+        return metricsCache[key]
+    }
+
+    func getCachedChartData(exerciseId: Int, metric: ChartMetric, period: TimePeriod) -> [(Date, Double)]? {
+        let key = "chart_\(exerciseId)_\(metric.rawValue)_\(period.rawValue)"
+        return chartDataCache[key]
+    }
+
+    func getCachedPersonalRecords(exerciseId: Int) -> PersonalRecords? {
+        return recordsCache[exerciseId]
+    }
+
     func setModelContext(_ context: ModelContext) {
         lastKnownContext = context
     }
@@ -468,6 +489,11 @@ class ExerciseHistoryDataService: ObservableObject {
     func getExerciseMetrics(exerciseId: Int, period: TimePeriod, context: ModelContext? = nil) async throws -> ExerciseMetrics {
         print("📈 ExerciseHistoryDataService: Calculating metrics for exercise \(exerciseId), period: \(period.displayName)")
 
+        let metricsKey = "metrics_\(exerciseId)_\(period.rawValue)"
+        if let cached = metricsCache[metricsKey] {
+            return cached
+        }
+
         let historyData = try await getExerciseHistory(exerciseId: exerciseId, period: period, context: context)
         
         // Calculate metrics from workout sessions
@@ -547,6 +573,8 @@ class ExerciseHistoryDataService: ObservableObject {
         )
         
         print("✅ ExerciseHistoryDataService: Calculated metrics - maxReps: \(maxReps), maxWeight: \(maxWeight), totalVolume: \(totalVolume), maxDuration: \(maxDurationSeconds), totalDuration: \(totalDurationSeconds), maxDistance: \(maxDistanceMeters)")
+        // Cache metrics for fast subsequent access
+        metricsCache[metricsKey] = metrics
         return metrics
     }
     
@@ -606,6 +634,11 @@ class ExerciseHistoryDataService: ObservableObject {
     func getChartData(exerciseId: Int, metric: ChartMetric, period: TimePeriod, context: ModelContext? = nil) async throws -> [(Date, Double)] {
         print("📊 ExerciseHistoryDataService: Getting chart data for exercise \(exerciseId), metric: \(metric.rawValue), period: \(period.displayName)")
 
+        let chartKey = "chart_\(exerciseId)_\(metric.rawValue)_\(period.rawValue)"
+        if let cached = chartDataCache[chartKey] {
+            return cached
+        }
+
         let historyData = try await getExerciseHistory(exerciseId: exerciseId, period: period, context: context)
         
         // Convert workout sessions to chart data points
@@ -638,6 +671,8 @@ class ExerciseHistoryDataService: ObservableObject {
         chartData.sort { $0.0 < $1.0 }
         
         print("✅ ExerciseHistoryDataService: Generated \(chartData.count) chart data points")
+        // Cache generated chart data
+        chartDataCache[chartKey] = chartData
         return chartData
     }
     

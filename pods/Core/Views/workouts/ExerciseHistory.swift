@@ -217,8 +217,9 @@ struct ExerciseTrendsView: View {
                 .padding(.top, 20)
             }
         }
-        .task {
-            await loadExerciseData()
+        .onAppear {
+            primeFromCache()
+            Task { await loadExerciseData() }
         }
         .refreshable {
             await dataService.invalidateCache(for: exercise.exercise.id)
@@ -230,7 +231,8 @@ struct ExerciseTrendsView: View {
     
     private func loadExerciseData() async {
         print("🔄 ExerciseTrendsView: Starting to load data for exercise \(exercise.exercise.id)")
-        isLoading = true
+        let hadNoCachedData = metrics == nil && repsData.isEmpty && weightData.isEmpty && volumeData.isEmpty && oneRepMaxData.isEmpty && durationData.isEmpty && totalDurationData.isEmpty && distanceData.isEmpty
+        if hadNoCachedData { isLoading = true }
         defer { isLoading = false }
         
         durationData = []
@@ -310,6 +312,40 @@ struct ExerciseTrendsView: View {
             durationData = []
             totalDurationData = []
             distanceData = []
+        }
+    }
+
+    private func primeFromCache() {
+        if let cached = dataService.getCachedMetrics(exerciseId: exercise.exercise.id, period: selectedPeriod) {
+            metrics = cached
+        }
+
+        if let cached = dataService.getCachedChartData(exerciseId: exercise.exercise.id, metric: .reps, period: selectedPeriod) {
+            repsData = trimToRecent(cached)
+        }
+
+        if let cached = dataService.getCachedChartData(exerciseId: exercise.exercise.id, metric: .weight, period: selectedPeriod) {
+            weightData = trimToRecent(cached)
+        }
+
+        if let cached = dataService.getCachedChartData(exerciseId: exercise.exercise.id, metric: .volume, period: selectedPeriod) {
+            volumeData = trimToRecent(cached)
+        }
+
+        if let cached = dataService.getCachedChartData(exerciseId: exercise.exercise.id, metric: .estOneRepMax, period: selectedPeriod) {
+            oneRepMaxData = trimToRecent(cached)
+        }
+
+        if let cached = dataService.getCachedChartData(exerciseId: exercise.exercise.id, metric: .duration, period: selectedPeriod) {
+            durationData = trimToRecent(cached)
+        }
+
+        if let cached = dataService.getCachedChartData(exerciseId: exercise.exercise.id, metric: .totalDuration, period: selectedPeriod) {
+            totalDurationData = trimToRecent(cached)
+        }
+
+        if let cached = dataService.getCachedChartData(exerciseId: exercise.exercise.id, metric: .distance, period: selectedPeriod) {
+            distanceData = trimToRecent(cached).map { ($0.0, convertDistanceToDisplay($0.1)) }
         }
     }
     
@@ -478,8 +514,9 @@ struct ExerciseResultsView: View {
                 .padding(.bottom, 40)
             }
         }
-        .task {
-            await loadWorkoutHistory()
+        .onAppear {
+            primeFromCache()
+            Task { await loadWorkoutHistory() }
         }
         .refreshable {
             await dataService.invalidateCache(for: exercise.exercise.id)
@@ -490,8 +527,8 @@ struct ExerciseResultsView: View {
     // MARK: - Private Methods
     
     private func loadWorkoutHistory() async {
-        isLoading = true
-        
+        if workoutSessions.isEmpty { isLoading = true }
+
         do {
             let historyData = try await dataService.getExerciseHistory(
                 exerciseId: exercise.exercise.id,
@@ -505,6 +542,13 @@ struct ExerciseResultsView: View {
         }
         
         isLoading = false
+    }
+
+    private func primeFromCache() {
+        if let cached = dataService.getCachedExerciseHistory(exerciseId: exercise.exercise.id, period: selectedPeriod) {
+            workoutSessions = cached.workoutSessions.sorted { $0.date > $1.date }
+            isLoading = false
+        }
     }
     
     private func convertToHistoryItem(_ session: WorkoutSessionSummary, previousSession: WorkoutSessionSummary?) -> ExerciseHistoryItem {
@@ -1205,8 +1249,9 @@ struct ExerciseRecordsView: View {
                 .padding()
             }
         }
-        .task {
-            await loadPersonalRecords()
+        .onAppear {
+            primeFromCache()
+            Task { await loadPersonalRecords() }
         }
         .refreshable {
             await loadPersonalRecords()
@@ -1227,8 +1272,8 @@ struct ExerciseRecordsView: View {
     }
     
     private func loadPersonalRecords() async {
-        isLoading = true
-        
+        if personalRecords == nil { isLoading = true }
+
         do {
             personalRecords = try await dataService.getPersonalRecords(exerciseId: exercise.exercise.id, context: modelContext)
         } catch {
@@ -1237,6 +1282,13 @@ struct ExerciseRecordsView: View {
         }
         
         isLoading = false
+    }
+
+    private func primeFromCache() {
+        if let cached = dataService.getCachedPersonalRecords(exerciseId: exercise.exercise.id) {
+            personalRecords = cached
+            isLoading = false
+        }
     }
 }
 
