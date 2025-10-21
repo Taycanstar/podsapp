@@ -229,19 +229,17 @@ struct ExerciseChart: View {
                 // Reset overlay states when period changes
                 showingPersonalRecord = false
                 showingYourAverage = false
-                // Load new data for the selected period
-                Task {
-                    await loadChartData()
-                }
+                // Prime from cache for instant response, then refresh in background
+                primeFromCache()
+                Task { await refreshInBackground() }
             }
             
             if isLoading {
-                VStack {
-                    ProgressView("Loading exercise data...")
-                        .padding()
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Shimmering skeleton for initial load when no cache exists
+                ExerciseChartSkeleton()
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 chartContent
             }
@@ -260,8 +258,9 @@ struct ExerciseChart: View {
                 }
             }
         }
-        .task {
-            await loadChartData()
+        .onAppear {
+            primeFromCache()
+            Task { await refreshInBackground() }
         }
     }
     
@@ -369,29 +368,44 @@ struct ExerciseChart: View {
     
     // MARK: - Data Loading
     
-    private func loadChartData() async {
-        print("🔄 ExerciseChart: Loading data for exercise \(exercise.exercise.id), metric: \(metric.rawValue)")
-        isLoading = true
-        
+    private func refreshInBackground() async {
+        print("🔄 ExerciseChart: Refreshing data for exercise \(exercise.exercise.id), metric: \(metric.rawValue)")
         do {
-            // Load metrics and chart data concurrently
-            async let metricsTask = dataService.getExerciseMetrics(exerciseId: exercise.exercise.id, period: selectedPeriod, context: modelContext)
-            async let chartDataTask = dataService.getChartData(exerciseId: exercise.exercise.id, metric: metric, period: selectedPeriod, context: modelContext)
-            
-            metrics = try await metricsTask
-            chartData = try await chartDataTask
-            
-            print("✅ ExerciseChart: Data loaded - \(chartData.count) data points")
-            print("   - Headlines: \(headlinePrimary)")
-            
+            // Load metrics and chart data concurrently without blocking UI
+            async let metricsTask = dataService.getExerciseMetrics(
+                exerciseId: exercise.exercise.id,
+                period: selectedPeriod,
+                context: modelContext
+            )
+            async let chartDataTask = dataService.getChartData(
+                exerciseId: exercise.exercise.id,
+                metric: metric,
+                period: selectedPeriod,
+                context: modelContext
+            )
+
+            let fetchedMetrics = try await metricsTask
+            let fetchedChart = try await chartDataTask
+
+            metrics = fetchedMetrics
+            chartData = fetchedChart
+
+            print("✅ ExerciseChart: Data refreshed - \(chartData.count) points")
         } catch {
-            print("❌ ExerciseChart: Error loading data - \(error)")
-            // Fallback to empty data
-            metrics = nil
-            chartData = []
+            print("❌ ExerciseChart: Error refreshing - \(error)")
         }
-        
         isLoading = false
+    }
+
+    private func primeFromCache() {
+        let cachedMetrics = dataService.getCachedMetrics(exerciseId: exercise.exercise.id, period: selectedPeriod)
+        let cachedChart = dataService.getCachedChartData(exerciseId: exercise.exercise.id, metric: metric, period: selectedPeriod)
+
+        if let cachedMetrics { metrics = cachedMetrics }
+        if let cachedChart { chartData = cachedChart }
+
+        // Show loader only if no cache at all
+        isLoading = (metrics == nil && chartData.isEmpty)
     }
     
     private var chartSection: some View {
@@ -784,6 +798,88 @@ struct CustomChartView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Skeleton + Shimmer
+
+private struct ChartShimmer: ViewModifier {
+    @State private var phase: CGFloat = -1
+    let duration: Double
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.white.opacity(0.0),
+                        Color.white.opacity(0.35),
+                        Color.white.opacity(0.0)
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .rotationEffect(.degrees(10))
+                .offset(x: phase * 200)
+                .blendMode(.plusLighter)
+                .mask(content)
+            )
+            .onAppear {
+                withAnimation(.linear(duration: duration).repeatForever(autoreverses: false)) {
+                    phase = 1
+                }
+            }
+    }
+}
+
+private extension View {
+    func chartShimmering(duration: Double = 1.1) -> some View {
+        modifier(ChartShimmer(duration: duration))
+    }
+}
+
+private struct ExerciseChartSkeleton: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header skeleton
+            VStack(alignment: .leading, spacing: 12) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 120, height: 22)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(.systemGray5))
+                        .frame(width: 120, height: 40)
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(.systemGray5))
+                        .frame(width: 100, height: 16)
+                        .opacity(0.7)
+                }
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 160, height: 14)
+                    .opacity(0.7)
+            }
+            .padding(.bottom, 32)
+
+            // Chart area skeleton
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemGray6))
+                .frame(height: 220)
+                .padding(.bottom, 32)
+            
+            // Buttons skeletons
+            VStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+                    .frame(height: 48)
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+                    .frame(height: 48)
+            }
+            Spacer()
+        }
+        .chartShimmering()
     }
 }
 
