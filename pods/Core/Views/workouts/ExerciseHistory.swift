@@ -111,12 +111,13 @@ struct ExerciseTrendsView: View {
     var body: some View {
         ScrollView {
             if isLoading {
-                VStack {
-                    ProgressView("Loading exercise data...")
-                        .padding()
-                    Spacer()
+                // Shimmering metric cards while initial data loads
+                LazyVStack(spacing: 24) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        HistoryMetricCardSkeleton()
+                    }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.top, 20)
             } else {
                 LazyVStack(spacing: 24) {
                     if hasDurationMetricsAvailable {
@@ -480,12 +481,14 @@ struct ExerciseResultsView: View {
     var body: some View {
         ScrollView {
             if isLoading {
-                VStack {
-                    ProgressView("Loading workout history...")
-                        .padding()
-                    Spacer()
+                LazyVStack(spacing: 24) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        ExerciseHistoryCardSkeleton()
+                    }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+                .padding(.bottom, 40)
             } else if workoutSessions.isEmpty {
                 VStack {
                     Image(systemName: "figure.strengthtraining.traditional")
@@ -1193,12 +1196,14 @@ struct ExerciseRecordsView: View {
         } else {
         ScrollView {
             if isLoading {
-                VStack {
-                    ProgressView("Loading personal records...")
-                        .padding()
-                    Spacer()
+                LazyVStack(spacing: 16) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        RecordRowSkeleton()
+                    }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+                .padding(.bottom, 40)
             } else if let records = personalRecords {
                 LazyVStack(spacing: 16) {
                     let unit = onboarding.unitsSystem == .imperial ? "lb" : "kg"
@@ -1423,6 +1428,147 @@ struct RIRRatingSheet: View {
             // Initialize temp value with current value
             tempRirValue = rirValue
         }
+    }
+}
+
+// MARK: - Skeleton + Shimmer
+
+private struct Shimmer: ViewModifier {
+    @State private var phase: CGFloat = -1
+    let duration: Double
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.white.opacity(0.0),
+                        Color.white.opacity(0.35),
+                        Color.white.opacity(0.0)
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .rotationEffect(.degrees(10))
+                .offset(x: phase * 200)
+                .blendMode(.plusLighter)
+                .mask(content)
+            )
+            .onAppear {
+                withAnimation(.linear(duration: duration).repeatForever(autoreverses: false)) {
+                    phase = 1
+                }
+            }
+    }
+}
+
+private extension View {
+    func shimmering(duration: Double = 1.1) -> some View {
+        modifier(Shimmer(duration: duration))
+    }
+}
+
+struct HistoryMetricCardSkeleton: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 140, height: 18)
+                Spacer()
+                
+            }
+            .padding(.horizontal, 16)
+
+            VStack(alignment: .leading, spacing: 8) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 120, height: 28)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 100, height: 12)
+                    .opacity(0.7)
+            }
+            .padding(.horizontal, 16)
+
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemGray6))
+                .frame(height: 120)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+        }
+        .padding(.vertical, 8)
+        .background(Color(.systemGray6))
+        .cornerRadius(16)
+        .padding(.horizontal, 16)
+        .shimmering()
+    }
+}
+
+struct ExerciseHistoryCardSkeleton: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 120, height: 18)
+                Spacer()
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 110, height: 28)
+            }
+
+            VStack(spacing: 12) {
+                ForEach(0..<3, id: \.self) { _ in
+                    HStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(.systemGray5))
+                            .frame(width: 32, height: 32)
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(.systemGray5))
+                            .frame(height: 16)
+                    }
+                }
+            }
+
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(.systemGray5))
+                .frame(width: 160, height: 16)
+                .opacity(0.7)
+        }
+        .padding(16)
+        .background(Color(.systemGray6))
+        .cornerRadius(16)
+        .shimmering()
+    }
+}
+
+struct RecordRowSkeleton: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "medal.fill")
+                .font(.system(size: 24))
+                .foregroundColor(.secondary)
+                .opacity(0.5)
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: 6) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 120, height: 14)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 90, height: 16)
+            }
+            Spacer()
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(.systemGray5))
+                .frame(width: 60, height: 14)
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+        .shimmering()
     }
 }
 
