@@ -331,7 +331,7 @@ struct FoodLogDetails: View {
             .padding(.top, 16)
         }
         .sheet(isPresented: Binding(
-            get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts },
+            get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts && proFeatureGate.blockedFeature != .analytics },
             set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
         )) {
             if proFeatureGate.blockedFeature == .foodScans {

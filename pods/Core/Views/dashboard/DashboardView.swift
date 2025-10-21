@@ -509,7 +509,7 @@ private var remainingCal: Double { vm.remainingCalories }
                 }
             }
             .sheet(isPresented: Binding(
-                get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts },
+                get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts && proFeatureGate.blockedFeature != .analytics },
                 set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
             )) {
                 if proFeatureGate.blockedFeature == .foodScans {

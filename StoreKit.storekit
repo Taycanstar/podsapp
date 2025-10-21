@@ -1,87 +1,182 @@
 {
-  "appPolicies": {
-    "eula": "",
-    "policies": [
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
       {
-        "locale": "en_US",
-        "policyText": "",
-        "policyURL": ""
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
       }
     ]
   },
-  "identifier": "CFF0AF84",
-  "nonRenewingSubscriptions": [],
-  "products": [],
-  "settings": {
-    "_applicationInternalID": "6504493649",
-    "_askToBuyEnabled": false,
-    "_billingGracePeriodEnabled": false,
-    "_billingIssuesEnabled": false,
-    "_developerTeamID": "TN4N9K5B77",
-    "_disableDialogs": false,
-    "_failTransactionsEnabled": false,
-    "_lastSynchronizedDate": 781650031.95536,
-    "_locale": "en_US",
-    "_renewalBillingIssuesEnabled": false,
-    "_storefront": "USA",
-    "_storeKitErrors": [],
-    "_timeRate": 0
+  "identifier" : "CFF0AF84",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6504493649",
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_developerTeamID" : "TN4N9K5B77",
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 782768498.46813405,
+    "_locale" : "en_US",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
   },
-  "subscriptionGroups": [
+  "subscriptionGroups" : [
     {
-      "id": "21800282",
-      "localizations": [],
-      "name": "Humuli Pro",
-      "subscriptions": [
+      "id" : "21800282",
+      "localizations" : [
+
+      ],
+      "name" : "Humuli Pro",
+      "subscriptions" : [
         {
-          "adHocOffers": [],
-          "codeOffers": [],
-          "displayPrice": "19.99",
-          "familyShareable": false,
-          "groupNumber": 1,
-          "internalID": "6753729190",
-          "introductoryOffer": null,
-          "localizations": [
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6753729190",
+          "introductoryOffer" : {
+            "internalID" : "48471DA8",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
             {
-              "description": "Calorie and workout tracker",
-              "displayName": "Humuli",
-              "locale": "en_US"
+              "description" : "Calorie and workout tracker",
+              "displayName" : "Humuli",
+              "locale" : "en_US"
             }
           ],
-          "productID": "humuli_pro_monthly",
-          "recurringSubscriptionPeriod": "P1M",
-          "referenceName": "Humuli Pro Monthly",
-          "subscriptionGroupID": "21800282",
-          "type": "RecurringSubscription",
-          "winbackOffers": []
+          "productID" : "humuli_pro_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Humuli Pro Monthly",
+          "subscriptionGroupID" : "21800282",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
         },
         {
-          "adHocOffers": [],
-          "codeOffers": [],
-          "displayPrice": "95.99",
-          "familyShareable": false,
-          "groupNumber": 2,
-          "internalID": "6753738923",
-          "introductoryOffer": null,
-          "localizations": [
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "95.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6753738923",
+          "introductoryOffer" : {
+            "internalID" : "EB46CF6E",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
             {
-              "description": "Calorie and workout tracker",
-              "displayName": "Humuli",
-              "locale": "en_US"
+              "description" : "Calorie and workout tracker",
+              "displayName" : "Humuli",
+              "locale" : "en_US"
             }
           ],
-          "productID": "humuli_pro_yearly",
-          "recurringSubscriptionPeriod": "P1Y",
-          "referenceName": "Humuli Pro Yearly",
-          "subscriptionGroupID": "21800282",
-          "type": "RecurringSubscription",
-          "winbackOffers": []
+          "productID" : "humuli_pro_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Humuli Pro Yearly",
+          "subscriptionGroupID" : "21800282",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    },
+    {
+      "id" : "21551403",
+      "localizations" : [
+
+      ],
+      "name" : "Podstack+",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "47.9",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6736410777",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Enjoy Plus features billed annually",
+              "displayName" : "Podstack+ Annual Plan",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.humuli.pods.plus.year",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Podstack+ Annual Plan ",
+          "subscriptionGroupID" : "21551403",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "5.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6736410681",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Enjoy Plus features billed monthly ",
+              "displayName" : "Podstack+ Monthly Plan",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.humuli.pods.plus.month",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Podstack+ Monthly Plan ",
+          "subscriptionGroupID" : "21551403",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
         }
       ]
     }
   ],
-  "version": {
-    "major": 4,
-    "minor": 0
+  "version" : {
+    "major" : 4,
+    "minor" : 0
   }
 }
