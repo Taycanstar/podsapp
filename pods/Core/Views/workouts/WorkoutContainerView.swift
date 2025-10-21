@@ -78,11 +78,16 @@ struct WorkoutContainerView: View {
             get: { proFeatureGate.showUpgradeSheet },
             set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
         )) {
-            if proFeatureGate.blockedFeature == .workouts {
+            switch proFeatureGate.blockedFeature {
+            case .workouts:
                 WorkoutUpgradeSheet(usageSummary: proFeatureGate.usageSummary) {
                     proFeatureGate.dismissUpgradeSheet()
                 }
-            } else {
+            case .analytics:
+                AnalyticsProUpgradeSheet(usageSummary: proFeatureGate.usageSummary) {
+                    proFeatureGate.dismissUpgradeSheet()
+                }
+            default:
                 HumuliProUpgradeSheet(
                     feature: proFeatureGate.blockedFeature,
                     usageSummary: proFeatureGate.usageSummary,

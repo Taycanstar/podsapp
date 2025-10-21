@@ -313,7 +313,7 @@ struct ExerciseChart: View {
             }) {
                 HStack {
                     HStack(spacing: 8) {
-                        Image(systemName: "trophy")
+                        Image(systemName: "medal.fill")
                             .font(.system(size: 16))
                         Text("Personal Record")
                             .font(.system(size: 16, weight: .medium))
