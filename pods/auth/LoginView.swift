@@ -209,6 +209,9 @@ struct LoginView: View {
                     
                     // Force synchronize UserDefaults to ensure all changes are written
                     UserDefaults.standard.synchronize()
+
+                    // Notify the app that authentication has completed
+                    NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
                     
                     Mixpanel.mainInstance().identify(distinctId: userIdString)
                     Mixpanel.mainInstance().people.set(properties: [

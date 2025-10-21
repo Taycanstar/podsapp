@@ -66,7 +66,6 @@ struct ContentView: View {
     @State private var newPodId: Int?
 
     @State private var isTabBarVisible: Bool = true
-    @State private var hasCheckedOnboarding = false
 
     @ObservedObject private var versionManager = VersionManager.shared
     @Environment(\.scenePhase) var scenePhase
@@ -133,14 +132,7 @@ struct ContentView: View {
         } message: {
             Text("An update to Humuli is required to continue.")
         }
-        .onChange(of: scenePhase) { newPhase in
-            if newPhase == .active && !hasCheckedOnboarding {
-                checkAndResumeOnboarding()
-            }
-        }
-        .task {
-            checkAndResumeOnboarding()
-        }
+        // Removed deprecated onboarding resume task
                     
                     if isTabBarVisible {
                         CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView, showNewSheet: $showNewSheet)
@@ -251,8 +243,7 @@ struct ContentView: View {
         // }
         .id(forceRefresh)
         .onAppear {
-            print("⚠️ ContentView appeared: Force checking onboarding status")
-            forceCheckOnboarding()
+            print("⚠️ ContentView appeared")
             setupNotificationObservers()
         }
         .onChange(of: selectedMeal) { _, newValue in
@@ -260,8 +251,7 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
-                print("⚠️ App became active: Force checking onboarding status")
-                forceCheckOnboarding()
+                print("⚠️ App became active")
                 
                 // Reset selectedDate to today if we've been away for more than 20 minutes
                 if let lastActiveTime = UserDefaults.standard.object(forKey: "lastActiveTime") as? Date {
@@ -298,8 +288,13 @@ struct ContentView: View {
 
      
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    print("🔄 ContentView: Running delayed state check after authentication")
-                    self.forceCheckOnboarding()
+                    print("🔄 ContentView: Bootstrapping after authentication")
+                    StartupCoordinator.shared.bootstrapIfNeeded(
+                        onboarding: viewModel,
+                        foodManager: foodManager,
+                        dayLogs: dayLogsVM,
+                        subscriptionManager: subscriptionManager
+                    )
                 }
             }
         }
@@ -365,6 +360,23 @@ struct ContentView: View {
             showNewSheet = true
         }
 
+        // Listen for explicit authentication completion
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("AuthenticationCompleted"))
+                .receive(on: RunLoop.main)
+        ) { _ in
+            print("🔔 ContentView: Received AuthenticationCompleted notification")
+            // Bootstrap for the current user and refresh the view
+            StartupCoordinator.shared.bootstrapIfNeeded(
+                onboarding: viewModel,
+                foodManager: foodManager,
+                dayLogs: dayLogsVM,
+                subscriptionManager: subscriptionManager
+            )
+            self.forceRefresh.toggle()
+        }
+
     // AppStorage keeps isAuthenticated synchronized; no manual persistence needed here
 }
     
@@ -410,171 +422,7 @@ struct ContentView: View {
         print("--------------------")
     }
     
-    private func checkAndResumeOnboarding() {
-        // Mark that we've checked onboarding status
-        hasCheckedOnboarding = true
-        
-        // Get all relevant onboarding state
-        self.isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
-        
-        // REMOVED: Old onboarding trigger logic - now using new onboarding in RegisterView
-        // The new onboarding system handles user registration and profile setup directly
-        // No need to trigger the old OnboardingFlowContainer
-
-        // Use viewModel for onboarding state
-        viewModel.onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
-        print("Onboarding state check: isAuthenticated=\(isAuthenticated), completed=\(viewModel.onboardingCompleted)")
-        
-        // Load user data if authenticated
-        if isAuthenticated {
-            if let storedEmail = UserDefaults.standard.string(forKey: "userEmail") {
-                viewModel.email = storedEmail
-            }
-            if let storedUsername = UserDefaults.standard.string(forKey: "username") {
-                viewModel.username = storedUsername
-            }
-            if let activeTeamId = UserDefaults.standard.object(forKey: "activeTeamId") as? Int {
-                viewModel.activeTeamId = activeTeamId
-            }
-            if let activeWorkspaceId = UserDefaults.standard.object(forKey: "activeWorkspaceId") as? Int {
-                viewModel.activeWorkspaceId = activeWorkspaceId
-            }
-            viewModel.profileInitial = UserDefaults.standard.string(forKey: "profileInitial") ?? ""
-            viewModel.profileColor = UserDefaults.standard.string(forKey: "profileColor") ?? ""
-            
-            // Load subscription information
-            subscriptionStatus = UserDefaults.standard.string(forKey: "subscriptionStatus") ?? "none"
-            subscriptionPlan = UserDefaults.standard.string(forKey: "subscriptionPlan")
-            if let expiresAtString = UserDefaults.standard.string(forKey: "subscriptionExpiresAt") {
-                subscriptionExpiresAt = ISO8601DateFormatter().date(from: expiresAtString)
-            }
-            
-            if isAuthenticated {
-                Task {
-                    await subscriptionManager.updatePurchasedSubscriptions()
-                }
-                
-                fetchSubscriptionInfo()
-            }
-        }
-    }
-
-    // FORCE direct check that always runs and has immediate UI updates
-    private func forceCheckOnboarding() {
-        // Load basic user data first - keep this as we still need to check authentication status
-        self.isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
-        
-        // Always load the server onboarding status if available
-        viewModel.serverOnboardingCompleted = UserDefaults.standard.bool(forKey: "serverOnboardingCompleted")
-        
-        // Load all user data
-        if isAuthenticated {
-            if let storedEmail = UserDefaults.standard.string(forKey: "userEmail") {
-                viewModel.email = storedEmail
-                
-                // Only check for different user if the server says onboarding is NOT completed
-                // If the server says onboarding is completed, we should trust that over the local email check
-                if !viewModel.serverOnboardingCompleted {
-                    // Check if this is a different user than the one who completed onboarding
-                    if let completedEmail = UserDefaults.standard.string(forKey: "emailWithCompletedOnboarding"),
-                       completedEmail != storedEmail {
-                        // Different user, need to reset onboarding state
-                        print("⚠️ Detected different user login. Resetting onboarding state.")
-                        viewModel.onboardingCompleted = false
-                        // We still set UserDefaults here as other components might be reading it directly
-                        UserDefaults.standard.set(false, forKey: "onboardingCompleted")
-                        UserDefaults.standard.set(true, forKey: "onboardingInProgress")
-                        UserDefaults.standard.removeObject(forKey: "currentOnboardingStep")
-                        // Make sure viewModel state is consistent
-                        viewModel.currentFlowStep = .gender
-                    }
-                }
-            }
-            
-            // If the server says onboarding is completed, update our local state to match
-            if viewModel.serverOnboardingCompleted {
-                viewModel.onboardingCompleted = true
-                UserDefaults.standard.set(true, forKey: "onboardingCompleted")
-                UserDefaults.standard.set(false, forKey: "onboardingInProgress")
-                // Also save the email to prevent future confusion
-                if !viewModel.email.isEmpty {
-                    UserDefaults.standard.set(viewModel.email, forKey: "emailWithCompletedOnboarding")
-                }
-                print("✅ Server says onboarding is completed - updating local state to match")
-            }
-            
-            if let storedUsername = UserDefaults.standard.string(forKey: "username") {
-                viewModel.username = storedUsername
-            }
-            if let activeTeamId = UserDefaults.standard.object(forKey: "activeTeamId") as? Int {
-                viewModel.activeTeamId = activeTeamId
-            }
-            if let activeWorkspaceId = UserDefaults.standard.object(forKey: "activeWorkspaceId") as? Int {
-                viewModel.activeWorkspaceId = activeWorkspaceId
-            }
-            viewModel.profileInitial = UserDefaults.standard.string(forKey: "profileInitial") ?? ""
-            viewModel.profileColor = UserDefaults.standard.string(forKey: "profileColor") ?? ""
-            
-            // Load subscription information
-            subscriptionStatus = UserDefaults.standard.string(forKey: "subscriptionStatus") ?? "none"
-            subscriptionPlan = UserDefaults.standard.string(forKey: "subscriptionPlan")
-            if let expiresAtString = UserDefaults.standard.string(forKey: "subscriptionExpiresAt") {
-                subscriptionExpiresAt = ISO8601DateFormatter().date(from: expiresAtString)
-            }
-            
-            if isAuthenticated {
-                Task {
-                    await subscriptionManager.updatePurchasedSubscriptions()
-                }
-                
-                fetchSubscriptionInfo()
-            }
-        }
-
-        // Now check onboarding state using the viewModel and UserDefaults
-        // (we're in a transition, so we read from UserDefaults but update the viewModel)
-        viewModel.onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
-        let onboardingInProgress = UserDefaults.standard.bool(forKey: "onboardingInProgress")
-        let currentStep = UserDefaults.standard.string(forKey: "currentOnboardingStep")
-        let flowStepRaw = UserDefaults.standard.integer(forKey: "onboardingFlowStep")
-        
-        print("🟥 AUTH STATUS: \(isAuthenticated)")
-        print("🟥 ONBOARDING COMPLETED: \(viewModel.onboardingCompleted)")
-        print("🟥 ONBOARDING COMPLETED (SERVER): \(viewModel.serverOnboardingCompleted)")
-        print("🟥 ONBOARDING IN PROGRESS: \(onboardingInProgress)")
-        print("🟥 CURRENT STEP: \(currentStep ?? "none")")
-        print("🟥 FLOW STEP RAW: \(flowStepRaw)")
-
-        // REMOVED: Server onboarding sync logic
-        // The new onboarding system doesn't need to sync local/server onboarding state
-        // since RegisterView handles everything during account creation
-
-        // REMOVED: Old server-based onboarding resume logic
-        // The new onboarding system (RegisterView) handles all registration and profile setup
-        // No need to check server onboarding status or resume old flow
-
-        print("✅ Using new onboarding system - old flow disabled")
-
-        // Add observer for authentication completion notification
-        NotificationCenter.default.addObserver(forName: Notification.Name("AuthenticationCompleted"), object: nil, queue: .main) { _ in
-            print("🔔 ContentView: Received AuthenticationCompleted notification")
-            // Force refresh authentication state
-            self.isAuthenticated = UserDefaults.standard.bool(forKey: "isAuthenticated")
-
-            // Ensure we properly handle the navigation after authentication
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                print("🔔 ContentView: Processing authentication completion")
-                self.forceCheckOnboarding()
-            }
-        }
-
-        StartupCoordinator.shared.bootstrapIfNeeded(
-            onboarding: viewModel,
-            foodManager: foodManager,
-            dayLogs: dayLogsVM,
-            subscriptionManager: subscriptionManager
-        )
-    }
+    // Deprecated onboarding checks removed. Auth + StartupCoordinator handle app state.
 
     // MARK: - Notification Permission Sheet Setup
     

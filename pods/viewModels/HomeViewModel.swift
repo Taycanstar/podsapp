@@ -1,6 +1,7 @@
 
 import Foundation
 
+@MainActor
 class HomeViewModel: ObservableObject {
     @Published var pods: [Pod] = []
     @Published var workspaces: [Workspace] = []

@@ -431,6 +431,12 @@ struct ProfileView: View {
 
         UserDefaults.standard.synchronize()
 
+        // Clear repo caches tied to previous user
+        Task { @MainActor in
+            CombinedLogsRepository.shared.clear()
+            FoodFeedRepository.shared.clear()
+        }
+
         print("✅ User logged out successfully - all state cleared")
     }
     

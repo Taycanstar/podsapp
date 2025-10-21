@@ -160,6 +160,9 @@ struct RegisterView: View {
                         UserDefaults.standard.set(resolvedName, forKey: "userName")
                         UserDefaults.standard.set(resolvedInitial, forKey: "profileInitial")
                         UserDefaults.standard.synchronize()
+
+                        // Post notification to signal authentication completion
+                        NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
                     }
                 } else {
                     print("⚠️ Apple Sign-In backend failure: \(message ?? "Unknown error")")
@@ -233,6 +236,9 @@ struct RegisterView: View {
                         UserDefaults.standard.set(resolvedName, forKey: "userName")
                         UserDefaults.standard.set(resolvedInitial, forKey: "profileInitial")
                         UserDefaults.standard.synchronize()
+
+                        // Post notification to signal authentication completion
+                        NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
                     }
                 } else {
                     print("⚠️ Google Sign-In backend failure: \(message ?? "Unknown error")")

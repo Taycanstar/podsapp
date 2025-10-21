@@ -102,6 +102,12 @@ struct DataControlsView: View {
         
         // Force synchronize to ensure changes take effect immediately
         UserDefaults.standard.synchronize()
+
+        // Clear repo caches tied to previous user
+        Task { @MainActor in
+            CombinedLogsRepository.shared.clear()
+            FoodFeedRepository.shared.clear()
+        }
     }
 
     private func deleteAllPods() {
