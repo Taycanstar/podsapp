@@ -572,6 +572,11 @@ class WorkoutCloudSync {
         )
     }
 
+    /// Public helper to create a CombinedLog from a WorkoutSession for optimistic dashboard insert
+    func combinedLog(for workout: WorkoutSession) -> CombinedLog {
+        return workoutToCombinedLog(workout)
+    }
+
     func pushQueuedChanges() async throws -> [CombinedLog] {
         guard !syncQueue.isEmpty else { return [] }
 

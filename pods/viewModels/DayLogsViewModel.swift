@@ -302,6 +302,23 @@ func addPending(_ log: CombinedLog) {
   let key = Calendar.current.startOfDay(for: log.scheduledAt!)
     print("[DayLogsVM] addPending( id:\(log.id), dateKey:\(key) )")
 
+  // If a server-confirmed workout arrives, remove any optimistic workout placeholders for the same day
+  if log.type == .workout && log.isOptimistic == false {
+    // Clean from pending cache for the same day
+    if var arr = pendingByDate[key] {
+      let before = arr.count
+      arr.removeAll { $0.type == .workout && $0.isOptimistic }
+      if arr.count != before { pendingByDate[key] = arr }
+    }
+
+    // Clean from visible logs for the same day
+    logs.removeAll { item in
+      guard item.type == .workout && item.isOptimistic else { return false }
+      if let sched = item.scheduledAt { return Calendar.current.isDate(sched, inSameDayAs: key) }
+      return false
+    }
+  }
+
   var arr = pendingByDate[key] ?? []
 
   // don't double-insert the same ID

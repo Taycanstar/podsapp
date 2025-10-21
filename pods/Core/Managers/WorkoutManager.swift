@@ -2501,6 +2501,14 @@ class WorkoutManager: ObservableObject {
                                                          context: resolvedContext)
                 try await workoutDataManager.saveWorkout(workoutSession, context: resolvedContext)
 
+                // Immediately emit an optimistic CombinedLog so Dashboard shows the workout right away
+                let optimistic = makeOptimisticCombinedLog(for: workoutSession)
+                NotificationCenter.default.post(
+                    name: .workoutDataChanged,
+                    object: nil,
+                    userInfo: ["workouts": [optimistic], "optimistic": true]
+                )
+
                 // Sync immediately so workout appears in dashboard before user dismisses summary
                 await workoutDataManager.syncNow(context: resolvedContext)
 
@@ -2648,6 +2656,65 @@ class WorkoutManager: ObservableObject {
     }
 
     // MARK: - Private Methods
+
+    // Create an optimistic CombinedLog from a freshly saved WorkoutSession
+    private func makeOptimisticCombinedLog(for session: WorkoutSession) -> CombinedLog {
+        let rawDuration = session.totalDuration ?? session.duration ?? 0
+        let durationMinutes = Int(rawDuration / 60)
+        let durationSeconds = Int(rawDuration)
+
+        let totalVolume = session.exercises.reduce(0.0) { total, exercise in
+            let exerciseVolume = exercise.sets.reduce(0.0) { setTotal, set in
+                let reps = Double(set.actualReps ?? set.targetReps ?? 0)
+                let weight = set.actualWeight ?? set.targetWeight ?? 0
+                return setTotal + (reps * weight)
+            }
+            return total + exerciseVolume
+        }
+
+        let units = preferredUnitsSystem
+        let profile = userProfileService.profileData
+        let estimatedCalories = WorkoutCalculationService.shared.estimateCaloriesBurned(
+            volume: totalVolume,
+            duration: rawDuration,
+            profile: profile,
+            unitsSystem: units
+        )
+
+        let workoutSummary = WorkoutSummary(
+            id: session.remoteId ?? -1,
+            title: session.name,
+            durationMinutes: durationMinutes,
+            durationSeconds: durationSeconds,
+            exercisesCount: session.exercises.count,
+            status: session.completedAt != nil ? "completed" : "in_progress",
+            scheduledAt: session.startedAt
+        )
+
+        return CombinedLog(
+            type: .workout,
+            status: "success",
+            calories: Double(estimatedCalories),
+            message: session.name,
+            foodLogId: nil,
+            food: nil,
+            mealType: nil,
+            mealLogId: nil,
+            meal: nil,
+            mealTime: nil,
+            scheduledAt: session.startedAt,
+            recipeLogId: nil,
+            recipe: nil,
+            servingsConsumed: nil,
+            activityId: nil,
+            activity: nil,
+            workoutLogId: session.remoteId,
+            workout: workoutSummary,
+            logDate: nil,
+            dayOfWeek: nil,
+            isOptimistic: true
+        )
+    }
 
     private var userEmail: String {
         UserDefaults.standard.string(forKey: "userEmail") ?? ""
