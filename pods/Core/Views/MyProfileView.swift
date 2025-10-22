@@ -183,9 +183,8 @@ struct MyProfileView: View {
                     hasInitiallyLoaded = true
                 }
             }
-            
-            // Always fetch weight data and process macro split data
-            fetchWeightData()
+
+            // Process macro split data (weight data is now loaded from processProfileData)
             fetchMacroSplitData()
             ensureCombinedLogsReady()
             let email = resolvedUserEmail()
@@ -219,8 +218,20 @@ struct MyProfileView: View {
                 await combinedLogsRepository.refresh(force: true)
             }
         }
-        .onChange(of: onboarding.profileData?.email) { _ in
+        .onChange(of: onboarding.profileData?.email) { oldEmail, newEmail in
             ensureCombinedLogsReady(force: true)
+            // When profile data updates (detected via email change), process weight logs
+            if let profileData = onboarding.profileData, let weightLogs = profileData.weightLogsRecent {
+                print("✅ Profile data updated - loading weight logs (\(weightLogs.count) logs)")
+                self.recentWeightLogs = weightLogs
+                if let mostRecentLog = weightLogs.first {
+                    self.weightDate = mostRecentLog.dateLogged
+                    // Update current weight if not already set
+                    if self.currentWeightKg == nil || self.currentWeightKg == 0 {
+                        self.currentWeightKg = mostRecentLog.weightKg
+                    }
+                }
+            }
         }
     }
     
@@ -1696,21 +1707,30 @@ struct MyProfileView: View {
     
     private func processProfileData() {
         guard let profileData = onboarding.profileData else { return }
-        
+
         // Process macro data if available
         processProfileMacroData(profileData)
-        
+
         // Update weight/height from profile data
         if let weightKg = profileData.currentWeightKg, weightKg > 0 {
             vm.weight = weightKg
-                            currentWeightKg = weightKg
+            currentWeightKg = weightKg
         }
-        
+
         if let heightCm = profileData.heightCm, heightCm > 0 {
             vm.height = heightCm
         }
-        
-        print("✅ Processed preloaded profile data - weight: \(vm.weight)kg, height: \(vm.height)cm")
+
+        // Load weight logs from profile data (seamless, no separate API call)
+        if let weightLogs = profileData.weightLogsRecent {
+            print("✅ Loading weight logs from profile data (\(weightLogs.count) logs)")
+            self.recentWeightLogs = weightLogs
+            if let mostRecentLog = weightLogs.first {
+                self.weightDate = mostRecentLog.dateLogged
+            }
+        }
+
+        print("✅ Processed preloaded profile data - weight: \(vm.weight)kg, height: \(vm.height)cm, weight logs: \(profileData.weightLogsRecent?.count ?? 0)")
     }
     
     // Helper function to parse dates robustly
@@ -1822,44 +1842,70 @@ struct MyProfileView: View {
     }
     
     private func fetchWeightData() {
-        // Always fetch from API to get recent logs for the chart, even if vm has weight
-        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
-            print("❌ No user email found for weight fetch")
-            return
-        }
-        
-        print("🏋️ Fetching weight data for email: \(email)")
+        print("🏋️ Fetching weight data")
         print("🏋️ vm.weight value: \(vm.weight)")
-        
+
         // Store vm.weight as the preferred source of truth (vm.weight is already in kg)
         let vmWeightKg = vm.weight > 0 ? vm.weight : nil
-        
-        // If vm has weight, use it immediately but still fetch logs for chart
+
+        // If vm has weight, use it immediately
         if let vmWeight = vmWeightKg {
             currentWeightKg = vmWeight
             print("🏋️ Got initial weight from DayLogsViewModel: \(vm.weight)kg")
         }
-        
+
+        // First, check if we have weight logs in profile data (from main profile API call)
+        if let profileData = onboarding.profileData,
+           let weightLogs = profileData.weightLogsRecent {
+            print("🏋️ Using weight logs from profile data (seamless load)")
+            print("  - Total logs in profile: \(weightLogs.count)")
+
+            self.recentWeightLogs = weightLogs
+
+            if let mostRecentLog = weightLogs.first {
+                self.weightDate = mostRecentLog.dateLogged
+
+                // Only update currentWeightKg if vm.weight doesn't exist
+                if vmWeightKg == nil {
+                    self.currentWeightKg = mostRecentLog.weightKg
+                    print("🏋️ Got weight from profile data: \(mostRecentLog.weightKg)kg")
+                } else {
+                    print("🏋️ Keeping vm.weight (\(vmWeightKg!)kg) over profile weight (\(mostRecentLog.weightKg)kg)")
+                }
+            }
+
+            return // Weight data loaded from profile, no need for separate API call
+        }
+
+        // Fallback: If weight logs not in profile data, fetch separately
+        // This maintains backward compatibility with older server versions
+        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
+            print("❌ No user email found for weight fetch")
+            return
+        }
+
+        print("🏋️ Weight logs not in profile data - fetching separately for email: \(email)")
+
         isLoadingWeight = true
         NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 7, offset: 0) { result in
             DispatchQueue.main.async {
                 self.isLoadingWeight = false
-                
+
                 switch result {
                 case .success(let response):
                     self.recentWeightLogs = response.logs
-                    
-                    print("🏋️ Weight API Response:")
+
+                    print("🏋️ Weight API Response (separate call):")
                     print("  - Total logs received: \(response.logs.count)")
                     print("  - Show chart condition (count >= 2): \(response.logs.count >= 2)")
-                    
+
                     for (index, log) in response.logs.enumerated() {
                         print("  - Log \(index + 1): \(log.weightKg)kg (\(log.weightKg * 2.20462)lbs) on \(log.dateLogged)")
                     }
-                    
+
                     if let mostRecentLog = response.logs.first {
                         self.weightDate = mostRecentLog.dateLogged
-                        
+
                         // Only update currentWeightKg if vm.weight doesn't exist or API has newer data
                         if vmWeightKg == nil {
                             self.currentWeightKg = mostRecentLog.weightKg
@@ -1891,13 +1937,11 @@ struct MyProfileView: View {
     
     private func refreshProfileData() async {
         print("🔄 Pull to refresh triggered")
-        
+
         // Refresh profile data (this will show the native pull-to-refresh indicator)
+        // Weight data will be automatically loaded via .onChange(of: onboarding.profileData)
         await onboarding.fetchProfileData(force: true)
-        
-        // Refresh weight data
-        fetchWeightData()
-        
+
         // Refresh macro data
         fetchMacroSplitData()
         

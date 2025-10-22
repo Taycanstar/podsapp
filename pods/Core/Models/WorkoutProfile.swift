@@ -21,6 +21,7 @@ struct ProfileDataResponse: Codable {
     var currentWeightKg: Double?
     var currentWeightLbs: Double?
     var weightDate: String?
+    var weightLogsRecent: [WeightLogResponse]?
     var calorieTrend3Weeks: [CalorieTrendDay]
     var macroData3Weeks: [MacroDataDay]?  // Optional macro breakdown data
     var averageDailyCalories: Double
@@ -55,6 +56,7 @@ struct ProfileDataResponse: Codable {
         case currentWeightKg = "current_weight_kg"
         case currentWeightLbs = "current_weight_lbs"
         case weightDate = "weight_date"
+        case weightLogsRecent = "weight_logs_recent"
         case calorieTrend3Weeks = "calorie_trend_3_weeks"
         case macroData3Weeks = "macro_data_3_weeks"
         case averageDailyCalories = "average_daily_calories"
@@ -92,6 +94,7 @@ struct ProfileDataResponse: Codable {
         currentWeightKg = try container.decodeIfPresent(Double.self, forKey: .currentWeightKg)
         currentWeightLbs = try container.decodeIfPresent(Double.self, forKey: .currentWeightLbs)
         weightDate = try container.decodeIfPresent(String.self, forKey: .weightDate)
+        weightLogsRecent = try container.decodeIfPresent([WeightLogResponse].self, forKey: .weightLogsRecent)
 
         calorieTrend3Weeks = try container.decodeIfPresent([CalorieTrendDay].self, forKey: .calorieTrend3Weeks) ?? []
         macroData3Weeks = try container.decodeIfPresent([MacroDataDay].self, forKey: .macroData3Weeks)
@@ -135,6 +138,7 @@ struct ProfileDataResponse: Codable {
         try container.encodeIfPresent(currentWeightKg, forKey: .currentWeightKg)
         try container.encodeIfPresent(currentWeightLbs, forKey: .currentWeightLbs)
         try container.encodeIfPresent(weightDate, forKey: .weightDate)
+        try container.encodeIfPresent(weightLogsRecent, forKey: .weightLogsRecent)
 
         try container.encode(calorieTrend3Weeks, forKey: .calorieTrend3Weeks)
         try container.encodeIfPresent(macroData3Weeks, forKey: .macroData3Weeks)

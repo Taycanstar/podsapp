@@ -11,6 +11,11 @@ struct LandingView: View {
     @Binding var isAuthenticated: Bool
     @State private var showSignupView = false
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject private var foodManager: FoodManager
+    @EnvironmentObject private var dayLogsViewModel: DayLogsViewModel
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @EnvironmentObject private var dataLayer: DataLayer
+    @EnvironmentObject private var dataSyncService: DataSyncService
     @State private var currentNonce: String?
     @State private var idTokenString: String?
 
@@ -153,7 +158,11 @@ struct LandingView: View {
                     DispatchQueue.main.async {
                         // Save auth state
                         UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                        UserDefaults.standard.set(email, forKey: "userEmail")
+                        if let email,
+                           let resolvedEmail = sanitizeEmail(email) {
+                            UserDefaults.standard.set(resolvedEmail, forKey: "userEmail")
+                            viewModel.email = resolvedEmail
+                        }
                         UserDefaults.standard.set(username, forKey: "username")
                         UserDefaults.standard.set(userId, forKey: "userId")
                         
@@ -199,7 +208,11 @@ struct LandingView: View {
                         }
 
                         // Update view model
-                        viewModel.email = email ?? ""
+                        if viewModel.email.isEmpty,
+                           let storedEmail = UserDefaults.standard.string(forKey: "userEmail"),
+                           !storedEmail.isEmpty {
+                            viewModel.email = storedEmail
+                        }
                         viewModel.username = username ?? ""
                         viewModel.userId = userId ?? 0
                         
@@ -234,6 +247,7 @@ struct LandingView: View {
                         // Always set authentication to true - let ContentView handle onboarding flow
                         print("🔑 Google Auth - Setting isAuthenticated = true, onboarding status: \(isOnboardingComplete)")
                         self.isAuthenticated = true
+                        bootstrapSharedStateIfNeeded()
 
                         // Force synchronize to ensure state changes are written immediately
                         UserDefaults.standard.synchronize()
@@ -283,7 +297,15 @@ struct LandingView: View {
                     DispatchQueue.main.async {
                         // Save auth state
                         UserDefaults.standard.set(true, forKey: "isAuthenticated")
-                        UserDefaults.standard.set(email, forKey: "userEmail")
+                        if let email,
+                           let resolvedEmail = sanitizeEmail(email) {
+                            UserDefaults.standard.set(resolvedEmail, forKey: "userEmail")
+                            viewModel.email = resolvedEmail
+                        } else if viewModel.email.isEmpty,
+                                  let existingEmail = UserDefaults.standard.string(forKey: "userEmail"),
+                                  !existingEmail.isEmpty {
+                            viewModel.email = existingEmail
+                        }
                         UserDefaults.standard.set(username, forKey: "username")
                         UserDefaults.standard.set(userId, forKey: "userId")
                         
@@ -329,7 +351,14 @@ struct LandingView: View {
                         }
 
                         // Update view model
-                        viewModel.email = email ?? ""
+                        if let email,
+                           let resolvedEmail = sanitizeEmail(email) {
+                            viewModel.email = resolvedEmail
+                        } else if viewModel.email.isEmpty,
+                                  let storedEmail = UserDefaults.standard.string(forKey: "userEmail"),
+                                  !storedEmail.isEmpty {
+                            viewModel.email = storedEmail
+                        }
                         viewModel.username = username ?? ""
                         viewModel.userId = userId ?? 0
                         
@@ -365,6 +394,7 @@ struct LandingView: View {
                         // Always set authentication to true - let ContentView handle onboarding flow
                         print("🔑 Apple Auth - Setting isAuthenticated = true, onboarding status: \(isOnboardingComplete)")
                         self.isAuthenticated = true
+                        bootstrapSharedStateIfNeeded()
 
                         // Force synchronize to ensure state changes are written immediately
                         UserDefaults.standard.synchronize()
@@ -439,6 +469,40 @@ struct LandingView: View {
         }
         
     
+    private func sanitizeEmail(_ email: String) -> String? {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed.lowercased()
+    }
+
+    private func bootstrapSharedStateIfNeeded() {
+        let resolvedEmail: String? = {
+            if !viewModel.email.isEmpty {
+                return viewModel.email
+            }
+            if let stored = UserDefaults.standard.string(forKey: "userEmail"),
+               !stored.isEmpty {
+                return stored
+            }
+            return nil
+        }()
+
+        guard let email = resolvedEmail else {
+            print("⚠️ Auth Bootstrap - Unable to resolve user email for shared state setup")
+            return
+        }
+
+        Task { @MainActor in
+            StartupCoordinator.shared.bootstrapIfNeeded(
+                onboarding: viewModel,
+                foodManager: foodManager,
+                dayLogs: dayLogsViewModel,
+                subscriptionManager: subscriptionManager
+            )
+
+            await dataLayer.initialize(userEmail: email)
+            await dataSyncService.initialize(userEmail: email)
+        }
+    }
 }
 
 // Button style modifier for uniform styling
@@ -461,5 +525,10 @@ struct LandingView_Previews: PreviewProvider {
     static var previews: some View {
         LandingView(isAuthenticated: .constant(false))
             .environmentObject(OnboardingViewModel())
+            .environmentObject(FoodManager())
+            .environmentObject(DayLogsViewModel())
+            .environmentObject(SubscriptionManager())
+            .environmentObject(DataLayer.shared)
+            .environmentObject(DataSyncService.shared)
     }
 }
