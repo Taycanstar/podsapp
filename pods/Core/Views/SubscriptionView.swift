@@ -13,6 +13,7 @@ struct SubscriptionView: View {
     @State private var showPricingSheet = false
     @State private var alertContent: AlertContent?
     @State private var isProcessingAction = false
+    @State private var mainCTAText: String?
 
     private let displayedTier: SubscriptionTier = .humuliProMonthly
 
@@ -63,7 +64,19 @@ struct SubscriptionView: View {
         .onAppear {
             isTabBarVisible.wrappedValue = false
             subscriptionManager.setOnboardingViewModel(viewModel)
-            Task { await fetchSubscriptionInfo(force: true) }
+            Task {
+                await fetchSubscriptionInfo(force: true)
+
+                // Load CTA text with intro offer if available
+                if let monthlyProduct = subscriptionManager.products.first(where: {
+                    $0.id == displayedTier.productIdentifier(for: .monthly)
+                }),
+                let introOffer = await subscriptionManager.getIntroductoryOfferDescription(for: monthlyProduct) {
+                    mainCTAText = "Try \(introOffer)"
+                } else {
+                    mainCTAText = "Starting at \(subscriptionManager.startingPrice(for: displayedTier))"
+                }
+            }
         }
         .onReceive(
             NotificationCenter.default
@@ -174,7 +187,7 @@ struct SubscriptionView: View {
             Button {
                 showPricingSheet = true
             } label: {
-                Text("Starting at \(subscriptionManager.startingPrice(for: displayedTier))")
+                Text(mainCTAText ?? "Loading...")
                     .font(.headline)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -381,6 +394,8 @@ struct PricingView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var isProcessing = false
+    @State private var monthlyIntroOffer: String?
+    @State private var yearlyIntroOffer: String?
 
     enum PlanType {
         case monthly
@@ -414,6 +429,7 @@ struct PricingView: View {
                         price: subscriptionManager.annualPrice(for: tier),
                         savings: savingsDescription(),
                         billingInfo: subscriptionManager.annualBillingInfo(for: tier),
+                        introOffer: yearlyIntroOffer,
                         isSelected: selectedPlan == .yearly
                     ) {
                         selectedPlan = .yearly
@@ -423,6 +439,7 @@ struct PricingView: View {
                         title: PlanType.monthly.title,
                         price: subscriptionManager.monthlyPrice(for: tier),
                         billingInfo: subscriptionManager.monthlyBillingInfo(for: tier),
+                        introOffer: monthlyIntroOffer,
                         isSelected: selectedPlan == .monthly
                     ) {
                         selectedPlan = .monthly
@@ -460,14 +477,35 @@ struct PricingView: View {
             } message: {
                 Text(errorMessage)
             }
+            .onAppear {
+                Task {
+                    // Load intro offer descriptions for both plans
+                    if let monthlyProduct = subscriptionManager.products.first(where: {
+                        $0.id == tier.productIdentifier(for: .monthly)
+                    }) {
+                        monthlyIntroOffer = await subscriptionManager.getIntroductoryOfferDescription(for: monthlyProduct)
+                    }
+
+                    if let yearlyProduct = subscriptionManager.products.first(where: {
+                        $0.id == tier.productIdentifier(for: .yearly)
+                    }) {
+                        yearlyIntroOffer = await subscriptionManager.getIntroductoryOfferDescription(for: yearlyProduct)
+                    }
+                }
+            }
         }
     }
 
     private var purchaseButtonTitle: String {
-        let price = selectedPlan == .yearly
-            ? subscriptionManager.annualPrice(for: tier)
-            : subscriptionManager.monthlyPrice(for: tier)
-        return "Subscribe for \(price)"
+        let introOffer = selectedPlan == .yearly ? yearlyIntroOffer : monthlyIntroOffer
+        if let intro = introOffer {
+            return "Start \(intro)"
+        } else {
+            let price = selectedPlan == .yearly
+                ? subscriptionManager.annualPrice(for: tier)
+                : subscriptionManager.monthlyPrice(for: tier)
+            return "Subscribe for \(price)"
+        }
     }
 
     private func savingsDescription() -> String? {
@@ -521,16 +559,32 @@ struct PricingOptionView: View {
     let price: String
     var savings: String? = nil
     let billingInfo: String
+    var introOffer: String? = nil
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(title)
                         .font(.headline)
                     Spacer()
+
+                    // Show intro offer badge prominently
+                    if let introOffer = introOffer {
+                        Text(introOffer)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(Color.green)
+                            )
+                    }
+
                     Text(price)
                         .font(.headline)
                 }
@@ -548,6 +602,18 @@ struct PricingOptionView: View {
                 Text(billingInfo)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+
+                // Show trial details below
+                if let introOffer = introOffer {
+                    Text("Then \(price) after trial")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Text("Auto-renews unless cancelled 24h before trial ends")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 2)
+                }
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)

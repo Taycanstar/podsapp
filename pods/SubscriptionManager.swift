@@ -346,10 +346,19 @@ class SubscriptionManager: ObservableObject {
         }
         
         print("Found product: \(product.id), \(product.displayName)")
-        
+
+        // Check intro offer eligibility
+        let isEligibleForIntro = await checkIntroductoryOfferEligibility(for: product)
+        print("Eligible for introductory offer: \(isEligibleForIntro)")
+
+        if let introDescription = await getIntroductoryOfferDescription(for: product) {
+            print("Introductory offer: \(introDescription)")
+        }
+
         do {
+            // Purchase with intro offer automatically applied if eligible
             let result = try await product.purchase()
-            
+
             print("Purchase result: \(result)")
             
             switch result {
@@ -372,6 +381,7 @@ class SubscriptionManager: ObservableObject {
                             Mixpanel.mainInstance().track(event: "Subscription Purchase", properties: [
                                 "Plan": duration == .yearly ? "Annual" : "Monthly",
                                 "Tier": tier.rawValue,
+                                "Has Intro Offer": isEligibleForIntro
                             ])
 
                         case .unverified:
@@ -435,6 +445,78 @@ class SubscriptionManager: ObservableObject {
         Mixpanel.mainInstance().track(event: "Subscription Restore", properties: [
             "User Email": userEmail
         ])
+    }
+
+    // MARK: - Introductory Offer Methods
+
+    @MainActor
+    func checkIntroductoryOfferEligibility(for product: Product) async -> Bool {
+        #if targetEnvironment(simulator)
+        // In simulator, always show as eligible for testing
+        return true
+        #else
+        // Check actual eligibility on device
+        guard let subscription = product.subscription else { return false }
+        return await subscription.isEligibleForIntroOffer
+        #endif
+    }
+
+    @MainActor
+    func getIntroductoryOfferDescription(for product: Product) async -> String? {
+        print("🎁 Getting intro offer description for product: \(product.id)")
+
+        let isEligible = await checkIntroductoryOfferEligibility(for: product)
+        print("🎁 Is eligible: \(isEligible)")
+
+        guard isEligible else {
+            print("🎁 Not eligible for intro offer")
+            return nil
+        }
+
+        guard let subscription = product.subscription else {
+            print("🎁 No subscription property on product")
+            return nil
+        }
+
+        guard let introOffer = subscription.introductoryOffer else {
+            print("🎁 No introductory offer on subscription")
+            return nil
+        }
+
+        print("🎁 Found intro offer with payment mode: \(introOffer.paymentMode)")
+        print("🎁 Intro offer period: \(introOffer.period.value) \(introOffer.period.unit)")
+
+        // Use if-else to avoid exhaustiveness issues with StoreKit enums
+        if introOffer.paymentMode == .freeTrial {
+            let period = introOffer.period
+            if period.unit == .week && period.value == 1 {
+                return "7 days free"
+            } else if period.unit == .month && period.value == 1 {
+                return "1 month free"
+            } else {
+                // Handle all period units
+                let unitString: String
+                switch period.unit {
+                case .day:
+                    unitString = period.value == 1 ? "day" : "days"
+                case .week:
+                    unitString = period.value == 1 ? "week" : "weeks"
+                case .month:
+                    unitString = period.value == 1 ? "month" : "months"
+                case .year:
+                    unitString = period.value == 1 ? "year" : "years"
+                @unknown default:
+                    unitString = "period"
+                }
+                return "\(period.value) \(unitString) free"
+            }
+        } else if introOffer.paymentMode == .payAsYouGo {
+            return "Introductory offer available"
+        } else if introOffer.paymentMode == .payUpFront {
+            return "Special intro price"
+        } else {
+            return nil
+        }
     }
 
 
