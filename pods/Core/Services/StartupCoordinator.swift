@@ -82,19 +82,23 @@ final class StartupCoordinator: ObservableObject {
 
         state = .warming
 
-        Task {
-            async let profileTask: Void = profileRepository.refresh(force: false)
-            async let subscriptionTask: Void = subscriptionRepository.refresh(force: false)
-            async let foodTask: Bool = foodRepository.refresh(force: false)
-            async let logsTask: Void = dayLogsRepository.refresh(date: dayLogs.selectedDate, force: false)
+        Task { [weak self] in
+            guard let self else { return }
+
+            async let profileTask: Void = self.profileRepository.refresh(force: false)
+            async let subscriptionTask: Void = self.subscriptionRepository.refresh(force: false)
+            async let foodTask: Bool = self.foodRepository.refresh(force: false)
+            async let logsTask: Void = self.dayLogsRepository.refresh(date: dayLogs.selectedDate, force: false)
 
             _ = await profileTask
             _ = await subscriptionTask
             _ = await foodTask
             _ = await logsTask
 
-            state = .ready
-            resumeContinuations()
+            await MainActor.run {
+                self.state = .ready
+                self.resumeContinuations()
+            }
         }
     }
 

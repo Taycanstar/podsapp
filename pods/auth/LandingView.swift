@@ -249,6 +249,8 @@ struct LandingView: View {
                         self.isAuthenticated = true
                         bootstrapSharedStateIfNeeded()
 
+                        NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
+
                         // Force synchronize to ensure state changes are written immediately
                         UserDefaults.standard.synchronize()
 
@@ -395,6 +397,8 @@ struct LandingView: View {
                         print("🔑 Apple Auth - Setting isAuthenticated = true, onboarding status: \(isOnboardingComplete)")
                         self.isAuthenticated = true
                         bootstrapSharedStateIfNeeded()
+
+                        NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
 
                         // Force synchronize to ensure state changes are written immediately
                         UserDefaults.standard.synchronize()

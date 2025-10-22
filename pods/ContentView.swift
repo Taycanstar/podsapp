@@ -238,6 +238,7 @@ struct ContentView: View {
         .id(forceRefresh)
         .onAppear {
             print("⚠️ ContentView appeared")
+            hydrateAuthenticatedState()
             setupNotificationObservers()
         }
         .onChange(of: selectedMeal) { _, newValue in
@@ -277,7 +278,8 @@ struct ContentView: View {
         .onChange(of: isAuthenticated) { _, newValue in
             print("🔄 ContentView: isAuthenticated changed to \(newValue)")
             if newValue {
-                print("🔄 ContentView: User authenticated - fetching initial data and checking state")
+                print("🔄 ContentView: User authenticated - refreshing state")
+                hydrateAuthenticatedState()
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     print("🔄 ContentView: Bootstrapping after authentication")
@@ -359,6 +361,7 @@ struct ContentView: View {
                 .receive(on: RunLoop.main)
         ) { _ in
             print("🔔 ContentView: Received AuthenticationCompleted notification")
+            hydrateAuthenticatedState()
             // Bootstrap for the current user and refresh the view
             StartupCoordinator.shared.bootstrapIfNeeded(
                 onboarding: viewModel,
@@ -381,6 +384,53 @@ struct ContentView: View {
             return SubscriptionTier(rawValue: viewModel.subscriptionPlan ?? "None") ?? .none
         }
     
+    private func hydrateAuthenticatedState() {
+        guard isAuthenticated else { return }
+
+        if viewModel.email.isEmpty,
+           let storedEmail = UserDefaults.standard.string(forKey: "userEmail"),
+           !storedEmail.isEmpty {
+            viewModel.email = storedEmail
+        }
+
+        if viewModel.username.isEmpty,
+           let storedUsername = UserDefaults.standard.string(forKey: "username"),
+           !storedUsername.isEmpty {
+            viewModel.username = storedUsername
+        }
+
+        if viewModel.profileInitial.isEmpty {
+            viewModel.profileInitial = UserDefaults.standard.string(forKey: "profileInitial") ?? ""
+        }
+
+        if viewModel.profileColor.isEmpty {
+            viewModel.profileColor = UserDefaults.standard.string(forKey: "profileColor") ?? ""
+        }
+
+        if viewModel.activeTeamId == nil,
+           let storedTeamId = UserDefaults.standard.object(forKey: "activeTeamId") as? Int {
+            viewModel.activeTeamId = storedTeamId
+        }
+
+        if viewModel.activeWorkspaceId == nil,
+           let storedWorkspaceId = UserDefaults.standard.object(forKey: "activeWorkspaceId") as? Int {
+            viewModel.activeWorkspaceId = storedWorkspaceId
+        }
+
+        viewModel.serverOnboardingCompleted = UserDefaults.standard.bool(forKey: "serverOnboardingCompleted")
+        viewModel.onboardingCompleted = UserDefaults.standard.bool(forKey: "onboardingCompleted")
+
+        subscriptionStatus = UserDefaults.standard.string(forKey: "subscriptionStatus") ?? "none"
+        subscriptionPlan = UserDefaults.standard.string(forKey: "subscriptionPlan")
+
+        if let expiresAtString = UserDefaults.standard.string(forKey: "subscriptionExpiresAt"),
+           !expiresAtString.isEmpty {
+            subscriptionExpiresAt = ISO8601DateFormatter().date(from: expiresAtString)
+        } else {
+            subscriptionExpiresAt = nil
+        }
+    }
+
     private func fetchSubscriptionInfo(force: Bool = false) {
         let email = viewModel.email
         guard !email.isEmpty else { return }
