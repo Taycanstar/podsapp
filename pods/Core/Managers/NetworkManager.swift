@@ -78,7 +78,7 @@ class NetworkManager {
 
 
     // ### STAGING ###
-    let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+    // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
 
 
     func determineUserLocation() {
