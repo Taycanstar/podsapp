@@ -131,53 +131,16 @@ struct WeightDataView: View {
             if !allLogs.isEmpty && errorMessage == nil {
                 Section {
                     // History header with summary
-                    VStack(spacing: 8) {
-                        HStack {
-                            Text("History")
-                                .font(.title)
-                                .foregroundColor(.primary)
-                                .fontWeight(.bold)
-                                .padding()
-                            
-                            Spacer()
-                            
-                            compareButton
-                        }
-                        
-                        // Summary of logs
-                        HStack {
-                            let appleHealthCount = allLogs.filter { $0.notes?.contains("Apple Health") == true || $0.notes?.contains("Withings") == true }.count
-                            let manualCount = allLogs.count - appleHealthCount
-                            
-                            HStack(spacing: 4) {
-                                Image(systemName: "heart.text.square")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.pink)
-                                Text("\(appleHealthCount) Apple Health")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.pink)
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.pink.opacity(0.1))
-                            .cornerRadius(6)
-                            
-                            HStack(spacing: 4) {
-                                Image(systemName: "plus.circle")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.blue)
-                                Text("\(manualCount) Manual")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.blue)
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(6)
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal)
+                    HStack {
+                        Text("History")
+                            .font(.title)
+                            .foregroundColor(.primary)
+                            .fontWeight(.bold)
+                            .padding()
+
+                        Spacer()
+
+                        compareButton
                     }
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
@@ -1280,29 +1243,11 @@ struct WeightLogRowView: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                // Weight in appropriate units with Apple Health indicator
-                HStack(spacing: 8) {
-                    Text(formatWeightDisplay())
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                    
-                    // Show Apple Health indicator if this log came from Apple Health
-                    if let notes = log.notes, (notes.contains("Apple Health") || notes.contains("Withings")) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "heart.text.square")
-                                .font(.system(size: 12))
-                                .foregroundColor(.pink)
-                            Text("Apple Health")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(.pink)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.pink.opacity(0.1))
-                        .cornerRadius(4)
-                    }
-                }
-                
+                // Weight in appropriate units
+                Text(formatWeightDisplay())
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+
                 Text(formatDateForHistory(date))
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
