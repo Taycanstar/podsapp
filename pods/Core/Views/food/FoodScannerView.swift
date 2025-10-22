@@ -239,41 +239,56 @@ struct FoodScannerView: View {
                     // Bottom controls
                     VStack(spacing: 30) {
                         // Mode selection buttons
-                        HStack(spacing: 15) {
-                            // Food Scan Button
-                            ScanOptionButton(
-                                icon: "text.viewfinder",
-                                title: "Food",
-                                isSelected: selectedMode == .food,
-                                action: { selectedMode = .food }
-                            )
+                        GeometryReader { geometry in
+                            let horizontalPadding: CGFloat = 20
+                            let spacing: CGFloat = 12
+                            let buttonCount: CGFloat = 4
+                            let availableWidth = max(0, geometry.size.width - (horizontalPadding * 2) - (spacing * (buttonCount - 1)))
+                            let buttonWidth = min(92, availableWidth / buttonCount)
                             
-                            // Nutrition Label Button
-                            ScanOptionButton(
-                                icon: "tag",
-                                title: "Label",
-                                isSelected: selectedMode == .nutritionLabel,
-                                action: { selectedMode = .nutritionLabel }
-                            )
-                            
-                            // Barcode Button
-                            ScanOptionButton(
-                                icon: "barcode.viewfinder",
-                                title: "Barcode",
-                                isSelected: selectedMode == .barcode,
-                                action: { selectedMode = .barcode }
-                            )
-                            
-                            // Gallery Button
-                            ScanOptionButton(
-                                icon: "photo",
-                                title: "Gallery",
-                                isSelected: selectedMode == .gallery,
-                                action: {
-                                    openGallery()
-                                }
-                            )
+                            HStack(spacing: spacing) {
+                                // Food Scan Button
+                                ScanOptionButton(
+                                    icon: "text.viewfinder",
+                                    title: "Food",
+                                    isSelected: selectedMode == .food,
+                                    preferredWidth: buttonWidth,
+                                    action: { selectedMode = .food }
+                                )
+                                
+                                // Nutrition Label Button
+                                ScanOptionButton(
+                                    icon: "tag",
+                                    title: "Label",
+                                    isSelected: selectedMode == .nutritionLabel,
+                                    preferredWidth: buttonWidth,
+                                    action: { selectedMode = .nutritionLabel }
+                                )
+                                
+                                // Barcode Button
+                                ScanOptionButton(
+                                    icon: "barcode.viewfinder",
+                                    title: "Barcode",
+                                    isSelected: selectedMode == .barcode,
+                                    preferredWidth: buttonWidth,
+                                    action: { selectedMode = .barcode }
+                                )
+                                
+                                // Gallery Button
+                                ScanOptionButton(
+                                    icon: "photo",
+                                    title: "Gallery",
+                                    isSelected: selectedMode == .gallery,
+                                    preferredWidth: buttonWidth,
+                                    action: {
+                                        openGallery()
+                                    }
+                                )
+                            }
+                            .padding(.horizontal, horizontalPadding)
+                            .frame(maxWidth: .infinity, alignment: .center)
                         }
+                        .frame(height: 72)
                         
                         // Capture button
                         if selectedMode != .gallery {
@@ -733,11 +748,16 @@ struct ScanOptionButton: View {
     let icon: String
     let title: String
     let isSelected: Bool
+    var preferredWidth: CGFloat? = nil
     let action: () -> Void
     
-    // Fixed dimensions for consistent sizing
-    private let buttonWidth: CGFloat = 90
+    private let defaultButtonWidth: CGFloat = 90
     private let buttonHeight: CGFloat = 60
+    private let cornerRadius: CGFloat = 12
+    
+    private var buttonWidth: CGFloat {
+        preferredWidth ?? defaultButtonWidth
+    }
     
     var body: some View {
         Button(action: action) {
@@ -752,14 +772,16 @@ struct ScanOptionButton: View {
             }
             .frame(width: buttonWidth, height: buttonHeight)
             .background(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: cornerRadius)
                     .fill(isSelected ? Color.white.opacity(0.3) : Color.black.opacity(0.4))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: cornerRadius)
                     .stroke(isSelected ? Color.white : Color.white.opacity(0.3), lineWidth: 1)
             )
         }
+        .frame(width: buttonWidth, height: buttonHeight)
+        .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 }
 
