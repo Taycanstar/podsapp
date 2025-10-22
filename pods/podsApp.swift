@@ -90,9 +90,15 @@ struct podsApp: App {
                 }
                 .onChange(of: scenePhase) { newPhase in
                     if newPhase == .active {
-                        // Trigger Apple Health weight sync when app becomes active
-                        Task {
-                            await weightSyncService.syncAppleHealthWeights()
+                        print("⚠️  App became active")
+                        // Only trigger sync if user is authenticated
+                        if let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty {
+                            print("✅ User authenticated (\(userEmail)) - triggering Apple Health weight sync")
+                            Task {
+                                await weightSyncService.syncAppleHealthWeights()
+                            }
+                        } else {
+                            print("⏭️  User not authenticated - skipping weight sync")
                         }
                     }
                 }

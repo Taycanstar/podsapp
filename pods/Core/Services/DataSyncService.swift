@@ -69,22 +69,22 @@ class DataSyncService: ObservableObject {
             print("📵 DataSyncService: Offline - sync will start when network is available")
         }
         
-        print("✅ DataSyncService: Initialization complete")
+       
     }
     
     /// Queue an operation for sync
     func queueOperation(_ operation: SyncOperation) async {
-        print("📤 DataSyncService: Queueing operation - \(operation.type.rawValue)")
-        print("   └── Data: \(operation.data.keys.joined(separator: ", "))")
+
+
         
         pendingOperations.append(operation)
         await savePendingOperations()
         
-        print("📋 DataSyncService: Queue now has \(pendingOperations.count) operations")
+
         
         // Try to sync immediately if online
         if isOnline && !isSyncing {
-            print("🔄 DataSyncService: Online and not syncing - attempting immediate sync")
+
             await performSync()
         } else {
             print("⏳ DataSyncService: Will sync when conditions are met (online: \(isOnline), syncing: \(isSyncing))")
@@ -93,9 +93,7 @@ class DataSyncService: ObservableObject {
     
     /// Perform a full sync of all data
     func performFullSync() async {
-        print("🔄 DataSyncService: Starting FULL SYNC")
-        print("   └── User: \(userEmail ?? "unknown")")
-        print("   └── Pending operations: \(pendingOperations.count)")
+
         
         guard let userEmail = userEmail else {
             print("❌ DataSyncService: No user email - cannot perform full sync")
@@ -108,22 +106,20 @@ class DataSyncService: ObservableObject {
         do {
             // 1. Sync pending operations first
             if !pendingOperations.isEmpty {
-                print("📤 DataSyncService: Syncing \(pendingOperations.count) pending operations")
+
                 await syncPendingOperations()
             } else {
                 print("✅ DataSyncService: No pending operations to sync")
             }
             
             // 2. Fetch latest data from server
-            print("📥 DataSyncService: Fetching latest data from server")
+     
             await fetchLatestDataFromServer(userEmail: userEmail)
             
             // 3. Update sync status
             lastSyncTime = Date()
             syncStatus = .success
-            
-            print("✅ DataSyncService: Full sync completed successfully")
-            print("   └── Last sync: \(formatTime(lastSyncTime!))")
+          
             
         } catch {
             print("❌ DataSyncService: Full sync failed - \(error.localizedDescription)")
@@ -210,7 +206,7 @@ class DataSyncService: ObservableObject {
         do {
             // Sync pending operations
             if !pendingOperations.isEmpty {
-                print("📤 DataSyncService: Processing \(pendingOperations.count) pending operations")
+
                 await syncPendingOperations()
             }
             
@@ -222,7 +218,7 @@ class DataSyncService: ObservableObject {
             
             lastSyncTime = Date()
             syncStatus = .success
-            print("✅ DataSyncService: Sync completed successfully at \(formatTime(lastSyncTime!))")
+
             
         } catch {
             print("❌ DataSyncService: Sync failed - \(error.localizedDescription)")
@@ -233,21 +229,18 @@ class DataSyncService: ObservableObject {
     }
     
     private func syncPendingOperations() async {
-        print("📤 DataSyncService: Starting to sync \(pendingOperations.count) pending operations")
+
         
         var successfulOperations: [SyncOperation] = []
         var failedOperations: [SyncOperation] = []
         
         for (index, operation) in pendingOperations.enumerated() {
-            print("📤 DataSyncService: Processing operation \(index + 1)/\(pendingOperations.count)")
-            print("   └── Type: \(operation.type.rawValue)")
-            print("   └── Created: \(formatTime(operation.createdAt))")
-            print("   └── Attempts: \(operation.retryCount)")
+
             
             do {
                 let success = try await syncOperation(operation)
                 if success {
-                    print("✅ DataSyncService: Operation \(index + 1) succeeded")
+           
                     successfulOperations.append(operation)
                 } else {
                     print("❌ DataSyncService: Operation \(index + 1) failed")
@@ -325,20 +318,16 @@ class DataSyncService: ObservableObject {
         
         do {
             // Simulate fetching different types of data
-            print("📥 DataSyncService: Fetching user profile...")
+
             try await Task.sleep(nanoseconds: 500_000_000)
-            print("✅ DataSyncService: User profile fetched")
-            
-            print("📥 DataSyncService: Fetching user preferences...")
+   
             try await Task.sleep(nanoseconds: 300_000_000)
-            print("✅ DataSyncService: User preferences fetched")
+         
             
-            print("📥 DataSyncService: Fetching workout data...")
+       
             try await Task.sleep(nanoseconds: 400_000_000)
-            print("✅ DataSyncService: Workout data fetched")
-            
-            // Notify DataLayer of new data
-            print("📢 DataSyncService: Notifying DataLayer of fresh data")
+      
+
             NotificationCenter.default.post(name: .dataUpdated, object: nil)
             
         } catch {
@@ -371,7 +360,7 @@ class DataSyncService: ObservableObject {
     }
     
     private func savePendingOperations() async {
-        print("💾 DataSyncService: Saving \(pendingOperations.count) pending operations to disk")
+
         
         guard let userEmail = userEmail else {
             print("❌ DataSyncService: No user email - cannot save operations")
@@ -383,7 +372,7 @@ class DataSyncService: ObservableObject {
         do {
             let data = try JSONEncoder().encode(pendingOperations)
             UserDefaults.standard.set(data, forKey: key)
-            print("💾 DataSyncService: Operations saved successfully")
+
         } catch {
             print("❌ DataSyncService: Failed to save operations: \(error.localizedDescription)")
         }

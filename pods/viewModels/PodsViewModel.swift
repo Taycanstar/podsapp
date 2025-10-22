@@ -52,23 +52,8 @@ class PodsViewModel: ObservableObject {
     
     func fetchPods(email: String, folderName: String = "Pods") {
         guard !isLoading else { return }
-        isLoading = true
-        
-        networkManager.fetchPodsForUser2(email: email, folderName: folderName) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.isLoading = false
-                
-                switch result {
-                case .success(let response):
-                    self.pods = response.pods.map { Pod(from: $0) }
-                    self.currentFolder = response.folder
-                    self.cachePods(response)
-                case .failure(let error):
-                    self.error = error
-                }
-            }
-        }
+        // Legacy pods API calls removed; rely on cached data only
+        isLoading = false
     }
     
     func fetchFolders(email: String) {

@@ -14,28 +14,14 @@ class HomeViewModel: ObservableObject {
     @Published var teams: [Team] = []
 
     func fetchPodsForUser(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping () -> Void) {
-        isLoading = true
-        
-        networkManager.fetchPodsForUser(email: email, workspaceId: workspaceId, showFavorites: showFavorites, showRecentlyVisited: showRecentlyVisited) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let newPods):
-                    self?.pods = newPods
-        
-                    self?.objectWillChange.send()
-                case .failure(let error):
-                    print("Error fetching pods: \(error)")
-                }
-                self?.isLoading = false
-                completion()
-            }
-        }
+        // Legacy pods fetching has been retired; keep method to satisfy existing call sites
+        isLoading = false
+        completion()
     }
     
     
     
     func refreshPods(email: String, workspaceId: Int? = nil, showFavorites: Bool = false, showRecentlyVisited: Bool = false, completion: @escaping () -> Void) {
-        self.pods = []  // Clear existing pods
         fetchPodsForUser(email: email, workspaceId: workspaceId, showFavorites: showFavorites, showRecentlyVisited: showRecentlyVisited, completion: completion)
     }
     

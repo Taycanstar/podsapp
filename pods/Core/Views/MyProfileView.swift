@@ -1224,7 +1224,7 @@ struct MyProfileView: View {
     }
     
     private var weightCardView: some View {
-        NavigationLink(destination: WeightDataView()) {
+        NavigationLink(destination: WeightDataView(initialAllLogs: recentWeightLogs)) {
             weightCardContent
         }
         .buttonStyle(PlainButtonStyle())

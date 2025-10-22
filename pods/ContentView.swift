@@ -70,12 +70,6 @@ struct ContentView: View {
     @ObservedObject private var versionManager = VersionManager.shared
     @Environment(\.scenePhase) var scenePhase
 
-    private func fetchInitialPods() {
-        homeViewModel.fetchPodsForUser(email: viewModel.email) {
-            print("Initial pods fetch completed")
-        }
-    }
-
     private var proOnboardingBinding: Binding<Bool> {
         Binding(
             get: { viewModel.showProOnboarding },
@@ -284,9 +278,7 @@ struct ContentView: View {
             print("🔄 ContentView: isAuthenticated changed to \(newValue)")
             if newValue {
                 print("🔄 ContentView: User authenticated - fetching initial data and checking state")
-                fetchInitialPods()
 
-     
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     print("🔄 ContentView: Bootstrapping after authentication")
                     StartupCoordinator.shared.bootstrapIfNeeded(
