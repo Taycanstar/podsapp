@@ -231,6 +231,8 @@ class SubscriptionManager: ObservableObject {
     func fetchProducts() async {
         do {
             let identifiers = SubscriptionTier.allProductIdentifiers
+            let bundleIdentifier = Bundle.main.bundleIdentifier ?? "unknown"
+            print("[StoreKit] requesting identifiers: \(identifiers) – bundle: \(bundleIdentifier)")
 
             guard identifiers.isEmpty == false else {
                 print("No product identifiers configured for subscription tiers.")
@@ -239,6 +241,7 @@ class SubscriptionManager: ObservableObject {
             }
 
             let storeProducts = try await Product.products(for: identifiers)
+            print("[StoreKit] received \(storeProducts.count) products: \(storeProducts.map { $0.id })")
 
             if storeProducts.isEmpty {
                 print("No products were fetched from the App Store.")
@@ -247,6 +250,8 @@ class SubscriptionManager: ObservableObject {
             }
         } catch {
             print("Failed to fetch products. Error: \(error)")
+            let nsError = error as NSError
+            print("[StoreKit] fetch failed – domain: \(nsError.domain) code: \(nsError.code) userInfo: \(nsError.userInfo)")
             if let storeKitError = error as? StoreKitError {
                 switch storeKitError {
                 case .networkError(let netError):

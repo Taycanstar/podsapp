@@ -688,14 +688,13 @@ class HealthKitManager {
             }
 
             let sleepSamples = samples as? [HKCategorySample] ?? []
-            print("──────── Sleep samples for selected date (\(date)) ────────")
+     
             for s in sleepSamples {
                 let stage = HealthKitManager.sleepStageName(for: s.value)
                 let mins  = Int(s.endDate.timeIntervalSince(s.startDate) / 60)
-                print(" • \(stage)  \(s.startDate) → \(s.endDate)  (\(mins) min)")
+          
             }
-            print("───────────────────────────────────────────────────────────")
-            print("🛌 Found \(sleepSamples.count) sleep samples for date: \(date)")
+        
 
             // Filter to only asleep stages and avoid overlapping periods
             let asleepSamples = sleepSamples.filter { sample in
