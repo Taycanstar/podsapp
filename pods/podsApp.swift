@@ -8,9 +8,24 @@ import GoogleSignIn
 import SwiftUI
 import Mixpanel
 import SwiftData
+import os.log
 
 @main
 struct podsApp: App {
+    init() {
+        // VERY LOUD LOG USING OS_LOG (guaranteed to appear in Console.app)
+        let logger = Logger(subsystem: "com.humuli.pods", category: "App")
+        logger.critical("🚀🚀🚀 APP STARTED WITH OS_LOG DIAGNOSTICS 🚀🚀🚀")
+        logger.critical("🚀🚀🚀 BUILD TIMESTAMP: \(Date().description) 🚀🚀🚀")
+
+        // Also try NSLog as backup
+        NSLog("🚀🚀🚀 APP STARTED - BUILD WITH NSLOG DIAGNOSTICS 🚀🚀🚀")
+        NSLog("🚀🚀🚀 BUILD TIMESTAMP: \(Date()) 🚀🚀🚀")
+
+        // And print as final backup
+        print("🚀🚀🚀 APP STARTED - BUILD WITH PRINT DIAGNOSTICS 🚀🚀🚀")
+    }
+
     @StateObject var sharedViewModel = SharedViewModel()
     @StateObject var onboardingViewModel = OnboardingViewModel()
     @StateObject var uploadViewModel = UploadViewModel()

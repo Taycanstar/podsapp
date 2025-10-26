@@ -4,6 +4,10 @@ import SwiftUI
 import StoreKit
 import Foundation
 import Mixpanel
+import os.log
+
+// Create logger for StoreKit diagnostics
+private let storeKitLogger = Logger(subsystem: "com.humuli.pods", category: "StoreKit")
 
 enum SubscriptionDuration {
     case monthly
@@ -232,44 +236,89 @@ class SubscriptionManager: ObservableObject {
         do {
             let identifiers = SubscriptionTier.allProductIdentifiers
             let bundleIdentifier = Bundle.main.bundleIdentifier ?? "unknown"
-            print("[StoreKit] requesting identifiers: \(identifiers) – bundle: \(bundleIdentifier)")
+
+            // Enhanced diagnostics using os_log (GUARANTEED to appear in Console.app)
+            storeKitLogger.critical("═══════════════════════════════════════════")
+            storeKitLogger.critical("[StoreKit] DETAILED DIAGNOSTICS")
+            storeKitLogger.critical("═══════════════════════════════════════════")
+            storeKitLogger.critical("[StoreKit] Bundle ID: \(bundleIdentifier)")
+            storeKitLogger.critical("[StoreKit] Requesting products: \(identifiers.joined(separator: ", "))")
+            storeKitLogger.critical("[StoreKit] Product count requested: \(identifiers.count)")
+            storeKitLogger.critical("[StoreKit] Receipt URL exists: \(Bundle.main.appStoreReceiptURL?.path ?? "none")")
+            if let receiptURL = Bundle.main.appStoreReceiptURL {
+                let receiptExists = FileManager.default.fileExists(atPath: receiptURL.path)
+                storeKitLogger.critical("[StoreKit] Receipt file exists: \(receiptExists ? "YES" : "NO")")
+            }
+            storeKitLogger.critical("[StoreKit] Current locale: \(Locale.current.identifier)")
+            storeKitLogger.critical("[StoreKit] Current storefront: \(Locale.current.regionCode ?? "unknown")")
+            storeKitLogger.critical("═══════════════════════════════════════════")
 
             guard identifiers.isEmpty == false else {
-                print("No product identifiers configured for subscription tiers.")
+                storeKitLogger.error("❌ No product identifiers configured for subscription tiers.")
                 products = []
                 return
             }
 
+            storeKitLogger.critical("[StoreKit] Calling Product.products(for:)...")
             let storeProducts = try await Product.products(for: identifiers)
-            print("[StoreKit] received \(storeProducts.count) products: \(storeProducts.map { $0.id })")
+
+            storeKitLogger.critical("═══════════════════════════════════════════")
+            storeKitLogger.critical("[StoreKit] RESPONSE RECEIVED")
+            storeKitLogger.critical("═══════════════════════════════════════════")
+            storeKitLogger.critical("[StoreKit] Products returned: \(storeProducts.count)")
 
             if storeProducts.isEmpty {
-                print("No products were fetched from the App Store.")
+                storeKitLogger.error("❌ NO PRODUCTS RETURNED FROM APP STORE")
+                storeKitLogger.error("[StoreKit] This means:")
+                storeKitLogger.error("  • Bundle ID mismatch, OR")
+                storeKitLogger.error("  • Products not approved/available in this storefront, OR")
+                storeKitLogger.error("  • Products not linked to this app version, OR")
+                storeKitLogger.error("  • Apple server propagation delay")
             } else {
+                storeKitLogger.info("✅ Products successfully fetched:")
+                for (index, product) in storeProducts.enumerated() {
+                    storeKitLogger.info("  [\(index + 1)] ID: \(product.id)")
+                    storeKitLogger.info("      Name: \(product.displayName)")
+                    storeKitLogger.info("      Price: \(product.displayPrice)")
+                    storeKitLogger.info("      Type: \(String(describing: product.type))")
+                    if let subscription = product.subscription {
+                        storeKitLogger.info("      Period: \(subscription.subscriptionPeriod.value) \(String(describing: subscription.subscriptionPeriod.unit))")
+                    }
+                }
                 products = storeProducts.sorted(by: { $0.displayName < $1.displayName })
             }
+            storeKitLogger.critical("═══════════════════════════════════════════")
         } catch {
-            print("Failed to fetch products. Error: \(error)")
+            storeKitLogger.critical("═══════════════════════════════════════════")
+            storeKitLogger.critical("[StoreKit] ERROR OCCURRED")
+            storeKitLogger.critical("═══════════════════════════════════════════")
+            storeKitLogger.error("❌ Failed to fetch products. Error: \(error.localizedDescription)")
+
             let nsError = error as NSError
-            print("[StoreKit] fetch failed – domain: \(nsError.domain) code: \(nsError.code) userInfo: \(nsError.userInfo)")
+            storeKitLogger.error("❌ Domain: \(nsError.domain)")
+            storeKitLogger.error("❌ Code: \(nsError.code)")
+            storeKitLogger.error("❌ UserInfo: \(String(describing: nsError.userInfo))")
+
             if let storeKitError = error as? StoreKitError {
                 switch storeKitError {
                 case .networkError(let netError):
-                    print("Network error: \(netError.localizedDescription)")
+                    storeKitLogger.error("❌ Network error: \(netError.localizedDescription)")
                 case .userCancelled:
-                    print("User cancelled the request")
+                    storeKitLogger.error("❌ User cancelled the request")
                 case .unknown:
-                    print("An unknown StoreKit error occurred")
+                    storeKitLogger.error("❌ An unknown StoreKit error occurred")
                 case .systemError(_):
-                    print("System error")
+                    storeKitLogger.error("❌ System error")
                 case .notAvailableInStorefront:
-                    print("Not available in store front")
+                    storeKitLogger.error("❌ Not available in storefront")
+                    storeKitLogger.error("   → Check product availability in App Store Connect for region: \(Locale.current.regionCode ?? "unknown")")
                 case .notEntitled:
-                    print("Not entitled")
+                    storeKitLogger.error("❌ Not entitled")
                 @unknown default:
-                    print("An unexpected StoreKit error occurred")
+                    storeKitLogger.error("❌ An unexpected StoreKit error occurred")
                 }
             }
+            storeKitLogger.critical("═══════════════════════════════════════════")
         }
     }
     
