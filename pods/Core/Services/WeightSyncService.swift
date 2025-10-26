@@ -16,10 +16,12 @@ import Foundation
 import HealthKit
 import SwiftUI
 
-@MainActor
+// FIXED: Removed @MainActor to prevent blocking UI on app foreground
+// @Published properties automatically update on MainActor, so UI updates still work correctly
+// But async network operations in syncAppleHealthWeights() now run on background thread
 class WeightSyncService: ObservableObject {
     static let shared = WeightSyncService()
-    
+
     @Published var isSyncing = false
     @Published var syncError: String?
     @Published var lastSyncDate: Date?
@@ -30,10 +32,14 @@ class WeightSyncService: ObservableObject {
     // UserDefaults keys for tracking sync state
     private let lastSyncDateKey = "lastAppleHealthWeightSync"
     private let syncedWeightIDsKey = "syncedAppleHealthWeightIDs"
-    
+
     // Add sync operation protection
     private var syncInProgress = false
     private var processingWeightIDs: Set<String> = []
+
+    // CRITICAL FIX: Throttle resume-triggered syncs
+    private var lastSyncAttemptTime: Date?
+    private let minimumSyncInterval: TimeInterval = 60 // 1 minute between syncs
     
     private init() {
         // Load last sync date from UserDefaults
@@ -54,15 +60,33 @@ class WeightSyncService: ObservableObject {
 
     /// Sync Apple Health weight data with the server
     func syncAppleHealthWeights() async {
+        // CRITICAL FIX: Skip if workout is active to avoid interfering with workout logging
+        let hasActiveWorkout = await MainActor.run {
+            WorkoutManager.shared.currentWorkout != nil
+        }
+        if hasActiveWorkout {
+            print("⏸️ WeightSyncService: Skipping sync while workout is active")
+            return
+        }
+
+        // CRITICAL FIX: Throttle rapid resume-triggered syncs
+        if let last = lastSyncAttemptTime, Date().timeIntervalSince(last) < minimumSyncInterval {
+            let elapsed = Int(Date().timeIntervalSince(last))
+            print("⏸️ WeightSyncService: Skipping sync - last attempt was \(elapsed)s ago (min: \(Int(minimumSyncInterval))s)")
+            return
+        }
+
+        lastSyncAttemptTime = Date()
+
         // Prevent concurrent sync operations
         guard !syncInProgress else {
             print("⏸️ WeightSyncService: Sync already in progress, skipping duplicate request")
             return
         }
-        
+
         syncInProgress = true
         defer { syncInProgress = false }
-        
+
         print("🔍 WeightSyncService: Starting sync debug...")
         print("  - HealthKit available: \(healthKitManager.isHealthDataAvailable)")
         
@@ -77,10 +101,12 @@ class WeightSyncService: ObservableObject {
         }
         
         print("🔄 WeightSyncService: Starting Apple Health weight sync for \(userEmail)")
-        
-        isSyncing = true
-        syncError = nil
-        
+
+        await MainActor.run {
+            isSyncing = true
+            syncError = nil
+        }
+
         do {
             // FIXED: Always check last 7 days to ensure we don't miss any weights
             // The previous logic with lastSyncDate was causing weights to be missed
@@ -98,8 +124,10 @@ class WeightSyncService: ObservableObject {
 
             if appleHealthWeights.isEmpty {
                 print("✅ WeightSyncService: No new Apple Health weight entries to sync")
-                updateLastSyncDate()
-                isSyncing = false
+                await MainActor.run {
+                    updateLastSyncDate()
+                    isSyncing = false
+                }
                 return
             }
 
@@ -131,8 +159,10 @@ class WeightSyncService: ObservableObject {
 
             if newWeights.isEmpty {
                 print("✅ WeightSyncService: All Apple Health weights already exist on server")
-                updateLastSyncDate()
-                isSyncing = false
+                await MainActor.run {
+                    updateLastSyncDate()
+                    isSyncing = false
+                }
                 return
             }
             
@@ -156,18 +186,23 @@ class WeightSyncService: ObservableObject {
             print("🎉 WeightSyncService: Sync complete! Synced \(syncedCount)/\(newWeights.count) weights")
 
             // Update last sync date and post notification
-            updateLastSyncDate()
-
-            // Post notification to refresh UI
-            NotificationCenter.default.post(name: Notification.Name("AppleHealthWeightSynced"), object: nil)
-            print("📢 WeightSyncService: Posted AppleHealthWeightSynced notification")
+            await MainActor.run {
+                updateLastSyncDate()
+                // Post notification to refresh UI
+                NotificationCenter.default.post(name: Notification.Name("AppleHealthWeightSynced"), object: nil)
+                print("📢 WeightSyncService: Posted AppleHealthWeightSynced notification")
+            }
             
         } catch {
             print("❌ WeightSyncService: Sync failed: \(error)")
-            syncError = error.localizedDescription
+            await MainActor.run {
+                syncError = error.localizedDescription
+            }
         }
-        
-        isSyncing = false
+
+        await MainActor.run {
+            isSyncing = false
+        }
     }
     
     /// Check if there are new Apple Health weights available for sync
@@ -533,7 +568,17 @@ class WeightSyncService: ObservableObject {
                     self.markWeightAsSynced(weightEntry.id)
                     continuation.resume()
                 case .failure(let error):
-                    continuation.resume(throwing: error)
+                    // CRITICAL FIX: Treat duplicate key errors as success
+                    // This prevents infinite retry loops when server already has the weight
+                    let errorMessage = error.localizedDescription
+                    if errorMessage.contains("duplicate key value") ||
+                       errorMessage.contains("apple_health_uuid") {
+                        print("ℹ️ WeightSyncService: Weight already on server, marking as synced")
+                        self.markWeightAsSynced(weightEntry.id)
+                        continuation.resume() // Success, not error
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                 }
             }
         }

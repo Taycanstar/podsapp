@@ -428,6 +428,9 @@ struct WorkoutInProgressView: View {
                     allExercises: allCombinedExercises,
                     index: globalIndex
                 )
+            },
+            onSkip: {
+                skipExercise(exercise: exercise)
             }
         )
     }
@@ -510,6 +513,141 @@ struct WorkoutInProgressView: View {
             isPresented = false
         }
     }
+
+    private func skipExercise(exercise: TodayWorkoutExercise) {
+        let previousCombined = allCombinedExercises
+        let snapshot = snapshotExerciseState(from: previousCombined)
+
+        withAnimation {
+            if let updatedWorkout = workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) {
+                applyWorkoutUpdate(updatedWorkout, snapshot: snapshot)
+            } else {
+                // Fallback to local state update if manager did not return a workout
+                let filteredWorkout = removeExerciseLocally(exerciseId: exercise.exercise.id)
+                applyWorkoutUpdate(filteredWorkout, snapshot: snapshot)
+            }
+        }
+    }
+
+    private func snapshotExerciseState(from combined: [TodayWorkoutExercise]) -> ExerciseStateSnapshot {
+        var completionById: [Int: Int] = [:]
+        var rirById: [Int: Double] = [:]
+        var completedIds = Set<Int>()
+
+        for (index, exercise) in combined.enumerated() {
+            let exerciseId = exercise.exercise.id
+            if let logged = exerciseCompletionStatus[index] {
+                completionById[exerciseId] = logged
+            }
+            if let rir = exerciseRIRValues[index] {
+                rirById[exerciseId] = rir
+            }
+            if completedExercises.contains(index) {
+                completedIds.insert(exerciseId)
+            }
+        }
+
+        return ExerciseStateSnapshot(
+            completionById: completionById,
+            rirById: rirById,
+            completedIds: completedIds
+        )
+    }
+
+    private func applyWorkoutUpdate(
+        _ updatedWorkout: TodayWorkout,
+        snapshot: ExerciseStateSnapshot
+    ) {
+        workout = updatedWorkout
+
+        let newCombined = allCombinedExercises
+        var newCompletionStatus: [Int: Int] = [:]
+        var newRIRValues: [Int: Double] = [:]
+        var newCompleted = Set<Int>()
+
+        for (index, exercise) in newCombined.enumerated() {
+            let exerciseId = exercise.exercise.id
+            if let logged = snapshot.completionById[exerciseId] {
+                newCompletionStatus[index] = logged
+            }
+            if let rir = snapshot.rirById[exerciseId] {
+                newRIRValues[index] = rir
+            }
+            if snapshot.completedIds.contains(exerciseId) {
+                newCompleted.insert(index)
+            }
+        }
+
+        exerciseCompletionStatus = newCompletionStatus
+        exerciseRIRValues = newRIRValues
+        completedExercises = newCompleted
+    }
+
+    private func removeExerciseLocally(exerciseId: Int) -> TodayWorkout {
+        func filterExercises(_ list: [TodayWorkoutExercise]?) -> [TodayWorkoutExercise]? {
+            guard let list else { return nil }
+            let filtered = list.filter { $0.exercise.id != exerciseId }
+            return filtered.isEmpty ? nil : filtered
+        }
+
+        let filteredMain = workout.exercises.filter { $0.exercise.id != exerciseId }
+        let filteredWarmups = filterExercises(workout.warmUpExercises)
+        let filteredCooldowns = filterExercises(workout.coolDownExercises)
+        let filteredBlocks = workout.blocks?.compactMap { block -> WorkoutBlock? in
+            var filteredExercises = block.exercises.filter { $0.exercise.id != exerciseId }
+
+            if filteredExercises.isEmpty {
+                return nil
+            }
+
+            switch block.type {
+            case .superset, .circuit:
+                guard filteredExercises.count >= 2 else { return nil }
+                let desiredType: BlockType = filteredExercises.count >= 3 ? .circuit : .superset
+
+                if desiredType == block.type {
+                    var updatedBlock = block
+                    updatedBlock.exercises = filteredExercises
+                    return updatedBlock
+                }
+
+                return WorkoutBlock(
+                    id: block.id,
+                    type: desiredType,
+                    exercises: filteredExercises,
+                    rounds: block.rounds,
+                    restBetweenExercises: block.restBetweenExercises,
+                    restBetweenRounds: block.restBetweenRounds,
+                    weightNormalization: block.weightNormalization,
+                    timingConfig: block.timingConfig
+                )
+
+            default:
+                var updatedBlock = block
+                updatedBlock.exercises = filteredExercises
+                return updatedBlock
+            }
+        }
+
+        return TodayWorkout(
+            id: workout.id,
+            date: workout.date,
+            title: workout.title,
+            exercises: filteredMain,
+            blocks: filteredBlocks,
+            estimatedDuration: workout.estimatedDuration,
+            fitnessGoal: workout.fitnessGoal,
+            difficulty: workout.difficulty,
+            warmUpExercises: filteredWarmups,
+            coolDownExercises: filteredCooldowns
+        )
+    }
+}
+
+private struct ExerciseStateSnapshot {
+    let completionById: [Int: Int]
+    let rirById: [Int: Double]
+    let completedIds: Set<Int>
 }
 
 // MARK: - Exercise Row Component
@@ -522,6 +660,7 @@ struct ExerciseRowInProgress: View {
     let useBackground: Bool
     let onToggle: () -> Void
     let onExerciseTap: () -> Void
+    let onSkip: () -> Void
     @EnvironmentObject var workoutManager: WorkoutManager
     @State private var showHistory = false
     @State private var showReplace = false
@@ -542,7 +681,7 @@ struct ExerciseRowInProgress: View {
         return loggedCount >= exercise.sets
     }
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], isCompleted: Bool, loggedSetsCount: Int?, useBackground: Bool = true, onToggle: @escaping () -> Void, onExerciseTap: @escaping () -> Void) {
+    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], isCompleted: Bool, loggedSetsCount: Int?, useBackground: Bool = true, onToggle: @escaping () -> Void, onExerciseTap: @escaping () -> Void, onSkip: @escaping () -> Void) {
         self.exercise = exercise
         self.allExercises = allExercises
         self.isCompleted = isCompleted
@@ -550,6 +689,7 @@ struct ExerciseRowInProgress: View {
         self.useBackground = useBackground
         self.onToggle = onToggle
         self.onExerciseTap = onExerciseTap
+        self.onSkip = onSkip
         self._tempExercise = State(initialValue: exercise)
     }
 
@@ -643,9 +783,7 @@ struct ExerciseRowInProgress: View {
                     showReplace = true
                 }
 
-                Button("Skip Exercise") {
-                    withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
-                }
+                Button("Skip Exercise", action: onSkip)
 
                 Divider()
 

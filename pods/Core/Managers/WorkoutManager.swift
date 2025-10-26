@@ -1845,14 +1845,36 @@ class WorkoutManager: ObservableObject {
     }
 
     /// Remove an exercise (by ExerciseData.id) from today's workout (all sections)
-    func removeExerciseFromToday(exerciseId: Int) {
-        guard let currentWorkout = todayWorkout else { return }
-        
-        let newMain = currentWorkout.exercises.filter { $0.exercise.id != exerciseId }
-        let newWarmUp = currentWorkout.warmUpExercises?.filter { $0.exercise.id != exerciseId }
-        let newCoolDown = currentWorkout.coolDownExercises?.filter { $0.exercise.id != exerciseId }
-        
-        let adjustedBlocks: [WorkoutBlock]? = currentWorkout.blocks.map { blocks in
+    @discardableResult
+    func removeExerciseFromToday(exerciseId: Int) -> TodayWorkout? {
+        var updatedToday: TodayWorkout?
+
+        if let today = todayWorkout {
+            let stripped = removeExercise(exerciseId, from: today)
+            let sanitized = sanitizeWarmupsIfNeeded(stripped)
+            todayWorkout = sanitized
+            saveTodayWorkout()
+            updatedToday = sanitized
+        }
+
+        if let active = currentWorkout {
+            let strippedActive = removeExercise(exerciseId, from: active)
+            currentWorkout = sanitizeWarmupsIfNeeded(strippedActive)
+        }
+
+        if updatedToday != nil || currentWorkout != nil {
+            print("🧹 Removed exercise id=\(exerciseId) from today's workout")
+        }
+
+        return currentWorkout ?? updatedToday
+    }
+
+    private func removeExercise(_ exerciseId: Int, from workout: TodayWorkout) -> TodayWorkout {
+        let main = workout.exercises.filter { $0.exercise.id != exerciseId }
+        let warmUp = workout.warmUpExercises?.filter { $0.exercise.id != exerciseId }
+        let coolDown = workout.coolDownExercises?.filter { $0.exercise.id != exerciseId }
+
+        let adjustedBlocks: [WorkoutBlock]? = workout.blocks.map { blocks in
             blocks.compactMap { block in
                 var filteredExercises = block.exercises.filter { $0.exercise.id != exerciseId }
 
@@ -1892,21 +1914,18 @@ class WorkoutManager: ObservableObject {
             }
         }
 
-        let updated = TodayWorkout(
-            id: currentWorkout.id,
-            date: currentWorkout.date,
-            title: currentWorkout.title,
-            exercises: newMain,
+        return TodayWorkout(
+            id: workout.id,
+            date: workout.date,
+            title: workout.title,
+            exercises: main,
             blocks: adjustedBlocks,
-            estimatedDuration: currentWorkout.estimatedDuration,
-            fitnessGoal: currentWorkout.fitnessGoal,
-            difficulty: currentWorkout.difficulty,
-            warmUpExercises: newWarmUp,
-            coolDownExercises: newCoolDown
+            estimatedDuration: workout.estimatedDuration,
+            fitnessGoal: workout.fitnessGoal,
+            difficulty: workout.difficulty,
+            warmUpExercises: warmUp,
+            coolDownExercises: coolDown
         )
-        todayWorkout = sanitizeWarmupsIfNeeded(updated)
-        saveTodayWorkout()
-        print("🧹 Removed exercise id=\(exerciseId) from today's workout")
     }
 
     /// Convert all weights in today's workout between Imperial and Metric and persist

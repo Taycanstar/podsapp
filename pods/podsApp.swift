@@ -56,7 +56,9 @@ struct podsApp: App {
     // Global workout manager for state synchronization
     @StateObject private var workoutManager = WorkoutManager.shared
     @StateObject private var proFeatureGate = ProFeatureGate()
-      
+
+    // CRITICAL FIX: Prevent data architecture from reinitializing on every resume
+    @State private var hasInitializedDataArchitecture = false
 
     var body: some Scene {
         WindowGroup {
@@ -94,7 +96,13 @@ struct podsApp: App {
                     // Migrate legacy fitness goal values in UserDefaults
                     FitnessGoalMigrationService.migrateUserDefaults()
                     NetworkManager().determineUserLocation()
-                    initializeDataArchitecture()
+
+                    // CRITICAL FIX: Only initialize data architecture once per app launch
+                    if !hasInitializedDataArchitecture {
+                        hasInitializedDataArchitecture = true
+                        initializeDataArchitecture()
+                    }
+
                     proFeatureGate.configure(subscriptionManager: subscriptionManager)
                     StartupCoordinator.shared.bootstrapIfNeeded(
                         onboarding: onboardingViewModel,
@@ -109,8 +117,10 @@ struct podsApp: App {
                         // Only trigger sync if user is authenticated
                         if let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty {
                             print("✅ User authenticated (\(userEmail)) - triggering Apple Health weight sync")
-                            Task {
-                                await weightSyncService.syncAppleHealthWeights()
+                            // FIXED: Use Task.detached to run sync on background thread
+                            // This prevents UI freeze when app returns from background
+                            Task.detached {
+                                await WeightSyncService.shared.syncAppleHealthWeights()
                             }
                         } else {
                             print("⏭️  User not authenticated - skipping weight sync")
@@ -144,40 +154,15 @@ struct podsApp: App {
             await dataSyncService.initialize(userEmail: userEmail)
             
             print("✅ DataLayer: Successfully initialized data architecture")
-            
+
             // Perform initial sync if online
             if dataSyncService.isOnline {
                 await dataSyncService.performFullSync()
             }
-            
-            // Demo: Add some sample operations to see sync in action
-            await addDemoSyncOperations()
+
+            // REMOVED: Demo operations that were adding fake sync work on every init
+            // This was causing unnecessary notification storms on app resume
         }
-    }
-    
-    /// Add demo sync operations to showcase the sync process
-    private func addDemoSyncOperations() async {
-        print("🎭 DataLayer: Adding demo sync operations to showcase sync process")
-        
-        // Add some sample operations
-        let demoOperations = [
-            SyncOperation(
-                type: .userPreferences,
-                data: ["theme": "dark", "notifications": "enabled", "language": "en"],
-                createdAt: Date()
-            ),
-            SyncOperation(
-                type: .profileUpdate,
-                data: ["name": "Demo User", "bio": "Testing sync", "location": "Demo City"],
-                createdAt: Date().addingTimeInterval(-30) // 30 seconds ago
-            )
-        ]
-        
-        for operation in demoOperations {
-            await dataSyncService.queueOperation(operation)
-        }
-        
-        print("🎭 DataLayer: Added \(demoOperations.count) demo operations")
     }
     
     /// Create ModelContainer with migration error handling

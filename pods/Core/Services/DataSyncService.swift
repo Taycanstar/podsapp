@@ -19,10 +19,11 @@ import UIKit
 
 /// Comprehensive data sync service following industry best practices
 /// Provides offline-first capabilities with intelligent conflict resolution
-@MainActor
+/// FIXED: Removed @MainActor - async functions update @Published from background threads
+/// @Published properties automatically publish on main thread, so UI updates work correctly
 class DataSyncService: ObservableObject {
     static let shared = DataSyncService()
-    
+
     // MARK: - Published Properties
     @Published var isOnline = false
     @Published var isSyncing = false
@@ -76,8 +77,10 @@ class DataSyncService: ObservableObject {
     func queueOperation(_ operation: SyncOperation) async {
 
 
-        
-        pendingOperations.append(operation)
+        // CRITICAL FIX: Update @Published properties on main thread
+        await MainActor.run {
+            pendingOperations.append(operation)
+        }
         await savePendingOperations()
         
 
@@ -100,9 +103,12 @@ class DataSyncService: ObservableObject {
             return
         }
         
-        syncStatus = .syncing
-        isSyncing = true
-        
+        // CRITICAL FIX: Update @Published properties on main thread
+        await MainActor.run {
+            syncStatus = .syncing
+            isSyncing = true
+        }
+
         do {
             // 1. Sync pending operations first
             if !pendingOperations.isEmpty {
@@ -117,16 +123,25 @@ class DataSyncService: ObservableObject {
             await fetchLatestDataFromServer(userEmail: userEmail)
             
             // 3. Update sync status
-            lastSyncTime = Date()
-            syncStatus = .success
-          
-            
+            // CRITICAL FIX: Update @Published properties on main thread
+            await MainActor.run {
+                lastSyncTime = Date()
+                syncStatus = .success
+            }
+
+
         } catch {
             print("❌ DataSyncService: Full sync failed - \(error.localizedDescription)")
-            syncStatus = .failed(error)
+            // CRITICAL FIX: Update @Published properties on main thread
+            await MainActor.run {
+                syncStatus = .failed(error)
+            }
         }
-        
-        isSyncing = false
+
+        // CRITICAL FIX: Update @Published properties on main thread
+        await MainActor.run {
+            isSyncing = false
+        }
     }
     
     // MARK: - Private Methods
@@ -200,9 +215,12 @@ class DataSyncService: ObservableObject {
             return
         }
         
-        isSyncing = true
-        syncStatus = .syncing
-        
+        // CRITICAL FIX: Update @Published properties on main thread
+        await MainActor.run {
+            isSyncing = true
+            syncStatus = .syncing
+        }
+
         do {
             // Sync pending operations
             if !pendingOperations.isEmpty {
@@ -216,16 +234,25 @@ class DataSyncService: ObservableObject {
                 await fetchLatestDataFromServer(userEmail: userEmail)
             }
             
-            lastSyncTime = Date()
-            syncStatus = .success
+            // CRITICAL FIX: Update @Published properties on main thread
+            await MainActor.run {
+                lastSyncTime = Date()
+                syncStatus = .success
+            }
 
-            
+
         } catch {
             print("❌ DataSyncService: Sync failed - \(error.localizedDescription)")
-            syncStatus = .failed(error)
+            // CRITICAL FIX: Update @Published properties on main thread
+            await MainActor.run {
+                syncStatus = .failed(error)
+            }
         }
-        
-        isSyncing = false
+
+        // CRITICAL FIX: Update @Published properties on main thread
+        await MainActor.run {
+            isSyncing = false
+        }
     }
     
     private func syncPendingOperations() async {
@@ -253,8 +280,11 @@ class DataSyncService: ObservableObject {
         }
         
         // Remove successful operations from queue
-        pendingOperations = failedOperations
-        
+        // CRITICAL FIX: Update @Published properties on main thread
+        await MainActor.run {
+            pendingOperations = failedOperations
+        }
+
         print("📊 DataSyncService: Sync results:")
         print("   └── Successful: \(successfulOperations.count)")
         print("   └── Failed: \(failedOperations.count)")
@@ -320,15 +350,18 @@ class DataSyncService: ObservableObject {
             // Simulate fetching different types of data
 
             try await Task.sleep(nanoseconds: 500_000_000)
-   
-            try await Task.sleep(nanoseconds: 300_000_000)
-         
-            
-       
-            try await Task.sleep(nanoseconds: 400_000_000)
-      
 
-            NotificationCenter.default.post(name: .dataUpdated, object: nil)
+            try await Task.sleep(nanoseconds: 300_000_000)
+
+
+
+            try await Task.sleep(nanoseconds: 400_000_000)
+
+            // CRITICAL FIX: Post notification on main actor to prevent
+            // "Publishing changes from background threads" warnings
+            await MainActor.run {
+                NotificationCenter.default.post(name: .dataUpdated, object: nil)
+            }
             
         } catch {
             print("❌ DataSyncService: Failed to fetch data from server: \(error.localizedDescription)")
@@ -348,7 +381,10 @@ class DataSyncService: ObservableObject {
         
         if let data = UserDefaults.standard.data(forKey: key),
            let operations = try? JSONDecoder().decode([SyncOperation].self, from: data) {
-            pendingOperations = operations
+            // CRITICAL FIX: Update @Published properties on main thread
+            await MainActor.run {
+                pendingOperations = operations
+            }
             print("📂 DataSyncService: Loaded \(operations.count) pending operations")
             
             for (index, operation) in operations.enumerated() {

@@ -21,23 +21,28 @@ import Combine
 
 // MARK: - Data Layer Architecture
 
-@MainActor
+// FIXED: Removed @MainActor - async functions update @Published from background threads
+// @Published properties automatically publish on main thread, so UI updates work correctly
 class DataLayer: ObservableObject {
     static let shared = DataLayer()
-    
+
     // MARK: - Published Properties
     @Published var isInitialized = false
     @Published var cacheHitRate: Double = 0.0
     @Published var lastCacheUpdate: Date?
-    
+
     // MARK: - Private Properties
     private var userEmail: String?
     private var cancellables = Set<AnyCancellable>()
-    
+
     // Layer 1: In-Memory Cache (milliseconds access)
     private var memoryCache: [String: Any] = [:]
     private var cacheTimestamps: [String: Date] = [:]
     private let cacheTimeout: TimeInterval = 300 // 5 minutes
+
+    // CRITICAL FIX: Throttle cache clears to prevent notification storm
+    private var lastCacheClearTime: Date?
+    private let minimumCacheClearInterval: TimeInterval = 5 // 5 seconds
     
     // Layer 2: SwiftData (offline capable)
     private var modelContext: ModelContext?
@@ -417,15 +422,23 @@ class DataLayer: ObservableObject {
     
     private func handleDataUpdate() async {
         print("🔄 DataLayer: Handling data update from sync service")
-        
+
+        // CRITICAL FIX: Throttle cache clears to prevent storm on every notification
+        if let last = lastCacheClearTime, Date().timeIntervalSince(last) < minimumCacheClearInterval {
+            let elapsed = Int(Date().timeIntervalSince(last))
+            print("⏭️ DataLayer: Skipping cache clear - cleared \(elapsed)s ago (min: \(Int(minimumCacheClearInterval))s)")
+            return
+        }
+
         // Clear relevant cache entries to force refresh
         print("🧹 DataLayer: Clearing cache to force refresh with new data")
         memoryCache.removeAll()
         cacheTimestamps.removeAll()
-        
+
         // Reload fresh data
         await loadCachedData()
-        
+
+        lastCacheClearTime = Date()
         print("✅ DataLayer: Data update handled successfully")
     }
     

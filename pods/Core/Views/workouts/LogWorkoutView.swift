@@ -3958,11 +3958,11 @@ struct ExerciseWorkoutCard: View {
                     Button("Don't recommend again", role: .destructive) {
                         let ups = UserProfileService.shared
                         ups.addToAvoided(exercise.exercise.id)
-                        withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
+                        withAnimation { _ = workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
                     }
 
                     Button("Delete from workout", role: .destructive) {
-                        withAnimation { workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
+                        withAnimation { _ = workoutManager.removeExerciseFromToday(exerciseId: exercise.exercise.id) }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
