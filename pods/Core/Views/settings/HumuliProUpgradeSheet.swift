@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UIKit
+import StoreKit
 
 struct HumuliProUpgradeSheet: View {
     @Environment(\.dismiss) var dismiss
@@ -552,6 +553,10 @@ extension HumuliProUpgradeSheet {
 
                 Spacer()
 
+                // Redeem offer code button
+                redeemCodeButton()
+                    .padding(.bottom, 8)
+
                 // Single upgrade button
                 Button {
                     Task { await upgrade() }
@@ -636,6 +641,36 @@ extension HumuliProUpgradeSheet {
         let savings = subscriptionManager.savingsPercentage(for: .humuliProMonthly)
         guard savings > 0, selectedPlan == .yearly else { return nil }
         return "Save \(savings)% compared to monthly"
+    }
+
+    @ViewBuilder
+    private func redeemCodeButton() -> some View {
+        if #available(iOS 14.0, *) {
+            Button {
+                Task { await presentRedemptionSheet() }
+            } label: {
+                Text("Redeem Offer Code")
+                    .font(.system(size: 15))
+                    .foregroundColor(.gray)
+            }
+            .disabled(isProcessing)
+        }
+    }
+
+    @available(iOS 14.0, *)
+    private func presentRedemptionSheet() async {
+        guard let email = await currentEmail() else {
+            await MainActor.run {
+                showError = true
+                errorMessage = "Please sign in to redeem an offer code."
+            }
+            return
+        }
+
+        await MainActor.run {
+            SKPaymentQueue.default().presentCodeRedemptionSheet()
+        }
+        // Transaction.updates listener will automatically catch the redemption
     }
 
     private func upgrade() async {

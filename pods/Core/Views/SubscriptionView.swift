@@ -167,6 +167,8 @@ struct SubscriptionView: View {
 
             restoreButton()
 
+            redeemCodeButton()
+
             termsFooter
         }
     }
@@ -197,6 +199,8 @@ struct SubscriptionView: View {
             }
 
             restoreButton()
+
+            redeemCodeButton()
 
             termsFooter
         }
@@ -235,6 +239,23 @@ struct SubscriptionView: View {
         }
         .buttonStyle(.bordered)
         .disabled(isProcessingAction)
+    }
+
+    @ViewBuilder
+    private func redeemCodeButton() -> some View {
+        if #available(iOS 14.0, *) {
+            Button {
+                Task { await presentRedemptionSheet() }
+            } label: {
+                Text("Redeem Offer Code")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+            }
+            .buttonStyle(.bordered)
+            .disabled(isProcessingAction)
+        }
     }
 
     private var termsFooter: some View {
@@ -300,6 +321,23 @@ struct SubscriptionView: View {
         } successMessage: {
             return "Any available purchases have been restored."
         }
+    }
+
+    @available(iOS 14.0, *)
+    private func presentRedemptionSheet() async {
+        guard let email = await currentEmail() else {
+            await MainActor.run {
+                alertContent = AlertContent(title: "Sign In Required",
+                                            message: "Please sign in to redeem an offer code.")
+            }
+            return
+        }
+
+        await MainActor.run {
+            SKPaymentQueue.default().presentCodeRedemptionSheet()
+        }
+        // Transaction.updates listener will automatically catch the redemption
+        // and trigger subscription refresh via NotificationCenter
     }
 
     private func performAction(_ action: @escaping () async throws -> Void,
