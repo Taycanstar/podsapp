@@ -3253,31 +3253,7 @@ struct ReplaceExerciseSheet: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 0) {
-                    // Large Title that scrolls with content
-
-                    
-                    // Search Bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
-                        
-                        TextField("Search exercises", text: $searchText)
-                            .textFieldStyle(PlainTextFieldStyle())
-                        
-                        if !searchText.isEmpty {
-                            Button(action: { searchText = "" }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                    .padding(10)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-                    .padding(.horizontal)
-                    .padding(.bottom, 16)
-                    
+                VStack(spacing: 16) {
                     // Current Exercise Card
                     HStack(spacing: 12) {
                         // Exercise thumbnail
@@ -3287,7 +3263,7 @@ struct ReplaceExerciseSheet: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: 60, height: 60)
-                                .cornerRadius(24)
+                                .cornerRadius(12)
                         } else {
                             RoundedRectangle(cornerRadius: 8)
                                 .fill(Color.gray.opacity(0.2))
@@ -3310,12 +3286,18 @@ struct ReplaceExerciseSheet: View {
                         
                         Spacer()
                     }
-                    .padding()
-                    .background(Color(.systemBackground))
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.secondarySystemBackground))
+                    )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 24)
+                        RoundedRectangle(cornerRadius: 16)
                             .stroke(Color(.systemGray4), lineWidth: 1)
                     )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .padding(.top, 8)
                     .padding(.horizontal)
                     .padding(.bottom, 8)
                     
@@ -3405,12 +3387,19 @@ struct ReplaceExerciseSheet: View {
                 }
             }
             .navigationTitle("Replace Exercise")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(
+                text: $searchText,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Search exercises"
+            )
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
                     }
+                    .accessibilityLabel("Dismiss")
                 }
             }
         }
@@ -3429,9 +3418,12 @@ struct ReplaceExerciseSheet: View {
         // First, filter by logical replaceability (muscle groups and movement patterns)
         let logicallyRelevant = getLogicallyRelevantExercises(from: allExercises)
         
+        // Allow global search when the user provides a query
+        let searchSource = searchText.isEmpty ? logicallyRelevant : allExercises
+        
         // Apply search filter
-        let searchFiltered = searchText.isEmpty ? logicallyRelevant :
-            logicallyRelevant.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        let searchFiltered = searchText.isEmpty ? searchSource :
+            searchSource.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
         
         // Apply equipment filter
         let equipmentFiltered = applyEquipmentFilter(to: searchFiltered)
