@@ -805,7 +805,7 @@ struct ExerciseRowInProgress: View {
         )
         .sheet(isPresented: $showReplace) {
             ReplaceExerciseSheet(
-                currentExercise: $tempExercise,
+                currentExercise: tempExercise,
                 onExerciseReplaced: { newExercise in
                     if let idx = exerciseIndexInToday {
                         // Build updated TodayWorkoutExercise preserving fields

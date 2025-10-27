@@ -3743,10 +3743,13 @@ private extension View {
             weight: oldExercise.weight,
             restTime: oldExercise.restTime,
             notes: oldExercise.notes, // Preserve existing notes
-            warmupSets: oldExercise.warmupSets // Preserve existing warm-up sets
+            warmupSets: oldExercise.warmupSets, // Preserve existing warm-up sets
+            flexibleSets: oldExercise.flexibleSets,
+            trackingType: oldExercise.trackingType
         )
         
         exercises[index] = replacedExercise
+        workoutManager.updateExercise(at: index, with: replacedExercise)
         
         // Save to UserDefaults if needed
         if let userEmail = UserDefaults.standard.string(forKey: "userEmail") {
@@ -3986,7 +3989,7 @@ struct ExerciseWorkoutCard: View {
         )
         .sheet(isPresented: $showReplace) {
             ReplaceExerciseSheet(
-                currentExercise: $tempExercise,
+                currentExercise: tempExercise,
                 onExerciseReplaced: { newExercise in
                     onExerciseReplaced(exerciseIndex, newExercise)
                 }

@@ -2767,6 +2767,7 @@ struct ExerciseOptionsSheet: View {
     @EnvironmentObject var onboarding: OnboardingViewModel
     @EnvironmentObject var workoutManager: WorkoutManager
     @State private var showingReplaceExercise = false
+    @State private var replacementSnapshot: TodayWorkoutExercise? = nil
     @State private var showingDeleteConfirmation = false
     // Rest timer bindings are provided by parent
     // Defaults applied by parent when this sheet is first opened
@@ -2967,6 +2968,7 @@ struct ExerciseOptionsSheet: View {
                 
                 // Replace
                 Button(action: {
+                    replacementSnapshot = exercise
                     showingReplaceExercise = true
                 }) {
                     HStack {
@@ -3142,9 +3144,9 @@ struct ExerciseOptionsSheet: View {
         } message: {
             Text("Are you sure you want to remove \(exercise.exercise.name) from this workout?")
         }
-        .sheet(isPresented: $showingReplaceExercise) {
+        .sheet(isPresented: $showingReplaceExercise, onDismiss: { replacementSnapshot = nil }) {
             ReplaceExerciseSheet(
-                currentExercise: $exercise,
+                currentExercise: replacementSnapshot ?? exercise,
                 onExerciseReplaced: onExerciseReplaced
             )
         }
@@ -3213,7 +3215,7 @@ extension ExerciseOptionsSheet {
 // MARK: - Replace Exercise Sheet
 
 struct ReplaceExerciseSheet: View {
-    @Binding var currentExercise: TodayWorkoutExercise
+    let currentExercise: TodayWorkoutExercise
     let onExerciseReplaced: ((ExerciseData) -> Void)?
     
     @Environment(\.dismiss) private var dismiss
@@ -3245,8 +3247,8 @@ struct ReplaceExerciseSheet: View {
         let averageWeight: Double?
     }
     
-    init(currentExercise: Binding<TodayWorkoutExercise>, onExerciseReplaced: ((ExerciseData) -> Void)? = nil) {
-        self._currentExercise = currentExercise
+    init(currentExercise: TodayWorkoutExercise, onExerciseReplaced: ((ExerciseData) -> Void)? = nil) {
+        self.currentExercise = currentExercise
         self.onExerciseReplaced = onExerciseReplaced
     }
     
@@ -3290,7 +3292,7 @@ struct ReplaceExerciseSheet: View {
                     .padding(.horizontal, 16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(.secondarySystemBackground))
+                            .fill(Color("sheetbg"))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
@@ -3386,6 +3388,7 @@ struct ReplaceExerciseSheet: View {
                     }
                 }
             }
+            .background(Color("sheetbg"))
             .navigationTitle("Replace Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(
@@ -3395,7 +3398,11 @@ struct ReplaceExerciseSheet: View {
             )
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { dismiss() }) {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.28)) {
+                            dismiss()
+                        }
+                    }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .semibold))
                     }
@@ -3403,6 +3410,9 @@ struct ReplaceExerciseSheet: View {
                 }
             }
         }
+        .background(Color("sheetbg").ignoresSafeArea())
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
         .task {
             await loadUserEquipment()
             await loadExerciseHistory()
@@ -3599,24 +3609,13 @@ struct ReplaceExerciseSheet: View {
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
         
-        // Preserve existing notes when replacing exercise
-        let preservedNotes = currentExercise.notes
-        
-        // Update the current exercise with preserved notes
-        currentExercise = TodayWorkoutExercise(
-            exercise: newExercise,
-            sets: currentExercise.sets,
-            reps: currentExercise.reps,
-            weight: currentExercise.weight,
-            restTime: currentExercise.restTime,
-            notes: preservedNotes
-        )
-        
-        // Pass the new exercise back to parent view
+        // Pass the new exercise back to parent view while preserving notes on the consumer side
         onExerciseReplaced?(newExercise)
         
-        // Dismiss the sheet
-        dismiss()
+        // Dismiss the sheet with an explicit animation for a smoother exit
+        withAnimation(.easeInOut(duration: 0.3)) {
+            dismiss()
+        }
     }
 }
 
