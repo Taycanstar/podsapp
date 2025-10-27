@@ -3609,12 +3609,15 @@ struct ReplaceExerciseSheet: View {
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
         
-        // Pass the new exercise back to parent view while preserving notes on the consumer side
-        onExerciseReplaced?(newExercise)
-        
-        // Dismiss the sheet with an explicit animation for a smoother exit
-        withAnimation(.easeInOut(duration: 0.3)) {
+        // Dismiss the sheet with a native slide animation first
+        withAnimation(.easeInOut(duration: 0.32)) {
             dismiss()
+        }
+        
+        // Apply the replacement after the animation so the sheet can close smoothly
+        let replacement = newExercise
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.34) {
+            onExerciseReplaced?(replacement)
         }
     }
 }
