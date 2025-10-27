@@ -82,7 +82,9 @@ final class StartupCoordinator: ObservableObject {
 
         state = .warming
 
-        Task { [weak self] in
+        // CRITICAL FIX: Use Task { @MainActor in } to ensure all repository refreshes
+        // and state updates happen on main thread
+        Task { @MainActor [weak self] in
             guard let self else { return }
 
             async let profileTask: Void = self.profileRepository.refresh(force: false)
@@ -95,10 +97,8 @@ final class StartupCoordinator: ObservableObject {
             _ = await foodTask
             _ = await logsTask
 
-            await MainActor.run {
-                self.state = .ready
-                self.resumeContinuations()
-            }
+            self.state = .ready
+            self.resumeContinuations()
         }
     }
 

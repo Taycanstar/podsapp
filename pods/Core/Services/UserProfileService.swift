@@ -97,6 +97,7 @@ class UserProfileService: ObservableObject {
     /// This prevents "Publishing changes from background threads" violations
     @MainActor
     func updateFromServer(serverData: [String: Any]) {
+        assertMainActor("updateFromServer")
         print("📝 UserProfileService: Updating profile from server data")
         print("   └── Data keys: \(serverData.keys.joined(separator: ", "))")
         print("   └── Thread: \(Thread.isMainThread ? "MAIN ✅" : "BACKGROUND ⚠️")")
@@ -111,6 +112,7 @@ class UserProfileService: ObservableObject {
 
     @MainActor
     func refreshProfileDataIfNeeded(userEmail: String, force: Bool = false) async {
+        assertMainActor("refreshProfileDataIfNeeded")
         if !force,
            let lastEmail = lastFetchedEmail,
            lastEmail == userEmail,
@@ -149,6 +151,7 @@ class UserProfileService: ObservableObject {
 
     @MainActor
     private func handleProfileResponse(_ response: ProfileDataResponse, email: String) {
+        assertMainActor("handleProfileResponse")
         profileData = response
         workoutProfiles = response.workoutProfiles
         activeWorkoutProfileId = response.activeWorkoutProfileId ?? response.workoutProfiles.first?.id
@@ -168,6 +171,7 @@ class UserProfileService: ObservableObject {
 
     @MainActor
     func refreshWorkoutProfiles() async {
+        assertMainActor("refreshWorkoutProfiles")
         guard let email = try? currentUserEmail() else { return }
         do {
             let response = try await awaitFetchWorkoutProfiles(email: email)
@@ -179,6 +183,7 @@ class UserProfileService: ObservableObject {
 
     @MainActor
     func createWorkoutProfile(named name: String, makeActive: Bool = true) async throws {
+        assertMainActor("createWorkoutProfile")
         let email = try currentUserEmail()
         let response = try await awaitCreateWorkoutProfile(email: email, name: name, makeActive: makeActive)
         applyWorkoutProfiles(profiles: response.profiles,
@@ -188,6 +193,7 @@ class UserProfileService: ObservableObject {
 
     @MainActor
     func activateWorkoutProfile(profileId: Int) async throws {
+        assertMainActor("activateWorkoutProfile")
         let email = try currentUserEmail()
         let response = try await awaitActivateWorkoutProfile(email: email, profileId: profileId)
         applyWorkoutProfiles(profiles: response.profiles,
@@ -197,6 +203,7 @@ class UserProfileService: ObservableObject {
 
     @MainActor
     func deleteWorkoutProfile(profileId: Int) async throws {
+        assertMainActor("deleteWorkoutProfile")
         let email = try currentUserEmail()
         let response = try await awaitDeleteWorkoutProfile(email: email, profileId: profileId)
         applyWorkoutProfiles(response: response)
@@ -206,6 +213,10 @@ class UserProfileService: ObservableObject {
         let email = UserDefaults.standard.string(forKey: "userEmail") ?? ""
         guard !email.isEmpty else { throw ProfileServiceError.missingUserEmail }
         return email
+    }
+
+    private func assertMainActor(_ context: String, file: StaticString = #fileID, line: UInt = #line) {
+        MainActorDiagnostics.assertIsolated("UserProfileService.\(context)", file: file, line: line)
     }
 
     @MainActor
@@ -274,6 +285,7 @@ class UserProfileService: ObservableObject {
 
     @MainActor
     private func storeTrainingSplitLocally(_ value: TrainingSplitPreference, profileId: Int? = nil, persistDefaults: Bool = true) {
+        assertMainActor("storeTrainingSplitLocally")
         let resolvedProfileId = profileId ?? activeWorkoutProfile?.id
 
         if let id = resolvedProfileId,
@@ -893,9 +905,8 @@ class UserProfileService: ObservableObject {
 
     // MARK: - Publishing helpers
     private func publishChange() {
-        DispatchQueue.main.async {
-            self.objectWillChange.send()
-        }
+        assertMainActor("publishChange")
+        objectWillChange.send()
     }
 
     // MARK: - Workout History & Progress

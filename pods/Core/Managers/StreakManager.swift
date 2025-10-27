@@ -38,31 +38,34 @@ class StreakManager: ObservableObject {
     private init() {
         loadCachedStreakData()
     }
+
+    private func assertMainActor(_ context: String, file: StaticString = #fileID, line: UInt = #line) {
+        MainActorDiagnostics.assertIsolated("StreakManager.\(context)", file: file, line: line)
+    }
     
     /// Load cached streak data immediately from UserDefaults
     private func loadCachedStreakData() {
+        assertMainActor("loadCachedStreakData.entry")
         let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
-        
-        // CRITICAL FIX: Ensure all @Published property updates happen on main thread
-        DispatchQueue.main.async {
-            self.currentStreak = UserDefaults.standard.integer(forKey: "\(self.currentStreakKey)_\(userEmail)")
-            self.longestStreak = UserDefaults.standard.integer(forKey: "\(self.longestStreakKey)_\(userEmail)")
-            self.streakAsset = UserDefaults.standard.string(forKey: "\(self.streakAssetKey)_\(userEmail)") ?? "streaks1"
-            
-            if let lastActivityTimestamp = UserDefaults.standard.object(forKey: "\(self.lastActivityDateKey)_\(userEmail)") as? Date {
-                self.lastActivityDate = lastActivityTimestamp
-            }
-            
-            if let streakStartTimestamp = UserDefaults.standard.object(forKey: "\(self.streakStartDateKey)_\(userEmail)") as? Date {
-                self.streakStartDate = streakStartTimestamp
-            }
-            
-            print("📱 StreakManager: Loaded cached streak data - Current: \(self.currentStreak), Longest: \(self.longestStreak), Asset: \(self.streakAsset)")
+
+        currentStreak = UserDefaults.standard.integer(forKey: "\(currentStreakKey)_\(userEmail)")
+        longestStreak = UserDefaults.standard.integer(forKey: "\(longestStreakKey)_\(userEmail)")
+        streakAsset = UserDefaults.standard.string(forKey: "\(streakAssetKey)_\(userEmail)") ?? "streaks1"
+
+        if let lastActivityTimestamp = UserDefaults.standard.object(forKey: "\(lastActivityDateKey)_\(userEmail)") as? Date {
+            lastActivityDate = lastActivityTimestamp
         }
+
+        if let streakStartTimestamp = UserDefaults.standard.object(forKey: "\(streakStartDateKey)_\(userEmail)") as? Date {
+            streakStartDate = streakStartTimestamp
+        }
+
+        print("📱 StreakManager: Loaded cached streak data - Current: \(currentStreak), Longest: \(longestStreak), Asset: \(streakAsset)")
     }
     
     /// Save streak data to UserDefaults for persistence
     private func saveStreakDataToCache(_ streakData: UserStreakData) {
+        assertMainActor("saveStreakDataToCache")
         let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
         
         UserDefaults.standard.set(streakData.currentStreak, forKey: "\(currentStreakKey)_\(userEmail)")
@@ -92,39 +95,38 @@ class StreakManager: ObservableObject {
     
     /// Update published properties and save to cache
     private func updateLocalStreakData(_ streakData: UserStreakData) {
-        // CRITICAL FIX: Ensure all @Published property updates happen on main thread
-        DispatchQueue.main.async {
-            // Update published properties
-            self.currentStreak = streakData.currentStreak
-            self.longestStreak = streakData.longestStreak
-            self.streakAsset = streakData.streakAsset
-            
-            // Update dates if available
-            if let lastActivityDateString = streakData.lastActivityDate {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd"
-                self.lastActivityDate = formatter.date(from: lastActivityDateString)
-            }
-            
-            if let streakStartDateString = streakData.streakStartDate {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd"
-                self.streakStartDate = formatter.date(from: streakStartDateString)
-            }
-            
-            // Save to cache for next app launch
-            self.saveStreakDataToCache(streakData)
-            
-            // Post notification for any views still using the old pattern
-            NotificationCenter.default.post(
-                name: NSNotification.Name("StreakUpdatedNotification"),
-                object: streakData
-            )
+        assertMainActor("updateLocalStreakData.entry")
+        // Update published properties
+        currentStreak = streakData.currentStreak
+        longestStreak = streakData.longestStreak
+        streakAsset = streakData.streakAsset
+
+        // Update dates if available
+        if let lastActivityDateString = streakData.lastActivityDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            lastActivityDate = formatter.date(from: lastActivityDateString)
         }
+
+        if let streakStartDateString = streakData.streakStartDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            streakStartDate = formatter.date(from: streakStartDateString)
+        }
+
+        // Save to cache for next app launch
+        saveStreakDataToCache(streakData)
+
+        // Post notification for any views still using the old pattern
+        NotificationCenter.default.post(
+            name: NSNotification.Name("StreakUpdatedNotification"),
+            object: streakData
+        )
     }
     
     /// Clear cached data when user logs out
     func clearCachedData() {
+        assertMainActor("clearCachedData.entry")
         let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? "unknown"
         
         UserDefaults.standard.removeObject(forKey: "\(currentStreakKey)_\(userEmail)")
@@ -134,27 +136,25 @@ class StreakManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "\(streakStartDateKey)_\(userEmail)")
         UserDefaults.standard.removeObject(forKey: "\(lastSyncDateKey)_\(userEmail)")
         
-        // CRITICAL FIX: Ensure all @Published property updates happen on main thread
-        DispatchQueue.main.async {
-            // Reset to defaults
-            self.currentStreak = 0
-            self.longestStreak = 0
-            self.streakAsset = "streaks1"
-            self.lastActivityDate = nil
-            self.streakStartDate = nil
-            
-            print("🧹 StreakManager: Cleared cached streak data")
-        }
+        currentStreak = 0
+        longestStreak = 0
+        streakAsset = "streaks1"
+        lastActivityDate = nil
+        streakStartDate = nil
+
+        print("🧹 StreakManager: Cleared cached streak data")
     }
     
     /// Sync streak data from server (called by DataSyncService)
     func syncFromServer(streakData: UserStreakData) {
+        assertMainActor("syncFromServer")
         updateLocalStreakData(streakData)
     }
     
     /// Update user streak when any activity is logged
     /// - Parameter activityDate: The date of the activity (defaults to today)
     func updateStreak(activityDate: Date = Date()) {
+        assertMainActor("updateStreak.entry")
         guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
             print("⚠️ StreakManager: No user email found")
             return
@@ -216,25 +216,19 @@ class StreakManager: ObservableObject {
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                DispatchQueue.main.async {
-                    completion(.failure(error))
-                }
+                Task { @MainActor in completion(.failure(error)) }
                 return
             }
             
             guard let data = data else {
-                DispatchQueue.main.async {
-                    completion(.failure(NetworkManagerTwo.NetworkError.invalidResponse))
-                }
+                Task { @MainActor in completion(.failure(NetworkManagerTwo.NetworkError.invalidResponse)) }
                 return
             }
             
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
-                DispatchQueue.main.async {
-                    completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: errorMessage)))
-                }
+                Task { @MainActor in completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: errorMessage))) }
                 return
             }
             
@@ -256,9 +250,7 @@ class StreakManager: ObservableObject {
                             streakStartDate: json["streak_start_date"] as? String
                         )
                         
-                        DispatchQueue.main.async {
-                            completion(.success(streakData))
-                        }
+                        Task { @MainActor in completion(.success(streakData)) }
                         return
                     }
                 }
@@ -269,18 +261,14 @@ class StreakManager: ObservableObject {
                 
                 let streakData = try decoder.decode(UserStreakData.self, from: data)
                 
-                DispatchQueue.main.async {
-                    completion(.success(streakData))
-                }
+                Task { @MainActor in completion(.success(streakData)) }
                 
             } catch {
                 print("❌ StreakManager: Decoding error - \(error)")
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     print("Response data: \(json)")
                 }
-                DispatchQueue.main.async {
-                    completion(.failure(NetworkManagerTwo.NetworkError.decodingError))
-                }
+                Task { @MainActor in completion(.failure(NetworkManagerTwo.NetworkError.decodingError)) }
             }
         }.resume()
     }

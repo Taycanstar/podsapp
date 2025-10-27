@@ -14,6 +14,7 @@
 		360AB80C2B7DAFE800B65DF8 /* AltCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360AB80B2B7DAFE800B65DF8 /* AltCameraView.swift */; };
 		361507282B7DBA270060974A /* CameraViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361507272B7DBA270060974A /* CameraViewModel.swift */; };
 		3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615072D2B7EE48E0060974A /* CreatePodView.swift */; };
+		3615D1112EAF108D0063EB8B /* MainActorDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615D1102EAF108D0063EB8B /* MainActorDiagnostics.swift */; };
 		3617B93C2C58A0A4008FB5FA /* AddSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3617B93B2C58A0A4008FB5FA /* AddSheetView.swift */; };
 		3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */; };
 		361919152EA17778007CAA0D /* WorkoutLogDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361919142EA17769007CAA0D /* WorkoutLogDetailView.swift */; };
@@ -388,6 +389,7 @@
 		360AB80B2B7DAFE800B65DF8 /* AltCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltCameraView.swift; sourceTree = "<group>"; };
 		361507272B7DBA270060974A /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
 		3615072D2B7EE48E0060974A /* CreatePodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePodView.swift; sourceTree = "<group>"; };
+		3615D1102EAF108D0063EB8B /* MainActorDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainActorDiagnostics.swift; sourceTree = "<group>"; };
 		3617B93B2C58A0A4008FB5FA /* AddSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSheetView.swift; sourceTree = "<group>"; };
 		3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPodView.swift; sourceTree = "<group>"; };
 		361919142EA17769007CAA0D /* WorkoutLogDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLogDetailView.swift; sourceTree = "<group>"; };
@@ -774,6 +776,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		3615D10F2EAF10870063EB8B /* Diagnostics */ = {
+			isa = PBXGroup;
+			children = (
+				3615D1102EAF108D0063EB8B /* MainActorDiagnostics.swift */,
+			);
+			path = Diagnostics;
+			sourceTree = "<group>";
+		};
 		3619191C2EA7DE6E007CAA0D /* subscriptions */ = {
 			isa = PBXGroup;
 			children = (
@@ -965,6 +975,7 @@
 		3682C8612BBADF4700B350E2 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				3615D10F2EAF10870063EB8B /* Diagnostics */,
 				36D3A4FC2E8C2C7500AD6B94 /* newOnboarding */,
 				361FF31B2E20617800B7F68E /* Models */,
 				361FF3162E20612400B7F68E /* Services */,
@@ -1779,6 +1790,7 @@
 				361FF3112E1D998F00B7F68E /* BodyweightWithEquipment.swift in Sources */,
 				3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */,
 				361FF3212E2061C200B7F68E /* WorkoutSession.swift in Sources */,
+				3615D1112EAF108D0063EB8B /* MainActorDiagnostics.swift in Sources */,
 				3625329F2E629D1A003C3B8D /* CircularProgressView.swift in Sources */,
 				36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */,
 				361FF3152E1D99AA00B7F68E /* StretchMobilityView.swift in Sources */,

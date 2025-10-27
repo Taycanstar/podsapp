@@ -265,8 +265,10 @@ struct ContentView: View {
                 } else {
                     print("🕒 No previous background time recorded")
                 }
-                
-                Task {
+
+                // CRITICAL FIX: Use Task { @MainActor in } to ensure version check runs on main thread
+                // This prevents "Publishing changes from background threads" violations
+                Task { @MainActor in
                     await versionManager.checkVersion()
                 }
             } else if newPhase == .background {

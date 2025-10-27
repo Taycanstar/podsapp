@@ -31,9 +31,14 @@ class FoodNavigationState: ObservableObject {
     @Published var createRecipeImageURL: URL? = nil
     @Published var createRecipeUIImage: UIImage? = nil
     @Published var createRecipeImage: Image? = nil
+
+    private func assertMainActor(_ context: String, file: StaticString = #fileID, line: UInt = #line) {
+        MainActorDiagnostics.assertIsolated("FoodNavigationState.\(context)", file: file, line: line)
+    }
     
     // Method to reset all create meal state
     func resetCreateMealState() {
+        assertMainActor("resetCreateMealState")
         createMealSelectedFoods = []
         createMealName = ""
         createMealShareWith = "Everyone"
@@ -45,6 +50,7 @@ class FoodNavigationState: ObservableObject {
     
     // Method to reset all create recipe state
     func resetCreateRecipeState() {
+        assertMainActor("resetCreateRecipeState")
         createRecipeSelectedFoods = []
         createRecipeName = ""
         createRecipeShareWith = "Everyone"

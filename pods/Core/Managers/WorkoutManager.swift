@@ -201,6 +201,10 @@ class WorkoutManager: ObservableObject {
         UserProfileService.shared.scopedDefaultsKey(key)
     }
 
+    private func assertMainActor(_ context: String, file: StaticString = #fileID, line: UInt = #line) {
+        MainActorDiagnostics.assertIsolated("WorkoutManager.\(context)", file: file, line: line)
+    }
+
     private struct ActiveWorkoutState: Codable {
         let workoutId: UUID
         let startedAt: Date
@@ -477,6 +481,7 @@ class WorkoutManager: ObservableObject {
 
     /// Generate today's workout with dynamic programming (1 second simple loading)
     func generateTodayWorkout() async {
+        assertMainActor("generateTodayWorkout")
         let startTime = Date()
         await setGenerating(true, message: "Generating workout")
         
@@ -2774,6 +2779,7 @@ class WorkoutManager: ObservableObject {
     }
 
     private func setGenerating(_ generating: Bool, message: String = "") async {
+        assertMainActor("setGenerating")
         isGeneratingWorkout = generating
         generationMessage = message
     }
@@ -3195,6 +3201,7 @@ class WorkoutManager: ObservableObject {
     }
 
     private func handleActiveWorkoutProfileChange() {
+        assertMainActor("handleActiveWorkoutProfileChange")
         // Reset in-memory session state so new profile starts cleanly
         resetSessionStateForActiveProfile()
 
@@ -3215,6 +3222,7 @@ class WorkoutManager: ObservableObject {
     // MARK: - Persistence
     
     private func loadTodayWorkout() {
+        assertMainActor("loadTodayWorkout")
         loadTodayWorkoutMetadata()
         let key = profileStorageKey(todayWorkoutKey)
         
@@ -3253,6 +3261,7 @@ class WorkoutManager: ObservableObject {
     }
 
     private func saveTodayWorkout() {
+        assertMainActor("saveTodayWorkout")
         guard let workout = todayWorkout else { return }
         let key = profileStorageKey(todayWorkoutKey)
         

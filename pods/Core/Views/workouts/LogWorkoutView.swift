@@ -666,9 +666,11 @@ struct LogWorkoutView: View {
                 switch result {
                 case .success:
                     print("✅ Successfully updated workout duration on server")
-                    
+
                     // Update DataLayer cache
-                    Task {
+                    // CRITICAL FIX: Use Task { @MainActor in } to ensure DataLayer runs on main thread
+                    // This prevents "Publishing changes from background threads" violations
+                    Task { @MainActor in
                         let profileUpdate = ["preferred_workout_duration": durationMinutes]
                         await DataLayer.shared.updateProfileData(profileUpdate)
                     }
@@ -698,9 +700,10 @@ struct LogWorkoutView: View {
                 switch result {
                 case .success:
                     print("✅ Successfully updated fitness goal on server")
-                    
+
                     // Update DataLayer cache
-                    Task {
+                    // CRITICAL FIX: Use Task { @MainActor in } to ensure DataLayer runs on main thread
+                    Task { @MainActor in
                         let profileUpdate = ["preferred_fitness_goal": fitnessGoal.rawValue]
                         await DataLayer.shared.updateProfileData(profileUpdate)
                     }
@@ -730,9 +733,10 @@ struct LogWorkoutView: View {
                 switch result {
                 case .success:
                     print("✅ Successfully updated fitness level on server")
-                    
+
                     // Update DataLayer cache
-                    Task {
+                    // CRITICAL FIX: Use Task { @MainActor in } to ensure DataLayer runs on main thread
+                    Task { @MainActor in
                         let profileUpdate = ["experience_level": fitnessLevel.rawValue]
                         await DataLayer.shared.updateProfileData(profileUpdate)
                     }

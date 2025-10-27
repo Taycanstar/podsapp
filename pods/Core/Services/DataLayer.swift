@@ -177,8 +177,10 @@ class DataLayer: ObservableObject {
     }
     
     // MARK: - Profile Data Methods
-    
+
     /// Update profile data and propagate across layers
+    /// CRITICAL: @MainActor ensures this always runs on main thread to prevent UI freezes
+    @MainActor
     func updateProfileData(_ data: [String: Any]) async {
         print("📝 DataLayer: Updating profile data across all layers")
         print("   └── Data keys: \(data.keys.joined(separator: ", "))")

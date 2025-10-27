@@ -81,7 +81,11 @@ struct WorkoutProfileSettingsView: View {
         NetworkManagerTwo.shared.updateWorkoutPreferences(email: email, workoutData: payload) { result in
             switch result {
             case .success:
-                Task { await DataLayer.shared.updateProfileData(payload) }
+                // CRITICAL FIX: Use Task { @MainActor in } to ensure DataLayer runs on main thread
+                // This prevents "Publishing changes from background threads" violations
+                Task { @MainActor in
+                    await DataLayer.shared.updateProfileData(payload)
+                }
             case .failure(let err):
                 print("❌ Failed to update workout prefs: \(err)")
             }

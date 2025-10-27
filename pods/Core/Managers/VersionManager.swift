@@ -22,6 +22,7 @@ class VersionManager: ObservableObject {
                 Store URL: \(response.storeUrl)
                 """)
                 
+            MainActorDiagnostics.assertIsolated("VersionManager.checkVersion.requiresUpdate")
             requiresUpdate = response.needsUpdate
             storeUrl = response.storeUrl
         } catch {
