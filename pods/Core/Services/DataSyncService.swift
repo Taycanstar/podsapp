@@ -345,28 +345,16 @@ class DataSyncService: ObservableObject {
     private func fetchLatestDataFromServer(userEmail: String) async {
         print("📥 DataSyncService: Fetching latest data from server")
         print("   └── User: \(userEmail)")
-        
-        do {
-            // Simulate fetching different types of data
 
-            try await Task.sleep(nanoseconds: 500_000_000)
+        // CRITICAL FIX: Removed simulation code and notification posting
+        // The .dataUpdated notification was causing SwiftUI to re-evaluate ALL @ObservedObject
+        // bindings across the entire view hierarchy while still in async context.
+        // This triggered "Publishing changes from background threads" violations and UI freeze.
+        //
+        // Real implementation would fetch actual data here and only post notifications
+        // when there's actual data to update, not during every sync cycle.
 
-            try await Task.sleep(nanoseconds: 300_000_000)
-
-
-
-            try await Task.sleep(nanoseconds: 400_000_000)
-
-            // CRITICAL FIX: Post notification on main actor to prevent
-            // "Publishing changes from background threads" warnings
-            await MainActor.run {
-                NotificationCenter.default.post(name: .dataUpdated, object: nil)
-            }
-            
-        } catch {
-            print("❌ DataSyncService: Failed to fetch data from server: \(error.localizedDescription)")
-            // Don't throw the error, just log it and continue
-        }
+        print("✅ DataSyncService: Fetch complete (no simulation notification posted)")
     }
     
     private func loadPendingOperations() async {

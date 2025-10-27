@@ -34,6 +34,7 @@ class DataLayer: ObservableObject {
     // MARK: - Private Properties
     private var userEmail: String?
     private var cancellables = Set<AnyCancellable>()
+    private var isInitializing = false
 
     // Layer 1: In-Memory Cache (milliseconds access)
     private var memoryCache: [String: Any] = [:]
@@ -73,15 +74,21 @@ class DataLayer: ObservableObject {
     /// Initialize the data layer with user context
     func initialize(userEmail: String) async {
         print("🚀 DataLayer: Initializing for user: \(userEmail)")
+        isInitializing = true
         self.userEmail = userEmail
-        
+
         // Initialize SwiftData context
         await setupSwiftDataContext()
-        
+
         // Load cached data into memory
         await loadCachedData()
-        
-        isInitialized = true
+
+        // CRITICAL FIX: Update @Published property on main thread (non-blocking to avoid deadlock)
+        Task { @MainActor in
+            isInitialized = true
+        }
+
+        isInitializing = false
         print("✅ DataLayer: Initialization complete")
         print("   └── User: \(userEmail)")
         print("   └── Cache entries: \(memoryCache.count)")
@@ -175,7 +182,14 @@ class DataLayer: ObservableObject {
     func updateProfileData(_ data: [String: Any]) async {
         print("📝 DataLayer: Updating profile data across all layers")
         print("   └── Data keys: \(data.keys.joined(separator: ", "))")
-        
+        print("   └── Thread: \(Thread.isMainThread ? "MAIN ✅" : "BACKGROUND ⚠️")")
+
+        // CRITICAL: Assert we're on main thread to catch violations early in debug builds
+        // This will crash if DataLayer is called from background thread, preventing UI freezes
+        #if DEBUG
+        dispatchPrecondition(condition: .onQueue(.main))
+        #endif
+
         // Layer 1: Update memory cache
         print("📝 DataLayer: Layer 1 (Memory Cache) - Updating profile data")
         memoryCache["profile_data"] = data
@@ -342,12 +356,18 @@ class DataLayer: ObservableObject {
     
     private func setupNotificationObservers() {
         print("📡 DataLayer: Setting up notification observers")
-        
-        // Listen for sync service updates
+
+        // CRITICAL FIX: Ensure notification handling runs on main thread
+        // receive(on:) ensures the sink closure executes on main RunLoop
+        // Task { @MainActor in } ensures handleDataUpdate runs in main actor context
         NotificationCenter.default.publisher(for: .dataUpdated)
+            .receive(on: RunLoop.main)  // ← Force main thread context
             .sink { [weak self] _ in
-                print("📢 DataLayer: Received data update notification from sync service")
-                Task {
+                print("📢 DataLayer: Received .dataUpdated notification")
+                print("   └── Thread: \(Thread.isMainThread ? "MAIN ✅" : "BACKGROUND ⚠️")")
+                print("   └── Current thread: \(Thread.current)")
+                Task { @MainActor in
+                    print("📢 DataLayer: About to call handleDataUpdate() on MainActor")
                     await self?.handleDataUpdate()
                 }
             }
@@ -410,18 +430,31 @@ class DataLayer: ObservableObject {
     
     private func updateCacheHitRate() {
         let total = cacheHits + cacheMisses
-        cacheHitRate = total > 0 ? Double(cacheHits) / Double(total) : 0.0
-        lastCacheUpdate = Date()
-        
+        let hitRate = total > 0 ? Double(cacheHits) / Double(total) : 0.0
+        let updateTime = Date()
+
+        // CRITICAL FIX: Update @Published properties on main thread
+        Task { @MainActor in
+            cacheHitRate = hitRate
+            lastCacheUpdate = updateTime
+        }
+
         print("📊 DataLayer: Cache Statistics")
         print("   └── Hits: \(cacheHits)")
         print("   └── Misses: \(cacheMisses)")
-        print("   └── Hit Rate: \(String(format: "%.1f", cacheHitRate * 100))%")
+        print("   └── Hit Rate: \(String(format: "%.1f", hitRate * 100))%")
         print("   └── Entries: \(memoryCache.count)")
     }
     
     private func handleDataUpdate() async {
         print("🔄 DataLayer: Handling data update from sync service")
+
+        // CRITICAL FIX: Don't handle updates during initialization
+        // This prevents SwiftUI re-evaluation cascade during app startup/resume
+        if isInitializing {
+            print("⏭️ DataLayer: Skipping update - still initializing")
+            return
+        }
 
         // CRITICAL FIX: Throttle cache clears to prevent storm on every notification
         if let last = lastCacheClearTime, Date().timeIntervalSince(last) < minimumCacheClearInterval {

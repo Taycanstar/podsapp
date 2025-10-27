@@ -93,12 +93,17 @@ class UserProfileService: ObservableObject {
     // MARK: - Server Data Integration
     
     /// Update profile data from server response
+    /// CRITICAL FIX: @MainActor ensures all @Published property updates happen on main thread
+    /// This prevents "Publishing changes from background threads" violations
+    @MainActor
     func updateFromServer(serverData: [String: Any]) {
         print("📝 UserProfileService: Updating profile from server data")
         print("   └── Data keys: \(serverData.keys.joined(separator: ", "))")
-        
-        // Update DataLayer cache with server data
-        Task {
+        print("   └── Thread: \(Thread.isMainThread ? "MAIN ✅" : "BACKGROUND ⚠️")")
+
+        // CRITICAL FIX: Task { @MainActor in } ensures DataLayer updates on main thread
+        // Plain Task { } would create a background thread even though we're in @MainActor context!
+        Task { @MainActor in
             await DataLayer.shared.updateProfileData(serverData)
             print("✅ UserProfileService: Profile data updated in DataLayer")
         }
@@ -125,7 +130,9 @@ class UserProfileService: ObservableObject {
                     return
                 }
 
-                DispatchQueue.main.async {
+                    // CRITICAL FIX: Use Task { @MainActor in } to ensure handleProfileResponse
+                // runs on main thread for @Published property updates
+                Task { @MainActor in
                     self.isLoading = false
                     switch result {
                     case .success(let response):
@@ -135,10 +142,12 @@ class UserProfileService: ObservableObject {
                     }
                     continuation.resume()
                 }
+                
             }
         }
     }
 
+    @MainActor
     private func handleProfileResponse(_ response: ProfileDataResponse, email: String) {
         profileData = response
         workoutProfiles = response.workoutProfiles

@@ -2256,6 +2256,12 @@ class ExerciseVideoPlayerController: UIViewController {
     var videoURL: URL?
 
     // MARK: - Private
+    private struct AudioSessionConfiguration {
+        let category: AVAudioSession.Category
+        let mode: AVAudioSession.Mode
+        let options: AVAudioSession.CategoryOptions
+    }
+
     private var playerView: UIView!
     private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
@@ -2263,6 +2269,7 @@ class ExerciseVideoPlayerController: UIViewController {
     private var timeControlObs: NSKeyValueObservation?
     private var fallbackWorkItem: DispatchWorkItem?
     private var loadingIndicator: UIActivityIndicatorView!
+    private var previousAudioSessionConfiguration: AudioSessionConfiguration?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -2301,62 +2308,64 @@ class ExerciseVideoPlayerController: UIViewController {
     }
 
     // MARK: - Playback Setup
-func setupPlayerIfReady() {
-    guard let url = videoURL else { return }
+    func setupPlayerIfReady() {
+        guard let url = videoURL else { return }
 
-    // Stream the MOV directly (HEVC w/ alpha is hardware-decoded on iOS 13+)
-    let item = AVPlayerItem(url: url)
-    let p = AVPlayer(playerItem: item)
-    p.isMuted = true
-    p.volume = 0
-    // Ensure this playback never interrupts other audio
-    p.automaticallyWaitsToMinimizeStalling = true
-    self.player = p
+        configureAudioSessionForSilentPlayback()
 
-    if playerLayer == nil {
-        let layer = AVPlayerLayer(player: p)
-        layer.videoGravity = .resizeAspect
-        layer.isOpaque = false                          // <-- critical
-        layer.backgroundColor = UIColor.clear.cgColor   // <-- critical
-        self.playerLayer = layer
-        self.playerView.layer.addSublayer(layer)
-    } else {
-        self.playerLayer?.player = p
-    }
+        // Stream the MOV directly (HEVC w/ alpha is hardware-decoded on iOS 13+)
+        let item = AVPlayerItem(url: url)
+        let p = AVPlayer(playerItem: item)
+        p.isMuted = true
+        p.volume = 0
+        // Ensure this playback never interrupts other audio
+        p.automaticallyWaitsToMinimizeStalling = true
+        self.player = p
 
-    // Make sure every container is transparent too
-    self.view.backgroundColor = .clear
-    self.playerView.backgroundColor = .clear
-
-    view.setNeedsLayout()
-    view.layoutIfNeeded()
-    playerLayer?.frame = playerView.bounds
-
-    // Loop
-    NotificationCenter.default.addObserver(
-        self,
-        selector: #selector(loopVideo),
-        name: .AVPlayerItemDidPlayToEndTime,
-        object: item
-    )
-
-    p.play()
-}
-
-
-// Utility: timeout wrapper
-func withTimeout<T>(seconds: TimeInterval, _ op: @escaping () async throws -> T) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self) { group in
-        group.addTask { try await op() }
-        group.addTask {
-            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            throw NSError(domain: "VideoPrepTimeout", code: -1, userInfo: [NSLocalizedDescriptionKey: "Prep timed out"])
+        if playerLayer == nil {
+            let layer = AVPlayerLayer(player: p)
+            layer.videoGravity = .resizeAspect
+            layer.isOpaque = false                          // <-- critical
+            layer.backgroundColor = UIColor.clear.cgColor   // <-- critical
+            self.playerLayer = layer
+            self.playerView.layer.addSublayer(layer)
+        } else {
+            self.playerLayer?.player = p
         }
-        let result = try await group.next()!
-        group.cancelAll()
-        return result
+
+        // Make sure every container is transparent too
+        self.view.backgroundColor = .clear
+        self.playerView.backgroundColor = .clear
+
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        playerLayer?.frame = playerView.bounds
+
+        // Loop
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(loopVideo),
+            name: .AVPlayerItemDidPlayToEndTime,
+            object: item
+        )
+
+        p.play()
     }
-}
+
+
+    // Utility: timeout wrapper
+    func withTimeout<T>(seconds: TimeInterval, _ op: @escaping () async throws -> T) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await op() }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw NSError(domain: "VideoPrepTimeout", code: -1, userInfo: [NSLocalizedDescriptionKey: "Prep timed out"])
+            }
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
+        }
+    }
 
 
 
@@ -2396,10 +2405,12 @@ func withTimeout<T>(seconds: TimeInterval, _ op: @escaping () async throws -> T)
     private func setupPlayer(with item: AVPlayerItem) {
         playerItem = item
 
-    let p = AVPlayer(playerItem: item)
-    p.isMuted = true
-    p.volume = 0
-    // Ensure this playback never interrupts other audio
+        configureAudioSessionForSilentPlayback()
+
+        let p = AVPlayer(playerItem: item)
+        p.isMuted = true
+        p.volume = 0
+        // Ensure this playback never interrupts other audio
         p.automaticallyWaitsToMinimizeStalling = false
         player = p
 
@@ -2493,6 +2504,44 @@ func withTimeout<T>(seconds: TimeInterval, _ op: @escaping () async throws -> T)
         playerLayer?.removeFromSuperlayer()
         playerLayer = nil
         player = nil
+
+        restoreAudioSessionIfNeeded()
+    }
+
+    private func configureAudioSessionForSilentPlayback() {
+        let session = AVAudioSession.sharedInstance()
+
+        // If we already applied the mix-friendly ambient category, skip
+        if session.category == .ambient,
+           session.categoryOptions.contains(.mixWithOthers) {
+            return
+        }
+
+        previousAudioSessionConfiguration = AudioSessionConfiguration(
+            category: session.category,
+            mode: session.mode,
+            options: session.categoryOptions
+        )
+
+        do {
+            try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+            try session.setActive(true, options: [])
+        } catch {
+            print("⚠️ ExerciseVideoPlayerController: Failed to configure audio session - \(error)")
+        }
+    }
+
+    private func restoreAudioSessionIfNeeded() {
+        guard let previous = previousAudioSessionConfiguration else { return }
+        previousAudioSessionConfiguration = nil
+
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setActive(false, options: [.notifyOthersOnDeactivation])
+            try session.setCategory(previous.category, mode: previous.mode, options: previous.options)
+        } catch {
+            print("⚠️ ExerciseVideoPlayerController: Failed to restore audio session - \(error)")
+        }
     }
 }
 

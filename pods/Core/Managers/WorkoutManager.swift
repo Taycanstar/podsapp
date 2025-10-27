@@ -3175,8 +3175,11 @@ class WorkoutManager: ObservableObject {
     
     private func setupObservers() {
         // Listen for user profile changes to update defaults
+        // CRITICAL FIX: Ensure updates arrive on main thread to prevent
+        // "Updating ObservedObject from background threads" violations
         userProfileService.$profileData
             .compactMap { $0 }
+            .receive(on: RunLoop.main)  // ← Force main thread context
             .sink { [weak self] _ in
                 // Profile data updated, could trigger workout regeneration if needed
             }
@@ -3184,6 +3187,7 @@ class WorkoutManager: ObservableObject {
 
         userProfileService.$activeWorkoutProfileId
             .removeDuplicates()
+            .receive(on: RunLoop.main)  // ← Force main thread context
             .sink { [weak self] _ in
                 self?.handleActiveWorkoutProfileChange()
             }
