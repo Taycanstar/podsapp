@@ -53,6 +53,7 @@ struct MyProfileView: View {
     @Binding var isAuthenticated: Bool
     @EnvironmentObject var onboarding: OnboardingViewModel
     @EnvironmentObject var vm: DayLogsViewModel  // Add this to access current weight
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject private var combinedLogsRepository = CombinedLogsRepository.shared
     @Namespace private var profileTabNamespace
     
@@ -120,6 +121,17 @@ struct MyProfileView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: ProfileView(isAuthenticated: $isAuthenticated)) {
                         Image(systemName: "line.3.horizontal")

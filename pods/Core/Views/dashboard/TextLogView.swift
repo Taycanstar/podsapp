@@ -11,7 +11,7 @@ import Speech
 struct TextLogView: View {
     @Binding var isPresented: Bool
     let selectedMeal: String
-    @State private var mealDescription = ""
+    @State private var mealDescription: String
     @FocusState private var isInputFocused: Bool
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
@@ -37,6 +37,12 @@ struct TextLogView: View {
     // Upgrade retry handling
     @State private var pendingRetryDescription: String?
     @State private var pendingRetryMealType: String?
+    
+    init(isPresented: Binding<Bool>, selectedMeal: String, initialDescription: String = "") {
+        _isPresented = isPresented
+        self.selectedMeal = selectedMeal
+        _mealDescription = State(initialValue: initialDescription)
+    }
     
     var body: some View {
         NavigationView {

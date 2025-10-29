@@ -62,7 +62,7 @@ struct podsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainContentView()
 
                 .environmentObject(onboardingViewModel)
                 .environmentObject(sharedViewModel)

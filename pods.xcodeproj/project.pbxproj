@@ -15,6 +15,10 @@
 		361507282B7DBA270060974A /* CameraViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361507272B7DBA270060974A /* CameraViewModel.swift */; };
 		3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615072D2B7EE48E0060974A /* CreatePodView.swift */; };
 		3615D1112EAF108D0063EB8B /* MainActorDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615D1102EAF108D0063EB8B /* MainActorDiagnostics.swift */; };
+		3615D1132EAFEA320063EB8B /* AgentTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615D1122EAFEA2B0063EB8B /* AgentTabBar.swift */; };
+		36F2C8F22EB3F1DD002BC4E9 /* DashboardContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8F12EB3F1DD002BC4E9 /* DashboardContainer.swift */; };
+		36F2C8F42EB3F34F002BC4E9 /* ChatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8F32EB3F34F002BC4E9 /* ChatsView.swift */; };
+		3615D1152EB005EC0063EB8B /* MainContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615D1142EB005E50063EB8B /* MainContentView.swift */; };
 		3617B93C2C58A0A4008FB5FA /* AddSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3617B93B2C58A0A4008FB5FA /* AddSheetView.swift */; };
 		3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */; };
 		361919152EA17778007CAA0D /* WorkoutLogDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 361919142EA17769007CAA0D /* WorkoutLogDetailView.swift */; };
@@ -390,6 +394,10 @@
 		361507272B7DBA270060974A /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
 		3615072D2B7EE48E0060974A /* CreatePodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePodView.swift; sourceTree = "<group>"; };
 		3615D1102EAF108D0063EB8B /* MainActorDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainActorDiagnostics.swift; sourceTree = "<group>"; };
+		3615D1122EAFEA2B0063EB8B /* AgentTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentTabBar.swift; sourceTree = "<group>"; };
+		36F2C8F12EB3F1DD002BC4E9 /* DashboardContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardContainer.swift; sourceTree = "<group>"; };
+		36F2C8F32EB3F34F002BC4E9 /* ChatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatsView.swift; sourceTree = "<group>"; };
+		3615D1142EB005E50063EB8B /* MainContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainContentView.swift; sourceTree = "<group>"; };
 		3617B93B2C58A0A4008FB5FA /* AddSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSheetView.swift; sourceTree = "<group>"; };
 		3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPodView.swift; sourceTree = "<group>"; };
 		361919142EA17769007CAA0D /* WorkoutLogDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLogDetailView.swift; sourceTree = "<group>"; };
@@ -784,6 +792,13 @@
 			path = Diagnostics;
 			sourceTree = "<group>";
 		};
+		3615D1162EB0FDC60063EB8B /* home */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = home;
+			sourceTree = "<group>";
+		};
 		3619191C2EA7DE6E007CAA0D /* subscriptions */ = {
 			isa = PBXGroup;
 			children = (
@@ -1011,6 +1026,7 @@
 		3682C86A2BBAED5B00B350E2 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				3615D1122EAFEA2B0063EB8B /* AgentTabBar.swift */,
 				362532A62E6CD987003C3B8D /* RestTimerSheet.swift */,
 				362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */,
 				78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */,
@@ -1044,6 +1060,7 @@
 		3688DBF62BDEAE54001E244C /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				3615D1162EB0FDC60063EB8B /* home */,
 				3619191C2EA7DE6E007CAA0D /* subscriptions */,
 				3619191A2EA5C540007CAA0D /* LogProUpgradeSheet.swift */,
 				36D3A51F2E9396D700AD6B94 /* ShimmerView.swift */,
@@ -1197,6 +1214,7 @@
 		36C458B82B7421100060355F /* pods */ = {
 			isa = PBXGroup;
 			children = (
+				3615D1142EB005E50063EB8B /* MainContentView.swift */,
 				36CE7F002C1176DA001774F9 /* pods.entitlements */,
 				3682C8612BBADF4700B350E2 /* Core */,
 				363889402BAA92010062631B /* VideoEditorRepresentable.swift */,
@@ -1318,6 +1336,8 @@
 		36ED35AC2DD53B5C00D174FB /* dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				36F2C8F32EB3F34F002BC4E9 /* ChatsView.swift */,
+				36F2C8F12EB3F1DD002BC4E9 /* DashboardContainer.swift */,
 				361FF3462E2A011700B7F68E /* TextLogView.swift */,
 				361FF33C2E26EC9E00B7F68E /* StreaksView.swift */,
 				36ED35AD2DD53B6C00D174FB /* LogWaterView.swift */,
@@ -1663,6 +1683,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				36F2C8F42EB3F34F002BC4E9 /* ChatsView.swift in Sources */,
+				36F2C8F22EB3F1DD002BC4E9 /* DashboardContainer.swift in Sources */,
 				36A851932E58B419004E5CED /* ReplaceExerciseView.swift in Sources */,
 				36ED35E32DDE52F300D174FB /* AddQuickLogDetailsView.swift in Sources */,
 				36CB03302D5B04DD006A74E9 /* FoodSearchModel.swift in Sources */,
@@ -1730,6 +1752,7 @@
 				361FF3412E288D9D00B7F68E /* MuscleRecoveryService.swift in Sources */,
 				361FF3392E23090000B7F68E /* StartWorkoutView.swift in Sources */,
 				36D3A5142E8EDC6F00AD6B94 /* AllowHealthView.swift in Sources */,
+				3615D1152EB005EC0063EB8B /* MainContentView.swift in Sources */,
 				36D3A5222E942B7300AD6B94 /* RegisterView.swift in Sources */,
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
@@ -1793,6 +1816,7 @@
 				3615D1112EAF108D0063EB8B /* MainActorDiagnostics.swift in Sources */,
 				3625329F2E629D1A003C3B8D /* CircularProgressView.swift in Sources */,
 				36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */,
+				3615D1132EAFEA320063EB8B /* AgentTabBar.swift in Sources */,
 				361FF3152E1D99AA00B7F68E /* StretchMobilityView.swift in Sources */,
 				36881DFD2E77406300262045 /* ExerciseLoggingSheet.swift in Sources */,
 				36A85D072DC3020000DD4266 /* SportSelectionView.swift in Sources */,
@@ -2162,7 +2186,7 @@
 				BLOB_NAME_WESTUS = humulistoragewest;
 				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
@@ -2205,7 +2229,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = distributionNew;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = devprofile;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
@@ -2232,7 +2256,7 @@
 				BLOB_NAME_WESTUS = humulistoragewest;
 				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
@@ -2275,7 +2299,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = distributionNew;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = devprofile;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";

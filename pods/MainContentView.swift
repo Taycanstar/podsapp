@@ -3,18 +3,10 @@ import SwiftUI
 import MicrosoftCognitiveServicesSpeech
 import Combine
 
-struct TabBarVisibilityKey: EnvironmentKey {
-    static let defaultValue: Binding<Bool> = .constant(true)
-}
 
-extension EnvironmentValues {
-    var isTabBarVisible: Binding<Bool> {
-        get { self[TabBarVisibilityKey.self] }
-        set { self[TabBarVisibilityKey.self] = newValue }
-    }
-}
 
-struct ContentView: View {
+
+struct MainContentView: View {
     @State private var selectedTab: Int = 0
     @State private var isRecording = false
     @State private var showVideoPreview = false
@@ -82,8 +74,8 @@ struct ContentView: View {
         Group {
             if isAuthenticated {
                 // Debug logging for navigation state
-                let _ = print("🔄 ContentView.body: Authenticated user - showing main app interface")
-                let _ = print("🔄 ContentView.body: Onboarding completed: \(viewModel.onboardingCompleted), Server completed: \(viewModel.serverOnboardingCompleted)")
+                let _ = print("🔄 MainContentView.body: Authenticated user - showing main app interface")
+                let _ = print("🔄 MainContentView.body: Onboarding completed: \(viewModel.onboardingCompleted), Server completed: \(viewModel.serverOnboardingCompleted)")
                 ZStack(alignment: .bottom) {
                     VStack {
                         Group {
@@ -127,7 +119,6 @@ struct ContentView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .ignoresSafeArea(.keyboard)
                         .onChange(of: selectedTab) {_, newValue in
                             if newValue == 1 {
                                 showingVideoCreationScreen = true
@@ -149,14 +140,6 @@ struct ContentView: View {
             Text("An update to Humuli is required to continue.")
         }
         // Removed deprecated onboarding resume task
-                    
-                    if isTabBarVisible {
-                        CustomTabBar(selectedTab: $selectedTab, showVideoCreationScreen: $showingVideoCreationScreen, showQuickPodView: $showQuickPodView, showNewSheet: $showNewSheet)
-                            .ignoresSafeArea(.keyboard)
-                    }
-                    
-                }
-                .ignoresSafeArea(.keyboard)
 
                 .fullScreenCover(isPresented: $showingVideoCreationScreen) {
                     CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)
@@ -188,13 +171,13 @@ struct ContentView: View {
                 .fullScreenCover(isPresented: $showFoodScanner) {
                     FoodScannerView(isPresented: $showFoodScanner, selectedMeal: selectedMeal, onFoodScanned: { food, foodLogId in
                         // When a barcode is scanned and food is returned, show the confirmation view
-                        print("🔍 DEBUG ContentView: Received food: \(food.description), foodLogId: \(String(describing: foodLogId))")
+                        print("🔍 DEBUG MainContentView: Received food: \(food.description), foodLogId: \(String(describing: foodLogId))")
                         scannedFood = food
                         scannedFoodLogId = foodLogId
-                        print("🔍 DEBUG ContentView: Set scannedFood and scannedFoodLogId")
+                        print("🔍 DEBUG MainContentView: Set scannedFood and scannedFoodLogId")
                         // Small delay to ensure transitions are smooth
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                            print("🔍 DEBUG ContentView: About to show ConfirmLogView sheet")
+                            print("🔍 DEBUG MainContentView: About to show ConfirmLogView sheet")
                             showConfirmFoodView = true
                         }
                     })
@@ -204,14 +187,14 @@ struct ContentView: View {
                 .fullScreenCover(isPresented: $showVoiceLog) {
                     VoiceLogView(isPresented: $showVoiceLog, selectedMeal: selectedMeal)
                         .onAppear {
-                            print("VoiceLogView appeared from ContentView")
-                            print("🍽️ ContentView passing selectedMeal to VoiceLogView: \(selectedMeal)")
+                            print("VoiceLogView appeared from MainContentView")
+                            print("🍽️ MainContentView passing selectedMeal to VoiceLogView: \(selectedMeal)")
                         }
                         .onDisappear {
-                            print("VoiceLogView disappeared from ContentView")
-                        }
-                }
-
+                            print("VoiceLogView disappeared from MainContentView")
+    }
+}
+}
                 .fullScreenCover(isPresented: $showLogWorkoutView) {
                     WorkoutContainerView(selectedTab: $selectedTab)
                 }
@@ -247,7 +230,7 @@ struct ContentView: View {
                 .environment(\.isTabBarVisible, $isTabBarVisible)
             } else {
                 // Debug logging for authentication state
-                let _ = print("🔄 ContentView.body: Not authenticated - showing onboarding")
+                let _ = print("🔄 MainContentView.body: Not authenticated - showing onboarding")
                 MainOnboardingView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
             }
         }
@@ -259,12 +242,12 @@ struct ContentView: View {
         // }
         .id(forceRefresh)
         .onAppear {
-            print("⚠️ ContentView appeared")
+            print("⚠️ MainContentView appeared")
             hydrateAuthenticatedState()
             setupNotificationObservers()
         }
         .onChange(of: selectedMeal) { _, newValue in
-            print("🍽️ ContentView selectedMeal changed to: \(newValue)")
+            print("🍽️ MainContentView selectedMeal changed to: \(newValue)")
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
@@ -300,13 +283,13 @@ struct ContentView: View {
             }
         }
         .onChange(of: isAuthenticated) { _, newValue in
-            print("🔄 ContentView: isAuthenticated changed to \(newValue)")
+            print("🔄 MainContentView: isAuthenticated changed to \(newValue)")
             if newValue {
-                print("🔄 ContentView: User authenticated - refreshing state")
+                print("🔄 MainContentView: User authenticated - refreshing state")
                 hydrateAuthenticatedState()
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    print("🔄 ContentView: Bootstrapping after authentication")
+                    print("🔄 MainContentView: Bootstrapping after authentication")
                     StartupCoordinator.shared.bootstrapIfNeeded(
                         onboarding: viewModel,
                         foodManager: foodManager,
@@ -347,7 +330,7 @@ struct ContentView: View {
             if let userInfo = notification.userInfo,
                let food = userInfo["food"] as? Food {
                 print("📱 Received ShowFoodConfirmation notification for: \(food.displayName)")
-                print("🩺 [DEBUG] ContentView received food.healthAnalysis: \(food.healthAnalysis?.score ?? -1)")
+                print("🩺 [DEBUG] MainContentView received food.healthAnalysis: \(food.healthAnalysis?.score ?? -1)")
                 print("🔍 DEBUG NotificationCenter: Setting scannedFood and showing sheet")
                 
                 // Set the scanned food data
@@ -384,7 +367,7 @@ struct ContentView: View {
                 .publisher(for: Notification.Name("AuthenticationCompleted"))
                 .receive(on: RunLoop.main)
         ) { _ in
-            print("🔔 ContentView: Received AuthenticationCompleted notification")
+            print("🔔 MainContentView: Received AuthenticationCompleted notification")
             hydrateAuthenticatedState()
             // Bootstrap for the current user and refresh the view
             StartupCoordinator.shared.bootstrapIfNeeded(
@@ -395,10 +378,16 @@ struct ContentView: View {
             )
             self.forceRefresh.toggle()
         }
+    }
 
     // AppStorage keeps isAuthenticated synchronized; no manual persistence needed here
-}
     
+    private func handleAgentSubmit() {
+        let trimmedText = agentInputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return }
+        print("📝 Agent prompt submitted: \(trimmedText)")
+        agentInputText = ""
+    }
     
     func hasPremiumAccess() -> Bool {
             return viewModel.subscriptionStatus == "active" && viewModel.subscriptionPlan != nil && viewModel.subscriptionPlan != "None"
@@ -481,18 +470,11 @@ struct ContentView: View {
         print("Status: \(viewModel.subscriptionStatus)")
         print("Plan: \(viewModel.subscriptionPlan ?? "None")")
         print("Expires At: \(viewModel.subscriptionExpiresAt ?? "N/A")")
-        print("Has Premium Access: \(hasPremiumAccess())")
+              print("Has Premium Access: \(hasPremiumAccess())")
         let currentTier = getCurrentSubscriptionTier()
         print("Current Subscription Tier: \(currentTier)")
         print("Can user create team? \(viewModel.canCreateNewTeam)")
         print("--------------------")
-    }
-
-    private func handleAgentSubmit() {
-        let trimmedText = agentInputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty else { return }
-        print("📝 Agent prompt submitted: \(trimmedText)")
-        agentInputText = ""
     }
     
     // Deprecated onboarding checks removed. Auth + StartupCoordinator handle app state.

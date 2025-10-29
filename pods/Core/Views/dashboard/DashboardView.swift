@@ -3,6 +3,13 @@ import HealthKit
 import Combine
 
 struct DashboardView: View {
+    @Binding var agentText: String
+    var onPlusTapped: () -> Void
+    var onBarcodeTapped: () -> Void
+    var onMicrophoneTapped: () -> Void
+    var onWaveformTapped: () -> Void
+    var onSubmit: () -> Void
+    var onShowChats: () -> Void = {}
 
     // ─── Shared app-wide state ──────────────────────────────────────────────
     @EnvironmentObject private var onboarding: OnboardingViewModel
@@ -12,6 +19,7 @@ struct DashboardView: View {
     @EnvironmentObject private var mealReminderService: MealReminderService
     @EnvironmentObject private var proFeatureGate: ProFeatureGate
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @AppStorage("isAuthenticated") private var isAuthenticated: Bool = false
     @AppStorage(WaterUnit.storageKey) private var storedWaterUnitRawValue: String = WaterUnit.defaultUnit.rawValue
     @ObservedObject private var workoutManager = WorkoutManager.shared
     @ObservedObject private var userProfileService = UserProfileService.shared
@@ -29,7 +37,7 @@ struct DashboardView: View {
     // ─── Streak state ─────────────────────────────────────────────────────
     @ObservedObject private var streakManager = StreakManager.shared
 
-
+    // ─── Navigation state ──────────────────────────────────────────────────
     @State private var selectedFoodLogId: String? = nil
     @State private var selectedMealLogId: String? = nil
     @State private var selectedWorkoutLogId: String? = nil
@@ -70,6 +78,35 @@ struct DashboardView: View {
     // ─── Quick helpers ──────────────────────────────────────────────────────
     private var isToday     : Bool { Calendar.current.isDateInToday(vm.selectedDate) }
     
+    private var userInitial: String {
+        if !onboarding.profileInitial.isEmpty {
+            return String(onboarding.profileInitial.prefix(1)).uppercased()
+        }
+        if let first = onboarding.name.first {
+            return String(first).uppercased()
+        }
+        if let fallback = onboarding.profileData?.name.first {
+            return String(fallback).uppercased()
+        }
+        let defaultInitial = UserDefaults.standard.string(forKey: "profileInitial") ?? ""
+        return defaultInitial.isEmpty ? "?" : String(defaultInitial.prefix(1)).uppercased()
+    }
+    
+    private var userDisplayName: String {
+        if !onboarding.name.isEmpty {
+            return onboarding.name
+        }
+        if let profileName = onboarding.profileData?.name, !profileName.isEmpty {
+            return profileName
+        }
+        let storedUsername = UserDefaults.standard.string(forKey: "username")
+        return storedUsername?.isEmpty == false ? storedUsername! : "You"
+    }
+    
+    private var shouldShowProfileBorder: Bool {
+        ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 26
+    }
+
     // Reactive water intake calculation
     private var totalWaterIntake: Double {
         let calendar = Calendar.current
@@ -374,217 +411,164 @@ private var remainingCal: Double { vm.remainingCalories }
     // ────────────────────────────────────────────────────────────────────────
 
     var body: some View {
+        ZStack(alignment: .bottom) {
+            Color("primarybg").ignoresSafeArea()
 
-        
-        NavigationView {
-            ZStack {
-                Color("primarybg").ignoresSafeArea()
+            dashboardList
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                // Single List containing everything for smooth scrolling
-                List {
-                    // Header content as list sections
-                    Section {
-                        nutritionSummaryCard
-                                 .padding(.horizontal, -16) 
-                            .listRowInsets(EdgeInsets())
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
+            if isTabBarVisible.wrappedValue {
+                AgentTabBar(
+                    text: $agentText,
+                    onPlusTapped: onPlusTapped,
+                    onBarcodeTapped: onBarcodeTapped,
+                    onMicrophoneTapped: onMicrophoneTapped,
+                    onWaveformTapped: onWaveformTapped,
+                    onSubmit: onSubmit
+                )
+                .padding(.bottom)
+            }
 
-                        if isToday && !isTodayWorkoutDismissed && !hideWorkoutPreviews {
-                            todayWorkoutCard
-                                .padding(.horizontal)
-                                // .padding(.top, 8)
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        }
-
-
-                        
-                        // UNIFIED: Single modern loader with dynamic progress (legacy states now synchronized)
-                        if foodMgr.foodScanningState.isActive {
-
-                            ModernFoodLoadingCard(state: foodMgr.foodScanningState)
-                                .padding(.horizontal)
-                                .padding(.top, 16)
-                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        } else {
-
-                        }
-                    }
-                    
-                    // Logs section
-                    if vm.isLoading {
-                        Section {
-                            loadingState
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        }
-                    } else if let err = vm.error {
-                        Section {
-                            errorState(err)
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        }
-                    } else {
-                        scheduledPreviewsSection
-                        logsSection
-                        emptyStateSection
-                    }
-                    }
-                .listStyle(PlainListStyle())
-                .scrollContentBackground(.hidden)
-                .scrollIndicators(.hidden)
-                .safeAreaInset(edge: .bottom) {
-                    // Add buffer space for tab bar
-                    Spacer()
-                        .frame(height: 100)
+            toastOverlay
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    HapticFeedback.generateRigid()
+                    onShowChats()
+                } label: {
+                    ProfileInitialCircle(initial: userInitial, showsBorder: shouldShowProfileBorder)
                 }
-                .animation(.default, value: sortedLogs)
+                .buttonStyle(.plain)
+            }
 
-                   if foodMgr.showAIGenerationSuccess, let food = foodMgr.aiGeneratedFood {
-        VStack {
-          Spacer()
-          BottomPopup(message: "Food logged")
-            .padding(.bottom, 90)
-        }
-        .zIndex(1)
-        .transition(.opacity)
-        .animation(.spring(), value: foodMgr.showAIGenerationSuccess)
-      }
-      else if foodMgr.showLogSuccess, let item = foodMgr.lastLoggedItem {
-        VStack {
-          Spacer()
-          BottomPopup(message: "\(item.name) logged")
-            .padding(.bottom, 90)
-        }
-        .zIndex(1)
-        .transition(.opacity)
-        .animation(.spring(), value: foodMgr.showLogSuccess)
-      }
-      else if foodMgr.showSavedMealToast {
-        VStack {
-          Spacer()
-          BottomPopup(message: "Saved Meal")
-            .padding(.bottom, 90)
-        }
-        .zIndex(1)
-        .transition(.opacity)
-        .animation(.spring(), value: foodMgr.showSavedMealToast)
-      }
-      else if foodMgr.showUnsavedMealToast {
-        VStack {
-          Spacer()
-          BottomPopup(message: "Unsaved Meal")
-            .padding(.bottom, 90)
-        }
-        .zIndex(1)
-        .transition(.opacity)
-        .animation(.spring(), value: foodMgr.showUnsavedMealToast)
-      }
-      else if workoutManager.showWorkoutLogCard, let workout = workoutManager.lastCompletedWorkout {
-        VStack {
-          Spacer()
-          WorkoutLogCard(summary: workout)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 90)
-        }
-        .zIndex(1)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: workoutManager.showWorkoutLogCard)
-      }
-    }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color("primarybg"), for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar { toolbarContent }
-            .sheet(item: $scheduleSheetLog) { log in
-                ScheduleMealSheet(initialMealType: initialMealType(for: log)) { selection in
-                    scheduleLog(selection: selection, for: log)
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 12) {
+                    Button {
+                        vm.selectedDate.addDays(-1)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Text(navTitle)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.primary)
+
+                    Button {
+                        vm.selectedDate.addDays(+1)
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .sheet(isPresented: Binding(
-                get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts && proFeatureGate.blockedFeature != .analytics },
-                set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
-            )) {
-                if proFeatureGate.blockedFeature == .foodScans {
-                    LogProUpgradeSheet(
-                        usageSummary: proFeatureGate.usageSummary,
-                        onDismiss: { proFeatureGate.dismissUpgradeSheet() }
-                    )
-                } else {
-                    HumuliProUpgradeSheet(
-                        feature: proFeatureGate.blockedFeature,
-                        usageSummary: proFeatureGate.usageSummary,
-                        onDismiss: { proFeatureGate.dismissUpgradeSheet() }
-                    )
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: 12) {
+                    HStack(spacing: 4) {
+                        Image(streakManager.streakAsset)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 20, height: 20)
+
+                        Text("\(streakManager.currentStreak)")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+
+                    Button {
+                        showDatePicker = true
+                    } label: {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .sheet(isPresented: $showDatePicker) {
-                DatePickerSheet(date: $vm.selectedDate,
-                                isPresented: $showDatePicker)
+        }
+        .sheet(item: $scheduleSheetLog) { log in
+            ScheduleMealSheet(initialMealType: initialMealType(for: log)) { selection in
+                scheduleLog(selection: selection, for: log)
             }
-            .alert("Product Name Required", isPresented: $foodMgr.showNutritionNameInput) {
-                TextField("Enter product name", text: $nutritionProductName)
-                    .textInputAutocapitalization(.words)
-                Button("Cancel", role: .cancel) {
-                    foodMgr.cancelNutritionNameInput()
-                }
-                Button("Save") {
-                    if !nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        foodMgr.createNutritionLabelFoodWithName(nutritionProductName) { result in
-                            DispatchQueue.main.async {
-                                nutritionProductName = "" // Reset for next time
-                                switch result {
-                                case .success:
-                                    print("✅ Successfully created nutrition label food")
-                                case .failure(let error):
-                                    print("❌ Failed to create nutrition label food: \(error)")
-                                }
+        }
+        .sheet(isPresented: Binding(
+            get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts && proFeatureGate.blockedFeature != .analytics },
+            set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
+        )) {
+            if proFeatureGate.blockedFeature == .foodScans {
+                LogProUpgradeSheet(
+                    usageSummary: proFeatureGate.usageSummary,
+                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
+                )
+            } else {
+                HumuliProUpgradeSheet(
+                    feature: proFeatureGate.blockedFeature,
+                    usageSummary: proFeatureGate.usageSummary,
+                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
+                )
+            }
+        }
+        .sheet(isPresented: $showDatePicker) {
+            DatePickerSheet(date: $vm.selectedDate,
+                            isPresented: $showDatePicker)
+        }
+        .alert("Product Name Required", isPresented: $foodMgr.showNutritionNameInput) {
+            TextField("Enter product name", text: $nutritionProductName)
+                .textInputAutocapitalization(.words)
+            Button("Cancel", role: .cancel) {
+                foodMgr.cancelNutritionNameInput()
+            }
+            Button("Save") {
+                if !nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    foodMgr.createNutritionLabelFoodWithName(nutritionProductName) { result in
+                        DispatchQueue.main.async {
+                            nutritionProductName = "" // Reset for next time
+                            switch result {
+                            case .success:
+                                print("✅ Successfully created nutrition label food")
+                            case .failure(let error):
+                                print("❌ Failed to create nutrition label food: \(error)")
                             }
                         }
                     }
                 }
-                .disabled(nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            } message: {
-                Text("We couldn't find the product name on the nutrition label. Please enter it manually.")
             }
-            .alert(foodMgr.scanFailureType, isPresented: $foodMgr.showScanFailureAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(foodMgr.scanFailureMessage)
+            .disabled(nutritionProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text("We couldn't find the product name on the nutrition label. Please enter it manually.")
+        }
+        .alert(foodMgr.scanFailureType, isPresented: $foodMgr.showScanFailureAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(foodMgr.scanFailureMessage)
+        }
+        .alert(item: $scheduleAlert) { alert in
+            switch alert {
+            case .success(let message):
+                return Alert(title: Text("Scheduled"), message: Text(message), dismissButton: .default(Text("OK")))
+            case .failure(let message):
+                return Alert(title: Text("Error"), message: Text(message), dismissButton: .default(Text("OK")))
             }
-            .alert(item: $scheduleAlert) { alert in
-                switch alert {
-                case .success(let message):
-                    return Alert(title: Text("Scheduled"), message: Text(message), dismissButton: .default(Text("OK")))
-                case .failure(let message):
-                    return Alert(title: Text("Error"), message: Text(message), dismissButton: .default(Text("OK")))
-                }
-            }
-            .onAppear {
-                configureOnAppear() 
-                
-                // Initialize food manager with user email only if we have a valid email
-                if !onboarding.email.isEmpty {
-                    foodMgr.initialize(userEmail: onboarding.email)
-                    
-                    // Set up the connection between FoodManager and DayLogsViewModel for voice logging
-                    foodMgr.dayLogsViewModel = vm
-                } else {
-                    print("⚠️ DashboardView onAppear - No email available for FoodManager initialization")
-                }
-                
-                // Load health data for the selected date
-                healthViewModel.reloadHealthData(for: vm.selectedDate)
-                
+        }
+        .onAppear {
+            configureOnAppear()
 
+            if !onboarding.email.isEmpty {
+                foodMgr.initialize(userEmail: onboarding.email)
+                foodMgr.dayLogsViewModel = vm
+            } else {
+                print("⚠️ DashboardView onAppear - No email available for FoodManager initialization")
             }
+
+            healthViewModel.reloadHealthData(for: vm.selectedDate)
+        }
             .onChange(of: onboarding.email) { newEmail in
                 print("🔄 DashboardView - User email changed to: \(newEmail)")
                 
@@ -611,6 +595,7 @@ private var remainingCal: Double { vm.remainingCalories }
                     // Preload data for new user
                     preloadHealthData()
                 }
+
             }
             .onChange(of: vm.selectedDate) { newDate in
                 // Force refresh to ensure correct data for the selected date
@@ -720,8 +705,6 @@ private var remainingCal: Double { vm.remainingCalories }
                 .hidden()
             )
         }
-        .navigationViewStyle(.stack)
-    }
 
     // Delete function for swipe-to-delete functionality
     private func deleteLogItems(at indexSet: IndexSet) {
@@ -1085,6 +1068,199 @@ private var remainingCal: Double { vm.remainingCalories }
 // MARK: -- Sub-views
 // ────────────────────────────────────────────────────────────────────────────
 private extension DashboardView {
+    private var dashboardHeader: some View {
+        HStack(spacing: 16) {
+            Button {
+                HapticFeedback.generateRigid()
+                onShowChats()
+            } label: {
+                ProfileInitialCircle(initial: userInitial, showsBorder: shouldShowProfileBorder)
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 12)
+
+            HStack(spacing: 12) {
+                Button {
+                    vm.selectedDate.addDays(-1)
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.primary)
+                }
+
+                Button {
+                    showDatePicker = true
+                } label: {
+                    Text(navTitle)
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.primary)
+                }
+
+                Button {
+                    vm.selectedDate.addDays(+1)
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.primary)
+                }
+            }
+
+            Spacer(minLength: 12)
+
+            HStack(spacing: 14) {
+                StreaksView(
+                    currentStreak: $streakManager.currentStreak,
+                    longestStreak: $streakManager.longestStreak,
+                    streakAsset: $streakManager.streakAsset,
+                    isVisible: $onboarding.isStreakVisible
+                )
+
+                Button {
+                    showDatePicker = true
+                } label: {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(Color("primarybg"))
+        .overlay(Divider().foregroundColor(Color.primary.opacity(0.08)), alignment: .bottom)
+    }
+
+    private var dashboardList: some View {
+        List {
+            Section {
+                nutritionSummaryCard
+                    .padding(.horizontal, -16)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
+                if isToday && !isTodayWorkoutDismissed && !hideWorkoutPreviews {
+                    todayWorkoutCard
+                        .padding(.horizontal)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+
+                if foodMgr.foodScanningState.isActive {
+                    ModernFoodLoadingCard(state: foodMgr.foodScanningState)
+                        .padding(.horizontal)
+                        .padding(.top, 16)
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            }
+
+            if vm.isLoading {
+                Section {
+                    loadingState
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            } else if let err = vm.error {
+                Section {
+                    errorState(err)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            } else {
+                scheduledPreviewsSection
+                logsSection
+                emptyStateSection
+            }
+        }
+        .listStyle(PlainListStyle())
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
+        .animation(.default, value: sortedLogs)
+    }
+
+    @ViewBuilder
+    private var toastOverlay: some View {
+        if foodMgr.showAIGenerationSuccess, let _ = foodMgr.aiGeneratedFood {
+            VStack {
+                Spacer()
+                BottomPopup(message: "Food logged")
+                    .padding(.bottom, 90)
+            }
+            .zIndex(3)
+            .transition(.opacity)
+            .animation(.spring(), value: foodMgr.showAIGenerationSuccess)
+        } else if foodMgr.showLogSuccess, let item = foodMgr.lastLoggedItem {
+            VStack {
+                Spacer()
+                BottomPopup(message: "\(item.name) logged")
+                    .padding(.bottom, 90)
+            }
+            .zIndex(3)
+            .transition(.opacity)
+            .animation(.spring(), value: foodMgr.showLogSuccess)
+        } else if foodMgr.showSavedMealToast {
+            VStack {
+                Spacer()
+                BottomPopup(message: "Saved Meal")
+                    .padding(.bottom, 90)
+            }
+            .zIndex(3)
+            .transition(.opacity)
+            .animation(.spring(), value: foodMgr.showSavedMealToast)
+        } else if foodMgr.showUnsavedMealToast {
+            VStack {
+                Spacer()
+                BottomPopup(message: "Unsaved Meal")
+                    .padding(.bottom, 90)
+            }
+            .zIndex(3)
+            .transition(.opacity)
+            .animation(.spring(), value: foodMgr.showUnsavedMealToast)
+        } else if workoutManager.showWorkoutLogCard, let workout = workoutManager.lastCompletedWorkout {
+            VStack {
+                Spacer()
+                WorkoutLogCard(summary: workout)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 90)
+            }
+            .zIndex(3)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: workoutManager.showWorkoutLogCard)
+        }
+    }
+    var dashboardContent: some View {
+        ZStack(alignment: .bottom) {
+            Color("primarybg").ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                dashboardHeader
+
+                dashboardList
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                if isTabBarVisible.wrappedValue {
+                    AgentTabBar(
+                        text: $agentText,
+                        onPlusTapped: onPlusTapped,
+                        onBarcodeTapped: onBarcodeTapped,
+                        onMicrophoneTapped: onMicrophoneTapped,
+                        onWaveformTapped: onWaveformTapped,
+                        onSubmit: onSubmit
+                    )
+                }
+            }
+
+        toastOverlay
+    }
+}
+
  
     // ① Nutrition summary ----------------------------------------------------
     var nutritionSummaryCard: some View {
@@ -1561,60 +1737,6 @@ private extension DashboardView {
         let attributes = [NSAttributedString.Key.font: font]
         let size = (text as NSString).size(withAttributes: attributes)
         return size.width
-    }
-
-
-
-    // ③ Toolbar --------------------------------------------------------------
-@ToolbarContentBuilder
-    var toolbarContent: some ToolbarContent {
-        ToolbarItemGroup(placement: .principal) {
-            HStack(spacing: 10) {
-                Button {
-                    vm.selectedDate.addDays(-1)
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
-                }
-
-                Button {
-                    showDatePicker = true
-                } label: {
-                    Text(navTitle)
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
-                }
-
-                Button {
-                    vm.selectedDate.addDays(+1)
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
-                }
-            }
-        }
-
-        ToolbarItem(placement: .navigationBarLeading) {
-            // Streaks display
-            StreaksView(
-                currentStreak: $streakManager.currentStreak,
-                longestStreak: $streakManager.longestStreak,
-                streakAsset: $streakManager.streakAsset,
-                isVisible: $onboarding.isStreakVisible
-            )
-        }
-
-        ToolbarItem(placement: .navigationBarTrailing) {
-            Button {
-                showDatePicker = true
-            } label: {
-                Image(systemName: "calendar")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.primary)
-            }
-        }
     }
 
     // Height card for page 3
@@ -2104,6 +2226,26 @@ struct ProgressBar: View {
     }
 }
 
+private struct ProfileInitialCircle: View {
+    var initial: String
+    var size: CGFloat = 36
+    var showsBorder: Bool = true
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.clear)
+                .overlay(
+                    Circle()
+                        .stroke(Color.primary.opacity(0.25), lineWidth: showsBorder ? 1.4 : 0)
+                )
+            Text(initial)
+                .font(.system(size: size * 0.45, weight: .semibold))
+                .foregroundColor(.primary)
+        }
+        .frame(width: size, height: size)
+    }
+}
 
 struct LogRow: View {
     let log: CombinedLog
