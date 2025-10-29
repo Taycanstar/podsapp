@@ -19,8 +19,10 @@ struct HumuliProUpgradeSheet: View {
     let showUsageDetail: Bool
     @State private var selectedPlan: SubscriptionPlan = .yearly
     @State private var isProcessing = false
+    @State private var isRestoring = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var infoMessage: String?
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @EnvironmentObject private var viewModel: OnboardingViewModel
 
@@ -58,12 +60,6 @@ struct HumuliProUpgradeSheet: View {
             }
         }
 
-        var renewalText: String {
-            switch self {
-            case .monthly: return "Auto-renews monthly. Cancel anytime."
-            case .yearly: return "Auto-renews yearly. Cancel anytime."
-            }
-        }
     }
 }
 
@@ -133,6 +129,7 @@ struct ManageSubscriptionSheet: View {
 
     @State private var showPlans = false
     @State private var isProcessing = false
+    @State private var isRestoring = false
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var infoMessage: String?
@@ -164,6 +161,22 @@ struct ManageSubscriptionSheet: View {
                         .cornerRadius(12)
                 }
 
+                Button {
+                    Task { await restorePurchases() }
+                } label: {
+                    if isRestoring {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    } else {
+                        Text("Restore Purchases")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    }
+                }
+                .disabled(isProcessing || isRestoring)
+
                 Button(role: .destructive) {
                     Task { await cancelSubscription() }
                 } label: {
@@ -178,7 +191,7 @@ struct ManageSubscriptionSheet: View {
                             .padding()
                     }
                 }
-                .disabled(isProcessing)
+                .disabled(isProcessing || isRestoring)
 
                 if let infoMessage {
                     Text(infoMessage)
@@ -314,6 +327,33 @@ struct ManageSubscriptionSheet: View {
     private func refreshSubscription() async {
         guard let email = await currentEmail() else { return }
         await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email, force: true)
+    }
+
+    private func restorePurchases() async {
+        guard isRestoring == false else { return }
+        guard let email = await currentEmail() else {
+            await presentError("We couldn't find your account email. Please sign in again.")
+            return
+        }
+
+        await MainActor.run {
+            isRestoring = true
+            infoMessage = nil
+        }
+
+        do {
+            try await subscriptionManager.restorePurchases(userEmail: email)
+            await refreshSubscription()
+            await MainActor.run {
+                infoMessage = "Purchases restored successfully."
+            }
+        } catch {
+            await presentError(error.localizedDescription)
+        }
+
+        await MainActor.run {
+            isRestoring = false
+        }
     }
 
     private func presentError(_ message: String) async {
@@ -578,12 +618,31 @@ extension HumuliProUpgradeSheet {
                 .disabled(isProcessing)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 12)
+                Button {
+                    Task { await restorePurchases() }
+                } label: {
+                    if isRestoring {
+                        ProgressView()
+                            .padding(.top, 8)
+                    } else {
+                        Text("Restore Purchases")
+                            .font(.system(size: 15))
+                            .foregroundColor(.primary)
+                    }
+                }
+                .disabled(isProcessing || isRestoring)
+                .padding(.top, 8)
 
-                // Auto-renew text
-                Text(selectedPlan.renewalText)
-                    .font(.system(size: 13))
-                    .foregroundColor(.gray)
-                    .padding(.bottom, 40)
+                if let infoMessage {
+                    Text(infoMessage)
+                        .font(.system(size: 13))
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 8)
+                        .padding(.horizontal, 24)
+                }
+
+                Spacer().frame(height: 24)
             }
         }
         .preferredColorScheme(.light)
@@ -708,6 +767,39 @@ extension HumuliProUpgradeSheet {
                 showError = true
                 errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    private func restorePurchases() async {
+        guard isRestoring == false else { return }
+        guard let email = await currentEmail() else {
+            await MainActor.run {
+                showError = true
+                errorMessage = "Please sign in before restoring purchases."
+            }
+            return
+        }
+
+        await MainActor.run {
+            isRestoring = true
+            infoMessage = nil
+        }
+
+        do {
+            try await subscriptionManager.restorePurchases(userEmail: email)
+            await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email, force: true)
+            await MainActor.run {
+                infoMessage = "Purchases restored successfully."
+            }
+        } catch {
+            await MainActor.run {
+                showError = true
+                errorMessage = error.localizedDescription
+            }
+        }
+
+        await MainActor.run {
+            isRestoring = false
         }
     }
 
