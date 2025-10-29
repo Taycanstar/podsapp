@@ -2466,6 +2466,18 @@ class WorkoutManager: ObservableObject {
         print("▶️ WorkoutManager: Resumed workout, paused for \(formatted)s")
     }
 
+    var isActiveWorkoutPaused: Bool {
+        activeWorkoutState?.pauseBeganAt != nil
+    }
+
+    func currentActiveWorkoutDuration(asOf referenceDate: Date = Date()) -> TimeInterval? {
+        guard let state = activeWorkoutState else { return nil }
+        let endTime = max(referenceDate, state.lastActivityAt)
+        let pausedDuration = state.totalPausedDuration(referenceDate: endTime)
+        let rawDuration = endTime.timeIntervalSince(state.startedAt) - pausedDuration
+        return max(rawDuration, 0)
+    }
+
     func applyActiveExerciseUpdate(_ exercise: TodayWorkoutExercise) {
         let sanitizedExercise = stripWarmups(from: exercise)
 
