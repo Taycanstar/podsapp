@@ -12,7 +12,8 @@ struct WorkoutInProgressView: View {
     @Binding var isPresented: Bool
     @State private var workout: TodayWorkout
     @State private var isPaused = false
-    @State private var elapsedTime: TimeInterval = 0
+    @State private var now = Date()
+    @State private var fallbackStartDate = Date()
     @State private var timer: Timer?
     @State private var completedExercises: Set<Int> = []
     @State private var navigationPath = NavigationPath()
@@ -21,6 +22,7 @@ struct WorkoutInProgressView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject private var workoutManager: WorkoutManager
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     
     // Track if any sets have been logged during this workout
     @State private var hasLoggedSets = false
@@ -70,8 +72,14 @@ struct WorkoutInProgressView: View {
     }
 
     private var navigationTimerTitle: String {
-        let base = timeString(from: elapsedTime)
-        return base
+        timeString(from: displayedElapsedTime)
+    }
+
+    private var displayedElapsedTime: TimeInterval {
+        if let managerDuration = workoutManager.currentActiveWorkoutDuration(asOf: now) {
+            return managerDuration
+        }
+        return max(now.timeIntervalSince(fallbackStartDate), 0)
     }
     
     var body: some View {
@@ -253,6 +261,12 @@ struct WorkoutInProgressView: View {
                 let section = index < warmUpCount ? "Warm-up" : 
                              index < warmUpCount + workout.exercises.count ? "Main" : "Cool-down"
                 print("🏋️ Exercise \(index) (\(section)): \(exercise.exercise.name)")
+            }
+        }
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .active {
+                now = Date()
+                syncWithManagerState()
             }
         }
         .onDisappear {
@@ -438,11 +452,16 @@ struct WorkoutInProgressView: View {
     // MARK: - Helper Methods
     
     private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if !isPaused {
-                elapsedTime += 1
-            }
+        stopTimer()
+        now = Date()
+        fallbackStartDate = Date()
+        syncWithManagerState()
+        let newTimer = Timer(timeInterval: 1.0, repeats: true) { _ in
+            now = Date()
+            syncWithManagerState()
         }
+        timer = newTimer
+        RunLoop.main.add(newTimer, forMode: .common)
     }
     
     private func stopTimer() {
@@ -451,8 +470,8 @@ struct WorkoutInProgressView: View {
     }
     
     private func pauseWorkout() {
-        isPaused = true
         workoutManager.pauseActiveWorkout()
+        syncWithManagerState()
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.prepare()
@@ -460,8 +479,8 @@ struct WorkoutInProgressView: View {
     }
 
     private func resumeWorkout() {
-        isPaused = false
         workoutManager.resumeActiveWorkout()
+        syncWithManagerState()
         // Generate haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.prepare()
@@ -489,6 +508,13 @@ struct WorkoutInProgressView: View {
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
+    }
+    
+    private func syncWithManagerState() {
+        let managerPaused = workoutManager.isActiveWorkoutPaused
+        if managerPaused != isPaused {
+            isPaused = managerPaused
+        }
     }
     
     private func timeString(from timeInterval: TimeInterval) -> String {

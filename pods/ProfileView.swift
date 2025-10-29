@@ -125,8 +125,13 @@ struct ProfileView: View {
                 Button {
                     showUpgradeSheet = true
                 } label: {
-                    Label("Upgrade to Humuli Pro", systemImage: "arrow.up.circle")
-                        .foregroundColor(iconColor)
+                    HStack {
+                        Label("Upgrade to Humuli Pro", systemImage: "arrow.up.circle")
+                            .foregroundColor(iconColor)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .listRowBackground(rowBackgroundColor)
