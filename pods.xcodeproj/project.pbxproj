@@ -16,8 +16,6 @@
 		3615072E2B7EE48E0060974A /* CreatePodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615072D2B7EE48E0060974A /* CreatePodView.swift */; };
 		3615D1112EAF108D0063EB8B /* MainActorDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615D1102EAF108D0063EB8B /* MainActorDiagnostics.swift */; };
 		3615D1132EAFEA320063EB8B /* AgentTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615D1122EAFEA2B0063EB8B /* AgentTabBar.swift */; };
-		36F2C8F22EB3F1DD002BC4E9 /* DashboardContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8F12EB3F1DD002BC4E9 /* DashboardContainer.swift */; };
-		36F2C8F42EB3F34F002BC4E9 /* ChatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8F32EB3F34F002BC4E9 /* ChatsView.swift */; };
 		3615D1152EB005EC0063EB8B /* MainContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3615D1142EB005E50063EB8B /* MainContentView.swift */; };
 		3617B93C2C58A0A4008FB5FA /* AddSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3617B93B2C58A0A4008FB5FA /* AddSheetView.swift */; };
 		3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */; };
@@ -344,6 +342,8 @@
 		36ED35F92DDE57C400D174FB /* HelperViewsFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35F82DDE57C400D174FB /* HelperViewsFlow.swift */; };
 		36F2C8AC2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8AB2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift */; };
 		36F2C8AE2F9D1C7B00B4A123 /* BlockCreationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8AD2F9D1C7B00B4A123 /* BlockCreationService.swift */; };
+		36F2C8F22EB3F1DD002BC4E9 /* DashboardContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8F12EB3F1DD002BC4E9 /* DashboardContainer.swift */; };
+		36F2C8F42EB3F34F002BC4E9 /* ChatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F2C8F32EB3F34F002BC4E9 /* ChatsView.swift */; };
 		36F3B2E32CA0D03400AE568B /* ColumnTrendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */; };
 		36F5A0012F9C1AAB00A1B234 /* UserContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */; };
 		36F5A0032F9C1AAB00A1B234 /* RepositoryTTL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */; };
@@ -395,8 +395,6 @@
 		3615072D2B7EE48E0060974A /* CreatePodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePodView.swift; sourceTree = "<group>"; };
 		3615D1102EAF108D0063EB8B /* MainActorDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainActorDiagnostics.swift; sourceTree = "<group>"; };
 		3615D1122EAFEA2B0063EB8B /* AgentTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentTabBar.swift; sourceTree = "<group>"; };
-		36F2C8F12EB3F1DD002BC4E9 /* DashboardContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardContainer.swift; sourceTree = "<group>"; };
-		36F2C8F32EB3F34F002BC4E9 /* ChatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatsView.swift; sourceTree = "<group>"; };
 		3615D1142EB005E50063EB8B /* MainContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainContentView.swift; sourceTree = "<group>"; };
 		3617B93B2C58A0A4008FB5FA /* AddSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSheetView.swift; sourceTree = "<group>"; };
 		3617B93D2C58AB7C008FB5FA /* QuickPodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPodView.swift; sourceTree = "<group>"; };
@@ -720,6 +718,8 @@
 		36ED35F82DDE57C400D174FB /* HelperViewsFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperViewsFlow.swift; sourceTree = "<group>"; };
 		36F2C8AB2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupersetCircuitSelectionSheet.swift; sourceTree = "<group>"; };
 		36F2C8AD2F9D1C7B00B4A123 /* BlockCreationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockCreationService.swift; sourceTree = "<group>"; };
+		36F2C8F12EB3F1DD002BC4E9 /* DashboardContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardContainer.swift; sourceTree = "<group>"; };
+		36F2C8F32EB3F34F002BC4E9 /* ChatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatsView.swift; sourceTree = "<group>"; };
 		36F3B2E22CA0D03400AE568B /* ColumnTrendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnTrendView.swift; sourceTree = "<group>"; };
 		36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserContextStore.swift; path = Pods/Core/Repositories/UserContextStore.swift; sourceTree = SOURCE_ROOT; };
 		36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RepositoryTTL.swift; path = Pods/Core/Repositories/RepositoryTTL.swift; sourceTree = SOURCE_ROOT; };
