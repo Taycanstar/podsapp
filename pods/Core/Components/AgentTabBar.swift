@@ -20,7 +20,7 @@ struct AgentTabBar: View {
         VStack(spacing: 0) {
             TransparentBlurView(removeAllFilters: true)
                 .blur(radius: 14)
-                .frame(height: 48)
+                .frame(height: )
                 .frame(maxWidth: .infinity)
                 .allowsHitTesting(false)
 
@@ -39,6 +39,7 @@ struct AgentTabBar: View {
                 .textFieldStyle(.plain)
                 .textInputAutocapitalization(.sentences)
                 .disableAutocorrection(false)
+                .font(.system(size: 16))
                 .foregroundColor(.primary)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 8)
@@ -50,7 +51,9 @@ struct AgentTabBar: View {
                 HStack(spacing: 10) {
                     ActionCircleButton(
                         systemName: "plus",
-                        action: onPlusTapped
+                        action: onPlusTapped,
+                        backgroundColor: Color.accentColor,
+                        foregroundColor: .white
                     )
                     
                     ActionCircleButton(
@@ -63,15 +66,13 @@ struct AgentTabBar: View {
                 
                 HStack(spacing: 10) {
                     ActionCircleButton(
-                        systemName: "mic.fill",
+                        systemName: "mic",
                         action: onMicrophoneTapped
                     )
                     
                     ActionCircleButton(
                         systemName: "waveform",
-                        action: onWaveformTapped,
-                        backgroundColor: Color.accentColor,
-                        foregroundColor: .white
+                        action: onWaveformTapped
                     )
                 }
             }
@@ -108,7 +109,7 @@ private struct ActionCircleButton: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(foregroundColor)
             }
-            .frame(width: 40, height: 40)
+            .frame(width: 30, height: 30)
         }
         .buttonStyle(.plain)
     }
