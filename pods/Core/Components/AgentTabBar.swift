@@ -20,7 +20,7 @@ struct AgentTabBar: View {
         VStack(spacing: 0) {
             TransparentBlurView(removeAllFilters: true)
                 .blur(radius: 14)
-                .frame(height: )
+                .frame(height:10)
                 .frame(maxWidth: .infinity)
                 .allowsHitTesting(false)
 
@@ -34,12 +34,14 @@ struct AgentTabBar: View {
     }
 
     private var contentCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let hasUserInput = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
+        return VStack(alignment: .leading, spacing: 12) {
             TextField("Ask or Log Anything", text: $text)
                 .textFieldStyle(.plain)
                 .textInputAutocapitalization(.sentences)
                 .disableAutocorrection(false)
-                .font(.system(size: 16))
+                .font(.system(size: 15))
                 .foregroundColor(.primary)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 8)
@@ -69,10 +71,18 @@ struct AgentTabBar: View {
                         systemName: "mic",
                         action: onMicrophoneTapped
                     )
-                    
+
                     ActionCircleButton(
-                        systemName: "waveform",
-                        action: onWaveformTapped
+                        systemName: hasUserInput ? "arrow.forward" : "waveform",
+                        action: {
+                            if hasUserInput {
+                                onWaveformTapped()
+                            } else {
+                                onMicrophoneTapped()
+                            }
+                        },
+                        backgroundColor: hasUserInput ? Color.accentColor : Color(.systemGray6),
+                        foregroundColor: hasUserInput ? .white : .primary
                     )
                 }
             }
