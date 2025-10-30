@@ -76,8 +76,8 @@ struct AgentTabBar: View {
                 }
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color(.systemBackground))
@@ -89,7 +89,7 @@ struct AgentTabBar: View {
         )
         .padding(.horizontal, 16)
         .padding(.top, -12)
-        .padding(.bottom, 12)
+        // .padding(.bottom, 12)
     }
 }
 
