@@ -494,6 +494,7 @@ class SubscriptionManager: ObservableObject {
     func restorePurchases(userEmail: String) async throws {
         print("Restoring purchases for \(userEmail)")
         try await AppStore.sync()
+        await syncRestoredTransactions(for: userEmail)
         await updateSubscriptionStatus()
         await fetchSubscriptionInfoIfNeeded(for: userEmail, force: true)
         Mixpanel.mainInstance().track(event: "Subscription Restore", properties: [
@@ -502,6 +503,63 @@ class SubscriptionManager: ObservableObject {
     }
 
     // MARK: - Introductory Offer Methods
+
+    @MainActor
+    private func syncRestoredTransactions(for userEmail: String) async {
+        let networkManager = NetworkManager()
+        let transactions = await currentEntitlementTransactions()
+
+        for transaction in transactions {
+            let productId = transaction.productID
+            let transactionId = String(transaction.originalID)
+            do {
+                _ = try await networkManager.updateSubscription(
+                    userEmail: userEmail,
+                    productId: productId,
+                    transactionId: transactionId
+                )
+
+                let status = subscriptionStatus(for: transaction)
+                let expirationString = transaction.expirationDate.map { ISO8601DateFormatter.fullFormatter.string(from: $0) }
+                let willRenew: Bool
+                if let expiration = transaction.expirationDate {
+                    willRenew = expiration > Date() && transaction.revocationDate == nil
+                } else {
+                    willRenew = transaction.revocationDate == nil
+                }
+
+                _ = try await networkManager.updateSubscriptionStatus(
+                    userEmail: userEmail,
+                    productId: productId,
+                    status: status,
+                    willRenew: willRenew,
+                    expirationDate: expirationString
+                )
+            } catch {
+                print("Failed to sync restored transaction for product \(productId): \(error)")
+            }
+        }
+    }
+
+    private func currentEntitlementTransactions() async -> [StoreKit.Transaction] {
+        var transactions: [StoreKit.Transaction] = []
+        for await entitlement in Transaction.currentEntitlements {
+            if case .verified(let transaction) = entitlement {
+                transactions.append(transaction)
+            }
+        }
+        return transactions
+    }
+
+    private func subscriptionStatus(for transaction: StoreKit.Transaction) -> String {
+        if let revocationDate = transaction.revocationDate {
+            return revocationDate > Date() ? "cancelled" : "cancelled"
+        }
+        if let expirationDate = transaction.expirationDate {
+            return expirationDate > Date() ? "active" : "expired"
+        }
+        return "active"
+    }
 
     @MainActor
     func checkIntroductoryOfferEligibility(for product: Product) async -> Bool {
