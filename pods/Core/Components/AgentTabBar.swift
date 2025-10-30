@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct AgentTabBar: View {
     @Binding var text: String
@@ -14,8 +15,25 @@ struct AgentTabBar: View {
     var onMicrophoneTapped: () -> Void = {}
     var onWaveformTapped: () -> Void = {}
     var onSubmit: () -> Void = {}
-    
+
     var body: some View {
+        VStack(spacing: 0) {
+            TransparentBlurView(removeAllFilters: true)
+                .blur(radius: 14)
+                .frame(height: 48)
+                .frame(maxWidth: .infinity)
+                .allowsHitTesting(false)
+
+            contentCard
+        }
+        .background(
+            TransparentBlurView(removeAllFilters: true)
+                .blur(radius: 14)
+                .ignoresSafeArea(edges: [.horizontal, .bottom])
+        )
+    }
+
+    private var contentCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             TextField("Ask or Log Anything", text: $text)
                 .textFieldStyle(.plain)
@@ -70,6 +88,8 @@ struct AgentTabBar: View {
                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)
         )
         .padding(.horizontal, 16)
+        .padding(.top, -12)
+        .padding(.bottom, 12)
     }
 }
 
@@ -103,9 +123,31 @@ struct AgentTabBar_Previews: PreviewProvider {
     }
 }
 
+private struct TransparentBlurView: UIViewRepresentable {
+    var removeAllFilters: Bool = false
+
+    func makeUIView(context: Context) -> UIVisualEffectView {
+        UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+    }
+
+    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
+        DispatchQueue.main.async {
+            guard let backdropLayer = uiView.layer.sublayers?.first else { return }
+
+            if removeAllFilters {
+                backdropLayer.filters = []
+            } else {
+                backdropLayer.filters?.removeAll { filter in
+                    String(describing: filter) != "gaussianBlur"
+                }
+            }
+        }
+    }
+}
+
 private struct AgentTabBarPreview: View {
     @State private var prompt: String = ""
-    
+
     var body: some View {
         AgentTabBar(text: $prompt)
     }

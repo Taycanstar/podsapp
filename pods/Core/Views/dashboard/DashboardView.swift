@@ -1244,17 +1244,18 @@ private extension DashboardView {
 
                 dashboardList
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
 
-                if isTabBarVisible.wrappedValue {
-                    AgentTabBar(
-                        text: $agentText,
-                        onPlusTapped: onPlusTapped,
-                        onBarcodeTapped: onBarcodeTapped,
-                        onMicrophoneTapped: onMicrophoneTapped,
-                        onWaveformTapped: onWaveformTapped,
-                        onSubmit: onSubmit
-                    )
-                }
+            if isTabBarVisible.wrappedValue {
+                AgentTabBar(
+                    text: $agentText,
+                    onPlusTapped: onPlusTapped,
+                    onBarcodeTapped: onBarcodeTapped,
+                    onMicrophoneTapped: onMicrophoneTapped,
+                    onWaveformTapped: onWaveformTapped,
+                    onSubmit: onSubmit
+                )
+                .ignoresSafeArea(edges: [.horizontal])
             }
 
         toastOverlay
