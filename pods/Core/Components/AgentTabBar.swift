@@ -127,7 +127,7 @@ struct AgentTabBar: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                .stroke(borderColor, lineWidth: 1)
         )
         .padding(.horizontal, 16)
         .padding(.top, -12)
@@ -157,6 +157,14 @@ struct AgentTabBar: View {
 
     private func toggleSpeechRecognition() {
         isListening.toggle()
+    }
+
+    private var borderColor: Color {
+        Color(uiColor: UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+            ? UIColor.white.withAlphaComponent(0.20)
+            : UIColor.black.withAlphaComponent(0.08)
+        })
     }
 }
 
