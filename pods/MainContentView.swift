@@ -2,6 +2,7 @@ import AVFoundation
 import SwiftUI
 import MicrosoftCognitiveServicesSpeech
 import Combine
+import UIKit
 
 
 
@@ -23,6 +24,7 @@ struct MainContentView: View {
     @EnvironmentObject var deepLinkHandler: DeepLinkHandler
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @EnvironmentObject var notificationManager: NotificationManager
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
     @State private var subscriptionStatus: String = "none"
     @State private var subscriptionPlan: String?
     @State private var subscriptionExpiresAt: Date?
@@ -36,6 +38,8 @@ struct MainContentView: View {
     @State private var showLogWorkoutView = false
     @State private var showBiWeeklyNotificationAlert = false
     @State private var agentInputText: String = ""
+    @State private var agentPendingRetryDescription: String?
+    @State private var agentPendingRetryMealType: String?
     
     // State for selected meal - initialized with time-based default
     @State private var selectedMeal: String = {
@@ -378,6 +382,21 @@ struct MainContentView: View {
             )
             self.forceRefresh.toggle()
         }
+        .onChange(of: proFeatureGate.showUpgradeSheet) { _, newValue in
+            if !newValue {
+                if let pendingDescription = agentPendingRetryDescription,
+                   let pendingMealType = agentPendingRetryMealType,
+                   proFeatureGate.hasActiveSubscription() {
+                    agentPendingRetryDescription = nil
+                    agentPendingRetryMealType = nil
+                    prepareAgentAnalysisStates()
+                    performAgentAnalysis(description: pendingDescription, mealType: pendingMealType)
+                } else {
+                    agentPendingRetryDescription = nil
+                    agentPendingRetryMealType = nil
+                }
+            }
+        }
     }
 
     // AppStorage keeps isAuthenticated synchronized; no manual persistence needed here
@@ -385,10 +404,301 @@ struct MainContentView: View {
     private func handleAgentSubmit() {
         let trimmedText = agentInputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
-        print("📝 Agent prompt submitted: \(trimmedText)")
+        let description = trimmedText
+        let mealType = selectedMeal
+        agentPendingRetryDescription = nil
+        agentPendingRetryMealType = nil
         agentInputText = ""
+        prepareAgentAnalysisStates()
+        performAgentAnalysis(description: description, mealType: mealType)
+    }
+
+    private func prepareAgentAnalysisStates() {
+        print("🆕 Agent text analysis: initializing state")
+        foodManager.isGeneratingMacros = true
+        foodManager.isLoading = true
+        foodManager.macroLoadingMessage = "Analyzing description..."
+        foodManager.macroLoadingTitle = "Generating with AI"
+        foodManager.updateFoodScanningState(.initializing)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.foodManager.updateFoodScanningState(.preparing(image: UIImage()))
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            self.foodManager.updateFoodScanningState(.uploading(progress: 0.5))
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+            self.foodManager.updateFoodScanningState(.analyzing)
+        }
+    }
+
+    private func performAgentAnalysis(description: String, mealType: String) {
+        let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"; formatter.timeZone = .current
+        let dateString = formatter.string(from: dayLogsVM.selectedDate)
+        NetworkManagerTwo.shared.analyzeMealOrActivity(description: description, mealType: mealType, date: dateString) { result in
+            switch result {
+            case .success(let responseData):
+                print("✅ Agent analysis succeeded")
+                self.agentPendingRetryDescription = nil
+                self.agentPendingRetryMealType = nil
+                if let entryType = responseData["entry_type"] as? String {
+                    if entryType == "food" {
+                        self.handleAgentFoodResponse(responseData, mealType: mealType)
+                    } else if entryType == "activity" {
+                        self.handleAgentActivityResponse(responseData)
+                    } else {
+                        self.handleAgentAnalysisFailure("Unsupported entry type: \(entryType)")
+                    }
+                } else {
+                    self.handleAgentAnalysisFailure("Missing entry type in response")
+                }
+            case .failure(let error):
+                print("❌ Agent analysis failed: \(error)")
+                if let netError = error as? NetworkManagerTwo.NetworkError,
+                   case .featureLimitExceeded(let message) = netError {
+                    self.handleAgentFeatureLimitExceeded(message: message, description: description, mealType: mealType)
+                } else {
+                    self.handleAgentAnalysisFailure(error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private func handleAgentAnalysisFailure(_ message: String) {
+        DispatchQueue.main.async {
+            self.foodManager.handleScanFailure(.networkError(message))
+            self.foodManager.isGeneratingMacros = false
+            self.foodManager.isLoading = false
+            self.foodManager.macroLoadingMessage = ""
+            self.foodManager.macroLoadingTitle = "Generating with AI"
+        }
+    }
+
+    private func handleAgentFeatureLimitExceeded(message: String,
+                                                  description: String,
+                                                  mealType: String) {
+        agentPendingRetryDescription = description
+        agentPendingRetryMealType = mealType
+        handleAgentAnalysisFailure(message)
+        presentAgentUpgradeSheet()
+    }
+
+    private func presentAgentUpgradeSheet() {
+        let email = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+        if !email.isEmpty {
+            Task { await proFeatureGate.refreshUsageSummary(for: email) }
+        }
+        DispatchQueue.main.async {
+            self.proFeatureGate.blockedFeature = .foodScans
+            self.proFeatureGate.showUpgradeSheet = true
+        }
+    }
+
+    private func handleAgentFoodResponse(_ responseData: [String: Any], mealType: String) {
+        guard let foodLogId = responseData["food_log_id"] as? Int,
+              let foodData = responseData["food"] as? [String: Any] else {
+            handleAgentAnalysisFailure("Malformed food response")
+            return
+        }
+
+        let displayName = foodData["displayName"] as? String ?? "Food Log"
+        let calories = responseData["calories"] as? Int ?? 0
+        let message = responseData["message"] as? String ?? ""
+
+        var healthAnalysisData: HealthAnalysis? = nil
+        if let healthDict = foodData["health_analysis"] as? [String: Any] {
+            do {
+                let data = try JSONSerialization.data(withJSONObject: healthDict, options: [])
+                let decoder = JSONDecoder()
+                healthAnalysisData = try decoder.decode(HealthAnalysis.self, from: data)
+            } catch {
+                print("❌ Failed to decode HealthAnalysis: \(error)")
+            }
+        }
+
+        var foodNutrients: [Nutrient]? = nil
+        if let nutrientsArray = foodData["foodNutrients"] as? [[String: Any]] {
+            foodNutrients = nutrientsArray.compactMap { nutrientData in
+                guard let name = nutrientData["nutrientName"] as? String,
+                      let value = nutrientData["value"] as? Double,
+                      let unit = nutrientData["unitName"] as? String else { return nil }
+                return Nutrient(nutrientName: name, value: value, unitName: unit)
+            }
+        }
+
+        let loggedFoodItem = LoggedFoodItem(
+            foodLogId: foodLogId,
+            fdcId: foodData["fdcId"] as? Int ?? 0,
+            displayName: displayName,
+            calories: foodData["calories"] as? Double ?? Double(calories),
+            servingSizeText: foodData["servingSizeText"] as? String ?? "1 serving",
+            numberOfServings: foodData["numberOfServings"] as? Double ?? 1.0,
+            brandText: foodData["brandText"] as? String ?? "",
+            protein: foodData["protein"] as? Double ?? 0.0,
+            carbs: foodData["carbs"] as? Double ?? 0.0,
+            fat: foodData["fat"] as? Double ?? 0.0,
+            healthAnalysis: healthAnalysisData,
+            foodNutrients: foodNutrients
+        )
+
+        let combinedLog = CombinedLog(
+            type: .food,
+            status: responseData["status"] as? String ?? "success",
+            calories: Double(calories),
+            message: message,
+            foodLogId: foodLogId,
+            food: loggedFoodItem,
+            mealType: mealType,
+            mealLogId: nil,
+            meal: nil,
+            mealTime: nil,
+            scheduledAt: dayLogsVM.selectedDate,
+            recipeLogId: nil,
+            recipe: nil,
+            servingsConsumed: nil
+        )
+
+        DispatchQueue.main.async {
+            self.dayLogsVM.addPending(combinedLog)
+
+            if let idx = self.foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
+                self.foodManager.combinedLogs[idx] = combinedLog
+            } else {
+                self.foodManager.combinedLogs.insert(combinedLog, at: 0)
+            }
+
+            self.foodManager.lastLoggedItem = (name: displayName, calories: Double(calories))
+            self.foodManager.showLogSuccess = true
+            ReviewManager.shared.foodWasLogged()
+            MealReminderService.shared.mealWasLogged(mealType: mealType)
+            self.foodManager.updateFoodScanningState(.completed(result: combinedLog))
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.foodManager.resetFoodScanningState()
+                self.foodManager.isGeneratingMacros = false
+                self.foodManager.isLoading = false
+                self.foodManager.macroLoadingMessage = ""
+                self.foodManager.macroLoadingTitle = "Generating Macros with AI"
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                self.foodManager.showLogSuccess = false
+            }
+        }
+    }
+
+    private func handleAgentActivityResponse(_ responseData: [String: Any]) {
+        guard let activityLogId = responseData["activity_log_id"] as? Int,
+              let activityName = responseData["activity_name"] as? String,
+              let caloriesBurned = responseData["calories_burned"] as? Int,
+              let durationMinutes = responseData["duration_minutes"] as? Int,
+              let message = responseData["message"] as? String else {
+            print("❌ Failed to parse activity response data")
+            return
+        }
+
+        let activitySummary = ActivitySummary(
+            id: String(activityLogId),
+            workoutActivityType: formatActivityType(responseData["activity_type"] as? String ?? "Other"),
+            displayName: formatActivityName(activityName),
+            duration: Double(durationMinutes * 60),
+            totalEnergyBurned: Double(caloriesBurned),
+            totalDistance: nil,
+            startDate: Date(),
+            endDate: Date()
+        )
+
+        let combinedLog = CombinedLog(
+            type: .activity,
+            status: "success",
+            calories: Double(caloriesBurned),
+            message: message,
+            foodLogId: nil,
+            food: nil,
+            mealType: nil,
+            mealLogId: nil,
+            meal: nil,
+            mealTime: nil,
+            scheduledAt: dayLogsVM.selectedDate,
+            recipeLogId: nil,
+            recipe: nil,
+            servingsConsumed: nil,
+            activityId: String(activityLogId),
+            activity: activitySummary,
+            workoutLogId: nil,
+            workout: nil,
+            logDate: formatDateForLog(Date()),
+            dayOfWeek: formatDayOfWeek(Date())
+        )
+
+        DispatchQueue.main.async {
+            self.dayLogsVM.addPending(combinedLog)
+            self.foodManager.lastLoggedItem = (name: activityName, calories: Double(caloriesBurned))
+            self.foodManager.showLogSuccess = true
+            self.foodManager.updateFoodScanningState(.completed(result: combinedLog))
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.foodManager.resetFoodScanningState()
+                self.foodManager.isGeneratingMacros = false
+                self.foodManager.isLoading = false
+                self.foodManager.macroLoadingMessage = ""
+                self.foodManager.macroLoadingTitle = "Generating Macros with AI"
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                self.foodManager.showLogSuccess = false
+            }
+        }
     }
     
+    private func formatDateForLog(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+    
+    private func formatDayOfWeek(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: date)
+    }
+    
+    private func formatActivityName(_ name: String) -> String {
+        switch name.lowercased() {
+        case "running": return "Running"
+        case "walking": return "Walking"
+        case "cycling", "biking": return "Cycling"
+        case "swimming": return "Swimming"
+        case "hiking": return "Hiking"
+        case "yoga": return "Yoga"
+        case "weightlifting", "weight lifting", "strength training": return "Strength Training"
+        case "cardio": return "Cardio Workout"
+        case "tennis": return "Tennis"
+        case "basketball": return "Basketball"
+        case "soccer", "football": return "Soccer"
+        case "rowing": return "Rowing"
+        case "elliptical": return "Elliptical"
+        case "stairs", "stair climbing": return "Stair Climbing"
+        default:
+            return name.prefix(1).uppercased() + name.dropFirst().lowercased()
+        }
+    }
+
+    private func formatActivityType(_ type: String) -> String {
+        switch type.lowercased() {
+        case "cardio":
+            return "Running"
+        case "strength":
+            return "StrengthTraining"
+        case "sports":
+            return "Other"
+        default:
+            return formatActivityName(type)
+        }
+    }
+
     func hasPremiumAccess() -> Bool {
             return viewModel.subscriptionStatus == "active" && viewModel.subscriptionPlan != nil && viewModel.subscriptionPlan != "None"
         }

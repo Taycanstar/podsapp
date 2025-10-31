@@ -106,7 +106,7 @@ struct AgentTabBar: View {
                             systemName: hasUserInput ? "arrow.forward" : "waveform",
                             action: {
                                 if hasUserInput {
-                                    onWaveformTapped()
+                                    submitAgentPrompt()
                                 } else {
                                     onMicrophoneTapped()
                                 }
@@ -157,6 +157,15 @@ struct AgentTabBar: View {
 
     private func toggleSpeechRecognition() {
         isListening.toggle()
+    }
+    
+    private func submitAgentPrompt() {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        text = trimmed
+        onWaveformTapped()
+        text = ""
+        isPromptFocused = false
     }
 
     private var borderColor: Color {
