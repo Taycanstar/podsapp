@@ -331,7 +331,9 @@ private var remainingCal: Double { vm.remainingCalories }
             .onDelete { indexSet in
                 deleteLogItems(at: indexSet)
             }
+            
         }
+        // .padding(.bottom, 110)
     }
 
     @ViewBuilder
@@ -348,13 +350,13 @@ private var remainingCal: Double { vm.remainingCalories }
     }
 
 
-    private var navTitle: String {
+private var navTitle: String {
         if isToday      { return "Today" }
         if isYesterday  { return "Yesterday" }
         let f = DateFormatter(); f.dateFormat = "EEEE, MMM d"
         return f.string(from: vm.selectedDate)
     }
-
+    
     private var currentUserEmail: String? {
         if onboarding.email.isEmpty == false {
             return onboarding.email
@@ -1175,10 +1177,12 @@ private extension DashboardView {
             } else {
                 scheduledPreviewsSection
                 logsSection
+                
                 emptyStateSection
             }
         }
         .listStyle(PlainListStyle())
+        .contentMargins(.bottom, 110, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .animation(.default, value: sortedLogs)
