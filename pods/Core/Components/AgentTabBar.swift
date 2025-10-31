@@ -16,6 +16,9 @@ struct AgentTabBar: View {
     var onWaveformTapped: () -> Void = {}
     var onSubmit: () -> Void = {}
     @FocusState private var isPromptFocused: Bool
+    @State private var isListening = false
+    @State private var pulseScale: CGFloat = 1.0
+    @StateObject private var speechRecognizer = SpeechRecognizer()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -68,24 +71,62 @@ struct AgentTabBar: View {
                 
                 Spacer()
                 
-                HStack(spacing: 10) {
-                    ActionCircleButton(
-                        systemName: "mic",
-                        action: onMicrophoneTapped
-                    )
+                if isListening {
+                    Button {
+                        HapticFeedback.generate()
+                        toggleSpeechRecognition()
+                    } label: {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Color(.systemBackground))
+                            .frame(width: 30, height: 30)
+                            .background(Color.orange)
+                            .clipShape(Circle())
+                            .scaleEffect(pulseScale)
+                            .animation(
+                                Animation.easeInOut(duration: 1.0)
+                                    .repeatForever(autoreverses: true),
+                                value: pulseScale
+                            )
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    HStack(spacing: 10) {
+                        ActionCircleButton(
+                            systemName: "mic",
+                            action: {
+                                HapticFeedback.generate()
+                                toggleSpeechRecognition()
+                            },
+                            backgroundColor: Color(.systemBackground),
+                            foregroundColor: .primary
+                        )
+                        .overlay(
+                            Circle()
+                                .stroke(Color(.systemGray4), lineWidth: 1)
+                        )
 
-                    ActionCircleButton(
-                        systemName: hasUserInput ? "arrow.forward" : "waveform",
-                        action: {
-                            if hasUserInput {
-                                onWaveformTapped()
-                            } else {
-                                onMicrophoneTapped()
+                        ActionCircleButton(
+                            systemName: hasUserInput ? "arrow.forward" : "waveform",
+                            action: {
+                                if hasUserInput {
+                                    onWaveformTapped()
+                                } else {
+                                    onMicrophoneTapped()
+                                }
+                            },
+                            backgroundColor: hasUserInput ? Color.accentColor : Color(.systemBackground),
+                            foregroundColor: hasUserInput ? .white : .primary
+                        )
+                        .overlay(
+                            Group {
+                                if !hasUserInput {
+                                    Circle()
+                                        .stroke(Color(.systemGray4), lineWidth: 1)
+                                }
                             }
-                        },
-                        backgroundColor: hasUserInput ? Color.accentColor : Color(.systemGray6),
-                        foregroundColor: hasUserInput ? .white : .primary
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -103,7 +144,31 @@ struct AgentTabBar: View {
         .padding(.horizontal, 16)
         .padding(.top, -12)
         .padding(.bottom, isPromptFocused ? 10 : 0)
+        .onChange(of: speechRecognizer.transcript) { newTranscript in
+            if !newTranscript.isEmpty {
+                text = newTranscript
+            }
+        }
+        .onChange(of: isListening) { listening in
+            if listening {
+                speechRecognizer.startRecording()
+                pulseScale = 1.2
+            } else {
+                speechRecognizer.stopRecording()
+                pulseScale = 1.0
+            }
+        }
+        .onDisappear {
+            if isListening {
+                isListening = false
+                speechRecognizer.stopRecording()
+            }
+        }
         // .padding(.bottom, 12)
+    }
+
+    private func toggleSpeechRecognition() {
+        isListening.toggle()
     }
 }
 
