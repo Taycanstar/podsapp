@@ -426,7 +426,6 @@ private var remainingCal: Double { vm.remainingCalories }
                     onWaveformTapped: onWaveformTapped,
                     onSubmit: onSubmit
                 )
-             
             }
 
             toastOverlay

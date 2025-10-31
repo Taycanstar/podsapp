@@ -15,6 +15,7 @@ struct AgentTabBar: View {
     var onMicrophoneTapped: () -> Void = {}
     var onWaveformTapped: () -> Void = {}
     var onSubmit: () -> Void = {}
+    @FocusState private var isPromptFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -48,6 +49,7 @@ struct AgentTabBar: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .submitLabel(.send)
                 .onSubmit(onSubmit)
+                .focused($isPromptFocused)
             
             HStack {
                 HStack(spacing: 10) {
@@ -100,6 +102,7 @@ struct AgentTabBar: View {
         )
         .padding(.horizontal, 16)
         .padding(.top, -12)
+        .padding(.bottom, isPromptFocused ? 10 : 0)
         // .padding(.bottom, 12)
     }
 }
