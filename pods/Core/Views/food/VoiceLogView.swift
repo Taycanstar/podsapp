@@ -121,44 +121,84 @@ struct VoiceLogView: View {
         GeometryReader { geometry in
             ZStack {
                 // Background that adapts to dark/light mode
-                Color(UIColor.systemBackground)
-                    .edgesIgnoringSafeArea(.all)
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color("primarybg"),
+                        Color("chat").opacity(0.25)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
                 
                 VStack {
                     Spacer()
-                    
-                    // Recording visualization
-                    VStack(spacing: 24) {
-                        // Status text with processing state
-                        if audioRecorder.isProcessing {
-                            Text("Processing...")
-                                .font(.headline)
-                                .foregroundColor(Color(UIColor.secondaryLabel))
-                                .padding(.bottom, 8)
-                        } else if !audioRecorder.transcribedText.isEmpty {
-                            Text("Transcription:")
-                                .font(.headline)
-                                .foregroundColor(Color(UIColor.secondaryLabel))
-                                .padding(.bottom, 4)
+                    VStack(spacing: 28) {
+                        RoundedRectangle(cornerRadius: 999)
+                            .fill(Color.white.opacity(0.25))
+                            .frame(width: 48, height: 4)
+                            .opacity(audioRecorder.isRecording ? 1.0 : 0.6)
+                            .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: audioRecorder.isRecording)
+                        
+                        VStack(spacing: 10) {
+                            Text(statusTitle())
+                                .font(.system(size: 24, weight: .semibold, design: .rounded))
+                                .foregroundColor(.primary)
                             
-                            Text(audioRecorder.transcribedText)
-                                .font(.body)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-                                .padding(.bottom, 8)
-                        } else {
-                            Text(audioRecorder.isRecording ? "Describe your meal" : "Ready to record")
-                                .font(.headline)
-                                .foregroundColor(Color(UIColor.secondaryLabel))
-                                .padding(.bottom, 16)
+                            if let subtitle = statusSubtitle() {
+                                Text(subtitle)
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundColor(Color(UIColor.secondaryLabel))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 24)
+                            }
                         }
                         
-                        // Centered Waveform visualization with fixed width
-                        WaveformView(samples: audioRecorder.audioSamples, isRecording: audioRecorder.isRecording)
-                            .frame(width: geometry.size.width * 0.7, height: 100)
-                            .padding(.horizontal)
+                        VoiceAuraView(
+                            level: audioRecorder.audioLevel,
+                            samples: audioRecorder.audioSamples,
+                            isRecording: audioRecorder.isRecording || audioRecorder.isProcessing
+                        )
+                        .frame(width: min(geometry.size.width * 0.7, 260),
+                               height: min(geometry.size.width * 0.7, 260))
+                        .padding(.top, 12)
+                        
+                        if audioRecorder.isProcessing {
+                            ProgressView("Analyzing your voice log")
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.accentColor))
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(Color(UIColor.secondaryLabel))
+                                .padding(.top, 4)
+                        }
+                        
+                        if !audioRecorder.transcribedText.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Preview")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(Color(UIColor.secondaryLabel))
+                                
+                                ScrollView {
+                                    Text(audioRecorder.transcribedText)
+                                        .font(.system(size: 17, weight: .medium, design: .rounded))
+                                        .foregroundColor(.primary)
+                                        .multilineTextAlignment(.leading)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .frame(maxHeight: 140)
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 20)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                            )
+                            .padding(.top, 12)
+                        }
                     }
-                    .frame(width: geometry.size.width, height: geometry.size.height * 0.6)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 24)
                     
                     Spacer()
                     
@@ -299,45 +339,118 @@ struct VoiceLogView: View {
         // In a real app, you would show an alert here
         print("Permission denied - would show alert")
     }
-}
-
-// Waveform visualization component
-struct WaveformView: View {
-    let samples: [Float]
-    let isRecording: Bool
     
-    var body: some View {
-        GeometryReader { geometry in
-            HStack(spacing: 2) {
-                ForEach(0..<min(samples.count, 60), id: \.self) { index in
-                    WaveBar(
-                        value: CGFloat(samples[samples.count - 1 - index]),
-                        isRecording: isRecording,
-                        index: index
-                    )
-                }
-            }
-            .frame(width: geometry.size.width)
+    private func statusTitle() -> String {
+        if audioRecorder.isProcessing {
+            return "Processing your voice log"
         }
+        
+        if audioRecorder.isRecording {
+            return "Listening..."
+        }
+        
+        if !audioRecorder.transcribedText.isEmpty {
+            return "Captured summary"
+        }
+        
+        return "Ready for voice mode"
+    }
+    
+    private func statusSubtitle() -> String? {
+        if audioRecorder.isProcessing {
+            return "Hang tight—Humuli is generating nutrition details from your recording."
+        }
+        
+        if audioRecorder.isRecording {
+            return "Describe your meal or activity naturally. We’ll structure everything for you."
+        }
+        
+        if !audioRecorder.transcribedText.isEmpty {
+            return "Review the preview below, then confirm to log it."
+        }
+        
+        return "Tap the microphone to start logging with your voice."
     }
 }
 
-// Individual bar in the waveform
-struct WaveBar: View {
-    let value: CGFloat
+struct VoiceAuraView: View {
+    let level: CGFloat
+    let samples: [Float]
     let isRecording: Bool
-    let index: Int
+    
+    private var ringSamples: [CGFloat] {
+        let ringCount = 32
+        guard !samples.isEmpty else {
+            return Array(repeating: 0.08, count: ringCount)
+        }
+        
+        return (0..<ringCount).map { index in
+            let sampleIndex = max(samples.count - 1 - index * 2, 0)
+            let value = CGFloat(samples[sampleIndex])
+            return max(0.08, min(value, 1.0))
+        }
+    }
     
     var body: some View {
-        let height = 5 + value * 95 // Scale to reasonable height
-        
-        Rectangle()
-            .fill(Color.primary.opacity(isRecording ? 1.0 : 0.6))
-            .frame(height: height)
-            // Use more recent samples at full opacity, fade older ones
-            .opacity(isRecording ? 1.0 - Double(index) / 60.0 * 0.5 : 1.0)
-            // Round the edges a bit
-            .cornerRadius(2)
+        GeometryReader { proxy in
+            let size = min(proxy.size.width, proxy.size.height)
+            let baseDiameter = size * 0.58
+            let expansion = 1 + level * 0.35
+            
+            ZStack {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            gradient: Gradient(colors: [
+                                Color.accentColor.opacity(isRecording ? 0.55 : 0.25),
+                                Color("chat").opacity(0.05),
+                                Color.clear
+                            ]),
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: baseDiameter * 1.4
+                        )
+                    )
+                    .frame(width: baseDiameter * 1.9, height: baseDiameter * 1.9)
+                    .scaleEffect(expansion)
+                    .animation(.easeOut(duration: 0.28), value: level)
+                
+                ForEach(Array(ringSamples.enumerated()), id: \.offset) { idx, sample in
+                    Capsule()
+                        .fill(Color.accentColor.opacity(isRecording ? Double(0.25 + sample * 0.65) : 0.18))
+                        .frame(width: size * 0.03, height: size * (0.16 + sample * 0.4))
+                        .offset(y: -size * 0.34)
+                        .rotationEffect(.degrees(Double(idx) / Double(ringSamples.count) * 360))
+                        .animation(.easeOut(duration: 0.25), value: sample)
+                }
+                
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color("chat").opacity(isRecording ? 0.95 : 0.6),
+                                Color.accentColor.opacity(isRecording ? 0.85 : 0.5)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: baseDiameter, height: baseDiameter)
+                    .scaleEffect(expansion)
+                    .shadow(color: Color.accentColor.opacity(0.35), radius: 24, x: 0, y: 18)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    )
+                
+                Image(systemName: isRecording ? "waveform" : "mic.fill")
+                    .font(.system(size: baseDiameter * 0.34, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 10)
+            }
+            .frame(width: size, height: size)
+        }
+        .aspectRatio(1, contentMode: .fit)
     }
 }
 
@@ -503,4 +616,3 @@ extension AudioRecorder: AVAudioRecorderDelegate {
 #Preview {
     VoiceLogView(isPresented: .constant(false), selectedMeal: "Lunch")
 }
-
