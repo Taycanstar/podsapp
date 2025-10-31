@@ -133,42 +133,21 @@ struct VoiceLogView: View {
                 
                 VStack {
                     Spacer()
-                    VStack(spacing: 28) {
-                        RoundedRectangle(cornerRadius: 999)
-                            .fill(Color.white.opacity(0.25))
-                            .frame(width: 48, height: 4)
-                            .opacity(audioRecorder.isRecording ? 1.0 : 0.6)
-                            .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: audioRecorder.isRecording)
-                        
-                        VStack(spacing: 10) {
-                            Text(statusTitle())
-                                .font(.system(size: 24, weight: .semibold, design: .rounded))
-                                .foregroundColor(.primary)
-                            
-                            if let subtitle = statusSubtitle() {
-                                Text(subtitle)
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundColor(Color(UIColor.secondaryLabel))
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 24)
-                            }
-                        }
-                        
-                        VoiceAuraView(
+                    VStack(spacing: 24) {
+                        VoiceFluidView(
                             level: audioRecorder.audioLevel,
                             samples: audioRecorder.audioSamples,
-                            isRecording: audioRecorder.isRecording || audioRecorder.isProcessing
+                            isActive: audioRecorder.isRecording || audioRecorder.isProcessing
                         )
                         .frame(width: min(geometry.size.width * 0.7, 260),
                                height: min(geometry.size.width * 0.7, 260))
                         .padding(.top, 12)
                         
                         if audioRecorder.isProcessing {
-                            ProgressView("Analyzing your voice log")
+                            ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: Color.accentColor))
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(Color(UIColor.secondaryLabel))
-                                .padding(.top, 4)
+                                .scaleEffect(1.2)
+                                .padding(.top, 12)
                         }
                         
                         if !audioRecorder.transcribedText.isEmpty {
@@ -339,116 +318,122 @@ struct VoiceLogView: View {
         // In a real app, you would show an alert here
         print("Permission denied - would show alert")
     }
-    
-    private func statusTitle() -> String {
-        if audioRecorder.isProcessing {
-            return "Processing your voice log"
-        }
-        
-        if audioRecorder.isRecording {
-            return "Listening..."
-        }
-        
-        if !audioRecorder.transcribedText.isEmpty {
-            return "Captured summary"
-        }
-        
-        return "Ready for voice mode"
-    }
-    
-    private func statusSubtitle() -> String? {
-        if audioRecorder.isProcessing {
-            return "Hang tight—Humuli is generating nutrition details from your recording."
-        }
-        
-        if audioRecorder.isRecording {
-            return "Describe your meal or activity naturally. We’ll structure everything for you."
-        }
-        
-        if !audioRecorder.transcribedText.isEmpty {
-            return "Review the preview below, then confirm to log it."
-        }
-        
-        return "Tap the microphone to start logging with your voice."
-    }
 }
 
-struct VoiceAuraView: View {
+struct VoiceFluidView: View {
     let level: CGFloat
     let samples: [Float]
-    let isRecording: Bool
-    
-    private var ringSamples: [CGFloat] {
-        let ringCount = 32
-        guard !samples.isEmpty else {
-            return Array(repeating: 0.08, count: ringCount)
-        }
-        
-        return (0..<ringCount).map { index in
-            let sampleIndex = max(samples.count - 1 - index * 2, 0)
-            let value = CGFloat(samples[sampleIndex])
-            return max(0.08, min(value, 1.0))
-        }
-    }
+    let isActive: Bool
     
     var body: some View {
         GeometryReader { proxy in
-            let size = min(proxy.size.width, proxy.size.height)
-            let baseDiameter = size * 0.58
-            let expansion = 1 + level * 0.35
+            let dimension = min(proxy.size.width, proxy.size.height)
+            let frame = CGSize(width: dimension, height: dimension)
+            let center = CGPoint(x: proxy.size.width / 2, y: proxy.size.height / 2)
             
             ZStack {
                 Circle()
                     .fill(
                         RadialGradient(
                             gradient: Gradient(colors: [
-                                Color.accentColor.opacity(isRecording ? 0.55 : 0.25),
-                                Color("chat").opacity(0.05),
-                                Color.clear
+                                Color("chat").opacity(isActive ? 0.85 : 0.6),
+                                Color.accentColor.opacity(isActive ? 0.75 : 0.4)
                             ]),
                             center: .center,
-                            startRadius: 0,
-                            endRadius: baseDiameter * 1.4
+                            startRadius: dimension * 0.08,
+                            endRadius: dimension * 0.55
                         )
                     )
-                    .frame(width: baseDiameter * 1.9, height: baseDiameter * 1.9)
-                    .scaleEffect(expansion)
-                    .animation(.easeOut(duration: 0.28), value: level)
+                    .frame(width: frame.width, height: frame.height)
+                    .shadow(color: Color.accentColor.opacity(isActive ? 0.45 : 0.2),
+                            radius: 28,
+                            x: 0,
+                            y: 18)
                 
-                ForEach(Array(ringSamples.enumerated()), id: \.offset) { idx, sample in
-                    Capsule()
-                        .fill(Color.accentColor.opacity(isRecording ? Double(0.25 + sample * 0.65) : 0.18))
-                        .frame(width: size * 0.03, height: size * (0.16 + sample * 0.4))
-                        .offset(y: -size * 0.34)
-                        .rotationEffect(.degrees(Double(idx) / Double(ringSamples.count) * 360))
-                        .animation(.easeOut(duration: 0.25), value: sample)
+                TimelineView(.animation) { timeline in
+                    let time = timeline.date.timeIntervalSinceReferenceDate
+                    Canvas { context, canvasSize in
+                        let circleRect = CGRect(
+                            x: (canvasSize.width - frame.width) / 2,
+                            y: (canvasSize.height - frame.height) / 2,
+                            width: frame.width,
+                            height: frame.height
+                        )
+                        
+                        let circlePath = Path(ellipseIn: circleRect)
+                        context.clip(to: circlePath)
+                        
+                        context.fill(circlePath,
+                                     with: .linearGradient(
+                                        Gradient(colors: [
+                                            Color("chat").opacity(0.65),
+                                            Color.accentColor.opacity(0.85)
+                                        ]),
+                                        startPoint: CGPoint(x: circleRect.midX, y: circleRect.minY),
+                                        endPoint: CGPoint(x: circleRect.midX, y: circleRect.maxY)
+                                     ))
+                        
+                        let envelope = isActive ? max(level, 0.08) : 0.04
+                        let baseline = circleRect.maxY - circleRect.height * 0.22
+                        let steps = max(Int(circleRect.width / 5), 40)
+                        
+                        func wavePath(phaseShift: CGFloat, speed: Double, depth: CGFloat) -> Path {
+                            var path = Path()
+                            path.move(to: CGPoint(x: circleRect.minX, y: circleRect.maxY))
+                            
+                            for step in 0...steps {
+                                let progress = CGFloat(step) / CGFloat(steps)
+                                let x = circleRect.minX + progress * circleRect.width
+                                let sampleIdx = Int(progress * CGFloat(max(samples.count - 1, 0)))
+                                let sample = samples.indices.contains(sampleIdx) ? CGFloat(samples[sampleIdx]) : 0
+                                let energy = min(max(sample * 0.7 + envelope, 0.05), 1.0)
+                                let amplitude = circleRect.height * (0.18 + envelope * depth)
+                                let oscillation = sin(progress * 2.4 * .pi + CGFloat(time * speed) + phaseShift)
+                                let y = baseline - oscillation * amplitude * energy
+                                path.addLine(to: CGPoint(x: x, y: min(max(y, circleRect.minY), circleRect.maxY)))
+                            }
+                            
+                            path.addLine(to: CGPoint(x: circleRect.maxX, y: circleRect.maxY))
+                            path.closeSubpath()
+                            return path
+                        }
+                        
+                        let waveConfigs: [(CGFloat, Double, CGFloat, [Color])] = [
+                            (0, 0.9, 0.38, [Color.accentColor.opacity(0.95), Color("chat").opacity(0.55)]),
+                            (.pi / 2, 1.25, 0.3, [Color.accentColor.opacity(0.75), Color("chat").opacity(0.4)]),
+                            (.pi, 1.55, 0.24, [Color.accentColor.opacity(0.55), Color("chat").opacity(0.25)])
+                        ]
+                        
+                        for config in waveConfigs {
+                            let path = wavePath(phaseShift: config.0,
+                                                speed: config.1,
+                                                depth: config.2)
+                            
+                            context.addFilter(.blur(radius: 14))
+                            context.fill(path,
+                                         with: .linearGradient(
+                                            Gradient(colors: config.3),
+                                            startPoint: CGPoint(x: circleRect.midX, y: circleRect.minY),
+                                            endPoint: CGPoint(x: circleRect.midX, y: circleRect.maxY)
+                                         ))
+                            context.addFilter(.blur(radius: 0))
+                        }
+                        
+                        context.stroke(circlePath,
+                                       with: .color(Color.white.opacity(0.22)),
+                                       lineWidth: 1.1)
+                    }
                 }
+                .frame(width: frame.width, height: frame.height)
                 
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color("chat").opacity(isRecording ? 0.95 : 0.6),
-                                Color.accentColor.opacity(isRecording ? 0.85 : 0.5)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: baseDiameter, height: baseDiameter)
-                    .scaleEffect(expansion)
-                    .shadow(color: Color.accentColor.opacity(0.35), radius: 24, x: 0, y: 18)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                    )
-                
-                Image(systemName: isRecording ? "waveform" : "mic.fill")
-                    .font(.system(size: baseDiameter * 0.34, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 10)
+                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    .blur(radius: 12)
+                    .frame(width: frame.width * 1.08, height: frame.height * 1.08)
+                    .opacity(isActive ? 1 : 0.4)
             }
-            .frame(width: size, height: size)
+            .frame(width: frame.width, height: frame.height)
+            .position(center)
         }
         .aspectRatio(1, contentMode: .fit)
     }

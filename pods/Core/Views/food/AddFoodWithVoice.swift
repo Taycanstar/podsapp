@@ -34,42 +34,21 @@ struct AddFoodWithVoice: View {
                     VStack {
                         Spacer()
                         
-                        VStack(spacing: 28) {
-                            RoundedRectangle(cornerRadius: 999)
-                                .fill(Color.white.opacity(0.25))
-                                .frame(width: 48, height: 4)
-                                .opacity(audioRecorder.isRecording ? 1.0 : 0.6)
-                                .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: audioRecorder.isRecording)
-                            
-                            VStack(spacing: 10) {
-                                Text(statusTitle())
-                                    .font(.system(size: 24, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.primary)
-                                
-                                if let subtitle = statusSubtitle() {
-                                    Text(subtitle)
-                                        .font(.system(size: 15, weight: .medium))
-                                        .foregroundColor(Color(UIColor.secondaryLabel))
-                                        .multilineTextAlignment(.center)
-                                        .padding(.horizontal, 24)
-                                }
-                            }
-                            
-                            VoiceAuraView(
+                        VStack(spacing: 24) {
+                            VoiceFluidView(
                                 level: audioRecorder.audioLevel,
                                 samples: audioRecorder.audioSamples,
-                                isRecording: audioRecorder.isRecording || audioRecorder.isProcessing
+                                isActive: audioRecorder.isRecording || audioRecorder.isProcessing
                             )
                             .frame(width: min(geometry.size.width * 0.7, 260),
                                    height: min(geometry.size.width * 0.7, 260))
                             .padding(.top, 12)
                             
                             if audioRecorder.isProcessing {
-                                ProgressView("Creating your food")
+                                ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: Color.accentColor))
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundColor(Color(UIColor.secondaryLabel))
-                                    .padding(.top, 4)
+                                    .scaleEffect(1.2)
+                                    .padding(.top, 12)
                             }
                             
                             if !audioRecorder.transcribedText.isEmpty {
@@ -209,32 +188,6 @@ struct AddFoodWithVoice: View {
     
     private func showPermissionAlert() {
         print("Permission denied - would show alert")
-    }
-    
-    private func statusTitle() -> String {
-        if audioRecorder.isProcessing {
-            return "Generating your food"
-        }
-        if audioRecorder.isRecording {
-            return "Listening..."
-        }
-        if !audioRecorder.transcribedText.isEmpty {
-            return "Captured summary"
-        }
-        return "Ready for voice mode"
-    }
-    
-    private func statusSubtitle() -> String? {
-        if audioRecorder.isProcessing {
-            return "Hang tight—Humuli is crafting the nutrition details for you."
-        }
-        if audioRecorder.isRecording {
-            return "Talk naturally about ingredients, portions, or how you prepared it."
-        }
-        if !audioRecorder.transcribedText.isEmpty {
-            return "Review the preview below, then confirm to add it."
-        }
-        return "Tap the microphone to describe the food you want to add."
     }
     
     private func createFoodFromVoiceInBackground() {
