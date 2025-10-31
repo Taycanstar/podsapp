@@ -78,9 +78,9 @@ struct AgentTabBar: View {
                     } label: {
                         Image(systemName: "checkmark")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Color(.systemBackground))
+                            .foregroundColor(.white)
                             .frame(width: 30, height: 30)
-                            .background(Color.orange)
+                            .background(Color.accentColor)
                             .clipShape(Circle())
                             .scaleEffect(pulseScale)
                             .animation(
@@ -98,12 +98,8 @@ struct AgentTabBar: View {
                                 HapticFeedback.generate()
                                 toggleSpeechRecognition()
                             },
-                            backgroundColor: Color(.systemBackground),
+                            backgroundColor: Color(.systemGray6),
                             foregroundColor: .primary
-                        )
-                        .overlay(
-                            Circle()
-                                .stroke(Color(.systemGray4), lineWidth: 1)
                         )
 
                         ActionCircleButton(
@@ -115,16 +111,8 @@ struct AgentTabBar: View {
                                     onMicrophoneTapped()
                                 }
                             },
-                            backgroundColor: hasUserInput ? Color.accentColor : Color(.systemBackground),
+                            backgroundColor: hasUserInput ? Color.accentColor : Color(.systemGray6),
                             foregroundColor: hasUserInput ? .white : .primary
-                        )
-                        .overlay(
-                            Group {
-                                if !hasUserInput {
-                                    Circle()
-                                        .stroke(Color(.systemGray4), lineWidth: 1)
-                                }
-                            }
                         )
                     }
                 }
@@ -134,7 +122,7 @@ struct AgentTabBar: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color(.systemBackground))
+                .fill(Color("chat"))
                 .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
         )
         .overlay(
