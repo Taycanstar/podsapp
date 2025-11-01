@@ -47,7 +47,10 @@ struct DashboardView: View {
     
     // ─── Nutrition label name input ────────────────────────────────────────
     @State private var nutritionProductName = ""
-    
+
+    // ─── Keyboard focus state ──────────────────────────────────────────────
+    @FocusState private var isAgentInputFocused: Bool
+
     // ─── Sort state ─────────────────────────────────────────────────────────
     @State private var sortOption: LogSortOption = .date
     
@@ -422,6 +425,7 @@ private var navTitle: String {
             if isTabBarVisible.wrappedValue {
                 AgentTabBar(
                     text: $agentText,
+                    isPromptFocused: $isAgentInputFocused,
                     onPlusTapped: onPlusTapped,
                     onBarcodeTapped: onBarcodeTapped,
                     onMicrophoneTapped: onMicrophoneTapped,
@@ -1186,6 +1190,10 @@ private extension DashboardView {
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .animation(.default, value: sortedLogs)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isAgentInputFocused = false
+        }
     }
 
     @ViewBuilder
@@ -1252,6 +1260,7 @@ private extension DashboardView {
             if isTabBarVisible.wrappedValue {
                 AgentTabBar(
                     text: $agentText,
+                    isPromptFocused: $isAgentInputFocused,
                     onPlusTapped: onPlusTapped,
                     onBarcodeTapped: onBarcodeTapped,
                     onMicrophoneTapped: onMicrophoneTapped,

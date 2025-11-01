@@ -10,12 +10,12 @@ import UIKit
 
 struct AgentTabBar: View {
     @Binding var text: String
+    var isPromptFocused: FocusState<Bool>.Binding
     var onPlusTapped: () -> Void = {}
     var onBarcodeTapped: () -> Void = {}
     var onMicrophoneTapped: () -> Void = {}
     var onWaveformTapped: () -> Void = {}
     var onSubmit: () -> Void = {}
-    @FocusState private var isPromptFocused: Bool
     @State private var isListening = false
     @State private var pulseScale: CGFloat = 1.0
     @StateObject private var speechRecognizer = SpeechRecognizer()
@@ -41,18 +41,30 @@ struct AgentTabBar: View {
         let hasUserInput = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
         return VStack(alignment: .leading, spacing: 12) {
-            TextField("Ask or Log Anything", text: $text)
-                .textFieldStyle(.plain)
-                .textInputAutocapitalization(.sentences)
-                .disableAutocorrection(false)
-                .font(.system(size: 15))
-                .foregroundColor(.primary)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .submitLabel(.send)
-                .onSubmit(onSubmit)
-                .focused($isPromptFocused)
+            ZStack(alignment: .topLeading) {
+                // Placeholder text
+                if text.isEmpty {
+                    Text("Ask or Log Anything")
+                        .font(.system(size: 15))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 8)
+                        .allowsHitTesting(false)
+                }
+
+                TextEditor(text: $text)
+                    .textInputAutocapitalization(.sentences)
+                    .autocorrectionDisabled(false)
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+                    .frame(maxHeight: 120)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .focused(isPromptFocused)
+            }
+            .padding(.horizontal, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
             
             HStack {
                 HStack(spacing: 10) {
@@ -103,7 +115,7 @@ struct AgentTabBar: View {
                         )
 
                         ActionCircleButton(
-                            systemName: hasUserInput ? "arrow.forward" : "waveform",
+                            systemName: hasUserInput ? "arrow.up" : "waveform",
                             action: {
                                 if hasUserInput {
                                     submitAgentPrompt()
@@ -131,7 +143,7 @@ struct AgentTabBar: View {
         )
         .padding(.horizontal, 16)
         .padding(.top, -12)
-        .padding(.bottom, isPromptFocused ? 10 : 0)
+        .padding(.bottom, isPromptFocused.wrappedValue ? 10 : 0)
         .onChange(of: speechRecognizer.transcript) { newTranscript in
             if !newTranscript.isEmpty {
                 text = newTranscript
@@ -165,7 +177,7 @@ struct AgentTabBar: View {
         text = trimmed
         onWaveformTapped()
         text = ""
-        isPromptFocused = false
+        isPromptFocused.wrappedValue = false
     }
 
     private var borderColor: Color {
@@ -231,8 +243,9 @@ private struct TransparentBlurView: UIViewRepresentable {
 
 private struct AgentTabBarPreview: View {
     @State private var prompt: String = ""
+    @FocusState private var isFocused: Bool
 
     var body: some View {
-        AgentTabBar(text: $prompt)
+        AgentTabBar(text: $prompt, isPromptFocused: $isFocused)
     }
 }
