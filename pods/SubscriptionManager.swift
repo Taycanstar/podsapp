@@ -512,21 +512,24 @@ class SubscriptionManager: ObservableObject {
         for transaction in transactions {
             let productId = transaction.productID
             let transactionId = String(transaction.originalID)
+            let status = subscriptionStatus(for: transaction)
+            let expirationString = transaction.expirationDate.map { ISO8601DateFormatter.fullFormatter.string(from: $0) }
+
+            let willRenew: Bool
+            if let expiration = transaction.expirationDate {
+                willRenew = expiration > Date() && transaction.revocationDate == nil
+            } else {
+                willRenew = transaction.revocationDate == nil
+            }
+
             do {
                 _ = try await networkManager.updateSubscription(
                     userEmail: userEmail,
                     productId: productId,
-                    transactionId: transactionId
+                    transactionId: transactionId,
+                    status: status,
+                    expiresAt: expirationString
                 )
-
-                let status = subscriptionStatus(for: transaction)
-                let expirationString = transaction.expirationDate.map { ISO8601DateFormatter.fullFormatter.string(from: $0) }
-                let willRenew: Bool
-                if let expiration = transaction.expirationDate {
-                    willRenew = expiration > Date() && transaction.revocationDate == nil
-                } else {
-                    willRenew = transaction.revocationDate == nil
-                }
 
                 _ = try await networkManager.updateSubscriptionStatus(
                     userEmail: userEmail,
@@ -686,15 +689,20 @@ class SubscriptionManager: ObservableObject {
     @MainActor
         func handleSubscriptionChange(_ transaction: StoreKit.Transaction) async {
             let productId = transaction.productID
-            let transactionId = transaction.id.description
+            let transactionId = transaction.originalID.description
             let userEmail = onboardingViewModel?.email ?? ""
+
+            let status = subscriptionStatus(for: transaction)
+            let expirationString = transaction.expirationDate.map { ISO8601DateFormatter.fullFormatter.string(from: $0) }
 
             let networkManager = NetworkManager()
             do {
                 let result = try await networkManager.updateSubscription(
                     userEmail: userEmail,
                     productId: productId,
-                    transactionId: transactionId
+                    transactionId: transactionId,
+                    status: status,
+                    expiresAt: expirationString
                 )
                 print("Subscription change sync result: \(result)")
                 await updateSubscriptionStatus()

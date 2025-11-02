@@ -57,7 +57,7 @@ extension Date {
 
 class NetworkManager {
  
- let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+//  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 //   let baseUrl = "http://192.168.1.92:8000"  
     // let baseUrl = "http://172.20.10.4:8000" 
     
@@ -78,7 +78,7 @@ class NetworkManager {
 
 
     // ### STAGING ###
-    // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+    let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
 
 
     func determineUserLocation() {
@@ -281,7 +281,75 @@ class NetworkManager {
             }
         }.resume()
     }
-    
+
+    /// Send onboarding data to backend
+    func sendOnboardingData(_ data: [String: Any], completion: @escaping (Bool, String?) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/api/process_onboarding_data/") else {
+            completion(false, "Invalid URL")
+            return
+        }
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: data) else {
+            completion(false, "Failed to encode onboarding data")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonData
+
+        print("📤 NetworkManager: Sending onboarding data to \(url.absoluteString)")
+        print("   └── Data keys: \(data.keys.joined(separator: ", "))")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ NetworkManager: Onboarding save failed - \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    completion(false, error.localizedDescription)
+                }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ NetworkManager: Invalid response")
+                DispatchQueue.main.async {
+                    completion(false, "Invalid response from server")
+                }
+                return
+            }
+
+            guard let data = data else {
+                print("❌ NetworkManager: No data from server")
+                DispatchQueue.main.async {
+                    completion(false, "No data from server")
+                }
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                print("✅ NetworkManager: Onboarding data saved successfully")
+                DispatchQueue.main.async {
+                    completion(true, nil)
+                }
+            } else {
+                // Try to parse error message from response
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = json["error"] as? String {
+                    print("❌ NetworkManager: Server error - \(errorMessage)")
+                    DispatchQueue.main.async {
+                        completion(false, errorMessage)
+                    }
+                } else {
+                    print("❌ NetworkManager: HTTP error \(httpResponse.statusCode)")
+                    DispatchQueue.main.async {
+                        completion(false, "Server error: \(httpResponse.statusCode)")
+                    }
+                }
+            }
+        }.resume()
+    }
+
     func checkEmailVerified(email: String, completion: @escaping (Bool, String?) -> Void) {
         guard let url = URL(string: "\(baseUrl)/check-email-verified/") else {
             completion(false, "Invalid URL")
@@ -4855,16 +4923,25 @@ func completeAppleSignup(idToken: String,
        }
    
 
-    func updateSubscription(userEmail: String, productId: String, transactionId: String) async throws -> [String: Any] {
+    func updateSubscription(userEmail: String,
+                            productId: String,
+                            transactionId: String,
+                            status: String,
+                            expiresAt: String?) async throws -> [String: Any] {
            guard let url = URL(string: "\(baseUrl)/update-subscription/") else {
                throw NetworkError.invalidURL
            }
 
-           let body: [String: Any] = [
+           var body: [String: Any] = [
                "user_email": userEmail,
                "product_id": productId,
-               "transaction_id": transactionId
+               "transaction_id": transactionId,
+               "status": status
            ]
+
+           if let expiresAt = expiresAt {
+               body["expires_at"] = expiresAt
+           }
 
            var request = URLRequest(url: url)
            request.httpMethod = "POST"
