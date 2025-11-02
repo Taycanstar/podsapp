@@ -1152,20 +1152,19 @@ private extension DashboardView {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(alignment: .top, spacing: 16) {
                         Image(systemName: workoutIconName(for: workout))
-                            .font(.system(size: 30, weight: .semibold))
+                            .font(.system(size: 22, weight: .semibold))
                             .foregroundColor(.primary)
 
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Today's Workout")
-                                .font(.subheadline)
-                                .fontWeight(.regular)
-                                .foregroundColor(.secondary)
-
+                        VStack(alignment: .leading, spacing: 4) {
                             Text(workoutManager.todayWorkoutDisplayTitle)
-                                .font(.title2)
-                                .fontWeight(.semibold)
+                                .font(.body)
+                                .fontWeight(.regular)
                                 .foregroundColor(.primary)
                                 .lineLimit(2)
+
+                            Text("Today's Workout")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
 
                         Spacer()
@@ -1214,18 +1213,9 @@ private extension DashboardView {
 
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 8) {
-                            summaryChip(icon: "clock", text: formattedDurationLabel(for: workout))
-                            summaryChip(icon: "list.bullet", text: "\(workout.exercises.count) exercises")
-                            summaryChip(icon: "target", text: workout.fitnessGoal.displayName)
-                        }
-
-                        let muscles = primaryMuscleHighlights(for: workout)
-                        if !muscles.isEmpty {
-                            HStack(spacing: 8) {
-                                ForEach(muscles, id: \.self) { muscle in
-                                    summaryChip(text: muscle)
-                                }
-                            }
+                            summaryChip(text: formattedDurationLabel(for: workout))
+                            summaryChip(text: "\(workout.exercises.count) exercises")
+                            summaryChip(text: workout.fitnessGoal.displayName)
                         }
                     }
                 }
