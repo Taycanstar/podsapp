@@ -1836,13 +1836,12 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 4692,Bent Knee Back to Side Kick,Strength,Hips,Body weight,Male,"Erector Spinae, Gluteus Maximus, Gluteus Medius","Hamstrings, Quadriceps, Sartorius",,,strength
 4693,Kneeling Leg Half Circle (male),Strength,Hips,Body weight,Male,,,,,strength
 4702,Alternating Superman,Strength,Hips,Body weight,Male,"Erector Spinae, Gluteus Maximus",Hamstrings,,,strength
-4703,Bodyweight Full Squat with Overhead Press (VERSION 2),Aerobic,Plyometrics,Body weight,Male,,,,,strength
+4703,Bodyweight Full Squat with Overhead Press,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 4704,Silent Burpee,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 4705,Mountain Climber Walk,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 4706,Jump Step Jump,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 4707,Criss Cross Jump,Aerobic,Plyometrics,Body weight,Male,,,,,cardio
 4708,Criss Cross Elbow To Knee,Aerobic,Plyometrics,Body weight,Male,,,,,cardio
-4709,Basketball Shot Jump,Aerobic,Plyometrics,Body weight,Male,,,,,cardio
 4710,Touchdown,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 4711,Criss Cross Jack,Aerobic,Plyometrics,Body weight,Male,,,,,cardio
 4712,Lateral Hops,Aerobic,Plyometrics,Body weight,Male,,,,,strength
@@ -1898,7 +1897,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 4844,Depth Jump,Aerobic,Plyometrics,Body weight,Male,,,,,cardio
 4845,Kettlebell Lying on Floor Chest Press,Strength,Chest,Kettlebell,Male,,,,,strength
 4848,Barbell Pin Front Squat,Strength,Thighs,Barbell,Male,,,,,strength
-4849,Banded Glute Ham Raise (VERSION 2),Strength,"Hips, Thighs",Resistance Band,Male,,,,,strength
+4849,Banded Glute Ham Raise,Strength,"Hips, Thighs",Resistance Band,Male,,,,,strength
 4850,Barbell Single Leg Good Morning,Strength,Thighs,Barbell,Male,,,,,strength
 4851,Barbell Pin Good Morning,Strength,Thighs,Barbell,Male,,,,,strength
 4857,Barbell Behind the Back Push Press,Strength,Weightlifting,Barbell,Male,Deltoid Anterior,"Deltoid Lateral, Serratus Anterior, Triceps Brachii",,,strength
@@ -1977,7 +1976,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5031,Medicine Ball Lying Leg Raise,Strength,Waist,Medicine Ball,Male,,,,,strength
 5032,Leg Raise Oblique Crunch,Strength,Waist,Body weight,Male,"Gluteus Medius, Iliopsoas, Obliques","Quadriceps, Rectus Abdominis, Tensor Fasciae Latae",,,strength
 5033,Cable Single Arm Triceps Pushdown (rope attachment),Strength,Upper Arms,Cable,Male,,,,,strength
-5034,Landmine One Arm Bent Over Row (VERSION 2),Strength,Back,Barbell,Male,,,,,strength
+5034,Landmine One Arm Bent Over Row,Strength,Back,Barbell,Male,,,,,strength
 5035,Weighted Hyperextension,Strength,Hips,Weighted,Male,,,,,strength
 5036,Exercise Ball Leg Curl,Strength,Thighs,Stability ball,Male,Hamstrings,"Gastrocnemius, Sartorius, Soleus",,,strength
 5037,Alternate Front Kick in Place with Arm Circles,Aerobic,Plyometrics,Body weight,Male,,,,,cardio
@@ -2015,7 +2014,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5070,Kettlebell Rear Lunge,Strength,Thighs,Kettlebell,Male,,,,,strength
 5071,Kettlebell Single Arm Overhead Lunge,Strength,Thighs,Kettlebell,Male,,,,,strength
 5072,Kettlebell Sit-up Press,Strength,Waist,Kettlebell,Male,,,,,strength
-5073,Kettlebell Sumo Squat (VERSION 2),Strength,Hips,Kettlebell,Male,"Gluteus Maximus, Gluteus Medius, Quadriceps","Adductor Brevis, Adductor Longus, Adductor Magnus, Pectineous, Soleus",,,strength
+5073,Kettlebell Sumo Squat,Strength,Hips,Kettlebell,Male,"Gluteus Maximus, Gluteus Medius, Quadriceps","Adductor Brevis, Adductor Longus, Adductor Magnus, Pectineous, Soleus",,,strength
 5074,Landmine Press,Strength,Shoulders,Body weight,Male,,,,,strength
 5075,Barbell Muscle Clean,Strength,Weightlifting,Barbell,Male,,,,,strength
 5076,Dumbbell Overhead Lunge,Strength,Thighs,Dumbbell,Male,"Gluteus Maximus, Quadriceps","Adductor Magnus, Soleus",,,strength
@@ -2072,7 +2071,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5160,Incline Close Grip Push-up,Strength,Upper Arms,Body weight,Male,,,,,strength
 5161,Medicine Ball Throw Squat with Wall,Strength,Shoulders,Medicine Ball,Male,,,,,strength
 5162,Seated Neck Stretch,Stretching,Neck,Body weight,Male,"Splenius, Trapezius Upper Fibers ",,,,mobility
-5163,Handstand Push-up (VERSION 2),Strength,Shoulders,Body weight,Male,"Deltoid Anterior, Deltoid Lateral, Deltoid Posterior , Pectoralis Major Clavicular Head","Pectoralis Major Sternal Head, Serratus Anterior, Triceps Brachii",,,strength
+5163,Handstand Push-up,Strength,Shoulders,Body weight,Male,"Deltoid Anterior, Deltoid Lateral, Deltoid Posterior , Pectoralis Major Clavicular Head","Pectoralis Major Sternal Head, Serratus Anterior, Triceps Brachii",,,strength
 5164,Lateral Cone Hop,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 5165,Plank Pike Slide with Towel,Strength,Waist,Body weight,Male,"Deltoid Anterior, Iliopsoas, Rectus Abdominis","Gluteus Maximus, Latissimus Dorsi, Obliques, Pectoralis Major Clavicular Head, Pectoralis Major Sternal Head, Quadriceps, Sartorius, Serratus Anterior, Tensor Fasciae Latae, Teres Major, Triceps Brachii",,,strength
 5166,Single Leg Box Jump,Aerobic,Plyometrics,Body weight,Male,,,,,cardio
@@ -2096,7 +2095,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5191,Barbell Split Snatch,Strength,Weightlifting,Barbell,Male,"Biceps Brachii, Brachialis, Brachioradialis, Deltoid Anterior, Deltoid Lateral, Gastrocnemius, Hamstrings, Pectoralis Major Clavicular Head, Quadriceps, Soleus",,,,strength
 5192,Cluster,Strength,Weightlifting,Barbell,Male,,,,,strength
 5193,Power Sled Rear Drag,Strength,Thighs,Power Sled,Male,,,,,strength
-5194,Bodyweight Muscle-up (VERSION 2),Strength,Back,Body weight,Male,"Biceps Brachii, Brachialis, Brachioradialis, Infraspinatus, Latissimus Dorsi, Obliques, Teres Major, Teres Minor , Trapezius Lower Fibers, Trapezius Middle Fibers, Triceps Brachii",,,,strength
+5194,Bodyweight Muscle-up,Strength,Back,Body weight,Male,"Biceps Brachii, Brachialis, Brachioradialis, Infraspinatus, Latissimus Dorsi, Obliques, Teres Major, Teres Minor , Trapezius Lower Fibers, Trapezius Middle Fibers, Triceps Brachii",,,,strength
 5195,Seated Neck Side Stretch,Stretching,Stretching,Body weight,Male,,,,,mobility
 5196,Push-up with Twist,Strength,Waist,Body weight,Male,"Obliques, Pectoralis Major Clavicular Head, Pectoralis Major Sternal Head","Deltoid Anterior, Deltoid Lateral, Gluteus Maximus, Gluteus Medius, Serratus Anterior, Tensor Fasciae Latae, Triceps Brachii",,,strength
 5201,Dumbbell Waiter Biceps Curl,Strength,Upper Arms,Dumbbell,Male,Biceps Brachii,"Brachialis, Brachioradialis",,,strength
@@ -2148,7 +2147,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5291,Biceps Squeeze with Towel,Strength,Upper Arms,EZ Barbell,Male,Biceps Brachii,"Brachialis, Brachioradialis",,,strength
 5298,Dumbbell Preacher Curl (Turned Torso),Strength,Upper Arms,Dumbbell,Male,,,,,strength
 5299,Lever Preacher Curl (Turned Torso),Strength,Upper Arms,Leverage machine,Male,,,,,strength
-5302,Balance Board (VERSION 2),Strength,"Hips, Thighs",Body weight,Male,"Adductor Brevis, Adductor Longus, Adductor Magnus, Gastrocnemius, Gluteus Maximus, Gluteus Medius, Gracilis, Hamstrings, Quadriceps, Sartorius, Soleus",,,,strength
+5302,Balance Board,Strength,"Hips, Thighs",Body weight,Male,"Adductor Brevis, Adductor Longus, Adductor Magnus, Gastrocnemius, Gluteus Maximus, Gluteus Medius, Gracilis, Hamstrings, Quadriceps, Sartorius, Soleus",,,,strength
 5304,Trap Bar Squat,Strength,"Hips, Thighs",Trap bar,Male,"Gluteus Maximus, Quadriceps","Adductor Magnus, Soleus",,,strength
 5305,Kettlebell Sumo Squat off Stepbox (male),Strength,"Hips, Thighs",Kettlebell,Male,"Gluteus Maximus, Gluteus Medius, Quadriceps","Adductor Brevis, Adductor Longus, Adductor Magnus, Gracilis, Pectineous, Soleus",,,strength
 5306,Kettlebell Single Arm Clean and Press (male),Strength,Weightlifting,Kettlebell,Male,"Biceps Brachii, Brachialis, Brachioradialis, Deltoid Anterior, Gastrocnemius, Hamstrings, Pectoralis Major Clavicular Head, Quadriceps, Serratus Anterior, Soleus, Triceps Brachii",,,,strength
@@ -2156,8 +2155,8 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5311,Exercise Ball Serratus Wall Slide,Strength,Back,Stability ball,Male,,,,,strength
 5315,Cable Glute Dominant Step-up,Strength,Hips,Cable,Male,,,,,strength
 5328,Barbell Standing Shoulders Press,Strength,Shoulders,Barbell,Male,Deltoid Anterior,"Deltoid Lateral, Serratus Anterior, Triceps Brachii",,,strength
-5329,Dumbbell Hip Thrust (VERSION 2),Strength,Hips,Dumbbell,Male,Gluteus Maximus,"Hamstrings, Quadriceps",,,strength
-5330,Dumbbell Pullover (VERSION 2),Strength,Back,Dumbbell,Male,Latissimus Dorsi,"Deltoid Posterior, Pectoralis Major Sternal Head, Teres Major, Triceps Brachii",,,strength
+5329,Dumbbell Hip Thrust,Strength,Hips,Dumbbell,Male,Gluteus Maximus,"Hamstrings, Quadriceps",,,strength
+5330,Dumbbell Pullover,Strength,Back,Dumbbell,Male,Latissimus Dorsi,"Deltoid Posterior, Pectoralis Major Sternal Head, Teres Major, Triceps Brachii",,,strength
 5332,Weighted Svend Bench Press,Strength,Upper Arms,Weighted,Male,,,,,strength
 5333,Lever Trunk Rotation,Strength,Waist,Leverage machine,Male,,,,,strength
 5338,Kneeling Back Leg Lift,Strength,Hips,Body weight,Male,"Erector Spinae, Gluteus Maximus","Hamstrings, Quadriceps",,,strength
@@ -2210,7 +2209,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5446,Standing Biceps Curl (with leg),Strength,Upper Arms,Body weight,Male,Biceps Brachii,"Brachialis, Brachioradialis",,,strength
 5447,Lever Pronated Grip Seated Row (plate loaded),Strength,Back,Leverage machine,Male,,,,,strength
 5448,Lever Pronated Grip Seated Scapula Retraction Shrug (plate loaded),Strength,Back,Leverage machine,Male,,,,,strength
-5449,Dumbbell Standing Drag Curl (VERSION 2),Strength,Upper Arms,Dumbbell,Male,,,,,strength
+5449,Dumbbell Standing Drag Curl,Strength,Upper Arms,Dumbbell,Male,,,,,strength
 5450,EZ-bar 21s,Strength,Upper Arms,EZ Barbell,Male,"Biceps Brachii, Brachialis",Brachioradialis,,,strength
 5456,Rotator Cuff Warm-up,Strength,Back,Body weight,Male,"Infraspinatus, Subscapularis, Teres Minor ",,,,strength
 5457,Dumbbell Squeeze Press on Floor,Strength,Chest,Dumbbell,Male,"Pectoralis Major Clavicular Head, Pectoralis Major Sternal Head","Deltoid Anterior, Triceps Brachii",,,strength
@@ -2219,7 +2218,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5460,Explosive Push-up,Strength,Chest,Body weight,Male,"Pectoralis Major Clavicular Head, Pectoralis Major Sternal Head","Deltoid Anterior, Triceps Brachii",,,strength
 5461,T-Twist Knee Drive (male),Strength,Plyometrics,Body weight,Male,,,,,strength
 5462,Dumbbell Standing Wrist Curl,Strength,Forearms,Dumbbell,Male,Wrist Flexors,,,,strength
-5463,Dumbbell Russian Twist with Legs Floor Off (VERSION 2),Strength,Waist,Dumbbell,Male,"Iliopsoas, Obliques, Rectus Abdominis","Quadriceps, Sartorius, Tensor Fasciae Latae",,,strength
+5463,Dumbbell Russian Twist with Legs Floor Off,Strength,Waist,Dumbbell,Male,"Iliopsoas, Obliques, Rectus Abdominis","Quadriceps, Sartorius, Tensor Fasciae Latae",,,strength
 5464,Dumbbell Starfish Crunch (beginner) (male),Strength,Waist,Dumbbell,Male,"Iliopsoas, Obliques, Rectus Abdominis","Deltoid Anterior, Latissimus Dorsi, Pectoralis Major Clavicular Head, Pectoralis Major Sternal Head, Quadriceps, Sartorius, Teres Major",,,strength
 5465,Dumbbell Crunch Hold with Legs Off,Strength,Waist,Dumbbell,Male,"Iliopsoas, Rectus Abdominis","Obliques, Quadriceps, Sartorius, Tensor Fasciae Latae",,,strength
 5466,Front Plank with Arm and Leg Lift (male),Strength,Waist,Body weight,Male,"Gluteus Maximus, Latissimus Dorsi, Rectus Abdominis, Teres Major","Deltoid Anterior, Gastrocnemius, Hamstrings, Obliques, Pectoralis Major Clavicular Head, Pectoralis Major Sternal Head, Quadriceps, Serratus Anterior, Soleus, Tensor Fasciae Latae, Triceps Brachii",,,strength
@@ -2235,7 +2234,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5497,Dumbbell Plank Pass Through,Strength,Waist,Dumbbell,Male,"Obliques, Pectoralis Major Clavicular Head, Pectoralis Major Sternal Head, Rectus Abdominis, Trapezius Middle Fibers","Deltoid Anterior, Deltoid Lateral, Deltoid Posterior, Gluteus Maximus, Gluteus Medius, Infraspinatus, Serratus Anterior, Tensor Fasciae Latae, Teres Major, Teres Minor, Trapezius Middle Fibers, Triceps Brachii",,,strength
 5499,Standing Side Crunch Elbow to Knee (male),Strength,Waist,Body weight,Male,,,,,strength
 5500,Standing Elbow Clap (male),Strength,Chest,Body weight,Male,,,,,strength
-5501,Seated Chin Tuck (VERSION 2),Strength,Neck,Body weight,Male,,,,,strength
+5501,Seated Chin Tuck,Strength,Neck,Body weight,Male,,,,,strength
 5502,Seated Shoulder 90 degrees Internal Rotation,Strength,Back,Body weight,Male,,,,,strength
 5503,Seated Learning Back Stretch,Stretching,Back,Body weight,Male,,,,,mobility
 5504,Chest Pull Back (male),Strength,Back,Body weight,Male,,,,,strength
@@ -2249,7 +2248,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5512,Shuffle Hops,Strength,Hips,Body weight,Male,,,,,strength
 5513,Bench Dip on Stability Ball,Strength,Upper Arms,Body weight,Male,Triceps Brachii,"Deltoid Anterior, Latissimus Dorsi, Pectoralis Major Clavicular Head, Pectoralis Major Sternal Head, Teres Major",,,strength
 5514,Twist Crunch Legs-Up (male),Strength,Waist,Body weight,Male,,,,,strength
-5515,Decline Sit-up (VERSION 3),Strength,Waist,Body weight,Male,,,,,strength
+5515,Decline Sit-up,Strength,Waist,Body weight,Male,,,,,strength
 5516,Lever Reverse Vertical Hack Squat,Strength,Hips,Leverage machine,Male,"Gluteus Maximus, Quadriceps","Adductor Magnus, Soleus",,,strength
 5519,Barbell Reverse Spider Curl,Strength,Upper Arms,Barbell,Male,,,,,strength
 5520,Lever Vertical Squat,Strength,Thighs,Leverage machine,Male,,,,,strength
@@ -2257,7 +2256,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5522,Ring Pull-up,Strength,Back,Body weight,Male,,,,,strength
 5523,EZ Bar Standing Front Raise,Strength,Shoulders,EZ Barbell,Male,,,,,strength
 5524,Cable Standing One Arm Face Pull,Strength,Shoulders,Cable,Male,,,,,strength
-5525,Lever Step (VERSION 2),Aerobic,Cardio,Leverage machine,Male,,,,,strength
+5525,Lever Step,Aerobic,Cardio,Leverage machine,Male,,,,,strength
 5526,Hip Circle with Hula Hoop,Strength,Waist,Body weight,Male,,,,,strength
 5527,Lever Seated Bent Over Rear Delt Fly,Strength,Shoulders,Leverage machine,Male,,,,,strength
 5530,Mountain Climbers Shoulder Tap (male),Aerobic,Plyometrics,Body weight,Male,,,,,strength
@@ -2289,7 +2288,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5577,Barbell Paused Sumo Deadlift,Strength,Hips,Barbell,Male,,,,,strength
 5578,Barbell Paused Bent Over Row,Strength,Back,Barbell,Male,,,,,strength
 5579,EZ Bar Seated Wrist Curl,Strength,Forearms,EZ Barbell,Male,,,,,strength
-5580,Cable Neutral Grip Wide Pulldown (VERSION 2),Strength,Back,Cable,Male,,,,,strength
+5580,Cable Neutral Grip Wide Pulldown,Strength,Back,Cable,Male,,,,,strength
 5584,Jumping Split Jack (Male),Aerobic,Plyometrics,Body weight,Male,,,,,strength
 5586,Surrender Side Bend (Male),Strength,Waist,Body weight,Male,,,,,strength
 5587,Leg Front Lift Jack (Male),Aerobic,Plyometrics,Body weight,Male,,,,,strength
@@ -2299,7 +2298,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5591,Stepback with Coner Touch (Male),Aerobic,Plyometrics,Body weight,Male,,,,,strength
 5592,Arm Crossover Curtsy (Male),Aerobic,Plyometrics,Body weight,Male,,,,,strength
 5593,Wall Press and Twist (Male),Strength,Waist,Body weight,Male,,,,,strength
-5594,Shoulder Backbend Stretch (VERSION 2),Stretching,Shoulders,Body weight,Male,,,,,mobility
+5594,Shoulder Backbend Stretch,Stretching,Shoulders,Body weight,Male,,,,,mobility
 5595,Lunge Stretch (male),Stretching,Thighs,Body weight,Male,,,,,mobility
 5598,Inchworm and Mountain Climbers (Male),Aerobic,Plyometrics,Body weight,Male,,,,,strength
 5599,Shuffle Leg Lift (Male),Aerobic,Plyometrics,Body weight,Male,,,,,strength
@@ -2359,7 +2358,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5738,Suspender Chest Press,Strength,Chest,Suspension,Male,,,,,strength
 5739,Band Incline Chest Press,Strength,Chest,Band,Male,,,,,strength
 5740,Band Incline Chest Fly,Strength,Chest,Band,Male,,,,,strength
-5741,Cable Kneeling Crunch (VERSION 2),Strength,Waist,Cable,Male,,,,,strength
+5741,Cable Kneeling Crunch,Strength,Waist,Cable,Male,,,,,strength
 5742,Knee Raise Step Jack (male),Aerobic,Plyometrics,Body weight,Male,,,,,strength
 5762,Handstand against the Wall,Strength,Shoulders,Body weight,Male,,,,,strength
 5763,Side Step Shuffles,Aerobic,Plyometrics,Body weight,Male,,,,,strength
@@ -2385,12 +2384,12 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5822,Prone Y Raise,Strength,Back,Body weight,Male,,,,,strength
 5823,Barbell Walking Lunge,Strength,Thighs,Barbell,Male,,,,,strength
 5824,Smith Lateral Step-up (male),Strength,Thighs,Smith machine,Male,,,,,strength
-5825,Smith Rear Lunge (version 2) (male),Strength,Thighs,Smith machine,Male,,,,,strength
-5826,Dumbbell Step-up (VERSION 2) (male),Strength,Thighs,Dumbbell,Male,,,,,strength
+5825,Smith Rear Lunge,Strength,Thighs,Smith machine,Male,,,,,strength
+5826,Dumbbell Step-up,Strength,Thighs,Dumbbell,Male,,,,,strength
 5827,Dumbbell Sumo Squat Off Benches (male),Strength,Hips,Dumbbell,Male,,,,,strength
 5828,Dumbbell Single Leg Squat with Support (pistol),Strength,Thighs,Dumbbell,Male,,,,,strength
-5829,Shrimp Squat (male),Strength,Thighs,Body weight,Male,,,,,strength
-5830,Bodyweight Step-up (VERSION 2) (male),Strength,Thighs,Body weight,Male,,,,,strength
+5829,Shrimp Squat,Strength,Thighs,Body weight,Male,,,,,strength
+5830,Bodyweight Step-up,Strength,Thighs,Body weight,Male,,,,,strength
 5831,Suspender Single Leg Squat (male),Strength,Hips,Suspension,Male,,,,,strength
 5832,Bouncing Circle Draw (male),Aerobic,Plyometrics,Body weight,Male,,,,,strength
 5833,Double Punch Front Leg Lift (male),Aerobic,Plyometrics,Body weight,Male,,,,,strength
@@ -2441,8 +2440,8 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5921,Dumbbell Hammer Preacher Curl,Strength,Upper Arms,Dumbbell,Male,,,,,strength
 5922,Cable SZ bar Close Grip Curl,Strength,Upper Arms,Cable,Male,,,,,strength
 5923,Cable Preacher Curl (rope attachment),Strength,Upper Arms,Cable,Male,,,,,strength
-5924,Dumbbell Drag Curl (VERSION 2),Strength,Upper Arms,Dumbbell,Male,,,,,strength
-5925,EZ Barbell Drag Curl (VERSION 2),Strength,Upper Arms,EZ Barbell,Male,,,,,strength
+5924,Dumbbell Drag Curl,Strength,Upper Arms,Dumbbell,Male,,,,,strength
+5925,EZ Barbell Drag Curl,Strength,Upper Arms,EZ Barbell,Male,,,,,strength
 5926,Suspender Arm Curl (male),Strength,Upper Arms,Suspension,Male,,,,,strength
 5927,Suspender One Arm Biceps Curl (male),Strength,Upper Arms,Suspension,Male,,,,,strength
 5928,Band 45 degrees One Arm Biceps Curl (male),Strength,Upper Arms,Band,Male,,,,,strength
