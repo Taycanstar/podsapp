@@ -607,10 +607,22 @@ struct ExerciseData: Identifiable, Hashable, Codable {
     let gender: String
     let target: String
     let synergist: String
+    let rawCategory: String?
     let complexityRating: Int? // 1-5 scale: 1=Beginner, 5=Expert (optional for backward compatibility)
     
     // Initializer with optional complexity rating for backward compatibility
-    init(id: Int, name: String, exerciseType: String, bodyPart: String, equipment: String, gender: String, target: String, synergist: String, complexityRating: Int? = nil) {
+    init(
+        id: Int,
+        name: String,
+        exerciseType: String,
+        bodyPart: String,
+        equipment: String,
+        gender: String,
+        target: String,
+        synergist: String,
+        category: String? = nil,
+        complexityRating: Int? = nil
+    ) {
         self.id = id
         self.name = name
         self.exerciseType = exerciseType
@@ -619,13 +631,32 @@ struct ExerciseData: Identifiable, Hashable, Codable {
         self.gender = gender
         self.target = target
         self.synergist = synergist
+        self.rawCategory = category
         self.complexityRating = complexityRating
     }
     
     // Computed properties for compatibility
     var muscle: String { bodyPart }
-    var category: String { equipment }
+    var category: String {
+        if let rawCategory, !rawCategory.isEmpty {
+            return rawCategory
+        }
+        return equipment
+    }
     var instructions: String? { target.isEmpty ? nil : target }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case exerciseType
+        case bodyPart
+        case equipment
+        case gender
+        case target
+        case synergist
+        case rawCategory = "category"
+        case complexityRating
+    }
     
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)

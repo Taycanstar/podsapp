@@ -23,6 +23,13 @@ struct AddExerciseView: View {
     @State private var showingBodyweightWithEquipment = false
     @State private var showingCardioExercises = false
     @State private var showingStretchMobility = false
+    @State private var isLoadingExercises = false
+    @State private var isProcessingExercises = false
+    @State private var cachedFilteredExercises: [ExerciseData] = []
+    @State private var cachedAlphabeticalSections: [String: [ExerciseData]] = [:]
+    @State private var cachedSortedSectionKeys: [String] = []
+    @State private var cachedGroupedExercises: [String: [ExerciseData]] = [:]
+    @State private var processingWorkItem: DispatchWorkItem?
 
     
     // Segmented control options
@@ -86,6 +93,17 @@ struct AddExerciseView: View {
         NavigationView {
             contentView
                 .background(Color(.systemBackground))
+                .overlay(alignment: .center) {
+                    if (isLoadingExercises || isProcessingExercises) && cachedFilteredExercises.isEmpty {
+                        ProgressView("Loading exercises…")
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(.systemBackground))
+                                    .shadow(radius: 6)
+                            )
+                    }
+                }
             .navigationTitle("Add Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -158,6 +176,12 @@ struct AddExerciseView: View {
                 StretchMobilityView(onExercisesSelected: onExercisesSelected)
             }
         }
+        .onChange(of: searchText) { _, _ in
+            processExercises()
+        }
+        .onChange(of: selectedMuscle) { _, _ in
+            processExercises()
+        }
 
     }
     
@@ -179,6 +203,7 @@ struct AddExerciseView: View {
                 if newValue != 1 {
                     selectedMuscle = nil
                 }
+                processExercises()
             }
             
             // Muscle Group Carousel (only show when "By Muscle" is selected)
@@ -362,110 +387,53 @@ struct AddExerciseView: View {
     
     // MARK: - Computed Properties
     private var validSectionKeys: [String] {
-        // Only include keys that actually have exercises (no empty sections)
-        return sortedSectionKeys.filter { key in
-            if let exercises = alphabeticalSections[key] {
-                return !exercises.isEmpty
-            }
-            return false
+        cachedSortedSectionKeys.filter { key in
+            guard let exercises = cachedAlphabeticalSections[key] else { return false }
+            return !exercises.isEmpty
         }
     }
     
     private var alphabeticalSections: [String: [ExerciseData]] {
-        let sortedExercises = filteredExercises.sorted { exercise1, exercise2 in
-            // Sort alphabetically: symbols, numbers, then a-z
-            let name1 = exercise1.name.lowercased()
-            let name2 = exercise2.name.lowercased()
-            
-            let char1 = name1.first ?? Character(" ")
-            let char2 = name2.first ?? Character(" ")
-            
-            let isAlpha1 = char1.isLetter
-            let isAlpha2 = char2.isLetter
-            let isNumber1 = char1.isNumber
-            let isNumber2 = char2.isNumber
-            
-            if !isAlpha1 && !isNumber1 && (isAlpha2 || isNumber2) {
-                return true // symbols first
-            } else if (isAlpha1 || isNumber1) && !isAlpha2 && !isNumber2 {
-                return false // symbols first
-            } else if isNumber1 && isAlpha2 {
-                return true // numbers before letters
-            } else if isAlpha1 && isNumber2 {
-                return false // numbers before letters
-            } else {
-                return name1 < name2 // alphabetical within same category
-            }
-        }
-        
-        return Dictionary(grouping: sortedExercises) { exercise in
-            let firstChar = exercise.name.first ?? Character(" ")
-            if firstChar.isLetter {
-                return String(firstChar.uppercased())
-            } else if firstChar.isNumber {
-                return "#"
-            } else {
-                return "•"
-            }
-        }
+        cachedAlphabeticalSections
     }
     
     private var sortedSectionKeys: [String] {
-        // Only include keys that actually have exercises (no empty sections)
-        let keys = Array(alphabeticalSections.keys)
-        return keys.sorted { key1, key2 in
-            // Sort order: symbols (•), numbers (#), then A-Z
-            if key1 == "•" && key2 != "•" {
-                return true
-            } else if key1 != "•" && key2 == "•" {
-                return false
-            } else if key1 == "#" && key2 != "#" && key2 != "•" {
-                return true
-            } else if key1 != "#" && key1 != "•" && key2 == "#" {
-                return false
-            } else {
-                return key1 < key2
-            }
-        }
+        cachedSortedSectionKeys
     }
     
     private var groupedExercises: [String: [ExerciseData]] {
-        let groupKey: (ExerciseData) -> String = { exercise in
-            switch selectedSegment {
-            case 1: return exercise.muscle
-            case 2: return exercise.category
-            default: return ""
-            }
-        }
-        
-        return Dictionary(grouping: filteredExercises, by: groupKey)
+        cachedGroupedExercises
     }
     
     private var filteredExercises: [ExerciseData] {
+        cachedFilteredExercises
+    }
+
+    private func computeFilteredExercises(
+        _ base: [ExerciseData],
+        searchText: String,
+        segment: Int,
+        selectedMuscle: String?
+    ) -> [ExerciseData] {
         let filtered: [ExerciseData]
-        
-        // Apply search filter
         if searchText.isEmpty {
-            filtered = exercises
+            filtered = base
         } else {
-            filtered = exercises.filter { exercise in
+            filtered = base.filter { exercise in
                 exercise.name.localizedCaseInsensitiveContains(searchText) ||
                 exercise.muscle.localizedCaseInsensitiveContains(searchText) ||
                 exercise.category.localizedCaseInsensitiveContains(searchText)
             }
         }
-        
-        // Apply muscle group filter when in "By Muscle" mode
+
         let muscleFiltered: [ExerciseData]
-        if selectedSegment == 1, let selectedMuscle = selectedMuscle {
+        if segment == 1, let selectedMuscle {
             let targetBodyParts = getDatabaseBodyPart(for: selectedMuscle)
             muscleFiltered = filtered.filter { exercise in
-                // First check if bodyPart matches
                 let bodyPartMatches = targetBodyParts.contains { bodyPart in
                     exercise.bodyPart.localizedCaseInsensitiveContains(bodyPart)
                 }
-                
-                // For more specific filtering, also check target muscle
+
                 let targetMatches: Bool
                 switch selectedMuscle {
                 case "Biceps":
@@ -481,7 +449,7 @@ struct AddExerciseView: View {
                     targetMatches = exercise.target.localizedCaseInsensitiveContains("Quadriceps")
                 case "Hamstrings":
                     targetMatches = exercise.target.localizedCaseInsensitiveContains("Hamstrings")
-                case "Trapezius":  
+                case "Trapezius":
                     targetMatches = exercise.target.localizedCaseInsensitiveContains("Trapezius")
                 case "Lower Back":
                     targetMatches = exercise.target.localizedCaseInsensitiveContains("Erector Spinae") ||
@@ -494,35 +462,98 @@ struct AddExerciseView: View {
                 default:
                     targetMatches = bodyPartMatches
                 }
-                
+
                 return bodyPartMatches || targetMatches
             }
         } else {
             muscleFiltered = filtered
         }
-        
-        // Apply segment filter and sort
-        switch selectedSegment {
-        case 0: // All
-            return muscleFiltered // Sorting is handled in alphabeticalSections
-        case 1: // By Muscle
-            return muscleFiltered.sorted { exercise1, exercise2 in
-                if exercise1.muscle == exercise2.muscle {
-                    return exercise1.name < exercise2.name
+
+        switch segment {
+        case 1:
+            return muscleFiltered.sorted { lhs, rhs in
+                if lhs.muscle == rhs.muscle {
+                    return lhs.name < rhs.name
                 }
-                return exercise1.muscle < exercise2.muscle
+                return lhs.muscle < rhs.muscle
             }
-        case 2: // Categories
-            return muscleFiltered.sorted { exercise1, exercise2 in
-                if exercise1.category == exercise2.category {
-                    return exercise1.name < exercise2.name
+        case 2:
+            return muscleFiltered.sorted { lhs, rhs in
+                if lhs.category == rhs.category {
+                    return lhs.name < rhs.name
                 }
-                return exercise1.category < exercise2.category
+                return lhs.category < rhs.category
             }
         default:
             return muscleFiltered
         }
     }
+
+    private func buildAlphabeticalSections(from exercises: [ExerciseData]) -> [String: [ExerciseData]] {
+        let sortedExercises = exercises.sorted { exercise1, exercise2 in
+            let name1 = exercise1.name.lowercased()
+            let name2 = exercise2.name.lowercased()
+
+            let firstChar1 = exercise1.name.first
+            let firstChar2 = exercise2.name.first
+            let isLetter1 = firstChar1?.isLetter ?? false
+            let isLetter2 = firstChar2?.isLetter ?? false
+            let isNumber1 = firstChar1?.isNumber ?? false
+            let isNumber2 = firstChar2?.isNumber ?? false
+
+            if !isLetter1 && isLetter2 {
+                return true
+            } else if isLetter1 && !isLetter2 {
+                return false
+            } else if isNumber1 && !isNumber2 {
+                return true
+            } else if isLetter1 && isNumber2 {
+                return false
+            } else {
+                return name1 < name2
+            }
+        }
+
+        return Dictionary(grouping: sortedExercises) { exercise in
+            let firstChar = exercise.name.first ?? Character(" ")
+            if firstChar.isLetter {
+                return String(firstChar.uppercased())
+            } else if firstChar.isNumber {
+                return "#"
+            } else {
+                return "•"
+            }
+        }
+    }
+
+    private func buildSortedSectionKeys(from sections: [String: [ExerciseData]]) -> [String] {
+        let keys = Array(sections.keys)
+        return keys.sorted { key1, key2 in
+            if key1 == "•" && key2 != "•" {
+                return true
+            } else if key1 != "•" && key2 == "•" {
+                return false
+            } else if key1 == "#" && key2 != "#" && key2 != "•" {
+                return true
+            } else if key1 != "#" && key1 != "•" && key2 == "#" {
+                return false
+            } else {
+                return key1 < key2
+            }
+        }
+    }
+
+    private func buildGroupedExercises(from exercises: [ExerciseData], segment: Int) -> [String: [ExerciseData]] {
+        let groupKey: (ExerciseData) -> String = { exercise in
+            switch segment {
+            case 1: return exercise.muscle
+            case 2: return exercise.category
+            default: return ""
+            }
+        }
+        return Dictionary(grouping: exercises, by: groupKey)
+    }
+
     
     // MARK: - Methods
     private func toggleExerciseSelection(_ exercise: ExerciseData) {
@@ -535,8 +566,63 @@ struct AddExerciseView: View {
     }
     
     private func loadExercises() {
-        self.exercises = ExerciseDatabase.getAllExercises()
-        print("🏋️ AddExerciseView: Loaded \(self.exercises.count) exercises")
+        if let cached = ExerciseDatabase.cachedSnapshot() {
+            self.exercises = cached
+            print("🏋️ AddExerciseView: Loaded cached \(cached.count) exercises")
+            processExercises()
+            return
+        }
+
+        guard !isLoadingExercises else { return }
+        isLoadingExercises = true
+        DispatchQueue.global(qos: .userInitiated).async {
+            let loadedExercises = ExerciseDatabase.getAllExercises()
+            DispatchQueue.main.async {
+                self.exercises = loadedExercises
+                self.isLoadingExercises = false
+                print("🏋️ AddExerciseView: Loaded \(loadedExercises.count) exercises")
+                self.processExercises()
+            }
+        }
+    }
+
+    private func processExercises() {
+        processingWorkItem?.cancel()
+        let baseExercises = exercises
+        guard !baseExercises.isEmpty else {
+            cachedFilteredExercises = []
+            cachedAlphabeticalSections = [:]
+            cachedSortedSectionKeys = []
+            cachedGroupedExercises = [:]
+            isProcessingExercises = false
+            return
+        }
+
+        let currentSearch = searchText
+        let currentSegment = selectedSegment
+        let currentMuscle = selectedMuscle
+
+        isProcessingExercises = true
+
+        var workItem: DispatchWorkItem?
+        workItem = DispatchWorkItem {
+            let filtered = computeFilteredExercises(baseExercises, searchText: currentSearch, segment: currentSegment, selectedMuscle: currentMuscle)
+            let alphabetical = buildAlphabeticalSections(from: filtered)
+            let sortedKeys = buildSortedSectionKeys(from: alphabetical)
+            let grouped = buildGroupedExercises(from: filtered, segment: currentSegment)
+            DispatchQueue.main.async {
+                guard let workItem, !workItem.isCancelled else { return }
+                self.cachedFilteredExercises = filtered
+                self.cachedAlphabeticalSections = alphabetical
+                self.cachedSortedSectionKeys = sortedKeys
+                self.cachedGroupedExercises = grouped
+                self.isProcessingExercises = false
+                self.processingWorkItem = nil
+            }
+        }
+        guard let workItem else { return }
+        processingWorkItem = workItem
+        DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
     }
 }
 

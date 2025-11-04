@@ -135,6 +135,7 @@
 		3662A5552DFE3B8500847487 /* WorkoutContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A5542DFE3B8500847487 /* WorkoutContainerView.swift */; };
 		3662A5572DFE430D00847487 /* AddExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A5562DFE430D00847487 /* AddExerciseView.swift */; };
 		3662A5592DFE452100847487 /* Final_Exercise_List.xlsx in Resources */ = {isa = PBXBuildFile; fileRef = 3662A5582DFE452100847487 /* Final_Exercise_List.xlsx */; };
+		36FE12352FFFABCD00A1BCDE /* exercisesdb.csv in Resources */ = {isa = PBXBuildFile; fileRef = 36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */; };
 		3662A55B2DFE5FDA00847487 /* ExerciseDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A55A2DFE5FDA00847487 /* ExerciseDatabase.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
@@ -512,6 +513,7 @@
 		3662A5562DFE430D00847487 /* AddExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExerciseView.swift; sourceTree = "<group>"; };
 		3662A5582DFE452100847487 /* Final_Exercise_List.xlsx */ = {isa = PBXFileReference; lastKnownFileType = file; path = Final_Exercise_List.xlsx; sourceTree = "<group>"; };
 		3662A55A2DFE5FDA00847487 /* ExerciseDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDatabase.swift; sourceTree = "<group>"; };
+		36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = exercisesdb.csv; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -962,6 +964,7 @@
 				3662A5542DFE3B8500847487 /* WorkoutContainerView.swift */,
 				3662A5562DFE430D00847487 /* AddExerciseView.swift */,
 				3662A55A2DFE5FDA00847487 /* ExerciseDatabase.swift */,
+				36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */,
 				363068C42E085D9200F2D4EC /* RecentlyAddedView.swift */,
 				363068C62E089D2A00F2D4EC /* AddedByMe.swift */,
 				363068C82E089EF800F2D4EC /* ByEquipmentView.swift */,
@@ -1523,6 +1526,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				36FE12352FFFABCD00A1BCDE /* exercisesdb.csv in Resources */,
 				3698E4FC2C24968F0040AF60 /* .gitignore in Resources */,
 				3682F0A32B84173100ABF344 /* Podfile in Resources */,
 				3698E4F42C2483F90040AF60 /* config.release.plist in Resources */,

@@ -24,6 +24,9 @@ struct podsApp: App {
 
         // And print as final backup
         print("🚀🚀🚀 APP STARTED - BUILD WITH PRINT DIAGNOSTICS 🚀🚀🚀")
+
+        // Warm exercise database synchronously so data is ready before UI usage
+        ExerciseDatabase.warmCache()
     }
 
     @StateObject var sharedViewModel = SharedViewModel()
