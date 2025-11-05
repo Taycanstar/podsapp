@@ -161,12 +161,20 @@ class WorkoutRecommendationService {
         
         // Filter by available equipment
         let availableExercises = experienceAppropriate.filter { exercise in
-            userProfile.canPerformExercise(exercise)
+            let allowed = userProfile.canPerformExercise(exercise)
+            if !allowed {
+                logFilterRejection(exercise, reason: "profile_equipment")
+            }
+            return allowed
         }
         
         // Filter out avoided exercises
         let filteredExercises = availableExercises.filter { exercise in
-            !userProfile.avoidedExercises.contains(exercise.id)
+            if userProfile.avoidedExercises.contains(exercise.id) {
+                logFilterRejection(exercise, reason: "user_avoided")
+                return false
+            }
+            return true
         }
         
         // Prioritize exercises based on user preferences, experience, and recovery
@@ -215,18 +223,29 @@ class WorkoutRecommendationService {
         let availableExercises: [ExerciseData]
         if let customEquipment = customEquipment, !customEquipment.isEmpty {
             availableExercises = typeFilteredExercises.filter { exercise in
-                canPerformExerciseWithCustomEquipment(exercise, equipment: customEquipment)
+                let allowed = canPerformExerciseWithCustomEquipment(exercise, equipment: customEquipment)
+                if !allowed {
+                    logFilterRejection(exercise, reason: "session_equipment")
+                }
+                return allowed
             }
-       
         } else {
             availableExercises = typeFilteredExercises.filter { exercise in
-                userProfile.canPerformExercise(exercise)
+                let allowed = userProfile.canPerformExercise(exercise)
+                if !allowed {
+                    logFilterRejection(exercise, reason: "profile_equipment")
+                }
+                return allowed
             }
         }
         
         // Filter out avoided exercises
         let filteredExercises = availableExercises.filter { exercise in
-            !userProfile.avoidedExercises.contains(exercise.id)
+            if userProfile.avoidedExercises.contains(exercise.id) {
+                logFilterRejection(exercise, reason: "user_avoided")
+                return false
+            }
+            return true
         }
         
         // Prioritize exercises based on user preferences, experience, and recovery
@@ -241,263 +260,20 @@ class WorkoutRecommendationService {
     
     // Helper method to check if exercise can be performed with custom equipment
     private func canPerformExerciseWithCustomEquipment(_ exercise: ExerciseData, equipment: [Equipment]) -> Bool {
-        let exerciseEquipment = exercise.equipment.lowercased()
-        let exerciseName = exercise.name.lowercased()
-        
-        // Always allow bodyweight exercises (no equipment needed)
-        if exerciseEquipment == "body weight" || exerciseEquipment.isEmpty {
-            return true
-        }
-        
-        // Check if any of the user's equipment matches the exercise equipment
-        for userEquipment in equipment {
-            let equipmentString = userEquipment.rawValue.lowercased()
-            
-            // Direct match
-            if exerciseEquipment.contains(equipmentString.lowercased()) {
-                return true
-            }
-            
-            // Special mappings for equipment names
-            switch userEquipment {
-            case .bodyWeight:
-                if exerciseEquipment == "body weight" || exerciseEquipment.isEmpty {
-                    return true
-                }
-            case .dumbbells:
-                if exerciseEquipment.contains("dumbbell") {
-                    return true
-                }
-            case .barbells:
-                if exerciseEquipment.contains("barbell") && !exerciseEquipment.contains("ez") {
-                    return true
-                }
-            case .ezBar:
-                if exerciseEquipment.contains("ez barbell") || exerciseEquipment.contains("ez bar") {
-                    return true
-                }
-            case .cable:
-                if exerciseEquipment.contains("cable") {
-                    return true
-                }
-            case .kettlebells:
-                if exerciseEquipment.contains("kettlebell") {
-                    return true
-                }
-            case .smithMachine:
-                if exerciseEquipment.contains("smith") {
-                    return true
-                }
-            case .resistanceBands:
-                if exerciseEquipment.contains("band") {
-                    return true
-                }
-            case .stabilityBall:
-                if exerciseEquipment.contains("stability") || exerciseEquipment.contains("swiss") || exerciseEquipment.contains("exercise ball") {
-                    return true
-                }
-            case .bosuBalanceTrainer:
-                if exerciseEquipment.contains("bosu") {
-                    return true
-                }
-            case .medicineBalls:
-                if exerciseEquipment.contains("medicine ball") {
-                    return true
-                }
-            case .battleRopes:
-                if exerciseEquipment.contains("rope") && !exerciseEquipment.contains("jump") {
-                    return true
-                }
-            case .pullupBar:
-                if exerciseEquipment.contains("pull") && (exerciseEquipment.contains("bar") || exerciseEquipment.contains("up")) {
-                    return true
-                }
-            case .dipBar:
-                if exerciseEquipment.contains("dip") || (exerciseEquipment.contains("parallel") && exerciseEquipment.contains("bar")) {
-                    return true
-                }
-            case .pvc:
-                if exerciseEquipment.contains("pvc") || exerciseEquipment.contains("pipe") {
-                    return true
-                }
-            case .flatBench:
-                // Flat bench exercises require both the bench AND the primary equipment
-                return requiresBenchAndEquipment(exercise, benchType: "flat", availableEquipment: equipment)
-            case .declineBench:
-                // Decline bench exercises require both the bench AND the primary equipment  
-                return requiresBenchAndEquipment(exercise, benchType: "decline", availableEquipment: equipment)
-            case .inclineBench:
-                // Incline bench exercises require both the bench AND the primary equipment
-                return requiresBenchAndEquipment(exercise, benchType: "incline", availableEquipment: equipment)
-            case .preacherCurlBench:
-                // Preacher curl exercises require both the bench AND the primary equipment
-                return requiresPreacherAndEquipment(exercise, availableEquipment: equipment)
-            case .pullupBar:
-                // Pull-up exercises require a pull-up bar
-                return requiresPullupBar(exercise)
-            case .dipBar:
-                // Dip exercises require parallel bars
-                return requiresDipBar(exercise)
-            case .squatRack:
-                // Heavy barbell exercises often require a squat rack
-                return requiresSquatRackAndEquipment(exercise, availableEquipment: equipment)
-            case .box:
-                // Box/platform exercises
-                return requiresBoxAndEquipment(exercise, availableEquipment: equipment)
-            case .platforms:
-                // Olympic lift platform exercises
-                return requiresPlatformAndEquipment(exercise, availableEquipment: equipment)
-            case .legPress:
-                // Leg press machine exercises
-                return exerciseName.contains("leg press")
-            case .latPulldownCable:
-                // Lat pulldown machine exercises
-                return requiresLatPulldown(exercise)
-            case .legExtensionMachine:
-                // Leg extension machine exercises
-                return exerciseName.contains("leg extension")
-            case .legCurlMachine:
-                // Leg curl machine exercises  
-                return requiresLegCurl(exercise)
-            case .calfRaiseMachine:
-                // Calf raise machine exercises
-                return requiresCalfRaiseMachine(exercise)
-            case .rowMachine:
-                // Seated row machine exercises
-                return requiresRowMachine(exercise)
-            case .hammerstrengthMachine:
-                // Hammer strength machine exercises
-                return exerciseEquipment.contains("leverage") || exerciseName.contains("hammer")
-            case .hackSquatMachine:
-                // Hack squat machine exercises
-                return exerciseName.contains("hack squat")
-            case .shoulderPressMachine:
-                // Shoulder press machine exercises
-                return exerciseName.contains("shoulder press") && exerciseEquipment.contains("leverage")
-            case .tricepsExtensionMachine:
-                // Triceps extension machine exercises
-                return exerciseName.contains("triceps extension") && exerciseEquipment.contains("leverage")
-            case .bicepsCurlMachine:
-                // Biceps curl machine exercises
-                return exerciseName.contains("biceps curl") && exerciseEquipment.contains("leverage")
-            case .abCrunchMachine:
-                // Ab crunch machine exercises
-                return exerciseName.contains("crunch") && exerciseEquipment.contains("leverage")
-            case .preacherCurlMachine:
-                // Preacher curl machine exercises
-                return exerciseName.contains("preacher") && exerciseEquipment.contains("leverage")
-            default:
-                // For other equipment, try partial matching
-                let equipmentWords = equipmentString.components(separatedBy: " ")
-                for word in equipmentWords {
-                    if word.count > 3 && exerciseEquipment.contains(word.lowercased()) {
-                        return true
-                    }
-                }
-            }
-        }
-        
-        return false
+        let required = ExerciseEquipmentResolver.shared.equipment(for: exercise)
+        guard !required.isEmpty else { return true }
+        let allowed = Set(equipment)
+        return !required.isDisjoint(with: allowed)
     }
-    
-    // Helper method to check bench exercises that require both bench and primary equipment
-    private func requiresBenchAndEquipment(_ exercise: ExerciseData, benchType: String, availableEquipment: [Equipment]) -> Bool {
-        let exerciseName = exercise.name.lowercased()
-        let exerciseEquipment = exercise.equipment.lowercased()
-        
-        // First check if this exercise actually requires the specific bench type
-        let requiresThisBench: Bool
-        switch benchType {
-        case "flat":
-            requiresThisBench = exerciseName.contains("bench") && 
-                               !exerciseName.contains("decline") && 
-                               !exerciseName.contains("incline")
-        case "decline":
-            requiresThisBench = exerciseName.contains("decline") && exerciseName.contains("bench")
-        case "incline":
-            requiresThisBench = exerciseName.contains("incline") && exerciseName.contains("bench")
-        default:
-            return false
-        }
-        
-        if !requiresThisBench {
-            return false
-        }
-        
-        // Now check if user has the primary equipment required for the exercise
-        let hasPrimaryEquipment: Bool
-        if exerciseEquipment.contains("barbell") {
-            hasPrimaryEquipment = availableEquipment.contains(.barbells)
-        } else if exerciseEquipment.contains("dumbbell") {
-            hasPrimaryEquipment = availableEquipment.contains(.dumbbells)
-        } else if exerciseEquipment.contains("cable") {
-            hasPrimaryEquipment = availableEquipment.contains(.cable)
-        } else if exerciseEquipment.contains("smith") {
-            hasPrimaryEquipment = availableEquipment.contains(.smithMachine)
-        } else {
-            // For other equipment types, allow the exercise
-            hasPrimaryEquipment = true
-        }
-        
-        return hasPrimaryEquipment
-    }
-    
-    // Helper method for preacher curl exercises
-    private func requiresPreacherAndEquipment(_ exercise: ExerciseData, availableEquipment: [Equipment]) -> Bool {
-        let exerciseName = exercise.name.lowercased()
-        let exerciseEquipment = exercise.equipment.lowercased()
-        
-        // Check if this is a preacher curl exercise
-        guard exerciseName.contains("preacher") else { return false }
-        
-        // Check if user has the primary equipment
-        if exerciseEquipment.contains("ez") {
-            return availableEquipment.contains(.ezBar)
-        } else if exerciseEquipment.contains("dumbbell") {
-            return availableEquipment.contains(.dumbbells)
-        } else if exerciseEquipment.contains("barbell") {
-            return availableEquipment.contains(.barbells)
-        } else if exerciseEquipment.contains("cable") {
-            return availableEquipment.contains(.cable)
-        }
-        return true
-    }
-    
-    // Helper method for pull-up bar exercises
-    private func requiresPullupBar(_ exercise: ExerciseData) -> Bool {
-        let exerciseName = exercise.name.lowercased()
-        return exerciseName.contains("pull-up") || 
-               exerciseName.contains("pullup") ||
-               exerciseName.contains("pull up") ||
-               exerciseName.contains("chin-up") ||
-               exerciseName.contains("chinup")
-    }
-    
-    // Helper method for dip bar exercises
-    private func requiresDipBar(_ exercise: ExerciseData) -> Bool {
-        let exerciseName = exercise.name.lowercased()
-        return (exerciseName.contains("dip") && !exerciseName.contains("bench")) ||
-               exerciseName.contains("parallel bar")
-    }
-    
-    // Helper method for squat rack exercises
-    private func requiresSquatRackAndEquipment(_ exercise: ExerciseData, availableEquipment: [Equipment]) -> Bool {
-        let exerciseName = exercise.name.lowercased()
-        let exerciseEquipment = exercise.equipment.lowercased()
-        
-        // Heavy barbell exercises that typically need a rack
-        let needsRack = (exerciseName.contains("squat") && !exerciseName.contains("hack")) ||
-                       exerciseName.contains("olympic") ||
-                       exerciseName.contains("back squat") ||
-                       exerciseName.contains("front squat")
-        
-        if !needsRack { return false }
-        
-        // Check if user has the primary equipment
-        if exerciseEquipment.contains("barbell") {
-            return availableEquipment.contains(.barbells)
-        }
-        return true
+
+    private func logFilterRejection(_ exercise: ExerciseData, reason: String) {
+        WorkoutGenerationTelemetry.record(.filterRejected, metadata: [
+            "exerciseId": exercise.id,
+            "reason": reason
+        ])
+#if DEBUG
+        print("🚫 Filtered \(exercise.name) [\(exercise.id)] – \(reason)")
+#endif
     }
     
     // Helper method for box/step exercises

@@ -1,0 +1,110 @@
+//
+//  WorkoutContextAssembler.swift
+//  pods
+//
+//  Created by Dimi Nunez on 11/4/25.
+//
+
+
+//
+//  WorkoutContextAssembler.swift
+//
+
+import Foundation
+
+@MainActor
+struct WorkoutContextAssembler {
+    private let userProfileService = UserProfileService.shared
+    private let feedbackService = PerformanceFeedbackService.shared
+    private let repository = WorkoutContextRepository.shared
+
+    func assembleContext(
+        userEmail: String,
+        requestedMuscles: [String],
+        duration: WorkoutDuration,
+        equipmentOverride: [Equipment]?,
+        sessionPhase: SessionPhase,
+        flexibilityPreferences: FlexibilityPreferences
+    ) -> WorkoutContextV1 {
+        let profile = userProfileService
+
+        let userSection = WorkoutContextV1.UserSection(
+            email: userEmail,
+            fitnessGoal: profile.fitnessGoal.normalized,
+            experienceLevel: profile.experienceLevel,
+            gender: profile.gender,
+            preferredSplit: profile.trainingSplit,
+            workoutFrequency: profile.workoutFrequency,
+            typicalDurationMinutes: profile.workoutDuration.minutes,
+            timezoneOffsetMinutes: TimeZone.current.secondsFromGMT() / 60
+        )
+
+        let preferences = WorkoutContextV1.PreferenceSection(
+            availableEquipment: [],
+            bodyweightOnly: profile.bodyweightOnlyWorkouts,
+            dislikes: profile.avoidedExercises,
+            preferredExerciseTypes: profile.preferredExerciseTypes,
+            injuriesOrLimitations: [], // Placeholder until onboarding captures injuries explicitly
+            scheduleConstraintsMinutes: duration.minutes,
+            allowTimedWork: flexibilityPreferences.isEnabled
+        )
+
+        let recoverySection = WorkoutContextV1.RecoverySection(
+            muscles: [],
+            readinessScore: nil,
+            hrvScore: nil,
+            sleepHours: nil,
+            lastUpdated: Date()
+        )
+
+        let historySection = buildHistorySection(durationMinutes: duration.minutes)
+
+        let constraintSection = WorkoutContextV1.ConstraintSection(
+            requestedMuscles: requestedMuscles,
+            requestedDurationMinutes: duration.minutes,
+            availableEquipment: [],
+            seed: UUID(),
+            generatedAt: Date(),
+            sessionPhase: sessionPhase,
+            flexibilityPreferences: flexibilityPreferences
+        )
+
+        let metadata = WorkoutContextV1.Metadata(
+            schemaVersion: WorkoutContextV1.schemaVersion,
+            generatedAt: Date(),
+            source: "ios"
+        )
+
+        let context = WorkoutContextV1(
+            user: userSection,
+            preferences: preferences,
+            recovery: recoverySection,
+            history: historySection,
+            constraints: constraintSection,
+            metadata: metadata
+        )
+
+        repository.saveContext(context, for: userEmail)
+        return context
+    }
+
+    private func buildHistorySection(durationMinutes: Int) -> WorkoutContextV1.HistorySection {
+        let feedback = feedbackService.feedbackHistory
+        let recentSessions = feedback.suffix(8).map { entry -> WorkoutContextV1.HistorySection.Session in
+            let duration = Int(Double(durationMinutes) * entry.completionRate)
+            return WorkoutContextV1.HistorySection.Session(
+                id: entry.workoutId,
+                date: entry.timestamp,
+                durationMinutes: max(duration, 10),
+                targetMuscles: [],
+                totalVolume: 0,
+                averageRPE: entry.overallRPE
+            )
+        }
+
+        return WorkoutContextV1.HistorySection(
+            recentSessions: Array(recentSessions),
+            prs: []
+        )
+    }
+}

@@ -22,10 +22,14 @@ class WorkoutGenerationService {
     
     private let recommendationService = WorkoutRecommendationService.shared
     private let recoveryService = MuscleRecoveryService.shared
+    private let llmService = LLMWorkoutService.shared
+    private let contextAssembler = WorkoutContextAssembler()
+    private let userProfileService = UserProfileService.shared
+    private var exerciseCache: [Int: ExerciseData] = [:]
     
     private init() {}
     
-    /// Generate optimized workout plan using research-based algorithm (no more iterative approach)
+    /// Generate optimized workout plan using LLM first, falling back to the deterministic pipeline.
     func generateWorkoutPlan(
         muscleGroups: [String],
         targetDuration: WorkoutDuration,
@@ -34,12 +38,6 @@ class WorkoutGenerationService {
         customEquipment: [Equipment]?,
         flexibilityPreferences: FlexibilityPreferences
     ) throws -> WorkoutPlan {
-        
-        let targetDurationMinutes = targetDuration.minutes
-        
-        print("🏗️ WorkoutGenerationService: Generating \(targetDurationMinutes)min \(fitnessGoal) workout using research-based algorithm")
-        
-        // Use enhanced WorkoutRecommendationService for optimal exercise count calculation
         let optimalExerciseCount = recommendationService.getOptimalExerciseCount(
             duration: targetDuration,
             fitnessGoal: fitnessGoal,
@@ -47,6 +45,59 @@ class WorkoutGenerationService {
             experienceLevel: experienceLevel,
             equipment: customEquipment
         )
+
+        let userEmail = resolveUserEmail()
+        let context = contextAssembler.assembleContext(
+            userEmail: userEmail ?? "",
+            requestedMuscles: muscleGroups,
+            duration: targetDuration,
+            equipmentOverride: customEquipment,
+            sessionPhase: SessionPhase.alignedWith(fitnessGoal: fitnessGoal),
+            flexibilityPreferences: flexibilityPreferences
+        )
+
+        if let email = userEmail,
+           let llmPlan = attemptLLMPlan(
+                userEmail: email,
+                context: context,
+                muscleGroups: muscleGroups,
+                targetDuration: targetDuration,
+                fitnessGoal: fitnessGoal,
+                optimalExerciseCount: optimalExerciseCount,
+                customEquipment: customEquipment,
+                flexibilityPreferences: flexibilityPreferences
+           ) {
+            return llmPlan
+        }
+
+        if userEmail == nil {
+            WorkoutGenerationTelemetry.record(.llmFallbackUsed, metadata: ["reason": "missing_email"])
+        }
+
+        return try generateResearchBackedPlan(
+            muscleGroups: muscleGroups,
+            targetDuration: targetDuration,
+            fitnessGoal: fitnessGoal,
+            experienceLevel: experienceLevel,
+            customEquipment: customEquipment,
+            flexibilityPreferences: flexibilityPreferences,
+            optimalExerciseCount: optimalExerciseCount
+        )
+    }
+
+    /// Deterministic fallback workout generator that uses the research-based algorithm.
+    private func generateResearchBackedPlan(
+        muscleGroups: [String],
+        targetDuration: WorkoutDuration,
+        fitnessGoal: FitnessGoal,
+        experienceLevel: ExperienceLevel,
+        customEquipment: [Equipment]?,
+        flexibilityPreferences: FlexibilityPreferences,
+        optimalExerciseCount: (total: Int, perMuscle: Int)
+    ) throws -> WorkoutPlan {
+        let targetDurationMinutes = targetDuration.minutes
+        
+        print("🏗️ WorkoutGenerationService: Generating \(targetDurationMinutes)min \(fitnessGoal) workout using research-based algorithm")
         
         print("🎯 Optimal exercise count: \(optimalExerciseCount.total) total, \(optimalExerciseCount.perMuscle) per muscle")
 
@@ -87,7 +138,163 @@ class WorkoutGenerationService {
             totalTimeBreakdown: breakdown
         )
     }
-    
+
+    private func attemptLLMPlan(
+        userEmail: String,
+        context: WorkoutContextV1,
+        muscleGroups: [String],
+        targetDuration: WorkoutDuration,
+        fitnessGoal: FitnessGoal,
+        optimalExerciseCount: (total: Int, perMuscle: Int),
+        customEquipment: [Equipment]?,
+        flexibilityPreferences: FlexibilityPreferences
+    ) -> WorkoutPlan? {
+        let candidatePool = buildCandidatePool(
+            muscles: muscleGroups,
+            targetDuration: targetDuration,
+            fitnessGoal: fitnessGoal,
+            customEquipment: customEquipment,
+            flexibilityPreferences: flexibilityPreferences
+        )
+
+        guard !candidatePool.isEmpty else {
+            WorkoutGenerationTelemetry.record(.llmFallbackUsed, metadata: ["reason": "empty_candidate_pool"])
+            return nil
+        }
+
+        do {
+            let (response, warnings) = try llmService.generatePlanSync(
+                userEmail: userEmail,
+                context: context,
+                candidates: candidatePool,
+                targetExerciseCount: optimalExerciseCount.total
+            )
+
+            warnings.forEach {
+                WorkoutGenerationTelemetry.record(.planValidationWarning, metadata: ["message": $0])
+            }
+
+            let mappedExercises = convertLLMResponse(response, fitnessGoal: fitnessGoal)
+            guard !mappedExercises.isEmpty else {
+                WorkoutGenerationTelemetry.record(.llmFallbackUsed, metadata: ["reason": "llm_returned_no_valid_exercises"])
+                return nil
+            }
+            let minimumLLMExercises = max(3, optimalExerciseCount.total / 3)
+            if mappedExercises.count < minimumLLMExercises {
+                WorkoutGenerationTelemetry.record(.llmFallbackUsed, metadata: [
+                    "reason": "llm_returned_too_few_exercises",
+                    "received": mappedExercises.count,
+                    "target": optimalExerciseCount.total
+                ])
+                return nil
+            }
+
+            let warmupMinutes = response.warmupMinutes ?? getOptimalWarmupDuration(targetDuration.minutes)
+            let cooldownMinutes = response.cooldownMinutes ?? warmupMinutes
+            let minimumWorkBlock = max(targetDuration.minutes / 2, 10)
+            let exerciseMinutes = max(targetDuration.minutes - warmupMinutes - cooldownMinutes, minimumWorkBlock)
+            let breakdown = TimeBreakdown(
+                warmupMinutes: warmupMinutes,
+                exerciseMinutes: exerciseMinutes,
+                cooldownMinutes: cooldownMinutes,
+                totalMinutes: warmupMinutes + exerciseMinutes + cooldownMinutes
+            )
+
+            return WorkoutPlan(
+                exercises: mappedExercises,
+                actualDurationMinutes: breakdown.totalMinutes,
+                totalTimeBreakdown: breakdown
+            )
+        } catch {
+            WorkoutGenerationTelemetry.record(.llmFallbackUsed, metadata: ["reason": error.localizedDescription])
+            return nil
+        }
+    }
+
+    private func buildCandidatePool(
+        muscles: [String],
+        targetDuration: WorkoutDuration,
+        fitnessGoal: FitnessGoal,
+        customEquipment: [Equipment]?,
+        flexibilityPreferences: FlexibilityPreferences
+    ) -> [NetworkManagerTwo.LLMCandidateExercise] {
+        var pool: [NetworkManagerTwo.LLMCandidateExercise] = []
+        var seen = Set<Int>()
+        for muscle in muscles {
+            let recommendations = recommendationService.getRecommendedExercises(
+                for: muscle,
+                count: 6,
+                customEquipment: customEquipment,
+                flexibilityPreferences: flexibilityPreferences
+            )
+
+            for exercise in recommendations where !seen.contains(exercise.id) {
+                seen.insert(exercise.id)
+                let candidate = NetworkManagerTwo.LLMCandidateExercise(
+                    exerciseId: exercise.id,
+                    name: exercise.name
+                )
+                pool.append(candidate)
+            }
+        }
+
+        return pool
+    }
+
+    private func convertLLMResponse(_ response: NetworkManagerTwo.LLMWorkoutResponse, fitnessGoal: FitnessGoal) -> [TodayWorkoutExercise] {
+        var mapped: [TodayWorkoutExercise] = []
+
+        for spec in response.exercises {
+            guard let exercise = lookupExercise(by: spec.exerciseId) else {
+                WorkoutGenerationTelemetry.record(.planValidationWarning, metadata: ["message": "Missing exercise id \(spec.exerciseId)"])
+                continue
+            }
+
+            let rest = spec.restSeconds ?? getResearchBasedRestTime(
+                fitnessGoal: fitnessGoal,
+                isCompound: isCompoundExercise(exercise)
+            )
+
+            let trackingType = ExerciseClassificationService.determineTrackingType(for: exercise)
+            let sanitizedWeight = (spec.weight ?? 0) <= 0 ? nil : spec.weight
+            let todayExercise = TodayWorkoutExercise(
+                exercise: exercise,
+                sets: max(1, spec.sets),
+                reps: max(1, spec.reps),
+                weight: sanitizedWeight,
+                restTime: rest,
+                notes: nil,
+                warmupSets: nil,
+                flexibleSets: nil,
+                trackingType: trackingType
+            )
+
+            mapped.append(todayExercise)
+        }
+
+        return mapped
+    }
+
+    private func resolveUserEmail() -> String? {
+        if let cached = UserDefaults.standard.string(forKey: "userEmail"), !cached.isEmpty {
+            return cached
+        }
+        if let profileEmail = userProfileService.profileData?.email, !profileEmail.isEmpty {
+            return profileEmail
+        }
+        return nil
+    }
+
+    private func lookupExercise(by id: Int) -> ExerciseData? {
+        if let cached = exerciseCache[id] {
+            return cached
+        }
+
+        let snapshot = ExerciseDatabase.cachedSnapshot() ?? ExerciseDatabase.getAllExercises()
+        exerciseCache = Dictionary(uniqueKeysWithValues: snapshot.map { ($0.id, $0) })
+        return exerciseCache[id]
+    }
+
     // MARK: - Optimized Exercise Generation (No More Iterative Testing)
     
     /// Generate exercises respecting total time budget with smart distribution

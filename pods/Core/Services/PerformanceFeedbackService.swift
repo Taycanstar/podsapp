@@ -78,6 +78,10 @@ class PerformanceFeedbackService: ObservableObject {
         
         // Trigger next workout adaptation
         await triggerWorkoutAdaptation(feedback)
+        WorkoutGenerationTelemetry.record(.feedbackSubmitted, metadata: [
+            "rpe": feedback.overallRPE,
+            "completionRate": feedback.completionRate
+        ])
         
         print("📊 Feedback submitted successfully. Total feedback history: \(feedbackHistory.count)")
     }

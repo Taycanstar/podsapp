@@ -15,7 +15,7 @@
 import Foundation
 
 // MARK: - Equipment Categories
-enum EquipmentCategory: String, CaseIterable {
+enum EquipmentCategory: String, CaseIterable, Codable {
     case freeWeights = "Free Weights"
     case machines = "Machines"
     case bodyweight = "Bodyweight"
@@ -24,7 +24,7 @@ enum EquipmentCategory: String, CaseIterable {
 }
 
 // MARK: - Equipment Types (matching ByEquipmentView)
-enum Equipment: String, CaseIterable {
+enum Equipment: String, CaseIterable, Codable {
     // Primary Equipment (explicit in equipment field)
     case barbells = "Barbells"
     case dumbbells = "Dumbbells"
@@ -149,7 +149,7 @@ enum WorkoutLocation: String, CaseIterable {
 }
 
 // MARK: - Exercise Type Preferences
-enum ExerciseType: String, CaseIterable {
+enum ExerciseType: String, CaseIterable, Codable {
     case compound = "Compound"
     case isolation = "Isolation"
     case cardio = "Cardio"
@@ -166,7 +166,7 @@ enum ExerciseType: String, CaseIterable {
 
 
 // MARK: - Workout Frequency
-enum WorkoutFrequency: String, CaseIterable {
+enum WorkoutFrequency: String, CaseIterable, Codable {
     case once = "1x per week"
     case twice = "2x per week"
     case three = "3x per week"

@@ -1067,70 +1067,23 @@ class UserProfileService: ObservableObject {
     }
     
     func canPerformExercise(_ exercise: ExerciseData) -> Bool {
-        let equipmentNeeded = mapExerciseToEquipment(exercise)
+        let equipmentNeeded = ExerciseEquipmentResolver.shared.equipment(for: exercise)
 
         if bodyweightOnlyWorkouts {
-            return equipmentNeeded.isEmpty
+            if equipmentNeeded.isEmpty {
+                return true
+            }
+
+            return equipmentNeeded.isSubset(of: Self.bodyweightApprovedEquipment)
         }
-        
-        // If no specific equipment needed, assume bodyweight
-        if equipmentNeeded.isEmpty {
-            return true
-        }
-        
-        // Check if user has any of the required equipment
-        return equipmentNeeded.contains { hasEquipment($0) }
+
+        guard !equipmentNeeded.isEmpty else { return true }
+        let owned = Set(availableEquipment)
+        return !equipmentNeeded.isDisjoint(with: owned)
     }
     
     private func mapExerciseToEquipment(_ exercise: ExerciseData) -> [Equipment] {
-        if let override = equipmentOverride(for: exercise) {
-            return override
-        }
-        let equipmentName = exercise.equipment.lowercased()
-
-        switch equipmentName {
-        case let name where name.contains("dumbbell"):
-            return [.dumbbells]
-        case let name where name.contains("barbell"):
-            return [.barbells]
-        case let name where name.contains("kettlebell"):
-            return [.kettlebells]
-        case let name where name.contains("cable"):
-            return [.cable, .latPulldownCable]
-        case let name where name.contains("smith"):
-            return [.smithMachine]
-        case let name where name.contains("leverage"):
-            return [.hammerstrengthMachine]
-        case let name where name.contains("band"):
-            return [.resistanceBands]
-        case let name where name.contains("stability ball"):
-            return [.stabilityBall]
-        case let name where name.contains("medicine ball"):
-            return [.medicineBalls]
-        case let name where name.contains("bosu"):
-            return [.bosuBalanceTrainer]
-        case let name where name.contains("ez"):
-            return [.ezBar]
-        case let name where name.contains("rope"):
-            return [.battleRopes]
-        case let name where name.contains("sled"):
-            return [.sled]
-        case "body weight":
-            return [] // No equipment needed
-        default:
-            return [] // Assume bodyweight if unknown
-        }
-    }
-
-    private func equipmentOverride(for exercise: ExerciseData) -> [Equipment]? {
-        switch exercise.id {
-        case 5696: // Cheat Curl
-            return [.barbells]
-        case 9695: // Landmine Half Kneeling Shoulders Press misclassified as bodyweight
-            return [.barbells]
-        default:
-            return nil
-        }
+        Array(ExerciseEquipmentResolver.shared.equipment(for: exercise))
     }
     
     // MARK: - Default Equipment Setup
@@ -1161,6 +1114,18 @@ class UserProfileService: ObservableObject {
             }
         }
     }
+
+    private static let bodyweightApprovedEquipment: Set<Equipment> = [
+        .bodyWeight,
+        .resistanceBands,
+        .pullupBar,
+        .dipBar,
+        .rings,
+        .stabilityBall,
+        .medicineBalls,
+        .flatBench,
+        .box
+    ]
 }
 
 // MARK: - Extensions for Server Data Mapping
