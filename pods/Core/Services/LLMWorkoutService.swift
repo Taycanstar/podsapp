@@ -24,13 +24,17 @@ final class LLMWorkoutService {
         userEmail: String,
         context: WorkoutContextV1,
         candidates: [NetworkManagerTwo.LLMCandidateExercise],
-        targetExerciseCount: Int
+        targetExerciseCount: Int,
+        fitnessGoal: FitnessGoal,
+        experienceLevel: ExperienceLevel,
+        sessionBudget: TimeEstimator.SessionTimeBudget
     ) throws -> (NetworkManagerTwo.LLMWorkoutResponse, [String]) {
         let request = NetworkManagerTwo.LLMWorkoutRequest(
             userEmail: userEmail,
             context: context.trimmingHistory(maxSessions: 12),
             candidates: candidates,
             targetExerciseCount: targetExerciseCount,
+            sessionBudget: buildBudgetPayload(from: sessionBudget),
             requestId: UUID()
         )
 
@@ -56,7 +60,10 @@ final class LLMWorkoutService {
         let warnings = validator.validate(
             response: payload,
             candidateIds: Set(candidates.map(\.exerciseId)),
-            requestedMuscles: context.constraints.requestedMuscles
+            requestedMuscles: context.constraints.requestedMuscles,
+            fitnessGoal: fitnessGoal,
+            experienceLevel: experienceLevel,
+            sessionBudget: sessionBudget
         )
 
         WorkoutGenerationTelemetry.record(.llmRequestFinished, metadata: [
@@ -65,5 +72,32 @@ final class LLMWorkoutService {
         ])
 
         return (payload, warnings)
+    }
+
+    private func buildBudgetPayload(from budget: TimeEstimator.SessionTimeBudget) -> NetworkManagerTwo.LLMSessionBudget {
+        let densityHint: String
+        switch budget.format {
+        case .straightSets:
+            densityHint = "straight sets • full rest between efforts"
+        case .superset:
+            densityHint = "superset • pair movements, ~37% rest compression"
+        case .circuit3:
+            densityHint = "circuit of 3 exercises • ~35% rest compression"
+        case .circuit4:
+            densityHint = "circuit of 4 exercises • ~30% rest compression"
+        case .emom:
+            densityHint = "EMOM • intervals with ~25% rest compression"
+        }
+
+        return NetworkManagerTwo.LLMSessionBudget(
+            format: budget.format.rawValue,
+            densityHint: densityHint,
+            durationMinutes: budget.duration.minutes,
+            availableWorkSeconds: budget.availableWorkSeconds,
+            maxWorkSeconds: budget.maxWorkSeconds,
+            warmupSeconds: budget.warmupSeconds,
+            cooldownSeconds: budget.cooldownSeconds,
+            bufferSeconds: budget.bufferSeconds
+        )
     }
 }

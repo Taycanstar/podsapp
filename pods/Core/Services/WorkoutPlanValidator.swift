@@ -16,7 +16,10 @@ struct WorkoutPlanValidator {
     func validate(
         response: NetworkManagerTwo.LLMWorkoutResponse,
         candidateIds: Set<Int>,
-        requestedMuscles: [String]
+        requestedMuscles: [String],
+        fitnessGoal: FitnessGoal,
+        experienceLevel: ExperienceLevel,
+        sessionBudget: TimeEstimator.SessionTimeBudget?
     ) -> [String] {
         var warnings: [String] = []
 
@@ -43,6 +46,22 @@ struct WorkoutPlanValidator {
             if !missing.isEmpty {
                 let musclesList = missing.joined(separator: ", ")
                 warnings.append("Missing requested muscle coverage for \(musclesList)")
+            }
+        }
+
+        if let budget = sessionBudget {
+            let estimator = TimeEstimator.shared
+            let averageSeconds = estimator.averageExerciseSeconds(
+                goal: fitnessGoal,
+                experienceLevel: experienceLevel,
+                format: budget.format
+            )
+            let estimatedSeconds = Int((Double(response.exercises.count) * averageSeconds).rounded())
+
+            if estimatedSeconds > budget.maxWorkSeconds {
+                warnings.append("Estimated session length (~\(estimatedSeconds / 60)m) exceeds budgeted work time of \(budget.maxWorkSeconds / 60)m")
+            } else if estimatedSeconds < Int(Double(budget.availableWorkSeconds) * 0.5) {
+                warnings.append("Plan may underutilize available time (uses ~\(max(1, estimatedSeconds / 60))m of \(max(1, budget.availableWorkSeconds / 60))m budget)")
             }
         }
 

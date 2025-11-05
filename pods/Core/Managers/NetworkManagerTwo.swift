@@ -235,11 +235,23 @@ let baseUrl = "http://172.20.10.4:8000"
         let name: String
     }
 
+    struct LLMSessionBudget: Codable {
+        let format: String
+        let densityHint: String
+        let durationMinutes: Int
+        let availableWorkSeconds: Int
+        let maxWorkSeconds: Int
+        let warmupSeconds: Int
+        let cooldownSeconds: Int
+        let bufferSeconds: Int
+    }
+
     struct LLMWorkoutRequest: Codable {
         let userEmail: String
         let context: WorkoutContextV1
         let candidates: [LLMCandidateExercise]
         let targetExerciseCount: Int
+        let sessionBudget: LLMSessionBudget?
         let requestId: UUID
     }
 

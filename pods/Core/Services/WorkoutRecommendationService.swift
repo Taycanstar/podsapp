@@ -1923,96 +1923,37 @@ class WorkoutRecommendationService {
         fitnessGoal: FitnessGoal,
         muscleGroupCount: Int,
         experienceLevel: ExperienceLevel,
-        equipment: [Equipment]? = nil
+        equipment: [Equipment]? = nil,
+        flexibilityPreferences: FlexibilityPreferences? = nil
     ) -> (total: Int, perMuscle: Int) {
-        let durationMinutes = duration.minutes
-        let timeComponents = calculateTimeComponents(
+        let estimator = TimeEstimator.shared
+        let format = estimator.preferredFormat(duration: duration, goal: fitnessGoal)
+        let budget = estimator.makeSessionBudget(
+            duration: duration,
             fitnessGoal: fitnessGoal,
             experienceLevel: experienceLevel,
-            equipment: equipment
+            preferences: flexibilityPreferences
         )
-        
-        // Calculate available exercise time with research-based warmup/cooldown
-        let warmupMinutes = getOptimalWarmupDuration(durationMinutes)
-        let cooldownMinutes = warmupMinutes
-        let bufferMinutes = Int(Double(durationMinutes) * 0.03) // Single 3% buffer (no double buffering)
-        let availableMinutes = durationMinutes - warmupMinutes - cooldownMinutes - bufferMinutes
-        
-        // Direct calculation using research-based time per exercise
-        let exercisesTotal = Int(Double(availableMinutes) / timeComponents.averageMinutesPerExercise)
-        
-        // Apply research-based constraints (no arbitrary limits)
-        let (minExercises, maxExercises) = getExerciseCountBounds(
-            fitnessGoal: fitnessGoal,
-            durationMinutes: durationMinutes
-        )
-        
-        let finalTotal = min(maxExercises, max(minExercises, exercisesTotal))
-        
-        print("🔍 Exercise calculation: \(availableMinutes)min available, \(String(format: "%.1f", timeComponents.averageMinutesPerExercise))min per exercise = \(exercisesTotal) calculated, bounds=(\(minExercises),\(maxExercises)), final=\(finalTotal)")
-        
-        // Smart distribution: respect time budget over muscle group fairness
-        let (actualTotal, finalPerMuscle): (Int, Int)
-        if finalTotal < muscleGroupCount {
-            // Very short workout: some muscle groups get 0 exercises
-            actualTotal = finalTotal // Use all available exercise slots
-            finalPerMuscle = 1 // 1 per selected muscle group
-        } else {
-            // Normal workout: respect the time budget calculation
-            let exercisesPerMuscle = finalTotal / muscleGroupCount
-            let remainder = finalTotal % muscleGroupCount
-            let perMuscle = max(1, min(4, exercisesPerMuscle))
-            // CRITICAL FIX: Always use the full finalTotal, never reduce it
-            actualTotal = finalTotal // Respect time budget calculation
-            finalPerMuscle = perMuscle // Base exercises per muscle
+        var averageExerciseSeconds = max(45, estimator.averageExerciseSeconds(
+            goal: fitnessGoal,
+            experienceLevel: experienceLevel,
+            format: format
+        ))
+
+        if let equipment, !equipment.isEmpty, equipment.allSatisfy({ $0 == .bodyWeight }) {
+            averageExerciseSeconds *= 0.85
         }
-        
-        print("🎯 Research-based calculation: \(availableMinutes)min available, \(String(format: "%.1f", timeComponents.averageMinutesPerExercise))min per exercise = \(actualTotal) total, \(finalPerMuscle) per muscle")
-        
-        return (total: actualTotal, perMuscle: finalPerMuscle)
-    }
-    
-    /// Calculate time components for exercise planning using Perplexity algorithm
-    private func calculateTimeComponents(
-        fitnessGoal: FitnessGoal,
-        experienceLevel: ExperienceLevel,
-        equipment: [Equipment]? = nil
-    ) -> (averageMinutesPerExercise: Double, restSeconds: Int, setupSeconds: Int) {
-        let userProfile = UserProfileService.shared
-        
-        // Use average exercise type for time estimation (compound exercises are most common)
-        let averageExerciseType = ExerciseCategory.compound
-        
-        // Get parameters using Perplexity algorithm
-        let (sets, reps, restBase, repDuration) = getGoalParameters(
-            fitnessGoal,
-            experienceLevel: experienceLevel,
-            gender: userProfile.gender, 
-            exerciseType: averageExerciseType
-        )
-        
-        // Experience level adjustments are now handled in the algorithm
-        let adjustedRest = restBase
-        
-        // Equipment-based time multipliers from research
-        let equipmentFactor = calculateEquipmentFactor(equipment)
-        
-        // Setup time based on equipment complexity
-        let setupTime = equipmentFactor > 1.1 ? 25 : 
-                       equipmentFactor < 0.9 ? 5 : 15
-        
-        // Calculate total time per exercise using Perplexity research formulas
-        let workingTime = Double(sets * reps * repDuration) / 60.0
-        let restTime = Double((sets - 1) * adjustedRest) / 60.0
-        let setupMinutes = Double(setupTime + 15) / 60.0 // Include transition time
-        
-        let totalMinutes = (workingTime + restTime + setupMinutes) * equipmentFactor
-        
-        return (
-            averageMinutesPerExercise: totalMinutes,
-            restSeconds: adjustedRest,
-            setupSeconds: setupTime
-        )
+
+        var total = Int(Double(budget.availableWorkSeconds) / averageExerciseSeconds)
+        let cap = estimator.exerciseCap(for: duration)
+        let minExercises = estimator.minimumExercises(for: duration, muscleGroupCount: muscleGroupCount)
+        if total == 0 {
+            total = minExercises
+        }
+        total = min(cap, max(minExercises, total))
+        let perMuscle = max(1, total / max(1, muscleGroupCount))
+        print("⏱️ Time-estimated calculation: budget=\(budget.availableWorkSeconds)s avg=\(Int(averageExerciseSeconds))s format=\(format.rawValue) → total=\(total), cap=\(cap), perMuscle=\(perMuscle)")
+        return (total: total, perMuscle: perMuscle)
     }
     
     /// Get research-based parameters using Perplexity algorithm with individual factors
@@ -2218,78 +2159,6 @@ class WorkoutRecommendationService {
         }
         
         return mappedReps
-    }
-    
-    /// Get optimal warmup duration based on workout length research
-    private func getOptimalWarmupDuration(_ workoutMinutes: Int) -> Int {
-        switch workoutMinutes {
-        case 0..<30: return 3  // 10% of short workouts
-        case 30..<45: return 5  // Balanced for medium workouts
-        case 45..<60: return 6  // Optimal for 45-60min sessions
-        case 60..<90: return 7  // Longer warmup for extended sessions
-        default: return 10      // Full warmup for long sessions
-        }
-    }
-    
-    /// Get research-based exercise count bounds for fitness goals
-    private func getExerciseCountBounds(
-        fitnessGoal: FitnessGoal,
-        durationMinutes: Int
-    ) -> (min: Int, max: Int) {
-        let scaleFactor = Double(durationMinutes) / 60.0
-        
-        switch fitnessGoal {
-        case .strength, .powerlifting:
-            // Fewer exercises, longer rest periods required
-            return (
-                min: Int(4 * scaleFactor),
-                max: Int(8 * scaleFactor)
-            )
-        case .hypertrophy:
-            // Moderate volume for muscle growth
-            return (
-                min: Int(5 * scaleFactor),
-                max: Int(10 * scaleFactor)
-            )
-        case .endurance:
-            // Higher exercise count, shorter rest
-            return (
-                min: Int(8 * scaleFactor),
-                max: Int(15 * scaleFactor)
-            )
-        default:
-            // General fitness balanced approach
-            return (
-                min: Int(4 * scaleFactor),
-                max: Int(10 * scaleFactor)
-            )
-        }
-    }
-    
-    /// Calculate equipment factor for time estimation based on research
-    private func calculateEquipmentFactor(_ equipment: [Equipment]?) -> Double {
-        guard let equipment = equipment, !equipment.isEmpty else { return 1.0 }
-        
-        var factor = 0.0
-        var count = 0
-        
-        for equip in equipment {
-            count += 1
-            switch equip {
-            case .barbells:
-                factor += 1.2  // Plate loading time
-            case .dumbbells:
-                factor += 1.0  // Baseline
-            case .cable, .legPress, .latPulldownCable:
-                factor += 1.1  // Pin adjustments
-            case .bodyWeight:
-                factor += 0.8  // No setup required
-            default:
-                factor += 1.0
-            }
-        }
-        
-        return count > 0 ? factor / Double(count) : 1.0
     }
     
     /// Get duration-optimized exercise recommendations
