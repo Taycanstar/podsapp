@@ -224,13 +224,19 @@ class WorkoutRecommendationService {
         // Filter by available equipment (use custom equipment if provided)
         let availableExercises: [ExerciseData]
         if let customEquipment = customEquipment {
+            let allowedSet = equipmentOverrideSet(from: customEquipment)
             availableExercises = typeFilteredExercises.filter { exercise in
-                let allowed = canPerformExerciseWithCustomEquipment(exercise, equipment: customEquipment)
-                if !allowed {
-                    logFilterRejection(exercise, reason: "session_equipment")
-                }
-                return allowed
+                let (canPerform, missing, required) = canPerformExerciseWithCustomEquipment(exercise, allowedEquipment: allowedSet)
+                if !canPerform {
+            logFilterRejection(exercise, reason: "session_equipment")
+#if DEBUG
+            if !missing.isEmpty {
+                print("🚫 Session equipment filter dropped \(exercise.name) requires \(describeEquipmentSet(required)) missing \(describeEquipmentSet(missing)) (allowed \(describeEquipmentSet(allowedSet)))")
             }
+#endif
+        }
+        return canPerform
+    }
             print("🧮 \(muscleGroup): after session equipment filter \(availableExercises.count)")
         } else {
             availableExercises = typeFilteredExercises.filter { exercise in
@@ -244,12 +250,26 @@ class WorkoutRecommendationService {
         }
         
         // Filter out avoided exercises
-        let filteredExercises = availableExercises.filter { exercise in
+        var filteredExercises = availableExercises.filter { exercise in
             if userProfile.avoidedExercises.contains(exercise.id) {
                 logFilterRejection(exercise, reason: "user_avoided")
                 return false
             }
             return true
+        }
+
+        if filteredExercises.count < count {
+            let allowedSet = customEquipment != nil
+                ? equipmentOverrideSet(from: customEquipment!)
+                : equipmentOverrideSet(from: userProfile.availableEquipment)
+            filteredExercises = augmentWithFallbacks(
+                basePool: typeFilteredExercises,
+                current: filteredExercises,
+                allowedEquipment: allowedSet,
+                avoidedIds: Set(userProfile.avoidedExercises),
+                recoveryPercentage: recoveryPercentage,
+                desiredCount: count
+            )
         }
         
         // Prioritize exercises based on user preferences, experience, and recovery
@@ -263,12 +283,15 @@ class WorkoutRecommendationService {
     }
     
     // Helper method to check if exercise can be performed with custom equipment
-    private func canPerformExerciseWithCustomEquipment(_ exercise: ExerciseData, equipment: [Equipment]) -> Bool {
-        let required = ExerciseEquipmentResolver.shared.equipment(for: exercise)
-        var allowed = equipment.isEmpty ? Set([.bodyWeight]) : Set(equipment)
+    private func canPerformExerciseWithCustomEquipment(_ exercise: ExerciseData, allowedEquipment: Set<Equipment>) -> (Bool, Set<Equipment>, Set<Equipment>) {
+        var allowed = allowedEquipment
         allowed.insert(.bodyWeight)
-
-        return !required.isDisjoint(with: allowed)
+        let required = ExerciseEquipmentResolver.shared.equipment(for: exercise)
+        if required.isEmpty {
+            return (true, [], required)
+        }
+        let missing = required.subtracting(allowed)
+        return (missing.isEmpty, missing, required)
     }
 
     private func logFilterRejection(_ exercise: ExerciseData, reason: String) {
@@ -350,6 +373,48 @@ class WorkoutRecommendationService {
         let exerciseEquipment = exercise.equipment.lowercased()
         return exerciseName.contains("seated row") &&
                (exerciseEquipment.contains("leverage") || exerciseEquipment.contains("machine"))
+    }
+
+    private func equipmentOverrideSet(from equipment: [Equipment]) -> Set<Equipment> {
+        if equipment.isEmpty {
+            return [.bodyWeight]
+        }
+        var allowed = Set(equipment)
+        allowed.insert(.bodyWeight)
+        return allowed
+    }
+
+    private func describeEquipmentSet(_ equipment: Set<Equipment>) -> String {
+        guard !equipment.isEmpty else { return "[]" }
+        return "[" + equipment.map { $0.rawValue }.sorted().joined(separator: ", ") + "]"
+    }
+
+    private func augmentWithFallbacks(
+        basePool: [ExerciseData],
+        current: [ExerciseData],
+        allowedEquipment: Set<Equipment>,
+        avoidedIds: Set<Int>,
+        recoveryPercentage: Double,
+        desiredCount: Int
+    ) -> [ExerciseData] {
+        var augmented = current
+        guard augmented.count < desiredCount else { return augmented }
+
+        let alreadySelected = Set(augmented.map { $0.id })
+        let supplementalCandidates = basePool.filter { exercise in
+            guard !alreadySelected.contains(exercise.id),
+                  !avoidedIds.contains(exercise.id) else { return false }
+            let required = ExerciseEquipmentResolver.shared.equipment(for: exercise)
+            return required.subtracting(allowedEquipment.union([.bodyWeight])).isEmpty
+        }
+
+        guard !supplementalCandidates.isEmpty else { return augmented }
+
+        let prioritized = prioritizeExercises(supplementalCandidates, recoveryPercentage: recoveryPercentage, maxCount: desiredCount)
+        for exercise in prioritized where augmented.count < desiredCount {
+            augmented.append(exercise)
+        }
+        return augmented
     }
     
     // MARK: - Flexibility Exercise Filtering

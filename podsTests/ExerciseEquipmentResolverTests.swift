@@ -41,6 +41,24 @@ final class ExerciseEquipmentResolverTests: XCTestCase {
         XCTAssertTrue(equipment.contains(.smithMachine), "Smith variations must require the Smith Machine")
     }
 
+    func testUserProfileRequiresAllEquipmentPieces() {
+        let service = UserProfileService.shared
+        let originalEquipment = service.availableEquipment
+        let originalBodyweight = service.bodyweightOnlyWorkouts
+
+        let landmine = makeExercise(name: "Landmine Rear Lunge", equipment: "")
+
+        service.bodyweightOnlyWorkouts = false
+        service.availableEquipment = [.squatRack]
+        XCTAssertFalse(service.canPerformExercise(landmine), "Should reject when barbell is missing even if squat rack is owned")
+
+        service.availableEquipment = [.squatRack, .barbells]
+        XCTAssertTrue(service.canPerformExercise(landmine), "Should allow when all required equipment is present")
+
+        service.availableEquipment = originalEquipment
+        service.bodyweightOnlyWorkouts = originalBodyweight
+    }
+
     private func makeExercise(
         id: Int = 1,
         name: String,

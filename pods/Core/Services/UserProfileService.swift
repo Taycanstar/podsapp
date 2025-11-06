@@ -1078,8 +1078,9 @@ class UserProfileService: ObservableObject {
         }
 
         guard !equipmentNeeded.isEmpty else { return true }
-        let owned = Set(availableEquipment)
-        return !equipmentNeeded.isDisjoint(with: owned)
+        var owned = Set(availableEquipment)
+        owned.insert(.bodyWeight)
+        return equipmentNeeded.isSubset(of: owned)
     }
     
     private func mapExerciseToEquipment(_ exercise: ExerciseData) -> [Equipment] {
