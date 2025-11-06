@@ -676,6 +676,19 @@ class WorkoutManager: ObservableObject {
         saveSessionData()
     }
 
+    /// Set session-only equipment selection (temporary override)
+    func setSessionEquipment(_ equipment: [Equipment], type: String) {
+        customEquipment = equipment
+        selectedEquipmentType = type
+
+        print("🧰 Session equipment override → \(equipment.map { $0.rawValue }), type=\(type)")
+
+        let rawEquipment = equipment.map { $0.rawValue }
+        UserDefaults.standard.set(rawEquipment, forKey: profileScopedKey(sessionCustomEquipmentKey))
+        UserDefaults.standard.set(type, forKey: profileScopedKey(sessionEquipmentTypeKey))
+        saveSessionData()
+    }
+
     /// Set default muscle selection (permanent preference)
     func setDefaultMuscleSelection(type: String, muscles: [String]) {
         customTargetMuscles = nil
@@ -2837,6 +2850,12 @@ class WorkoutManager: ObservableObject {
         guard !muscleGroups.isEmpty else {
             throw WorkoutGenerationError.noMuscleGroups
         }
+
+        if let override = parameters.customEquipment {
+            print("🧰 createIntelligentWorkout using session equipment override: \(override.map { $0.rawValue })")
+        } else {
+            print("🧰 createIntelligentWorkout using profile equipment (no session override)")
+        }
         
         // Delegate to sophisticated WorkoutGenerationService
         var workoutPlan = try workoutGenerationService.generateWorkoutPlan(
@@ -3434,6 +3453,19 @@ class WorkoutManager: ObservableObject {
             sessionFlexibilityPreferences = flexibility
         }
 
+        if let sessionDate = UserDefaults.standard.object(forKey: profileScopedKey(sessionDateKey)) as? Date,
+           Calendar.current.isDateInToday(sessionDate),
+           let savedEquipment = UserDefaults.standard.array(forKey: profileScopedKey(sessionCustomEquipmentKey)) as? [String] {
+            let resolved = savedEquipment.compactMap { Equipment(rawValue: $0) }
+            customEquipment = resolved
+            if let equipmentType = UserDefaults.standard.string(forKey: profileScopedKey(sessionEquipmentTypeKey)), !equipmentType.isEmpty {
+                selectedEquipmentType = equipmentType
+            }
+            print("📦 Restored session equipment override → \(resolved.map { $0.rawValue }), type=\(selectedEquipmentType)")
+        } else {
+            print("📦 No session equipment override found for today (using profile defaults)")
+        }
+
         // Load rest timer session settings (same-day)
         if let sessionDate = UserDefaults.standard.object(forKey: profileScopedKey(sessionDateKey)) as? Date,
            Calendar.current.isDateInToday(sessionDate) {
@@ -3466,6 +3498,15 @@ class WorkoutManager: ObservableObject {
         if let flexibility = sessionFlexibilityPreferences,
            let data = try? JSONEncoder().encode(flexibility) {
             UserDefaults.standard.set(data, forKey: profileScopedKey(sessionFlexibilityKey))
+        }
+
+        if let equipment = customEquipment {
+            let raw = equipment.map { $0.rawValue }
+            UserDefaults.standard.set(raw, forKey: profileScopedKey(sessionCustomEquipmentKey))
+            UserDefaults.standard.set(selectedEquipmentType, forKey: profileScopedKey(sessionEquipmentTypeKey))
+        } else {
+            UserDefaults.standard.removeObject(forKey: profileScopedKey(sessionCustomEquipmentKey))
+            UserDefaults.standard.removeObject(forKey: profileScopedKey(sessionEquipmentTypeKey))
         }
 
         // Persist rest timer settings

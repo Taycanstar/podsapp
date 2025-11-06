@@ -12,7 +12,11 @@ struct ExerciseEquipmentResolver {
             return override
         }
         var normalized = parseEquipmentColumn(exercise.equipment)
-        normalized.formUnion(heuristics(for: exercise))
+        let heuristicMatches = heuristics(for: exercise)
+        if !heuristicMatches.isEmpty {
+            debugLog("🔧 EquipmentResolver: inferred \(heuristicMatches.map { $0.rawValue }) for \(exercise.name)")
+        }
+        normalized.formUnion(heuristicMatches)
         if normalized.isEmpty {
             normalized.insert(.bodyWeight)
         }
@@ -85,12 +89,27 @@ struct ExerciseEquipmentResolver {
         var matches: Set<Equipment> = []
         let name = exercise.name.lowercased()
 
+        if name.contains("lever ") || name.hasPrefix("lever") || name.contains("plate loaded") {
+            matches.insert(.hammerstrengthMachine)
+        }
         if name.contains("landmine") {
             matches.insert(.barbells)
             matches.insert(.squatRack)
         }
         if name.contains("trap bar") || name.contains("hex bar") {
             matches.insert(.barbells)
+        }
+        if name.contains("barbell") {
+            matches.insert(.barbells)
+        }
+        if name.contains("dumbbell") {
+            matches.insert(.dumbbells)
+        }
+        if name.contains("kettlebell") {
+            matches.insert(.kettlebells)
+        }
+        if name.contains("cable") {
+            matches.insert(.cable)
         }
         if name.contains("smith") {
             matches.insert(.smithMachine)
@@ -156,5 +175,11 @@ struct ExerciseEquipmentResolver {
         default:
             return nil
         }
+    }
+
+    private func debugLog(_ message: String) {
+        #if DEBUG
+        print(message)
+        #endif
     }
 }

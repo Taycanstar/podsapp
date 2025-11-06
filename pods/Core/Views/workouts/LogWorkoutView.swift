@@ -476,16 +476,8 @@ struct LogWorkoutView: View {
     private var equipmentPickerSheet: some View {
         EquipmentView(onSelectionChanged: { newEquipment, equipmentType in
                 // Save custom equipment selection and type, regenerate workout
-                workoutManager.customEquipment = newEquipment
-                workoutManager.selectedEquipmentType = equipmentType
-                
-                // Persist to UserDefaults (WorkoutManager handles this)
-                let equipmentStrings = newEquipment.map { $0.rawValue }
-                let equipmentKey = UserProfileService.shared.scopedDefaultsKey("currentWorkoutCustomEquipment")
-                let typeKey = UserProfileService.shared.scopedDefaultsKey("currentWorkoutEquipmentType")
-                UserDefaults.standard.set(equipmentStrings, forKey: equipmentKey)
-                UserDefaults.standard.set(equipmentType, forKey: typeKey)
-                
+                workoutManager.setSessionEquipment(newEquipment, type: equipmentType)
+
                 print("⚙️ Selected equipment: \(newEquipment.map { $0.rawValue }), type: \(equipmentType)")
                 showingEquipmentPicker = false
                 

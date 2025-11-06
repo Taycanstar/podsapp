@@ -26,6 +26,21 @@ final class ExerciseEquipmentResolverTests: XCTestCase {
         XCTAssertTrue(equipment.contains(.medicineBalls), "Medicine ball work should require medicine ball equipment")
     }
 
+    func testLandmineExercisesRequireBarbellAndRack() {
+        let landmineLunge = makeExercise(name: "Landmine Rear Lunge", equipment: "")
+        let equipment = resolver.equipment(for: landmineLunge)
+
+        XCTAssertTrue(equipment.contains(.barbells), "Landmine work must flag the barbell requirement")
+        XCTAssertTrue(equipment.contains(.squatRack), "Landmine work should also require a squat rack/anchor point")
+    }
+
+    func testSmithMachineExercisesRequireSmithMachine() {
+        let smithRow = makeExercise(name: "Smith Bent Over Row", equipment: "")
+        let equipment = resolver.equipment(for: smithRow)
+
+        XCTAssertTrue(equipment.contains(.smithMachine), "Smith variations must require the Smith Machine")
+    }
+
     private func makeExercise(
         id: Int = 1,
         name: String,

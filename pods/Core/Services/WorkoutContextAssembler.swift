@@ -28,6 +28,11 @@ struct WorkoutContextAssembler {
     ) -> WorkoutContextV1 {
         let profile = userProfileService
 
+        let resolvedEquipment = equipmentOverride ?? profile.availableEquipment
+        let equipmentSource = equipmentOverride == nil ? "profile" : "session_override"
+        let equipmentSummary = resolvedEquipment.isEmpty ? "[bodyweight-only]" : resolvedEquipment.map { $0.rawValue }.joined(separator: ", ")
+        print("🧾 WorkoutContextAssembler: using \(equipmentSource) equipment → \(equipmentSummary)")
+
         let userSection = WorkoutContextV1.UserSection(
             email: userEmail,
             fitnessGoal: profile.fitnessGoal.normalized,
@@ -39,9 +44,16 @@ struct WorkoutContextAssembler {
             timezoneOffsetMinutes: TimeZone.current.secondsFromGMT() / 60
         )
 
+        let effectiveBodyweightOnly: Bool = {
+            if let override = equipmentOverride {
+                return override.isEmpty
+            }
+            return profile.bodyweightOnlyWorkouts
+        }()
+
         let preferences = WorkoutContextV1.PreferenceSection(
-            availableEquipment: [],
-            bodyweightOnly: profile.bodyweightOnlyWorkouts,
+            availableEquipment: resolvedEquipment,
+            bodyweightOnly: effectiveBodyweightOnly,
             dislikes: profile.avoidedExercises,
             preferredExerciseTypes: profile.preferredExerciseTypes,
             injuriesOrLimitations: [], // Placeholder until onboarding captures injuries explicitly
@@ -54,7 +66,7 @@ struct WorkoutContextAssembler {
         let constraintSection = WorkoutContextV1.ConstraintSection(
             requestedMuscles: requestedMuscles,
             requestedDurationMinutes: duration.minutes,
-            availableEquipment: [],
+            availableEquipment: resolvedEquipment,
             seed: UUID(),
             generatedAt: Date(),
             sessionPhase: sessionPhase,
@@ -77,6 +89,7 @@ struct WorkoutContextAssembler {
         )
 
         repository.saveContext(context, for: userEmail)
+        print("🧾 WorkoutContextAssembler: persisted context for \(userEmail) with \(resolvedEquipment.count) equipment entries")
         return context
     }
 

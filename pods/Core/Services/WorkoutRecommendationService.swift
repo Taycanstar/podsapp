@@ -151,6 +151,7 @@ class WorkoutRecommendationService {
         let muscleExercises = allExercises.filter { exercise in
             exerciseMatchesMuscle(exercise, muscleGroup: muscleGroup)
         }
+        print("🧮 \(muscleGroup): initial pool \(muscleExercises.count) exercises")
         
         print("🎯 Smart muscle filtering for '\(muscleGroup)': Found \(muscleExercises.count) exercises out of \(allExercises.count) total")
         
@@ -184,6 +185,7 @@ class WorkoutRecommendationService {
             muscleGroup: muscleGroup,
             desiredCount: count
         )
+        print("✅ \(muscleGroup): returning \(min(count, variabilityAdjusted.count)) exercises after filtering")
         return Array(variabilityAdjusted.prefix(count))
     }
 
@@ -221,7 +223,7 @@ class WorkoutRecommendationService {
         
         // Filter by available equipment (use custom equipment if provided)
         let availableExercises: [ExerciseData]
-        if let customEquipment = customEquipment, !customEquipment.isEmpty {
+        if let customEquipment = customEquipment {
             availableExercises = typeFilteredExercises.filter { exercise in
                 let allowed = canPerformExerciseWithCustomEquipment(exercise, equipment: customEquipment)
                 if !allowed {
@@ -229,6 +231,7 @@ class WorkoutRecommendationService {
                 }
                 return allowed
             }
+            print("🧮 \(muscleGroup): after session equipment filter \(availableExercises.count)")
         } else {
             availableExercises = typeFilteredExercises.filter { exercise in
                 let allowed = userProfile.canPerformExercise(exercise)
@@ -237,6 +240,7 @@ class WorkoutRecommendationService {
                 }
                 return allowed
             }
+            print("🧮 \(muscleGroup): after profile equipment filter \(availableExercises.count)")
         }
         
         // Filter out avoided exercises
@@ -261,8 +265,9 @@ class WorkoutRecommendationService {
     // Helper method to check if exercise can be performed with custom equipment
     private func canPerformExerciseWithCustomEquipment(_ exercise: ExerciseData, equipment: [Equipment]) -> Bool {
         let required = ExerciseEquipmentResolver.shared.equipment(for: exercise)
-        guard !required.isEmpty else { return true }
-        let allowed = Set(equipment)
+        var allowed = equipment.isEmpty ? Set([.bodyWeight]) : Set(equipment)
+        allowed.insert(.bodyWeight)
+
         return !required.isDisjoint(with: allowed)
     }
 

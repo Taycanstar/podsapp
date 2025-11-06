@@ -66,6 +66,7 @@ class WorkoutGenerationService {
             sessionPhase: SessionPhase.alignedWith(fitnessGoal: fitnessGoal),
             flexibilityPreferences: flexibilityPreferences
         )
+        print("🧾 Context equipment preview → preferences=\(context.preferences.availableEquipment.map { $0.rawValue }) constraints=\(context.constraints.availableEquipment.map { $0.rawValue })")
 
         if let llmPlan = attemptLLMPlan(
             userEmail: userEmail,
@@ -82,7 +83,17 @@ class WorkoutGenerationService {
             return llmPlan
         }
 
-        throw WorkoutGenerationError.generationFailed("Unable to generate AI workout")
+        WorkoutGenerationTelemetry.record(.llmFallbackUsed, metadata: ["reason": "llm_unavailable_or_invalid"])
+        return try generateResearchBackedPlan(
+            muscleGroups: muscleGroups,
+            targetDuration: targetDuration,
+            fitnessGoal: fitnessGoal,
+            experienceLevel: experienceLevel,
+            customEquipment: customEquipment,
+            flexibilityPreferences: flexibilityPreferences,
+            optimalExerciseCount: optimalExerciseCount,
+            sessionBudget: sessionBudget
+        )
     }
 
     /// Deterministic fallback workout generator that uses the research-based algorithm.
@@ -230,6 +241,7 @@ class WorkoutGenerationService {
     ) -> [NetworkManagerTwo.LLMCandidateExercise] {
         var pool: [NetworkManagerTwo.LLMCandidateExercise] = []
         var seen = Set<Int>()
+        print("📦 Building candidate pool with equipment=\(describeEquipment(customEquipment))")
         for muscle in muscles {
             let recommendations = recommendationService.getRecommendedExercises(
                 for: muscle,
@@ -241,6 +253,11 @@ class WorkoutGenerationService {
             let supported = recommendations.filter {
                 isExerciseSupported($0, customEquipment: customEquipment)
             }
+            let filteredCount = recommendations.count - supported.count
+            if filteredCount > 0 {
+                print("⚠️ \(muscle): filtered \(filteredCount) exercises due to equipment override")
+            }
+            print("⚙️ \(muscle): kept \(supported.count)/\(recommendations.count) candidates")
 
             for exercise in supported where !seen.contains(exercise.id) {
                 seen.insert(exercise.id)
@@ -252,6 +269,7 @@ class WorkoutGenerationService {
             }
         }
 
+        print("📦 Candidate pool size=\(pool.count) (equipment=\(describeEquipment(customEquipment)))")
         return pool
     }
 
@@ -647,13 +665,42 @@ class WorkoutGenerationService {
     }
 
     private func isExerciseSupported(_ exercise: ExerciseData, customEquipment: [Equipment]?) -> Bool {
-        if let customEquipment, !customEquipment.isEmpty {
-            let required = ExerciseEquipmentResolver.shared.equipment(for: exercise)
-            guard !required.isEmpty else { return true }
-            let allowed = Set(customEquipment)
-            return !required.isDisjoint(with: allowed)
+        if let overrideSet = equipmentOverrideSet(from: customEquipment) {
+            var required = ExerciseEquipmentResolver.shared.equipment(for: exercise)
+            if required.isEmpty {
+                required.insert(.bodyWeight)
+            }
+            let missing = required.subtracting(overrideSet)
+            if !missing.isEmpty {
+                print("🚫 Filtered \(exercise.name) requires \(describeEquipmentSet(required)) but available session equipment is \(describeEquipmentSet(overrideSet)). Missing: \(describeEquipmentSet(missing))")
+                return false
+            }
+            return true
         }
         return UserProfileService.shared.canPerformExercise(exercise)
+    }
+
+    private func equipmentOverrideSet(from customEquipment: [Equipment]?) -> Set<Equipment>? {
+        guard let customEquipment else { return nil }
+        if customEquipment.isEmpty {
+            return [.bodyWeight]
+        }
+        var allowed = Set(customEquipment)
+        allowed.insert(.bodyWeight)
+        return allowed
+    }
+
+    private func describeEquipment(_ customEquipment: [Equipment]?) -> String {
+        guard let customEquipment else { return "profile-default" }
+        if customEquipment.isEmpty {
+            return "[bodyweight-only]"
+        }
+        return customEquipment.map { $0.rawValue }.joined(separator: ", ")
+    }
+    
+    private func describeEquipmentSet(_ equipment: Set<Equipment>) -> String {
+        if equipment.isEmpty { return "[]" }
+        return "[" + equipment.map { $0.rawValue }.sorted().joined(separator: ", ") + "]"
     }
 
     private func volumeMultiplier(for recovery: Double) -> Double {
