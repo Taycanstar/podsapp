@@ -182,7 +182,7 @@ class WorkoutGenerationService {
                 WorkoutGenerationTelemetry.record(.planValidationWarning, metadata: ["message": $0])
             }
 
-            let mappedExercises = convertLLMResponse(response, fitnessGoal: fitnessGoal)
+            let mappedExercises = convertLLMResponse(response, fitnessGoal: fitnessGoal, customEquipment: customEquipment)
             guard !mappedExercises.isEmpty else {
                 WorkoutGenerationTelemetry.record(.llmFallbackUsed, metadata: ["reason": "llm_returned_no_valid_exercises"])
                 return nil
@@ -238,7 +238,11 @@ class WorkoutGenerationService {
                 flexibilityPreferences: flexibilityPreferences
             )
 
-            for exercise in recommendations where !seen.contains(exercise.id) {
+            let supported = recommendations.filter {
+                isExerciseSupported($0, customEquipment: customEquipment)
+            }
+
+            for exercise in supported where !seen.contains(exercise.id) {
                 seen.insert(exercise.id)
                 let candidate = NetworkManagerTwo.LLMCandidateExercise(
                     exerciseId: exercise.id,
@@ -251,7 +255,11 @@ class WorkoutGenerationService {
         return pool
     }
 
-    private func convertLLMResponse(_ response: NetworkManagerTwo.LLMWorkoutResponse, fitnessGoal: FitnessGoal) -> [TodayWorkoutExercise] {
+    private func convertLLMResponse(
+        _ response: NetworkManagerTwo.LLMWorkoutResponse,
+        fitnessGoal: FitnessGoal,
+        customEquipment: [Equipment]?
+    ) -> [TodayWorkoutExercise] {
         var mapped: [TodayWorkoutExercise] = []
 
         for spec in response.exercises {
@@ -282,7 +290,16 @@ class WorkoutGenerationService {
             mapped.append(todayExercise)
         }
 
-        return mapped
+        let filtered = mapped.filter { isExerciseSupported($0.exercise, customEquipment: customEquipment) }
+        let droppedCount = mapped.count - filtered.count
+        if droppedCount > 0 {
+            WorkoutGenerationTelemetry.record(.planValidationWarning, metadata: [
+                "message": "llm_exercises_filtered",
+                "dropped": droppedCount
+            ])
+        }
+
+        return filtered
     }
 
     private func resolveUserEmail() -> String? {

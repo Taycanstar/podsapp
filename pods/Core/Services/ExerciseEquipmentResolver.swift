@@ -45,15 +45,15 @@ struct ExerciseEquipmentResolver {
                 matches.insert(.smithMachine)
             case "lever", "leverage machine":
                 matches.insert(.hammerstrengthMachine)
-            case "resistance bands", "band":
+            case "resistance bands", "band", "elastic band":
                 matches.insert(.resistanceBands)
             case "medicine ball":
                 matches.insert(.medicineBalls)
-            case "stability ball":
+            case "stability ball", "swiss ball", "exercise ball":
                 matches.insert(.stabilityBall)
             case "sled":
                 matches.insert(.sled)
-            case "ez bar", "ez-bar":
+            case "ez bar", "ez-bar", "ezbar":
                 matches.insert(.ezBar)
             case "pull up bar", "pullup bar":
                 matches.insert(.pullupBar)
@@ -63,6 +63,16 @@ struct ExerciseEquipmentResolver {
                 matches.insert(.latPulldownCable)
             case "leg press":
                 matches.insert(.legPress)
+            case "flat bench", "bench":
+                matches.insert(.flatBench)
+            case "incline bench":
+                matches.insert(.inclineBench)
+            case "decline bench":
+                matches.insert(.declineBench)
+            case "preacher bench":
+                matches.insert(.preacherCurlBench)
+            case "pvc", "pvc pipe", "dowel":
+                matches.insert(.pvc)
             default:
                 break
             }
@@ -94,6 +104,41 @@ struct ExerciseEquipmentResolver {
         if name.contains("band") && exercise.equipment.isEmpty {
             matches.insert(.resistanceBands)
         }
+        if name.contains("medicine ball") {
+            matches.insert(.medicineBalls)
+        }
+        if name.contains("pvc") || name.contains("dowel") {
+            matches.insert(.pvc)
+        }
+
+        func inferBenchEquipment() {
+            if name.contains("preacher") {
+                matches.insert(.preacherCurlBench)
+            } else if name.contains("incline") {
+                matches.insert(.inclineBench)
+            } else if name.contains("decline") {
+                matches.insert(.declineBench)
+            } else {
+                matches.insert(.flatBench)
+            }
+        }
+
+        if name.contains("bench") {
+            inferBenchEquipment()
+        }
+        if name.contains("flye") || name.contains("fly") {
+            if name.contains("incline") {
+                matches.insert(.inclineBench)
+            } else if name.contains("decline") {
+                matches.insert(.declineBench)
+            } else if name.contains("bench") {
+                inferBenchEquipment()
+            }
+        }
+        if name.contains("step-up") || name.contains("step up") || name.contains("box jump") {
+            matches.insert(.box)
+        }
+
         if name.contains("machine") && matches.isEmpty {
             matches.insert(.hammerstrengthMachine)
         }
