@@ -38,6 +38,10 @@ class WorkoutGenerationService {
         customEquipment: [Equipment]?,
         flexibilityPreferences: FlexibilityPreferences
     ) throws -> WorkoutPlan {
+        guard let userEmail = resolveUserEmail() else {
+            throw WorkoutGenerationError.noUserEmail
+        }
+
         let optimalExerciseCount = recommendationService.getOptimalExerciseCount(
             duration: targetDuration,
             fitnessGoal: fitnessGoal,
@@ -47,16 +51,15 @@ class WorkoutGenerationService {
             flexibilityPreferences: flexibilityPreferences
         )
 
-        var sessionBudget = TimeEstimator.shared.makeSessionBudget(
+        let sessionBudget = TimeEstimator.shared.makeSessionBudget(
             duration: targetDuration,
             fitnessGoal: fitnessGoal,
             experienceLevel: experienceLevel,
             preferences: flexibilityPreferences
         )
 
-        let userEmail = resolveUserEmail()
         let context = contextAssembler.assembleContext(
-            userEmail: userEmail ?? "",
+            userEmail: userEmail,
             requestedMuscles: muscleGroups,
             duration: targetDuration,
             equipmentOverride: customEquipment,
@@ -64,36 +67,22 @@ class WorkoutGenerationService {
             flexibilityPreferences: flexibilityPreferences
         )
 
-        if let email = userEmail,
-           let llmPlan = attemptLLMPlan(
-                userEmail: email,
-                context: context,
-                muscleGroups: muscleGroups,
-                targetDuration: targetDuration,
-                fitnessGoal: fitnessGoal,
-                optimalExerciseCount: optimalExerciseCount,
-                customEquipment: customEquipment,
-                flexibilityPreferences: flexibilityPreferences,
-                experienceLevel: experienceLevel,
-                sessionBudget: sessionBudget
-           ) {
-            return llmPlan
-        }
-
-        if userEmail == nil {
-            WorkoutGenerationTelemetry.record(.llmFallbackUsed, metadata: ["reason": "missing_email"])
-        }
-
-        return try generateResearchBackedPlan(
+        if let llmPlan = attemptLLMPlan(
+            userEmail: userEmail,
+            context: context,
             muscleGroups: muscleGroups,
             targetDuration: targetDuration,
             fitnessGoal: fitnessGoal,
-            experienceLevel: experienceLevel,
+            optimalExerciseCount: optimalExerciseCount,
             customEquipment: customEquipment,
             flexibilityPreferences: flexibilityPreferences,
-            optimalExerciseCount: optimalExerciseCount,
+            experienceLevel: experienceLevel,
             sessionBudget: sessionBudget
-        )
+        ) {
+            return llmPlan
+        }
+
+        throw WorkoutGenerationError.generationFailed("Unable to generate AI workout")
     }
 
     /// Deterministic fallback workout generator that uses the research-based algorithm.
@@ -127,8 +116,7 @@ class WorkoutGenerationService {
             experienceLevel: experienceLevel,
             sessionBudget: &mutableBudget
         )
-        let userProfile = UserProfileService.shared
-        exercises = exercises.filter { userProfile.canPerformExercise($0.exercise) }
+        exercises = exercises.filter { isExerciseSupported($0.exercise, customEquipment: customEquipment) }
 
         let totalExerciseSeconds = TimeEstimator.shared.totalSeconds(
             for: exercises,
@@ -639,6 +627,16 @@ class WorkoutGenerationService {
             // Recovery under 30%: still allocate a small weight so we never zero-out an entire workout
             return 0.1
         }
+    }
+
+    private func isExerciseSupported(_ exercise: ExerciseData, customEquipment: [Equipment]?) -> Bool {
+        if let customEquipment, !customEquipment.isEmpty {
+            let required = ExerciseEquipmentResolver.shared.equipment(for: exercise)
+            guard !required.isEmpty else { return true }
+            let allowed = Set(customEquipment)
+            return !required.isDisjoint(with: allowed)
+        }
+        return UserProfileService.shared.canPerformExercise(exercise)
     }
 
     private func volumeMultiplier(for recovery: Double) -> Double {

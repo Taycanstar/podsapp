@@ -101,7 +101,7 @@ struct WorkoutContextV1: Codable {
 
     let user: UserSection
     let preferences: PreferenceSection
-    let recovery: RecoverySection
+    let recovery: RecoverySection?
     let history: HistorySection
     let constraints: ConstraintSection
     let metadata: Metadata

@@ -49,14 +49,6 @@ struct WorkoutContextAssembler {
             allowTimedWork: flexibilityPreferences.isEnabled
         )
 
-        let recoverySection = WorkoutContextV1.RecoverySection(
-            muscles: [],
-            readinessScore: nil,
-            hrvScore: nil,
-            sleepHours: nil,
-            lastUpdated: Date()
-        )
-
         let historySection = buildHistorySection(durationMinutes: duration.minutes)
 
         let constraintSection = WorkoutContextV1.ConstraintSection(
@@ -78,7 +70,7 @@ struct WorkoutContextAssembler {
         let context = WorkoutContextV1(
             user: userSection,
             preferences: preferences,
-            recovery: recoverySection,
+            recovery: nil,
             history: historySection,
             constraints: constraintSection,
             metadata: metadata

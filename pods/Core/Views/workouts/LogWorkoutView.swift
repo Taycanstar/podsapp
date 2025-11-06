@@ -75,6 +75,7 @@ struct LogWorkoutView: View {
     @State private var actionError: String?
     
     
+    
     // Properties that delegate to WorkoutManager but are accessed locally
     private var isGeneratingWorkout: Bool {
         workoutManager.isGeneratingWorkout
