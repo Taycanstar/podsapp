@@ -129,6 +129,14 @@ struct ExerciseEquipmentResolver {
         if name.contains("pvc") || name.contains("dowel") {
             matches.insert(.pvc)
         }
+        if name.contains("exercise ball") ||
+            name.contains("stability ball") ||
+            name.contains("swiss ball") ||
+            name.contains("yoga ball") ||
+            name.contains("physio ball") ||
+            name.contains("balance ball") {
+            matches.insert(.stabilityBall)
+        }
 
         func inferBenchEquipment() {
             if name.contains("preacher") {

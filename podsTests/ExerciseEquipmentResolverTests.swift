@@ -59,6 +59,14 @@ final class ExerciseEquipmentResolverTests: XCTestCase {
         service.bodyweightOnlyWorkouts = originalBodyweight
     }
 
+    func testExerciseBallNameMapsToStabilityBall() {
+        let rollOut = makeExercise(name: "Exercise Ball Roll-out", equipment: "")
+        let swissCrunch = makeExercise(name: "Swiss Ball Crunch", equipment: "")
+
+        XCTAssertTrue(resolver.equipment(for: rollOut).contains(.stabilityBall), "Exercise Ball Roll-out should require a stability ball")
+        XCTAssertTrue(resolver.equipment(for: swissCrunch).contains(.stabilityBall), "Swiss Ball Crunch should require a stability ball")
+    }
+
     private func makeExercise(
         id: Int = 1,
         name: String,
