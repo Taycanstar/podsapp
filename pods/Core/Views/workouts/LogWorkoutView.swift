@@ -462,10 +462,6 @@ struct LogWorkoutView: View {
                 print("🎯 Session muscles set to \(newMuscles) for \(split.rawValue)")
                 workoutManager.setSessionTargetMuscles(newMuscles, type: split.rawValue)
                 showingTargetMusclesPicker = false
-
-                Task {
-                    await workoutManager.generateTodayWorkout()
-                }
             },
             currentCustomMuscles: workoutManager.baselineCustomMuscles,
             currentMuscleType: selectedMuscleType
@@ -475,16 +471,11 @@ struct LogWorkoutView: View {
     @ViewBuilder
     private var equipmentPickerSheet: some View {
         EquipmentView(onSelectionChanged: { newEquipment, equipmentType in
-                // Save custom equipment selection and type, regenerate workout
+                // Save custom equipment selection and type
                 workoutManager.setSessionEquipment(newEquipment, type: equipmentType)
 
                 print("⚙️ Selected equipment: \(newEquipment.map { $0.rawValue }), type: \(equipmentType)")
                 showingEquipmentPicker = false
-                
-                // Regenerate workout
-                Task {
-                    await workoutManager.generateTodayWorkout()
-                }
             })
     }
     
@@ -500,18 +491,12 @@ struct LogWorkoutView: View {
                     }
                     
                     showingFitnessGoalPicker = false
-                    Task {
-                        await workoutManager.generateTodayWorkout()
-                    }
                     print("✅ Default fitness goal set to \(newGoal.displayName)")
                 },
                 onSetForWorkout: { newGoal in
                     workoutManager.setSessionFitnessGoal(newGoal)
                     showingFitnessGoalPicker = false
                     
-                    Task {
-                        await workoutManager.generateTodayWorkout()
-                    }
                     print("✅ Session fitness goal set to \(newGoal.displayName)")
                 }
             )
