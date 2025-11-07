@@ -488,18 +488,12 @@ struct LogWorkoutView: View {
                     }
                     
                     showingFitnessLevelPicker = false
-                    Task {
-                        await workoutManager.generateTodayWorkout()
-                    }
                     print("✅ Default fitness level set to \(newLevel.displayName)")
                 },
                 onSetForWorkout: { newLevel in
                     workoutManager.setSessionFitnessLevel(newLevel)
                     showingFitnessLevelPicker = false
                     
-                    Task {
-                        await workoutManager.generateTodayWorkout()
-                    }
                     print("✅ Session fitness level set to \(newLevel.displayName)")
                 }
             )
@@ -528,9 +522,6 @@ struct LogWorkoutView: View {
                                     switch result {
                                     case .success:
                                         showingFlexibilityPicker = false
-                                        Task {
-                                            await workoutManager.generateTodayWorkout()
-                                        }
                                         print("✅ Default flexibility preferences updated")
                                     case .failure(let error):
                                         print("❌ Failed to update flexibility preferences: \(error)")
@@ -540,9 +531,6 @@ struct LogWorkoutView: View {
                         }
                     } else {
                         showingFlexibilityPicker = false
-                        Task {
-                            await workoutManager.generateTodayWorkout()
-                        }
                     }
                 },
                 onSetForWorkout: { warmUp, coolDown in
@@ -550,9 +538,6 @@ struct LogWorkoutView: View {
                     workoutManager.setSessionFlexibilityPreferences(newPrefs)
                     
                     showingFlexibilityPicker = false
-                    Task {
-                        await workoutManager.generateTodayWorkout()
-                    }
                     print("✅ Session flexibility preferences set")
                 }
             )
@@ -572,9 +557,7 @@ struct LogWorkoutView: View {
     
     private func regenerateWorkoutWithNewDuration() {
         print("🔄 Regenerating workout with WorkoutManager")
-        Task {
-            await workoutManager.generateTodayWorkout()
-        }
+        self.requestWorkoutGeneration()
         // Note: shouldRegenerateWorkout is reset by TodayWorkoutView after it triggers generation
     }
     
@@ -735,7 +718,7 @@ struct LogWorkoutView: View {
                 if hasSessionModifications {
                     Button(action: {
                         workoutManager.clearAllSessionOverrides()
-                        Task { await workoutManager.generateTodayWorkout() }
+                        self.requestWorkoutGeneration()
                         print("🔄 Reset to default preferences")
                     }) {
                         Image(systemName: "xmark")
@@ -1077,7 +1060,7 @@ struct LogWorkoutView: View {
                 onPresentLogSheet: onPresentLogSheet,
                 onRefresh: {
                     HapticFeedback.generate()
-                    Task { await workoutManager.generateTodayWorkout() }
+                    self.requestWorkoutGeneration()
                 },
                 onRenameWorkout: {
                     HapticFeedback.generate()
@@ -1497,34 +1480,34 @@ private struct TodayWorkoutView: View {
         .onChange(of: shouldRegenerate) { _, newValue in
             if newValue {
                 // Reset the flag and regenerate workout
-                generateTodayWorkout()
+                requestWorkoutGeneration()
                 shouldRegenerate = false
             }
         }
         .onChange(of: selectedDuration) { _, newDuration in
             // Regenerate workout when duration changes (ensures fresh data)
             print("🔄 Duration changed to \(newDuration.minutes) minutes - regenerating workout")
-            generateTodayWorkout()
+            requestWorkoutGeneration()
         }
         .onChange(of: customTargetMuscles) { _, newMuscles in
             print("🎯 Custom muscles changed to: \(newMuscles?.description ?? "nil") - regenerating workout")
-            generateTodayWorkout()
+            requestWorkoutGeneration()
         }
         .onChange(of: effectiveFlexibilityPreferences) { _, newPreferences in
             print("🧘 Flexibility preferences changed to: warmUp=\(newPreferences.warmUpEnabled), coolDown=\(newPreferences.coolDownEnabled) - regenerating workout")
-            generateTodayWorkout()
+            requestWorkoutGeneration()
         }
         .onChange(of: customEquipment) { _, newEquipment in
             print("⚙️ Custom equipment changed to: \(newEquipment?.description ?? "nil") - regenerating workout") 
-            generateTodayWorkout()
+            requestWorkoutGeneration()
         }
         .onChange(of: effectiveFitnessGoal) { _, newGoal in
             print("🏋️ Fitness goal changed to: \(newGoal.displayName) - regenerating workout")
-            generateTodayWorkout()
+            requestWorkoutGeneration()
         }
         .onChange(of: effectiveFitnessLevel) { _, newLevel in
             print("📈 Fitness level changed to: \(newLevel.displayName) - regenerating workout")
-            generateTodayWorkout()
+            requestWorkoutGeneration()
         }
     }
 
@@ -1550,11 +1533,14 @@ private struct TodayWorkoutView: View {
         }
 
         guard !workoutManager.isGeneratingWorkout else { return }
-        generateTodayWorkout()
+        requestWorkoutGeneration()
     }
     
-    private func generateTodayWorkout() {
-        print("🚀 TodayWorkoutView: Using WorkoutManager to generate workout")
+    private func requestWorkoutGeneration() {
+        guard !workoutManager.isGeneratingWorkout else {
+            print("⏳ TodayWorkoutView: generation already in progress")
+            return
+        }
         Task {
             await workoutManager.generateTodayWorkout()
         }
@@ -4908,7 +4894,7 @@ private struct DynamicSessionPhaseView: View {
         return sessionPhase.contextualDisplayName(for: workoutManager.effectiveFitnessGoal)
     }
     
-    private var phaseDescription: String {
+private var phaseDescription: String {
         switch sessionPhase {
         case .strengthFocus:
             return "Building maximal strength"
@@ -4916,6 +4902,19 @@ private struct DynamicSessionPhaseView: View {
             return "Increasing muscle size"
         case .conditioningFocus:
             return "Improving endurance"
+        }
+    }
+}
+
+private extension LogWorkoutView {
+    func requestWorkoutGeneration() {
+        guard !workoutManager.isGeneratingWorkout else {
+            print("⏳ Skipping requestWorkoutGeneration() – already in progress")
+            return
+        }
+        print("🚀 TodayWorkoutView: Using WorkoutManager to generate workout")
+        Task {
+            await workoutManager.generateTodayWorkout()
         }
     }
 }
