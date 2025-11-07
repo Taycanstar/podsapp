@@ -73,7 +73,8 @@ enum Equipment: String, CaseIterable, Codable {
     case preacherCurlMachine = "Preacher Curl Machine"
     case pvc = "PVC"
     case rings = "Rings"
-    
+    case suspensionTrainer = "TRX"
+
     var category: EquipmentCategory {
         switch self {
         case .dumbbells, .barbells, .kettlebells, .ezBar:
@@ -84,7 +85,7 @@ enum Equipment: String, CaseIterable, Codable {
             return .bodyweight
         case .resistanceBands, .stabilityBall, .medicineBalls, .bosuBalanceTrainer, .pvc:
             return .accessories
-        case .battleRopes, .sled, .squatRack, .box, .platforms, .rings:
+        case .battleRopes, .sled, .squatRack, .box, .platforms, .rings, .suspensionTrainer:
             return .specialty
         }
     }
@@ -132,6 +133,7 @@ enum Equipment: String, CaseIterable, Codable {
         case .preacherCurlMachine: return "preachercurlmachine"
         case .pvc: return "pvc"
         case .rings: return "rrings"
+        case .suspensionTrainer: return "trx"
         }
     }
 }

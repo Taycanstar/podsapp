@@ -487,10 +487,10 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 0796,Standing Wheel Rollout,Strength,Waist,Body weight,Male,,,,,strength
 0798,Stationary Bike Walk,Aerobic,Cardio,Hammerstrength Machine,Male,,,,,cardio
 0803,Superman Push-up,Strength,Chest,Body weight,Male,,,,,strength
-0805,Suspender Abdominal Fallout,Strength,Waist,TRX,Male,,,,,strength
-0806,Suspender Push-up,Strength,Chest,TRX,Male,,,,,strength
-0807,Suspender Reverse Crunch,Strength,Waist,TRX,Male,,,,,strength
-0808,Suspender Row,Strength,Back,TRX,Male,,,,,strength
+0805,Suspender Abdominal Fallout,Strength,Waist,Suspension Trainer,Male,,,,,strength
+0806,Suspender Push-up,Strength,Chest,Suspension Trainer,Male,,,,,strength
+0807,Suspender Reverse Crunch,Strength,Waist,Suspension Trainer,Male,,,,,strength
+0808,Suspender Row,Strength,Back,Suspension Trainer,Male,,,,,strength
 0809,Suspended Split Squat,Strength,Thighs,Body weight,Male,"Gluteus Maximus, Quadriceps","Adductor Magnus, Soleus",,,strength
 0811,Trap Bar Deadlift,Strength,Thighs,Barbells,Male,,,,,strength
 0812,Triceps Dip (bench leg),Strength,Upper Arms,Body weight,Male,,,,,strength
@@ -914,7 +914,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 1814,Elbow Flexor Stretch,Stretching,Upper Arms,Body weight,Male,,,,,mobility
 1816,Extension Of Arms In Vertical Stretch,Stretching,Upper Arms,Body weight,Male,,,,,mobility
 1817,Arms Stretch On a Support,Stretching,Upper Arms,Body weight,Male,,,,,mobility
-1818,Suspender Bar Suspension Stretch,Stretching,Upper Arms,TRX,Male,,,,,mobility
+1818,Suspender Bar Suspension Stretch,Stretching,Upper Arms,Suspension Trainer,Male,,,,,mobility
 1821,Elbow Extension And Supination   Pronation Forearm Stretch,Stretching,Upper Arms,Body weight,Male,,,,,mobility
 1826,Finger Flexor Stretch,Stretching,Forearms,Body weight,Male,,,,,mobility
 1831,Rotating Neck Stretch,Stretching,Neck,Body weight,Male,,,,,mobility
@@ -1570,7 +1570,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 4090,Landmine Sumo Squat,Strength,Hips,Barbells/Squat Rack,Male,"Gluteus Maximus, Quadriceps","Adductor Magnus, Gluteus Medius, Soleus, Tensor Fasciae Latae",,,strength
 4091,Twist Superman,Strength,Hips,Body weight,Male,,,,,strength
 4093,Wheel Rollout with Wall Support,Strength,Waist,Body weight,Male,,,,,strength
-4094,Suspender Forward Lunge with Rear Fly,Strength,Shoulders,TRX,Male,,,,,strength
+4094,Suspender Forward Lunge with Rear Fly,Strength,Shoulders,Suspension Trainer,Male,,,,,strength
 4095,Crunch with Leg Lift,Strength,Waist,Body weight,Male,,,,,strength
 4098,Kettlebell Side Lunge,Strength,Thighs,Kettlebells,Male,,,,,strength
 4100,Sled Wide Hack Squat,Strength,Hips,Sled,Male,,,,,strength
@@ -1721,7 +1721,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 4442,Assisted Bulgarian Split Squat,Strength,Thighs,Body weight,Male,,,,,strength
 4443,Dumbbell Assisted Bulgarian Split Squat,Strength,Thighs,Dumbbells,Male,,,,,strength
 4446,Kettlebell Half Kneeling One Arm Bottoms-up Press,Strength,Shoulders,Kettlebells,Male,,,,,strength
-4450,Suspender Wide Grip Inverted Row,Strength,Back,TRX,Male,,,,,strength
+4450,Suspender Wide Grip Inverted Row,Strength,Back,Suspension Trainer,Male,,,,,strength
 4456,Glute Ham Raise,Strength,Hips,Body weight,Male,,,,,strength
 4457,Dumbbell Side Bridge with Bent Leg,Strength,Waist,Dumbbells,Male,,,,,strength
 4459,Lying Ab Press,Strength,Waist,Body weight,Male,,,,,strength
@@ -1867,7 +1867,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 4785,Seated Pull-up,Strength,Back,Body weight,Male,,,,,strength
 4789,Side Squat,Strength,Thighs,Body weight,Male,"Gluteus Maximus, Quadriceps","Adductor Magnus, Gluteus Medius, Soleus, Tensor Fasciae Latae",,,strength
 4793,Single Leg Hip Thrust Jump,Aerobic,Plyometrics,Body weight,Male,,,,,strength
-4798,Suspender Alternate Superman,Strength,Waist,TRX,Male,,,,,strength
+4798,Suspender Alternate Superman,Strength,Waist,Suspension Trainer,Male,,,,,strength
 4800,Table Top Bridge,Stretching,Waist,Body weight,Male,,,,,strength
 4802,Toe Walk,Strength,Calves,Body weight,Male,,,,,strength
 4804,Triceps Press (low bar position),Strength,Upper Arms,Body weight,Male,,,,,strength
@@ -2348,8 +2348,8 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5709,Standing Sprint,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 5710,Switching Downward Punch,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 5736,Lever Single Arm Chest Press (plate loaded),Strength,Chest,Hammerstrength Machine,Male,,,,,strength
-5737,Suspender Fly,Strength,Chest,TRX,Male,,,,,strength
-5738,Suspender Chest Press,Strength,Chest,TRX,Male,,,,,strength
+5737,Suspender Fly,Strength,Chest,Suspension Trainer,Male,,,,,strength
+5738,Suspender Chest Press,Strength,Chest,Suspension Trainer,Male,,,,,strength
 5739,Band Incline Chest Press,Strength,Chest,Resistance Bands,Male,,,,,strength
 5740,Band Incline Chest Fly,Strength,Chest,Resistance Bands,Male,,,,,strength
 5741,Cable Kneeling Crunch,Strength,Waist,Cable,Male,,,,,strength
@@ -2384,7 +2384,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5828,Dumbbell Single Leg Squat with Support (pistol),Strength,Thighs,Dumbbells,Male,,,,,strength
 5829,Shrimp Squat,Strength,Thighs,Body weight,Male,,,,,strength
 5830,Bodyweight Step-up,Strength,Thighs,Body weight,Male,,,,,strength
-5831,Suspender Single Leg Squat,Strength,Hips,TRX,Male,,,,,strength
+5831,Suspender Single Leg Squat,Strength,Hips,Suspension Trainer,Male,,,,,strength
 5832,Bouncing Circle Draw,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 5833,Double Punch Front Leg Lift,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 5838,Lever Leg Press (plate loaded),Strength,Thighs,Leg Press,Male,,,,,strength
@@ -2413,8 +2413,8 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5867,Kettlebell Bent over Alternate Twist Row,Strength,Back,Kettlebells,Male,,,,,strength
 5873,EZ Barbell Lying Triceps Extension,Strength,Upper Arms,EZ Bar,Male,,,,,strength
 5874,Cable High Pulley Straight Bar Overhead Triceps Extension,Strength,Upper Arms,Cable,Male,,,,,strength
-5875,Suspender Close grip Chest Press,Strength,Upper Arms,TRX,Male,,,,,strength
-5876,Suspender Triceps Extension,Strength,Upper Arms,TRX,Male,,,,,strength
+5875,Suspender Close grip Chest Press,Strength,Upper Arms,Suspension Trainer,Male,,,,,strength
+5876,Suspender Triceps Extension,Strength,Upper Arms,Suspension Trainer,Male,,,,,strength
 5877,Band High Pulley Overhead Triceps Extension,Strength,Upper Arms,Resistance Bands,Male,,,,,strength
 5878,Band Bent over One Arm Kickback,Strength,Upper Arms,Resistance Bands,Male,,,,,strength
 5879,Kettlebell Side Plank,Strength,Waist,Kettlebells,Male,,,,,strength
@@ -2436,8 +2436,8 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 5923,Cable Preacher Curl (rope attachment),Strength,Upper Arms,Cable,Male,,,,,strength
 5924,Dumbbell Drag Curl,Strength,Upper Arms,Dumbbells,Male,,,,,strength
 5925,EZ Barbell Drag Curl,Strength,Upper Arms,EZ Bar,Male,,,,,strength
-5926,Suspender Arm Curl,Strength,Upper Arms,TRX,Male,,,,,strength
-5927,Suspender One Arm Biceps Curl,Strength,Upper Arms,TRX,Male,,,,,strength
+5926,Suspender Arm Curl,Strength,Upper Arms,Suspension Trainer,Male,,,,,strength
+5927,Suspender One Arm Biceps Curl,Strength,Upper Arms,Suspension Trainer,Male,,,,,strength
 5928,Band 45 degrees One Arm Biceps Curl,Strength,Upper Arms,Resistance Bands,Male,,,,,strength
 5929,Fixed Feet Sit-Up Stand,Strength,Waist,Body weight,Male,,,,,strength
 5930,Inchworm and Plank Leg Lift,Aerobic,Plyometrics,Body weight,Male,,,,,strength
@@ -2568,9 +2568,9 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 6216,Band Standing Single Arm Biceps Curl,Strength,Upper Arms,Resistance Bands,Male,,,,,strength
 6218,Dumbbell Incline Twist Press,Strength,Chest,Dumbbells/Incline Bench,Male,,,,,strength
 6219,Cable Standing Single Arm Fly,Strength,Chest,Cable,Male,,,,,strength
-6220,Suspender Row,Strength,Back,TRX,Male,,,,,strength
+6220,Suspender Row,Strength,Back,Suspension Trainer,Male,,,,,strength
 6221,Dumbbell Standing French Press,Strength,Upper Arms,Dumbbells,Male,,,,,strength
-6222,Suspender Squat Jump,Aerobic,Thighs,TRX,Male,,,,,strength
+6222,Suspender Squat Jump,Aerobic,Thighs,Suspension Trainer,Male,,,,,strength
 6223,Finger Claps,Strength,Forearms,Body weight,Male,,,,,strength
 6224,Inner Wrist Curl,Strength,Forearms,Body weight,Male,,,,,strength
 6225,Reverse Wrist Curl,Strength,Forearms,Body weight,Male,,,,,strength
@@ -2580,7 +2580,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 6229,Bodyweight Standing Elbow Touches (Hands on neck),Strength,Chest,Body weight,Male,,,,,strength
 6230,Chest Pressdown,Strength,Chest,Body weight,Male,,,,,strength
 6231,Knee Push-up Chest Pullback,Strength,Chest,Body weight,Male,,,,,strength
-6232,Suspender Biceps Curl,Strength,Upper Arms,TRX,Male,,,,,strength
+6232,Suspender Biceps Curl,Strength,Upper Arms,Suspension Trainer,Male,,,,,strength
 6233,Ring Abdominal Fallout,Strength,Waist,Body weight,Male,,,,,strength
 6234,Ring Arm Curl,Strength,Upper Arms,Body weight,Male,,,,,strength
 6235,Ring Split Squat,Strength,Thighs,Body weight,Male,,,,,strength
@@ -3125,12 +3125,12 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 7265,Dumbbell Change Plyo Side Lunge,Strength,Thighs,Dumbbells,Male,,,,,strength
 7266,Dumbbell Change Lateral Raise Curtsey Lunge,Strength,Thighs,Dumbbells,Male,,,,,strength
 7267,Dumbbell Sumo Squat Front Raise,Strength,Thighs,Dumbbells,Male,,,,,strength
-7274,Suspender Pike,Strength,Hips,TRX,Male,,,,,strength
-7275,Suspender Front Plank,Strength,Waist,TRX,Male,,,,,strength
+7274,Suspender Pike,Strength,Hips,Suspension Trainer,Male,,,,,strength
+7275,Suspender Front Plank,Strength,Waist,Suspension Trainer,Male,,,,,strength
 7276,Bottle Weighted Gorilla Row,Strength,Back,Body weight,Male,,,,,strength
 7277,Resistance Band Hip Thrusts on Knees,Strength,Hips,Resistance Bands,Male,,,,,strength
-7278,Suspender Lat Stretch,Stretching,Back,TRX,Male,,,,,mobility
-7279,Suspender Squat Power Pull,Strength,Thighs,TRX,Male,,,,,strength
+7278,Suspender Lat Stretch,Stretching,Back,Suspension Trainer,Male,,,,,mobility
+7279,Suspender Squat Power Pull,Strength,Thighs,Suspension Trainer,Male,,,,,strength
 7281,Resistance Band Leg Kickback,Strength,Hips,Resistance Bands,Male,,,,,strength
 7282,Resistance Band Walk,Strength,Thighs,Resistance Bands,Male,,,,,strength
 7284,Leg Raise Hip Lift,Strength,Waist,Body weight,Male,,,,,strength
@@ -3249,11 +3249,11 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 7498,Sit-up to Mountain Hop,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 7499,Double Plank Jack to 4 Mountain Climber,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 7503,Assisted Partial Range Inverse Leg Curl against Wall,Strength,Thighs,Body weight,Male,,,,,strength
-7505,Suspender Scapula Retraction,Strength,Back,TRX,Male,,,,,strength
-7506,Suspender Internal Rotation,Strength,Chest,TRX,Male,,,,,strength
-7507,Suspender External Rotation,Strength,Back,TRX,Male,,,,,strength
-7508,Suspender Prone Ys,Strength,Waist,TRX,Male,,,,,strength
-7509,Suspender Prone Ts,Strength,Back,TRX,Male,,,,,strength
+7505,Suspender Scapula Retraction,Strength,Back,Suspension Trainer,Male,,,,,strength
+7506,Suspender Internal Rotation,Strength,Chest,Suspension Trainer,Male,,,,,strength
+7507,Suspender External Rotation,Strength,Back,Suspension Trainer,Male,,,,,strength
+7508,Suspender Prone Ys,Strength,Waist,Suspension Trainer,Male,,,,,strength
+7509,Suspender Prone Ts,Strength,Back,Suspension Trainer,Male,,,,,strength
 7510,Ring Archer Push-up,Strength,Chest,Body weight,Male,,,,,strength
 7511,Ring Tuck Planche,Strength,Waist,Body weight,Male,,,,,strength
 7512,Ring Archer Pull-up,Strength,Back,Body weight,Male,,,,,strength
@@ -3670,7 +3670,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 8364,Resistance Band Overhead Shoulder Press,Strength,Shoulders,Resistance Bands,Male,,,,,strength
 8365,Resistance Band Pass Through,Strength,Shoulders,Resistance Bands,Male,,,,,strength
 8366,Kettlebell Side Swing,Strength,Waist,Kettlebells,Male,,,,,strength
-8367,Suspender Triceps Press,Strength,Upper Arms,TRX,Male,,,,,strength
+8367,Suspender Triceps Press,Strength,Upper Arms,Suspension Trainer,Male,,,,,strength
 8368,Lever Vertical Leg Press,Strength,Thighs,Leg Press,Male,,,,,strength
 8375,Lever Angled Leg Press,Strength,Thighs,Leg Press,Male,"Gluteus Medius, Quadriceps","Adductor Magnus, Soleus",,,strength
 8390,Side Swing Skater Stepback,Aerobic,Plyometrics,Body weight,Male,,,,,strength
@@ -3852,7 +3852,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 8691,Landmine Squat with Linebacker Attachment,Strength,Thighs,Barbells/Squat Rack,Male,,,,,strength
 8692,Lever Seated Single Arm Wide Lat Pulldown,Strength,Back,Lat Pulldown Cable,Male,,,,,strength
 8693,Lever Seated Single Arm Shoulder Press,Strength,Shoulders,Shoulder Press Machine,Male,,,,,strength
-8694,Suspender Chest Press to Rollout,Strength,Chest,TRX,Male,,,,,strength
+8694,Suspender Chest Press to Rollout,Strength,Chest,Suspension Trainer,Male,,,,,strength
 8698,Resistance Band Incline Reverse Hyperextension,Strength,Hips,Resistance Bands,Male,,,,,strength
 8700,Barbell Staggered Stance Deadlift,Strength,Hips,Barbells,Male,,,,,strength
 8701,Weighted Bag Walking Lunge,Strength,Thighs,Body weight,Male,,,,,strength
@@ -3912,7 +3912,7 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 8821,Dumbbell Bosu Ball Goblet Squat,Strength,Thighs,Dumbbells,Male,,,,,strength
 8822,Kettlebell Clean and Push Press,Strength,Weightlifting,Kettlebells,Male,,,,,strength
 8824,Weighted Plate Standing Front Raise Drive,Strength,Shoulders,Body weight,Male,,,,,strength
-8844,Suspender Power Pull,Strength,Waist,TRX,Male,,,,,strength
+8844,Suspender Power Pull,Strength,Waist,Suspension Trainer,Male,,,,,strength
 8845,Spider Crawl,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 8846,Lever Lying Decline Chest Press (plate loaded),Strength,Chest,Hammerstrength Machine,Male,,,,,strength
 8847,Lever Standing Lateral Raise,Strength,Shoulders,Hammerstrength Machine,Male,,,,,strength
@@ -4173,20 +4173,20 @@ ID,Name,Exercise type,BodyPart,Equipment,Gender,Target,Synergist,Type,Regions,ca
 9492,Cable Lying Upright Row (SZ bar),Strength,Shoulders,Cable,Male,,,,,strength
 9493,Lever Belt Sumo Squat,Strength,Hips,Hammerstrength Machine,Male,,,,,strength
 9494,Lever Belt Romanian Deadlift,Strength,Hips,Hammerstrength Machine,Male,,,,,strength
-9495,Suspender Extended Plank,Strength,Waist,TRX,Male,,,,,strength
-9496,Suspender High Row,Strength,Back,TRX,Male,,,,,strength
-9497,Suspender Incline Plank,Strength,Waist,TRX,Male,,,,,strength
-9498,Suspender Inverted Row parallel to the floor,Strength,Back,TRX,Male,,,,,strength
-9499,Suspender Knee Tuck Row,Strength,Back,TRX,Male,,,,,strength
-9500,Suspender Pike,Strength,Waist,TRX,Male,,,,,strength
-9501,Suspender Plank,Strength,Waist,TRX,Male,,,,,strength
-9502,Suspender Push-up to Side Plank,Strength,Chest,TRX,Male,,,,,strength
-9503,Suspender Rear Delt Row,Strength,Shoulders,TRX,Male,,,,,strength
-9504,Suspender Reverse Ab Rollout,Strength,Waist,TRX,Male,,,,,strength
-9505,Suspender Reverse Push-up,Strength,Upper Arms,TRX,Male,,,,,strength
-9506,Suspender Side Squat,Strength,Hips,TRX,Male,,,,,strength
-9507,Suspender Weighted Vest Decline Push up,Strength,Chest,TRX,Male,,,,,strength
-9508,Suspender Y Raise,Strength,Shoulders,TRX,Male,,,,,strength
+9495,Suspender Extended Plank,Strength,Waist,Suspension Trainer,Male,,,,,strength
+9496,Suspender High Row,Strength,Back,Suspension Trainer,Male,,,,,strength
+9497,Suspender Incline Plank,Strength,Waist,Suspension Trainer,Male,,,,,strength
+9498,Suspender Inverted Row parallel to the floor,Strength,Back,Suspension Trainer,Male,,,,,strength
+9499,Suspender Knee Tuck Row,Strength,Back,Suspension Trainer,Male,,,,,strength
+9500,Suspender Pike,Strength,Waist,Suspension Trainer,Male,,,,,strength
+9501,Suspender Plank,Strength,Waist,Suspension Trainer,Male,,,,,strength
+9502,Suspender Push-up to Side Plank,Strength,Chest,Suspension Trainer,Male,,,,,strength
+9503,Suspender Rear Delt Row,Strength,Shoulders,Suspension Trainer,Male,,,,,strength
+9504,Suspender Reverse Ab Rollout,Strength,Waist,Suspension Trainer,Male,,,,,strength
+9505,Suspender Reverse Push-up,Strength,Upper Arms,Suspension Trainer,Male,,,,,strength
+9506,Suspender Side Squat,Strength,Hips,Suspension Trainer,Male,,,,,strength
+9507,Suspender Weighted Vest Decline Push up,Strength,Chest,Suspension Trainer,Male,,,,,strength
+9508,Suspender Y Raise,Strength,Shoulders,Suspension Trainer,Male,,,,,strength
 9509,Lever Sitting Toe Raise,Strength,Calves,Hammerstrength Machine,Male,,,,,strength
 9513,Countermovement Jump Arms Pull,Aerobic,Plyometrics,Body weight,Male,,,,,strength
 9514,Countermovement Jump Arms on Hip,Aerobic,Plyometrics,Body weight,Male,,,,,strength
