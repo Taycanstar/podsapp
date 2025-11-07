@@ -408,7 +408,7 @@ struct LogWorkoutView: View {
     private var durationPickerSheet: some View {
         WorkoutDurationPickerView(
             selectedDuration: .constant(workoutManager.effectiveDuration),
-            onSetDefault: { newDuration in
+                onSetDefault: { newDuration in
                     // Update WorkoutManager and UserProfileService
                     workoutManager.setDefaultDuration(newDuration)
                     
@@ -418,38 +418,12 @@ struct LogWorkoutView: View {
                     }
                     
                     showingDurationPicker = false
-                    
-                    // Regenerate workout with new duration (minimum 1.5s loader)
-                    Task {
-                        let startTime = Date()
-                        await workoutManager.generateTodayWorkout()
-                        
-                        // Ensure minimum 1.5 seconds of loading for smooth UX
-                        let elapsed = Date().timeIntervalSince(startTime)
-                        let remaining = max(0, 1.5 - elapsed)
-                        if remaining > 0 {
-                            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                        }
-                    }
                     print("✅ Default duration set to \(newDuration.minutes) minutes")
                 },
                 onSetForWorkout: { newDuration in
                     // Update WorkoutManager session duration
                     workoutManager.setSessionDuration(newDuration)
                     showingDurationPicker = false
-                    
-                    // Regenerate with new duration (minimum 1.5s loader)
-                    Task {
-                        let startTime = Date()
-                        await workoutManager.generateTodayWorkout()
-                        
-                        // Ensure minimum 1.5 seconds of loading for smooth UX
-                        let elapsed = Date().timeIntervalSince(startTime)
-                        let remaining = max(0, 1.5 - elapsed)
-                        if remaining > 0 {
-                            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                        }
-                    }
                     print("✅ Session duration set to \(newDuration.minutes) minutes")
                 }
             )
