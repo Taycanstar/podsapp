@@ -142,8 +142,13 @@ struct ContentView: View {
                 }
                 
                 // Food container as a fullScreenCover
-                .fullScreenCover(isPresented: $viewModel.isShowingFoodContainer) {
-                    FoodContainerView()
+                .fullScreenCover(
+                    isPresented: $viewModel.isShowingFoodContainer,
+                    onDismiss: {
+                        viewModel.pendingInitialFoodTab = nil
+                    }
+                ) {
+                    FoodContainerView(initialTabPreference: viewModel.pendingInitialFoodTab)
                         .environmentObject(viewModel)
                 }
                 

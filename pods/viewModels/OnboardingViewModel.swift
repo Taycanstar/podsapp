@@ -839,6 +839,7 @@ class OnboardingViewModel: ObservableObject {
     
     // Food container visibility control
     @Published var isShowingFoodContainer: Bool = false
+    @Published var pendingInitialFoodTab: String? = nil
     
     // Streak visibility control
     @Published var isStreakVisible: Bool = true {
@@ -1503,8 +1504,11 @@ class OnboardingViewModel: ObservableObject {
             UserDefaults.standard.set(meal, forKey: "selectedMealFromNewSheet")
         }
         if let tab = initialTab {
+            pendingInitialFoodTab = tab
             // Store the initial tab for FoodContainerView to use
             UserDefaults.standard.set(tab, forKey: "initialFoodTabFromNewSheet")
+        } else {
+            pendingInitialFoodTab = nil
         }
         isShowingFoodContainer = true
     }

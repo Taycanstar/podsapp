@@ -194,7 +194,7 @@ struct FoodContainerView: View {
         )
     }
     
-    init() {
+    init(initialTabPreference: String? = nil) {
         // Check if a meal was selected from NewSheetView
         let selectedMealFromNewSheet = UserDefaults.standard.string(forKey: "selectedMealFromNewSheet")
         
@@ -221,8 +221,10 @@ struct FoodContainerView: View {
         _selectedMeal = State(initialValue: initialMeal)
         
         // Check if an initial tab was selected from NewSheetView
-        let initialTabFromNewSheet = UserDefaults.standard.string(forKey: "initialFoodTabFromNewSheet")
-        if let tab = initialTabFromNewSheet {
+        if let preferredTab = initialTabPreference {
+            _initialFoodTab = State(initialValue: preferredTab)
+            UserDefaults.standard.removeObject(forKey: "initialFoodTabFromNewSheet")
+        } else if let tab = UserDefaults.standard.string(forKey: "initialFoodTabFromNewSheet") {
             _initialFoodTab = State(initialValue: tab)
             // Clear the stored value so it doesn't persist for future opens
             UserDefaults.standard.removeObject(forKey: "initialFoodTabFromNewSheet")
