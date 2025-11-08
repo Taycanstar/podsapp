@@ -523,14 +523,20 @@ class SubscriptionManager: ObservableObject {
             }
 
             do {
-                _ = try await networkManager.updateSubscription(
+                try await ensureBackendSubscriptionExists(
+                    networkManager: networkManager,
                     userEmail: userEmail,
                     productId: productId,
                     transactionId: transactionId,
                     status: status,
                     expiresAt: expirationString
                 )
+            } catch {
+                print("Failed to upsert subscription for product \(productId): \(error)")
+                continue
+            }
 
+            do {
                 _ = try await networkManager.updateSubscriptionStatus(
                     userEmail: userEmail,
                     productId: productId,
@@ -539,9 +545,49 @@ class SubscriptionManager: ObservableObject {
                     expirationDate: expirationString
                 )
             } catch {
-                print("Failed to sync restored transaction for product \(productId): \(error)")
+                print("Failed to update subscription status for product \(productId): \(error)")
             }
         }
+    }
+
+    private func ensureBackendSubscriptionExists(
+        networkManager: NetworkManager,
+        userEmail: String,
+        productId: String,
+        transactionId: String,
+        status: String,
+        expiresAt: String?
+    ) async throws {
+        do {
+            _ = try await networkManager.updateSubscription(
+                userEmail: userEmail,
+                productId: productId,
+                transactionId: transactionId,
+                status: status,
+                expiresAt: expiresAt
+            )
+        } catch {
+            guard shouldAttemptSubscriptionCreation(for: error) else { throw error }
+
+            _ = try await networkManager.purchaseSubscription(
+                userEmail: userEmail,
+                productId: productId,
+                transactionId: transactionId
+            )
+
+            _ = try await networkManager.updateSubscription(
+                userEmail: userEmail,
+                productId: productId,
+                transactionId: transactionId,
+                status: status,
+                expiresAt: expiresAt
+            )
+        }
+    }
+
+    private func shouldAttemptSubscriptionCreation(for error: Error) -> Bool {
+        guard case let NetworkError.serverError(message) = error else { return false }
+        return message.contains("404")
     }
 
     private func currentEntitlementTransactions() async -> [StoreKit.Transaction] {
