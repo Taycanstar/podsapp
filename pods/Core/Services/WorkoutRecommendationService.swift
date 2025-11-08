@@ -288,6 +288,158 @@ class WorkoutRecommendationService {
         )
         return Array(variabilityAdjusted.prefix(count))
     }
+
+    // MARK: - Research-backed deterministic selector (toggleable)
+
+    /// New deterministic selector that applies sport-science heuristics from the exercise-selection guide.
+    /// Keeps the existing filtering pipeline but replaces generic prioritization with goal/equipment/taxonomy weights.
+    func getResearchBackedExercises(
+        for muscleGroup: String,
+        count: Int = 5,
+        customEquipment: [Equipment]?,
+        flexibilityPreferences: FlexibilityPreferences? = nil
+    ) -> [ExerciseData] {
+        let userProfile = UserProfileService.shared
+        let recoveryService = MuscleRecoveryService.shared
+        let allExercises = ExerciseDatabase.getAllExercises()
+
+        let recoveryPercentage = recoveryService.getMuscleRecoveryPercentage(for: muscleGroup)
+
+        // Muscle match → experience gating → type filter
+        let muscleExercises = allExercises.filter { exerciseMatchesMuscle($0, muscleGroup: muscleGroup) }
+        let experienceAppropriate = getExperienceTailoredExercises(muscleExercises, userProfile: userProfile)
+        let typeFiltered = filterByExerciseType(exercises: experienceAppropriate, flexibilityPreferences: flexibilityPreferences, muscleGroup: muscleGroup)
+
+        // Equipment filtering (session override if provided)
+        let availableExercises: [ExerciseData]
+        if let customEquipment {
+            let allowed = equipmentOverrideSet(from: customEquipment)
+            availableExercises = typeFiltered.filter { exercise in
+                let (canPerform, _, _) = canPerformExerciseWithCustomEquipment(exercise, allowedEquipment: allowed)
+                if !canPerform { logFilterRejection(exercise, reason: "session_equipment") }
+                return canPerform
+            }
+        } else {
+            availableExercises = typeFiltered.filter { exercise in
+                let allowed = userProfile.canPerformExercise(exercise)
+                if !allowed { logFilterRejection(exercise, reason: "profile_equipment") }
+                return allowed
+            }
+        }
+
+        // Remove avoided exercises
+        let basePool = availableExercises.filter { !userProfile.avoidedExercises.contains($0.id) }
+
+        // Score by sport-science heuristics
+        let scored = basePool.map { ex -> (ExerciseData, Double) in
+            let s = researchScore(
+                exercise: ex,
+                goal: userProfile.fitnessGoal,
+                experience: userProfile.experienceLevel,
+                recovery: recoveryPercentage
+            )
+            return (ex, s)
+        }
+        .sorted { $0.1 > $1.1 }
+        .map { $0.0 }
+
+        // Preserve variability selection pass
+        let variabilityAdjusted = applyVariabilitySelection(scored, muscleGroup: muscleGroup, desiredCount: count)
+        return Array(variabilityAdjusted.prefix(count))
+    }
+
+    // MARK: - Heuristics helpers
+
+    private enum EquipmentKind { case barbell, dumbbell, machine, cable, bodyweight, band, kettlebell, smith, other }
+
+    private func classifyEquipmentKind(_ exercise: ExerciseData) -> EquipmentKind {
+        let eq = exercise.equipment.lowercased()
+        if eq.contains("barbell") { return .barbell }
+        if eq.contains("dumbbell") { return .dumbbell }
+        if eq.contains("machine") { return .machine }
+        if eq.contains("cable") { return .cable }
+        if eq.contains("body") { return .bodyweight }
+        if eq.contains("band") || eq.contains("resistance band") { return .band }
+        if eq.contains("kettlebell") { return .kettlebell }
+        if eq.contains("smith") { return .smith }
+        return .other
+    }
+
+    private func researchScore(
+        exercise: ExerciseData,
+        goal: FitnessGoal,
+        experience: ExperienceLevel,
+        recovery: Double
+    ) -> Double {
+        // Taxonomy
+        let movement = MovementType.classify(exercise)
+        let equip = classifyEquipmentKind(exercise)
+        var score = 0.0
+
+        // Base: compounds first
+        switch movement {
+        case .compound: score += 3
+        case .isolation: score += 1
+        case .core: score += 1
+        case .cardio: score += 0
+        }
+
+        // Goal-specific modality weighting
+        switch goal.normalized {
+        case .strength, .powerlifting:
+            if movement == .compound { score += 1 }
+            switch equip {
+            case .barbell: score += 3
+            case .dumbbell: score += 1
+            case .machine: score -= 0.5
+            case .smith: score -= 0.5
+            case .bodyweight, .band: score -= 1
+            default: break
+            }
+        case .olympicWeightlifting:
+            // Strict bias to barbell structural compounds
+            if movement == .compound { score += 2 }
+            switch equip {
+            case .barbell: score += 3
+            default: score -= 1
+            }
+        case .hypertrophy, .general:
+            if movement == .compound { score += 1 }
+            // Modalities roughly equal; slight edge for cables/machines on accessories
+            switch equip {
+            case .barbell, .dumbbell: score += 1
+            case .cable, .machine: score += 1
+            case .band: score += 0.5
+            default: break
+            }
+        case .circuitTraining, .endurance, .tone:
+            switch equip {
+            case .bodyweight, .band: score += 2
+            case .dumbbell, .cable: score += 1
+            case .machine: score += 0.5
+            case .barbell, .smith: score -= 1
+            default: break
+            }
+            if movement == .cardio || movement == .core { score += 0.5 }
+        default:
+            break
+        }
+
+        // Experience-level adjustments
+        switch experience {
+        case .advanced:
+            if movement == .compound && (equip == .barbell || equip == .kettlebell) { score += 1 }
+        case .beginner:
+            if equip == .barbell && movement == .compound { score -= 0.5 }
+        case .intermediate:
+            break
+        }
+
+        // Recovery moderation
+        if recovery < 70 { score -= 1 } else if recovery < 85 { score -= 0.5 }
+
+        return score
+    }
     
     // Helper method to check if exercise can be performed with custom equipment
     private func canPerformExerciseWithCustomEquipment(_ exercise: ExerciseData, allowedEquipment: Set<Equipment>) -> (Bool, Set<Equipment>, Set<Equipment>) {
@@ -2247,13 +2399,23 @@ class WorkoutRecommendationService {
         customEquipment: [Equipment]?,
         flexibilityPreferences: FlexibilityPreferences? = nil
     ) -> [ExerciseData] {
-        // First get standard recommendations using existing sophisticated logic
-        var exercises = getRecommendedExercises(
-            for: muscleGroup,
-            count: count * 2, // Get extra to filter optimally
-            customEquipment: customEquipment,
-            flexibilityPreferences: flexibilityPreferences
-        )
+        // First get recommendations using the selected selector
+        var exercises: [ExerciseData]
+        if FeatureFlags.useResearchBackedSelector {
+            exercises = getResearchBackedExercises(
+                for: muscleGroup,
+                count: count * 2,
+                customEquipment: customEquipment,
+                flexibilityPreferences: flexibilityPreferences
+            )
+        } else {
+            exercises = getRecommendedExercises(
+                for: muscleGroup,
+                count: count * 2, // Get extra to filter optimally
+                customEquipment: customEquipment,
+                flexibilityPreferences: flexibilityPreferences
+            )
+        }
         
         // For shorter workouts, prioritize compound movements for time efficiency
         if duration.minutes <= 30 {

@@ -70,7 +70,8 @@ class WorkoutGenerationService {
         )
         print("🧾 Context equipment preview → preferences=\(context.preferences.availableEquipment.map { $0.rawValue }) constraints=\(context.constraints.availableEquipment.map { $0.rawValue })")
 
-        if let llmPlan = attemptLLMPlan(
+        if FeatureFlags.useLLMForWorkoutGeneration,
+           let llmPlan = attemptLLMPlan(
             userEmail: userEmail,
             context: context,
             muscleGroups: muscleGroups,

@@ -305,6 +305,8 @@
 		36DB82DE2EBAA8B1004BA082 /* LLMWorkoutService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82DD2EBAA8B1004BA082 /* LLMWorkoutService.swift */; };
 		36DB82E02EBBC17A004BA082 /* TimeEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82DF2EBBC17A004BA082 /* TimeEstimator.swift */; };
 		36DB82E22EBE7364004BA082 /* SetScheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82E12EBE7364004BA082 /* SetScheme.swift */; };
+		36DB82E42EBF99ED004BA082 /* exercise-selection-guide.md in Resources */ = {isa = PBXBuildFile; fileRef = 36DB82E32EBF99ED004BA082 /* exercise-selection-guide.md */; };
+		36DB82E62EBF9EFA004BA082 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82E52EBF9EFA004BA082 /* FeatureFlags.swift */; };
 		36DBFBDD2C8BA7A200958BF4 /* AddWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */; };
 		36DBFBDF2C8E454500958BF4 /* CreateTeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DBFBDE2C8E454500958BF4 /* CreateTeamView.swift */; };
 		36E097362C4C74CE00F354E6 /* .lldbinit in Resources */ = {isa = PBXBuildFile; fileRef = 36E097352C4C74CE00F354E6 /* .lldbinit */; };
@@ -690,6 +692,8 @@
 		36DB82DD2EBAA8B1004BA082 /* LLMWorkoutService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMWorkoutService.swift; sourceTree = "<group>"; };
 		36DB82DF2EBBC17A004BA082 /* TimeEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeEstimator.swift; sourceTree = "<group>"; };
 		36DB82E12EBE7364004BA082 /* SetScheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetScheme.swift; sourceTree = "<group>"; };
+		36DB82E32EBF99ED004BA082 /* exercise-selection-guide.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "exercise-selection-guide.md"; sourceTree = "<group>"; };
+		36DB82E52EBF9EFA004BA082 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
 		36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWorkspaceView.swift; sourceTree = "<group>"; };
 		36DBFBDE2C8E454500958BF4 /* CreateTeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTeamView.swift; sourceTree = "<group>"; };
 		36E097352C4C74CE00F354E6 /* .lldbinit */ = {isa = PBXFileReference; lastKnownFileType = text; path = .lldbinit; sourceTree = "<group>"; };
@@ -824,6 +828,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				36DB82E52EBF9EFA004BA082 /* FeatureFlags.swift */,
 				36DB82E12EBE7364004BA082 /* SetScheme.swift */,
 				36DB82DF2EBBC17A004BA082 /* TimeEstimator.swift */,
 				36DB82DD2EBAA8B1004BA082 /* LLMWorkoutService.swift */,
@@ -1425,6 +1430,7 @@
 			isa = PBXGroup;
 			children = (
 				36F9E5B02FAFCA1200E11122 /* time_cost_model.json */,
+				36DB82E32EBF99ED004BA082 /* exercise-selection-guide.md */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -1582,6 +1588,7 @@
 				36D647D32C0CDE17002F1047 /* LaunchScreen.storyboard in Resources */,
 				367FBDA22C3AFD0D0009BD12 /* Assets.xcassets in Resources */,
 				36C458C12B7421110060355F /* Preview Assets.xcassets in Resources */,
+				36DB82E42EBF99ED004BA082 /* exercise-selection-guide.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1765,6 +1772,7 @@
 				36ED35C02DDBB0C100D174FB /* GoalProgress.swift in Sources */,
 				3625329B2E629481003C3B8D /* TimeManager.swift in Sources */,
 				363068D72E1078F900F2D4EC /* AddFoodWithScan.swift in Sources */,
+				36DB82E62EBF9EFA004BA082 /* FeatureFlags.swift in Sources */,
 				36A851A52E5D2DD7004E5CED /* WorkoutGenerationService.swift in Sources */,
 				36ED35D92DDE527600D174FB /* TapPlusView.swift in Sources */,
 				36C458E82B746B7C0060355F /* CustomTabBar.swift in Sources */,
