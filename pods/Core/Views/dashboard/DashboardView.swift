@@ -389,7 +389,10 @@ private var remainingCal: Double { vm.remainingCalories }
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        if isToday && !isTodayWorkoutDismissed && !hideWorkoutPreviews {
+                        if isToday &&
+                            !isTodayWorkoutDismissed &&
+                            !hideWorkoutPreviews &&
+                            !workoutManager.hasCompletedWorkoutToday {
                             todayWorkoutCard
                                 .padding(.horizontal)
                                 // .padding(.top, 8)

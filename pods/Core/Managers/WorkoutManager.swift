@@ -110,6 +110,7 @@ class WorkoutManager: ObservableObject {
     @Published private(set) var completedWorkoutSummary: CompletedWorkoutSummary?
     @Published private(set) var isDisplayingSummary: Bool = false
     @Published private(set) var isWorkoutViewActive: Bool = false
+    @Published private(set) var hasCompletedWorkoutToday: Bool = false
 
     // MARK: - Workout Log Card Display (similar to FoodManager pattern)
     @Published var showWorkoutLogCard = false
@@ -192,10 +193,12 @@ class WorkoutManager: ObservableObject {
     private let customWorkoutIdCounterKey = "customWorkoutIdCounter"
     private let customWorkoutsLastFetchKey = "customWorkoutsLastFetch"
     private let pinnedCustomWorkoutsKey = "pinnedCustomWorkouts"
+    private let lastWorkoutCompletionDateKey = "lastWorkoutCompletionDate"
 
     private var customWorkoutsLastFetch: Date?
     private var isFetchingCustomWorkouts = false
     private var pinnedCustomWorkoutIDs: Set<Int> = []
+    private var lastWorkoutCompletionDate: Date?
 
     private func profileScopedKey(_ key: String) -> String {
         UserProfileService.shared.scopedDefaultsKey(key)
@@ -293,6 +296,7 @@ class WorkoutManager: ObservableObject {
         loadTodayWorkout()
         setupSessionMonitoring()
         setupDynamicProgramming()  // Initialize dynamic programming
+        loadLastWorkoutCompletionState()
 
         workoutDataManager.$syncError
             .receive(on: RunLoop.main)
@@ -307,6 +311,13 @@ class WorkoutManager: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] message in
                 self?.syncErrorMessage = message
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: NSNotification.Name.NSCalendarDayChanged)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.refreshDailyCompletionFlag()
             }
             .store(in: &cancellables)
     }
@@ -461,6 +472,7 @@ class WorkoutManager: ObservableObject {
         loadSessionData()
         loadDefaultMusclePreferences()
         loadTodayWorkout()
+        clearWorkoutCompletionState()
     }
 
     /// Check if workout should be regenerated and regenerate if needed
@@ -2609,6 +2621,8 @@ class WorkoutManager: ObservableObject {
             pendingSummaryRegeneration = true
             isDisplayingSummary = true
         }
+
+        markWorkoutCompleted(on: now)
     }
 
     private func cleanupAfterIncompleteCompletion() {
@@ -2801,6 +2815,42 @@ class WorkoutManager: ObservableObject {
     private func profileStorageKey(_ base: String) -> String {
         let emailScoped = userEmail.isEmpty ? base : "\(base)_\(userEmail)"
         return userProfileService.scopedDefaultsKey(emailScoped)
+    }
+
+    // MARK: - Daily Workout Completion Tracking
+
+    private func loadLastWorkoutCompletionState() {
+        let key = profileStorageKey(lastWorkoutCompletionDateKey)
+        let timestamp = UserDefaults.standard.double(forKey: key)
+        if timestamp > 0 {
+            lastWorkoutCompletionDate = Date(timeIntervalSince1970: timestamp)
+        } else {
+            lastWorkoutCompletionDate = nil
+        }
+        refreshDailyCompletionFlag()
+    }
+
+    private func markWorkoutCompleted(on date: Date) {
+        lastWorkoutCompletionDate = date
+        let key = profileStorageKey(lastWorkoutCompletionDateKey)
+        UserDefaults.standard.set(date.timeIntervalSince1970, forKey: key)
+        refreshDailyCompletionFlag()
+    }
+
+    private func refreshDailyCompletionFlag() {
+        if let date = lastWorkoutCompletionDate,
+           Calendar.current.isDateInToday(date) {
+            hasCompletedWorkoutToday = true
+        } else {
+            hasCompletedWorkoutToday = false
+        }
+    }
+
+    private func clearWorkoutCompletionState() {
+        lastWorkoutCompletionDate = nil
+        let key = profileStorageKey(lastWorkoutCompletionDateKey)
+        UserDefaults.standard.removeObject(forKey: key)
+        hasCompletedWorkoutToday = false
     }
 
     private func setGenerating(_ generating: Bool, message: String = "") async {
@@ -3248,12 +3298,14 @@ class WorkoutManager: ObservableObject {
         activeWorkoutState = nil
 
         loadTodayWorkout()
+        loadLastWorkoutCompletionState()
     }
     
     // MARK: - Persistence
     
     private func loadTodayWorkout() {
         assertMainActor("loadTodayWorkout")
+        refreshDailyCompletionFlag()
         loadTodayWorkoutMetadata()
         let key = profileStorageKey(todayWorkoutKey)
         
