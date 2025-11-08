@@ -53,17 +53,15 @@ struct DynamicWorkoutParameters: Codable, Equatable {
     }
 }
 
-/// Session phases for periodization cycling (Fitbod's A-B-C pattern)
+/// Session phases for periodization cycling (two-phase cadence)
 enum SessionPhase: String, CaseIterable, Codable {
     case strengthFocus = "strength"         // Lower reps, higher intensity
     case volumeFocus = "volume"             // Higher reps, moderate intensity  
-    case conditioningFocus = "conditioning" // Circuit-style, time-based
     
     var displayName: String {
         switch self {
         case .strengthFocus: return "Strength Focus"
         case .volumeFocus: return "Volume Focus" 
-        case .conditioningFocus: return "Conditioning Focus"
         }
     }
     
@@ -71,7 +69,6 @@ enum SessionPhase: String, CaseIterable, Codable {
         switch self {
         case .strengthFocus: return "Building maximum strength with lower reps"
         case .volumeFocus: return "Muscle growth with higher volume"
-        case .conditioningFocus: return "Endurance and conditioning work"
         }
     }
     
@@ -79,16 +76,14 @@ enum SessionPhase: String, CaseIterable, Codable {
         switch self {
         case .strengthFocus: return "💪"
         case .volumeFocus: return "📊"
-        case .conditioningFocus: return "🏃‍♂️"
         }
     }
     
-    /// Get next phase in A-B-C cycling pattern
+    /// Get next phase in A-B cadence
     func nextPhase() -> SessionPhase {
         switch self {
         case .strengthFocus: return .volumeFocus
-        case .volumeFocus: return .conditioningFocus
-        case .conditioningFocus: return .strengthFocus
+        case .volumeFocus: return .strengthFocus
         }
     }
     
@@ -97,10 +92,8 @@ enum SessionPhase: String, CaseIterable, Codable {
         switch fitnessGoal.normalized {
         case .strength, .powerlifting:
             return .strengthFocus
-        case .hypertrophy, .general:
+        case .hypertrophy, .general, .circuitTraining, .tone, .endurance:
             return .volumeFocus
-        case .circuitTraining:
-            return .conditioningFocus
         case .olympicWeightlifting:
             return .strengthFocus
         default:
@@ -119,7 +112,7 @@ enum SessionPhase: String, CaseIterable, Codable {
             return "Muscle Building"  
         case (.volumeFocus, .general):
             return "General Fitness"
-        case (.conditioningFocus, .circuitTraining):
+        case (.volumeFocus, .circuitTraining):
             return "Circuit Training"
         default:
             return displayName  // Fallback to original
@@ -391,7 +384,7 @@ struct DynamicWorkoutExercise: Codable, Hashable, Identifiable {
         TodayWorkoutExercise(
             exercise: exercise,
             sets: setCount,
-            reps: repRange.upperBound, // Use upper bound as default for compatibility
+            reps: targetReps,
             weight: suggestedWeight,
             restTime: restTime,
             notes: notes,

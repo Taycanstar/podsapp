@@ -58,12 +58,14 @@ class WorkoutGenerationService {
             preferences: flexibilityPreferences
         )
 
+        let sessionPhase = SessionPhase.alignedWith(fitnessGoal: fitnessGoal)
+
         let context = contextAssembler.assembleContext(
             userEmail: userEmail,
             requestedMuscles: muscleGroups,
             duration: targetDuration,
             equipmentOverride: customEquipment,
-            sessionPhase: SessionPhase.alignedWith(fitnessGoal: fitnessGoal),
+            sessionPhase: sessionPhase,
             flexibilityPreferences: flexibilityPreferences
         )
         print("🧾 Context equipment preview → preferences=\(context.preferences.availableEquipment.map { $0.rawValue }) constraints=\(context.constraints.availableEquipment.map { $0.rawValue })")
@@ -78,6 +80,7 @@ class WorkoutGenerationService {
             customEquipment: customEquipment,
             flexibilityPreferences: flexibilityPreferences,
             experienceLevel: experienceLevel,
+            sessionPhase: sessionPhase,
             sessionBudget: sessionBudget
         ) {
             return llmPlan
@@ -92,7 +95,8 @@ class WorkoutGenerationService {
             customEquipment: customEquipment,
             flexibilityPreferences: flexibilityPreferences,
             optimalExerciseCount: optimalExerciseCount,
-            sessionBudget: sessionBudget
+            sessionBudget: sessionBudget,
+            sessionPhase: sessionPhase
         )
     }
 
@@ -105,7 +109,8 @@ class WorkoutGenerationService {
         customEquipment: [Equipment]?,
         flexibilityPreferences: FlexibilityPreferences,
         optimalExerciseCount: (total: Int, perMuscle: Int),
-        sessionBudget: TimeEstimator.SessionTimeBudget
+        sessionBudget: TimeEstimator.SessionTimeBudget,
+        sessionPhase: SessionPhase
     ) throws -> WorkoutPlan {
         let targetDurationMinutes = targetDuration.minutes
         
@@ -125,6 +130,7 @@ class WorkoutGenerationService {
             customEquipment: customEquipment,
             flexibilityPreferences: flexibilityPreferences,
             experienceLevel: experienceLevel,
+            sessionPhase: sessionPhase,
             sessionBudget: &mutableBudget
         )
         exercises = exercises.filter { isExerciseSupported($0.exercise, customEquipment: customEquipment) }
@@ -163,6 +169,7 @@ class WorkoutGenerationService {
         customEquipment: [Equipment]?,
         flexibilityPreferences: FlexibilityPreferences,
         experienceLevel: ExperienceLevel,
+        sessionPhase: SessionPhase,
         sessionBudget: TimeEstimator.SessionTimeBudget
     ) -> WorkoutPlan? {
         let candidatePool = buildCandidatePool(
@@ -193,7 +200,13 @@ class WorkoutGenerationService {
                 WorkoutGenerationTelemetry.record(.planValidationWarning, metadata: ["message": $0])
             }
 
-            let mappedExercises = convertLLMResponse(response, fitnessGoal: fitnessGoal, customEquipment: customEquipment)
+            let mappedExercises = convertLLMResponse(
+                response,
+                fitnessGoal: fitnessGoal,
+                experienceLevel: experienceLevel,
+                sessionPhase: sessionPhase,
+                customEquipment: customEquipment
+            )
             guard !mappedExercises.isEmpty else {
                 WorkoutGenerationTelemetry.record(.llmFallbackUsed, metadata: ["reason": "llm_returned_no_valid_exercises"])
                 return nil
@@ -276,6 +289,8 @@ class WorkoutGenerationService {
     private func convertLLMResponse(
         _ response: NetworkManagerTwo.LLMWorkoutResponse,
         fitnessGoal: FitnessGoal,
+        experienceLevel: ExperienceLevel,
+        sessionPhase: SessionPhase,
         customEquipment: [Equipment]?
     ) -> [TodayWorkoutExercise] {
         var mapped: [TodayWorkoutExercise] = []
@@ -286,17 +301,30 @@ class WorkoutGenerationService {
                 continue
             }
 
-            let rest = spec.restSeconds ?? getResearchBasedRestTime(
-                fitnessGoal: fitnessGoal,
-                isCompound: isCompoundExercise(exercise)
+            let suggestion = SetSchemeSuggestion(
+                sets: spec.sets > 0 ? spec.sets : nil,
+                reps: spec.reps > 0 ? spec.reps : nil
             )
+            let scheme = SetSchemePlanner.shared.scheme(
+                for: exercise,
+                goal: fitnessGoal,
+                experienceLevel: experienceLevel,
+                sessionPhase: sessionPhase,
+                isCompound: SetSchemePlanner.isCompoundExercise(exercise),
+                suggestion: suggestion
+            )
+
+            var rest = scheme.restSeconds
+            if let suggestedRest = spec.restSeconds, suggestedRest > 0 {
+                rest = suggestedRest
+            }
 
             let trackingType = ExerciseClassificationService.determineTrackingType(for: exercise)
             let sanitizedWeight = (spec.weight ?? 0) <= 0 ? nil : spec.weight
             let todayExercise = TodayWorkoutExercise(
                 exercise: exercise,
-                sets: max(1, spec.sets),
-                reps: max(1, spec.reps),
+                sets: scheme.sets,
+                reps: scheme.targetReps,
                 weight: sanitizedWeight,
                 restTime: rest,
                 notes: nil,
@@ -304,6 +332,13 @@ class WorkoutGenerationService {
                 flexibleSets: nil,
                 trackingType: trackingType
             )
+
+            if let reason = scheme.overrideReason {
+                WorkoutGenerationTelemetry.record(.planValidationWarning, metadata: [
+                    "message": reason,
+                    "exercise": exercise.name
+                ])
+            }
 
             mapped.append(todayExercise)
         }
@@ -352,6 +387,7 @@ class WorkoutGenerationService {
         customEquipment: [Equipment]?,
         flexibilityPreferences: FlexibilityPreferences,
         experienceLevel: ExperienceLevel,
+        sessionPhase: SessionPhase,
         sessionBudget: inout TimeEstimator.SessionTimeBudget
     ) -> [TodayWorkoutExercise] {
         var exercises: [TodayWorkoutExercise] = []
@@ -395,7 +431,8 @@ class WorkoutGenerationService {
                     for: exercise,
                     targetDuration: targetDuration,
                     fitnessGoal: fitnessGoal,
-                    recoveryPercentage: recoveryPercentage
+                    recoveryPercentage: recoveryPercentage,
+                    sessionPhase: sessionPhase
                 )
                 guard built.sets > 0 else { continue }
                 let estimateSeconds = estimator.estimateExerciseSeconds(
@@ -454,7 +491,8 @@ class WorkoutGenerationService {
                         for: exercise,
                         targetDuration: targetDuration,
                         fitnessGoal: fitnessGoal,
-                        recoveryPercentage: recoveryPercentage
+                        recoveryPercentage: recoveryPercentage,
+                        sessionPhase: sessionPhase
                     )
                     guard built.sets > 0 else { continue }
                     let estimateSeconds = estimator.estimateExerciseSeconds(
@@ -521,7 +559,8 @@ class WorkoutGenerationService {
                         for: exercise,
                         targetDuration: targetDuration,
                         fitnessGoal: fitnessGoal,
-                        recoveryPercentage: fallback.recoveryPercentage
+                        recoveryPercentage: fallback.recoveryPercentage,
+                        sessionPhase: sessionPhase
                     )
                     guard built.sets > 0 else { continue }
                     let estimateSeconds = estimator.estimateExerciseSeconds(
@@ -763,6 +802,7 @@ class WorkoutGenerationService {
         customEquipment: [Equipment]?,
         flexibilityPreferences: FlexibilityPreferences
     ) -> [TodayWorkoutExercise] {
+        let sessionPhase = SessionPhase.alignedWith(fitnessGoal: fitnessGoal)
         var exercises: [TodayWorkoutExercise] = []
         var usedIds = Set<Int>() // Avoid duplicate exercises across muscle groups
         
@@ -782,18 +822,19 @@ class WorkoutGenerationService {
             print("🎯 \(muscle): requested \(exercisesPerMuscle), got \(recommended.count) exercises")
             let recovery = recoveryService.getMuscleRecoveryPercentage(for: muscle)
             
-        for exercise in recommended {
-            guard !usedIds.contains(exercise.id) else { continue }
-            let built = makeWorkoutExercise(
-                for: exercise,
-                targetDuration: targetDuration,
-                fitnessGoal: fitnessGoal,
-                recoveryPercentage: recovery
-            )
-            guard built.sets > 0 else { continue }
-            exercises.append(built)
-            usedIds.insert(exercise.id)
-        }
+            for exercise in recommended {
+                guard !usedIds.contains(exercise.id) else { continue }
+                let built = makeWorkoutExercise(
+                    for: exercise,
+                    targetDuration: targetDuration,
+                    fitnessGoal: fitnessGoal,
+                    recoveryPercentage: recovery,
+                    sessionPhase: sessionPhase
+                )
+                guard built.sets > 0 else { continue }
+                exercises.append(built)
+                usedIds.insert(exercise.id)
+            }
             
             print("📊 Running total after \(muscle): \(exercises.count) exercises")
         }
@@ -877,7 +918,8 @@ class WorkoutGenerationService {
         for exercise: ExerciseData,
         targetDuration: WorkoutDuration,
         fitnessGoal: FitnessGoal,
-        recoveryPercentage: Double
+        recoveryPercentage: Double,
+        sessionPhase: SessionPhase
     ) -> TodayWorkoutExercise {
         let trackingType = ExerciseClassificationService.determineTrackingType(for: exercise)
         
@@ -891,7 +933,11 @@ class WorkoutGenerationService {
         
         switch trackingType {
         case .repsWeight, .repsOnly:
-            let rec = recommendationService.getSmartRecommendation(for: exercise, fitnessGoal: fitnessGoal)
+            let rec = recommendationService.getSmartRecommendation(
+                for: exercise,
+                fitnessGoal: fitnessGoal,
+                sessionPhase: sessionPhase
+            )
             let adjustedSets = adjustedSetCount(base: rec.sets, multiplier: volumeFactor)
             guard adjustedSets > 0 else {
                 print("🪫 Volume suppressed: \(exercise.name) skipped due to low recovery")

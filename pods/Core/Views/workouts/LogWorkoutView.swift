@@ -1480,39 +1480,37 @@ private struct TodayWorkoutView: View {
         .onChange(of: shouldRegenerate) { _, newValue in
             if newValue {
                 // Reset the flag and regenerate workout
-                requestWorkoutGeneration()
+                requestTodayWorkoutGeneration()
                 shouldRegenerate = false
             }
         }
         .onChange(of: selectedDuration) { _, newDuration in
             // Regenerate workout when duration changes (ensures fresh data)
             print("🔄 Duration changed to \(newDuration.minutes) minutes - regenerating workout")
-            requestWorkoutGeneration()
+            requestTodayWorkoutGeneration()
         }
         .onChange(of: customTargetMuscles) { _, newMuscles in
             print("🎯 Custom muscles changed to: \(newMuscles?.description ?? "nil") - regenerating workout")
-            requestWorkoutGeneration()
+            requestTodayWorkoutGeneration()
         }
         .onChange(of: effectiveFlexibilityPreferences) { _, newPreferences in
             print("🧘 Flexibility preferences changed to: warmUp=\(newPreferences.warmUpEnabled), coolDown=\(newPreferences.coolDownEnabled) - regenerating workout")
-            requestWorkoutGeneration()
+            requestTodayWorkoutGeneration()
         }
         .onChange(of: customEquipment) { _, newEquipment in
             print("⚙️ Custom equipment changed to: \(newEquipment?.description ?? "nil") - regenerating workout") 
-            requestWorkoutGeneration()
+            requestTodayWorkoutGeneration()
         }
         .onChange(of: effectiveFitnessGoal) { _, newGoal in
             print("🏋️ Fitness goal changed to: \(newGoal.displayName) - regenerating workout")
-            requestWorkoutGeneration()
+            requestTodayWorkoutGeneration()
         }
         .onChange(of: effectiveFitnessLevel) { _, newLevel in
             print("📈 Fitness level changed to: \(newLevel.displayName) - regenerating workout")
-            requestWorkoutGeneration()
+            requestTodayWorkoutGeneration()
         }
     }
 
-    
-    
     private func loadOrGenerateTodayWorkout() {
         // CRITICAL: Don't regenerate if in error state to prevent infinite loop
         if workoutManager.generationError != nil {
@@ -1533,10 +1531,10 @@ private struct TodayWorkoutView: View {
         }
 
         guard !workoutManager.isGeneratingWorkout else { return }
-        requestWorkoutGeneration()
+        requestTodayWorkoutGeneration()
     }
-    
-    private func requestWorkoutGeneration() {
+
+    private func requestTodayWorkoutGeneration() {
         guard !workoutManager.isGeneratingWorkout else {
             print("⏳ TodayWorkoutView: generation already in progress")
             return
@@ -2119,8 +2117,6 @@ private struct TodayWorkoutView: View {
                 return 1
             case .volumeFocus:
                 return 2
-            case .conditioningFocus:
-                return 3
             }
         }
         return 1
@@ -4847,7 +4843,7 @@ private struct DynamicSessionPhaseView: View {
             
             // Phase indicator dots
             HStack(spacing: 6) {
-                ForEach([SessionPhase.strengthFocus, .volumeFocus, .conditioningFocus], id: \.self) { phase in
+                ForEach([SessionPhase.strengthFocus, .volumeFocus], id: \.self) { phase in
                     Circle()
                         .fill(phase == sessionPhase ? phaseColor : Color.gray.opacity(0.3))
                         .frame(width: 8, height: 8)
@@ -4873,8 +4869,6 @@ private struct DynamicSessionPhaseView: View {
             return "dumbbell.fill"
         case .volumeFocus:
             return "chart.bar.fill"
-        case .conditioningFocus:
-            return "figure.run"
         }
     }
     
@@ -4884,8 +4878,6 @@ private struct DynamicSessionPhaseView: View {
             return .red
         case .volumeFocus:
             return .blue
-        case .conditioningFocus:
-            return .green
         }
     }
     
@@ -4894,14 +4886,12 @@ private struct DynamicSessionPhaseView: View {
         return sessionPhase.contextualDisplayName(for: workoutManager.effectiveFitnessGoal)
     }
     
-private var phaseDescription: String {
+    private var phaseDescription: String {
         switch sessionPhase {
         case .strengthFocus:
             return "Building maximal strength"
         case .volumeFocus:
             return "Increasing muscle size"
-        case .conditioningFocus:
-            return "Improving endurance"
         }
     }
 }
@@ -4909,13 +4899,11 @@ private var phaseDescription: String {
 private extension LogWorkoutView {
     func requestWorkoutGeneration() {
         guard !workoutManager.isGeneratingWorkout else {
-            print("⏳ Skipping requestWorkoutGeneration() – already in progress")
+            print("⏳ LogWorkoutView: generation already in progress")
             return
         }
-        print("🚀 TodayWorkoutView: Using WorkoutManager to generate workout")
         Task {
             await workoutManager.generateTodayWorkout()
         }
     }
 }
-    

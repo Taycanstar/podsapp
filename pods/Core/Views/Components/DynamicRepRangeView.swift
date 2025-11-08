@@ -143,7 +143,6 @@ extension SessionPhase {
         switch self {
         case .strengthFocus: return .red
         case .volumeFocus: return .orange
-        case .conditioningFocus: return .blue
         }
     }
     
@@ -151,7 +150,6 @@ extension SessionPhase {
         switch self {
         case .strengthFocus: return "dumbbell.fill"
         case .volumeFocus: return "chart.bar.fill"
-        case .conditioningFocus: return "heart.fill"
         }
     }
 }

@@ -245,8 +245,6 @@
 		36C458BC2B7421100060355F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458BB2B7421100060355F /* ContentView.swift */; };
 		36C458C12B7421110060355F /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 36C458C02B7421110060355F /* Preview Assets.xcassets */; };
 		36C458CB2B7421110060355F /* podsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458CA2B7421110060355F /* podsTests.swift */; };
-		36F9E5C42FAFD2DE00E11122 /* TimeEstimatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F9E5C32FAFD2DE00E11122 /* TimeEstimatorTests.swift */; };
-		36FA4D612FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FA4D602FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift */; };
 		36C458D52B7421110060355F /* podsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458D42B7421110060355F /* podsUITests.swift */; };
 		36C458D72B7421110060355F /* podsUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458D62B7421110060355F /* podsUITestsLaunchTests.swift */; };
 		36C458E42B7457580060355F /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C458E32B7457580060355F /* HomeView.swift */; };
@@ -306,6 +304,7 @@
 		36DB82DC2EBAA800004BA082 /* WorkoutContextRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82DB2EBAA800004BA082 /* WorkoutContextRepository.swift */; };
 		36DB82DE2EBAA8B1004BA082 /* LLMWorkoutService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82DD2EBAA8B1004BA082 /* LLMWorkoutService.swift */; };
 		36DB82E02EBBC17A004BA082 /* TimeEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82DF2EBBC17A004BA082 /* TimeEstimator.swift */; };
+		36DB82E22EBE7364004BA082 /* SetScheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82E12EBE7364004BA082 /* SetScheme.swift */; };
 		36DBFBDD2C8BA7A200958BF4 /* AddWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */; };
 		36DBFBDF2C8E454500958BF4 /* CreateTeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DBFBDE2C8E454500958BF4 /* CreateTeamView.swift */; };
 		36E097362C4C74CE00F354E6 /* .lldbinit in Resources */ = {isa = PBXBuildFile; fileRef = 36E097352C4C74CE00F354E6 /* .lldbinit */; };
@@ -367,6 +366,8 @@
 		36F722882DE52E53009C1CA0 /* BarcodeHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F722872DE52E53009C1CA0 /* BarcodeHelper.swift */; };
 		36F7228A2DE52E60009C1CA0 /* GalleryHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F722892DE52E60009C1CA0 /* GalleryHelper.swift */; };
 		36F9E5B12FAFCA1200E11122 /* time_cost_model.json in Resources */ = {isa = PBXBuildFile; fileRef = 36F9E5B02FAFCA1200E11122 /* time_cost_model.json */; };
+		36F9E5C42FAFD2DE00E11122 /* TimeEstimatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F9E5C32FAFD2DE00E11122 /* TimeEstimatorTests.swift */; };
+		36FA4D612FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FA4D602FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift */; };
 		36FE12352FFFABCD00A1BCDE /* exercisesdb.csv in Resources */ = {isa = PBXBuildFile; fileRef = 36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */; };
 		50FB9842CD464A8F9D9E63AB /* ProFoodSearchLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */; };
 		6DF1182C44BE49149F12E422 /* ProFoodSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678276B9D0A646E8AD3315C6 /* ProFoodSearchView.swift */; };
@@ -631,8 +632,6 @@
 		36C458C02B7421110060355F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		36C458C62B7421110060355F /* podsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = podsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C458CA2B7421110060355F /* podsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsTests.swift; sourceTree = "<group>"; };
-		36F9E5C32FAFD2DE00E11122 /* TimeEstimatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeEstimatorTests.swift; sourceTree = "<group>"; };
-		36FA4D602FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseEquipmentResolverTests.swift; sourceTree = "<group>"; };
 		36C458D02B7421110060355F /* podsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = podsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		36C458D42B7421110060355F /* podsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsUITests.swift; sourceTree = "<group>"; };
 		36C458D62B7421110060355F /* podsUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = podsUITestsLaunchTests.swift; sourceTree = "<group>"; };
@@ -690,6 +689,7 @@
 		36DB82DB2EBAA800004BA082 /* WorkoutContextRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutContextRepository.swift; sourceTree = "<group>"; };
 		36DB82DD2EBAA8B1004BA082 /* LLMWorkoutService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMWorkoutService.swift; sourceTree = "<group>"; };
 		36DB82DF2EBBC17A004BA082 /* TimeEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeEstimator.swift; sourceTree = "<group>"; };
+		36DB82E12EBE7364004BA082 /* SetScheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetScheme.swift; sourceTree = "<group>"; };
 		36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWorkspaceView.swift; sourceTree = "<group>"; };
 		36DBFBDE2C8E454500958BF4 /* CreateTeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTeamView.swift; sourceTree = "<group>"; };
 		36E097352C4C74CE00F354E6 /* .lldbinit */ = {isa = PBXFileReference; lastKnownFileType = text; path = .lldbinit; sourceTree = "<group>"; };
@@ -752,6 +752,8 @@
 		36F722872DE52E53009C1CA0 /* BarcodeHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeHelper.swift; sourceTree = "<group>"; };
 		36F722892DE52E60009C1CA0 /* GalleryHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryHelper.swift; sourceTree = "<group>"; };
 		36F9E5B02FAFCA1200E11122 /* time_cost_model.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = time_cost_model.json; sourceTree = "<group>"; };
+		36F9E5C32FAFD2DE00E11122 /* TimeEstimatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeEstimatorTests.swift; sourceTree = "<group>"; };
+		36FA4D602FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseEquipmentResolverTests.swift; sourceTree = "<group>"; };
 		36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = exercisesdb.csv; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -822,6 +824,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				36DB82E12EBE7364004BA082 /* SetScheme.swift */,
 				36DB82DF2EBBC17A004BA082 /* TimeEstimator.swift */,
 				36DB82DD2EBAA8B1004BA082 /* LLMWorkoutService.swift */,
 				36DB82D92EBA9B05004BA082 /* WorkoutPlanValidator.swift */,
@@ -1951,6 +1954,7 @@
 				363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */,
 				3696B95B2B9836F000D211D7 /* EmailVerificationView.swift in Sources */,
 				363068CB2E0B571000F2D4EC /* CameraProgressView.swift in Sources */,
+				36DB82E22EBE7364004BA082 /* SetScheme.swift in Sources */,
 				36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */,
 				36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */,
 				36D3A51C2E91A19600AD6B94 /* YourProgramView.swift in Sources */,

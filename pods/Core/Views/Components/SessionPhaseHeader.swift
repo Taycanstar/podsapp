@@ -82,8 +82,6 @@ extension SessionPhase {
             return "dumbbell.fill"
         case .volumeFocus:
             return "chart.bar.fill"
-        case .conditioningFocus:
-            return "figure.run"
         }
     }
     
@@ -93,8 +91,6 @@ extension SessionPhase {
             return .red
         case .volumeFocus:
             return .blue
-        case .conditioningFocus:
-            return .green
         }
     }
     
@@ -104,8 +100,6 @@ extension SessionPhase {
             return "Building maximal strength"
         case .volumeFocus:
             return "Increasing muscle size"
-        case .conditioningFocus:
-            return "Improving endurance"
         }
     }
 }
@@ -116,7 +110,6 @@ extension SessionPhase {
     VStack(spacing: 16) {
         SessionPhaseHeader(sessionPhase: .strengthFocus, workoutCount: 1, fitnessGoal: .strength)
         SessionPhaseHeader(sessionPhase: .volumeFocus, workoutCount: 2, fitnessGoal: .hypertrophy)
-        SessionPhaseHeader(sessionPhase: .conditioningFocus, workoutCount: 3, fitnessGoal: .tone)
     }
     .padding()
 }

@@ -1,54 +1,61 @@
 // FILE: Services/WorkoutRecommendationService.swift
 import Foundation
 
+@MainActor
 class WorkoutRecommendationService {
     static let shared = WorkoutRecommendationService()
     
     private init() {}
     
     // Enhanced recommendation system using user profile and Perplexity algorithm
-    func getSmartRecommendation(for exercise: ExerciseData, fitnessGoal: FitnessGoal? = nil) -> (sets: Int, reps: Int, weight: Double?) {
+    func getSmartRecommendation(
+        for exercise: ExerciseData,
+        fitnessGoal: FitnessGoal? = nil,
+        sessionPhase: SessionPhase? = nil
+    ) -> (sets: Int, reps: Int, weight: Double?) {
         let userProfile = UserProfileService.shared
-        
-        // Use passed fitness goal (for session overrides) or fall back to user's default
-        let goalToUse = fitnessGoal ?? userProfile.fitnessGoal
-        
-        // Get recommendation using Perplexity algorithm (experience level handled internally)
-        let baseRecommendation = getDefaultSetsAndReps(for: exercise, fitnessGoal: goalToUse)
-        
-        // Check for historical performance and progressive overload
-        let smartWeight = getSmartWeight(for: exercise, baseWeight: baseRecommendation.weight)
-        
+
+        let goalToUse = (fitnessGoal ?? userProfile.fitnessGoal).normalized
+        let phase = sessionPhase ?? SessionPhase.alignedWith(fitnessGoal: goalToUse)
+        let scheme = SetSchemePlanner.shared.scheme(
+            for: exercise,
+            goal: goalToUse,
+            experienceLevel: userProfile.experienceLevel,
+            sessionPhase: phase,
+            isCompound: SetSchemePlanner.isCompoundExercise(exercise)
+        )
+
+        let smartWeight = getSmartWeight(for: exercise, baseWeight: nil)
+
         return (
-            sets: baseRecommendation.sets,
-            reps: baseRecommendation.reps,
+            sets: scheme.sets,
+            reps: scheme.targetReps,
             weight: smartWeight
         )
     }
-    
-    // Default sets and reps using Perplexity algorithm with individual factors
-    func getDefaultSetsAndReps(for exercise: ExerciseData, fitnessGoal: FitnessGoal) -> (sets: Int, reps: Int, weight: Double?) {
-        let userProfile = UserProfileService.shared
-        let exerciseCategory = getExerciseCategory(exercise)
 
-        
-        // Use Perplexity algorithm for sets and reps
-        let (sets, reps, _, _) = getGoalParameters(
-            fitnessGoal,
+    // Default sets and reps used in UI helpers
+    func getDefaultSetsAndReps(
+        for exercise: ExerciseData,
+        fitnessGoal: FitnessGoal,
+        sessionPhase: SessionPhase? = nil
+    ) -> (sets: Int, reps: Int, weight: Double?) {
+        let userProfile = UserProfileService.shared
+        let phase = sessionPhase ?? SessionPhase.alignedWith(fitnessGoal: fitnessGoal)
+        let scheme = SetSchemePlanner.shared.scheme(
+            for: exercise,
+            goal: fitnessGoal,
             experienceLevel: userProfile.experienceLevel,
-            gender: userProfile.gender,
-            exerciseType: exerciseCategory
+            sessionPhase: phase,
+            isCompound: SetSchemePlanner.isCompoundExercise(exercise)
         )
-        
-     
-        
-        return (sets: sets, reps: reps, weight: nil)
+        return (sets: scheme.sets, reps: scheme.targetReps, weight: nil)
     }
     
     // MARK: - Muscle Group Mapping (copied from AddExerciseView.swift)
     
     // Mapping from display names to actual database bodyPart values
-    private func getDatabaseBodyPart(for displayMuscle: String) -> [String] {
+    private nonisolated static func getDatabaseBodyPart(for displayMuscle: String) -> [String] {
         switch displayMuscle {
         case "Chest":
             return ["Chest"]
@@ -88,8 +95,8 @@ class WorkoutRecommendationService {
     }
     
     // Smart muscle filtering with target muscle matching
-    func exerciseMatchesMuscle(_ exercise: ExerciseData, muscleGroup: String) -> Bool {
-        let targetBodyParts = getDatabaseBodyPart(for: muscleGroup)
+    nonisolated func exerciseMatchesMuscle(_ exercise: ExerciseData, muscleGroup: String) -> Bool {
+        let targetBodyParts = Self.getDatabaseBodyPart(for: muscleGroup)
 
         // First check if bodyPart matches
         let bodyPartMatches = targetBodyParts.contains { bodyPart in
