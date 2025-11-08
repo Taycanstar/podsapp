@@ -1016,7 +1016,7 @@ struct ExerciseLoggingView: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Color.blue)
+                .background(.primary)
                 .cornerRadius(100)
                 .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
@@ -1030,7 +1030,7 @@ struct ExerciseLoggingView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.blue)
+                    .background(.primary)
                     .cornerRadius(100)
                     .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
             }
@@ -1056,7 +1056,7 @@ struct ExerciseLoggingView: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Color.blue)
+                .background(.primary)
                 .cornerRadius(24)
                 .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
@@ -1070,7 +1070,7 @@ struct ExerciseLoggingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
         }
-        .background(Color.accentColor)
+        .background(.primary)
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         .contentShape(Rectangle())
@@ -1101,7 +1101,7 @@ struct ExerciseLoggingView: View {
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(Color.blue)
+            .background(.primary)
             .cornerRadius(24)
             .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }

@@ -74,6 +74,8 @@ struct LogFood: View {
     }
     
     let foodTabs: [FoodTab] = [.all, .meals, .foods, .savedMeals]
+    private let initialTabSelection: FoodTab?
+    @State private var hasAppliedInitialTab = false
     
     // IMPORTANT: Keep init argument order exactly the same
     init(selectedTab: Binding<Int>, 
@@ -95,17 +97,28 @@ struct LogFood: View {
         if let tabString = initialTab {
             switch tabString {
             case "savedMeals":
+                initialTabSelection = .savedMeals
                 _selectedFoodTab = State(initialValue: .savedMeals)
             case "meals":
+                initialTabSelection = .meals
                 _selectedFoodTab = State(initialValue: .meals)
             case "foods":
+                initialTabSelection = .foods
                 _selectedFoodTab = State(initialValue: .foods)
             default:
+                initialTabSelection = .all
                 _selectedFoodTab = State(initialValue: .all)
             }
         } else {
+            initialTabSelection = nil
             _selectedFoodTab = State(initialValue: .all)
         }
+    }
+    
+    private func applyInitialTabIfNeeded() {
+        guard !hasAppliedInitialTab, let initialTabSelection else { return }
+        hasAppliedInitialTab = true
+        selectedFoodTab = initialTabSelection
     }
     
     var body: some View {
@@ -125,6 +138,7 @@ struct LogFood: View {
                 keyboardHeight: $keyboardHeight,
                 foodManager: foodManager
             ))
+            .onAppear { applyInitialTabIfNeeded() }
             .alert("Product Name Required", isPresented: $foodManager.showNutritionNameInputForCreation) {
                 TextField("Enter product name", text: $nutritionProductName)
                     .textInputAutocapitalization(.words)
