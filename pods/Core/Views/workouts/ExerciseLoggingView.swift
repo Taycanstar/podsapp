@@ -1025,8 +1025,14 @@ struct ExerciseLoggingView: View {
             
             Button(action: logAllSets) {
                 Text("Log All Sets")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color("tiktoknp"))
+                    .cornerRadius(100)
+                    .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
             }
-            .buttonStyle(SecondaryButtonStyle())
         }
     }
 
