@@ -143,21 +143,15 @@ struct StartWorkoutView: View {
             Spacer()
             
             // Start workout button
-            Button(action: {
-                startWorkout()
-            }) {
+            Button(action: startWorkout) {
                 HStack(spacing: 8) {
                     Image(systemName: "play.fill")
                         .font(.system(size: 16))
                     Text("Start Workout")
                         .font(.system(size: 17, weight: .semibold))
                 }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Color.accentColor)
-                .cornerRadius(12)
             }
+            .buttonStyle(PrimaryButtonStyle())
         }
     }
     

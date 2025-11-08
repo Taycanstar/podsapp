@@ -307,6 +307,7 @@
 		36DB82E22EBE7364004BA082 /* SetScheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82E12EBE7364004BA082 /* SetScheme.swift */; };
 		36DB82E42EBF99ED004BA082 /* exercise-selection-guide.md in Resources */ = {isa = PBXBuildFile; fileRef = 36DB82E32EBF99ED004BA082 /* exercise-selection-guide.md */; };
 		36DB82E62EBF9EFA004BA082 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82E52EBF9EFA004BA082 /* FeatureFlags.swift */; };
+		36DB82E82EBFC6BD004BA082 /* PrimaryButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DB82E72EBFC6BD004BA082 /* PrimaryButtonStyle.swift */; };
 		36DBFBDD2C8BA7A200958BF4 /* AddWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */; };
 		36DBFBDF2C8E454500958BF4 /* CreateTeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DBFBDE2C8E454500958BF4 /* CreateTeamView.swift */; };
 		36E097362C4C74CE00F354E6 /* .lldbinit in Resources */ = {isa = PBXBuildFile; fileRef = 36E097352C4C74CE00F354E6 /* .lldbinit */; };
@@ -694,6 +695,7 @@
 		36DB82E12EBE7364004BA082 /* SetScheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetScheme.swift; sourceTree = "<group>"; };
 		36DB82E32EBF99ED004BA082 /* exercise-selection-guide.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "exercise-selection-guide.md"; sourceTree = "<group>"; };
 		36DB82E52EBF9EFA004BA082 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
+		36DB82E72EBFC6BD004BA082 /* PrimaryButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButtonStyle.swift; sourceTree = "<group>"; };
 		36DBFBDC2C8BA7A200958BF4 /* AddWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWorkspaceView.swift; sourceTree = "<group>"; };
 		36DBFBDE2C8E454500958BF4 /* CreateTeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTeamView.swift; sourceTree = "<group>"; };
 		36E097352C4C74CE00F354E6 /* .lldbinit */ = {isa = PBXFileReference; lastKnownFileType = text; path = .lldbinit; sourceTree = "<group>"; };
@@ -1055,6 +1057,7 @@
 		3682C86A2BBAED5B00B350E2 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				36DB82E72EBFC6BD004BA082 /* PrimaryButtonStyle.swift */,
 				362532A62E6CD987003C3B8D /* RestTimerSheet.swift */,
 				362532A02E638056003C3B8D /* ModernFoodLoadingCard.swift */,
 				78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */,
@@ -1830,6 +1833,7 @@
 				36A851A92E5E27DA004E5CED /* PerformanceFeedbackService.swift in Sources */,
 				3641F5122C73A13500256E85 /* PodInfoView.swift in Sources */,
 				36B3CF872C84014000265F91 /* MediaPreview.swift in Sources */,
+				36DB82E82EBFC6BD004BA082 /* PrimaryButtonStyle.swift in Sources */,
 				364A83B02D87D21E009D2620 /* EditRecipeView.swift in Sources */,
 				361FF3182E20613F00B7F68E /* WorkoutRecommendationService.swift in Sources */,
 				362125EF2C6041F3009D3E7C /* PodOptionsView.swift in Sources */,

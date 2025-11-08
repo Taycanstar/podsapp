@@ -1459,14 +1459,8 @@ private struct TodayWorkoutView: View {
                 HStack {
                     Button(action: { onStartWorkout(workout) }) {
                         Text("Start Workout")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color(.systemBackground))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.primary)
-                            .cornerRadius(100)
-                            .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                     }
+                    .buttonStyle(PrimaryButtonStyle())
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -2611,15 +2605,8 @@ private struct WorkoutDetailFullScreenView: View {
         .safeAreaInset(edge: .bottom) {
             Button(action: startWorkout) {
                 Text("Start Workout")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(Color(.systemBackground))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.primary)
-                    .cornerRadius(100)
-                    .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PrimaryButtonStyle())
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
