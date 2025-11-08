@@ -22,7 +22,6 @@ struct DashboardView: View {
     // ─── Local UI state ─────────────────────────────────────────────────────
     @State private var showDatePicker = false
     @State private var showWaterLogSheet = false
-    @State private var showWorkoutContainer = false
     @State private var workoutSelectedTab: Int = 0
     @State private var isTodayWorkoutDismissed = false
     @AppStorage("hideWorkoutPreviews") private var hideWorkoutPreviews = false
@@ -1147,7 +1146,11 @@ private extension DashboardView {
             Button {
                 HapticFeedback.generate()
                 workoutSelectedTab = 0
-                showWorkoutContainer = true
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShowWorkoutContainerFromDashboard"),
+                    object: nil,
+                    userInfo: ["selectedTab": workoutSelectedTab]
+                )
             } label: {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(alignment: .top, spacing: 16) {
@@ -1177,7 +1180,11 @@ private extension DashboardView {
 
                                 Button {
                                     HapticFeedback.generate()
-                                    showWorkoutContainer = true
+                                    NotificationCenter.default.post(
+                                        name: NSNotification.Name("ShowWorkoutContainerFromDashboard"),
+                                        object: nil,
+                                        userInfo: ["selectedTab": workoutSelectedTab]
+                                    )
                                 } label: {
                                     Label("See Details", systemImage: "info.circle")
                                 }
@@ -1233,9 +1240,6 @@ private extension DashboardView {
                 )
             }
             .buttonStyle(.plain)
-            .fullScreenCover(isPresented: $showWorkoutContainer) {
-                WorkoutContainerView(selectedTab: $workoutSelectedTab)
-            }
         }
     }
 

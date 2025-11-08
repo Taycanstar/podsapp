@@ -356,6 +356,17 @@ struct ContentView: View {
             showNewSheet = true
         }
 
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: NSNotification.Name("ShowWorkoutContainerFromDashboard"))
+                .receive(on: RunLoop.main)
+        ) { notification in
+            if let tab = notification.userInfo?["selectedTab"] as? Int {
+                selectedTab = tab
+            }
+            showLogWorkoutView = true
+        }
+
         // Listen for explicit authentication completion
         .onReceive(
             NotificationCenter.default
