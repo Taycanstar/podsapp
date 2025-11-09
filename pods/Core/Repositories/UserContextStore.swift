@@ -71,6 +71,7 @@ struct UserScopedKey: Hashable {
         case recipes
         case savedMeals
         case userFoods
+        case workoutContext
     }
 
     var storageKey: String { "pods.usercontext.\(email).\(domain.rawValue)" }

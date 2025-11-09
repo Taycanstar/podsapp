@@ -110,6 +110,7 @@ class WorkoutManager: ObservableObject {
     @Published private(set) var completedWorkoutSummary: CompletedWorkoutSummary?
     @Published private(set) var isDisplayingSummary: Bool = false
     @Published private(set) var isWorkoutViewActive: Bool = false
+    @Published private(set) var hasCompletedWorkoutToday: Bool = false
 
     // MARK: - Workout Log Card Display (similar to FoodManager pattern)
     @Published var showWorkoutLogCard = false
@@ -192,10 +193,12 @@ class WorkoutManager: ObservableObject {
     private let customWorkoutIdCounterKey = "customWorkoutIdCounter"
     private let customWorkoutsLastFetchKey = "customWorkoutsLastFetch"
     private let pinnedCustomWorkoutsKey = "pinnedCustomWorkouts"
+    private let lastWorkoutCompletionDateKey = "lastWorkoutCompletionDate"
 
     private var customWorkoutsLastFetch: Date?
     private var isFetchingCustomWorkouts = false
     private var pinnedCustomWorkoutIDs: Set<Int> = []
+    private var lastWorkoutCompletionDate: Date?
 
     private func profileScopedKey(_ key: String) -> String {
         UserProfileService.shared.scopedDefaultsKey(key)
@@ -293,6 +296,7 @@ class WorkoutManager: ObservableObject {
         loadTodayWorkout()
         setupSessionMonitoring()
         setupDynamicProgramming()  // Initialize dynamic programming
+        loadLastWorkoutCompletionState()
 
         workoutDataManager.$syncError
             .receive(on: RunLoop.main)
@@ -307,6 +311,13 @@ class WorkoutManager: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] message in
                 self?.syncErrorMessage = message
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: NSNotification.Name.NSCalendarDayChanged)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.refreshDailyCompletionFlag()
             }
             .store(in: &cancellables)
     }
@@ -461,6 +472,7 @@ class WorkoutManager: ObservableObject {
         loadSessionData()
         loadDefaultMusclePreferences()
         loadTodayWorkout()
+        clearWorkoutCompletionState()
     }
 
     /// Check if workout should be regenerated and regenerate if needed
@@ -673,6 +685,19 @@ class WorkoutManager: ObservableObject {
 
         selectedMuscleType = type
         UserDefaults.standard.set(type, forKey: profileScopedKey(sessionMuscleTypeKey))
+        saveSessionData()
+    }
+
+    /// Set session-only equipment selection (temporary override)
+    func setSessionEquipment(_ equipment: [Equipment], type: String) {
+        customEquipment = equipment
+        selectedEquipmentType = type
+
+        print("🧰 Session equipment override → \(equipment.map { $0.rawValue }), type=\(type)")
+
+        let rawEquipment = equipment.map { $0.rawValue }
+        UserDefaults.standard.set(rawEquipment, forKey: profileScopedKey(sessionCustomEquipmentKey))
+        UserDefaults.standard.set(type, forKey: profileScopedKey(sessionEquipmentTypeKey))
         saveSessionData()
     }
 
@@ -2596,6 +2621,8 @@ class WorkoutManager: ObservableObject {
             pendingSummaryRegeneration = true
             isDisplayingSummary = true
         }
+
+        markWorkoutCompleted(on: now)
     }
 
     private func cleanupAfterIncompleteCompletion() {
@@ -2790,6 +2817,42 @@ class WorkoutManager: ObservableObject {
         return userProfileService.scopedDefaultsKey(emailScoped)
     }
 
+    // MARK: - Daily Workout Completion Tracking
+
+    private func loadLastWorkoutCompletionState() {
+        let key = profileStorageKey(lastWorkoutCompletionDateKey)
+        let timestamp = UserDefaults.standard.double(forKey: key)
+        if timestamp > 0 {
+            lastWorkoutCompletionDate = Date(timeIntervalSince1970: timestamp)
+        } else {
+            lastWorkoutCompletionDate = nil
+        }
+        refreshDailyCompletionFlag()
+    }
+
+    private func markWorkoutCompleted(on date: Date) {
+        lastWorkoutCompletionDate = date
+        let key = profileStorageKey(lastWorkoutCompletionDateKey)
+        UserDefaults.standard.set(date.timeIntervalSince1970, forKey: key)
+        refreshDailyCompletionFlag()
+    }
+
+    private func refreshDailyCompletionFlag() {
+        if let date = lastWorkoutCompletionDate,
+           Calendar.current.isDateInToday(date) {
+            hasCompletedWorkoutToday = true
+        } else {
+            hasCompletedWorkoutToday = false
+        }
+    }
+
+    private func clearWorkoutCompletionState() {
+        lastWorkoutCompletionDate = nil
+        let key = profileStorageKey(lastWorkoutCompletionDateKey)
+        UserDefaults.standard.removeObject(forKey: key)
+        hasCompletedWorkoutToday = false
+    }
+
     private func setGenerating(_ generating: Bool, message: String = "") async {
         assertMainActor("setGenerating")
         isGeneratingWorkout = generating
@@ -2836,6 +2899,12 @@ class WorkoutManager: ObservableObject {
 
         guard !muscleGroups.isEmpty else {
             throw WorkoutGenerationError.noMuscleGroups
+        }
+
+        if let override = parameters.customEquipment {
+            print("🧰 createIntelligentWorkout using session equipment override: \(override.map { $0.rawValue })")
+        } else {
+            print("🧰 createIntelligentWorkout using profile equipment (no session override)")
         }
         
         // Delegate to sophisticated WorkoutGenerationService
@@ -3229,12 +3298,14 @@ class WorkoutManager: ObservableObject {
         activeWorkoutState = nil
 
         loadTodayWorkout()
+        loadLastWorkoutCompletionState()
     }
     
     // MARK: - Persistence
     
     private func loadTodayWorkout() {
         assertMainActor("loadTodayWorkout")
+        refreshDailyCompletionFlag()
         loadTodayWorkoutMetadata()
         let key = profileStorageKey(todayWorkoutKey)
         
@@ -3434,6 +3505,19 @@ class WorkoutManager: ObservableObject {
             sessionFlexibilityPreferences = flexibility
         }
 
+        if let sessionDate = UserDefaults.standard.object(forKey: profileScopedKey(sessionDateKey)) as? Date,
+           Calendar.current.isDateInToday(sessionDate),
+           let savedEquipment = UserDefaults.standard.array(forKey: profileScopedKey(sessionCustomEquipmentKey)) as? [String] {
+            let resolved = savedEquipment.compactMap { Equipment(rawValue: $0) }
+            customEquipment = resolved
+            if let equipmentType = UserDefaults.standard.string(forKey: profileScopedKey(sessionEquipmentTypeKey)), !equipmentType.isEmpty {
+                selectedEquipmentType = equipmentType
+            }
+            print("📦 Restored session equipment override → \(resolved.map { $0.rawValue }), type=\(selectedEquipmentType)")
+        } else {
+            print("📦 No session equipment override found for today (using profile defaults)")
+        }
+
         // Load rest timer session settings (same-day)
         if let sessionDate = UserDefaults.standard.object(forKey: profileScopedKey(sessionDateKey)) as? Date,
            Calendar.current.isDateInToday(sessionDate) {
@@ -3466,6 +3550,15 @@ class WorkoutManager: ObservableObject {
         if let flexibility = sessionFlexibilityPreferences,
            let data = try? JSONEncoder().encode(flexibility) {
             UserDefaults.standard.set(data, forKey: profileScopedKey(sessionFlexibilityKey))
+        }
+
+        if let equipment = customEquipment {
+            let raw = equipment.map { $0.rawValue }
+            UserDefaults.standard.set(raw, forKey: profileScopedKey(sessionCustomEquipmentKey))
+            UserDefaults.standard.set(selectedEquipmentType, forKey: profileScopedKey(sessionEquipmentTypeKey))
+        } else {
+            UserDefaults.standard.removeObject(forKey: profileScopedKey(sessionCustomEquipmentKey))
+            UserDefaults.standard.removeObject(forKey: profileScopedKey(sessionEquipmentTypeKey))
         }
 
         // Persist rest timer settings

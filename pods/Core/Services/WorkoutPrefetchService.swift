@@ -244,7 +244,7 @@ class WorkoutPrefetchService: ObservableObject {
     private func prefetchCommonScenarios(context: UserContext) async {
         // Prefetch common fitness goal transitions
         let commonGoals: [FitnessGoal] = [.strength, .hypertrophy, .general]
-        let commonPhases: [SessionPhase] = [.strengthFocus, .volumeFocus, .conditioningFocus]
+        let commonPhases: [SessionPhase] = [.strengthFocus, .volumeFocus]
         
         // Get user's typical exercises (mock data for now)
         let commonExercises = await getCommonExercisesForUser(context)

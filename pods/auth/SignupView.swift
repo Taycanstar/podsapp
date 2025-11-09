@@ -138,6 +138,7 @@ struct SignupView: View {
         } else {
             self.errorMessage = nil
             let networkManager = NetworkManager()
+            viewModel.email = currentEmail
             let onboardingPayload = viewModel.signupOnboardingPayload()
             let trimmedName = viewModel.name.trimmingCharacters(in: .whitespacesAndNewlines)
 

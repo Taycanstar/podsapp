@@ -30,79 +30,81 @@ struct NotificationCopy {
     ]
     
     // ───────── Breakfast (22 variations) ─────────
-    static let breakfast: [(title: String, body: String)] = [
-        ("Quick Pause👀",              "Jot down breakfast before the morning blurs."),
-        ("Psst… friendly nudge",       "How'd that breakfast go? Drop it in the log."),
-        ("Live it, love it, log it🙂‍↕️", "Little taps, big wins."),
-        ("Breakfast recap?",           "Your log is all ears — two taps and done."),
-        ("Start on-track",             "Log breakfast and watch your numbers fall into place."),
-        ("Morning fuel check☀️",       "What powered you up? Log it while the coffee's hot."),
-        ("Best day starter",           "Before the day sprints ahead, tag your breakfast and keep the streak alive."),
-        ("Sunrise check-in",           "What kicked off your morning? Log and launch."),
-        ("Fuel gauge🚀",               "Breakfast logged = green light for the day ahead."),
-        ("Bite-size victory",          "One entry now saves guesswork later—tag breakfast."),
-        ("Coffee & context",           "While the mug's warm, give breakfast its timestamp."),
-        ("Morning snapshot📸",         "Scan your plate before the calendar fills."),
-        ("Day-one data",               "Every trend starts with breakfast—note it down."),
-        ("Small step, strong start",   "Two taps, then conquer the to-do list."),
-        ("First win of the day",       "Logging breakfast? That's momentum talking."),
-        ("Breakfast Bookmark🔖",       "Mark the moment—future insights start here."),
-        ("Early streak spark",         "Add breakfast and keep the chain unbroken."),
-        ("Taste memory",               "Record flavors now, reminisce later."),
-        ("Minute-one mindfulness🧘",     "Pause, log, breathe—carry on."),
-        ("Chart your course",          "Numbers look best with breakfast on board."),
-        ("Early bird balance🐥",         "Feed the log before you feed the inbox."),
-        ("Good-morning glance👀",        "Sync your fork with your phone—breakfast awaits its spot.")
-    ]
+ static let breakfast: [(title: String, body: String)] = [
+    ("Log breakfast",            "Add what you ate while it’s fresh."),
+    ("Breakfast reminder",       "A quick add keeps your day on track."),
+    ("Morning check-in",         "Log now for accurate totals later."),
+    ("Capture breakfast",        "Two taps and you’re done."),
+    ("Keep your streak",         "Add breakfast to stay consistent."),
+    ("Fuel recorded?",           "Log breakfast for better insights."),
+    ("Don’t forget breakfast",   "Note it before the day gets busy."),
+    ("Coffee time",              "Add breakfast while the mug’s warm."),
+    ("Quick add: breakfast",     "Save the guesswork for later."),
+    ("First entry",              "Start the day with a logged meal."),
+    ("Complete your morning",    "Add breakfast to today’s log."),
+    ("Accurate numbers",         "Breakfast helps balance your day."),
+    ("Stay on plan",             "Log breakfast to hit your targets."),
+    ("Start strong",             "Add breakfast now."),
+    ("Lock it in",               "Record breakfast while you remember."),
+    ("Small step, big payoff",   "A quick log improves your trends."),
+    ("Snapshot breakfast",       "Scan or add in seconds."),
+    ("Morning fuel",             "What did you have? Log it."),
+    ("Just ate?",                "Add breakfast before you move on."),
+    ("Before you go",            "Log breakfast and keep momentum.")
+]
+
+
     
     // ───────── Lunch (20 variations) ─────────
-    static let lunch: [(title: String, body: String)] = [
-        ("Lunch roll-call",            "Got a fruit or veggie on deck? High-five yourself and log it."),
-        ("Menu-planning already?",     "Tick lunch off your log before dinner steals the spotlight."),
-        ("Earn your kudos🤓",          "Log that lunch and own it."),
-        ("Tiny Task —> big streak 🔥", "Log lunch, keep rolling."),
-        ("Midday snapshot📸",          "What's in the box? Give it a home in your logs."),
-        ("Streaks love honesty",       "Log anything, big or small."),
-        ("Had anything for breakfast?", "Tiny taps today save head-scratching tomorrow."),
-        ("New me?",                    "Future-you thanks you for every entry you make today."),
-        ("Midday milestone",           "Lock in lunch and own the afternoon."),
-        ("Plate progress",             "What's fueling the next sprint? Jot it down."),
-        ("Desk-to-log",                "Sandwich, salad, or surprise—record it before the 2 p.m. rush."),
-        ("Refuel record🔥",              "Add lunch; your stats will thank you."),
-        ("Half-time report",           "Game's not over—update the score with lunch."),
-        ("Fork-lift🍴",                  "Elevate your streak—log that forkful."),
-        ("Lunch ledger💰",               "Quick entry keeps the data honest."),
-        ("Bite, scan, done🍴",           "A tap or two beats a blank later."),
-        ("Noon nudge👀",                 "Give lunch its cameo while it's camera-ready."),
-        ("Recharge recap🔋",             "Logging lunch = battery boost for the day."),
-        ("Balanced break",             "Pencil in lunch, then power back up."),
-        ("Plate math🧮",               "Add today's numbers before the next meeting starts.")
-    ]
-    
-    // ───────── Dinner (21 variations) ─────────
-    static let dinner: [(title: String, body: String)] = [
-        ("Future you checking in",     "Thanks for logging today. I'm so glad I did!"),
-        ("What a ride!",               "Capture today's eats while they're fresh."),
-        ("Food = joy",                 "Had a delicious dinner? Immortalize it in the log."),
-        ("Memory jog✅",               "Note dinner now, before \"What did I eat?\" kicks in."),
-        ("Plate-to-phone📱",           "Log tonight's feast before coach-mode kicks in."),
-        ("Wind down right😶‍🌫️",        "Log dinner, close your nutrition rings."),
-        ("Evening wrap-up",            "Final log = flawless daily record."),
-        ("Day in review",              "Close the loop—log tonight's plate."),
-        ("Fork-down finale 📽️",        "Dinner logged, rings closed, couch unlocked."),
-        ("Night-cap note",             "Log dinner, rest easier."),
-        ("Last bite, last scan",       "Seal today's stats before tomorrow starts."),
-        ("Good-night gratitude",       "Log dinner and toast to your progress."),
-        ("Twilight tally🌙",           "Your numbers need their nightcap—add dinner."),
-        ("Supper Snapshot📸",          "Capture flavor memories—log while they're vivid."),
-        ("Bedtime bonus🌙",              "Logging now beats back-tracking later."),
-        ("Daily storybook📖",          "The final chapter: enter dinner, hit save."),
-        ("Digest & document💬",          "Quick save before shutdown mode."),
-        ("Moonlight Metrics🌙",          "Let today's data shine—dinner goes in."),
-        ("Plate History📖",              "Preserve tonight's masterpiece for future you."),
-        ("Cook-to-cloud☁️",              "From stove to stats in two taps."),
-        ("Evening audit",              "Check dinner off, then check out.")
-    ]
+    // ───────── Lunch (20 variations) ─────────
+static let lunch: [(title: String, body: String)] = [
+    ("Log lunch",               "Add what you had while it’s fresh."),
+    ("Lunch reminder",          "A quick add keeps your day on track."),
+    ("Midday check-in",         "Log now for accurate totals later."),
+    ("Capture lunch",           "Two taps and you’re done."),
+    ("Keep your streak",        "Add lunch to stay consistent."),
+    ("Don’t forget lunch",      "Note it before the afternoon gets busy."),
+    ("Quick add: lunch",        "Save the guesswork for later."),
+    ("On your plate?",          "Record lunch for better insights."),
+    ("Complete your noon log",  "Add lunch to today’s entries."),
+    ("Stay on plan",            "Log lunch to hit your targets."),
+    ("Start the afternoon right","A quick entry keeps you aligned."),
+    ("Lock it in",              "Record lunch while you remember."),
+    ("Small step, big payoff",  "A quick log improves your trends."),
+    ("Snapshot lunch",          "Scan or add in seconds."),
+    ("Just ate?",               "Add lunch before you move on."),
+    ("Before the next meeting", "Log lunch and keep momentum."),
+    ("Balance your day",        "Lunch helps your numbers stay steady."),
+    ("Refuel recorded?",        "Add lunch to complete the picture."),
+    ("Desk to log",             "Sandwich or salad—note it now."),
+    ("Midday progress",         "Log lunch and carry the day forward.")
+]
+
+// ───────── Dinner (21 variations) ─────────
+static let dinner: [(title: String, body: String)] = [
+    ("Log dinner",              "Add tonight’s meal while it’s fresh."),
+    ("Evening check-in",        "Close the day with a quick entry."),
+    ("Dinner reminder",         "Log now for accurate daily totals."),
+    ("Capture dinner",          "Two taps and you’re done."),
+    ("Finish strong",           "Add dinner to complete your log."),
+    ("Before you unwind",       "Record dinner and relax."),
+    ("Last entry of the day",   "Log dinner to keep your streak."),
+    ("Complete the picture",    "Dinner helps balance today’s numbers."),
+    ("Don’t forget dinner",     "Note it before the day ends."),
+    ("Lock it in",              "Record dinner while you remember."),
+    ("Small step, clear record","A quick log keeps things accurate."),
+    ("Evening snapshot",        "Scan or add in seconds."),
+    ("Just ate?",               "Add dinner before you move on."),
+    ("Daily wrap-up",           "One entry to finish the day right."),
+    ("Stay on plan",            "Log dinner to hit your targets."),
+    ("Tidy the totals",         "Add dinner and see the full day."),
+    ("Simple save",             "Log dinner now—no backtracking later."),
+    ("Nightly routine",         "A quick entry keeps consistency."),
+    ("Last bite, last log",     "Record dinner and you’re set."),
+    ("End on track",            "Add dinner to maintain momentum."),
+    ("Good night, good data",   "Log dinner and close the day cleanly.")
+]
+
 }
 
 /// Manages all notification functionality for Humuli

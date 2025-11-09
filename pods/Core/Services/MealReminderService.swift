@@ -242,15 +242,74 @@ class MealReminderService: ObservableObject {
     
     private func loadSavedTime(for meal: MealType) -> Date? {
         let key = timeKey(for: meal)
-        let timeInterval = UserDefaults.standard.double(forKey: key)
+        let defaults = UserDefaults.standard
+        let calendar = Calendar.current
         
+        // New storage format: minutes since midnight
+        if let minutesValue = defaults.object(forKey: key) as? Int {
+            return dateForToday(minutesSinceMidnight: minutesValue, calendar: calendar)
+        }
+        
+        // Legacy storage: absolute timestamp (susceptible to timezone drift)
+        let timeInterval = defaults.double(forKey: key)
         guard timeInterval > 0 else { return nil }
-        return Date(timeIntervalSince1970: timeInterval)
+        
+        let legacyDate = Date(timeIntervalSince1970: timeInterval)
+        let components = calendar.dateComponents([.hour, .minute], from: legacyDate)
+        let normalizedDate = dateForToday(
+            hour: components.hour,
+            minute: components.minute,
+            fallback: defaultTime(for: meal),
+            calendar: calendar
+        )
+        
+        if let normalizedDate {
+            // Migrate to minute-based storage to avoid future drift
+            let minutesValue = minutesSinceMidnight(from: normalizedDate, calendar: calendar)
+            defaults.set(minutesValue, forKey: key)
+        }
+        
+        return normalizedDate
     }
     
     private func saveTime(_ time: Date, for meal: MealType) {
         let key = timeKey(for: meal)
-        UserDefaults.standard.set(time.timeIntervalSince1970, forKey: key)
+        let minutesValue = minutesSinceMidnight(from: time, calendar: Calendar.current)
+        UserDefaults.standard.set(minutesValue, forKey: key)
+    }
+    
+    private func dateForToday(minutesSinceMidnight: Int, calendar: Calendar) -> Date? {
+        guard minutesSinceMidnight >= 0 else { return nil }
+        let hour = minutesSinceMidnight / 60
+        let minute = minutesSinceMidnight % 60
+        return calendar.date(
+            bySettingHour: hour,
+            minute: minute,
+            second: 0,
+            of: Date()
+        )
+    }
+    
+    private func dateForToday(
+        hour: Int?,
+        minute: Int?,
+        fallback: Date,
+        calendar: Calendar
+    ) -> Date? {
+        guard let hour, let minute else { return fallback }
+        return calendar.date(
+            bySettingHour: hour,
+            minute: minute,
+            second: 0,
+            of: Date()
+        ) ?? fallback
+    }
+    
+    private func minutesSinceMidnight(from date: Date, calendar: Calendar) -> Int {
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        return hour * 60 + minute
     }
     
     private func markAsUserCustomTime(_ meal: MealType) {

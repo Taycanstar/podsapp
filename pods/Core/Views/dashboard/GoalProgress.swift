@@ -330,8 +330,9 @@ struct GoalProgress: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 20) {
                 // Calories section
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Calories")
@@ -546,37 +547,16 @@ struct GoalProgress: View {
                 }
                 .padding(.horizontal)
                 
-                Spacer(minLength: 40)
-                
-                // Generate goals button
-                Button(action: {
-                    if isGenerating {
-                        return
-                    }
-                    generateGoals()
-                }) {
-                    if isGenerating {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.gray)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                    } else {
-                        Text("Generate Personalized Goals")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color("background"))
-                            .foregroundColor(Color("bg"))
-                            .cornerRadius(12)
-                    }
-                }
-                .disabled(isGenerating)
-                .padding(.horizontal)
+                Spacer(minLength: 120)
             }
             .padding(.top, 16)
+        }
+        
+        generateGoalsButton
+            .background(
+                Color("iosbg")
+                    .ignoresSafeArea(edges: .bottom)
+            )
         }
         .background(Color("iosbg").ignoresSafeArea())
         .alert(isPresented: $showError) {
@@ -623,6 +603,32 @@ struct GoalProgress: View {
             // Show tab bar when this view disappears
             isTabBarVisible.wrappedValue = true
         }
+    }
+    
+    private var generateGoalsButton: some View {
+        Button(action: {
+            guard !isGenerating else { return }
+            generateGoals()
+        }) {
+            Group {
+                if isGenerating {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                } else {
+                    Text("Generate Personalized Goals")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(isGenerating ? Color.gray : Color("background"))
+            .foregroundColor(isGenerating ? Color.white : Color("bg"))
+            .cornerRadius(999)
+        }
+        .disabled(isGenerating)
+        .padding(.horizontal, 24)
+        .padding(.top, 12)
+        .padding(.bottom, 24)
     }
     
     // Update goals from input fields and refresh the ring

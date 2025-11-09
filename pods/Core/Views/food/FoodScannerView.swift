@@ -91,7 +91,7 @@ struct FoodScannerView: View {
                 } else {
                     CameraPreviewView(
                         selectedMode: $selectedMode,
-                        flashEnabled: flashEnabled, 
+                        flashEnabled: $flashEnabled, 
                         onCapture: { image in
                             print("🔍 CRASH_DEBUG: onCapture called")
                             guard let image = image else { 
@@ -788,7 +788,7 @@ struct ScanOptionButton: View {
 struct CameraPreviewView: UIViewRepresentable {
     let captureSession = AVCaptureSession()
     @Binding var selectedMode: FoodScannerView.ScanMode
-    var flashEnabled: Bool
+    @Binding var flashEnabled: Bool
     var onCapture: (UIImage?) -> Void
     var onBarcodeDetected: (String) -> Void
     
@@ -809,6 +809,8 @@ struct CameraPreviewView: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: UIView, context: Context) {
+        // Keep coordinator in sync with latest SwiftUI state
+        context.coordinator.parent = self
         // Update barcode scanning based on mode change
         context.coordinator.updateBarcodeScanning(isBarcode: selectedMode == .barcode)
     }
@@ -935,7 +937,7 @@ struct CameraPreviewView: UIViewRepresentable {
     }
     
     class Coordinator: NSObject, AVCapturePhotoCaptureDelegate, AVCaptureMetadataOutputObjectsDelegate {
-        let parent: CameraPreviewView
+        var parent: CameraPreviewView
         var photoOutput = AVCapturePhotoOutput()
         var metadataOutput: AVCaptureMetadataOutput?
         var device: AVCaptureDevice?

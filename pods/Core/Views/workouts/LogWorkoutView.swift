@@ -75,6 +75,7 @@ struct LogWorkoutView: View {
     @State private var actionError: String?
     
     
+    
     // Properties that delegate to WorkoutManager but are accessed locally
     private var isGeneratingWorkout: Bool {
         workoutManager.isGeneratingWorkout
@@ -407,7 +408,7 @@ struct LogWorkoutView: View {
     private var durationPickerSheet: some View {
         WorkoutDurationPickerView(
             selectedDuration: .constant(workoutManager.effectiveDuration),
-            onSetDefault: { newDuration in
+                onSetDefault: { newDuration in
                     // Update WorkoutManager and UserProfileService
                     workoutManager.setDefaultDuration(newDuration)
                     
@@ -417,38 +418,12 @@ struct LogWorkoutView: View {
                     }
                     
                     showingDurationPicker = false
-                    
-                    // Regenerate workout with new duration (minimum 1.5s loader)
-                    Task {
-                        let startTime = Date()
-                        await workoutManager.generateTodayWorkout()
-                        
-                        // Ensure minimum 1.5 seconds of loading for smooth UX
-                        let elapsed = Date().timeIntervalSince(startTime)
-                        let remaining = max(0, 1.5 - elapsed)
-                        if remaining > 0 {
-                            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                        }
-                    }
                     print("✅ Default duration set to \(newDuration.minutes) minutes")
                 },
                 onSetForWorkout: { newDuration in
                     // Update WorkoutManager session duration
                     workoutManager.setSessionDuration(newDuration)
                     showingDurationPicker = false
-                    
-                    // Regenerate with new duration (minimum 1.5s loader)
-                    Task {
-                        let startTime = Date()
-                        await workoutManager.generateTodayWorkout()
-                        
-                        // Ensure minimum 1.5 seconds of loading for smooth UX
-                        let elapsed = Date().timeIntervalSince(startTime)
-                        let remaining = max(0, 1.5 - elapsed)
-                        if remaining > 0 {
-                            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-                        }
-                    }
                     print("✅ Session duration set to \(newDuration.minutes) minutes")
                 }
             )
@@ -461,10 +436,6 @@ struct LogWorkoutView: View {
                 print("🎯 Session muscles set to \(newMuscles) for \(split.rawValue)")
                 workoutManager.setSessionTargetMuscles(newMuscles, type: split.rawValue)
                 showingTargetMusclesPicker = false
-
-                Task {
-                    await workoutManager.generateTodayWorkout()
-                }
             },
             currentCustomMuscles: workoutManager.baselineCustomMuscles,
             currentMuscleType: selectedMuscleType
@@ -474,24 +445,11 @@ struct LogWorkoutView: View {
     @ViewBuilder
     private var equipmentPickerSheet: some View {
         EquipmentView(onSelectionChanged: { newEquipment, equipmentType in
-                // Save custom equipment selection and type, regenerate workout
-                workoutManager.customEquipment = newEquipment
-                workoutManager.selectedEquipmentType = equipmentType
-                
-                // Persist to UserDefaults (WorkoutManager handles this)
-                let equipmentStrings = newEquipment.map { $0.rawValue }
-                let equipmentKey = UserProfileService.shared.scopedDefaultsKey("currentWorkoutCustomEquipment")
-                let typeKey = UserProfileService.shared.scopedDefaultsKey("currentWorkoutEquipmentType")
-                UserDefaults.standard.set(equipmentStrings, forKey: equipmentKey)
-                UserDefaults.standard.set(equipmentType, forKey: typeKey)
-                
+                // Save custom equipment selection and type
+                workoutManager.setSessionEquipment(newEquipment, type: equipmentType)
+
                 print("⚙️ Selected equipment: \(newEquipment.map { $0.rawValue }), type: \(equipmentType)")
                 showingEquipmentPicker = false
-                
-                // Regenerate workout
-                Task {
-                    await workoutManager.generateTodayWorkout()
-                }
             })
     }
     
@@ -507,18 +465,12 @@ struct LogWorkoutView: View {
                     }
                     
                     showingFitnessGoalPicker = false
-                    Task {
-                        await workoutManager.generateTodayWorkout()
-                    }
                     print("✅ Default fitness goal set to \(newGoal.displayName)")
                 },
                 onSetForWorkout: { newGoal in
                     workoutManager.setSessionFitnessGoal(newGoal)
                     showingFitnessGoalPicker = false
                     
-                    Task {
-                        await workoutManager.generateTodayWorkout()
-                    }
                     print("✅ Session fitness goal set to \(newGoal.displayName)")
                 }
             )
@@ -536,18 +488,12 @@ struct LogWorkoutView: View {
                     }
                     
                     showingFitnessLevelPicker = false
-                    Task {
-                        await workoutManager.generateTodayWorkout()
-                    }
                     print("✅ Default fitness level set to \(newLevel.displayName)")
                 },
                 onSetForWorkout: { newLevel in
                     workoutManager.setSessionFitnessLevel(newLevel)
                     showingFitnessLevelPicker = false
                     
-                    Task {
-                        await workoutManager.generateTodayWorkout()
-                    }
                     print("✅ Session fitness level set to \(newLevel.displayName)")
                 }
             )
@@ -576,9 +522,6 @@ struct LogWorkoutView: View {
                                     switch result {
                                     case .success:
                                         showingFlexibilityPicker = false
-                                        Task {
-                                            await workoutManager.generateTodayWorkout()
-                                        }
                                         print("✅ Default flexibility preferences updated")
                                     case .failure(let error):
                                         print("❌ Failed to update flexibility preferences: \(error)")
@@ -588,9 +531,6 @@ struct LogWorkoutView: View {
                         }
                     } else {
                         showingFlexibilityPicker = false
-                        Task {
-                            await workoutManager.generateTodayWorkout()
-                        }
                     }
                 },
                 onSetForWorkout: { warmUp, coolDown in
@@ -598,9 +538,6 @@ struct LogWorkoutView: View {
                     workoutManager.setSessionFlexibilityPreferences(newPrefs)
                     
                     showingFlexibilityPicker = false
-                    Task {
-                        await workoutManager.generateTodayWorkout()
-                    }
                     print("✅ Session flexibility preferences set")
                 }
             )
@@ -620,9 +557,7 @@ struct LogWorkoutView: View {
     
     private func regenerateWorkoutWithNewDuration() {
         print("🔄 Regenerating workout with WorkoutManager")
-        Task {
-            await workoutManager.generateTodayWorkout()
-        }
+        self.requestWorkoutGeneration()
         // Note: shouldRegenerateWorkout is reset by TodayWorkoutView after it triggers generation
     }
     
@@ -783,7 +718,7 @@ struct LogWorkoutView: View {
                 if hasSessionModifications {
                     Button(action: {
                         workoutManager.clearAllSessionOverrides()
-                        Task { await workoutManager.generateTodayWorkout() }
+                        self.requestWorkoutGeneration()
                         print("🔄 Reset to default preferences")
                     }) {
                         Image(systemName: "xmark")
@@ -1125,7 +1060,7 @@ struct LogWorkoutView: View {
                 onPresentLogSheet: onPresentLogSheet,
                 onRefresh: {
                     HapticFeedback.generate()
-                    Task { await workoutManager.generateTodayWorkout() }
+                    self.requestWorkoutGeneration()
                 },
                 onRenameWorkout: {
                     HapticFeedback.generate()
@@ -1524,14 +1459,8 @@ private struct TodayWorkoutView: View {
                 HStack {
                     Button(action: { onStartWorkout(workout) }) {
                         Text("Start Workout")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color(.systemBackground))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.primary)
-                            .cornerRadius(100)
-                            .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                     }
+                    .buttonStyle(PrimaryButtonStyle())
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -1545,39 +1474,37 @@ private struct TodayWorkoutView: View {
         .onChange(of: shouldRegenerate) { _, newValue in
             if newValue {
                 // Reset the flag and regenerate workout
-                generateTodayWorkout()
+                requestTodayWorkoutGeneration()
                 shouldRegenerate = false
             }
         }
         .onChange(of: selectedDuration) { _, newDuration in
             // Regenerate workout when duration changes (ensures fresh data)
             print("🔄 Duration changed to \(newDuration.minutes) minutes - regenerating workout")
-            generateTodayWorkout()
+            requestTodayWorkoutGeneration()
         }
         .onChange(of: customTargetMuscles) { _, newMuscles in
             print("🎯 Custom muscles changed to: \(newMuscles?.description ?? "nil") - regenerating workout")
-            generateTodayWorkout()
+            requestTodayWorkoutGeneration()
         }
         .onChange(of: effectiveFlexibilityPreferences) { _, newPreferences in
             print("🧘 Flexibility preferences changed to: warmUp=\(newPreferences.warmUpEnabled), coolDown=\(newPreferences.coolDownEnabled) - regenerating workout")
-            generateTodayWorkout()
+            requestTodayWorkoutGeneration()
         }
         .onChange(of: customEquipment) { _, newEquipment in
             print("⚙️ Custom equipment changed to: \(newEquipment?.description ?? "nil") - regenerating workout") 
-            generateTodayWorkout()
+            requestTodayWorkoutGeneration()
         }
         .onChange(of: effectiveFitnessGoal) { _, newGoal in
             print("🏋️ Fitness goal changed to: \(newGoal.displayName) - regenerating workout")
-            generateTodayWorkout()
+            requestTodayWorkoutGeneration()
         }
         .onChange(of: effectiveFitnessLevel) { _, newLevel in
             print("📈 Fitness level changed to: \(newLevel.displayName) - regenerating workout")
-            generateTodayWorkout()
+            requestTodayWorkoutGeneration()
         }
     }
 
-    
-    
     private func loadOrGenerateTodayWorkout() {
         // CRITICAL: Don't regenerate if in error state to prevent infinite loop
         if workoutManager.generationError != nil {
@@ -1598,11 +1525,14 @@ private struct TodayWorkoutView: View {
         }
 
         guard !workoutManager.isGeneratingWorkout else { return }
-        generateTodayWorkout()
+        requestTodayWorkoutGeneration()
     }
-    
-    private func generateTodayWorkout() {
-        print("🚀 TodayWorkoutView: Using WorkoutManager to generate workout")
+
+    private func requestTodayWorkoutGeneration() {
+        guard !workoutManager.isGeneratingWorkout else {
+            print("⏳ TodayWorkoutView: generation already in progress")
+            return
+        }
         Task {
             await workoutManager.generateTodayWorkout()
         }
@@ -2181,8 +2111,6 @@ private struct TodayWorkoutView: View {
                 return 1
             case .volumeFocus:
                 return 2
-            case .conditioningFocus:
-                return 3
             }
         }
         return 1
@@ -2677,15 +2605,8 @@ private struct WorkoutDetailFullScreenView: View {
         .safeAreaInset(edge: .bottom) {
             Button(action: startWorkout) {
                 Text("Start Workout")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(Color(.systemBackground))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.primary)
-                    .cornerRadius(100)
-                    .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PrimaryButtonStyle())
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
@@ -4909,7 +4830,7 @@ private struct DynamicSessionPhaseView: View {
             
             // Phase indicator dots
             HStack(spacing: 6) {
-                ForEach([SessionPhase.strengthFocus, .volumeFocus, .conditioningFocus], id: \.self) { phase in
+                ForEach([SessionPhase.strengthFocus, .volumeFocus], id: \.self) { phase in
                     Circle()
                         .fill(phase == sessionPhase ? phaseColor : Color.gray.opacity(0.3))
                         .frame(width: 8, height: 8)
@@ -4935,8 +4856,6 @@ private struct DynamicSessionPhaseView: View {
             return "dumbbell.fill"
         case .volumeFocus:
             return "chart.bar.fill"
-        case .conditioningFocus:
-            return "figure.run"
         }
     }
     
@@ -4946,8 +4865,6 @@ private struct DynamicSessionPhaseView: View {
             return .red
         case .volumeFocus:
             return .blue
-        case .conditioningFocus:
-            return .green
         }
     }
     
@@ -4962,9 +4879,18 @@ private struct DynamicSessionPhaseView: View {
             return "Building maximal strength"
         case .volumeFocus:
             return "Increasing muscle size"
-        case .conditioningFocus:
-            return "Improving endurance"
         }
     }
 }
-    
+
+private extension LogWorkoutView {
+    func requestWorkoutGeneration() {
+        guard !workoutManager.isGeneratingWorkout else {
+            print("⏳ LogWorkoutView: generation already in progress")
+            return
+        }
+        Task {
+            await workoutManager.generateTodayWorkout()
+        }
+    }
+}

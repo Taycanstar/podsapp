@@ -82,6 +82,20 @@ class OnboardingViewModel: ObservableObject {
             }
         }
 
+        /// Map fitness goal to ICP (Ideal Customer Profile) for body composition phase
+        var icp: String {
+            switch self {
+            case .loseWeight:
+                return "cut"
+            case .leanAndToned:
+                return "cut"
+            case .gainMuscle:
+                return "lean_bulk"
+            case .liftMoreWeight:
+                return "recomp"
+            }
+        }
+
         /// Best-effort reverse lookup from a stored onboarding value
         static func option(forOnboardingValue value: String) -> FitnessGoalOption? {
             switch value {
@@ -825,6 +839,7 @@ class OnboardingViewModel: ObservableObject {
     
     // Food container visibility control
     @Published var isShowingFoodContainer: Bool = false
+    @Published var pendingInitialFoodTab: String? = nil
     
     // Streak visibility control
     @Published var isStreakVisible: Bool = true {
@@ -1216,6 +1231,9 @@ class OnboardingViewModel: ObservableObject {
         let resolvedDietPreference = sanitizedDietPreference.isEmpty ? "balanced" : sanitizedDietPreference
         let resolvedWorkoutLocation = workoutLocation.isEmpty ? "gym" : workoutLocation
 
+        // Calculate ICP based on selected fitness goal
+        let icp = selectedFitnessGoal?.icp ?? ""
+
         var payload: [String: Any] = [
             "gender": gender,
             "date_of_birth": dobFormatter.string(from: dob),
@@ -1223,6 +1241,7 @@ class OnboardingViewModel: ObservableObject {
             "weight_kg": weightKg,
             "desired_weight_kg": desiredWeightKg,
             "fitness_goal": fitnessGoal,
+            "icp": icp,  // Add ICP mapped from fitness goal
             "workout_frequency": resolvedWorkoutFrequency,
             "diet_preference": resolvedDietPreference,
             "add_calories_burned": addCaloriesBurned,
@@ -1292,8 +1311,11 @@ class OnboardingViewModel: ObservableObject {
         let sanitizedFrequency = normalizedFrequencyValue(workoutFrequency)
         let sanitizedDietPreference = normalizedDietPreference(dietPreference)
 
+        // Calculate ICP based on selected fitness goal
+        let icp = selectedFitnessGoal?.icp ?? ""
+
         let onboardingData: [String: Any] = [
-            "email": email,
+            "user_email": email,
             "gender": gender,
             "date_of_birth": dateOfBirth?.ISO8601Format() ?? "",
             "height_cm": heightCm,
@@ -1301,6 +1323,7 @@ class OnboardingViewModel: ObservableObject {
             "desired_weight_kg": desiredWeightKg,
             "diet_goal": dietGoal,
             "fitness_goal": fitnessGoal,
+            "icp": icp,  // Add ICP mapped from fitness goal
             "goal_timeframe_weeks": goalTimeframeWeeks,
             "weekly_weight_change": weeklyWeightChange,
             "workout_frequency": sanitizedFrequency.isEmpty ? "medium" : sanitizedFrequency,
@@ -1321,32 +1344,39 @@ class OnboardingViewModel: ObservableObject {
         print("📋 OnboardingViewModel: Prepared onboarding data with \(onboardingData.count) fields")
         
         Task {
-            do {
-                // Use DataLayer for local-first save with background sync
-                print("💾 OnboardingViewModel: Saving via DataLayer (local-first strategy)")
-                await DataLayer.shared.saveOnboardingData(onboardingData)
-                
-                // Update local state
-                await MainActor.run {
-                    print("✅ OnboardingViewModel: Updating local state")
-                    self.onboardingCompleted = true
+            // First, save locally for offline access
+            print("💾 OnboardingViewModel: Saving locally via DataLayer")
+            await DataLayer.shared.saveOnboardingData(onboardingData)
+
+            // Then, send to backend
+            print("📤 OnboardingViewModel: Sending to backend via NetworkManager")
+            NetworkManager().sendOnboardingData(onboardingData) { success, errorMessage in
+                Task { @MainActor in
                     self.isLoading = false
-                    self.isShowingOnboarding = false
-                    
-                    // Save completion status
-                    UserDefaults.standard.set(true, forKey: "onboardingCompleted")
-                    UserDefaults.standard.set(self.email, forKey: "userEmail")
-                    
-                    print("🎉 OnboardingViewModel: Onboarding completed successfully!")
-                    print("   └── User: \(self.email)")
-                    print("   └── Data saved locally and queued for sync")
-                }
-                
-            } catch {
-                await MainActor.run {
-                    print("❌ OnboardingViewModel: Failed to complete onboarding - \(error.localizedDescription)")
-                    self.isLoading = false
-                    self.errorMessage = "Failed to save onboarding data: \(error.localizedDescription)"
+
+                    if success {
+                        print("✅ OnboardingViewModel: Backend save successful")
+                        self.onboardingCompleted = true
+                        self.isShowingOnboarding = false
+
+                        // Save completion status
+                        UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+                        UserDefaults.standard.set(self.email, forKey: "userEmail")
+
+                        print("🎉 OnboardingViewModel: Onboarding completed successfully!")
+                        print("   └── User: \(self.email)")
+                        print("   └── Data saved locally and sent to backend")
+                    } else {
+                        print("❌ OnboardingViewModel: Backend save failed - \(errorMessage ?? "Unknown error")")
+                        // Even if backend fails, we saved locally, so still complete onboarding
+                        self.onboardingCompleted = true
+                        self.isShowingOnboarding = false
+                        UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+                        UserDefaults.standard.set(self.email, forKey: "userEmail")
+
+                        print("⚠️ OnboardingViewModel: Completed with local save only (backend sync failed)")
+                        self.errorMessage = "Onboarding saved locally. Backend sync failed: \(errorMessage ?? "Unknown error")"
+                    }
                 }
             }
         }
@@ -1474,8 +1504,11 @@ class OnboardingViewModel: ObservableObject {
             UserDefaults.standard.set(meal, forKey: "selectedMealFromNewSheet")
         }
         if let tab = initialTab {
+            pendingInitialFoodTab = tab
             // Store the initial tab for FoodContainerView to use
             UserDefaults.standard.set(tab, forKey: "initialFoodTabFromNewSheet")
+        } else {
+            pendingInitialFoodTab = nil
         }
         isShowingFoodContainer = true
     }

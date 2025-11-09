@@ -33,7 +33,7 @@ struct EquipmentView: View {
                     .hackSquatMachine, .shoulderPressMachine, .tricepsExtensionMachine,
                     .bicepsCurlMachine, .abCrunchMachine, .preacherCurlBench, .resistanceBands,
                     .stabilityBall, .medicineBalls, .battleRopes, .box, .platforms, .pvc,
-                    .bosuBalanceTrainer, .sled, .preacherCurlMachine, .rings
+                    .bosuBalanceTrainer, .sled, .preacherCurlMachine, .rings, .suspensionTrainer
                 ]
             case .smallGym:
                 return [
@@ -47,12 +47,12 @@ struct EquipmentView: View {
                 return [
                     .dumbbells, .barbells, .squatRack, .flatBench, .inclineBench,
                     .pullupBar, .dipBar, .kettlebells, .resistanceBands, .box,
-                    .medicineBalls, .ezBar, .pvc, .rings
+                    .medicineBalls, .ezBar, .pvc, .rings, .suspensionTrainer
                 ]
             case .atHome:
                 return [
                     .dumbbells, .resistanceBands, .stabilityBall, .medicineBalls,
-                    .pullupBar, .flatBench, .kettlebells, .box, .pvc
+                    .pullupBar, .flatBench, .kettlebells, .box, .pvc, .suspensionTrainer
                 ]
             case .bodyweightOnly:
                 return [

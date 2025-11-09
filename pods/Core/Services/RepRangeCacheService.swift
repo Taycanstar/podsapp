@@ -418,9 +418,6 @@ extension DynamicParameterService {
         case .volumeFocus:
             let rangeMid = baseRange.lowerBound + (baseRange.upperBound - baseRange.lowerBound) / 3
             return rangeMid...baseRange.upperBound
-        case .conditioningFocus:
-            let newLower = baseRange.lowerBound + (baseRange.upperBound - baseRange.lowerBound) * 2 / 3
-            return newLower...baseRange.upperBound
         }
     }
     

@@ -164,8 +164,13 @@ struct ContentView: View {
                 }
                 
                 // Food container as a fullScreenCover
-                .fullScreenCover(isPresented: $viewModel.isShowingFoodContainer) {
-                    FoodContainerView()
+                .fullScreenCover(
+                    isPresented: $viewModel.isShowingFoodContainer,
+                    onDismiss: {
+                        viewModel.pendingInitialFoodTab = nil
+                    }
+                ) {
+                    FoodContainerView(initialTabPreference: viewModel.pendingInitialFoodTab)
                         .environmentObject(viewModel)
                 }
                 
@@ -376,6 +381,17 @@ struct ContentView: View {
             // Handle request from DashboardView to show NewSheetView
             print("📱 Received ShowNewSheetFromDashboard notification")
             showNewSheet = true
+        }
+
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: NSNotification.Name("ShowWorkoutContainerFromDashboard"))
+                .receive(on: RunLoop.main)
+        ) { notification in
+            if let tab = notification.userInfo?["selectedTab"] as? Int {
+                selectedTab = tab
+            }
+            showLogWorkoutView = true
         }
 
         // Listen for explicit authentication completion

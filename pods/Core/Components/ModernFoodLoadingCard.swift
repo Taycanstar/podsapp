@@ -102,16 +102,16 @@ struct ModernFoodLoadingCard: View {
         }
         .padding(20)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 24)
                 .fill(Color("containerbg"))
                 .overlay(
                     // Shimmer light effect
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 24)
                         .fill(shimmerGradient(shimmerColor: shimmerColor))
                         .opacity(shimmerOpacity)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 24)
                         .stroke(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
                 )
         )

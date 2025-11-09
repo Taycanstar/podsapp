@@ -1012,28 +1012,16 @@ struct ExerciseLoggingView: View {
     private var startWorkoutButton: some View {
         Button(action: startWorkout) {
             Text("Start Workout")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Color.blue)
-                .cornerRadius(100)
-                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
+        .buttonStyle(PrimaryButtonStyle())
     }
     
     private var workoutActionButtons: some View {
         HStack(spacing: 12) {
             Button(action: logCurrentSet) {
                 Text("Log Set")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.blue)
-                    .cornerRadius(100)
-                    .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
             }
+            .buttonStyle(PrimaryButtonStyle())
             
             Button(action: logAllSets) {
                 Text("Log All Sets")
@@ -1042,7 +1030,7 @@ struct ExerciseLoggingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(Color("tiktoknp"))
-                    .cornerRadius(24)
+                    .cornerRadius(100)
                     .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
             }
         }
@@ -1052,28 +1040,15 @@ struct ExerciseLoggingView: View {
     private var logSetAndContinueButton: some View {
         Button(action: logSetAndContinue) {
             Text("Log Set and Continue")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Color.blue)
-                .cornerRadius(24)
-                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
+        .buttonStyle(PrimaryButtonStyle())
     }
     
     private var doneButton: some View {
         Button(action: completeWorkout) {
             Text("Done")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
         }
-        .background(Color.accentColor)
-        .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
-        .contentShape(Rectangle())
+        .buttonStyle(PrimaryButtonStyle())
     }
     
     // MARK: - Duration Exercise Timer Buttons
@@ -1096,14 +1071,8 @@ struct ExerciseLoggingView: View {
             // Log Set button (consistent styling)
             Button(action: logCurrentSet) {
                 Text("Log Set")
-                    .font(.system(size: 16, weight: .semibold))
             }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color.blue)
-            .cornerRadius(24)
-            .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+            .buttonStyle(PrimaryButtonStyle())
         }
     }
     

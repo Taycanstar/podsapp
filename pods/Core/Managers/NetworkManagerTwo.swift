@@ -28,6 +28,8 @@ class NetworkManagerTwo {
 
 // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 //   let baseUrl = "http://192.168.1.92:8000"
+// let baseUrl = "http://172.20.10.4:8000"
+
 let baseUrl = "http://172.20.10.4:8000"
 
 
@@ -228,6 +230,48 @@ let baseUrl = "http://172.20.10.4:8000"
             let isCompleted: Bool?
             let notes: String?
         }
+    }
+
+    struct LLMCandidateExercise: Codable {
+        let exerciseId: Int
+        let name: String
+    }
+
+    struct LLMSessionBudget: Codable {
+        let format: String
+        let densityHint: String
+        let durationMinutes: Int
+        let availableWorkSeconds: Int
+        let maxWorkSeconds: Int
+        let warmupSeconds: Int
+        let cooldownSeconds: Int
+        let bufferSeconds: Int
+    }
+
+    struct LLMWorkoutRequest: Codable {
+        let userEmail: String
+        let context: WorkoutContextV1
+        let candidates: [LLMCandidateExercise]
+        let targetExerciseCount: Int
+        let sessionBudget: LLMSessionBudget?
+        let requestId: UUID
+    }
+
+    struct LLMWorkoutResponse: Codable {
+        struct Exercise: Codable {
+            let exerciseId: Int
+            let muscleGroup: String
+            let sets: Int
+            let reps: Int
+            let weight: Double?
+            let restSeconds: Int?
+        }
+
+        let exercises: [Exercise]
+        let warmupMinutes: Int?
+        let cooldownMinutes: Int?
+        let rationale: String?
+        let warnings: [String]?
     }
 
     struct WorkoutRequest: Codable {
@@ -497,6 +541,63 @@ let baseUrl = "http://172.20.10.4:8000"
         }
 
         return try decoder.decode(DeleteWorkoutExerciseResponse.self, from: data)
+    }
+
+    func generateLLMWorkoutPlan(request: LLMWorkoutRequest, completion: @escaping (Result<LLMWorkoutResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/ai/workouts/generate/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+
+        do {
+            urlRequest.httpBody = try encoder.encode(request)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: urlRequest) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let response = response else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+
+            do {
+                try self.validate(response: response, data: data)
+            } catch {
+                completion(.failure(error))
+                return
+            }
+
+            guard let data else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+            do {
+                let payload = try decoder.decode(LLMWorkoutResponse.self, from: data)
+                completion(.success(payload))
+            } catch {
+                completion(.failure(NetworkError.decodingError))
+            }
+        }.resume()
     }
 
     private func validate(response: URLResponse, data: Data?) throws {

@@ -1,54 +1,61 @@
 // FILE: Services/WorkoutRecommendationService.swift
 import Foundation
 
+@MainActor
 class WorkoutRecommendationService {
     static let shared = WorkoutRecommendationService()
     
     private init() {}
     
     // Enhanced recommendation system using user profile and Perplexity algorithm
-    func getSmartRecommendation(for exercise: ExerciseData, fitnessGoal: FitnessGoal? = nil) -> (sets: Int, reps: Int, weight: Double?) {
+    func getSmartRecommendation(
+        for exercise: ExerciseData,
+        fitnessGoal: FitnessGoal? = nil,
+        sessionPhase: SessionPhase? = nil
+    ) -> (sets: Int, reps: Int, weight: Double?) {
         let userProfile = UserProfileService.shared
-        
-        // Use passed fitness goal (for session overrides) or fall back to user's default
-        let goalToUse = fitnessGoal ?? userProfile.fitnessGoal
-        
-        // Get recommendation using Perplexity algorithm (experience level handled internally)
-        let baseRecommendation = getDefaultSetsAndReps(for: exercise, fitnessGoal: goalToUse)
-        
-        // Check for historical performance and progressive overload
-        let smartWeight = getSmartWeight(for: exercise, baseWeight: baseRecommendation.weight)
-        
+
+        let goalToUse = (fitnessGoal ?? userProfile.fitnessGoal).normalized
+        let phase = sessionPhase ?? SessionPhase.alignedWith(fitnessGoal: goalToUse)
+        let scheme = SetSchemePlanner.shared.scheme(
+            for: exercise,
+            goal: goalToUse,
+            experienceLevel: userProfile.experienceLevel,
+            sessionPhase: phase,
+            isCompound: SetSchemePlanner.isCompoundExercise(exercise)
+        )
+
+        let smartWeight = getSmartWeight(for: exercise, baseWeight: nil)
+
         return (
-            sets: baseRecommendation.sets,
-            reps: baseRecommendation.reps,
+            sets: scheme.sets,
+            reps: scheme.targetReps,
             weight: smartWeight
         )
     }
-    
-    // Default sets and reps using Perplexity algorithm with individual factors
-    func getDefaultSetsAndReps(for exercise: ExerciseData, fitnessGoal: FitnessGoal) -> (sets: Int, reps: Int, weight: Double?) {
-        let userProfile = UserProfileService.shared
-        let exerciseCategory = getExerciseCategory(exercise)
 
-        
-        // Use Perplexity algorithm for sets and reps
-        let (sets, reps, _, _) = getGoalParameters(
-            fitnessGoal,
+    // Default sets and reps used in UI helpers
+    func getDefaultSetsAndReps(
+        for exercise: ExerciseData,
+        fitnessGoal: FitnessGoal,
+        sessionPhase: SessionPhase? = nil
+    ) -> (sets: Int, reps: Int, weight: Double?) {
+        let userProfile = UserProfileService.shared
+        let phase = sessionPhase ?? SessionPhase.alignedWith(fitnessGoal: fitnessGoal)
+        let scheme = SetSchemePlanner.shared.scheme(
+            for: exercise,
+            goal: fitnessGoal,
             experienceLevel: userProfile.experienceLevel,
-            gender: userProfile.gender,
-            exerciseType: exerciseCategory
+            sessionPhase: phase,
+            isCompound: SetSchemePlanner.isCompoundExercise(exercise)
         )
-        
-     
-        
-        return (sets: sets, reps: reps, weight: nil)
+        return (sets: scheme.sets, reps: scheme.targetReps, weight: nil)
     }
     
     // MARK: - Muscle Group Mapping (copied from AddExerciseView.swift)
     
     // Mapping from display names to actual database bodyPart values
-    private func getDatabaseBodyPart(for displayMuscle: String) -> [String] {
+    private nonisolated static func getDatabaseBodyPart(for displayMuscle: String) -> [String] {
         switch displayMuscle {
         case "Chest":
             return ["Chest"]
@@ -88,8 +95,8 @@ class WorkoutRecommendationService {
     }
     
     // Smart muscle filtering with target muscle matching
-    func exerciseMatchesMuscle(_ exercise: ExerciseData, muscleGroup: String) -> Bool {
-        let targetBodyParts = getDatabaseBodyPart(for: muscleGroup)
+    nonisolated func exerciseMatchesMuscle(_ exercise: ExerciseData, muscleGroup: String) -> Bool {
+        let targetBodyParts = Self.getDatabaseBodyPart(for: muscleGroup)
 
         // First check if bodyPart matches
         let bodyPartMatches = targetBodyParts.contains { bodyPart in
@@ -151,6 +158,7 @@ class WorkoutRecommendationService {
         let muscleExercises = allExercises.filter { exercise in
             exerciseMatchesMuscle(exercise, muscleGroup: muscleGroup)
         }
+        print("🧮 \(muscleGroup): initial pool \(muscleExercises.count) exercises")
         
         print("🎯 Smart muscle filtering for '\(muscleGroup)': Found \(muscleExercises.count) exercises out of \(allExercises.count) total")
         
@@ -161,12 +169,20 @@ class WorkoutRecommendationService {
         
         // Filter by available equipment
         let availableExercises = experienceAppropriate.filter { exercise in
-            userProfile.canPerformExercise(exercise)
+            let allowed = userProfile.canPerformExercise(exercise)
+            if !allowed {
+                logFilterRejection(exercise, reason: "profile_equipment")
+            }
+            return allowed
         }
         
         // Filter out avoided exercises
         let filteredExercises = availableExercises.filter { exercise in
-            !userProfile.avoidedExercises.contains(exercise.id)
+            if userProfile.avoidedExercises.contains(exercise.id) {
+                logFilterRejection(exercise, reason: "user_avoided")
+                return false
+            }
+            return true
         }
         
         // Prioritize exercises based on user preferences, experience, and recovery
@@ -176,6 +192,7 @@ class WorkoutRecommendationService {
             muscleGroup: muscleGroup,
             desiredCount: count
         )
+        print("✅ \(muscleGroup): returning \(min(count, variabilityAdjusted.count)) exercises after filtering")
         return Array(variabilityAdjusted.prefix(count))
     }
 
@@ -213,20 +230,53 @@ class WorkoutRecommendationService {
         
         // Filter by available equipment (use custom equipment if provided)
         let availableExercises: [ExerciseData]
-        if let customEquipment = customEquipment, !customEquipment.isEmpty {
+        if let customEquipment = customEquipment {
+            let allowedSet = equipmentOverrideSet(from: customEquipment)
             availableExercises = typeFilteredExercises.filter { exercise in
-                canPerformExerciseWithCustomEquipment(exercise, equipment: customEquipment)
+                let (canPerform, missing, required) = canPerformExerciseWithCustomEquipment(exercise, allowedEquipment: allowedSet)
+                if !canPerform {
+            logFilterRejection(exercise, reason: "session_equipment")
+#if DEBUG
+            if !missing.isEmpty {
+                print("🚫 Session equipment filter dropped \(exercise.name) requires \(describeEquipmentSet(required)) missing \(describeEquipmentSet(missing)) (allowed \(describeEquipmentSet(allowedSet)))")
             }
-       
+#endif
+        }
+        return canPerform
+    }
+            print("🧮 \(muscleGroup): after session equipment filter \(availableExercises.count)")
         } else {
             availableExercises = typeFilteredExercises.filter { exercise in
-                userProfile.canPerformExercise(exercise)
+                let allowed = userProfile.canPerformExercise(exercise)
+                if !allowed {
+                    logFilterRejection(exercise, reason: "profile_equipment")
+                }
+                return allowed
             }
+            print("🧮 \(muscleGroup): after profile equipment filter \(availableExercises.count)")
         }
         
         // Filter out avoided exercises
-        let filteredExercises = availableExercises.filter { exercise in
-            !userProfile.avoidedExercises.contains(exercise.id)
+        var filteredExercises = availableExercises.filter { exercise in
+            if userProfile.avoidedExercises.contains(exercise.id) {
+                logFilterRejection(exercise, reason: "user_avoided")
+                return false
+            }
+            return true
+        }
+
+        if filteredExercises.count < count {
+            let allowedSet = customEquipment != nil
+                ? equipmentOverrideSet(from: customEquipment!)
+                : equipmentOverrideSet(from: userProfile.availableEquipment)
+            filteredExercises = augmentWithFallbacks(
+                basePool: typeFilteredExercises,
+                current: filteredExercises,
+                allowedEquipment: allowedSet,
+                avoidedIds: Set(userProfile.avoidedExercises),
+                recoveryPercentage: recoveryPercentage,
+                desiredCount: count
+            )
         }
         
         // Prioritize exercises based on user preferences, experience, and recovery
@@ -238,266 +288,179 @@ class WorkoutRecommendationService {
         )
         return Array(variabilityAdjusted.prefix(count))
     }
+
+    // MARK: - Research-backed deterministic selector (toggleable)
+
+    /// New deterministic selector that applies sport-science heuristics from the exercise-selection guide.
+    /// Keeps the existing filtering pipeline but replaces generic prioritization with goal/equipment/taxonomy weights.
+    func getResearchBackedExercises(
+        for muscleGroup: String,
+        count: Int = 5,
+        customEquipment: [Equipment]?,
+        flexibilityPreferences: FlexibilityPreferences? = nil
+    ) -> [ExerciseData] {
+        let userProfile = UserProfileService.shared
+        let recoveryService = MuscleRecoveryService.shared
+        let allExercises = ExerciseDatabase.getAllExercises()
+
+        let recoveryPercentage = recoveryService.getMuscleRecoveryPercentage(for: muscleGroup)
+
+        // Muscle match → experience gating → type filter
+        let muscleExercises = allExercises.filter { exerciseMatchesMuscle($0, muscleGroup: muscleGroup) }
+        let experienceAppropriate = getExperienceTailoredExercises(muscleExercises, userProfile: userProfile)
+        let typeFiltered = filterByExerciseType(exercises: experienceAppropriate, flexibilityPreferences: flexibilityPreferences, muscleGroup: muscleGroup)
+
+        // Equipment filtering (session override if provided)
+        let availableExercises: [ExerciseData]
+        if let customEquipment {
+            let allowed = equipmentOverrideSet(from: customEquipment)
+            availableExercises = typeFiltered.filter { exercise in
+                let (canPerform, _, _) = canPerformExerciseWithCustomEquipment(exercise, allowedEquipment: allowed)
+                if !canPerform { logFilterRejection(exercise, reason: "session_equipment") }
+                return canPerform
+            }
+        } else {
+            availableExercises = typeFiltered.filter { exercise in
+                let allowed = userProfile.canPerformExercise(exercise)
+                if !allowed { logFilterRejection(exercise, reason: "profile_equipment") }
+                return allowed
+            }
+        }
+
+        // Remove avoided exercises
+        let basePool = availableExercises.filter { !userProfile.avoidedExercises.contains($0.id) }
+
+        // Score by sport-science heuristics
+        let scored = basePool.map { ex -> (ExerciseData, Double) in
+            let s = researchScore(
+                exercise: ex,
+                goal: userProfile.fitnessGoal,
+                experience: userProfile.experienceLevel,
+                recovery: recoveryPercentage
+            )
+            return (ex, s)
+        }
+        .sorted { $0.1 > $1.1 }
+        .map { $0.0 }
+
+        // Preserve variability selection pass
+        let variabilityAdjusted = applyVariabilitySelection(scored, muscleGroup: muscleGroup, desiredCount: count)
+        return Array(variabilityAdjusted.prefix(count))
+    }
+
+    // MARK: - Heuristics helpers
+
+    private enum EquipmentKind { case barbell, dumbbell, machine, cable, bodyweight, band, kettlebell, smith, other }
+
+    private func classifyEquipmentKind(_ exercise: ExerciseData) -> EquipmentKind {
+        let eq = exercise.equipment.lowercased()
+        if eq.contains("barbell") { return .barbell }
+        if eq.contains("dumbbell") { return .dumbbell }
+        if eq.contains("machine") { return .machine }
+        if eq.contains("cable") { return .cable }
+        if eq.contains("body") { return .bodyweight }
+        if eq.contains("band") || eq.contains("resistance band") { return .band }
+        if eq.contains("kettlebell") { return .kettlebell }
+        if eq.contains("smith") { return .smith }
+        return .other
+    }
+
+    private func researchScore(
+        exercise: ExerciseData,
+        goal: FitnessGoal,
+        experience: ExperienceLevel,
+        recovery: Double
+    ) -> Double {
+        // Taxonomy
+        let movement = MovementType.classify(exercise)
+        let equip = classifyEquipmentKind(exercise)
+        var score = 0.0
+
+        // Base: compounds first
+        switch movement {
+        case .compound: score += 3
+        case .isolation: score += 1
+        case .core: score += 1
+        case .cardio: score += 0
+        }
+
+        // Goal-specific modality weighting
+        switch goal.normalized {
+        case .strength, .powerlifting:
+            if movement == .compound { score += 1 }
+            switch equip {
+            case .barbell: score += 3
+            case .dumbbell: score += 1
+            case .machine: score -= 0.5
+            case .smith: score -= 0.5
+            case .bodyweight, .band: score -= 1
+            default: break
+            }
+        case .olympicWeightlifting:
+            // Strict bias to barbell structural compounds
+            if movement == .compound { score += 2 }
+            switch equip {
+            case .barbell: score += 3
+            default: score -= 1
+            }
+        case .hypertrophy, .general:
+            if movement == .compound { score += 1 }
+            // Modalities roughly equal; slight edge for cables/machines on accessories
+            switch equip {
+            case .barbell, .dumbbell: score += 1
+            case .cable, .machine: score += 1
+            case .band: score += 0.5
+            default: break
+            }
+        case .circuitTraining, .endurance, .tone:
+            switch equip {
+            case .bodyweight, .band: score += 2
+            case .dumbbell, .cable: score += 1
+            case .machine: score += 0.5
+            case .barbell, .smith: score -= 1
+            default: break
+            }
+            if movement == .cardio || movement == .core { score += 0.5 }
+        default:
+            break
+        }
+
+        // Experience-level adjustments
+        switch experience {
+        case .advanced:
+            if movement == .compound && (equip == .barbell || equip == .kettlebell) { score += 1 }
+        case .beginner:
+            if equip == .barbell && movement == .compound { score -= 0.5 }
+        case .intermediate:
+            break
+        }
+
+        // Recovery moderation
+        if recovery < 70 { score -= 1 } else if recovery < 85 { score -= 0.5 }
+
+        return score
+    }
     
     // Helper method to check if exercise can be performed with custom equipment
-    private func canPerformExerciseWithCustomEquipment(_ exercise: ExerciseData, equipment: [Equipment]) -> Bool {
-        let exerciseEquipment = exercise.equipment.lowercased()
-        let exerciseName = exercise.name.lowercased()
-        
-        // Always allow bodyweight exercises (no equipment needed)
-        if exerciseEquipment == "body weight" || exerciseEquipment.isEmpty {
-            return true
+    private func canPerformExerciseWithCustomEquipment(_ exercise: ExerciseData, allowedEquipment: Set<Equipment>) -> (Bool, Set<Equipment>, Set<Equipment>) {
+        var allowed = allowedEquipment
+        allowed.insert(.bodyWeight)
+        let required = ExerciseEquipmentResolver.shared.equipment(for: exercise)
+        if required.isEmpty {
+            return (true, [], required)
         }
-        
-        // Check if any of the user's equipment matches the exercise equipment
-        for userEquipment in equipment {
-            let equipmentString = userEquipment.rawValue.lowercased()
-            
-            // Direct match
-            if exerciseEquipment.contains(equipmentString.lowercased()) {
-                return true
-            }
-            
-            // Special mappings for equipment names
-            switch userEquipment {
-            case .bodyWeight:
-                if exerciseEquipment == "body weight" || exerciseEquipment.isEmpty {
-                    return true
-                }
-            case .dumbbells:
-                if exerciseEquipment.contains("dumbbell") {
-                    return true
-                }
-            case .barbells:
-                if exerciseEquipment.contains("barbell") && !exerciseEquipment.contains("ez") {
-                    return true
-                }
-            case .ezBar:
-                if exerciseEquipment.contains("ez barbell") || exerciseEquipment.contains("ez bar") {
-                    return true
-                }
-            case .cable:
-                if exerciseEquipment.contains("cable") {
-                    return true
-                }
-            case .kettlebells:
-                if exerciseEquipment.contains("kettlebell") {
-                    return true
-                }
-            case .smithMachine:
-                if exerciseEquipment.contains("smith") {
-                    return true
-                }
-            case .resistanceBands:
-                if exerciseEquipment.contains("band") {
-                    return true
-                }
-            case .stabilityBall:
-                if exerciseEquipment.contains("stability") || exerciseEquipment.contains("swiss") || exerciseEquipment.contains("exercise ball") {
-                    return true
-                }
-            case .bosuBalanceTrainer:
-                if exerciseEquipment.contains("bosu") {
-                    return true
-                }
-            case .medicineBalls:
-                if exerciseEquipment.contains("medicine ball") {
-                    return true
-                }
-            case .battleRopes:
-                if exerciseEquipment.contains("rope") && !exerciseEquipment.contains("jump") {
-                    return true
-                }
-            case .pullupBar:
-                if exerciseEquipment.contains("pull") && (exerciseEquipment.contains("bar") || exerciseEquipment.contains("up")) {
-                    return true
-                }
-            case .dipBar:
-                if exerciseEquipment.contains("dip") || (exerciseEquipment.contains("parallel") && exerciseEquipment.contains("bar")) {
-                    return true
-                }
-            case .pvc:
-                if exerciseEquipment.contains("pvc") || exerciseEquipment.contains("pipe") {
-                    return true
-                }
-            case .flatBench:
-                // Flat bench exercises require both the bench AND the primary equipment
-                return requiresBenchAndEquipment(exercise, benchType: "flat", availableEquipment: equipment)
-            case .declineBench:
-                // Decline bench exercises require both the bench AND the primary equipment  
-                return requiresBenchAndEquipment(exercise, benchType: "decline", availableEquipment: equipment)
-            case .inclineBench:
-                // Incline bench exercises require both the bench AND the primary equipment
-                return requiresBenchAndEquipment(exercise, benchType: "incline", availableEquipment: equipment)
-            case .preacherCurlBench:
-                // Preacher curl exercises require both the bench AND the primary equipment
-                return requiresPreacherAndEquipment(exercise, availableEquipment: equipment)
-            case .pullupBar:
-                // Pull-up exercises require a pull-up bar
-                return requiresPullupBar(exercise)
-            case .dipBar:
-                // Dip exercises require parallel bars
-                return requiresDipBar(exercise)
-            case .squatRack:
-                // Heavy barbell exercises often require a squat rack
-                return requiresSquatRackAndEquipment(exercise, availableEquipment: equipment)
-            case .box:
-                // Box/platform exercises
-                return requiresBoxAndEquipment(exercise, availableEquipment: equipment)
-            case .platforms:
-                // Olympic lift platform exercises
-                return requiresPlatformAndEquipment(exercise, availableEquipment: equipment)
-            case .legPress:
-                // Leg press machine exercises
-                return exerciseName.contains("leg press")
-            case .latPulldownCable:
-                // Lat pulldown machine exercises
-                return requiresLatPulldown(exercise)
-            case .legExtensionMachine:
-                // Leg extension machine exercises
-                return exerciseName.contains("leg extension")
-            case .legCurlMachine:
-                // Leg curl machine exercises  
-                return requiresLegCurl(exercise)
-            case .calfRaiseMachine:
-                // Calf raise machine exercises
-                return requiresCalfRaiseMachine(exercise)
-            case .rowMachine:
-                // Seated row machine exercises
-                return requiresRowMachine(exercise)
-            case .hammerstrengthMachine:
-                // Hammer strength machine exercises
-                return exerciseEquipment.contains("leverage") || exerciseName.contains("hammer")
-            case .hackSquatMachine:
-                // Hack squat machine exercises
-                return exerciseName.contains("hack squat")
-            case .shoulderPressMachine:
-                // Shoulder press machine exercises
-                return exerciseName.contains("shoulder press") && exerciseEquipment.contains("leverage")
-            case .tricepsExtensionMachine:
-                // Triceps extension machine exercises
-                return exerciseName.contains("triceps extension") && exerciseEquipment.contains("leverage")
-            case .bicepsCurlMachine:
-                // Biceps curl machine exercises
-                return exerciseName.contains("biceps curl") && exerciseEquipment.contains("leverage")
-            case .abCrunchMachine:
-                // Ab crunch machine exercises
-                return exerciseName.contains("crunch") && exerciseEquipment.contains("leverage")
-            case .preacherCurlMachine:
-                // Preacher curl machine exercises
-                return exerciseName.contains("preacher") && exerciseEquipment.contains("leverage")
-            default:
-                // For other equipment, try partial matching
-                let equipmentWords = equipmentString.components(separatedBy: " ")
-                for word in equipmentWords {
-                    if word.count > 3 && exerciseEquipment.contains(word.lowercased()) {
-                        return true
-                    }
-                }
-            }
-        }
-        
-        return false
+        let missing = required.subtracting(allowed)
+        return (missing.isEmpty, missing, required)
     }
-    
-    // Helper method to check bench exercises that require both bench and primary equipment
-    private func requiresBenchAndEquipment(_ exercise: ExerciseData, benchType: String, availableEquipment: [Equipment]) -> Bool {
-        let exerciseName = exercise.name.lowercased()
-        let exerciseEquipment = exercise.equipment.lowercased()
-        
-        // First check if this exercise actually requires the specific bench type
-        let requiresThisBench: Bool
-        switch benchType {
-        case "flat":
-            requiresThisBench = exerciseName.contains("bench") && 
-                               !exerciseName.contains("decline") && 
-                               !exerciseName.contains("incline")
-        case "decline":
-            requiresThisBench = exerciseName.contains("decline") && exerciseName.contains("bench")
-        case "incline":
-            requiresThisBench = exerciseName.contains("incline") && exerciseName.contains("bench")
-        default:
-            return false
-        }
-        
-        if !requiresThisBench {
-            return false
-        }
-        
-        // Now check if user has the primary equipment required for the exercise
-        let hasPrimaryEquipment: Bool
-        if exerciseEquipment.contains("barbell") {
-            hasPrimaryEquipment = availableEquipment.contains(.barbells)
-        } else if exerciseEquipment.contains("dumbbell") {
-            hasPrimaryEquipment = availableEquipment.contains(.dumbbells)
-        } else if exerciseEquipment.contains("cable") {
-            hasPrimaryEquipment = availableEquipment.contains(.cable)
-        } else if exerciseEquipment.contains("smith") {
-            hasPrimaryEquipment = availableEquipment.contains(.smithMachine)
-        } else {
-            // For other equipment types, allow the exercise
-            hasPrimaryEquipment = true
-        }
-        
-        return hasPrimaryEquipment
-    }
-    
-    // Helper method for preacher curl exercises
-    private func requiresPreacherAndEquipment(_ exercise: ExerciseData, availableEquipment: [Equipment]) -> Bool {
-        let exerciseName = exercise.name.lowercased()
-        let exerciseEquipment = exercise.equipment.lowercased()
-        
-        // Check if this is a preacher curl exercise
-        guard exerciseName.contains("preacher") else { return false }
-        
-        // Check if user has the primary equipment
-        if exerciseEquipment.contains("ez") {
-            return availableEquipment.contains(.ezBar)
-        } else if exerciseEquipment.contains("dumbbell") {
-            return availableEquipment.contains(.dumbbells)
-        } else if exerciseEquipment.contains("barbell") {
-            return availableEquipment.contains(.barbells)
-        } else if exerciseEquipment.contains("cable") {
-            return availableEquipment.contains(.cable)
-        }
-        return true
-    }
-    
-    // Helper method for pull-up bar exercises
-    private func requiresPullupBar(_ exercise: ExerciseData) -> Bool {
-        let exerciseName = exercise.name.lowercased()
-        return exerciseName.contains("pull-up") || 
-               exerciseName.contains("pullup") ||
-               exerciseName.contains("pull up") ||
-               exerciseName.contains("chin-up") ||
-               exerciseName.contains("chinup")
-    }
-    
-    // Helper method for dip bar exercises
-    private func requiresDipBar(_ exercise: ExerciseData) -> Bool {
-        let exerciseName = exercise.name.lowercased()
-        return (exerciseName.contains("dip") && !exerciseName.contains("bench")) ||
-               exerciseName.contains("parallel bar")
-    }
-    
-    // Helper method for squat rack exercises
-    private func requiresSquatRackAndEquipment(_ exercise: ExerciseData, availableEquipment: [Equipment]) -> Bool {
-        let exerciseName = exercise.name.lowercased()
-        let exerciseEquipment = exercise.equipment.lowercased()
-        
-        // Heavy barbell exercises that typically need a rack
-        let needsRack = (exerciseName.contains("squat") && !exerciseName.contains("hack")) ||
-                       exerciseName.contains("olympic") ||
-                       exerciseName.contains("back squat") ||
-                       exerciseName.contains("front squat")
-        
-        if !needsRack { return false }
-        
-        // Check if user has the primary equipment
-        if exerciseEquipment.contains("barbell") {
-            return availableEquipment.contains(.barbells)
-        }
-        return true
+
+    private func logFilterRejection(_ exercise: ExerciseData, reason: String) {
+        WorkoutGenerationTelemetry.record(.filterRejected, metadata: [
+            "exerciseId": exercise.id,
+            "reason": reason
+        ])
+#if DEBUG
+        print("🚫 Filtered \(exercise.name) [\(exercise.id)] – \(reason)")
+#endif
     }
     
     // Helper method for box/step exercises
@@ -569,6 +532,48 @@ class WorkoutRecommendationService {
         let exerciseEquipment = exercise.equipment.lowercased()
         return exerciseName.contains("seated row") &&
                (exerciseEquipment.contains("leverage") || exerciseEquipment.contains("machine"))
+    }
+
+    private func equipmentOverrideSet(from equipment: [Equipment]) -> Set<Equipment> {
+        if equipment.isEmpty {
+            return [.bodyWeight]
+        }
+        var allowed = Set(equipment)
+        allowed.insert(.bodyWeight)
+        return allowed
+    }
+
+    private func describeEquipmentSet(_ equipment: Set<Equipment>) -> String {
+        guard !equipment.isEmpty else { return "[]" }
+        return "[" + equipment.map { $0.rawValue }.sorted().joined(separator: ", ") + "]"
+    }
+
+    private func augmentWithFallbacks(
+        basePool: [ExerciseData],
+        current: [ExerciseData],
+        allowedEquipment: Set<Equipment>,
+        avoidedIds: Set<Int>,
+        recoveryPercentage: Double,
+        desiredCount: Int
+    ) -> [ExerciseData] {
+        var augmented = current
+        guard augmented.count < desiredCount else { return augmented }
+
+        let alreadySelected = Set(augmented.map { $0.id })
+        let supplementalCandidates = basePool.filter { exercise in
+            guard !alreadySelected.contains(exercise.id),
+                  !avoidedIds.contains(exercise.id) else { return false }
+            let required = ExerciseEquipmentResolver.shared.equipment(for: exercise)
+            return required.subtracting(allowedEquipment.union([.bodyWeight])).isEmpty
+        }
+
+        guard !supplementalCandidates.isEmpty else { return augmented }
+
+        let prioritized = prioritizeExercises(supplementalCandidates, recoveryPercentage: recoveryPercentage, maxCount: desiredCount)
+        for exercise in prioritized where augmented.count < desiredCount {
+            augmented.append(exercise)
+        }
+        return augmented
     }
     
     // MARK: - Flexibility Exercise Filtering
@@ -2147,96 +2152,37 @@ class WorkoutRecommendationService {
         fitnessGoal: FitnessGoal,
         muscleGroupCount: Int,
         experienceLevel: ExperienceLevel,
-        equipment: [Equipment]? = nil
+        equipment: [Equipment]? = nil,
+        flexibilityPreferences: FlexibilityPreferences? = nil
     ) -> (total: Int, perMuscle: Int) {
-        let durationMinutes = duration.minutes
-        let timeComponents = calculateTimeComponents(
+        let estimator = TimeEstimator.shared
+        let format = estimator.preferredFormat(duration: duration, goal: fitnessGoal)
+        let budget = estimator.makeSessionBudget(
+            duration: duration,
             fitnessGoal: fitnessGoal,
             experienceLevel: experienceLevel,
-            equipment: equipment
+            preferences: flexibilityPreferences
         )
-        
-        // Calculate available exercise time with research-based warmup/cooldown
-        let warmupMinutes = getOptimalWarmupDuration(durationMinutes)
-        let cooldownMinutes = warmupMinutes
-        let bufferMinutes = Int(Double(durationMinutes) * 0.03) // Single 3% buffer (no double buffering)
-        let availableMinutes = durationMinutes - warmupMinutes - cooldownMinutes - bufferMinutes
-        
-        // Direct calculation using research-based time per exercise
-        let exercisesTotal = Int(Double(availableMinutes) / timeComponents.averageMinutesPerExercise)
-        
-        // Apply research-based constraints (no arbitrary limits)
-        let (minExercises, maxExercises) = getExerciseCountBounds(
-            fitnessGoal: fitnessGoal,
-            durationMinutes: durationMinutes
-        )
-        
-        let finalTotal = min(maxExercises, max(minExercises, exercisesTotal))
-        
-        print("🔍 Exercise calculation: \(availableMinutes)min available, \(String(format: "%.1f", timeComponents.averageMinutesPerExercise))min per exercise = \(exercisesTotal) calculated, bounds=(\(minExercises),\(maxExercises)), final=\(finalTotal)")
-        
-        // Smart distribution: respect time budget over muscle group fairness
-        let (actualTotal, finalPerMuscle): (Int, Int)
-        if finalTotal < muscleGroupCount {
-            // Very short workout: some muscle groups get 0 exercises
-            actualTotal = finalTotal // Use all available exercise slots
-            finalPerMuscle = 1 // 1 per selected muscle group
-        } else {
-            // Normal workout: respect the time budget calculation
-            let exercisesPerMuscle = finalTotal / muscleGroupCount
-            let remainder = finalTotal % muscleGroupCount
-            let perMuscle = max(1, min(4, exercisesPerMuscle))
-            // CRITICAL FIX: Always use the full finalTotal, never reduce it
-            actualTotal = finalTotal // Respect time budget calculation
-            finalPerMuscle = perMuscle // Base exercises per muscle
+        var averageExerciseSeconds = max(45, estimator.averageExerciseSeconds(
+            goal: fitnessGoal,
+            experienceLevel: experienceLevel,
+            format: format
+        ))
+
+        if let equipment, !equipment.isEmpty, equipment.allSatisfy({ $0 == .bodyWeight }) {
+            averageExerciseSeconds *= 0.85
         }
-        
-        print("🎯 Research-based calculation: \(availableMinutes)min available, \(String(format: "%.1f", timeComponents.averageMinutesPerExercise))min per exercise = \(actualTotal) total, \(finalPerMuscle) per muscle")
-        
-        return (total: actualTotal, perMuscle: finalPerMuscle)
-    }
-    
-    /// Calculate time components for exercise planning using Perplexity algorithm
-    private func calculateTimeComponents(
-        fitnessGoal: FitnessGoal,
-        experienceLevel: ExperienceLevel,
-        equipment: [Equipment]? = nil
-    ) -> (averageMinutesPerExercise: Double, restSeconds: Int, setupSeconds: Int) {
-        let userProfile = UserProfileService.shared
-        
-        // Use average exercise type for time estimation (compound exercises are most common)
-        let averageExerciseType = ExerciseCategory.compound
-        
-        // Get parameters using Perplexity algorithm
-        let (sets, reps, restBase, repDuration) = getGoalParameters(
-            fitnessGoal,
-            experienceLevel: experienceLevel,
-            gender: userProfile.gender, 
-            exerciseType: averageExerciseType
-        )
-        
-        // Experience level adjustments are now handled in the algorithm
-        let adjustedRest = restBase
-        
-        // Equipment-based time multipliers from research
-        let equipmentFactor = calculateEquipmentFactor(equipment)
-        
-        // Setup time based on equipment complexity
-        let setupTime = equipmentFactor > 1.1 ? 25 : 
-                       equipmentFactor < 0.9 ? 5 : 15
-        
-        // Calculate total time per exercise using Perplexity research formulas
-        let workingTime = Double(sets * reps * repDuration) / 60.0
-        let restTime = Double((sets - 1) * adjustedRest) / 60.0
-        let setupMinutes = Double(setupTime + 15) / 60.0 // Include transition time
-        
-        let totalMinutes = (workingTime + restTime + setupMinutes) * equipmentFactor
-        
-        return (
-            averageMinutesPerExercise: totalMinutes,
-            restSeconds: adjustedRest,
-            setupSeconds: setupTime
-        )
+
+        var total = Int(Double(budget.availableWorkSeconds) / averageExerciseSeconds)
+        let cap = estimator.exerciseCap(for: duration)
+        let minExercises = estimator.minimumExercises(for: duration, muscleGroupCount: muscleGroupCount)
+        if total == 0 {
+            total = minExercises
+        }
+        total = min(cap, max(minExercises, total))
+        let perMuscle = max(1, total / max(1, muscleGroupCount))
+        print("⏱️ Time-estimated calculation: budget=\(budget.availableWorkSeconds)s avg=\(Int(averageExerciseSeconds))s format=\(format.rawValue) → total=\(total), cap=\(cap), perMuscle=\(perMuscle)")
+        return (total: total, perMuscle: perMuscle)
     }
     
     /// Get research-based parameters using Perplexity algorithm with individual factors
@@ -2444,78 +2390,6 @@ class WorkoutRecommendationService {
         return mappedReps
     }
     
-    /// Get optimal warmup duration based on workout length research
-    private func getOptimalWarmupDuration(_ workoutMinutes: Int) -> Int {
-        switch workoutMinutes {
-        case 0..<30: return 3  // 10% of short workouts
-        case 30..<45: return 5  // Balanced for medium workouts
-        case 45..<60: return 6  // Optimal for 45-60min sessions
-        case 60..<90: return 7  // Longer warmup for extended sessions
-        default: return 10      // Full warmup for long sessions
-        }
-    }
-    
-    /// Get research-based exercise count bounds for fitness goals
-    private func getExerciseCountBounds(
-        fitnessGoal: FitnessGoal,
-        durationMinutes: Int
-    ) -> (min: Int, max: Int) {
-        let scaleFactor = Double(durationMinutes) / 60.0
-        
-        switch fitnessGoal {
-        case .strength, .powerlifting:
-            // Fewer exercises, longer rest periods required
-            return (
-                min: Int(4 * scaleFactor),
-                max: Int(8 * scaleFactor)
-            )
-        case .hypertrophy:
-            // Moderate volume for muscle growth
-            return (
-                min: Int(5 * scaleFactor),
-                max: Int(10 * scaleFactor)
-            )
-        case .endurance:
-            // Higher exercise count, shorter rest
-            return (
-                min: Int(8 * scaleFactor),
-                max: Int(15 * scaleFactor)
-            )
-        default:
-            // General fitness balanced approach
-            return (
-                min: Int(4 * scaleFactor),
-                max: Int(10 * scaleFactor)
-            )
-        }
-    }
-    
-    /// Calculate equipment factor for time estimation based on research
-    private func calculateEquipmentFactor(_ equipment: [Equipment]?) -> Double {
-        guard let equipment = equipment, !equipment.isEmpty else { return 1.0 }
-        
-        var factor = 0.0
-        var count = 0
-        
-        for equip in equipment {
-            count += 1
-            switch equip {
-            case .barbells:
-                factor += 1.2  // Plate loading time
-            case .dumbbells:
-                factor += 1.0  // Baseline
-            case .cable, .legPress, .latPulldownCable:
-                factor += 1.1  // Pin adjustments
-            case .bodyWeight:
-                factor += 0.8  // No setup required
-            default:
-                factor += 1.0
-            }
-        }
-        
-        return count > 0 ? factor / Double(count) : 1.0
-    }
-    
     /// Get duration-optimized exercise recommendations
     func getDurationOptimizedExercises(
         for muscleGroup: String,
@@ -2525,13 +2399,23 @@ class WorkoutRecommendationService {
         customEquipment: [Equipment]?,
         flexibilityPreferences: FlexibilityPreferences? = nil
     ) -> [ExerciseData] {
-        // First get standard recommendations using existing sophisticated logic
-        var exercises = getRecommendedExercises(
-            for: muscleGroup,
-            count: count * 2, // Get extra to filter optimally
-            customEquipment: customEquipment,
-            flexibilityPreferences: flexibilityPreferences
-        )
+        // First get recommendations using the selected selector
+        var exercises: [ExerciseData]
+        if FeatureFlags.useResearchBackedSelector {
+            exercises = getResearchBackedExercises(
+                for: muscleGroup,
+                count: count * 2,
+                customEquipment: customEquipment,
+                flexibilityPreferences: flexibilityPreferences
+            )
+        } else {
+            exercises = getRecommendedExercises(
+                for: muscleGroup,
+                count: count * 2, // Get extra to filter optimally
+                customEquipment: customEquipment,
+                flexibilityPreferences: flexibilityPreferences
+            )
+        }
         
         // For shorter workouts, prioritize compound movements for time efficiency
         if duration.minutes <= 30 {
