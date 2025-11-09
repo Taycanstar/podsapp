@@ -8,10 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		0DB4770E990845A8A2F47741 /* ProFeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D174B3487294C0999CCBCD6 /* ProFeatureModels.swift */; };
-		36FFF1012FBEBE6000A1C0DE /* AgentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */; };
-		36FFF1112FBEBE6000A1C0DE /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1102FBEBE6000A1C0DE /* AgentService.swift */; };
-		36FFF1212FBEBE6000A1C0DE /* AgentChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1202FBEBE6000A1C0DE /* AgentChatViewModel.swift */; };
-		36FFF1312FBEBE6000A1C0DE /* AgentChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1302FBEBE6000A1C0DE /* AgentChatView.swift */; };
 		1EBBC77B20EF481D8E65E2A1 /* ScheduleMealSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298E12AED7C54F17AB5D6B77 /* ScheduleMealSheet.swift */; };
 		26C9913EDB154EB585919DC4 /* ProFeatureGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E2598AC8B354440B1EBC82A /* ProFeatureGate.swift */; };
 		36004B422B9000DF00423AB1 /* PodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36004B412B9000DF00423AB1 /* PodView.swift */; };
@@ -380,6 +376,10 @@
 		36F9E5C42FAFD2DE00E11122 /* TimeEstimatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F9E5C32FAFD2DE00E11122 /* TimeEstimatorTests.swift */; };
 		36FA4D612FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FA4D602FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift */; };
 		36FE12352FFFABCD00A1BCDE /* exercisesdb.csv in Resources */ = {isa = PBXBuildFile; fileRef = 36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */; };
+		36FFF1012FBEBE6000A1C0DE /* AgentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */; };
+		36FFF1112FBEBE6000A1C0DE /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1102FBEBE6000A1C0DE /* AgentService.swift */; };
+		36FFF1212FBEBE6000A1C0DE /* AgentChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1202FBEBE6000A1C0DE /* AgentChatViewModel.swift */; };
+		36FFF1312FBEBE6000A1C0DE /* AgentChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1302FBEBE6000A1C0DE /* AgentChatView.swift */; };
 		50FB9842CD464A8F9D9E63AB /* ProFoodSearchLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */; };
 		6DF1182C44BE49149F12E422 /* ProFoodSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678276B9D0A646E8AD3315C6 /* ProFoodSearchView.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
@@ -766,10 +766,6 @@
 		36F5A0162F9C1AAB00A1B234 /* RecipesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecipesRepository.swift; path = Pods/Core/Repositories/RecipesRepository.swift; sourceTree = SOURCE_ROOT; };
 		36F5A0182F9C1AAB00A1B234 /* SavedMealsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SavedMealsRepository.swift; path = Pods/Core/Repositories/SavedMealsRepository.swift; sourceTree = SOURCE_ROOT; };
 		36F5A01A2F9C1AAB00A1B234 /* UserFoodsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserFoodsRepository.swift; path = Pods/Core/Repositories/UserFoodsRepository.swift; sourceTree = SOURCE_ROOT; };
-		36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentModels.swift; path = Pods/Core/Models/AgentModels.swift; sourceTree = SOURCE_ROOT; };
-		36FFF1102FBEBE6000A1C0DE /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentService.swift; path = Pods/Core/Services/AgentService.swift; sourceTree = SOURCE_ROOT; };
-		36FFF1202FBEBE6000A1C0DE /* AgentChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentChatViewModel.swift; sourceTree = "<group>"; };
-		36FFF1302FBEBE6000A1C0DE /* AgentChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentChatView.swift; path = Pods/Core/Views/agent/AgentChatView.swift; sourceTree = SOURCE_ROOT; };
 		36F722852DE52E2C009C1CA0 /* ScanFoodHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFoodHelper.swift; sourceTree = "<group>"; };
 		36F722872DE52E53009C1CA0 /* BarcodeHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeHelper.swift; sourceTree = "<group>"; };
 		36F722892DE52E60009C1CA0 /* GalleryHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryHelper.swift; sourceTree = "<group>"; };
@@ -777,6 +773,10 @@
 		36F9E5C32FAFD2DE00E11122 /* TimeEstimatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeEstimatorTests.swift; sourceTree = "<group>"; };
 		36FA4D602FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseEquipmentResolverTests.swift; sourceTree = "<group>"; };
 		36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = exercisesdb.csv; sourceTree = "<group>"; };
+		36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentModels.swift; path = Pods/Core/Models/AgentModels.swift; sourceTree = SOURCE_ROOT; };
+		36FFF1102FBEBE6000A1C0DE /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentService.swift; path = Pods/Core/Services/AgentService.swift; sourceTree = SOURCE_ROOT; };
+		36FFF1202FBEBE6000A1C0DE /* AgentChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentChatViewModel.swift; sourceTree = "<group>"; };
+		36FFF1302FBEBE6000A1C0DE /* AgentChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentChatView.swift; path = Pods/Core/Views/agent/AgentChatView.swift; sourceTree = SOURCE_ROOT; };
 		4076D462C059EBED8E94C40D /* Pods-Podstack.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.release.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Podstack-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
 		5E2598AC8B354440B1EBC82A /* ProFeatureGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProFeatureGate.swift; path = Pods/Core/Services/ProFeatureGate.swift; sourceTree = SOURCE_ROOT; };

@@ -197,8 +197,13 @@ final class AgentService {
         }.resume()
     }
 
-    func sendChat(userEmail: String, message: String, completion: @escaping (Result<String, Error>) -> Void) {
-        guard let url = URL(string: "\(baseURL)/gracie-chat/") else {
+    func sendChat(
+        userEmail: String,
+        message: String,
+        history: [[String: String]] = [],
+        completion: @escaping (Result<String, Error>) -> Void
+    ) {
+        guard let url = URL(string: "\(baseURL)/agent/chat/") else {
             completion(.failure(AgentServiceError.invalidURL))
             return
         }
@@ -209,7 +214,7 @@ final class AgentService {
         let payload: [String: Any] = [
             "user_email": userEmail,
             "message": message,
-            "activity_logs": [],
+            "history": history,
         ]
 
         request.httpBody = try? JSONSerialization.data(withJSONObject: payload, options: [])
@@ -237,6 +242,7 @@ final class AgentMetricsUploader {
     private let agentService = AgentService.shared
     private var lastSignature: String?
 
+    @MainActor
     func uploadSnapshot(from healthVM: HealthKitViewModel, date: Date) {
         guard let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty else { return }
 

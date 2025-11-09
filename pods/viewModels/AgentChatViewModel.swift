@@ -48,7 +48,8 @@ final class AgentChatViewModel: ObservableObject {
         messages.append(outgoing)
         isLoading = true
 
-        agentService.sendChat(userEmail: userEmail, message: message) { [weak self] result in
+        let historyPayload = serializedHistory()
+        agentService.sendChat(userEmail: userEmail, message: message, history: historyPayload) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.isLoading = false
@@ -77,5 +78,20 @@ final class AgentChatViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    private func serializedHistory(limit: Int = 8) -> [[String: String]] {
+        messages
+            .suffix(limit)
+            .compactMap { message in
+                switch message.sender {
+                case .user:
+                    return ["role": "user", "content": message.text]
+                case .agent:
+                    return ["role": "assistant", "content": message.text]
+                case .system:
+                    return nil
+                }
+            }
     }
 }
