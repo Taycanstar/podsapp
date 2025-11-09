@@ -63,6 +63,10 @@ struct AgentTabBar: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .focused(isPromptFocused)
             }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isPromptFocused.wrappedValue = true
+            }
             .padding(.horizontal, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
             

@@ -415,147 +415,10 @@ private var navTitle: String {
     // ────────────────────────────────────────────────────────────────────────
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Color("primarybg").ignoresSafeArea()
-
-            dashboardList
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            if isTabBarVisible.wrappedValue {
-                AgentTabBar(
-                    text: $agentText,
-                    isPromptFocused: $isAgentInputFocused,
-                    onPlusTapped: onPlusTapped,
-                    onBarcodeTapped: onBarcodeTapped,
-                    onMicrophoneTapped: onMicrophoneTapped,
-                    onWaveformTapped: onWaveformTapped,
-                    onSubmit: onSubmit
-                )
-            }
-
-            toastOverlay
+        NavigationStack {
+            dashboardContent
         }
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    HapticFeedback.generateRigid()
-                    onShowChats()
-                } label: {
-                    ProfileInitialCircle(initial: userInitial, showsBorder: shouldShowProfileBorder)
-
-                        if isToday &&
-                            !isTodayWorkoutDismissed &&
-                            !hideWorkoutPreviews &&
-                            !workoutManager.hasCompletedWorkoutToday {
-                            todayWorkoutCard
-                                .padding(.horizontal)
-                                // .padding(.top, 8)
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        }
-
-
-                        
-                        // UNIFIED: Single modern loader with dynamic progress (legacy states now synchronized)
-                        if foodMgr.foodScanningState.isActive {
-
-                            ModernFoodLoadingCard(state: foodMgr.foodScanningState)
-                                .padding(.horizontal)
-                                .padding(.top, 16)
-                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        } else {
-
-                        }
-                    }
-                    
-                    // Logs section
-                    if vm.isLoading {
-                        Section {
-                            loadingState
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        }
-                    } else if let err = vm.error {
-                        Section {
-                            errorState(err)
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        }
-                    } else {
-                        scheduledPreviewsSection
-                        logsSection
-                        emptyStateSection
-                    }
-                    }
-                .listStyle(PlainListStyle())
-                .scrollContentBackground(.hidden)
-                .scrollIndicators(.hidden)
-                .safeAreaInset(edge: .bottom) {
-                    // Add buffer space for tab bar
-                    Spacer()
-                        .frame(height: 100)
-
-                }
-                .buttonStyle(.plain)
-            }
-
-            ToolbarItem(placement: .principal) {
-                HStack(spacing: 12) {
-                    Button {
-                        vm.selectedDate.addDays(-1)
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.primary)
-                    }
-                    .buttonStyle(.plain)
-
-                    Text(navTitle)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.primary)
-
-                    Button {
-                        vm.selectedDate.addDays(+1)
-                    } label: {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.primary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 12) {
-                    HStack(spacing: 4) {
-                        Image(streakManager.streakAsset)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 20, height: 20)
-
-                        Text("\(streakManager.currentStreak)")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.primary)
-                    }
-
-                    Button {
-                        showDatePicker = true
-                    } label: {
-                        Image(systemName: "calendar")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.primary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
         .sheet(item: $scheduleSheetLog) { log in
             ScheduleMealSheet(initialMealType: initialMealType(for: log)) { selection in
                 scheduleLog(selection: selection, for: log)
@@ -767,7 +630,7 @@ private var navTitle: String {
                 )
                 .hidden()
             )
-        }
+    }
 
     // Delete function for swipe-to-delete functionality
     private func deleteLogItems(at indexSet: IndexSet) {
@@ -1304,7 +1167,7 @@ private extension DashboardView {
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: workoutManager.showWorkoutLogCard)
         }
     }
-    var dashboardContent: some View {
+    private var dashboardContent: some View {
         ZStack(alignment: .bottom) {
             Color("primarybg").ignoresSafeArea()
 
@@ -1314,6 +1177,8 @@ private extension DashboardView {
                 dashboardList
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+
+            toastOverlay
 
             if isTabBarVisible.wrappedValue {
                 AgentTabBar(
@@ -1327,12 +1192,8 @@ private extension DashboardView {
                 )
                 .ignoresSafeArea(edges: [.horizontal])
             }
-
-        toastOverlay
+        }
     }
-}
-
- 
     // ① Nutrition summary ----------------------------------------------------
     var nutritionSummaryCard: some View {
         VStack(spacing: 0) {
