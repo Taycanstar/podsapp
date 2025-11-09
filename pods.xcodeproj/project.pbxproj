@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		0DB4770E990845A8A2F47741 /* ProFeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D174B3487294C0999CCBCD6 /* ProFeatureModels.swift */; };
+		36FFF1012FBEBE6000A1C0DE /* AgentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */; };
+		36FFF1112FBEBE6000A1C0DE /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1102FBEBE6000A1C0DE /* AgentService.swift */; };
+		36FFF1212FBEBE6000A1C0DE /* AgentChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1202FBEBE6000A1C0DE /* AgentChatViewModel.swift */; };
+		36FFF1312FBEBE6000A1C0DE /* AgentChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1302FBEBE6000A1C0DE /* AgentChatView.swift */; };
 		1EBBC77B20EF481D8E65E2A1 /* ScheduleMealSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298E12AED7C54F17AB5D6B77 /* ScheduleMealSheet.swift */; };
 		26C9913EDB154EB585919DC4 /* ProFeatureGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E2598AC8B354440B1EBC82A /* ProFeatureGate.swift */; };
 		36004B422B9000DF00423AB1 /* PodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36004B412B9000DF00423AB1 /* PodView.swift */; };
@@ -762,6 +766,10 @@
 		36F5A0162F9C1AAB00A1B234 /* RecipesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecipesRepository.swift; path = Pods/Core/Repositories/RecipesRepository.swift; sourceTree = SOURCE_ROOT; };
 		36F5A0182F9C1AAB00A1B234 /* SavedMealsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SavedMealsRepository.swift; path = Pods/Core/Repositories/SavedMealsRepository.swift; sourceTree = SOURCE_ROOT; };
 		36F5A01A2F9C1AAB00A1B234 /* UserFoodsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserFoodsRepository.swift; path = Pods/Core/Repositories/UserFoodsRepository.swift; sourceTree = SOURCE_ROOT; };
+		36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentModels.swift; path = Pods/Core/Models/AgentModels.swift; sourceTree = SOURCE_ROOT; };
+		36FFF1102FBEBE6000A1C0DE /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentService.swift; path = Pods/Core/Services/AgentService.swift; sourceTree = SOURCE_ROOT; };
+		36FFF1202FBEBE6000A1C0DE /* AgentChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentChatViewModel.swift; sourceTree = "<group>"; };
+		36FFF1302FBEBE6000A1C0DE /* AgentChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentChatView.swift; path = Pods/Core/Views/agent/AgentChatView.swift; sourceTree = SOURCE_ROOT; };
 		36F722852DE52E2C009C1CA0 /* ScanFoodHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFoodHelper.swift; sourceTree = "<group>"; };
 		36F722872DE52E53009C1CA0 /* BarcodeHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeHelper.swift; sourceTree = "<group>"; };
 		36F722892DE52E60009C1CA0 /* GalleryHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryHelper.swift; sourceTree = "<group>"; };
@@ -872,6 +880,7 @@
 				361FF3192E20615200B7F68E /* WorkoutSyncService.swift */,
 				36A851A42E5D2DD0004E5CED /* WorkoutGenerationService.swift */,
 				36A7B0012F0B4C9B00A6A1B0 /* StartupCoordinator.swift */,
+				36FFF1102FBEBE6000A1C0DE /* AgentService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -892,6 +901,7 @@
 				361FF3202E2061BC00B7F68E /* WorkoutSession.swift */,
 				361FF31E2E2061A400B7F68E /* ExerciseInstance.swift */,
 				361FF31C2E20618800B7F68E /* SetInstance.swift */,
+				36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -979,6 +989,7 @@
 				36ED35A22DD0DE6000D174FB /* DayLogsViewModel.swift */,
 				36ED35AA2DD529D600D174FB /* HealthKitViewModel.swift */,
 				36ED35B72DD92FF000D174FB /* UserDataModel.swift */,
+				36FFF1202FBEBE6000A1C0DE /* AgentChatViewModel.swift */,
 			);
 			path = viewModels;
 			sourceTree = "<group>";
@@ -1151,6 +1162,7 @@
 				36ED35D12DDBD4EC00D174FB /* ManageGoalsView.swift */,
 				36ED35D32DDBD5DC00D174FB /* UpdateWeight.swift */,
 				363068DC2E132EE400F2D4EC /* MyProfileView.swift */,
+				36FFF1302FBEBE6000A1C0DE /* AgentChatView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -1885,6 +1897,10 @@
 				3625329F2E629D1A003C3B8D /* CircularProgressView.swift in Sources */,
 				36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */,
 				3615D1132EAFEA320063EB8B /* AgentTabBar.swift in Sources */,
+				36FFF1012FBEBE6000A1C0DE /* AgentModels.swift in Sources */,
+				36FFF1112FBEBE6000A1C0DE /* AgentService.swift in Sources */,
+				36FFF1212FBEBE6000A1C0DE /* AgentChatViewModel.swift in Sources */,
+				36FFF1312FBEBE6000A1C0DE /* AgentChatView.swift in Sources */,
 				361FF3152E1D99AA00B7F68E /* StretchMobilityView.swift in Sources */,
 				36881DFD2E77406300262045 /* ExerciseLoggingSheet.swift in Sources */,
 				36A85D072DC3020000DD4266 /* SportSelectionView.swift in Sources */,

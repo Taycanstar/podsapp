@@ -40,6 +40,8 @@ struct MainContentView: View {
     @State private var agentInputText: String = ""
     @State private var agentPendingRetryDescription: String?
     @State private var agentPendingRetryMealType: String?
+    @State private var showAgentChat = false
+    @State private var agentInitialPrompt: String?
     
     // State for selected meal - initialized with time-based default
     @State private var selectedMeal: String = {
@@ -196,8 +198,14 @@ struct MainContentView: View {
                         }
                         .onDisappear {
                             print("VoiceLogView disappeared from MainContentView")
-    }
-}
+                    }
+                }
+
+                .fullScreenCover(isPresented: $showAgentChat, onDismiss: {
+                    agentInitialPrompt = nil
+                }) {
+                    AgentChatView(initialPrompt: agentInitialPrompt)
+                }
 }
                 .fullScreenCover(isPresented: $showLogWorkoutView) {
                     WorkoutContainerView(selectedTab: $selectedTab)
@@ -404,13 +412,11 @@ struct MainContentView: View {
     private func handleAgentSubmit() {
         let trimmedText = agentInputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
-        let description = trimmedText
-        let mealType = selectedMeal
         agentPendingRetryDescription = nil
         agentPendingRetryMealType = nil
+        agentInitialPrompt = trimmedText
         agentInputText = ""
-        prepareAgentAnalysisStates()
-        performAgentAnalysis(description: description, mealType: mealType)
+        showAgentChat = true
     }
 
     private func prepareAgentAnalysisStates() {

@@ -35,6 +35,7 @@ final class HealthKitViewModel: ObservableObject {
     
     private let healthKitManager = HealthKitManager.shared
     private var cancellables = Set<AnyCancellable>()
+    private let metricsUploader = AgentMetricsUploader.shared
     
     // Computed property for sleep progress
     var sleepProgress: Double {
@@ -361,7 +362,9 @@ final class HealthKitViewModel: ObservableObject {
         
         // When all data is loaded, update the loading state
         group.notify(queue: .main) { [weak self] in
-            self?.isLoading = false
+            guard let self else { return }
+            self.isLoading = false
+            self.metricsUploader.uploadSnapshot(from: self, date: date)
         }
     }
     
