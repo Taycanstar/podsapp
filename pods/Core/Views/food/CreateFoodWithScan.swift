@@ -82,7 +82,7 @@ struct CreateFoodWithScan: View {
             } else {
                 CameraPreviewView(
                     selectedMode: $selectedMode,
-                    flashEnabled: flashEnabled, 
+                    flashEnabled: $flashEnabled, 
                     onCapture: { image in
                         guard let image = image else { return }
                         if selectedMode == .food {
