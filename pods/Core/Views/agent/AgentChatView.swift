@@ -7,7 +7,6 @@ struct AgentChatView: View {
     @State private var inputText: String = ""
     @State private var showToast = false
     @State private var toastMessage = ""
-    @State private var thinkingPulse = false
     @State private var thinkingMessageIndex = 0
     @State private var shimmerPhase: CGFloat = 0
     @State private var scrollProxy: ScrollViewProxy?
@@ -108,12 +107,7 @@ struct AgentChatView: View {
 
     private var thinkingIndicator: some View {
         HStack(spacing: 10) {
-            Circle()
-                .fill(Color.primary)
-                .frame(width: 10, height: 10)
-                .scaleEffect(thinkingPulse ? 1.1 : 0.7)
-                .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: thinkingPulse)
-                .onAppear { thinkingPulse.toggle() }
+            thinkingPulseCircle
             shimmeringThinkingText
         }
         .padding(.vertical, 6)
@@ -281,6 +275,18 @@ struct AgentChatView: View {
             "Balancing recovery and strain…",
             "Reviewing your sleep + HRV…"
         ]
+    }
+
+    private var thinkingPulseCircle: some View {
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let normalized = (sin(t * 2 * .pi / 1.5) + 1) / 2
+            Circle()
+                .fill(Color.primary)
+                .frame(width: 10, height: 10)
+                .scaleEffect(0.85 + 0.25 * normalized)
+                .opacity(0.6 + 0.4 * normalized)
+        }
     }
 
     private var shimmeringThinkingText: some View {
