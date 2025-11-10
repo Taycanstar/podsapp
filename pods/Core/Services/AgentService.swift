@@ -22,6 +22,7 @@ struct AgentDailyMetricsPayload {
     var calendarConstraints: [[String: AnyCodable]]?
     var equipmentAvailable: [String]?
     var readinessNotes: String?
+    var walkingHeartRateAverage: Double?
 
     func dictionary(dateFormatter: ISO8601DateFormatter) -> [String: Any] {
         var dict: [String: Any] = [
@@ -48,6 +49,7 @@ struct AgentDailyMetricsPayload {
         }
         dict["equipment_available"] = equipmentAvailable
         dict["readiness_notes"] = readinessNotes
+        dict["walking_heart_rate_average"] = walkingHeartRateAverage
         return dict.compactMapValues { $0 }
     }
 }
@@ -246,14 +248,19 @@ final class AgentMetricsUploader {
     func uploadSnapshot(from healthVM: HealthKitViewModel, date: Date) {
         guard let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty else { return }
 
+        let sleepTotal = Double(healthVM.sleepHours) + Double(healthVM.sleepMinutes) / 60.0
+        let restingHR: Double? = healthVM.restingHeartRate > 0 ? healthVM.restingHeartRate : nil
+        let hrvScore: Double? = healthVM.heartRateVariability > 0 ? healthVM.heartRateVariability : nil
+        let walkingHR: Double? = healthVM.walkingHeartRateAverage > 0 ? healthVM.walkingHeartRateAverage : nil
+
         let payload = AgentDailyMetricsPayload(
             userEmail: userEmail,
             date: date,
             stepCount: Int(healthVM.stepCount),
-            sleepHours: Double(healthVM.sleepHours) + Double(healthVM.sleepMinutes) / 60.0,
+            sleepHours: sleepTotal,
             sleepScore: nil,
-            restingHeartRate: nil,
-            hrvScore: nil,
+            restingHeartRate: restingHR,
+            hrvScore: hrvScore,
             recoveryScore: nil,
             fatigueLevel: nil,
             sorenessLevel: nil,
@@ -266,7 +273,8 @@ final class AgentMetricsUploader {
             macroActuals: nil,
             calendarConstraints: nil,
             equipmentAvailable: nil,
-            readinessNotes: nil
+            readinessNotes: nil,
+            walkingHeartRateAverage: walkingHR
         )
 
         let signature = "\(userEmail)-\(date.timeIntervalSince1970)-\(payload.stepCount ?? 0)-\(payload.sleepHours ?? 0)"

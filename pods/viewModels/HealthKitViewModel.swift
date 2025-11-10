@@ -20,6 +20,9 @@ final class HealthKitViewModel: ObservableObject {
     @Published var distance: Double = 0
     @Published var recentWorkouts: [HKWorkout] = []
     @Published var nutritionData: [HKQuantityTypeIdentifier: Double] = [:]
+    @Published var restingHeartRate: Double = 0
+    @Published var heartRateVariability: Double = 0
+    @Published var walkingHeartRateAverage: Double = 0
     
     // Height and weight properties
     @Published var height: Double = 0 // Height in cm
@@ -333,6 +336,57 @@ final class HealthKitViewModel: ObservableObject {
                     self.sleepHours = floor(totalHours) // Just the whole hours
 
                     self.sleepMinutes = Int((totalHours - self.sleepHours) * 60)
+                }
+                if let error = error {
+                    self.error = error
+                }
+            }
+        }
+
+        group.enter()
+        healthKitManager.fetchRestingHeartRate(for: date) { [weak self] value, error in
+            Task { @MainActor [weak self] in
+                defer { group.leave() }
+                guard let self else { return }
+
+                if let value = value {
+                    self.restingHeartRate = value
+                } else {
+                    self.restingHeartRate = 0
+                }
+                if let error = error {
+                    self.error = error
+                }
+            }
+        }
+
+        group.enter()
+        healthKitManager.fetchHeartRateVariability(for: date) { [weak self] value, error in
+            Task { @MainActor [weak self] in
+                defer { group.leave() }
+                guard let self else { return }
+
+                if let value = value {
+                    self.heartRateVariability = value
+                } else {
+                    self.heartRateVariability = 0
+                }
+                if let error = error {
+                    self.error = error
+                }
+            }
+        }
+
+        group.enter()
+        healthKitManager.fetchWalkingHeartRateAverage(for: date) { [weak self] value, error in
+            Task { @MainActor [weak self] in
+                defer { group.leave() }
+                guard let self else { return }
+
+                if let value = value {
+                    self.walkingHeartRateAverage = value
+                } else {
+                    self.walkingHeartRateAverage = 0
                 }
                 if let error = error {
                     self.error = error

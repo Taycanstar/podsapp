@@ -816,6 +816,33 @@ class HealthKitManager {
             }
         }
     }
+
+    func fetchRestingHeartRate(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .restingHeartRate) else {
+            completion(nil, NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Resting heart rate not available"]))
+            return
+        }
+        let bpmUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
+        fetchAverageQuantity(type: type, unit: bpmUnit, date: date, completion: completion)
+    }
+
+    func fetchHeartRateVariability(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else {
+            completion(nil, NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "HRV not available"]))
+            return
+        }
+        let unit = HKUnit.secondUnit(with: .milli)
+        fetchAverageQuantity(type: type, unit: unit, date: date, completion: completion)
+    }
+
+    func fetchWalkingHeartRateAverage(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .walkingHeartRateAverage) else {
+            completion(nil, NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Walking heart rate not available"]))
+            return
+        }
+        let bpmUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
+        fetchAverageQuantity(type: type, unit: bpmUnit, date: date, completion: completion)
+    }
     
     // MARK: - Helper Methods
     
@@ -824,8 +851,35 @@ class HealthKitManager {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-        
         return HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+    }
+
+    private func fetchAverageQuantity(
+        type: HKQuantityType,
+        unit: HKUnit,
+        date: Date,
+        completion: @escaping (Double?, Error?) -> Void
+    ) {
+        let predicate = createDayPredicate(for: date)
+        let query = HKStatisticsQuery(
+            quantityType: type,
+            quantitySamplePredicate: predicate,
+            options: .discreteAverage
+        ) { _, result, error in
+            if let error = error {
+                completion(nil, error)
+                return
+            }
+
+            guard let quantity = result?.averageQuantity() else {
+                completion(nil, nil)
+                return
+            }
+
+            completion(quantity.doubleValue(for: unit), nil)
+        }
+
+        healthStore.execute(query)
     }
 }
  
