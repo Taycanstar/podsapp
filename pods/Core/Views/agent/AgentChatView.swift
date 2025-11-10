@@ -3,19 +3,11 @@ import UIKit
 
 struct AgentChatView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel: AgentChatViewModel
+    @ObservedObject var viewModel: AgentChatViewModel
     @State private var inputText: String = ""
     @State private var showToast = false
     @State private var toastMessage = ""
     @State private var thinkingPulse = false
-    @State private var hasBootstrapped = false
-    private let initialPrompt: String?
-
-    init(initialPrompt: String?) {
-        self.initialPrompt = initialPrompt
-        let email = UserDefaults.standard.string(forKey: "userEmail") ?? ""
-        _viewModel = StateObject(wrappedValue: AgentChatViewModel(userEmail: email))
-    }
 
     var body: some View {
         NavigationStack {
@@ -53,12 +45,7 @@ struct AgentChatView: View {
             }
         }
         .onAppear {
-            guard !hasBootstrapped else { return }
-            hasBootstrapped = true
-            viewModel.bootstrap()
-            if let prompt = initialPrompt, !prompt.isEmpty {
-                viewModel.send(message: prompt)
-            }
+            viewModel.bootstrapIfNeeded()
         }
         .overlay(alignment: .bottom) {
             if showToast {

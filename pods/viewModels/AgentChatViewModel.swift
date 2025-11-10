@@ -8,13 +8,16 @@ final class AgentChatViewModel: ObservableObject {
     @Published var contextSnapshot: AgentContextSnapshot?
 
     private let agentService = AgentService.shared
-    private let userEmail: String
+    private var userEmail: String
+    private var hasBootstrapped = false
 
     init(userEmail: String) {
         self.userEmail = userEmail
     }
 
-    func bootstrap() {
+    func bootstrapIfNeeded() {
+        guard !hasBootstrapped else { return }
+        hasBootstrapped = true
         refreshContext()
         refreshPendingActions()
     }
@@ -75,6 +78,13 @@ final class AgentChatViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    func updateUserEmail(_ email: String) {
+        guard email != userEmail else { return }
+        userEmail = email
+        resetConversation()
+        hasBootstrapped = false
     }
 
     private func serializedHistory(limit: Int = 8) -> [[String: String]] {

@@ -41,7 +41,7 @@ struct MainContentView: View {
     @State private var agentPendingRetryDescription: String?
     @State private var agentPendingRetryMealType: String?
     @State private var showAgentChat = false
-    @State private var agentInitialPrompt: String?
+    @StateObject private var agentChatViewModel = AgentChatViewModel(userEmail: UserDefaults.standard.string(forKey: "userEmail") ?? "")
     
     // State for selected meal - initialized with time-based default
     @State private var selectedMeal: String = {
@@ -79,15 +79,14 @@ struct MainContentView: View {
     var body: some View {
         Group {
             if isAuthenticated {
-                // Debug logging for navigation state
                 let _ = print("🔄 MainContentView.body: Authenticated user - showing main app interface")
                 let _ = print("🔄 MainContentView.body: Onboarding completed: \(viewModel.onboardingCompleted), Server completed: \(viewModel.serverOnboardingCompleted)")
+
                 ZStack(alignment: .bottom) {
                     VStack {
                         Group {
                             switch selectedTab {
                             case 0:
-//                                HomeView(shouldNavigateToNewPod: $shouldNavigateToNewPod, newPodId: $newPodId)
                                 DashboardContainer(
                                     agentText: $agentInputText,
                                     onPlusTapped: {
@@ -110,22 +109,18 @@ struct MainContentView: View {
                                         handleAgentSubmit()
                                     }
                                 )
-                            // PodsContainerView()
-
-                           case 2:
-                               
-                               PodsContainerView()
-                           case 3:
-                               FriendsView()
+                            case 2:
+                                PodsContainerView()
+                            case 3:
+                                FriendsView()
                             case 4:
-                                // ProfileView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
                                 MyProfileView(isAuthenticated: $isAuthenticated)
                             default:
                                 EmptyView()
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .onChange(of: selectedTab) {_, newValue in
+                        .onChange(of: selectedTab) { _, newValue in
                             if newValue == 1 {
                                 showingVideoCreationScreen = true
                             }
@@ -134,117 +129,95 @@ struct MainContentView: View {
                             selectedTab = 0
                         }
                     }
-      .disabled(versionManager.requiresUpdate)
-        .alert("Update Required", isPresented: $versionManager.requiresUpdate) {
-            Button("Update") {
-                if let url = URL(string: versionManager.storeUrl ?? "") {
-                    UIApplication.shared.open(url)
                 }
-            }
-            .tint(.accentColor)
-        } message: {
-            Text("An update to Humuli is required to continue.")
-        }
-        // Removed deprecated onboarding resume task
-
+                .disabled(versionManager.requiresUpdate)
+                .alert("Update Required", isPresented: $versionManager.requiresUpdate) {
+                    Button("Update") {
+                        if let url = URL(string: versionManager.storeUrl ?? "") {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .tint(.accentColor)
+                } message: {
+                    Text("An update to Humuli is required to continue.")
+                }
                 .fullScreenCover(isPresented: $showingVideoCreationScreen) {
                     CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)
                         .background(Color.black.edgesIgnoringSafeArea(.all))
                 }
-                
-                // Food container as a fullScreenCover
                 .fullScreenCover(isPresented: $viewModel.isShowingFoodContainer) {
                     FoodContainerView()
                         .environmentObject(viewModel)
                 }
-                
-
-                
                 .sheet(isPresented: $showNewSheet) {
-                    NewSheetView(isPresented: $showNewSheet,
-                                 showingVideoCreationScreen: $showingVideoCreationScreen,
-                                 showQuickPodView: $showQuickPodView, 
-                                 selectedTab: $selectedTab,
-                                 showFoodScanner: $showFoodScanner,
-                                 showVoiceLog: $showVoiceLog,
-                                 showLogWorkoutView: $showLogWorkoutView,
-                                 selectedMeal: $selectedMeal)
-                        .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
-                        .presentationCornerRadius(25)
-                        .presentationBackground(Color(.systemBackground))
+                    NewSheetView(
+                        isPresented: $showNewSheet,
+                        showingVideoCreationScreen: $showingVideoCreationScreen,
+                        showQuickPodView: $showQuickPodView,
+                        selectedTab: $selectedTab,
+                        showFoodScanner: $showFoodScanner,
+                        showVoiceLog: $showVoiceLog,
+                        showLogWorkoutView: $showLogWorkoutView,
+                        selectedMeal: $selectedMeal
+                    )
+                    .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
+                    .presentationCornerRadius(25)
+                    .presentationBackground(Color(.systemBackground))
                 }
-
                 .fullScreenCover(isPresented: $showFoodScanner) {
-                    FoodScannerView(isPresented: $showFoodScanner, selectedMeal: selectedMeal, onFoodScanned: { food, foodLogId in
-                        // When a barcode is scanned and food is returned, show the confirmation view
-                        print("🔍 DEBUG MainContentView: Received food: \(food.description), foodLogId: \(String(describing: foodLogId))")
+                    FoodScannerView(isPresented: $showFoodScanner, selectedMeal: selectedMeal) { food, foodLogId in
                         scannedFood = food
                         scannedFoodLogId = foodLogId
-                        print("🔍 DEBUG MainContentView: Set scannedFood and scannedFoodLogId")
-                        // Small delay to ensure transitions are smooth
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                            print("🔍 DEBUG MainContentView: About to show ConfirmLogView sheet")
                             showConfirmFoodView = true
                         }
-                    })
+                    }
                     .edgesIgnoringSafeArea(.all)
                 }
-
                 .fullScreenCover(isPresented: $showVoiceLog) {
                     VoiceLogView(isPresented: $showVoiceLog, selectedMeal: selectedMeal)
-                        .onAppear {
-                            print("VoiceLogView appeared from MainContentView")
-                            print("🍽️ MainContentView passing selectedMeal to VoiceLogView: \(selectedMeal)")
-                        }
-                        .onDisappear {
-                            print("VoiceLogView disappeared from MainContentView")
-                    }
                 }
-
-                .fullScreenCover(isPresented: $showAgentChat, onDismiss: {
-                    agentInitialPrompt = nil
-                }) {
-                    AgentChatView(initialPrompt: agentInitialPrompt)
+                .fullScreenCover(isPresented: $showAgentChat) {
+                    AgentChatView(viewModel: agentChatViewModel)
                 }
-}
                 .fullScreenCover(isPresented: $showLogWorkoutView) {
                     WorkoutContainerView(selectedTab: $selectedTab)
                 }
-
                 .fullScreenCover(item: $deepLinkHandler.activeInvitation) { invitation in
                     InvitationView(invitation: invitation)
                 }
                 .fullScreenCover(item: $deepLinkHandler.activeTeamInvitation) { invitation in
-                                 TeamInvitationView(invitation: invitation)
-                             }
-
+                    TeamInvitationView(invitation: invitation)
+                }
                 .fullScreenCover(isPresented: proOnboardingBinding) {
                     ProOnboardingView(isPresented: proOnboardingBinding)
                 }
-                
-                // Add presentation for ConfirmLogView when food is scanned
                 .sheet(isPresented: $showConfirmFoodView, onDismiss: {
-                    // Reset scanned food data
                     scannedFood = nil
                     scannedFoodLogId = nil
                 }) {
                     if let food = scannedFood {
                         NavigationView {
                             ConfirmLogView(
-                                path: .constant(NavigationPath()), // Dummy navigation path since we're using sheets
+                                path: .constant(NavigationPath()),
                                 food: food,
                                 foodLogId: scannedFoodLogId
                             )
                         }
                     }
                 }
-                
-                .environment(\.isTabBarVisible, $isTabBarVisible)
             } else {
                 // Debug logging for authentication state
                 let _ = print("🔄 MainContentView.body: Not authenticated - showing onboarding")
                 MainOnboardingView(isAuthenticated: $isAuthenticated, showTourView: $showTourView)
             }
+        }
+        .environment(\.isTabBarVisible, $isTabBarVisible)
+        .onAppear {
+            ensureAgentChatEmailUpToDate()
+        }
+        .onChange(of: viewModel.email) { _, _ in
+            ensureAgentChatEmailUpToDate()
         }
 
         // REMOVED: Old onboarding system (OnboardingFlowContainer) - now using new onboarding in RegisterView
@@ -414,9 +387,13 @@ struct MainContentView: View {
         guard !trimmedText.isEmpty else { return }
         agentPendingRetryDescription = nil
         agentPendingRetryMealType = nil
-        agentInitialPrompt = trimmedText
         agentInputText = ""
-        showAgentChat = true
+
+        ensureAgentChatEmailUpToDate()
+        agentChatViewModel.send(message: trimmedText)
+        if !showAgentChat {
+            showAgentChat = true
+        }
     }
 
     private func prepareAgentAnalysisStates() {
@@ -469,6 +446,13 @@ struct MainContentView: View {
                     self.handleAgentAnalysisFailure(error.localizedDescription)
                 }
             }
+        }
+    }
+
+    private func ensureAgentChatEmailUpToDate() {
+        let currentEmail = viewModel.email.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : viewModel.email
+        if !currentEmail.isEmpty {
+            agentChatViewModel.updateUserEmail(currentEmail)
         }
     }
 
