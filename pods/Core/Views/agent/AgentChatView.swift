@@ -1,9 +1,14 @@
 import SwiftUI
+import UIKit
 
 struct AgentChatView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: AgentChatViewModel
     @State private var inputText: String = ""
+    @State private var showToast = false
+    @State private var toastMessage = ""
+    @State private var thinkingPulse = false
+    @State private var hasBootstrapped = false
     private let initialPrompt: String?
 
     init(initialPrompt: String?) {
@@ -13,25 +18,57 @@ struct AgentChatView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 pendingActionsSection
                 Divider()
                 chatScrollView
                 inputBar
             }
-            .navigationTitle("Humuli Coach")
+            .navigationTitle("Humuli")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "chevron.backward")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: startNewChat) {
+                        Image(systemName: "square.and.pencil")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("Share", action: shareConversation)
+                        Button(role: .destructive, action: startNewChat) {
+                            Text("Delete Chat")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
                     }
                 }
             }
         }
         .onAppear {
-            viewModel.bootstrap(initialPrompt: initialPrompt)
+            guard !hasBootstrapped else { return }
+            hasBootstrapped = true
+            viewModel.bootstrap()
+            if let prompt = initialPrompt, !prompt.isEmpty {
+                viewModel.send(message: prompt)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if showToast {
+                Text(toastMessage)
+                    .font(.footnote)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.bottom, 40)
+            }
         }
     }
 
@@ -40,8 +77,11 @@ struct AgentChatView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
                     ForEach(viewModel.messages) { message in
-                        messageBubble(message)
+                        messageRow(message)
                             .id(message.id)
+                    }
+                    if viewModel.isLoading {
+                        thinkingIndicator
                     }
                 }
                 .padding()
@@ -54,36 +94,44 @@ struct AgentChatView: View {
                 }
             }
         }
-        .overlay(alignment: .topTrailing) {
-            if viewModel.isLoading {
-                ProgressView()
-                    .padding()
-            }
-        }
     }
 
-    private func messageBubble(_ message: AgentChatMessage) -> some View {
-        HStack {
-            if message.sender == .agent {
-                Spacer().frame(width: 32)
+    private var thinkingIndicator: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 10, height: 10)
+                .scaleEffect(thinkingPulse ? 1.1 : 0.7)
+                .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: thinkingPulse)
+                .onAppear { thinkingPulse.toggle() }
+            Text("Humuli is thinking…")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 6)
+    }
+
+    @ViewBuilder
+    private func messageRow(_ message: AgentChatMessage) -> some View {
+        switch message.sender {
+        case .user:
+            HStack {
+                Spacer()
+                Text(message.text)
+                    .padding(12)
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(16)
             }
+        case .agent:
             Text(message.text)
-                .padding(12)
-                .background(messageBackground(for: message.sender))
-                .foregroundColor(message.sender == .user ? .white : .primary)
-                .cornerRadius(16)
-            if message.sender == .user {
-                Spacer().frame(width: 32)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: message.sender == .user ? .trailing : .leading)
-    }
-
-    private func messageBackground(for sender: AgentChatMessage.Sender) -> Color {
-        switch sender {
-        case .user: return .accentColor
-        case .agent: return Color(uiColor: .secondarySystemBackground)
-        case .system: return Color.orange.opacity(0.3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 4)
+        case .system:
+            Text(message.text)
+                .font(.footnote)
+                .foregroundColor(.orange)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
@@ -127,20 +175,69 @@ struct AgentChatView: View {
     }
 
     private var inputBar: some View {
-        HStack(spacing: 12) {
-            TextField("Ask the coach anything", text: $inputText)
-                .textFieldStyle(.roundedBorder)
-            Button {
-                let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { return }
-                viewModel.send(message: trimmed)
-                inputText = ""
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 28))
+        VStack {
+            HStack(alignment: .bottom, spacing: 12) {
+                TextField("Ask or log anything…", text: $inputText, axis: .vertical)
+                    .textInputAutocapitalization(.sentences)
+                    .lineLimit(1...4)
+                    .padding(.vertical, 8)
+
+                Button {
+                    sendPrompt()
+                } label: {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(Color.accentColor))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color("chat"))
+                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
-        .padding()
+    }
+
+    private func sendPrompt() {
+        let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        viewModel.send(message: trimmed)
+        inputText = ""
+    }
+
+    private func startNewChat() {
+        viewModel.resetConversation()
+        viewModel.refreshContext()
+        inputText = ""
+    }
+
+    private func shareConversation() {
+        let transcript = viewModel.transcriptText()
+        guard !transcript.isEmpty else { return }
+        UIPasteboard.general.string = transcript
+        showToast(with: "Conversation copied")
+    }
+
+    private func showToast(with message: String) {
+        toastMessage = message
+        withAnimation {
+            showToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showToast = false
+            }
+        }
     }
 }

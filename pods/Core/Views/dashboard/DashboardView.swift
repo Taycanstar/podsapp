@@ -1852,7 +1852,7 @@ private extension DashboardView {
     }
     
     var cardBackgroundColor: Color {
-        Color("sheetbg").opacity(0.94)
+        Color("containerbg")
     }
     
     func formattedDurationLabel(for workout: TodayWorkout) -> String {

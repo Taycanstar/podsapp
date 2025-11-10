@@ -14,12 +14,9 @@ final class AgentChatViewModel: ObservableObject {
         self.userEmail = userEmail
     }
 
-    func bootstrap(initialPrompt: String?) {
+    func bootstrap() {
         refreshContext()
         refreshPendingActions()
-        if let prompt = initialPrompt {
-            send(message: prompt)
-        }
     }
 
     func refreshContext() {
@@ -93,5 +90,16 @@ final class AgentChatViewModel: ObservableObject {
                     return nil
                 }
             }
+    }
+
+    func resetConversation() {
+        messages.removeAll()
+        pendingActions.removeAll()
+    }
+
+    func transcriptText() -> String {
+        messages
+            .map { "\($0.sender == .user ? "You" : "Humuli"): \($0.text)" }
+            .joined(separator: "\n")
     }
 }

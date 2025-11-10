@@ -114,7 +114,7 @@ struct AgentTabBar: View {
                                 HapticFeedback.generate()
                                 toggleSpeechRecognition()
                             },
-                            backgroundColor: Color(.systemGray6),
+                            backgroundColor: Color("chaticon"),
                             foregroundColor: .primary
                         )
 
@@ -127,7 +127,7 @@ struct AgentTabBar: View {
                                     onMicrophoneTapped()
                                 }
                             },
-                            backgroundColor: hasUserInput ? Color.accentColor : Color(.systemGray6),
+                            backgroundColor: hasUserInput ? Color.accentColor : Color("chaticon"),
                             foregroundColor: hasUserInput ? .white : .primary
                         )
                     }
@@ -196,7 +196,7 @@ struct AgentTabBar: View {
 private struct ActionCircleButton: View {
     var systemName: String
     var action: () -> Void
-    var backgroundColor: Color = Color(.systemGray6)
+    var backgroundColor: Color = Color("chaticon")
     var foregroundColor: Color = .primary
     
     var body: some View {
