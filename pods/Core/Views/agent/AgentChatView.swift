@@ -8,13 +8,26 @@ struct AgentChatView: View {
     @State private var showToast = false
     @State private var toastMessage = ""
     @State private var thinkingPulse = false
+    @State private var thinkingMessageIndex = 0
+    @State private var shimmerPhase: CGFloat = 0
+    @State private var scrollProxy: ScrollViewProxy?
+    @FocusState private var isInputFocused: Bool
+
+    init(viewModel: AgentChatViewModel) {
+        _viewModel = ObservedObject(wrappedValue: viewModel)
+    }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 pendingActionsSection
                 Divider()
-                chatScrollView
+                ZStack(alignment: .bottomTrailing) {
+                    chatScrollView
+                    scrollToBottomButton
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 16)
+                }
                 inputBar
             }
             .navigationTitle("Humuli")
@@ -42,6 +55,13 @@ struct AgentChatView: View {
                         Image(systemName: "ellipsis")
                     }
                 }
+            }
+        }
+        .onReceive(thinkingTimer) { _ in
+            if viewModel.isLoading {
+                thinkingMessageIndex = (thinkingMessageIndex + 1) % thinkingPhrases.count
+            } else {
+                thinkingMessageIndex = 0
             }
         }
         .onAppear {
@@ -73,6 +93,9 @@ struct AgentChatView: View {
                 }
                 .padding()
             }
+            .onAppear {
+                scrollProxy = proxy
+            }
             .onChange(of: viewModel.messages.count) { _ in
                 if let lastId = viewModel.messages.last?.id {
                     withAnimation {
@@ -86,14 +109,12 @@ struct AgentChatView: View {
     private var thinkingIndicator: some View {
         HStack(spacing: 10) {
             Circle()
-                .fill(Color.accentColor)
+                .fill(Color.primary)
                 .frame(width: 10, height: 10)
                 .scaleEffect(thinkingPulse ? 1.1 : 0.7)
                 .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: thinkingPulse)
                 .onAppear { thinkingPulse.toggle() }
-            Text("Humuli is thinking…")
-                .font(.footnote)
-                .foregroundColor(.secondary)
+            shimmeringThinkingText
         }
         .padding(.vertical, 6)
     }
@@ -168,6 +189,7 @@ struct AgentChatView: View {
                     .textInputAutocapitalization(.sentences)
                     .lineLimit(1...4)
                     .padding(.vertical, 8)
+                    .focused($isInputFocused)
 
                 Button {
                     sendPrompt()
@@ -201,6 +223,7 @@ struct AgentChatView: View {
         guard !trimmed.isEmpty else { return }
         viewModel.send(message: trimmed)
         inputText = ""
+        isInputFocused = false
     }
 
     private func startNewChat() {
@@ -227,4 +250,63 @@ struct AgentChatView: View {
             }
         }
     }
+
+    private var scrollToBottomButton: some View {
+        Group {
+            if !viewModel.messages.isEmpty {
+                Button {
+                    if let lastId = viewModel.messages.last?.id {
+                        withAnimation {
+                            scrollProxy?.scrollTo(lastId, anchor: .bottom)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(.accentColor)
+                        .background(
+                            Circle()
+                                .fill(.thinMaterial)
+                                .frame(width: 44, height: 44)
+                        )
+                }
+            }
+        }
+    }
+
+    private var thinkingPhrases: [String] {
+        [
+            "Humuli is thinking…",
+            "Checking your recent trends…",
+            "Balancing recovery and strain…",
+            "Reviewing your sleep + HRV…"
+        ]
+    }
+
+    private var shimmeringThinkingText: some View {
+        let text = thinkingPhrases[thinkingMessageIndex]
+        return Text(text)
+            .font(.footnote)
+            .foregroundColor(.secondary)
+            .overlay(
+                LinearGradient(
+                    gradient: Gradient(colors: [.clear, Color.white.opacity(0.6), .clear]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .offset(x: shimmerPhase)
+                .mask(
+                    Text(text)
+                        .font(.footnote)
+                )
+            )
+            .onAppear {
+                shimmerPhase = -60
+                withAnimation(.linear(duration: 1.6).repeatForever(autoreverses: false)) {
+                    shimmerPhase = 60
+                }
+            }
+    }
+
+    private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
 }
