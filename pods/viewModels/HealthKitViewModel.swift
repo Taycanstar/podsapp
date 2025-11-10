@@ -6,7 +6,8 @@ import Combine
 @MainActor
 final class HealthKitViewModel: ObservableObject {
     static let shared = HealthKitViewModel()
-    
+    private let wearableBackfillKey = "lastWearableBackfillDate"
+    private var isBackfilling = false
     // Published properties for UI binding
     @Published var isAuthorized = false
     @Published var isLoading = false
@@ -112,6 +113,7 @@ final class HealthKitViewModel: ObservableObject {
                     // If permissions granted, reload the data
                     if granted {
                         self.reloadHealthData(for: self.currentDate)
+                        self.syncRecentMetricsIfNeeded()
                     }
                 }
             }
@@ -128,7 +130,7 @@ final class HealthKitViewModel: ObservableObject {
                 if granted {
                     // Refresh data immediately when permissions are granted
                     self.reloadHealthData(for: self.currentDate)
-
+                    self.syncRecentMetricsIfNeeded()
                     // Post notification that health data is now available
                     NotificationCenter.default.post(name: NSNotification.Name("HealthDataAvailableNotification"), object: nil)
                 }
@@ -419,6 +421,7 @@ final class HealthKitViewModel: ObservableObject {
             guard let self else { return }
             self.isLoading = false
             self.metricsUploader.uploadSnapshot(from: self, date: date)
+            self.syncRecentMetricsIfNeeded()
         }
     }
     
@@ -526,5 +529,142 @@ final class HealthKitViewModel: ObservableObject {
             return "Workout"
         }
     }
-} 
+}
+
+extension HealthKitViewModel {
+    private func syncRecentMetricsIfNeeded(days: Int = 7) {
+        guard isAuthorized else { return }
+        let lastSyncDate = UserDefaults.standard.object(forKey: wearableBackfillKey) as? Date
+        let startOfToday = calendar.startOfDay(for: Date())
+        if let lastSyncDate = lastSyncDate, calendar.isDate(lastSyncDate, inSameDayAs: startOfToday) {
+            return
+        }
+        guard !isBackfilling else { return }
+        isBackfilling = true
+        Task { [weak self] in
+            await self?.syncRecentMetrics(days: days)
+        }
+    }
+
+    @MainActor
+    private func syncRecentMetrics(days: Int) async {
+        defer { isBackfilling = false }
+        guard isAuthorized else { return }
+        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty else { return }
+
+        let startOfToday = calendar.startOfDay(for: Date())
+        var uploadedAny = false
+
+        for offset in 0..<days {
+            guard let targetDate = calendar.date(byAdding: .day, value: -offset, to: startOfToday) else { continue }
+            if let payload = await buildPayload(for: targetDate, userEmail: userEmail) {
+                await uploadPayload(payload)
+                uploadedAny = true
+            }
+        }
+
+        if uploadedAny {
+            UserDefaults.standard.set(startOfToday, forKey: wearableBackfillKey)
+        }
+    }
+
+    private func buildPayload(for date: Date, userEmail: String) async -> AgentDailyMetricsPayload? {
+        let stepCountValue = await fetchDouble(for: date, using: healthKitManager.fetchStepCount)
+        let sleepDuration = await fetchSleepDuration(for: date)
+        let activeEnergy = await fetchDouble(for: date, using: healthKitManager.fetchActiveEnergy)
+        let basalEnergy = await fetchDouble(for: date, using: healthKitManager.fetchBasalEnergy)
+        let waterLiters = await fetchDouble(for: date, using: healthKitManager.fetchWaterIntake)
+        let restingHR = await fetchDouble(for: date, using: healthKitManager.fetchRestingHeartRate)
+        let hrvScore = await fetchDouble(for: date, using: healthKitManager.fetchHeartRateVariability)
+        let walkingHR = await fetchDouble(for: date, using: healthKitManager.fetchWalkingHeartRateAverage)
+
+        let sleepHours = sleepDuration.map { $0 / 3600.0 }
+        let hydrationOz = waterLiters.map { $0 * 33.814 }
+
+        let caloriesBurned: Double?
+        if let activeEnergy = activeEnergy, let basalEnergy = basalEnergy {
+            caloriesBurned = activeEnergy + basalEnergy
+        } else if let activeEnergy = activeEnergy {
+            caloriesBurned = activeEnergy
+        } else if let basalEnergy = basalEnergy {
+            caloriesBurned = basalEnergy
+        } else {
+            caloriesBurned = nil
+        }
+
+        let stepCountInt = stepCountValue.map { Int($0.rounded()) }
+
+        let hasSignal = [
+            stepCountInt != nil,
+            sleepHours != nil,
+            hydrationOz != nil,
+            caloriesBurned != nil,
+            restingHR != nil,
+            hrvScore != nil,
+            walkingHR != nil
+        ].contains(true)
+
+        guard hasSignal else { return nil }
+
+        return AgentDailyMetricsPayload(
+            userEmail: userEmail,
+            date: date,
+            stepCount: stepCountInt,
+            sleepHours: sleepHours,
+            sleepScore: nil,
+            restingHeartRate: restingHR,
+            hrvScore: hrvScore,
+            recoveryScore: nil,
+            fatigueLevel: nil,
+            sorenessLevel: nil,
+            sorenessNotes: nil,
+            painFlags: nil,
+            hydrationOz: hydrationOz,
+            caloriesBurned: caloriesBurned,
+            caloriesConsumed: nil,
+            macroTargets: nil,
+            macroActuals: nil,
+            calendarConstraints: nil,
+            equipmentAvailable: nil,
+            readinessNotes: nil,
+            walkingHeartRateAverage: walkingHR
+        )
+    }
+
+    private func uploadPayload(_ payload: AgentDailyMetricsPayload) async {
+        await withCheckedContinuation { continuation in
+            AgentService.shared.syncDailyMetrics(payload: payload) { result in
+                if case let .failure(error) = result {
+                    print("⚠️ Failed to sync daily metrics for \(payload.date): \(error.localizedDescription)")
+                }
+                continuation.resume(returning: ())
+            }
+        }
+    }
+
+    private func fetchSleepDuration(for date: Date) async -> Double? {
+        await withCheckedContinuation { continuation in
+            healthKitManager.fetchSleepData(for: date) { duration, error in
+                if let error = error {
+                    print("⚠️ HealthKit sleep fetch error: \(error.localizedDescription)")
+                }
+                continuation.resume(returning: duration)
+            }
+        }
+    }
+
+    private func fetchDouble(
+        for date: Date,
+        using fetcher: @escaping (Date, @escaping (Double?, Error?) -> Void) -> Void
+    ) async -> Double? {
+        await withCheckedContinuation { continuation in
+            fetcher(date) { value, error in
+                if let error = error {
+                    print("⚠️ HealthKit fetch error: \(error.localizedDescription)")
+                }
+                continuation.resume(returning: value)
+            }
+        }
+    }
+}
  
