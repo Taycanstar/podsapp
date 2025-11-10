@@ -345,6 +345,16 @@ struct MainContentView: View {
             print("📱 Received ShowNewSheetFromDashboard notification")
             showNewSheet = true
         }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: NSNotification.Name("ShowWorkoutContainerFromDashboard"))
+                .receive(on: RunLoop.main)
+        ) { notification in
+            if let tab = notification.userInfo?["selectedTab"] as? Int {
+                selectedTab = tab
+            }
+            showLogWorkoutView = true
+        }
 
         // Listen for explicit authentication completion
         .onReceive(
@@ -389,11 +399,13 @@ struct MainContentView: View {
         agentPendingRetryMealType = nil
         agentInputText = ""
 
-        ensureAgentChatEmailUpToDate()
-        agentChatViewModel.send(message: trimmedText)
-        if !showAgentChat {
+        let shouldPresentChat = !showAgentChat
+        if shouldPresentChat {
             showAgentChat = true
         }
+
+        ensureAgentChatEmailUpToDate()
+        agentChatViewModel.send(message: trimmedText)
     }
 
     private func prepareAgentAnalysisStates() {
