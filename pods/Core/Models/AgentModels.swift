@@ -79,15 +79,80 @@ struct AgentContextSnapshot: Decodable {
     }
 }
 
-struct AgentChatMessage: Identifiable {
+struct AgentChatMessage: Identifiable, Equatable {
     enum Sender {
         case user
         case agent
         case system
+        case pendingLog
     }
 
     let id = UUID()
     let sender: Sender
     let text: String
     let timestamp: Date
+    let pendingLog: AgentPendingLog?
+
+    init(
+        sender: Sender,
+        text: String,
+        timestamp: Date,
+        pendingLog: AgentPendingLog? = nil
+    ) {
+        self.sender = sender
+        self.text = text
+        self.timestamp = timestamp
+        self.pendingLog = pendingLog
+    }
+
+    var isPendingLog: Bool {
+        sender == .pendingLog && pendingLog != nil
+    }
+
+    static func == (lhs: AgentChatMessage, rhs: AgentChatMessage) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+struct AgentPendingLog: Identifiable, Decodable {
+    enum LogType: String, Decodable {
+        case food
+        case activity
+    }
+
+    let id: String
+    let logType: LogType
+    let status: String
+    let mealType: String
+    let targetDate: String?
+    let title: String
+    let description: String?
+    let calories: Double?
+    let protein: Double?
+    let carbs: Double?
+    let fat: Double?
+    let servingText: String?
+    let activityType: String?
+    let durationMinutes: Int?
+    let createdAt: Date?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case logType = "log_type"
+        case status
+        case mealType = "meal_type"
+        case targetDate = "target_date"
+        case title
+        case description
+        case calories
+        case protein
+        case carbs
+        case fat
+        case servingText = "serving_text"
+        case activityType = "activity_type"
+        case durationMinutes = "duration_minutes"
+        case createdAt = "created_at"
+    }
+
+    var isFoodLog: Bool { logType == .food }
 }

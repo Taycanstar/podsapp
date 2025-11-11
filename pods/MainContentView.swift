@@ -81,6 +81,8 @@ struct MainContentView: View {
         .environment(\.isTabBarVisible, $isTabBarVisible)
         .onAppear {
             ensureAgentChatEmailUpToDate()
+            agentChatViewModel.updateTargetDate(dayLogsVM.selectedDate)
+            agentChatViewModel.updateMealTypeHint(selectedMeal)
         }
         .onChange(of: viewModel.email) { _, _ in
             ensureAgentChatEmailUpToDate()
@@ -99,6 +101,10 @@ struct MainContentView: View {
         }
         .onChange(of: selectedMeal) { _, newValue in
             print("🍽️ MainContentView selectedMeal changed to: \(newValue)")
+            agentChatViewModel.updateMealTypeHint(newValue)
+        }
+        .onChange(of: dayLogsVM.selectedDate) { _, newValue in
+            agentChatViewModel.updateTargetDate(newValue)
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {

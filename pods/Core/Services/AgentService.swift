@@ -54,6 +54,17 @@ struct AgentDailyMetricsPayload {
     }
 }
 
+struct AgentChatReply {
+    let text: String
+    let pendingLog: AgentPendingLog?
+}
+
+struct AgentLogCommitResult {
+    let entryType: String
+    let message: String?
+    let payload: [String: Any]
+}
+
 enum AgentServiceError: Error {
     case invalidURL
     case missingUserEmail
@@ -203,7 +214,9 @@ final class AgentService {
         userEmail: String,
         message: String,
         history: [[String: String]] = [],
-        completion: @escaping (Result<String, Error>) -> Void
+        targetDate: Date = Date(),
+        mealTypeHint: String = "Lunch",
+        completion: @escaping (Result<AgentChatReply, Error>) -> Void
     ) {
         guard let url = URL(string: "\(baseURL)/agent/chat/") else {
             completion(.failure(AgentServiceError.invalidURL))
@@ -213,10 +226,16 @@ final class AgentService {
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
+        let targetDateString = isoFormatter.string(from: targetDate)
+        let timezoneOffsetMinutes = TimeZone.current.secondsFromGMT(for: targetDate) / 60
+
         let payload: [String: Any] = [
             "user_email": userEmail,
             "message": message,
             "history": history,
+            "target_date": targetDateString,
+            "timezone_offset_minutes": timezoneOffsetMinutes,
+            "meal_type_hint": mealTypeHint,
         ]
 
         request.httpBody = try? JSONSerialization.data(withJSONObject: payload, options: [])
@@ -226,16 +245,83 @@ final class AgentService {
                 completion(.failure(error))
                 return
             }
+            guard let data = data else {
+                completion(.failure(AgentServiceError.emptyResponse))
+                return
+            }
+            do {
+                let apiResponse = try self.decoder.decode(AgentChatAPIResponse.self, from: data)
+                let reply = AgentChatReply(text: apiResponse.response, pendingLog: apiResponse.pendingLog)
+                completion(.success(reply))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
+    func confirmPendingLog(
+        userEmail: String,
+        pendingLogId: String,
+        mealType: String,
+        targetDate: Date,
+        completion: @escaping (Result<AgentLogCommitResult, Error>) -> Void
+    ) {
+        guard let url = URL(string: "\(baseURL)/agent/chat/log/") else {
+            completion(.failure(AgentServiceError.invalidURL))
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "pending_log_id": pendingLogId,
+            "meal_type": mealType,
+            "target_date": isoFormatter.string(from: targetDate),
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body, options: [])
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
             guard
-                let data = data,
-                let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                let response = json["response"] as? String
+                let httpResponse = response as? HTTPURLResponse,
+                200..<300 ~= httpResponse.statusCode,
+                let data = data
             else {
                 completion(.failure(AgentServiceError.decodingFailed))
                 return
             }
-            completion(.success(response))
+
+            do {
+                let jsonObject = try JSONSerialization.jsonObject(with: data, options: [])
+                guard
+                    let dict = jsonObject as? [String: Any],
+                    let log = dict["log"] as? [String: Any],
+                    let entryType = log["entry_type"] as? String
+                else {
+                    completion(.failure(AgentServiceError.decodingFailed))
+                    return
+                }
+                let message = log["message"] as? String
+                completion(.success(AgentLogCommitResult(entryType: entryType, message: message, payload: log)))
+            } catch {
+                completion(.failure(error))
+            }
         }.resume()
+    }
+}
+
+private struct AgentChatAPIResponse: Decodable {
+    let response: String
+    let pendingLog: AgentPendingLog?
+
+    private enum CodingKeys: String, CodingKey {
+        case response
+        case pendingLog = "pending_log"
     }
 }
 
