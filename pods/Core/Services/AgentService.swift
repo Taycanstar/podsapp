@@ -57,6 +57,7 @@ struct AgentDailyMetricsPayload {
 struct AgentChatReply {
     let text: String
     let pendingLog: AgentPendingLog?
+    let statusHint: AgentResponseHint
 }
 
 struct AgentLogCommitResult {
@@ -251,7 +252,11 @@ final class AgentService {
             }
             do {
                 let apiResponse = try self.decoder.decode(AgentChatAPIResponse.self, from: data)
-                let reply = AgentChatReply(text: apiResponse.response, pendingLog: apiResponse.pendingLog)
+                let reply = AgentChatReply(
+                    text: apiResponse.response,
+                    pendingLog: apiResponse.pendingLog,
+                    statusHint: AgentResponseHint(rawValue: apiResponse.statusHint ?? "") ?? .chat
+                )
                 completion(.success(reply))
             } catch {
                 completion(.failure(error))
@@ -318,10 +323,12 @@ final class AgentService {
 private struct AgentChatAPIResponse: Decodable {
     let response: String
     let pendingLog: AgentPendingLog?
+    let statusHint: String?
 
     private enum CodingKeys: String, CodingKey {
         case response
         case pendingLog = "pending_log"
+        case statusHint = "status_hint"
     }
 }
 

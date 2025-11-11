@@ -8,11 +8,11 @@ struct AgentChatView: View {
     @State private var inputText: String = ""
     @State private var showToast = false
     @State private var toastMessage = ""
-    @State private var thinkingMessageIndex = 0
-    @State private var shimmerPhase: CGFloat = 0
     @State private var scrollProxy: ScrollViewProxy?
     @FocusState private var isInputFocused: Bool
     @State private var mealSelections: [UUID: String] = [:]
+    @State private var statusPhraseIndex = 0
+    @State private var shimmerPhase: CGFloat = 0
     private let mealTypeOptions = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
     init(viewModel: AgentChatViewModel) {
@@ -60,11 +60,9 @@ struct AgentChatView: View {
             }
         }
         .onReceive(thinkingTimer) { _ in
-            if viewModel.isLoading {
-                thinkingMessageIndex = (thinkingMessageIndex + 1) % thinkingPhrases.count
-            } else {
-                thinkingMessageIndex = 0
-            }
+            guard viewModel.isLoading else { return }
+            let phrases = thinkingPhrases(for: viewModel.currentStatusHint)
+            statusPhraseIndex = (statusPhraseIndex + 1) % phrases.count
         }
         .onAppear {
             viewModel.bootstrapIfNeeded()
@@ -72,6 +70,12 @@ struct AgentChatView: View {
         }
         .onChange(of: viewModel.messages) { _, newMessages in
             syncMealSelections(with: newMessages)
+        }
+        .onChange(of: viewModel.currentStatusHint) { _, _ in
+            statusPhraseIndex = 0
+        }
+        .onChange(of: viewModel.isLoading) { _, loading in
+            if !loading { statusPhraseIndex = 0 }
         }
         .overlay(alignment: .bottom) {
             if showToast {
@@ -120,7 +124,9 @@ struct AgentChatView: View {
     private var thinkingIndicator: some View {
         HStack(spacing: 10) {
             thinkingPulseCircle
-            shimmeringThinkingText
+            Text(thinkingStatusText)
+                .font(.footnote)
+                .foregroundColor(.secondary)
         }
         .padding(.vertical, 6)
     }
@@ -703,13 +709,10 @@ struct AgentChatView: View {
         }
     }
 
-    private var thinkingPhrases: [String] {
-        [
-            "Humuli is thinking…",
-            "Checking your recent trends…",
-            "Balancing recovery and strain…",
-            "Reviewing your sleep + HRV…"
-        ]
+    private var thinkingStatusText: String {
+        let phrases = thinkingPhrases(for: viewModel.currentStatusHint)
+        let index = min(statusPhraseIndex, phrases.count - 1)
+        return phrases[index]
     }
 
     private var thinkingPulseCircle: some View {
@@ -724,29 +727,44 @@ struct AgentChatView: View {
         }
     }
 
-    private var shimmeringThinkingText: some View {
-        let text = thinkingPhrases[thinkingMessageIndex]
-        return Text(text)
-            .font(.footnote)
-            .foregroundColor(.secondary)
-            .overlay(
-                LinearGradient(
-                    gradient: Gradient(colors: [.clear, Color.white.opacity(0.6), .clear]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .offset(x: shimmerPhase)
-                .mask(
-                    Text(text)
-                        .font(.footnote)
-                )
-            )
-            .onAppear {
-                shimmerPhase = -60
-                withAnimation(.linear(duration: 1.6).repeatForever(autoreverses: false)) {
-                    shimmerPhase = 60
-                }
-            }
+    private func thinkingPhrases(for hint: AgentResponseHint) -> [String] {
+        switch hint {
+        case .logFood:
+            return [
+                "Analyzing your meal…",
+                "Balancing macros…",
+                "Reviewing recent meals…",
+                "Estimating nutrition…"
+            ]
+        case .logActivity:
+            return [
+                "Reviewing your activity…",
+                "Estimating calories burned…",
+                "Checking intensity…",
+                "Logging your session…"
+            ]
+        case .chat:
+            fallthrough
+        default:
+            return [
+                "Thinking…",
+                "Forming…",
+                "Processing…",
+                "Pondering…", 
+                "Tinkering...",
+                "Demystifying...",
+                "Unpacking...",
+                "Decoding...",
+                "Enacting...",
+                "Executing...",
+                "Analyzing...",
+                "Swaying...",
+                "Gyrating...",
+                "Consolidating...",
+                "Fiddling...",
+                "Lugging...",
+            ]
+        }
     }
 
     private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()

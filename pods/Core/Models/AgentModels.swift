@@ -1,5 +1,11 @@
 import Foundation
 
+enum AgentResponseHint: String, Codable {
+    case chat = "chat"
+    case logFood = "log_food"
+    case logActivity = "log_activity"
+}
+
 struct AnyCodable: Codable {
     let value: Any
 

@@ -7,6 +7,7 @@ final class AgentChatViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var contextSnapshot: AgentContextSnapshot?
     @Published var confirmingMessageID: UUID?
+    @Published var currentStatusHint: AgentResponseHint = .chat
 
     private let agentService = AgentService.shared
     private var userEmail: String
@@ -50,6 +51,7 @@ final class AgentChatViewModel: ObservableObject {
         let outgoing = AgentChatMessage(sender: .user, text: message, timestamp: Date())
         messages.append(outgoing)
         isLoading = true
+        currentStatusHint = .chat
 
         let historyPayload = serializedHistory()
         agentService.sendChat(
@@ -61,9 +63,9 @@ final class AgentChatViewModel: ObservableObject {
         ) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self else { return }
-                self.isLoading = false
                 switch result {
                 case .success(let reply):
+                    self.currentStatusHint = reply.statusHint
                     if let preview = reply.pendingLog {
                         self.replacePendingLogMessages()
                         let message = AgentChatMessage(
@@ -78,9 +80,12 @@ final class AgentChatViewModel: ObservableObject {
                         self.messages.append(message)
                     }
                     self.refreshPendingActions()
+                    self.isLoading = false
                 case .failure(let error):
+                    self.currentStatusHint = .chat
                     let message = AgentChatMessage(sender: .system, text: "Agent error: \(error.localizedDescription)", timestamp: Date())
                     self.messages.append(message)
+                    self.isLoading = false
                 }
             }
         }
