@@ -257,19 +257,8 @@ struct AgentChatView: View {
     }
 
     private func brandServingLine(for preview: AgentPendingLog) -> String? {
-        let brand = preview.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let serving = preview.servingText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-        switch (brand.isEmpty, serving.isEmpty) {
-        case (false, false):
-            return "\(brand) • \(serving)"
-        case (false, true):
-            return brand
-        case (true, false):
-            return serving
-        default:
-            return nil
-        }
+        return serving.isEmpty ? nil : serving
     }
 
     @ViewBuilder
