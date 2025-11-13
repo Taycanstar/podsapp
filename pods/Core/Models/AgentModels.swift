@@ -141,6 +141,8 @@ struct AgentPendingLog: Identifiable, Decodable {
     let activityType: String?
     let durationMinutes: Int?
     let createdAt: Date?
+    let healthAnalysis: HealthAnalysis?
+    let nutritionDetails: AgentPendingNutrition?
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -158,7 +160,46 @@ struct AgentPendingLog: Identifiable, Decodable {
         case activityType = "activity_type"
         case durationMinutes = "duration_minutes"
         case createdAt = "created_at"
+        case healthAnalysis = "health_analysis"
+        case nutritionDetails = "nutrition_details"
     }
 
     var isFoodLog: Bool { logType == .food }
+}
+
+struct AgentPendingNutrition: Decodable {
+    struct AdditionalNutrient: Decodable {
+        let label: String
+        let value: Double
+        let unit: String?
+    }
+
+    let sugars: Double?
+    let fiber: Double?
+    let sodium: Double?
+    let saturatedFat: Double?
+    let potassium: Double?
+    let cholesterol: Double?
+    let additionalNutrients: [AdditionalNutrient]
+
+    private enum CodingKeys: String, CodingKey {
+        case sugars
+        case fiber
+        case sodium
+        case saturatedFat = "saturated_fat"
+        case potassium
+        case cholesterol
+        case additional
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sugars = try container.decodeIfPresent(Double.self, forKey: .sugars)
+        fiber = try container.decodeIfPresent(Double.self, forKey: .fiber)
+        sodium = try container.decodeIfPresent(Double.self, forKey: .sodium)
+        saturatedFat = try container.decodeIfPresent(Double.self, forKey: .saturatedFat)
+        potassium = try container.decodeIfPresent(Double.self, forKey: .potassium)
+        cholesterol = try container.decodeIfPresent(Double.self, forKey: .cholesterol)
+        additionalNutrients = try container.decodeIfPresent([AdditionalNutrient].self, forKey: .additional) ?? []
+    }
 }

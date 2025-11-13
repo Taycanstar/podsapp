@@ -11,6 +11,7 @@ struct AgentChatView: View {
     @State private var scrollProxy: ScrollViewProxy?
     @FocusState private var isInputFocused: Bool
     @State private var mealSelections: [UUID: String] = [:]
+    @State private var expandedDetails: Set<UUID> = []
     @State private var statusPhraseIndex = 0
     @State private var shimmerPhase: CGFloat = 0
     private let mealTypeOptions = ["Breakfast", "Lunch", "Dinner", "Snack"]
@@ -183,20 +184,22 @@ struct AgentChatView: View {
                 activitySummary(preview: preview)
             }
 
-            Button {
-                dismissPendingPreview(messageID: messageID)
-            } label: {
-                Text("Not now")
-                    .font(.callout.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Color.primary.opacity(0.05))
-                    )
+            HStack(spacing: 12) {
+                CapsuleButton(title: "Not now") {
+                    dismissPendingPreview(messageID: messageID)
+                }
+
+                let isExpanded = expandedDetails.contains(messageID)
+                CapsuleButton(title: isExpanded ? "Hide Details" : "Show Details") {
+                    toggleDetails(for: messageID)
+                }
             }
-            .buttonStyle(.plain)
             .padding(.top, 4)
+
+            if expandedDetails.contains(messageID) {
+                pendingLogDetails(preview: preview)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
         .padding()
         .background(
@@ -205,7 +208,7 @@ struct AgentChatView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+                .stroke(Color.primary.opacity(0.12), lineWidth: 1)
         )
         .padding(.horizontal, 8)
         .padding(.top, 8)
@@ -410,6 +413,159 @@ struct AgentChatView: View {
         }
     }
 
+    private func CapsuleButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.callout.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Capsule().fill(Color.primary.opacity(0.05)))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func toggleDetails(for id: UUID) {
+        if expandedDetails.contains(id) {
+            expandedDetails.remove(id)
+        } else {
+            expandedDetails.insert(id)
+        }
+    }
+
+    private func pendingLogDetails(preview: AgentPendingLog) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if preview.logType == .food {
+                micronutrientGrid(nutrition: preview.nutritionDetails)
+                healthSection(health: preview.healthAnalysis)
+            } else {
+                activityDetailSection(preview: preview)
+            }
+        }
+        .padding(.top, 12)
+    }
+
+    private func micronutrientGrid(nutrition: AgentPendingNutrition?) -> some View {
+        Group {
+            if let nutrition {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Nutrients")
+                        .font(.headline)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
+                        microTile(label: "Sugar", value: nutrition.sugars, unit: "g")
+                        microTile(label: "Fiber", value: nutrition.fiber, unit: "g")
+                        microTile(label: "Sodium", value: nutrition.sodium, unit: "mg")
+                        microTile(label: "Sat Fat", value: nutrition.saturatedFat, unit: "g")
+                        microTile(label: "Potassium", value: nutrition.potassium, unit: "mg")
+                        microTile(label: "Cholesterol", value: nutrition.cholesterol, unit: "mg")
+                    }
+                    if !nutrition.additionalNutrients.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(nutrition.additionalNutrients, id: \.label) { item in
+                                HStack {
+                                    Text(item.label)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text(formattedValue(item.value, suffix: item.unit ?? ""))
+                                        .font(.caption.weight(.semibold))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func healthSection(health: HealthAnalysis?) -> some View {
+        Group {
+            if let health {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Health Score")
+                        .font(.headline)
+                    HStack(spacing: 12) {
+                        Text("\(health.score)")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .padding(14)
+                            .background(
+                                Circle()
+                                    .fill(Color(hex: health.color ?? "#CCCCCC").opacity(0.2))
+                            )
+                        VStack(alignment: .leading, spacing: 4) {
+                            let positiveTitles = health.positives.map { $0.title }
+                            if !positiveTitles.isEmpty {
+                                Text("Positives: \(positiveTitles.joined(separator: ", "))")
+                                    .font(.caption)
+                            }
+                            let negativeTitles = health.negatives.map { $0.title }
+                            if !negativeTitles.isEmpty {
+                                Text("Watch out: \(negativeTitles.joined(separator: ", "))")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func activityDetailSection(preview: AgentPendingLog) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Activity Details")
+                .font(.headline)
+            detailRow(label: "Type", value: preview.activityType ?? "Other")
+            if let duration = preview.durationMinutes {
+                detailRow(label: "Duration", value: "\(duration) min")
+            }
+            detailRow(label: "Scheduled", value: formatDateForLog(dayLogsVM.selectedDate))
+            if let note = preview.description, !note.isEmpty {
+                detailRow(label: "Notes", value: note)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func microTile(label: String, value: Double?, unit: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            Text(formattedValue(value, suffix: unit))
+                .font(.subheadline.weight(.semibold))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.primary.opacity(0.03))
+        )
+    }
+
+    private func formattedValue(_ value: Double?, suffix: String) -> String {
+        guard let value else { return "--" }
+        let rounded = value.rounded(.toNearestOrEven)
+        let base: String
+        if rounded.truncatingRemainder(dividingBy: 1) == 0 {
+            base = "\(Int(rounded))"
+        } else {
+            base = String(format: "%.1f", value)
+        }
+        return suffix.isEmpty ? base : "\(base) \(suffix)"
+    }
+
+    private func detailRow(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.body)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
     private func syncMealSelections(with messages: [AgentChatMessage]) {
         let pendingMessages = messages.filter { $0.isPendingLog }
         let pendingIDs = Set(pendingMessages.map(\.id))
@@ -731,7 +887,7 @@ struct AgentChatView: View {
         switch hint {
         case .logFood:
             return [
-                "Analyzing your meal…",
+                "Analyzing your log…",
                 "Balancing macros…",
                 "Reviewing recent meals…",
                 "Estimating nutrition…"
@@ -747,22 +903,10 @@ struct AgentChatView: View {
             fallthrough
         default:
             return [
-                "Thinking…",
-                "Forming…",
-                "Processing…",
-                "Pondering…", 
-                "Tinkering...",
-                "Demystifying...",
-                "Unpacking...",
-                "Decoding...",
-                "Enacting...",
-                "Executing...",
-                "Analyzing...",
-                "Swaying...",
-                "Gyrating...",
-                "Consolidating...",
-                "Fiddling...",
-                "Lugging...",
+                "Preparing your answer…",
+                "Reviewing your trends…",
+                "Thinking through your plan…",
+                "Summarizing insights…"
             ]
         }
     }
