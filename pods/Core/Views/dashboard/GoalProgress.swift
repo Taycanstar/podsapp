@@ -214,6 +214,7 @@ struct GoalProgress: View {
     @State private var proteinGoal: String = ""
     @State private var carbsGoal: String = ""
     @State private var fatGoal: String = ""
+    @State private var currentGoals: NutritionGoals?
     
     @State private var isSubmitting = false
     @State private var isGenerating = false
@@ -546,7 +547,35 @@ struct GoalProgress: View {
                     }
                 }
                 .padding(.horizontal)
-                
+
+                if let plan = currentGoals, let nutrients = plan.nutrients, !nutrients.isEmpty {
+                    NavigationLink {
+                    NutrientGoalEditorView(userEmail: vm.email, goals: plan) { updated in
+                        persist(goals: updated)
+                    }
+                    } label: {
+                        HStack {
+                            Image(systemName: "slider.horizontal.3")
+                                .foregroundColor(.blue)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Advanced Nutrient Targets")
+                                    .font(.headline)
+                                Text("Dial-in vitamins, minerals, amino acids, and more.")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.secondary)
+                        }
+                        .padding()
+                        .background(Color("cardbg"))
+                        .cornerRadius(16)
+                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(.horizontal)
+                }
+
                 Spacer(minLength: 120)
             }
             .padding(.top, 16)
@@ -652,6 +681,32 @@ struct GoalProgress: View {
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
+
+    private func persist(goals: NutritionGoals) {
+        currentGoals = goals
+        vm.calorieGoal = goals.calories
+        vm.proteinGoal = goals.protein
+        vm.carbsGoal = goals.carbs
+        vm.fatGoal = goals.fat
+        vm.remainingCalories = max(0, goals.calories - vm.totalCalories)
+        calorieGoal = String(Int(round(goals.calories)))
+        proteinGoal = String(Int(round(goals.protein)))
+        carbsGoal = String(Int(round(goals.carbs)))
+        fatGoal = String(Int(round(goals.fat)))
+
+        if let encoded = try? JSONEncoder().encode(goals) {
+            UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
+        }
+        UserDefaults.standard.set(goals.calories, forKey: "dailyCalorieGoal")
+        UserGoalsManager.shared.dailyGoals = DailyGoals(
+            calories: Int(goals.calories),
+            protein: Int(goals.protein),
+            carbs: Int(goals.carbs),
+            fat: Int(goals.fat)
+        )
+        NotificationCenter.default.post(name: NSNotification.Name("LogsChangedNotification"), object: nil)
+        print("🔄 Posted LogsChangedNotification after goal update")
+    }
     
     // Load goals directly from UserDefaults instead of relying on ViewModel
     private func loadGoalsFromUserDefaults() {
@@ -660,6 +715,7 @@ struct GoalProgress: View {
            let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data) {
             
             print("✅ GoalProgress: Loaded goals from UserDefaults nutritionGoalsData")
+            currentGoals = goals
             calorieGoal = String(Int(round(goals.calories)))
             proteinGoal = String(Int(round(goals.protein)))
             carbsGoal = String(Int(round(goals.carbs)))
@@ -686,6 +742,7 @@ struct GoalProgress: View {
             vm.proteinGoal = Double(userGoals.protein)
             vm.carbsGoal = Double(userGoals.carbs)
             vm.fatGoal = Double(userGoals.fat)
+            currentGoals = nil
         }
         
         // Recalculate remaining calories to ensure UI consistency
@@ -708,56 +765,22 @@ struct GoalProgress: View {
         }
         
         isSubmitting = true
+        let overridesPayload: [String: GoalOverridePayload] = [
+            "calories": GoalOverridePayload(min: nil, target: calories, max: nil),
+            "protein": GoalOverridePayload(min: nil, target: protein, max: nil),
+            "carbs": GoalOverridePayload(min: nil, target: carbs, max: nil),
+            "fat": GoalOverridePayload(min: nil, target: fat, max: nil)
+        ]
         
         NetworkManagerTwo.shared.updateNutritionGoals(
             userEmail: vm.email,
-            caloriesGoal: calories,
-            proteinGoal: protein,
-            carbsGoal: carbs,
-            fatGoal: fat
+            overrides: overridesPayload
         ) { result in
             isSubmitting = false
             
             switch result {
             case .success(let response):
-                // Update view model with new values
-                vm.calorieGoal = response.goals.calories
-                vm.proteinGoal = response.goals.protein
-                vm.carbsGoal = response.goals.carbs
-                vm.fatGoal = response.goals.fat
-                
-                // Manually update the remaining calories to refresh the UI
-                vm.remainingCalories = max(0, response.goals.calories - vm.totalCalories)
-                
-                // Save to UserDefaults for persistence
-                let nutritionGoals = NutritionGoals(
-                    calories: response.goals.calories,
-                    protein: response.goals.protein,
-                    carbs: response.goals.carbs,
-                    fat: response.goals.fat
-                )
-                
-                if let encoded = try? JSONEncoder().encode(nutritionGoals) {
-                    UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
-                    print("✅ Saved updated nutrition goals to UserDefaults")
-                }
-                
-                // Also update the daily calorie goal for backward compatibility
-                UserDefaults.standard.set(response.goals.calories, forKey: "dailyCalorieGoal")
-                
-                // Update UserGoalsManager for other parts of the app
-                UserGoalsManager.shared.dailyGoals = DailyGoals(
-                    calories: Int(response.goals.calories),
-                    protein: Int(response.goals.protein),
-                    carbs: Int(response.goals.carbs),
-                    fat: Int(response.goals.fat)
-                )
-                
-                // Post notification to refresh dashboard and other views
-                NotificationCenter.default.post(name: NSNotification.Name("LogsChangedNotification"), object: nil)
-                print("🔄 Posted LogsChangedNotification after goal update")
-                
-                // Dismiss the view
+                persist(goals: response.goals)
                 dismiss()
                 
             case .failure(let error):
@@ -782,48 +805,7 @@ struct GoalProgress: View {
             
             switch result {
             case .success(let response):
-                // Update input fields with the generated values
-                calorieGoal = String(Int(response.goals.calories))
-                proteinGoal = String(Int(response.goals.protein))
-                carbsGoal = String(Int(response.goals.carbs))
-                fatGoal = String(Int(response.goals.fat))
-                
-                // Update view model with new values
-                vm.calorieGoal = response.goals.calories
-                vm.proteinGoal = response.goals.protein
-                vm.carbsGoal = response.goals.carbs
-                vm.fatGoal = response.goals.fat
-                
-                // Manually update the remaining calories to refresh the UI
-                vm.remainingCalories = max(0, response.goals.calories - vm.totalCalories)
-                
-                // Save to UserDefaults for persistence
-                let nutritionGoals = NutritionGoals(
-                    calories: response.goals.calories,
-                    protein: response.goals.protein,
-                    carbs: response.goals.carbs,
-                    fat: response.goals.fat
-                )
-                
-                if let encoded = try? JSONEncoder().encode(nutritionGoals) {
-                    UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
-                    print("✅ Saved generated nutrition goals to UserDefaults")
-                }
-                
-                // Also update the daily calorie goal for backward compatibility
-                UserDefaults.standard.set(response.goals.calories, forKey: "dailyCalorieGoal")
-                
-                // Update UserGoalsManager for other parts of the app
-                UserGoalsManager.shared.dailyGoals = DailyGoals(
-                    calories: Int(response.goals.calories),
-                    protein: Int(response.goals.protein),
-                    carbs: Int(response.goals.carbs),
-                    fat: Int(response.goals.fat)
-                )
-                
-                // Post notification to refresh dashboard and other views
-                NotificationCenter.default.post(name: NSNotification.Name("LogsChangedNotification"), object: nil)
-                print("🔄 Posted LogsChangedNotification after goal generation")
+                persist(goals: response.goals)
                 
             case .failure(let error):
                 if let networkError = error as? NetworkManagerTwo.NetworkError {

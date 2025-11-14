@@ -8,6 +8,20 @@
 import Foundation
 import SwiftUI
 
+struct GoalOverridePayload {
+    var min: Double?
+    var target: Double?
+    var max: Double?
+
+    var dictionary: [String: Double] {
+        var payload: [String: Double] = [:]
+        if let min { payload["min"] = min }
+        if let target { payload["target"] = target }
+        if let max { payload["max"] = max }
+        return payload
+    }
+}
+
 class NetworkManagerTwo {
     // Shared instance (singleton)
     static let shared = NetworkManagerTwo()
@@ -26,9 +40,9 @@ class NetworkManagerTwo {
 
     
 
-let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+// let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 //   let baseUrl = "http://192.168.1.92:8000"
-// let baseUrl = "http://172.20.10.4:8000"
+let baseUrl = "http://172.20.10.4:8000"
 
 
   // ### STAGING ###
@@ -1142,83 +1156,66 @@ let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
                             return
                         }
                         
-                        // Extract nutrition goals
-                        var calories: Double = 0
-                        var protein: Double = 0
-                        var carbs: Double = 0
-                        var fat: Double = 0
-                        
-                        print("🔍 DEBUG: Looking for nutrition goals in JSON: \(json.keys)")
-                        
-                        // Try different JSON structures that might contain the nutrition goals
-                        if let nutritionGoals = json["nutrition_goals"] as? [String: Any] {
-                            print("✅ Found nutrition_goals key")
-                            calories = nutritionGoals["calories"] as? Double ?? 0
-                            protein = nutritionGoals["protein"] as? Double ?? 0
-                            carbs = nutritionGoals["carbohydrates"] as? Double ?? 0
-                            fat = nutritionGoals["fats"] as? Double ?? 0
-                        } else if let dailyGoals = json["daily_goals"] as? [String: Any] {
-                            print("✅ Found daily_goals key: \(dailyGoals)")
-                            calories = dailyGoals["calories"] as? Double ?? 0
-                            protein = dailyGoals["protein"] as? Double ?? 0
-                            carbs = dailyGoals["carbs"] as? Double ?? 0
-                            fat = dailyGoals["fat"] as? Double ?? 0
-                        } else if let goals = json["goals"] as? [String: Any] {
-                            print("✅ Found goals key")
-                            calories = goals["calories"] as? Double ?? 0
-                            protein = goals["protein"] as? Double ?? 0
-                            carbs = goals["carbs"] as? Double ?? 0
-                            fat = goals["fat"] as? Double ?? 0
-                        } else {
-                            print("⚠️ Could not find nutrition goals in JSON structure")
+                        var parsedGoals: NutritionGoals?
+                        let decoder = JSONDecoder()
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+                        if let goalsPayload = json["goals"] as? [String: Any] {
+                            let payloadData = try JSONSerialization.data(withJSONObject: goalsPayload)
+                            parsedGoals = try decoder.decode(NutritionGoals.self, from: payloadData)
                         }
-                        
-                        // Extract BMR and TDEE if available
-                        let bmr = (json["bmr"] as? Double) ?? 0
-                        let tdee = (json["tdee"] as? Double) ?? 0
-                        
-                        // Extract insights if available
-                        var metabolismInsights: InsightDetails? = nil
-                        var nutritionInsights: InsightDetails? = nil
-                        
-                        if let insights = json["insights"] as? [String: Any] {
-                            if let metabolism = insights["metabolism"] as? [String: Any] {
-                                let metabolismData = try? JSONSerialization.data(withJSONObject: metabolism)
-                                metabolismInsights = metabolismData.flatMap { try? JSONDecoder().decode(InsightDetails.self, from: $0) }
+
+                        if parsedGoals == nil {
+                            print("⚠️ Could not find structured goals payload, falling back to legacy fields.")
+                            var calories: Double = 0
+                            var protein: Double = 0
+                            var carbs: Double = 0
+                            var fat: Double = 0
+
+                            if let nutritionGoals = json["nutrition_goals"] as? [String: Any] {
+                                calories = nutritionGoals["calories"] as? Double ?? 0
+                                protein = nutritionGoals["protein"] as? Double ?? 0
+                                carbs = nutritionGoals["carbohydrates"] as? Double ?? 0
+                                fat = nutritionGoals["fats"] as? Double ?? 0
+                            } else if let dailyGoals = json["daily_goals"] as? [String: Any] {
+                                calories = dailyGoals["calories"] as? Double ?? 0
+                                protein = dailyGoals["protein"] as? Double ?? 0
+                                carbs = dailyGoals["carbs"] as? Double ?? 0
+                                fat = dailyGoals["fat"] as? Double ?? 0
                             }
-                            if let nutrition = insights["nutrition"] as? [String: Any] {
-                                let nutritionData = try? JSONSerialization.data(withJSONObject: nutrition)
-                                nutritionInsights = nutritionData.flatMap { try? JSONDecoder().decode(InsightDetails.self, from: $0) }
-                            }
+
+                            let bmr = (json["bmr"] as? Double)
+                            let tdee = (json["tdee"] as? Double)
+                            parsedGoals = NutritionGoals(
+                                bmr: bmr,
+                                tdee: tdee,
+                                calories: calories,
+                                protein: protein,
+                                carbs: carbs,
+                                fat: fat
+                            )
                         }
-                        
-                        // Create nutrition goals object
-                        let goals = NutritionGoals(
-                            bmr: bmr,
-                            tdee: tdee,
-                            calories: calories,
-                            protein: protein,
-                            carbs: carbs,
-                            fat: fat,
-                            metabolismInsights: metabolismInsights,
-                            nutritionInsights: nutritionInsights
-                        )
+
+                        guard let goals = parsedGoals else {
+                            completion(.failure(NetworkError.decodingError))
+                            return
+                        }
                         
                         // Save goals to UserDefaults for other parts of the app
                         // Avoid overwriting with zeros when API omits fields
-                        if calories > 0 || protein > 0 || carbs > 0 || fat > 0 {
+                        if goals.calories > 0 || goals.protein > 0 || goals.carbs > 0 || goals.fat > 0 {
                             UserGoalsManager.shared.dailyGoals = DailyGoals(
-                                calories: max(Int(calories), 0),
-                                protein: max(Int(protein), 0),
-                                carbs: max(Int(carbs), 0),
-                                fat: max(Int(fat), 0)
+                                calories: max(Int(goals.calories), 0),
+                                protein: max(Int(goals.protein), 0),
+                                carbs: max(Int(goals.carbs), 0),
+                                fat: max(Int(goals.fat), 0)
                             )
                         }
                         
-                        print("📝 DEBUG: Saving to UserGoalsManager: Calories=\(Int(calories)), Protein=\(Int(protein))g, Carbs=\(Int(carbs))g, Fat=\(Int(fat))g")
+                        print("📝 DEBUG: Saving to UserGoalsManager: Calories=\(Int(goals.calories)), Protein=\(Int(goals.protein))g, Carbs=\(Int(goals.carbs))g, Fat=\(Int(goals.fat))g")
                         
-                        print("✅ Successfully parsed nutrition goals: Calories=\(calories), Protein=\(protein)g, Carbs=\(carbs)g, Fat=\(fat)g")
-                        print("📊 BMR=\(bmr), TDEE=\(tdee)")
+                        print("✅ Successfully parsed nutrition goals: Calories=\(goals.calories), Protein=\(goals.protein)g, Carbs=\(goals.carbs)g, Fat=\(goals.fat)g")
+                        print("📊 BMR=\(goals.bmr ?? 0), TDEE=\(goals.tdee ?? 0)")
                         
                         completion(.success(goals))
                     } else {
@@ -2118,20 +2115,13 @@ let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
     // MARK: - Nutrition Goals
 
-    /// Update a user's nutrition goals
-    /// - Parameters:
-    ///   - userEmail: User's email address
-    ///   - caloriesGoal: Daily calorie goal
-    ///   - proteinGoal: Daily protein goal in grams
-    ///   - carbsGoal: Daily carbs goal in grams
-    ///   - fatGoal: Daily fat goal in grams
-    ///   - completion: Result callback with updated goals or error
+    /// Update a user's nutrition goals with custom overrides.
     func updateNutritionGoals(
         userEmail: String,
-        caloriesGoal: Double,
-        proteinGoal: Double,
-        carbsGoal: Double,
-        fatGoal: Double,
+        overrides: [String: GoalOverridePayload] = [:],
+        removeOverrides: [String] = [],
+        clearAll: Bool = false,
+        additionalFields: [String: Any] = [:],
         completion: @escaping (Result<NutritionGoalsResponse, Error>) -> Void
     ) {
         let urlString = "\(baseUrl)/update-nutrition-goals/"
@@ -2141,14 +2131,24 @@ let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
             return
         }
         
-        // Create request body
-        let parameters: [String: Any] = [
-            "user_email": userEmail,
-            "calories_goal": caloriesGoal,
-            "protein_goal": proteinGoal,
-            "carbs_goal": carbsGoal,
-            "fat_goal": fatGoal
-        ]
+        var parameters: [String: Any] = ["user_email": userEmail]
+
+        let overridePayload = overrides.compactMapValues { payload -> [String: Double]? in
+            let dict = payload.dictionary
+            return dict.isEmpty ? nil : dict
+        }
+        if !overridePayload.isEmpty {
+            parameters["overrides"] = overridePayload
+        }
+        if !removeOverrides.isEmpty {
+            parameters["remove_overrides"] = removeOverrides
+        }
+        if clearAll {
+            parameters["clear_all"] = true
+        }
+        for (key, value) in additionalFields {
+            parameters[key] = value
+        }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

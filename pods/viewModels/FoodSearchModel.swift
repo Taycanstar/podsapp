@@ -1413,6 +1413,54 @@ extension InsightDetails {
     }
 }
 
+struct NutrientTargetDetails: Codable {
+    let label: String?
+    let category: String?
+    let categoryLabel: String?
+    let unit: String?
+    let note: String?
+    let min: Double?
+    let target: Double?
+    let max: Double?
+    let defaultMin: Double?
+    let defaultTarget: Double?
+    let defaultMax: Double?
+    let pctOfCalories: Double?
+    let pctOfTotalFat: Double?
+    let gPerKg: Double?
+    let mgPerKg: Double?
+    let idealMax: Double?
+    let performanceDoseMg: Double?
+    let liters: Double?
+    let formula: String?
+    let source: String?
+    let displayOrder: Int?
+    let tdee: Double?
+    let bmr: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case label, category, unit, note, min, target, max, formula, source, tdee, bmr
+        case categoryLabel = "category_label"
+        case defaultMin = "default_min"
+        case defaultTarget = "default_target"
+        case defaultMax = "default_max"
+        case pctOfCalories = "pct_of_calories"
+        case pctOfTotalFat = "pct_of_total_fat"
+        case gPerKg = "g_per_kg"
+        case mgPerKg = "mg_per_kg"
+        case idealMax = "ideal_max"
+        case performanceDoseMg = "performance_dose_mg"
+        case liters
+        case displayOrder = "display_order"
+    }
+}
+
+struct NutrientOverride: Codable, Equatable {
+    let min: Double?
+    let target: Double?
+    let max: Double?
+}
+
 struct NutritionGoals: Codable {
     let bmr: Double?
     let tdee: Double?
@@ -1424,6 +1472,8 @@ struct NutritionGoals: Codable {
     let nutritionInsights: InsightDetails?
     let desiredWeightKg: Double?
     let desiredWeightLbs: Double?
+    let nutrients: [String: NutrientTargetDetails]?
+    let overrides: [String: NutrientOverride]?
     
     // Add initializer with default values for optional fields
     init(bmr: Double? = nil, 
@@ -1435,7 +1485,9 @@ struct NutritionGoals: Codable {
          metabolismInsights: InsightDetails? = nil, 
          nutritionInsights: InsightDetails? = nil,
          desiredWeightKg: Double? = nil,
-         desiredWeightLbs: Double? = nil) {
+         desiredWeightLbs: Double? = nil,
+         nutrients: [String: NutrientTargetDetails]? = nil,
+         overrides: [String: NutrientOverride]? = nil) {
         self.bmr = bmr
         self.tdee = tdee
         self.calories = calories
@@ -1446,6 +1498,8 @@ struct NutritionGoals: Codable {
         self.nutritionInsights = nutritionInsights
         self.desiredWeightKg = desiredWeightKg
         self.desiredWeightLbs = desiredWeightLbs
+        self.nutrients = nutrients
+        self.overrides = overrides
     }
     
     // Implement custom decoding to handle missing fields
@@ -1465,10 +1519,28 @@ struct NutritionGoals: Codable {
         nutritionInsights = try container.decodeIfPresent(InsightDetails.self, forKey: .nutritionInsights)
         desiredWeightKg = try container.decodeIfPresent(Double.self, forKey: .desiredWeightKg)
         desiredWeightLbs = try container.decodeIfPresent(Double.self, forKey: .desiredWeightLbs)
+        nutrients = try container.decodeIfPresent([String: NutrientTargetDetails].self, forKey: .nutrients)
+        overrides = try container.decodeIfPresent([String: NutrientOverride].self, forKey: .overrides)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(calories, forKey: .calories)
+        try container.encode(protein, forKey: .protein)
+        try container.encode(carbs, forKey: .carbs)
+        try container.encode(fat, forKey: .fat)
+        try container.encodeIfPresent(bmr, forKey: .bmr)
+        try container.encodeIfPresent(tdee, forKey: .tdee)
+        try container.encodeIfPresent(metabolismInsights, forKey: .metabolismInsights)
+        try container.encodeIfPresent(nutritionInsights, forKey: .nutritionInsights)
+        try container.encodeIfPresent(desiredWeightKg, forKey: .desiredWeightKg)
+        try container.encodeIfPresent(desiredWeightLbs, forKey: .desiredWeightLbs)
+        try container.encodeIfPresent(nutrients, forKey: .nutrients)
+        try container.encodeIfPresent(overrides, forKey: .overrides)
     }
     
     enum CodingKeys: String, CodingKey {
-        case bmr, tdee, calories, protein, carbs, fat
+        case bmr, tdee, calories, protein, carbs, fat, nutrients, overrides
         case metabolismInsights = "metabolism_insights"
         case nutritionInsights = "nutrition_insights"
         case desiredWeightKg = "desired_weight_kg"

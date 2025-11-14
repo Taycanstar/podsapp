@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ConfirmLogView: View {
+struct ConfirmLogViewLegacy: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var foodManager: FoodManager
     @EnvironmentObject private var viewModel: OnboardingViewModel
@@ -42,10 +42,6 @@ struct ConfirmLogView: View {
     @State private var vitaminC: String = ""
     @State private var calcium: String = ""
     @State private var iron: String = ""
-
-    // Meal + time selections
-    @State private var selectedMealPeriod: MealPeriod = .lunch
-    @State private var mealTime: Date = Date()
     
     // Brand information
     @State private var brand: String = ""
@@ -256,88 +252,49 @@ struct ConfirmLogView: View {
             unit.contains("ml") || unit.contains("fl") || unit.contains("oz")
         )
     }
-
-    private let proteinColor = Color("protein")
-    private let fatColor = Color("fat")
-    private let carbColor = Color("carbs")
-
-    private var adjustedProtein: Double {
-        calculateAdjustedValue(baseProtein, servings: numberOfServings)
-    }
-
-    private var adjustedCarbs: Double {
-        calculateAdjustedValue(baseCarbs, servings: numberOfServings)
-    }
-
-    private var adjustedFat: Double {
-        calculateAdjustedValue(baseFat, servings: numberOfServings)
-    }
-
-    private var adjustedCalories: Double {
-        calculateAdjustedValue(baseCalories, servings: numberOfServings)
-    }
-
-    private var macroSegments: [MacroSegment] {
-        let proteinCalories = adjustedProtein * 4
-        let carbCalories = adjustedCarbs * 4
-        let fatCalories = adjustedFat * 9
-        let total = max(proteinCalories + carbCalories + fatCalories, 1)
-        return [
-            MacroSegment(color: proteinColor, fraction: proteinCalories / total),
-            MacroSegment(color: fatColor, fraction: fatCalories / total),
-            MacroSegment(color: carbColor, fraction: carbCalories / total),
-        ]
-    }
-
-    private var proteinGoalPercent: Double {
-        guard dayLogsVM.proteinGoal > 0 else { return 0 }
-        return (adjustedProtein / dayLogsVM.proteinGoal) * 100
-    }
-
-    private var fatGoalPercent: Double {
-        guard dayLogsVM.fatGoal > 0 else { return 0 }
-        return (adjustedFat / dayLogsVM.fatGoal) * 100
-    }
-
-    private var carbGoalPercent: Double {
-        guard dayLogsVM.carbsGoal > 0 else { return 0 }
-        return (adjustedCarbs / dayLogsVM.carbsGoal) * 100
-    }
     
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 24) {
-                macroSummaryCard
-                portionDetailsCard
+        ScrollView {
+            VStack(spacing: 16) {
+                // Basic food info card
+                basicInfoCard
+                
+                // Health analysis section (moved above nutrition facts)
                 healthAnalysisCard
-                dailyGoalShareCard
-                totalCarbsCard
+                
+                // Nutrition facts section
                 nutritionFactsCard
+                
+                // Additional nutrients section (collapsible)
                 if showMoreNutrients {
                     additionalNutrientsCard
                 }
-                Spacer(minLength: 40)
+                
+                Spacer().frame(height: 40) // extra bottom space
             }
             .padding(.top, 16)
-            .padding(.bottom, 32)
         }
-        .background(Color("iosbg").ignoresSafeArea())
-        .navigationTitle(title.isEmpty ? "Log Food" : title)
+        .background(Color("iosbg"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.headline)
-                }
+            ToolbarItem(placement: .principal) {
+                Text("Log Food")
+                    .font(.headline)
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: logBarcodeFood) {
-                    Text(isCreating ? "Saving…" : "Log")
+                    Text("Log")
                         .fontWeight(.semibold)
                 }
                 .disabled(isCreating)
+            }
+            
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .foregroundColor(.accentColor)
             }
             
             ToolbarItemGroup(placement: .keyboard) {
@@ -371,256 +328,119 @@ struct ConfirmLogView: View {
                 }
             }
         )
+        // .onAppear {
+        //     // Auto-focus the servings field when the view appears
+        //     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        //         isServingsFocused = true
+        //     }
+        // }
+
     }
     
     // MARK: - Card Views
-    private var macroSummaryCard: some View {
-        HStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 12) {
-                macroStatRow(title: "Protein", value: adjustedProtein, unit: "g", color: proteinColor)
-                Divider().background(Color.white.opacity(0.2))
-                macroStatRow(title: "Fat", value: adjustedFat, unit: "g", color: fatColor)
-                Divider().background(Color.white.opacity(0.2))
-                macroStatRow(title: "Carbs", value: adjustedCarbs, unit: "g", color: carbColor)
-            }
-            
-            Spacer()
-            
-            MacroRingView(calories: adjustedCalories, arcs: macroArcs)
-                .frame(width: 100, height: 100)
-        }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(
-                    LinearGradient(colors: [Color("iosnp"), Color("iosnp").opacity(0.8)],
-                                   startPoint: .topLeading,
-                                   endPoint: .bottomTrailing)
-                )
-        )
-        .padding(.horizontal)
-    }
-    
-    private var macroArcs: [MacroArc] {
-        var running: Double = 0
-        return macroSegments.map { segment in
-            let arc = MacroArc(start: running, end: running + segment.fraction, color: segment.color)
-            running += segment.fraction
-            return arc
-        }
-    }
-    
-    private func macroStatRow(title: String, value: Double, unit: String, color: Color) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            Circle()
-                .fill(color)
-                .frame(width: 10, height: 10)
-            
-            Text(title.capitalized)
-                .font(.body)
-                .foregroundColor(.primary)
-            Spacer()
-            Text("\(value.cleanOneDecimal)\(unit)")
-                .font(.body)
-                .foregroundColor(.secondary)
-        }
-    }
-    
-    private var portionDetailsCard: some View {
-        VStack(spacing: 0) {
-            labeledRow("Food Name") {
-                TextField("Add a name", text: $title)
-                    .textFieldStyle(.plain)
-                    .multilineTextAlignment(.trailing)
-            }
-            
-            Divider().padding(.leading, 16)
-            
-            labeledRow("Serving Size") {
-                TextField("e.g., 1 cup, 2 tbsp", text: $servingSize)
-                    .textFieldStyle(.plain)
-                    .multilineTextAlignment(.trailing)
-            }
-            
-            Divider().padding(.leading, 16)
-            
-            labeledRow("Servings") {
-                HStack(spacing: 8) {
-                    Button {
-                        numberOfServings = max(0.25, numberOfServings - 0.25)
-                        updateNutritionValues()
-                    } label: {
-                        Image(systemName: "minus")
-                            .font(.footnote.weight(.bold))
-                            .frame(width: 28, height: 28)
-                            .background(Color.primary.opacity(0.08))
-                            .clipShape(Circle())
-                    }
-                    
-                    TextField("1", value: $numberOfServings, format: .number)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.center)
-                        .frame(width: 60)
-                        .focused($isServingsFocused)
-                        .onChange(of: numberOfServings) { _ in
-                            updateNutritionValues()
-                        }
-                    
-                    Button {
-                        numberOfServings += 0.25
-                        updateNutritionValues()
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.footnote.weight(.bold))
-                            .frame(width: 28, height: 28)
-                            .background(Color.primary.opacity(0.08))
-                            .clipShape(Circle())
-                    }
-                }
-            }
-            
-            Divider().padding(.leading, 16)
-            
-            labeledRow("Time") {
-                HStack(spacing: 8) {
-                    mealChips
-                    DatePicker("", selection: $mealTime, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
-                        .tint(.primary)
-                }
-            }
-            
-            Divider().padding(.leading, 16)
-            
-            labeledRow("Health Score") {
-                if let health = healthAnalysis {
-                    Text("\(health.score)/100")
-                        .fontWeight(.medium)
-                        .foregroundColor(healthColor(for: health.color))
-                } else {
-                    Text("Not available")
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
+    private var basicInfoCard: some View {
+        ZStack(alignment: .top) {
+            // Background with rounded corners
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color("iosnp"))
-        )
-        .padding(.horizontal)
-    }
-    
-    private func labeledRow<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
-        HStack(alignment: .center) {
-            Text(label)
-                .foregroundColor(.primary)
-            Spacer()
-            content()
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-    }
-    
-    private var mealChips: some View {
-        HStack(spacing: 8) {
-            ForEach(MealPeriod.allCases) { period in
-                let isSelected = selectedMealPeriod == period
-                Text(period.title)
-                    .font(.caption)
-                    .fontWeight(isSelected ? .semibold : .regular)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 12)
-                    .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.3), lineWidth: 1)
-                    )
-                    .foregroundColor(isSelected ? .accentColor : .primary)
-                    .onTapGesture {
-                        selectedMealPeriod = period
-                    }
-            }
-        }
-    }
-    
-    private enum MealPeriod: String, CaseIterable, Identifiable {
-        case breakfast, lunch, dinner, snack
-        
-        var id: String { rawValue }
-        
-        var title: String {
-            switch self {
-            case .breakfast: return "Breakfast"
-            case .lunch: return "Lunch"
-            case .dinner: return "Dinner"
-            case .snack: return "Snack"
-            }
-        }
-        
-        var displayName: String { title }
-    }
-
-    private var dailyGoalShareCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Daily Goal Share")
-                .font(.title3)
-                .fontWeight(.semibold)
             
-            HStack(spacing: 12) {
-                GoalShareBubble(title: "Protein",
-                                percent: proteinGoalPercent,
-                                grams: adjustedProtein,
-                                goal: dayLogsVM.proteinGoal,
-                                color: proteinColor)
-                GoalShareBubble(title: "Fat",
-                                percent: fatGoalPercent,
-                                grams: adjustedFat,
-                                goal: dayLogsVM.fatGoal,
-                                color: fatColor)
-                GoalShareBubble(title: "Carbs",
-                                percent: carbGoalPercent,
-                                grams: adjustedCarbs,
-                                goal: dayLogsVM.carbsGoal,
-                                color: carbColor)
-            }
-        }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color("iosnp"))
-        )
-        .padding(.horizontal)
-    }
-    
-    private var totalCarbsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Total Carbs")
-                .font(.title3)
-                .fontWeight(.semibold)
-            
-            let goal = max(dayLogsVM.carbsGoal, 1)
-            let progress = min(adjustedCarbs / goal, 1)
-            
-            VStack(alignment: .leading, spacing: 6) {
+            // Content
+            VStack(spacing: 0) {
+                // Title
+                TextField("Title", text: $title)
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
+                
+                // Divider
+                Divider()
+                    .padding(.leading, 16)
+                
+                // Serving Size Row - with label on left and input on right
                 HStack {
-                    Text("\(adjustedCarbs.cleanOneDecimal)g of \(Int(goal))g")
-                        .foregroundColor(.secondary)
+                    Text("Serving Size")
+                        .foregroundColor(.primary)
+                    
                     Spacer()
-                    Text("\(Int(progress * 100))%")
-                        .fontWeight(.medium)
+                    
+                    TextField("e.g., 1 cup, 2 tbsp", text: $servingSize)
+                    .keyboardType(.asciiCapable)
+                    .textFieldStyle(.plain)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 200)
                 }
-                ProgressView(value: progress)
-                    .tint(carbColor)
-                    .scaleEffect(x: 1, y: 1.5, anchor: .center)
+                    .padding(.horizontal)
+                    .padding(.vertical, 16)
+                
+                // Divider
+                Divider()
+                    .padding(.leading, 16)
+                
+                // Number of Servings
+                servingsRowView
+                
+                // Divider
+                Divider()
+                    .padding(.leading, 16)
+                
+                // Calories Row
+                caloriesRowView
+                
+                // Divider 
+                Divider()
+                    .padding(.leading, 16)
+                
+                // Health Score Row
+                healthScoreRowView
             }
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color("iosnp"))
-        )
         .padding(.horizontal)
+    }
+    
+    private var servingsRowView: some View {
+        HStack {
+            Text("Number of Servings")
+                .foregroundColor(.primary)
+            Spacer()
+            TextField("Servings", value: $numberOfServings, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+                .focused($isServingsFocused)
+                .onChange(of: numberOfServings) { _ in
+                    updateNutritionValues()
+                }
+        }
+        .padding()
+    }
+    
+    private var caloriesRowView: some View {
+        HStack {
+            Text("Calories")
+                .foregroundColor(.primary)
+            Spacer()
+            Text(calories.isEmpty ? "0" : calories)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding()
+    }
+    
+    private var healthScoreRowView: some View {
+        HStack {
+            Text("Health Score")
+                .foregroundColor(.primary)
+            Spacer()
+            if let health = healthAnalysis {
+                Text("\(health.score)/100")
+                    .foregroundColor(healthColor(for: health.color))
+                    .fontWeight(.medium)
+            } else {
+                Text("Not available")
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
     }
     
     
@@ -1651,7 +1471,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         showErrorAlert = true
         return
     }
-    guard Double(calories) != nil else {
+    guard let caloriesValue = Double(calories) else {
         errorMessage = "Calories must be a valid number"
         showErrorAlert = true
         return
@@ -1672,15 +1492,13 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
     updatedFood.description = title  // Apply user's edited name
     updatedFood.numberOfServings = userServings
 
-    let mealLabel = selectedMealPeriod.displayName
-    
     // 3. Fire the real network call
     foodManager.logFood(
         email:    viewModel.email,
         food:     updatedFood,
-        meal:     mealLabel,
+        meal:     "Lunch",                     // or pass in a variable
         servings: userServings,
-        date:     mealTime,
+        date:     Date(),
         notes:    nil
     ) { result in
         DispatchQueue.main.async {
@@ -1692,14 +1510,14 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                     type:            .food,
                     status:          logged.status,
                     calories:        Double(logged.food.calories),
-                    message:         "\(logged.food.displayName) - \(mealLabel)",
+                    message:         "\(logged.food.displayName) - \(logged.mealType)",
                     foodLogId:       logged.foodLogId,
                     food:            logged.food,
-                    mealType:        mealLabel,
+                    mealType:        logged.mealType,
                     mealLogId:       nil,
                     meal:            nil,
-                    mealTime:        mealLabel,
-                    scheduledAt:     mealTime,
+                    mealTime:        nil,
+                    scheduledAt:     Date(),
                     recipeLogId:     nil,
                     recipe:          nil,
                     servingsConsumed:nil
@@ -1768,91 +1586,6 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
     }
 }
 
-// MARK: - Supporting Views & Helpers
-private struct GoalShareBubble: View {
-    let title: String
-    let percent: Double
-    let grams: Double
-    let goal: Double
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.12))
-                Circle()
-                    .stroke(color.opacity(0.5), lineWidth: 2)
-                Text("\(Int(percent.rounded()))%")
-                    .font(.headline)
-                    .foregroundColor(color)
-            }
-            .frame(width: 76, height: 76)
-            Text("\(grams.cleanOneDecimal)g / \(Int(goal))g")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
-private struct MacroRingView: View {
-    let calories: Double
-    let arcs: [MacroArc]
-    
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.white.opacity(0.08), lineWidth: 8)
-            
-            ForEach(arcs.indices, id: \.self) { index in
-                let arc = arcs[index]
-                Circle()
-                    .trim(from: CGFloat(arc.start), to: CGFloat(arc.end))
-                    .stroke(arc.color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-            }
-            
-            VStack(spacing: -4) {
-                Text(String(format: "%.1f", calories))
-                    .font(.system(size: 20, weight: .medium))
-                Text("cals")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-}
-
-private struct MacroArc {
-    let start: Double
-    let end: Double
-    let color: Color
-}
-
-private struct MacroSegment {
-    let color: Color
-    let fraction: Double
-}
-
-private extension Double {
-    var cleanOneDecimal: String {
-        if self.isNaN { return "0" }
-        return String(format: "%.1f", self)
-    }
-    
-    var cleanZeroDecimal: String {
-        if self.isNaN { return "0" }
-        if abs(self - rounded()) < 0.01 {
-            return String(format: "%.0f", self)
-        } else {
-            return String(format: "%.1f", self)
-        }
-    }
-}
 
 extension ConfirmLogView {
     // Helper function to hide keyboard
@@ -1860,3 +1593,4 @@ extension ConfirmLogView {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
+
