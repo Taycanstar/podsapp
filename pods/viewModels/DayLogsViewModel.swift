@@ -11,6 +11,8 @@ import Combine
 
 @MainActor
 final class DayLogsViewModel: ObservableObject {
+  private static let nutritionGoalsLastSyncKey = "nutritionGoalsLastSync"
+  private static let nutritionGoalsRefreshInterval: TimeInterval = 60 * 60 * 24
       @Published var logs         : [CombinedLog] = [] {
     didSet { recalculateTotals() }
   }
@@ -18,7 +20,10 @@ final class DayLogsViewModel: ObservableObject {
   @Published var proteinGoal      : Double = 150
   @Published var carbsGoal        : Double = 200
   @Published var fatGoal          : Double = 70
-@Published var remainingCalories: Double = 2_000   // always ≥ 0
+  @Published var remainingCalories: Double = 2_000   // always ≥ 0
+  @Published var hasAdvancedNutritionTargets: Bool = false
+  @Published var nutritionGoalsVersion = UUID()
+  @Published var isRefreshingNutritionGoals = false
 
   private var pendingByDate: [Date: [CombinedLog]] = [:]
   @Published var error        : Error?
@@ -152,13 +157,13 @@ final class DayLogsViewModel: ObservableObject {
   
   /// Force refresh nutrition goals from UserDefaults
   /// This ensures the ViewModel has the most up-to-date values
-  func refreshNutritionGoals() {
-    fetchNutritionGoals()
+  func refreshNutritionGoals(forceRefresh: Bool = false) {
+    fetchNutritionGoals(forceRefresh: forceRefresh)
   }
 
 
   // MARK: – Goal helpers ------------------------------------------------------
- func fetchCalorieGoal() {
+func fetchCalorieGoal() {
     // 1) Highest priority: explicit dailyCalorieGoal if non-zero
     if let g = UserDefaults.standard.value(forKey: "dailyCalorieGoal") as? Double, g > 0 {
         calorieGoal = g
@@ -179,6 +184,88 @@ final class DayLogsViewModel: ObservableObject {
     }
     remainingCalories = max(0, calorieGoal - totalCalories)
 }
+
+  private func loadCachedNutritionGoals() -> NutritionGoals? {
+    guard let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
+          let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data) else {
+      return nil
+    }
+    return goals
+  }
+
+  private func applyNutritionGoals(_ goals: NutritionGoals, persist: Bool) {
+    if goals.calories > 0 {
+      calorieGoal = goals.calories
+    }
+    proteinGoal = goals.protein
+    carbsGoal = goals.carbs
+    fatGoal = goals.fat
+
+    if let desiredKg = goals.desiredWeightKg {
+      desiredWeightKg = desiredKg
+      desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
+    } else if let desiredLbs = goals.desiredWeightLbs {
+      desiredWeightLbs = desiredLbs
+      desiredWeightKg = desiredLbs / 2.20462
+    }
+
+    hasAdvancedNutritionTargets = !(goals.nutrients?.isEmpty ?? true)
+    nutritionGoalsVersion = UUID()
+    remainingCalories = max(0, calorieGoal - totalCalories)
+
+    guard persist else { return }
+    if let encoded = try? JSONEncoder().encode(goals) {
+      UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
+    }
+    UserDefaults.standard.set(Date(), forKey: Self.nutritionGoalsLastSyncKey)
+  }
+
+  private func applyFallbackNutritionGoals() {
+    let goals = UserGoalsManager.shared.dailyGoals
+    proteinGoal = Double(goals.protein)
+    carbsGoal = Double(goals.carbs)
+    fatGoal = Double(goals.fat)
+    hasAdvancedNutritionTargets = false
+    remainingCalories = max(0, calorieGoal - totalCalories)
+  }
+
+  private func maybeRefreshAdvancedNutritionGoals(forceRefresh: Bool,
+                                                  hasAdvancedTargets: Bool) {
+    guard shouldRefreshAdvancedNutritionGoals(forceRefresh: forceRefresh,
+                                              hasAdvancedTargets: hasAdvancedTargets) else {
+      return
+    }
+    requestAdvancedNutritionGoals()
+  }
+
+  private func shouldRefreshAdvancedNutritionGoals(forceRefresh: Bool,
+                                                   hasAdvancedTargets: Bool) -> Bool {
+    if forceRefresh { return true }
+    if isRefreshingNutritionGoals { return false }
+    guard UserDefaults.standard.bool(forKey: "onboardingCompleted") else { return false }
+    guard !email.isEmpty else { return false }
+    if !hasAdvancedTargets { return true }
+    guard let lastSync = UserDefaults.standard.object(forKey: Self.nutritionGoalsLastSyncKey) as? Date else {
+      return true
+    }
+    return Date().timeIntervalSince(lastSync) > Self.nutritionGoalsRefreshInterval
+  }
+
+  private func requestAdvancedNutritionGoals() {
+    guard !isRefreshingNutritionGoals else { return }
+    guard !email.isEmpty else { return }
+    isRefreshingNutritionGoals = true
+    NetworkManagerTwo.shared.generateNutritionGoals(userEmail: email) { [weak self] result in
+      guard let self else { return }
+      self.isRefreshingNutritionGoals = false
+      switch result {
+      case .success(let response):
+        self.applyNutritionGoals(response.goals, persist: true)
+      case .failure(let error):
+        print("⚠️ Failed to refresh nutrition goals: \(error.localizedDescription)")
+      }
+    }
+  }
 
   func processScheduledLog(
     _ preview: ScheduledLogPreview,
@@ -267,33 +354,19 @@ final class DayLogsViewModel: ObservableObject {
 
   }
 
- func fetchNutritionGoals() {
-    // First try to fetch the calorie goal (keeps existing logic)
+ func fetchNutritionGoals(forceRefresh: Bool = false) {
     fetchCalorieGoal()
-    
-    // Then fetch protein, carbs, and fat goals
-    if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
-       let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data) {
-        proteinGoal = goals.protein
-        carbsGoal = goals.carbs
-        fatGoal = goals.fat
-        
-        // Store desired weight if available
-        if let desiredKg = goals.desiredWeightKg {
-            desiredWeightKg = desiredKg
-            // Convert kg to lbs if desiredWeightLbs is not available
-            desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
-        } else if let desiredLbs = goals.desiredWeightLbs {
-            desiredWeightLbs = desiredLbs
-            // Convert lbs to kg if desiredWeightKg is not available
-            desiredWeightKg = desiredLbs / 2.20462
-        }
+
+    let cachedGoals = loadCachedNutritionGoals()
+    if let goals = cachedGoals {
+        applyNutritionGoals(goals, persist: false)
     } else {
-        // Use UserGoalsManager for defaults
-        proteinGoal = Double(UserGoalsManager.shared.dailyGoals.protein)
-        carbsGoal = Double(UserGoalsManager.shared.dailyGoals.carbs)
-        fatGoal = Double(UserGoalsManager.shared.dailyGoals.fat)
+        applyFallbackNutritionGoals()
     }
+
+    let hasCachedAdvancedTargets = cachedGoals?.nutrients?.isEmpty == false
+    maybeRefreshAdvancedNutritionGoals(forceRefresh: forceRefresh,
+                                       hasAdvancedTargets: hasCachedAdvancedTargets)
 }
 
 
@@ -603,25 +676,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   }
 
   if let goals = snapshot.goals {
-    let serverCal = goals.calories
-    if serverCal > 0 {
-      calorieGoal = serverCal
-    }
-    proteinGoal = goals.protein
-    carbsGoal = goals.carbs
-    fatGoal = goals.fat
-
-    if let desiredKg = goals.desiredWeightKg {
-      desiredWeightKg = desiredKg
-      desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
-    } else if let desiredLbs = goals.desiredWeightLbs {
-      desiredWeightLbs = desiredLbs
-      desiredWeightKg = desiredLbs / 2.20462
-    }
-
-    if let encoded = try? JSONEncoder().encode(goals) {
-      UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
-    }
+    applyNutritionGoals(goals, persist: true)
   }
 
   remainingCalories = max(0, calorieGoal - totalCalories)

@@ -344,6 +344,9 @@ struct ConfirmLogView: View {
                         healthAnalysisCard
                     }
                     dailyGoalShareCard
+                    if nutrientTargets.isEmpty {
+                        missingTargetsCallout
+                    }
                     totalCarbsSection
                     fatTotalsSection
                     proteinTotalsSection
@@ -355,6 +358,8 @@ struct ConfirmLogView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 12)
             }
+
+            footerBar
         }
         .background(Color("iosbg").ignoresSafeArea())
         .navigationBarHidden(true)
@@ -389,8 +394,40 @@ struct ConfirmLogView: View {
                 }
             }
         )
+        .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
+            reloadStoredNutrientTargets()
+        }
     }
     
+    private var footerBar: some View {
+        VStack(spacing: 16) {
+            Divider()
+                .padding(.horizontal, -16)
+            
+            Button(action: logBarcodeFood) {
+                Text(isCreating ? "Logging..." : "Log Food")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            }
+            .buttonStyle(.plain)
+            .background(
+                RoundedRectangle(cornerRadius: 999, style: .continuous)
+                    .fill(Color("background"))
+            )
+            .foregroundColor(Color("text"))
+            .disabled(isCreating)
+            .opacity(isCreating ? 0.7 : 1)
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 24)
+        .background(
+            Color("iosbg")
+                .ignoresSafeArea(edges: .bottom)
+        )
+    }
+
     // MARK: - Card Views
     private var macroSummaryCard: some View {
         HStack(spacing: 20) {
@@ -511,15 +548,20 @@ struct ConfirmLogView: View {
                             }
                         }
                     } label: {
-                        capsulePill {
-                            HStack(spacing: 4) {
-                                Text(selectedMealPeriod.title)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
+                        HStack(spacing: 4) {
+                            Text(selectedMealPeriod.title)
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
+                        .foregroundColor(.primary)
                     }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(Color("iosnp"))
+                    .cornerRadius(12)
                     
                     capsulePill {
                         DatePicker("", selection: $mealTime, displayedComponents: .hourAndMinute)
@@ -558,10 +600,8 @@ struct ConfirmLogView: View {
             .foregroundColor(.primary)
             .padding(.vertical, 6)
             .padding(.horizontal, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color("iosnp"))
-            )
+            .background(Color("iosnp"))
+            .cornerRadius(12)
     }
     
     private var mealChips: some View {
@@ -663,6 +703,42 @@ private enum MealPeriod: String, CaseIterable, Identifiable {
         nutrientSection(title: "Other", rows: otherRows)
     }
 
+    private var missingTargetsCallout: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Finish goal setup to unlock detailed targets")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+            Text("We’ll automatically sync your nutrition plan and show daily percentages once it’s ready.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+            Button(action: {
+                dayLogsVM.refreshNutritionGoals(forceRefresh: true)
+            }) {
+                HStack {
+                    if dayLogsVM.isRefreshingNutritionGoals {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(0.8)
+                    }
+                    Text(dayLogsVM.isRefreshingNutritionGoals ? "Syncing Targets" : "Sync Now")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.accentColor.opacity(dayLogsVM.isRefreshingNutritionGoals ? 0.4 : 0.15))
+                .foregroundColor(.accentColor)
+                .cornerRadius(12)
+            }
+            .disabled(dayLogsVM.isRefreshingNutritionGoals)
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color("iosnp"))
+        )
+        .padding(.horizontal)
+    }
+
     private func nutrientSection(title: String, rows: [NutrientRowDescriptor]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
@@ -715,6 +791,16 @@ private enum MealPeriod: String, CaseIterable, Identifiable {
         }
     }
 
+    private func reloadStoredNutrientTargets() {
+        if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
+           let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data),
+           let advanced = goals.nutrients {
+            nutrientTargets = advanced
+        } else {
+            nutrientTargets = [:]
+        }
+    }
+
     private var totalCarbRows: [NutrientRowDescriptor] {
         [
             NutrientRowDescriptor(label: "Carbs", slug: "carbs", defaultUnit: "g", source: .macro(.carbs), color: carbColor),
@@ -732,7 +818,7 @@ private enum MealPeriod: String, CaseIterable, Identifiable {
             NutrientRowDescriptor(label: "Polyunsaturated", slug: "polyunsaturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total polyunsaturated"]), color: fatColor),
             NutrientRowDescriptor(label: "Omega-3", slug: "omega_3_total", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-3", "omega 3", "omega-3"]), color: fatColor),
             NutrientRowDescriptor(label: "Omega-3 ALA", slug: "omega_3_ala", defaultUnit: "g", source: .nutrient(names: ["18:3 n-3 c,c,c (ala)", "alpha-linolenic acid", "omega-3 ala", "omega 3 ala"]), color: fatColor),
-            NutrientRowDescriptor(label: "Omega-3 EPA", slug: "omega_3_epa_dha", defaultUnit: "mg", source: .nutrient(names: ["20:5 n-3 (epa)", "22:6 n-3 (dha)", "epa", "dha", "eicosapentaenoic acid", "docosahexaenoic acid"], aggregation: .sum), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-3 EPA", slug: "omega_3_epa_dha", defaultUnit: "mg", source: .nutrient(names: ["20:5 n-3 (epa)", "22:6 n-3 (dha)", "epa", "dha", "eicosapentaenoic acid", "docosahexaenoic acid", "omega-3 epa + dha"], aggregation: .sum), color: fatColor),
             NutrientRowDescriptor(label: "Omega-6", slug: "omega_6", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-6", "omega 6", "omega-6"]), color: fatColor),
             NutrientRowDescriptor(label: "Saturated", slug: "saturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total saturated"]), color: fatColor),
             NutrientRowDescriptor(label: "Trans Fat", slug: "trans_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total trans"]), color: fatColor)
@@ -765,7 +851,10 @@ private enum MealPeriod: String, CaseIterable, Identifiable {
             NutrientRowDescriptor(label: "B12, Cobalamin", slug: "vitamin_b12_cobalamin", defaultUnit: "mcg", source: .nutrient(names: ["vitamin b-12", "cobalamin"]), color: .orange),
             NutrientRowDescriptor(label: "Folate", slug: "folate", defaultUnit: "mcg", source: .nutrient(names: ["folate, total", "folic acid"]), color: .orange),
             NutrientRowDescriptor(label: "Vitamin A", slug: "vitamin_a", defaultUnit: "mcg", source: .nutrient(names: ["vitamin a, rae", "vitamin a"]), color: .orange),
-            NutrientRowDescriptor(label: "Vitamin C", slug: "vitamin_c", defaultUnit: "mg", source: .nutrient(names: ["vitamin c, total ascorbic acid", "vitamin c"]), color: .orange)
+            NutrientRowDescriptor(label: "Vitamin C", slug: "vitamin_c", defaultUnit: "mg", source: .nutrient(names: ["vitamin c, total ascorbic acid", "vitamin c"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin D", slug: "vitamin_d", defaultUnit: "IU", source: .nutrient(names: ["vitamin d (d2 + d3)", "vitamin d"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin E", slug: "vitamin_e", defaultUnit: "mg", source: .nutrient(names: ["vitamin e (alpha-tocopherol)", "vitamin e"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin K", slug: "vitamin_k", defaultUnit: "mcg", source: .nutrient(names: ["vitamin k (phylloquinone)", "vitamin k"]), color: .orange)
         ]
     }
 
@@ -778,7 +867,9 @@ private enum MealPeriod: String, CaseIterable, Identifiable {
             NutrientRowDescriptor(label: "Manganese", slug: "manganese", defaultUnit: "mg", source: .nutrient(names: ["manganese, mn"]), color: .blue),
             NutrientRowDescriptor(label: "Phosphorus", slug: "phosphorus", defaultUnit: "mg", source: .nutrient(names: ["phosphorus, p"]), color: .blue),
             NutrientRowDescriptor(label: "Potassium", slug: "potassium", defaultUnit: "mg", source: .nutrient(names: ["potassium, k"]), color: .blue),
-            NutrientRowDescriptor(label: "Selenium", slug: "selenium", defaultUnit: "mcg", source: .nutrient(names: ["selenium, se"]), color: .blue)
+            NutrientRowDescriptor(label: "Selenium", slug: "selenium", defaultUnit: "mcg", source: .nutrient(names: ["selenium, se"]), color: .blue),
+            NutrientRowDescriptor(label: "Sodium", slug: "sodium", defaultUnit: "mg", source: .nutrient(names: ["sodium, na"]), color: .blue),
+            NutrientRowDescriptor(label: "Zinc", slug: "zinc", defaultUnit: "mg", source: .nutrient(names: ["zinc, zn"]), color: .blue)
         ]
     }
 
@@ -789,12 +880,7 @@ private enum MealPeriod: String, CaseIterable, Identifiable {
             NutrientRowDescriptor(label: "Caffeine", slug: "caffeine", defaultUnit: "mg", source: .nutrient(names: ["caffeine"]), color: .purple),
             NutrientRowDescriptor(label: "Cholesterol", slug: "cholesterol", defaultUnit: "mg", source: .nutrient(names: ["cholesterol"]), color: .purple),
             NutrientRowDescriptor(label: "Choline", slug: "choline", defaultUnit: "mg", source: .nutrient(names: ["choline, total"]), color: .purple),
-            NutrientRowDescriptor(label: "Water", slug: "water", defaultUnit: "ml", source: .nutrient(names: ["water"]), color: .purple),
-            NutrientRowDescriptor(label: "Sodium", slug: "sodium", defaultUnit: "mg", source: .nutrient(names: ["sodium, na"]), color: .purple),
-            NutrientRowDescriptor(label: "Zinc", slug: "zinc", defaultUnit: "mg", source: .nutrient(names: ["zinc, zn"]), color: .purple),
-            NutrientRowDescriptor(label: "Vitamin D", slug: "vitamin_d", defaultUnit: "IU", source: .nutrient(names: ["vitamin d (d2 + d3)", "vitamin d"]), color: .purple),
-            NutrientRowDescriptor(label: "Vitamin E", slug: "vitamin_e", defaultUnit: "mg", source: .nutrient(names: ["vitamin e (alpha-tocopherol)", "vitamin e"]), color: .purple),
-            NutrientRowDescriptor(label: "Vitamin K", slug: "vitamin_k", defaultUnit: "mcg", source: .nutrient(names: ["vitamin k (phylloquinone)", "vitamin k"]), color: .purple)
+            NutrientRowDescriptor(label: "Water", slug: "water", defaultUnit: "ml", source: .nutrient(names: ["water"]), color: .purple)
         ]
     }
 
