@@ -26,9 +26,6 @@ struct ConfirmLogView: View {
     @State private var carbs: String = ""
     @State private var fat: String = ""
     
-    // Flag to show additional nutrients
-    @State private var showMoreNutrients: Bool = false
-    
     // Additional nutrients
     @State private var saturatedFat: String = ""
     @State private var polyunsaturatedFat: String = ""
@@ -43,6 +40,8 @@ struct ConfirmLogView: View {
     @State private var vitaminC: String = ""
     @State private var calcium: String = ""
     @State private var iron: String = ""
+    @State private var nutrientTargets: [String: NutrientTargetDetails] = [:]
+    @State private var baseNutrientValues: [String: RawNutrientValue] = [:]
 
     // Meal + time selections
     @State private var selectedMealPeriod: MealPeriod = .lunch
@@ -243,6 +242,23 @@ struct ConfirmLogView: View {
                 break
             }
         }
+
+        var nutrientDictionary: [String: RawNutrientValue] = [:]
+        for nutrient in food.foodNutrients {
+            if let value = nutrient.value {
+                let key = ConfirmLogView.normalizedNutrientKey(nutrient.nutrientName)
+                nutrientDictionary[key] = RawNutrientValue(value: value, unit: nutrient.unitName)
+            }
+        }
+        self._baseNutrientValues = State(initialValue: nutrientDictionary)
+
+        var nutrientTargets: [String: NutrientTargetDetails] = [:]
+        if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
+           let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data),
+           let advanced = goals.nutrients {
+            nutrientTargets = advanced
+        }
+        self._nutrientTargets = State(initialValue: nutrientTargets)
         
         // Set flags for barcode food
         self.isBarcodeFood = true
@@ -276,6 +292,10 @@ struct ConfirmLogView: View {
 
     private var adjustedFat: Double {
         calculateAdjustedValue(baseFat, servings: numberOfServings)
+    }
+
+    private var adjustedFiber: Double {
+        calculateAdjustedValue(baseFiber, servings: numberOfServings)
     }
 
     private var adjustedCalories: Double {
@@ -324,11 +344,12 @@ struct ConfirmLogView: View {
                         healthAnalysisCard
                     }
                     dailyGoalShareCard
-                    totalCarbsCard
-                    nutritionFactsCard
-                    if showMoreNutrients {
-                        additionalNutrientsCard
-                    }
+                    totalCarbsSection
+                    fatTotalsSection
+                    proteinTotalsSection
+                    vitaminSection
+                    mineralSection
+                    otherNutrientSection
                     Spacer(minLength: 40)
                 }
                 .padding(.top, 16)
@@ -481,7 +502,7 @@ struct ConfirmLogView: View {
             
             Divider().padding(.leading, 16)
             
-            labeledRow("Time") {
+            labeledRow("Time", verticalPadding: 6) {
                 HStack(spacing: 8) {
                     Menu {
                         ForEach(MealPeriod.allCases) { period in
@@ -490,15 +511,21 @@ struct ConfirmLogView: View {
                             }
                         }
                     } label: {
-                        capsuleItem(text: selectedMealPeriod.title, systemImage: "chevron.down")
+                        capsulePill {
+                            HStack(spacing: 4) {
+                                Text(selectedMealPeriod.title)
+                                Image(systemName: "chevron.down")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     }
                     
-                    ZStack {
-                        capsuleItem(text: mealTimeFormatted, systemImage: "clock")
+                    capsulePill {
                         DatePicker("", selection: $mealTime, displayedComponents: .hourAndMinute)
                             .labelsHidden()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .opacity(0.02)
+                            .datePickerStyle(.compact)
+                            .tint(.primary)
                     }
                 }
             }
@@ -511,7 +538,11 @@ struct ConfirmLogView: View {
         .padding(.horizontal)
     }
     
-    private func labeledRow<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
+    private func labeledRow<Content: View>(
+        _ label: String,
+        verticalPadding: CGFloat = 10,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
         HStack(alignment: .center) {
             Text(label)
                 .foregroundColor(.primary)
@@ -519,23 +550,18 @@ struct ConfirmLogView: View {
             content()
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.vertical, verticalPadding)
     }
     
-    private func capsuleItem(text: String, systemImage: String? = nil) -> some View {
-        HStack(spacing: 4) {
-            Text(text)
-                .foregroundColor(.primary)
-            if let icon = systemImage {
-                Image(systemName: icon)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 14)
-        .background(Color("iosnp"))
-        .cornerRadius(16)
+    private func capsulePill<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
+            .foregroundColor(.primary)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color("iosnp"))
+            )
     }
     
     private var mealChips: some View {
@@ -613,357 +639,306 @@ private enum MealPeriod: String, CaseIterable, Identifiable {
         .padding(.horizontal)
     }
     
-    private var totalCarbsCard: some View {
+    private var totalCarbsSection: some View {
+        nutrientSection(title: "Total Carbs", rows: totalCarbRows)
+    }
+
+    private var fatTotalsSection: some View {
+        nutrientSection(title: "Fat Totals", rows: fatRows)
+    }
+
+    private var proteinTotalsSection: some View {
+        nutrientSection(title: "Protein Totals", rows: proteinRows)
+    }
+
+    private var vitaminSection: some View {
+        nutrientSection(title: "Vitamins", rows: vitaminRows)
+    }
+
+    private var mineralSection: some View {
+        nutrientSection(title: "Minerals", rows: mineralRows)
+    }
+
+    private var otherNutrientSection: some View {
+        nutrientSection(title: "Other", rows: otherRows)
+    }
+
+    private func nutrientSection(title: String, rows: [NutrientRowDescriptor]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Total Carbs")
+            Text(title)
                 .font(.title3)
                 .fontWeight(.semibold)
-            
-            let goal = max(dayLogsVM.carbsGoal, 1)
-            let progress = min(adjustedCarbs / goal, 1)
-            
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("\(adjustedCarbs.cleanOneDecimal)g of \(Int(goal))g")
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text("\(Int(progress * 100))%")
-                        .fontWeight(.medium)
+
+            VStack(spacing: 16) {
+                ForEach(rows) { descriptor in
+                    nutrientRow(for: descriptor)
                 }
-                ProgressView(value: progress)
-                    .tint(carbColor)
-                    .scaleEffect(x: 1, y: 1.5, anchor: .center)
             }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color("iosnp"))
+            )
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color("iosnp"))
-        )
         .padding(.horizontal)
     }
-    
-    
-    private var nutritionFactsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Nutrition Facts")
-                .font(.title2)
-                .fontWeight(.bold)
-                .padding(.horizontal)
-            
-            ZStack(alignment: .top) {
-                // Background with rounded corners
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color("iosnp"))
-                
-                // Content
-                VStack(spacing: 0) {
-                    // Protein (read-only)
-                    HStack {
-                        Text("Protein (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(protein.isEmpty ? "0" : protein)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    // Divider
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Carbs (read-only)
-                    HStack {
-                        Text("Carbs (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(carbs.isEmpty ? "0" : carbs)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    // Divider
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Fat (read-only)
-                    HStack {
-                        Text("Total Fat (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(fat.isEmpty ? "0" : fat)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+
+    @ViewBuilder
+    private func nutrientRow(for descriptor: NutrientRowDescriptor) -> some View {
+        let value = nutrientValue(for: descriptor)
+        let goal = nutrientGoal(for: descriptor)
+        let unit = nutrientUnit(for: descriptor)
+        let percentage = nutrientPercentage(value: value, goal: goal)
+        let ratio = nutrientRatioText(value: value, goal: goal, unit: unit)
+        let progress = nutrientProgressValue(value: value, goal: goal)
+
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(descriptor.label)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text(ratio)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
+                Spacer()
+                Text(percentage)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(descriptor.color)
             }
-            .padding(.horizontal)
-            
-            // Show More Nutrients button
-            Button(action: {
-                withAnimation {
-                    showMoreNutrients.toggle()
-                }
-            }) {
-                HStack {
-                    Text(showMoreNutrients ? "Hide Additional Nutrients" : "Show More Nutrients")
-                        .foregroundColor(.accentColor)
-                    
-                    Image(systemName: showMoreNutrients ? "chevron.up" : "chevron.down")
-                        .foregroundColor(.accentColor)
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 14)
-                .background(Color("iosnp"))
-                .cornerRadius(12)
-            }
-            .padding(.horizontal)
+
+            ProgressView(value: progress)
+                .tint(descriptor.color)
+                .scaleEffect(x: 1, y: 1.2, anchor: .center)
         }
     }
-    
-    private var additionalNutrientsCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ZStack(alignment: .top) {
-                // Background with rounded corners
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color("iosnp"))
-                
-                // Content
-                VStack(spacing: 0) {
-                    // Saturated Fat
-                    HStack {
-                        Text("Saturated Fat (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(saturatedFat.isEmpty ? "0" : saturatedFat)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Polyunsaturated Fat
-                    HStack {
-                        Text("Polyunsaturated Fat (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(polyunsaturatedFat.isEmpty ? "0" : polyunsaturatedFat)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Monounsaturated Fat
-                    HStack {
-                        Text("Monounsaturated Fat (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(monounsaturatedFat.isEmpty ? "0" : monounsaturatedFat)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Trans Fat
-                    HStack {
-                        Text("Trans Fat (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(transFat.isEmpty ? "0" : transFat)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Cholesterol
-                    HStack {
-                        Text("Cholesterol (mg)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(cholesterol.isEmpty ? "0" : cholesterol)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Sodium
-                    HStack {
-                        Text("Sodium (mg)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(sodium.isEmpty ? "0" : sodium)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Potassium
-                    HStack {
-                        Text("Potassium (mg)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(potassium.isEmpty ? "0" : potassium)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Sugar
-                    HStack {
-                        Text("Sugar (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(sugar.isEmpty ? "0" : sugar)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Fiber
-                    HStack {
-                        Text("Fiber (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(fiber.isEmpty ? "0" : fiber)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Vitamin A
-                    HStack {
-                        Text("Vitamin A (%)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(vitaminA.isEmpty ? "0" : vitaminA)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Vitamin C
-                    HStack {
-                        Text("Vitamin C (%)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(vitaminC.isEmpty ? "0" : vitaminC)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Calcium
-                    HStack {
-                        Text("Calcium (%)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(calcium.isEmpty ? "0" : calcium)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Iron
-                    HStack {
-                        Text("Iron (%)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(iron.isEmpty ? "0" : iron)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing) 
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                }
+
+    private var totalCarbRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Carbs", slug: "carbs", defaultUnit: "g", source: .macro(.carbs), color: carbColor),
+            NutrientRowDescriptor(label: "Fiber", slug: "fiber", defaultUnit: "g", source: .nutrient(names: ["fiber, total dietary", "dietary fiber"]), color: carbColor),
+            NutrientRowDescriptor(label: "Net (Non-fiber)", slug: "net_carbs", defaultUnit: "g", source: .computed(.netCarbs), color: carbColor),
+            NutrientRowDescriptor(label: "Sugars", slug: "sugars", defaultUnit: "g", source: .nutrient(names: ["sugars, total including nlea", "sugars, total", "sugar"]), color: carbColor),
+            NutrientRowDescriptor(label: "Sugars Added", slug: "added_sugars", defaultUnit: "g", source: .nutrient(names: ["sugars, added", "added sugars"]), color: carbColor)
+        ]
+    }
+
+    private var fatRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Fat", slug: "fat", defaultUnit: "g", source: .macro(.fat), color: fatColor),
+            NutrientRowDescriptor(label: "Monounsaturated", slug: "monounsaturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total monounsaturated"]), color: fatColor),
+            NutrientRowDescriptor(label: "Polyunsaturated", slug: "polyunsaturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total polyunsaturated"]), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-3", slug: "omega_3_total", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-3", "omega 3", "omega-3"]), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-3 ALA", slug: "omega_3_ala", defaultUnit: "g", source: .nutrient(names: ["18:3 n-3 c,c,c (ala)", "alpha-linolenic acid", "omega-3 ala", "omega 3 ala"]), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-3 EPA", slug: "omega_3_epa_dha", defaultUnit: "mg", source: .nutrient(names: ["20:5 n-3 (epa)", "22:6 n-3 (dha)", "epa", "dha", "eicosapentaenoic acid", "docosahexaenoic acid"], aggregation: .sum), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-6", slug: "omega_6", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-6", "omega 6", "omega-6"]), color: fatColor),
+            NutrientRowDescriptor(label: "Saturated", slug: "saturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total saturated"]), color: fatColor),
+            NutrientRowDescriptor(label: "Trans Fat", slug: "trans_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total trans"]), color: fatColor)
+        ]
+    }
+
+    private var proteinRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Protein", slug: "protein", defaultUnit: "g", source: .macro(.protein), color: proteinColor),
+            NutrientRowDescriptor(label: "Cysteine", slug: "cysteine", defaultUnit: "mg", source: .nutrient(names: ["cysteine", "cystine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Histidine", slug: "histidine", defaultUnit: "mg", source: .nutrient(names: ["histidine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Isoleucine", slug: "isoleucine", defaultUnit: "mg", source: .nutrient(names: ["isoleucine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Leucine", slug: "leucine", defaultUnit: "mg", source: .nutrient(names: ["leucine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Lysine", slug: "lysine", defaultUnit: "mg", source: .nutrient(names: ["lysine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Methionine", slug: "methionine", defaultUnit: "mg", source: .nutrient(names: ["methionine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Phenylalanine", slug: "phenylalanine", defaultUnit: "mg", source: .nutrient(names: ["phenylalanine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Threonine", slug: "threonine", defaultUnit: "mg", source: .nutrient(names: ["threonine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Tryptophan", slug: "tryptophan", defaultUnit: "mg", source: .nutrient(names: ["tryptophan"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Tyrosine", slug: "tyrosine", defaultUnit: "mg", source: .nutrient(names: ["tyrosine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Valine", slug: "valine", defaultUnit: "mg", source: .nutrient(names: ["valine"]), color: proteinColor)
+        ]
+    }
+
+    private var vitaminRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "B1, Thiamine", slug: "vitamin_b1_thiamin", defaultUnit: "mg", source: .nutrient(names: ["thiamin", "vitamin b-1"]), color: .orange),
+            NutrientRowDescriptor(label: "B2, Riboflavin", slug: "vitamin_b2_riboflavin", defaultUnit: "mg", source: .nutrient(names: ["riboflavin", "vitamin b-2"]), color: .orange),
+            NutrientRowDescriptor(label: "B3, Niacin", slug: "vitamin_b3_niacin", defaultUnit: "mg", source: .nutrient(names: ["niacin", "vitamin b-3"]), color: .orange),
+            NutrientRowDescriptor(label: "B5, Pantothenic Acid", slug: "vitamin_b5_pantothenic_acid", defaultUnit: "mg", source: .nutrient(names: ["pantothenic acid"]), color: .orange),
+            NutrientRowDescriptor(label: "B12, Cobalamin", slug: "vitamin_b12_cobalamin", defaultUnit: "mcg", source: .nutrient(names: ["vitamin b-12", "cobalamin"]), color: .orange),
+            NutrientRowDescriptor(label: "Folate", slug: "folate", defaultUnit: "mcg", source: .nutrient(names: ["folate, total", "folic acid"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin A", slug: "vitamin_a", defaultUnit: "mcg", source: .nutrient(names: ["vitamin a, rae", "vitamin a"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin C", slug: "vitamin_c", defaultUnit: "mg", source: .nutrient(names: ["vitamin c, total ascorbic acid", "vitamin c"]), color: .orange)
+        ]
+    }
+
+    private var mineralRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Calcium", slug: "calcium", defaultUnit: "mg", source: .nutrient(names: ["calcium, ca"]), color: .blue),
+            NutrientRowDescriptor(label: "Copper", slug: "copper", defaultUnit: "mcg", source: .nutrient(names: ["copper, cu"]), color: .blue),
+            NutrientRowDescriptor(label: "Iron", slug: "iron", defaultUnit: "mg", source: .nutrient(names: ["iron, fe"]), color: .blue),
+            NutrientRowDescriptor(label: "Magnesium", slug: "magnesium", defaultUnit: "mg", source: .nutrient(names: ["magnesium, mg"]), color: .blue),
+            NutrientRowDescriptor(label: "Manganese", slug: "manganese", defaultUnit: "mg", source: .nutrient(names: ["manganese, mn"]), color: .blue),
+            NutrientRowDescriptor(label: "Phosphorus", slug: "phosphorus", defaultUnit: "mg", source: .nutrient(names: ["phosphorus, p"]), color: .blue),
+            NutrientRowDescriptor(label: "Potassium", slug: "potassium", defaultUnit: "mg", source: .nutrient(names: ["potassium, k"]), color: .blue),
+            NutrientRowDescriptor(label: "Selenium", slug: "selenium", defaultUnit: "mcg", source: .nutrient(names: ["selenium, se"]), color: .blue)
+        ]
+    }
+
+    private var otherRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Calories", slug: "calories", defaultUnit: "kcal", source: .computed(.calories), color: .purple),
+            NutrientRowDescriptor(label: "Alcohol", slug: "alcohol", defaultUnit: "g", source: .nutrient(names: ["alcohol, ethyl"]), color: .purple),
+            NutrientRowDescriptor(label: "Caffeine", slug: "caffeine", defaultUnit: "mg", source: .nutrient(names: ["caffeine"]), color: .purple),
+            NutrientRowDescriptor(label: "Cholesterol", slug: "cholesterol", defaultUnit: "mg", source: .nutrient(names: ["cholesterol"]), color: .purple),
+            NutrientRowDescriptor(label: "Choline", slug: "choline", defaultUnit: "mg", source: .nutrient(names: ["choline, total"]), color: .purple),
+            NutrientRowDescriptor(label: "Water", slug: "water", defaultUnit: "ml", source: .nutrient(names: ["water"]), color: .purple),
+            NutrientRowDescriptor(label: "Sodium", slug: "sodium", defaultUnit: "mg", source: .nutrient(names: ["sodium, na"]), color: .purple),
+            NutrientRowDescriptor(label: "Zinc", slug: "zinc", defaultUnit: "mg", source: .nutrient(names: ["zinc, zn"]), color: .purple),
+            NutrientRowDescriptor(label: "Vitamin D", slug: "vitamin_d", defaultUnit: "IU", source: .nutrient(names: ["vitamin d (d2 + d3)", "vitamin d"]), color: .purple),
+            NutrientRowDescriptor(label: "Vitamin E", slug: "vitamin_e", defaultUnit: "mg", source: .nutrient(names: ["vitamin e (alpha-tocopherol)", "vitamin e"]), color: .purple),
+            NutrientRowDescriptor(label: "Vitamin K", slug: "vitamin_k", defaultUnit: "mcg", source: .nutrient(names: ["vitamin k (phylloquinone)", "vitamin k"]), color: .purple)
+        ]
+    }
+
+    private func nutrientValue(for descriptor: NutrientRowDescriptor) -> Double {
+        switch descriptor.source {
+        case .macro(let macro):
+            switch macro {
+            case .protein: return adjustedProtein
+            case .carbs: return adjustedCarbs
+            case .fat: return adjustedFat
             }
-            .padding(.horizontal)
+        case .nutrient(let names, let aggregation):
+            let matches = names.compactMap { baseNutrientValues[ConfirmLogView.normalizedNutrientKey($0)] }
+            guard !matches.isEmpty else { return 0 }
+            let perServing: Double
+            switch aggregation {
+            case .first:
+                perServing = matches.first?.value ?? 0
+            case .sum:
+                perServing = matches.reduce(0) { $0 + $1.value }
+            }
+            let sourceUnit = matches.first?.unit
+            let targetUnit = nutrientUnit(for: descriptor)
+            let converted = convert(perServing, from: sourceUnit, to: targetUnit)
+            return calculateAdjustedValue(converted, servings: numberOfServings)
+        case .computed(let computation):
+            switch computation {
+            case .netCarbs:
+                return max(adjustedCarbs - adjustedFiber, 0)
+            case .calories:
+                return adjustedCalories
+            }
         }
-        .transition(.opacity)
+    }
+
+    private func nutrientGoal(for descriptor: NutrientRowDescriptor) -> Double? {
+        var resolvedGoal: Double?
+        if let slug = descriptor.slug,
+           let details = nutrientTargets[slug] {
+            if let target = details.target, target > 0 {
+                resolvedGoal = target
+            } else if let max = details.max, max > 0 {
+                resolvedGoal = max
+            } else if let idealMax = details.idealMax, idealMax > 0 {
+                resolvedGoal = idealMax
+            }
+        }
+        if let resolvedGoal {
+            return convertGoal(resolvedGoal, for: descriptor)
+        }
+
+        switch descriptor.source {
+        case .macro(let macro):
+            switch macro {
+            case .protein: return dayLogsVM.proteinGoal
+            case .carbs: return dayLogsVM.carbsGoal
+            case .fat: return dayLogsVM.fatGoal
+            }
+        case .computed(let computation):
+            switch computation {
+            case .calories:
+                return dayLogsVM.calorieGoal
+            case .netCarbs:
+                if let target = nutrientTargets["net_carbs"]?.target {
+                    return convertGoal(target, for: descriptor)
+                }
+                return nil
+            }
+        default:
+            return nil
+        }
+    }
+
+    private func convertGoal(_ goal: Double, for descriptor: NutrientRowDescriptor) -> Double {
+        guard let slug = descriptor.slug else { return goal }
+        switch slug {
+        case "alcohol":
+            // Convert drinks/week guidance to grams per day assuming 14g per standard drink
+            return (goal / 7) * 14
+        default:
+            return goal
+        }
+    }
+
+    private func nutrientUnit(for descriptor: NutrientRowDescriptor) -> String {
+        if descriptor.defaultUnit.isEmpty,
+           let slug = descriptor.slug,
+           let unit = nutrientTargets[slug]?.unit,
+           !unit.isEmpty {
+            return unit
+        }
+        return descriptor.defaultUnit
+    }
+
+    private func nutrientPercentage(value: Double, goal: Double?) -> String {
+        guard let goal, goal > 0 else { return "--" }
+        let percent = (value / goal) * 100
+        return "\(percent.cleanZeroDecimal)%"
+    }
+
+    private func nutrientProgressValue(value: Double, goal: Double?) -> Double {
+        guard let goal, goal > 0 else { return 0 }
+        return min(max(value / goal, 0), 1)
+    }
+
+    private func nutrientRatioText(value: Double, goal: Double?, unit: String) -> String {
+        let valueText = value.goalShareFormatted
+        let goalText = goal.map { $0.goalShareFormatted } ?? "--"
+        let trimmedUnit = unit.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedUnit.isEmpty {
+            return "\(valueText)/\(goalText)"
+        } else {
+            return "\(valueText)/\(goalText) \(trimmedUnit)"
+        }
+    }
+
+    private func convert(_ value: Double, from sourceUnit: String?, to targetUnit: String?) -> Double {
+        let from = normalizedUnit(sourceUnit)
+        let to = normalizedUnit(targetUnit)
+        guard !from.isEmpty, !to.isEmpty, from != to else { return value }
+
+        switch (from, to) {
+        case ("g", "mg"): return value * 1000
+        case ("mg", "g"): return value / 1000
+        case ("g", "mcg"): return value * 1_000_000
+        case ("mcg", "g"): return value / 1_000_000
+        case ("mg", "mcg"): return value * 1000
+        case ("mcg", "mg"): return value / 1000
+        case ("g", "ml"): return value * 1 // Approximate density of water
+        case ("ml", "g"): return value * 1
+        default: return value
+        }
+    }
+
+    private func normalizedUnit(_ unit: String?) -> String {
+        guard let unit = unit?.trimmingCharacters(in: .whitespacesAndNewlines), !unit.isEmpty else { return "" }
+        let lower = unit.lowercased()
+        if lower.contains("mcg") { return "mcg" }
+        if lower.contains("mg") { return "mg" }
+        if lower.contains("g") { return "g" }
+        if lower.contains("ml") { return "ml" }
+        if lower.contains("kcal") { return "kcal" }
+        if lower.contains("iu") { return "iu" }
+        return unit
     }
     
     // MARK: - Health Analysis Card
@@ -1910,6 +1885,56 @@ private struct MacroSegment {
     let fraction: Double
 }
 
+private struct RawNutrientValue {
+    let value: Double
+    let unit: String?
+}
+
+private struct NutrientRowDescriptor: Identifiable {
+    let id: String
+    let label: String
+    let slug: String?
+    let defaultUnit: String
+    let source: NutrientValueSource
+    let color: Color
+
+    init(id: String? = nil,
+         label: String,
+         slug: String?,
+         defaultUnit: String,
+         source: NutrientValueSource,
+         color: Color) {
+        self.id = id ?? slug ?? label
+        self.label = label
+        self.slug = slug
+        self.defaultUnit = defaultUnit
+        self.source = source
+        self.color = color
+    }
+}
+
+private enum NutrientValueSource {
+    case macro(MacroType)
+    case nutrient(names: [String], aggregation: NutrientAggregation = .first)
+    case computed(NutrientComputation)
+}
+
+private enum MacroType {
+    case protein
+    case carbs
+    case fat
+}
+
+private enum NutrientAggregation {
+    case first
+    case sum
+}
+
+private enum NutrientComputation {
+    case netCarbs
+    case calories
+}
+
 private extension Double {
     var cleanOneDecimal: String {
         if self.isNaN { return "0" }
@@ -1936,6 +1961,10 @@ private extension Double {
 }
 
 extension ConfirmLogView {
+    static func normalizedNutrientKey(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
     // Helper function to hide keyboard
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
