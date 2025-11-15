@@ -18,6 +18,7 @@ struct ConfirmLogView: View {
     @State private var title: String = ""
     @State private var servingSize: String = ""
     @State private var numberOfServings: Double = 1
+    @State private var servingsInput: String = "1"
     @State private var calories: String = ""
     
     // Basic nutrition facts
@@ -95,6 +96,8 @@ struct ConfirmLogView: View {
     @State private var expandedNegativeIndices: Set<Int> = []
     @State private var expandedPositiveIndices: Set<Int> = []
     
+    private let showHealthInsights = false
+    
     // This view is ONLY for logging scanned foods
     init(path: Binding<NavigationPath>, food: Food, foodLogId: Int? = nil) {
         print("🔍 DEBUG ConfirmLogView: Initializing with food: \(food.description), fdcId: \(food.fdcId)")
@@ -146,17 +149,19 @@ struct ConfirmLogView: View {
         // Set serving size information
         // Prioritize householdServingFullText when available (more detailed format)
         if let servingText = food.householdServingFullText, !servingText.isEmpty {
-            self._servingSize = State(initialValue: servingText)
-            self._servingUnit = State(initialValue: food.servingSizeUnit ?? "serving")
-        } else if let servingSize = food.servingSize, let unit = food.servingSizeUnit {
-            // Format serving size to remove unnecessary decimal places (1.0 → 1, 1.5 → 1.5)
-            let formattedSize = servingSize == floor(servingSize) ? String(Int(servingSize)) : String(servingSize)
+        self._servingSize = State(initialValue: servingText)
+        self._servingUnit = State(initialValue: food.servingSizeUnit ?? "serving")
+    } else if let servingSize = food.servingSize, let unit = food.servingSizeUnit {
+        // Format serving size to remove unnecessary decimal places (1.0 → 1, 1.5 → 1.5)
+        let formattedSize = servingSize == floor(servingSize) ? String(Int(servingSize)) : String(servingSize)
             self._servingSize = State(initialValue: "\(formattedSize) \(unit)")
             self._servingUnit = State(initialValue: unit)
         }
         
         // Set number of servings (default to 1 if nil)
-        self._numberOfServings = State(initialValue: food.numberOfServings ?? 1)
+        let initialServings = food.numberOfServings ?? 1
+        self._numberOfServings = State(initialValue: initialServings)
+        self._servingsInput = State(initialValue: ConfirmLogView.formattedServings(initialServings))
         
         // Calculate nutrition value variables without modifying state directly
         var tmpCalories: Double = 0
@@ -305,16 +310,19 @@ struct ConfirmLogView: View {
     }
     
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 0) {
             headerBar
                 .padding(.horizontal)
-                .padding(.vertical, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 0)
     
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
                     macroSummaryCard
                     portionDetailsCard
-                    healthAnalysisCard
+                    if showHealthInsights {
+                        healthAnalysisCard
+                    }
                     dailyGoalShareCard
                     totalCarbsCard
                     nutritionFactsCard
@@ -324,7 +332,7 @@ struct ConfirmLogView: View {
                     Spacer(minLength: 40)
                 }
                 .padding(.top, 16)
-                .padding(.bottom, 16)
+                .padding(.bottom, 12)
             }
         }
         .background(Color("iosbg").ignoresSafeArea())
@@ -426,6 +434,7 @@ struct ConfirmLogView: View {
             }
             Divider()
                 .frame(maxWidth: .infinity)
+                .padding(.horizontal, -16)
         }
     }
     
@@ -456,61 +465,41 @@ struct ConfirmLogView: View {
             Divider().padding(.leading, 16)
             
             labeledRow("Servings") {
-                HStack(spacing: 8) {
-                    Button {
-                        numberOfServings = max(0.25, numberOfServings - 0.25)
-                        updateNutritionValues()
-                    } label: {
-                        Image(systemName: "minus")
-                            .font(.footnote.weight(.bold))
-                            .frame(width: 28, height: 28)
-                            .background(Color.primary.opacity(0.08))
-                            .clipShape(Circle())
-                    }
-                    
-                    TextField("1", value: $numberOfServings, format: .number)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.center)
-                        .frame(width: 60)
-                        .focused($isServingsFocused)
-                        .onChange(of: numberOfServings) { _ in
+                TextField("Enter servings (e.g., 1.5 or 1/2)", text: $servingsInput)
+                    .keyboardType(.numbersAndPunctuation)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 100)
+                    .focused($isServingsFocused)
+                    .onChange(of: servingsInput) { newValue in
+                        guard let parsed = parseServingsInput(newValue) else { return }
+                        if abs(parsed - numberOfServings) > 0.0001 {
+                            numberOfServings = parsed
                             updateNutritionValues()
                         }
-                    
-                    Button {
-                        numberOfServings += 0.25
-                        updateNutritionValues()
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.footnote.weight(.bold))
-                            .frame(width: 28, height: 28)
-                            .background(Color.primary.opacity(0.08))
-                            .clipShape(Circle())
                     }
-                }
             }
             
             Divider().padding(.leading, 16)
             
             labeledRow("Time") {
                 HStack(spacing: 8) {
-                    mealChips
-                    DatePicker("", selection: $mealTime, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
-                        .tint(.primary)
-                }
-            }
-            
-            Divider().padding(.leading, 16)
-            
-            labeledRow("Health Score") {
-                if let health = healthAnalysis {
-                    Text("\(health.score)/100")
-                        .fontWeight(.medium)
-                        .foregroundColor(healthColor(for: health.color))
-                } else {
-                    Text("Not available")
-                        .foregroundColor(.secondary)
+                    Menu {
+                        ForEach(MealPeriod.allCases) { period in
+                            Button(period.title) {
+                                selectedMealPeriod = period
+                            }
+                        }
+                    } label: {
+                        capsuleItem(text: selectedMealPeriod.title, systemImage: "chevron.down")
+                    }
+                    
+                    ZStack {
+                        capsuleItem(text: mealTimeFormatted, systemImage: "clock")
+                        DatePicker("", selection: $mealTime, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .opacity(0.02)
+                    }
                 }
             }
         }
@@ -531,6 +520,22 @@ struct ConfirmLogView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
+    }
+    
+    private func capsuleItem(text: String, systemImage: String? = nil) -> some View {
+        HStack(spacing: 4) {
+            Text(text)
+                .foregroundColor(.primary)
+            if let icon = systemImage {
+                Image(systemName: icon)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 14)
+        .background(Color("iosnp"))
+        .cornerRadius(16)
     }
     
     private var mealChips: some View {
@@ -555,7 +560,7 @@ struct ConfirmLogView: View {
         }
     }
     
-    private enum MealPeriod: String, CaseIterable, Identifiable {
+private enum MealPeriod: String, CaseIterable, Identifiable {
         case breakfast, lunch, dinner, snack
         
         var id: String { rawValue }
@@ -571,13 +576,17 @@ struct ConfirmLogView: View {
         
         var displayName: String { title }
     }
+    
+    private var mealTimeFormatted: String {
+        mealTime.formatted(date: .omitted, time: .shortened)
+    }
 
     private var dailyGoalShareCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Daily Goal Share")
                 .font(.title3)
                 .fontWeight(.semibold)
-            
+
             HStack(spacing: 12) {
                 GoalShareBubble(title: "Protein",
                                 percent: proteinGoalPercent,
@@ -595,12 +604,12 @@ struct ConfirmLogView: View {
                                 goal: dayLogsVM.carbsGoal,
                                 color: carbColor)
             }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color("iosnp"))
+            )
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color("iosnp"))
-        )
         .padding(.horizontal)
     }
     
@@ -1749,6 +1758,47 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
 }
 
     
+    private static func formattedServings(_ value: Double) -> String {
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(Int(value))
+        }
+        var string = String(format: "%.2f", value)
+        while string.last == "0" {
+            string.removeLast()
+        }
+        if string.last == "." {
+            string.removeLast()
+        }
+        return string
+    }
+
+    private func parseServingsInput(_ text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let tokens = trimmed.split(whereSeparator: { $0 == " " }).map(String.init)
+        if tokens.count == 2,
+           let base = Double(tokens[0]),
+           let fraction = parseFraction(tokens[1]) {
+            return base + fraction
+        }
+
+        if let fraction = parseFraction(trimmed) {
+            return fraction
+        }
+
+        return Double(trimmed)
+    }
+
+    private func parseFraction(_ component: String) -> Double? {
+        let parts = component.split(separator: "/").map(String.init)
+        guard parts.count == 2,
+              let numerator = Double(parts[0]),
+              let denominator = Double(parts[1]),
+              denominator != 0 else { return nil }
+        return numerator / denominator
+    }
+
     // Helper method to calculate adjusted values based on number of servings
     private func calculateAdjustedValue(_ baseValue: Double, servings: Double) -> Double {
         return (baseValue * servings).rounded(toPlaces: 1)
@@ -1776,6 +1826,11 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         vitaminC = String(format: "%.1f", baseVitaminC * numberOfServings)
         calcium = String(format: "%.1f", baseCalcium * numberOfServings)
         iron = String(format: "%.1f", baseIron * numberOfServings)
+
+        let formatted = ConfirmLogView.formattedServings(numberOfServings)
+        if formatted != servingsInput {
+            servingsInput = formatted
+        }
     }
 }
 
@@ -1787,22 +1842,28 @@ private struct GoalShareBubble: View {
     let goal: Double
     let color: Color
     
+    private var progress: Double {
+        min(max(percent / 100, 0), 1)
+    }
+    
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             Text(title)
                 .font(.caption)
                 .foregroundColor(.secondary)
             ZStack {
                 Circle()
-                    .fill(color.opacity(0.12))
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 8)
                 Circle()
-                    .stroke(color.opacity(0.5), lineWidth: 2)
+                    .trim(from: 0, to: progress)
+                    .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
                 Text("\(Int(percent.rounded()))%")
                     .font(.headline)
-                    .foregroundColor(color)
+                    .foregroundColor(.primary)
             }
             .frame(width: 76, height: 76)
-            Text("\(grams.cleanOneDecimal)g / \(Int(goal))g")
+            Text("\(grams.goalShareFormatted) / \(goal.goalShareFormatted)")
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
@@ -1862,6 +1923,15 @@ private extension Double {
         } else {
             return String(format: "%.1f", self)
         }
+    }
+
+    var goalShareFormatted: String {
+        if self.isNaN || self.isInfinite { return "0" }
+        let roundedValue = (self * 10).rounded() / 10
+        if roundedValue.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(Int(roundedValue))
+        }
+        return String(format: "%.1f", roundedValue)
     }
 }
 
