@@ -305,41 +305,31 @@ struct ConfirmLogView: View {
     }
     
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 24) {
-                macroSummaryCard
-                portionDetailsCard
-                healthAnalysisCard
-                dailyGoalShareCard
-                totalCarbsCard
-                nutritionFactsCard
-                if showMoreNutrients {
-                    additionalNutrientsCard
+        VStack(spacing: 18) {
+            headerBar
+                .padding(.horizontal)
+                .padding(.vertical, 16)
+    
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    macroSummaryCard
+                    portionDetailsCard
+                    healthAnalysisCard
+                    dailyGoalShareCard
+                    totalCarbsCard
+                    nutritionFactsCard
+                    if showMoreNutrients {
+                        additionalNutrientsCard
+                    }
+                    Spacer(minLength: 40)
                 }
-                Spacer(minLength: 40)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
             }
-            .padding(.top, 16)
-            .padding(.bottom, 32)
         }
         .background(Color("iosbg").ignoresSafeArea())
-        .navigationTitle(title.isEmpty ? "Log Food" : title)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarHidden(true)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.headline)
-                }
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: logBarcodeFood) {
-                    Text(isCreating ? "Saving…" : "Log")
-                        .fontWeight(.semibold)
-                }
-                .disabled(isCreating)
-            }
-            
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("Done") {
@@ -347,7 +337,6 @@ struct ConfirmLogView: View {
                 }
             }
         }
-        .navigationBarBackButtonHidden(true)
         .onAppear {
             setupHealthAnalysis()
         }
@@ -409,6 +398,36 @@ struct ConfirmLogView: View {
             return arc
         }
     }
+
+    private var headerBar: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 16) {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.primary)
+                        .frame(width: 32, height: 32)
+                }
+                
+                Text(title.isEmpty ? "Log Food" : title)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                
+                Button(action: logBarcodeFood) {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+                .disabled(isCreating)
+                .opacity(isCreating ? 0.5 : 1)
+            }
+            Divider()
+                .frame(maxWidth: .infinity)
+        }
+    }
     
     private func macroStatRow(title: String, value: Double, unit: String, color: Color) -> some View {
         HStack(alignment: .center, spacing: 12) {
@@ -428,14 +447,6 @@ struct ConfirmLogView: View {
     
     private var portionDetailsCard: some View {
         VStack(spacing: 0) {
-            labeledRow("Food Name") {
-                TextField("Add a name", text: $title)
-                    .textFieldStyle(.plain)
-                    .multilineTextAlignment(.trailing)
-            }
-            
-            Divider().padding(.leading, 16)
-            
             labeledRow("Serving Size") {
                 TextField("e.g., 1 cup, 2 tbsp", text: $servingSize)
                     .textFieldStyle(.plain)
