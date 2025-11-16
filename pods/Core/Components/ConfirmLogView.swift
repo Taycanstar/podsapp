@@ -482,6 +482,7 @@ struct ConfirmLogView: View {
                     .font(.body)
                     .foregroundColor(.primary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 22)
 
                 if let score = nutritionScore {
                     insightScale(score: score)
@@ -501,12 +502,12 @@ struct ConfirmLogView: View {
         let normalized = max(0, min(100, score))
         let labels = ["Limited", "Fair", "Good", "Nutritious"]
 
-        VStack(spacing: 6) {
+        VStack(spacing: 0) {
             GeometryReader { geo in
                 HStack(spacing: 5) {
                     ForEach(0..<labels.count, id: \.self) { index in
                         Capsule()
-                            .fill(indexForScore(normalized) == index ? Color.primary : Color.primary.opacity(0.15))
+                            .fill(indexForScore(normalized) == index ? segmentColor(for: index) : Color.primary.opacity(0.15))
                             .frame(height: 4)
                             .frame(maxWidth: .infinity)
                     }
@@ -519,7 +520,7 @@ struct ConfirmLogView: View {
                         .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                         .overlay(
                             Circle()
-                                .stroke(Color.primary.opacity(0.4), lineWidth: 1.5)
+                                .stroke(Color.primary.opacity(0.2), lineWidth: 1.5)
                         )
                         .offset(x: sliderOffset(for: normalized, width: geo.size.width - 5 * CGFloat(labels.count - 1)), y: 0),
                     alignment: .leading
@@ -544,6 +545,15 @@ struct ConfirmLogView: View {
         case ..<50: return 1
         case ..<75: return 2
         default: return 3
+        }
+    }
+
+    private func segmentColor(for index: Int) -> Color {
+        switch index {
+        case 0: return Color("limited")
+        case 1: return Color("fair")
+        case 2: return Color("good")
+        default: return Color("nut")
         }
     }
 
