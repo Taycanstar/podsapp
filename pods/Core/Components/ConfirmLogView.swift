@@ -519,8 +519,8 @@ struct ConfirmLogView: View {
                         .frame(width: 18, height: 18)
                         .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                         .overlay(
-                            Circle()
-                                .stroke(Color.primary.opacity(0.2), lineWidth: 1.5)
+                        Circle()
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 1.5)
                         )
                         .offset(x: sliderOffset(for: normalized, width: geo.size.width - 5 * CGFloat(labels.count - 1)), y: 0),
                     alignment: .leading
