@@ -1145,7 +1145,9 @@ private struct FoodListView: View {
                     carbs: food.carbs,
                     fat: food.fat,
                     healthAnalysis: nil,
-                    foodNutrients: food.foodNutrients
+                    foodNutrients: food.foodNutrients,
+                    aiInsight: food.aiInsight,
+                    nutritionScore: food.nutritionScore
                 )
                 
 

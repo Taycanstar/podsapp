@@ -41,7 +41,9 @@ extension Food {
             carbs: self.carbs,
             fat: self.fat,
             healthAnalysis: nil,
-            foodNutrients: self.foodNutrients
+            foodNutrients: self.foodNutrients,
+            aiInsight: self.aiInsight,
+            nutritionScore: self.nutritionScore
         )
     }
 }
@@ -633,6 +635,21 @@ class FoodManager: ObservableObject {
             }
         }
         
+        let aiInsight = foodDict["ai_insight"] as? String
+        let nutritionScore: Double? = {
+            if let value = foodDict["nutrition_score"] as? Double {
+                return value
+            }
+            if let value = foodDict["nutrition_score"] as? NSNumber {
+                return value.doubleValue
+            }
+            if let value = foodDict["nutrition_score"] as? String,
+               let double = Double(value) {
+                return double
+            }
+            return nil
+        }()
+
         // Extract health analysis
         var healthAnalysis: HealthAnalysis?
         if let healthDict = foodDict["health_analysis"] as? [String: Any] {
@@ -663,7 +680,9 @@ class FoodManager: ObservableObject {
             carbs: carbs,
             fat: fat,
             healthAnalysis: healthAnalysis,
-            foodNutrients: foodNutrients.isEmpty ? nil : foodNutrients
+            foodNutrients: foodNutrients.isEmpty ? nil : foodNutrients,
+            aiInsight: aiInsight,
+            nutritionScore: nutritionScore
         )
     }
 
@@ -2939,21 +2958,31 @@ trackTimer(progressTimer)
                 }
             }
             
-            // Create LoggedFoodItem from creation response
-            let loggedFoodItem = LoggedFoodItem(
-                foodLogId: nil,  // No log ID when not logged yet
-                fdcId: fdcId,
-                displayName: description,
-                calories: calories,
-                servingSizeText: householdServingFullText ?? "\(Int(servingSize)) \(servingSizeUnit)",
-                numberOfServings: numberOfServings,
-                brandText: brandName,
-                protein: protein,
-                carbs: carbs,
-                fat: fat,
-                healthAnalysis: healthAnalysis,
-                foodNutrients: nil   // Could extract if needed
-            )
+        let aiInsight = foodDict["ai_insight"] as? String
+        let nutritionScore: Double? = {
+            if let value = foodDict["nutrition_score"] as? Double { return value }
+            if let value = foodDict["nutrition_score"] as? NSNumber { return value.doubleValue }
+            if let value = foodDict["nutrition_score"] as? String, let double = Double(value) { return double }
+            return nil
+        }()
+
+        // Create LoggedFoodItem from creation response
+        let loggedFoodItem = LoggedFoodItem(
+            foodLogId: nil,  // No log ID when not logged yet
+            fdcId: fdcId,
+            displayName: description,
+            calories: calories,
+            servingSizeText: householdServingFullText ?? "\(Int(servingSize)) \(servingSizeUnit)",
+            numberOfServings: numberOfServings,
+            brandText: brandName,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+            healthAnalysis: healthAnalysis,
+            foodNutrients: nil,   // Could extract if needed
+            aiInsight: aiInsight,
+            nutritionScore: nutritionScore
+        )
             
             // Extract other fields
             let status = payload["status"] as? String ?? "success"

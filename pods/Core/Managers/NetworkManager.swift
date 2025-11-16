@@ -5679,7 +5679,9 @@ func completeAppleSignup(idToken: String,
                     carbs: carbs,
                     fat: fat,
                     healthAnalysis: nil,
-                    foodNutrients: nil
+                    foodNutrients: nil,
+                    aiInsight: food.aiInsight,
+                    nutritionScore: food.nutritionScore
                 )
                 
                 // Create LoggedFood with default status if missing

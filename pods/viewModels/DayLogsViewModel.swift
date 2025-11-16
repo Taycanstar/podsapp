@@ -762,20 +762,22 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                                 // Avoid division by zero
                                 let servingsCount = max(updatedFoodLog.servings, 0.1)
                                 
-                                updatedLog.food = LoggedFoodItem(
-                                    foodLogId: food.foodLogId,
-                                    fdcId: food.fdcId,
-                                    displayName: food.displayName,
-                                    calories: calories / servingsCount, // Store per-serving value
-                                    servingSizeText: food.servingSizeText,
-                                    numberOfServings: updatedFoodLog.servings,
-                                    brandText: food.brandText,
-                                    protein: protein / servingsCount,
-                                    carbs: carbs / servingsCount,
-                                    fat: fat / servingsCount,
-                                    healthAnalysis: food.healthAnalysis,
-                                    foodNutrients: food.foodNutrients
-                                )
+                               updatedLog.food = LoggedFoodItem(
+                                   foodLogId: food.foodLogId,
+                                   fdcId: food.fdcId,
+                                   displayName: food.displayName,
+                                   calories: calories / servingsCount, // Store per-serving value
+                                   servingSizeText: food.servingSizeText,
+                                   numberOfServings: updatedFoodLog.servings,
+                                   brandText: food.brandText,
+                                   protein: protein / servingsCount,
+                                   carbs: carbs / servingsCount,
+                                   fat: fat / servingsCount,
+                                   healthAnalysis: food.healthAnalysis,
+                                    foodNutrients: food.foodNutrients,
+                                    aiInsight: food.aiInsight,
+                                    nutritionScore: food.nutritionScore
+                               )
                                 
                                 print("✅ Updated food log locally (date change) with per-serving values: cal=\(calories / servingsCount), prot=\(protein / servingsCount), carbs=\(carbs / servingsCount), fat=\(fat / servingsCount)")
                             }
@@ -810,20 +812,22 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                                 // Avoid division by zero
                                 let servingsCount = max(updatedFoodLog.servings, 0.1)
                                 
-                                updatedLog.food = LoggedFoodItem(
-                                    foodLogId: food.foodLogId,
-                                    fdcId: food.fdcId,
-                                    displayName: food.displayName,
-                                    calories: calories / servingsCount, // Store per-serving value
-                                    servingSizeText: food.servingSizeText,
-                                    numberOfServings: updatedFoodLog.servings,
-                                    brandText: food.brandText,
-                                    protein: protein / servingsCount,
-                                    carbs: carbs / servingsCount,
-                                    fat: fat / servingsCount,
-                                    healthAnalysis: food.healthAnalysis,
-                                    foodNutrients: food.foodNutrients
-                                )
+                               updatedLog.food = LoggedFoodItem(
+                                   foodLogId: food.foodLogId,
+                                   fdcId: food.fdcId,
+                                   displayName: food.displayName,
+                                   calories: calories / servingsCount, // Store per-serving value
+                                   servingSizeText: food.servingSizeText,
+                                   numberOfServings: updatedFoodLog.servings,
+                                   brandText: food.brandText,
+                                   protein: protein / servingsCount,
+                                   carbs: carbs / servingsCount,
+                                   fat: fat / servingsCount,
+                                   healthAnalysis: food.healthAnalysis,
+                                    foodNutrients: food.foodNutrients,
+                                    aiInsight: food.aiInsight,
+                                    nutritionScore: food.nutritionScore
+                               )
                                 
                                 print("✅ Updated food log locally (same date) with per-serving values: cal=\(calories / servingsCount), prot=\(protein / servingsCount), carbs=\(carbs / servingsCount), fat=\(fat / servingsCount)")
                             }
@@ -1130,7 +1134,9 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       image: summaryImage(for: sourceLog),
       protein: summaryProtein(for: sourceLog),
       carbs: summaryCarbs(for: sourceLog),
-      fat: summaryFat(for: sourceLog)
+      fat: summaryFat(for: sourceLog),
+      aiInsight: sourceLog.food?.aiInsight,
+      nutritionScore: sourceLog.food?.nutritionScore
     )
 
     let preview = ScheduledLogPreview(
@@ -1200,7 +1206,9 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
         carbs: preview.summary.carbs,
         fat: preview.summary.fat,
         healthAnalysis: nil,
-        foodNutrients: nil
+        foodNutrients: nil,
+        aiInsight: preview.summary.aiInsight,
+        nutritionScore: preview.summary.nutritionScore
       )
 
       combined = CombinedLog(

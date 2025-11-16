@@ -95,6 +95,8 @@ struct ConfirmLogView: View {
     @State private var isLiquid: Bool = false // Detect if it's a beverage
     @State private var expandedNegativeIndices: Set<Int> = []
     @State private var expandedPositiveIndices: Set<Int> = []
+    @State private var aiInsight: String? = nil
+    @State private var nutritionScore: Double? = nil
     
     private let showHealthInsights = false
     
@@ -104,6 +106,8 @@ struct ConfirmLogView: View {
         print("🔍 DEBUG ConfirmLogView: foodLogId: \(String(describing: foodLogId))")
         self._path = path
         self._title = State(initialValue: food.description)
+        self._aiInsight = State(initialValue: food.aiInsight)
+        self._nutritionScore = State(initialValue: food.nutritionScore)
         
         // Debug print full barcode food response
         print("====== BARCODE FOOD API RESPONSE ======")
@@ -340,6 +344,9 @@ struct ConfirmLogView: View {
                 VStack(spacing: 24) {
                     macroSummaryCard
                     portionDetailsCard
+                    if let insight = aiInsight?.trimmingCharacters(in: .whitespacesAndNewlines), !insight.isEmpty {
+                        aiInsightSection(insight: insight)
+                    }
                     if showHealthInsights {
                         healthAnalysisCard
                     }
@@ -460,6 +467,28 @@ struct ConfirmLogView: View {
                                    endPoint: .bottomTrailing)
                 )
         )
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private func aiInsightSection(insight: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("AI Insight")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(insight)
+                    .font(.body)
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color("iosnp"))
+            )
+        }
         .padding(.horizontal)
     }
     

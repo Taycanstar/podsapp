@@ -45,6 +45,8 @@ struct Food: Codable, Identifiable, Hashable{
     var foodNutrients: [Nutrient]
     let foodMeasures: [FoodMeasure]
     var healthAnalysis: HealthAnalysis?
+    var aiInsight: String? = nil
+    var nutritionScore: Double? = nil
     
     var id: Int { fdcId }
     
@@ -52,6 +54,8 @@ struct Food: Codable, Identifiable, Hashable{
         case fdcId, description, brandOwner, brandName, servingSize, numberOfServings
         case servingSizeUnit, householdServingFullText, foodNutrients, foodMeasures
         case healthAnalysis = "health_analysis"
+        case aiInsight = "ai_insight"
+        case nutritionScore = "nutrition_score"
     }
     
     var calories: Double? {
@@ -329,11 +333,15 @@ struct LoggedFoodItem: Codable {
     let fat: Double?
     let healthAnalysis: HealthAnalysis?  // Add health analysis field
     let foodNutrients: [Nutrient]?  // Add complete nutrients array from backend
+    let aiInsight: String?
+    let nutritionScore: Double?
     
     enum CodingKeys: String, CodingKey {
         case foodLogId, fdcId, displayName, calories, servingSizeText, numberOfServings, brandText, protein, carbs, fat
         case healthAnalysis = "health_analysis"
         case foodNutrients
+        case aiInsight = "ai_insight"
+        case nutritionScore = "nutrition_score"
     }
 }
 
@@ -497,12 +505,14 @@ extension LoggedFoodItem {
             householdServingFullText: servingSizeText,
             foodNutrients: nutrients,
             foodMeasures: [],
-            healthAnalysis: self.healthAnalysis  // Preserve health analysis
+            healthAnalysis: self.healthAnalysis,  // Preserve health analysis
+            aiInsight: self.aiInsight,
+            nutritionScore: self.nutritionScore
         )
     }
     
     // Helper to create LoggedFoodItem without foodLogId (for backward compatibility)
-    init(fdcId: Int, displayName: String, calories: Double, servingSizeText: String, numberOfServings: Double, brandText: String?, protein: Double?, carbs: Double?, fat: Double?, healthAnalysis: HealthAnalysis? = nil) {
+    init(fdcId: Int, displayName: String, calories: Double, servingSizeText: String, numberOfServings: Double, brandText: String?, protein: Double?, carbs: Double?, fat: Double?, healthAnalysis: HealthAnalysis? = nil, aiInsight: String? = nil, nutritionScore: Double? = nil) {
         self.foodLogId = nil
         self.fdcId = fdcId
         self.displayName = displayName
@@ -515,6 +525,8 @@ extension LoggedFoodItem {
         self.fat = fat
         self.healthAnalysis = healthAnalysis
         self.foodNutrients = nil
+        self.aiInsight = aiInsight
+        self.nutritionScore = nutritionScore
     }
 }
 
