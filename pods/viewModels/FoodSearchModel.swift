@@ -27,6 +27,11 @@ struct BarcodeLookupResponse: Codable {
         food = try container.decode(Food.self, forKey: .food)
     }
     
+    init(food: Food, foodLogId: Int?) {
+        self.food = food
+        self.foodLogId = foodLogId
+    }
+    
     private enum CodingKeys: String, CodingKey {
         case foodLogId = "food_log_id"
         case food

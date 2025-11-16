@@ -734,37 +734,117 @@ class NetworkManagerTwo {
                 return
             }
             
-            // Check if there's an error response
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let errorMessage = json["error"] as? String {
-                DispatchQueue.main.async {
-                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(message: errorMessage)))
+                    }
+                    return
                 }
-                return
+
+                if let response = Self.makeFallbackBarcodeResponse(from: json) {
+                    DispatchQueue.main.async {
+                        print("✅ Parsed barcode response (manual) for: \(response.food.displayName)")
+                        completion(.success(response))
+                    }
+                    return
+                }
             }
-            
+
             do {
                 let decoder = JSONDecoder()
-                // Don't use convertFromSnakeCase as our structs handle key mapping manually
-                
-                // Try to parse as BarcodeLookupResponse
                 let response = try decoder.decode(BarcodeLookupResponse.self, from: data)
-                
                 DispatchQueue.main.async {
                     print("✅ Successfully looked up food by barcode: \(response.food.displayName), foodLogId: \(response.foodLogId)")
                     completion(.success(response))
                 }
-                
             } catch {
                 print("❌ Decoding error in barcode lookup: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("Response data: \(json)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
             }
         }.resume()
+    }
+
+    private static func makeFallbackBarcodeResponse(from json: [String: Any]) -> BarcodeLookupResponse? {
+        guard let foodDict = json["food"] as? [String: Any] else { return nil }
+        guard let food = makeFood(from: foodDict) else { return nil }
+        let foodLogId = (json["food_log_id"] as? Int) ?? (json["foodLogId"] as? Int)
+        return BarcodeLookupResponse(food: food, foodLogId: foodLogId)
+    }
+
+    private static func makeFood(from dict: [String: Any]) -> Food? {
+        guard let fdcId = dict["fdcId"] as? Int,
+              let description = dict["description"] as? String else { return nil }
+
+        let servingSize = doubleValue(dict["servingSize"]) ?? (dict["serving_size"] as? Double)
+        let numberOfServings = doubleValue(dict["numberOfServings"]) ?? (dict["number_of_servings"] as? Double)
+        let nutrients = ((dict["foodNutrients"] as? [[String: Any]]) ?? []).compactMap { makeNutrient(from: $0) }
+        let measures = ((dict["foodMeasures"] as? [[String: Any]]) ?? []).compactMap { makeMeasure(from: $0) }
+
+        return Food(
+            fdcId: fdcId,
+            description: description,
+            brandOwner: dict["brandOwner"] as? String,
+            brandName: dict["brandName"] as? String,
+            servingSize: servingSize,
+            numberOfServings: numberOfServings,
+            servingSizeUnit: dict["servingSizeUnit"] as? String,
+            householdServingFullText: dict["householdServingFullText"] as? String,
+            foodNutrients: nutrients.isEmpty ? defaultNutrients(from: dict) : nutrients,
+            foodMeasures: measures,
+            healthAnalysis: nil,
+            aiInsight: dict["ai_insight"] as? String,
+            nutritionScore: doubleValue(dict["nutrition_score"])
+        )
+    }
+
+    private static func defaultNutrients(from dict: [String: Any]) -> [Nutrient] {
+        var nutrients: [Nutrient] = []
+        if let calories = doubleValue(dict["calories"]) {
+            nutrients.append(Nutrient(nutrientName: "Energy", value: calories, unitName: "kcal"))
+        }
+        if let protein = doubleValue(dict["protein"]) {
+            nutrients.append(Nutrient(nutrientName: "Protein", value: protein, unitName: "g"))
+        }
+        if let carbs = doubleValue(dict["carbs"]) {
+            nutrients.append(Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "g"))
+        }
+        if let fat = doubleValue(dict["fat"]) {
+            nutrients.append(Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "g"))
+        }
+        return nutrients
+    }
+
+    private static func makeNutrient(from dict: [String: Any]) -> Nutrient? {
+        guard let name = dict["nutrientName"] as? String,
+              let unit = dict["unitName"] as? String,
+              let value = doubleValue(dict["value"]) else { return nil }
+        return Nutrient(nutrientName: name, value: value, unitName: unit)
+    }
+
+    private static func makeMeasure(from dict: [String: Any]) -> FoodMeasure? {
+        guard let gramWeight = doubleValue(dict["gramWeight"]),
+              let id = dict["id"] as? Int,
+              let measureUnitName = dict["measureUnitName"] as? String,
+              let rank = dict["rank"] as? Int else { return nil }
+        let text = dict["disseminationText"] as? String ?? dict["modifier"] as? String ?? ""
+        return FoodMeasure(disseminationText: text,
+                           gramWeight: gramWeight,
+                           id: id,
+                           modifier: dict["modifier"] as? String,
+                           measureUnitName: measureUnitName,
+                           rank: rank)
+    }
+
+    private static func doubleValue(_ value: Any?) -> Double? {
+        switch value {
+        case let d as Double: return d
+        case let n as NSNumber: return n.doubleValue
+        case let s as String: return Double(s)
+        default: return nil
+        }
     }
 
     // MARK: - Food Audio Transcription
