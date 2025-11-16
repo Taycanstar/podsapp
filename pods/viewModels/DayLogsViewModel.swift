@@ -11,8 +11,6 @@ import Combine
 
 @MainActor
 final class DayLogsViewModel: ObservableObject {
-  private static let nutritionGoalsLastSyncKey = "nutritionGoalsLastSync"
-  private static let nutritionGoalsRefreshInterval: TimeInterval = 60 * 60 * 24
       @Published var logs         : [CombinedLog] = [] {
     didSet { recalculateTotals() }
   }
@@ -83,9 +81,11 @@ final class DayLogsViewModel: ObservableObject {
 
   private let repository = DayLogsRepository.shared
   private let logNetwork = LogRepository()
+  private let goalsStore = NutritionGoalsStore.shared
   private(set) var email = ""
   private weak var healthViewModel: HealthKitViewModel?
   private var cancellables: Set<AnyCancellable> = []
+  private var goalsStoreCancellable: AnyCancellable?
 
   enum ScheduledLogAction: String {
     case log
@@ -99,6 +99,7 @@ final class DayLogsViewModel: ObservableObject {
     self.email = email
     self.healthViewModel = healthViewModel
     clearPendingCache()
+    observeGoalsStore()
 
     if !email.isEmpty {
       configureRepository(for: email)
@@ -153,6 +154,25 @@ final class DayLogsViewModel: ObservableObject {
     }
   }
 
+  private func observeGoalsStore() {
+    goalsStoreCancellable = goalsStore.$state
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] state in
+        guard let self else { return }
+        switch state {
+        case .loading:
+          self.isRefreshingNutritionGoals = true
+        case .ready(let goals):
+          self.isRefreshingNutritionGoals = false
+          self.applyNutritionGoals(goals, persist: false)
+        case .error:
+          self.isRefreshingNutritionGoals = false
+        case .idle:
+          self.isRefreshingNutritionGoals = false
+        }
+      }
+  }
+
   // MARK: - Public Methods
   
   /// Force refresh nutrition goals from UserDefaults
@@ -185,14 +205,6 @@ func fetchCalorieGoal() {
     remainingCalories = max(0, calorieGoal - totalCalories)
 }
 
-  private func loadCachedNutritionGoals() -> NutritionGoals? {
-    guard let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
-          let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data) else {
-      return nil
-    }
-    return goals
-  }
-
   private func applyNutritionGoals(_ goals: NutritionGoals, persist: Bool) {
     if goals.calories > 0 {
       calorieGoal = goals.calories
@@ -214,10 +226,7 @@ func fetchCalorieGoal() {
     remainingCalories = max(0, calorieGoal - totalCalories)
 
     guard persist else { return }
-    if let encoded = try? JSONEncoder().encode(goals) {
-      UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
-    }
-    UserDefaults.standard.set(Date(), forKey: Self.nutritionGoalsLastSyncKey)
+    NutritionGoalsStore.shared.cache(goals: goals)
   }
 
   private func applyFallbackNutritionGoals() {
@@ -229,43 +238,6 @@ func fetchCalorieGoal() {
     remainingCalories = max(0, calorieGoal - totalCalories)
   }
 
-  private func maybeRefreshAdvancedNutritionGoals(forceRefresh: Bool,
-                                                  hasAdvancedTargets: Bool) {
-    guard shouldRefreshAdvancedNutritionGoals(forceRefresh: forceRefresh,
-                                              hasAdvancedTargets: hasAdvancedTargets) else {
-      return
-    }
-    requestAdvancedNutritionGoals()
-  }
-
-  private func shouldRefreshAdvancedNutritionGoals(forceRefresh: Bool,
-                                                   hasAdvancedTargets: Bool) -> Bool {
-    if forceRefresh { return true }
-    if isRefreshingNutritionGoals { return false }
-    guard UserDefaults.standard.bool(forKey: "onboardingCompleted") else { return false }
-    guard !email.isEmpty else { return false }
-    if !hasAdvancedTargets { return true }
-    guard let lastSync = UserDefaults.standard.object(forKey: Self.nutritionGoalsLastSyncKey) as? Date else {
-      return true
-    }
-    return Date().timeIntervalSince(lastSync) > Self.nutritionGoalsRefreshInterval
-  }
-
-  private func requestAdvancedNutritionGoals() {
-    guard !isRefreshingNutritionGoals else { return }
-    guard !email.isEmpty else { return }
-    isRefreshingNutritionGoals = true
-    NetworkManagerTwo.shared.generateNutritionGoals(userEmail: email) { [weak self] result in
-      guard let self else { return }
-      self.isRefreshingNutritionGoals = false
-      switch result {
-      case .success(let response):
-        self.applyNutritionGoals(response.goals, persist: true)
-      case .failure(let error):
-        print("⚠️ Failed to refresh nutrition goals: \(error.localizedDescription)")
-      }
-    }
-  }
 
   func processScheduledLog(
     _ preview: ScheduledLogPreview,
@@ -357,16 +329,13 @@ func fetchCalorieGoal() {
  func fetchNutritionGoals(forceRefresh: Bool = false) {
     fetchCalorieGoal()
 
-    let cachedGoals = loadCachedNutritionGoals()
-    if let goals = cachedGoals {
+    if let goals = goalsStore.cachedGoals {
         applyNutritionGoals(goals, persist: false)
     } else {
         applyFallbackNutritionGoals()
     }
 
-    let hasCachedAdvancedTargets = cachedGoals?.nutrients?.isEmpty == false
-    maybeRefreshAdvancedNutritionGoals(forceRefresh: forceRefresh,
-                                       hasAdvancedTargets: hasCachedAdvancedTargets)
+    goalsStore.ensureGoalsAvailable(email: email, forceRefresh: forceRefresh)
 }
 
 

@@ -11,6 +11,7 @@ struct ConfirmLogView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var foodManager: FoodManager
     @EnvironmentObject private var viewModel: OnboardingViewModel
+    @ObservedObject private var goalsStore = NutritionGoalsStore.shared
     
     @Binding var path: NavigationPath
     
@@ -252,12 +253,7 @@ struct ConfirmLogView: View {
         }
         self._baseNutrientValues = State(initialValue: nutrientDictionary)
 
-        var nutrientTargets: [String: NutrientTargetDetails] = [:]
-        if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
-           let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data),
-           let advanced = goals.nutrients {
-            nutrientTargets = advanced
-        }
+        let nutrientTargets = NutritionGoalsStore.shared.currentTargets
         self._nutrientTargets = State(initialValue: nutrientTargets)
         
         // Set flags for barcode food
@@ -314,6 +310,10 @@ struct ConfirmLogView: View {
         ]
     }
 
+    private var shouldShowGoalsLoader: Bool {
+        nutrientTargets.isEmpty && goalsStore.isLoading
+    }
+
     private var proteinGoalPercent: Double {
         guard dayLogsVM.proteinGoal > 0 else { return 0 }
         return (adjustedProtein / dayLogsVM.proteinGoal) * 100
@@ -344,15 +344,18 @@ struct ConfirmLogView: View {
                         healthAnalysisCard
                     }
                     dailyGoalShareCard
-                    if nutrientTargets.isEmpty {
+                    if shouldShowGoalsLoader {
+                        goalsLoadingView
+                    } else if nutrientTargets.isEmpty {
                         missingTargetsCallout
+                    } else {
+                        totalCarbsSection
+                        fatTotalsSection
+                        proteinTotalsSection
+                        vitaminSection
+                        mineralSection
+                        otherNutrientSection
                     }
-                    totalCarbsSection
-                    fatTotalsSection
-                    proteinTotalsSection
-                    vitaminSection
-                    mineralSection
-                    otherNutrientSection
                     Spacer(minLength: 40)
                 }
                 .padding(.top, 16)
@@ -373,6 +376,7 @@ struct ConfirmLogView: View {
         }
         .onAppear {
             setupHealthAnalysis()
+            goalsStore.ensureGoalsAvailable(email: viewModel.email, forceRefresh: false)
         }
         .alert(isPresented: $showErrorAlert) {
             Alert(
@@ -395,6 +399,9 @@ struct ConfirmLogView: View {
             }
         )
         .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
+            reloadStoredNutrientTargets()
+        }
+        .onReceive(goalsStore.$state) { _ in
             reloadStoredNutrientTargets()
         }
     }
@@ -703,6 +710,23 @@ private enum MealPeriod: String, CaseIterable, Identifiable {
         nutrientSection(title: "Other", rows: otherRows)
     }
 
+    private var goalsLoadingView: some View {
+        VStack(spacing: 12) {
+            ProgressView("Syncing your targets…")
+                .progressViewStyle(CircularProgressViewStyle())
+            Text("Hang tight while we fetch your personalized nutrient plan.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color("iosnp"))
+        )
+        .padding(.horizontal)
+    }
+
     private var missingTargetsCallout: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Finish goal setup to unlock detailed targets")
@@ -792,13 +816,7 @@ private enum MealPeriod: String, CaseIterable, Identifiable {
     }
 
     private func reloadStoredNutrientTargets() {
-        if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
-           let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data),
-           let advanced = goals.nutrients {
-            nutrientTargets = advanced
-        } else {
-            nutrientTargets = [:]
-        }
+        nutrientTargets = goalsStore.currentTargets
     }
 
     private var totalCarbRows: [NutrientRowDescriptor] {

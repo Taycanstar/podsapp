@@ -164,16 +164,11 @@ struct CreatingPlanView: View {
                     self.loadingProgress = 1.0
                     self.nutritionGoals = response
                     
-                    // Save nutrition goals to UserDefaults for OnboardingPlanOverview
+                    // Save nutrition goals via the shared store so every surface stays in sync
                     if let nutritionGoals = self.nutritionGoals {
-                        let encoder = JSONEncoder()
-                        if let encoded = try? encoder.encode(nutritionGoals) {
-                            UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
-                            UserDefaults.standard.synchronize()
-                            print("📝 DEBUG: Encoded and saved nutrition goals to UserDefaults: Calories=\(nutritionGoals.calories), Protein=\(nutritionGoals.protein)g, Carbs=\(nutritionGoals.carbs)g, Fat=\(nutritionGoals.fat)g")
-                        } else {
-                            print("⚠️ ERROR: Failed to encode NutritionGoals for UserDefaults")
-                        }
+                        NutritionGoalsStore.shared.cache(goals: nutritionGoals)
+                        UserDefaults.standard.synchronize()
+                        print("📝 DEBUG: Cached nutrition goals: Calories=\(nutritionGoals.calories), Protein=\(nutritionGoals.protein)g, Carbs=\(nutritionGoals.carbs)g, Fat=\(nutritionGoals.fat)g")
                     } else {
                         print("⚠️ ERROR: No nutritionGoals available to save to UserDefaults")
                     }

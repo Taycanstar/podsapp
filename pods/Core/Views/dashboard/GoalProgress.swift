@@ -694,9 +694,7 @@ struct GoalProgress: View {
         carbsGoal = String(Int(round(goals.carbs)))
         fatGoal = String(Int(round(goals.fat)))
 
-        if let encoded = try? JSONEncoder().encode(goals) {
-            UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
-        }
+        NutritionGoalsStore.shared.cache(goals: goals)
         UserDefaults.standard.set(goals.calories, forKey: "dailyCalorieGoal")
         UserGoalsManager.shared.dailyGoals = DailyGoals(
             calories: Int(goals.calories),
@@ -710,11 +708,14 @@ struct GoalProgress: View {
     
     // Load goals directly from UserDefaults instead of relying on ViewModel
     private func loadGoalsFromUserDefaults() {
-        // Try to load from the nutritionGoalsData key first (most up-to-date)
-        if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
-           let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data) {
+        // Try to load from the shared store first (keeps UI in sync across the app)
+        if let goals = NutritionGoalsStore.shared.cachedGoals ??
+            {
+                guard let data = UserDefaults.standard.data(forKey: "nutritionGoalsData") else { return nil }
+                return try? JSONDecoder().decode(NutritionGoals.self, from: data)
+            }() {
             
-            print("✅ GoalProgress: Loaded goals from UserDefaults nutritionGoalsData")
+            print("✅ GoalProgress: Loaded goals from cached nutrition goals")
             currentGoals = goals
             calorieGoal = String(Int(round(goals.calories)))
             proteinGoal = String(Int(round(goals.protein)))
