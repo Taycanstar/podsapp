@@ -482,6 +482,10 @@ struct ConfirmLogView: View {
                     .font(.body)
                     .foregroundColor(.primary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if let score = nutritionScore {
+                    insightScale(score: score)
+                }
             }
             .padding(20)
             .background(
@@ -490,6 +494,63 @@ struct ConfirmLogView: View {
             )
         }
         .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private func insightScale(score: Double) -> some View {
+        let normalized = max(0, min(100, score))
+        let labels = ["Limited", "Fair", "Good", "Nutritious"]
+
+        VStack(spacing: 6) {
+            GeometryReader { geo in
+                HStack(spacing: 5) {
+                    ForEach(0..<labels.count, id: \.self) { index in
+                        Capsule()
+                            .fill(indexForScore(normalized) == index ? Color.primary : Color.primary.opacity(0.15))
+                            .frame(height: 4)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.vertical, 4)
+                .overlay(
+                    Circle()
+                        .fill(Color(.systemBackground))
+                        .frame(width: 18, height: 18)
+                        .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.primary.opacity(0.4), lineWidth: 1.5)
+                        )
+                        .offset(x: sliderOffset(for: normalized, width: geo.size.width - 5 * CGFloat(labels.count - 1)), y: 0),
+                    alignment: .leading
+                )
+            }
+            .frame(height: 24)
+
+            HStack {
+                ForEach(labels, id: \.self) { label in
+                    Text(label)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        }
+    }
+
+    private func indexForScore(_ score: Double) -> Int {
+        switch score {
+        case ..<25: return 0
+        case ..<50: return 1
+        case ..<75: return 2
+        default: return 3
+        }
+    }
+
+    private func sliderOffset(for score: Double, width: CGFloat) -> CGFloat {
+        let clamped = max(0, min(100, score)) / 100
+        let availableWidth = max(0, width - 18)
+        return CGFloat(clamped) * availableWidth
     }
     
     private var macroArcs: [MacroArc] {

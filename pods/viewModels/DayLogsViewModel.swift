@@ -24,6 +24,7 @@ final class DayLogsViewModel: ObservableObject {
   @Published var isRefreshingNutritionGoals = false
 
   private var pendingByDate: [Date: [CombinedLog]] = [:]
+  private var currentSnapshotDate: Date?
   @Published var error        : Error?
   @Published var isLoading    = false
   @Published var selectedDate = Date()
@@ -510,17 +511,18 @@ private func deleteOnServer(_ log: CombinedLog) async throws {
 
 func loadLogs(for date: Date, force: Bool = false) {
   let newKey = Calendar.current.startOfDay(for: date)
-  let currentKey = logs.isEmpty ? nil : Calendar.current.startOfDay(for: selectedDate)
+  let displayedKey = currentSnapshotDate ?? (logs.isEmpty ? nil : Calendar.current.startOfDay(for: selectedDate))
 
-  // CRITICAL FIX: Clear logs immediately when changing dates to prevent showing stale data
-  if currentKey != newKey {
+  // Clear the in-memory logs as soon as we target a different day so UI never shows stale data
+  if displayedKey != newKey {
     logs = []
 
-    // Clear pending cache for the date we're leaving to prevent stale data
-    if let currentKey = currentKey {
-      pendingByDate.removeValue(forKey: currentKey)
-      print("[DayLogsVM] Cleared pending cache for date: \(currentKey)")
+    if let displayedKey {
+      pendingByDate.removeValue(forKey: displayedKey)
+      print("[DayLogsVM] Cleared pending cache for date: \(displayedKey)")
     }
+
+    currentSnapshotDate = nil
   }
 
   selectedDate = date
@@ -536,6 +538,16 @@ func loadLogs(for date: Date, force: Bool = false) {
   Task { @MainActor [weak self] in
     guard let self else { return }
     await self.repository.refresh(date: date, force: force)
+    let calendar = Calendar.current
+    let requestedDay = calendar.startOfDay(for: date)
+    let activeDay = calendar.startOfDay(for: self.selectedDate)
+    // Ignore responses for stale date selections so fast switching can't overwrite the UI with old data
+    guard requestedDay == activeDay else {
+      print("[DayLogsVM] Skipping snapshot apply - selectedDate changed from \(requestedDay) to \(activeDay)")
+      self.isLoading = false
+      self.pendingNotificationReload = false
+      return
+    }
     if let snapshot = self.repository.snapshot(for: date) {
       self.applySnapshot(snapshot)
     } else {
@@ -547,6 +559,7 @@ func loadLogs(for date: Date, force: Bool = false) {
 
 private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   let key = Calendar.current.startOfDay(for: snapshot.date)
+  currentSnapshotDate = key
   let serverLogs = snapshot.combined
   reconcilePlaceholders(with: serverLogs)
   let pending = pendingByDate[key] ?? []
