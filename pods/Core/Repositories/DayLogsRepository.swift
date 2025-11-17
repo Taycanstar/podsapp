@@ -80,7 +80,9 @@ final class DayLogsRepository: ObservableObject {
                         self.snapshots[key] = snapshot
                         self.lastFetchTimestamps[key] = Date()
                         self.persistSnapshots()
-                    case .failure:
+                        print("✅ [DayLogsRepo] Stored snapshot for \(key) with \(snapshot.combined.count) logs")
+                    case .failure(let error):
+                        print("❌ [DayLogsRepo] Failed to fetch logs for \(key): \(error)")
                         break
                     }
                 }

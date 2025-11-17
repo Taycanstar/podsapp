@@ -1371,6 +1371,35 @@ struct InsightDetails: Codable {
     }
 }
 
+extension InsightDetails {
+    static func decodeLooseJSON(_ raw: String) -> InsightDetails? {
+        guard let data = normalizedInsightData(from: raw) else { return nil }
+        let decoder = JSONDecoder()
+        return try? decoder.decode(InsightDetails.self, from: data)
+    }
+
+    private static func normalizedInsightData(from raw: String) -> Data? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let data = trimmed.data(using: .utf8),
+           (try? JSONSerialization.jsonObject(with: data)) != nil {
+            return data
+        }
+
+        let pattern = "(?<!\\\\)'"
+        let replaced = trimmed.replacingOccurrences(of: pattern,
+                                                    with: "\"",
+                                                    options: .regularExpression)
+
+        guard let data = replaced.data(using: .utf8),
+              (try? JSONSerialization.jsonObject(with: data)) != nil else {
+            return nil
+        }
+
+        return data
+    }
+}
+
 // Add this extension to allow .isEmpty checks
 extension InsightDetails {
     var isEmpty: Bool {
@@ -1532,8 +1561,8 @@ struct NutritionGoals: Codable {
         // Optional fields - decode if present, use nil if missing
         bmr = try container.decodeIfPresent(Double.self, forKey: .bmr)
         tdee = try container.decodeIfPresent(Double.self, forKey: .tdee)
-        metabolismInsights = try container.decodeIfPresent(InsightDetails.self, forKey: .metabolismInsights)
-        nutritionInsights = try container.decodeIfPresent(InsightDetails.self, forKey: .nutritionInsights)
+        metabolismInsights = NutritionGoals.decodeInsights(from: container, forKey: .metabolismInsights)
+        nutritionInsights = NutritionGoals.decodeInsights(from: container, forKey: .nutritionInsights)
         desiredWeightKg = try container.decodeIfPresent(Double.self, forKey: .desiredWeightKg)
         desiredWeightLbs = try container.decodeIfPresent(Double.self, forKey: .desiredWeightLbs)
         nutrients = try container.decodeIfPresent([String: NutrientTargetDetails].self, forKey: .nutrients)
@@ -1562,6 +1591,19 @@ struct NutritionGoals: Codable {
         case nutritionInsights = "nutrition_insights"
         case desiredWeightKg = "desired_weight_kg"
         case desiredWeightLbs = "desired_weight_lbs"
+    }
+
+    private static func decodeInsights(from container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys) -> InsightDetails? {
+        if let details = try? container.decodeIfPresent(InsightDetails.self, forKey: key) {
+            return details
+        }
+
+        guard let rawString = try? container.decodeIfPresent(String.self, forKey: key),
+              !rawString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        return InsightDetails.decodeLooseJSON(rawString)
     }
 }
 
