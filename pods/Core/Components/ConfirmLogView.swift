@@ -368,12 +368,10 @@ struct ConfirmLogView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
             macroSummaryCard
+            portionDetailsCard
             if shouldShowMealItemsEditor {
                 mealItemsEditor
-                    .padding(.bottom, -12)
             }
-            portionDetailsCard
-                .padding(.top, shouldShowMealItemsEditor ? -8 : 0)
                     if let insight = aiInsight?.trimmingCharacters(in: .whitespacesAndNewlines), !insight.isEmpty {
                         aiInsightSection(insight: insight)
                     }
@@ -978,7 +976,7 @@ private func canonicalUnit(from rawUnit: String) -> String {
                     .menuIndicator(.hidden)
                     .padding(.vertical, 6)
                     .padding(.horizontal, 12)
-                    .background(Color("iosnp"))
+                    .background(Color.primary.opacity(0.06))
                     .cornerRadius(12)
                     
                     capsulePill {
