@@ -366,12 +366,14 @@ struct ConfirmLogView: View {
                 .padding(.bottom, 0)
     
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
+                VStack(spacing: 20) {
             macroSummaryCard
             if shouldShowMealItemsEditor {
                 mealItemsEditor
+                    .padding(.bottom, -12)
             }
             portionDetailsCard
+                .padding(.top, shouldShowMealItemsEditor ? -8 : 0)
                     if let insight = aiInsight?.trimmingCharacters(in: .whitespacesAndNewlines), !insight.isEmpty {
                         aiInsightSection(insight: insight)
                     }
@@ -401,14 +403,6 @@ struct ConfirmLogView: View {
         }
         .background(Color("iosbg").ignoresSafeArea())
         .navigationBarHidden(true)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                }
-            }
-        }
         .onAppear {
             setupHealthAnalysis()
             goalsStore.ensureGoalsAvailable(email: viewModel.email, forceRefresh: false)
