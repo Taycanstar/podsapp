@@ -511,6 +511,7 @@ struct ConfirmLogView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .frame(minHeight: mealItemsListHeight)
+                .padding(.bottom, -8)
             }
         }
     }
@@ -638,8 +639,9 @@ private struct MealItemServingControls: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            TextField("Qty", value: $item.serving, formatter: ConfirmLogView.servingFormatter)
-                .keyboardType(.decimalPad)
+            TextField("Qty", text: servingTextBinding)
+                .keyboardType(.numbersAndPunctuation)
+                .submitLabel(.done)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(Color.primary.opacity(0.06))
@@ -658,9 +660,6 @@ private struct MealItemServingControls: View {
             }
         }
         .font(.subheadline)
-        .onChange(of: item.serving) { _ in
-            onChange()
-        }
     }
 
     private var measureMenu: some View {
@@ -706,6 +705,20 @@ private struct MealItemServingControls: View {
             set: { newValue in
                 let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
                 item.servingUnit = trimmed.isEmpty ? nil : trimmed
+                onChange()
+            }
+        )
+    }
+
+    private var servingTextBinding: Binding<String> {
+        Binding<String>(
+            get: { ConfirmLogView.formattedServings(item.serving) },
+            set: { newValue in
+                guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
+                if abs(parsed - item.serving) > 0.0001 {
+                    item.serving = parsed
+                    onChange()
+                }
             }
         )
     }
@@ -940,7 +953,7 @@ private func canonicalUnit(from rawUnit: String) -> String {
                     .frame(width: 100)
                     .focused($isServingsFocused)
                     .onChange(of: servingsInput) { newValue in
-                        guard let parsed = parseServingsInput(newValue) else { return }
+                        guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
                         if abs(parsed - numberOfServings) > 0.0001 {
                             numberOfServings = parsed
                             updateNutritionValues()
@@ -2327,7 +2340,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         return totals
     }
 
-    private func parseServingsInput(_ text: String) -> Double? {
+    static func parseServingsInput(_ text: String) -> Double? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
@@ -2345,7 +2358,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         return Double(trimmed)
     }
 
-    private func parseFraction(_ component: String) -> Double? {
+    private static func parseFraction(_ component: String) -> Double? {
         let parts = component.split(separator: "/").map(String.init)
         guard parts.count == 2,
               let numerator = Double(parts[0]),
