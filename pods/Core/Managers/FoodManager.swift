@@ -43,7 +43,8 @@ extension Food {
             healthAnalysis: nil,
             foodNutrients: self.foodNutrients,
             aiInsight: self.aiInsight,
-            nutritionScore: self.nutritionScore
+            nutritionScore: self.nutritionScore,
+            mealItems: self.mealItems
         )
     }
 }
@@ -682,8 +683,18 @@ class FoodManager: ObservableObject {
             healthAnalysis: healthAnalysis,
             foodNutrients: foodNutrients.isEmpty ? nil : foodNutrients,
             aiInsight: aiInsight,
-            nutritionScore: nutritionScore
+            nutritionScore: nutritionScore,
+            mealItems: decodeMealItems(from: foodDict)
         )
+    }
+
+    private func decodeMealItems(from foodDict: [String: Any]) -> [MealItem]? {
+        guard let rawItems = foodDict["meal_items"] as? [[String: Any]] ?? foodDict["mealItems"] as? [[String: Any]],
+              !rawItems.isEmpty,
+              let data = try? JSONSerialization.data(withJSONObject: rawItems)
+        else { return nil }
+
+        return try? JSONDecoder().decode([MealItem].self, from: data)
     }
 
     
@@ -4440,8 +4451,7 @@ func analyzeNutritionLabel(
                         // Parse as LoggedFood and create CombinedLog (same as successful nutrition label scan)
                         let jsonData = try JSONSerialization.data(withJSONObject: payload)
                         let decoder = JSONDecoder()
-                        // Remove snake case conversion since backend now sends camelCase directly
-                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
                         
                         let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
                         
@@ -4707,8 +4717,7 @@ func analyzeNutritionLabel(
                         
                         let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
-                        // Remove snake case conversion since backend now sends camelCase directly
-                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
                         
                         // Debug: Print the actual JSON being decoded
                         if let jsonString = String(data: jsonData, encoding: .utf8) {
@@ -4812,8 +4821,7 @@ func analyzeNutritionLabel(
                         
                         let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
-                        // Remove snake case conversion since backend now sends camelCase directly
-                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
                         let food = try decoder.decode(Food.self, from: jsonData)
                         
                         print("🩺 [DEBUG] Food decoded (analyzeFoodImageForCreation). Health analysis present: \(food.healthAnalysis != nil)")
@@ -5013,8 +5021,7 @@ func analyzeNutritionLabel(
                         
                         let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
-                        // Remove snake case conversion since backend now sends camelCase directly
-                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
                         
                         // Debug: Print the actual JSON being decoded
                         if let jsonString = String(data: jsonData, encoding: .utf8) {

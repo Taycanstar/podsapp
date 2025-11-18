@@ -470,6 +470,7 @@ class NetworkManagerTwo {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 180
 
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
@@ -784,7 +785,7 @@ class NetworkManagerTwo {
         let nutrients = ((dict["foodNutrients"] as? [[String: Any]]) ?? []).compactMap { makeNutrient(from: $0) }
         let measures = ((dict["foodMeasures"] as? [[String: Any]]) ?? []).compactMap { makeMeasure(from: $0) }
 
-        return Food(
+        var food = Food(
             fdcId: fdcId,
             description: description,
             brandOwner: dict["brandOwner"] as? String,
@@ -799,6 +800,12 @@ class NetworkManagerTwo {
             aiInsight: dict["ai_insight"] as? String,
             nutritionScore: doubleValue(dict["nutrition_score"])
         )
+        if let mealItemsArray = dict["meal_items"] as? [[String: Any]] ?? dict["mealItems"] as? [[String: Any]],
+           let data = try? JSONSerialization.data(withJSONObject: mealItemsArray),
+           let decoded = try? JSONDecoder().decode([MealItem].self, from: data) {
+            food.mealItems = decoded
+        }
+        return food
     }
 
     private static func defaultNutrients(from dict: [String: Any]) -> [Nutrient] {

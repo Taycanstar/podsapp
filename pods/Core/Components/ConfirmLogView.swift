@@ -83,6 +83,8 @@ struct ConfirmLogView: View {
     @State private var baseVitaminC: Double = 0
     @State private var baseCalcium: Double = 0
     @State private var baseIron: Double = 0
+    @State private var mealItems: [MealItem] = []
+    @State private var expandedMealItemIDs: Set<UUID> = []
 
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     
@@ -99,6 +101,12 @@ struct ConfirmLogView: View {
     @State private var nutritionScore: Double? = nil
     
     private let showHealthInsights = false
+    private var hasMealItems: Bool { !mealItems.isEmpty }
+    private var shouldShowMealItemsEditor: Bool { !(originalFood?.mealItems?.isEmpty ?? true) }
+    private var mealItemsListHeight: CGFloat {
+        let baseRowHeight: CGFloat = 130
+        return max(CGFloat(mealItems.count) * baseRowHeight, baseRowHeight + 40)
+    }
     
     // This view is ONLY for logging scanned foods
     init(path: Binding<NavigationPath>, food: Food, foodLogId: Int? = nil) {
@@ -108,6 +116,8 @@ struct ConfirmLogView: View {
         self._title = State(initialValue: food.description)
         self._aiInsight = State(initialValue: food.aiInsight)
         self._nutritionScore = State(initialValue: food.nutritionScore)
+        let initialMealItems = food.mealItems ?? []
+        self._mealItems = State(initialValue: initialMealItems)
         
         // Debug print full barcode food response
         print("====== BARCODE FOOD API RESPONSE ======")
@@ -172,6 +182,7 @@ struct ConfirmLogView: View {
         var tmpProtein: Double = 0
         var tmpCarbs: Double = 0
         var tmpFat: Double = 0
+        var aggregatedMealItemTotals: MacroTotals? = nil
         
         // Extract nutrient values directly from food.foodNutrients
         for nutrient in food.foodNutrients {
@@ -187,6 +198,14 @@ struct ConfirmLogView: View {
             if nutrient.nutrientName == "Total lipid (fat)" {
                 tmpFat = nutrient.value ?? 0
             }
+        }
+        if !initialMealItems.isEmpty {
+            let totals = ConfirmLogView.macroTotals(for: initialMealItems)
+            aggregatedMealItemTotals = totals
+            tmpCalories = totals.calories
+            tmpProtein = totals.protein
+            tmpCarbs = totals.carbs
+            tmpFat = totals.fat
         }
         
         // Now set the base values and string display values
@@ -254,6 +273,12 @@ struct ConfirmLogView: View {
                 let key = ConfirmLogView.normalizedNutrientKey(nutrient.nutrientName)
                 nutrientDictionary[key] = RawNutrientValue(value: value, unit: nutrient.unitName)
             }
+        }
+        if let totals = aggregatedMealItemTotals {
+            nutrientDictionary[ConfirmLogView.normalizedNutrientKey("Energy")] = RawNutrientValue(value: totals.calories, unit: "kcal")
+            nutrientDictionary[ConfirmLogView.normalizedNutrientKey("Protein")] = RawNutrientValue(value: totals.protein, unit: "g")
+            nutrientDictionary[ConfirmLogView.normalizedNutrientKey("Carbohydrate, by difference")] = RawNutrientValue(value: totals.carbs, unit: "g")
+            nutrientDictionary[ConfirmLogView.normalizedNutrientKey("Total lipid (fat)")] = RawNutrientValue(value: totals.fat, unit: "g")
         }
         self._baseNutrientValues = State(initialValue: nutrientDictionary)
 
@@ -342,8 +367,11 @@ struct ConfirmLogView: View {
     
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
-                    macroSummaryCard
-                    portionDetailsCard
+            macroSummaryCard
+            if shouldShowMealItemsEditor {
+                mealItemsEditor
+            }
+            portionDetailsCard
                     if let insight = aiInsight?.trimmingCharacters(in: .whitespacesAndNewlines), !insight.isEmpty {
                         aiInsightSection(insight: insight)
                     }
@@ -384,6 +412,9 @@ struct ConfirmLogView: View {
         .onAppear {
             setupHealthAnalysis()
             goalsStore.ensureGoalsAvailable(email: viewModel.email, forceRefresh: false)
+            if shouldShowMealItemsEditor {
+                recalculateMealItemNutrition()
+            }
         }
         .alert(isPresented: $showErrorAlert) {
             Alert(
@@ -410,6 +441,11 @@ struct ConfirmLogView: View {
         }
         .onReceive(goalsStore.$state) { _ in
             reloadStoredNutrientTargets()
+        }
+        .onChange(of: mealItems) { _ in
+            if shouldShowMealItemsEditor {
+                recalculateMealItemNutrition()
+            }
         }
     }
     
@@ -443,6 +479,92 @@ struct ConfirmLogView: View {
     }
 
     // MARK: - Card Views
+    private var mealItemsEditor: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Meal Items")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .padding(.horizontal)
+
+            if mealItems.isEmpty {
+                Text("No items detected")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+            } else {
+                List {
+                    ForEach(Array(mealItems.enumerated()), id: \.element.id) { index, _ in
+                        mealItemCard(itemBinding: $mealItems[index])
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    removeMealItem(mealItems[index].id)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                    }
+                    .onDelete(perform: deleteMealItems)
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: mealItemsListHeight)
+            }
+        }
+    }
+
+    private func mealItemCard(itemBinding: Binding<MealItem>) -> some View {
+        let item = itemBinding.wrappedValue
+        let totals = ConfirmLogView.macroTotals(for: item)
+
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(item.name)
+                .font(.body)
+                .foregroundColor(.primary)
+
+            HStack(spacing: 6) {
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .font(.caption)
+                        .foregroundColor(.primary)
+                    Text("\(Int(totals.calories.rounded())) cal")
+                }
+                .font(.footnote)
+
+                Text(macroSummary(for: totals))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                servingEditor(for: itemBinding)
+            }
+
+            if let subitems = item.subitems, !subitems.isEmpty {
+                DisclosureGroup(isExpanded: bindingForExpansion(item.id)) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(subitems) { sub in
+                            subitemCard(for: sub)
+                        }
+                    }
+                    .padding(.top, 6)
+                } label: {
+                    Text("Ingredients")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.accentColor)
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color("iosnp"))
+        )
+    }
+
     private var macroSummaryCard: some View {
         HStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 12) {
@@ -468,6 +590,187 @@ struct ConfirmLogView: View {
                 )
         )
         .padding(.horizontal)
+    }
+
+    private func macroSummary(for totals: MacroTotals) -> String {
+        let proteinText = "\(macroValueString(totals.protein))P"
+        let fatText = "\(macroValueString(totals.fat))F"
+        let carbText = "\(macroValueString(totals.carbs))C"
+        let gramText = "\(macroValueString(totals.protein + totals.carbs + totals.fat))G"
+        return "\(proteinText) \(fatText) \(carbText) • \(gramText)"
+    }
+
+    private func macroValueString(_ value: Double) -> String {
+        if abs(value.rounded() - value) < 0.01 {
+            return String(Int(value.rounded()))
+        }
+        return String(format: "%.1f", value)
+    }
+
+    private func bindingForExpansion(_ id: UUID) -> Binding<Bool> {
+        Binding(
+            get: { expandedMealItemIDs.contains(id) },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedMealItemIDs.insert(id)
+                } else {
+                    expandedMealItemIDs.remove(id)
+                }
+            }
+        )
+    }
+
+private func subitemCard(for item: MealItem) -> some View {
+        let totals = ConfirmLogView.macroTotals(for: item)
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(item.name)
+                .font(.subheadline)
+            Text(macroSummary(for: totals))
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 2)
+    }
+
+private struct MealItemServingControls: View {
+    @Binding var item: MealItem
+    var onChange: () -> Void = {}
+
+    var body: some View {
+        HStack(spacing: 6) {
+            TextField("Qty", value: $item.serving, formatter: ConfirmLogView.servingFormatter)
+                .keyboardType(.decimalPad)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.primary.opacity(0.06))
+                .cornerRadius(10)
+                .frame(width: 54)
+
+            if item.hasMeasureOptions {
+                measureMenu
+            } else {
+                TextField("Unit", text: servingUnitBinding)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.primary.opacity(0.06))
+                    .cornerRadius(10)
+                    .frame(width: 110)
+            }
+        }
+        .font(.subheadline)
+        .onChange(of: item.serving) { _ in
+            onChange()
+        }
+    }
+
+    private var measureMenu: some View {
+        Menu {
+            ForEach(item.measures) { measure in
+                Button(action: { selectMeasure(measure) }) {
+                    HStack {
+                        Text(unitLabel(for: measure))
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(1)
+                            Spacer()
+                            if measure.id == item.selectedMeasureId {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.accentColor)
+                            }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(unitLabel(for: item.selectedMeasure))
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .foregroundColor(.primary)
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.primary.opacity(0.06))
+            .cornerRadius(10)
+            .frame(minWidth: 110, maxWidth: 140, alignment: .leading)
+        }
+        .menuStyle(.borderlessButton)
+        .frame(minWidth: 110, maxWidth: 140, alignment: .leading)
+    }
+
+    private var servingUnitBinding: Binding<String> {
+        Binding<String>(
+            get: { item.servingUnit ?? "" },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                item.servingUnit = trimmed.isEmpty ? nil : trimmed
+            }
+        )
+    }
+
+    private func selectMeasure(_ measure: MealItemMeasure) {
+        guard item.selectedMeasureId != measure.id else { return }
+        item.selectedMeasureId = measure.id
+        item.servingUnit = measure.unit
+        onChange()
+    }
+
+private func unitLabel(for measure: MealItemMeasure?) -> String {
+    guard let measure else { return "Select" }
+    let description = sanitizedDescription(measure.description)
+    if !description.isEmpty {
+        return description
+    }
+    return canonicalUnit(from: measure.unit)
+}
+
+private func sanitizedDescription(_ text: String) -> String {
+    var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.isEmpty { return "" }
+
+    let lower = trimmed.lowercased()
+    if ["g", "gram", "grams", "oz", "ounce", "ounces", "lb", "pound", "pounds"].contains(lower) {
+        return ""
+    }
+
+    if let range = trimmed.range(of: "(") {
+        trimmed = String(trimmed[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    trimmed = trimmed.replacingOccurrences(of: "portion", with: "serving", options: .caseInsensitive)
+    trimmed = trimmed.replacingOccurrences(of: "as served", with: "", options: .caseInsensitive)
+    trimmed = trimmed.replacingOccurrences(of: "as logged", with: "", options: .caseInsensitive)
+    trimmed = trimmed.replacingOccurrences(of: "  ", with: " ")
+    return trimmed.trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+private func canonicalUnit(from rawUnit: String) -> String {
+    let lower = rawUnit.lowercased()
+    let mapping: [(String, [String])] = [
+        ("cup", ["cup", "cups"]),
+        ("serving", ["serving", "portion", "tray", "plate", "meal"]),
+        ("piece", ["piece", "pieces", "roll", "rolls", "slice", "slices", "stick", "sticks", "item", "items"]),
+        ("tbsp", ["tbsp", "tablespoon", "tablespoons"]),
+        ("tsp", ["tsp", "teaspoon", "teaspoons"]),
+        ("g", ["g", "gram", "grams"]),
+        ("oz", ["oz", "ounce", "ounces"]),
+        ("lb", ["lb", "lbs", "pound", "pounds"]),
+    ]
+
+    for (canonical, tokens) in mapping {
+        if tokens.contains(where: { lower.contains($0) }) {
+            return canonical
+        }
+    }
+    return rawUnit.trimmingCharacters(in: .whitespacesAndNewlines)
+}
+}
+
+    private func servingEditor(for itemBinding: Binding<MealItem>) -> some View {
+        MealItemServingControls(item: itemBinding) {
+            recalculateMealItemNutrition()
+        }
     }
 
     @ViewBuilder
@@ -515,7 +818,7 @@ struct ConfirmLogView: View {
                 .padding(.vertical, 4)
                 .overlay(
                     Circle()
-                        .fill(Color(.systemBackground))
+                        .fill(Color.white)
                         .frame(width: 18, height: 18)
                         .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                         .overlay(
@@ -1872,6 +2175,9 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
     var updatedFood      = food
     updatedFood.description = title  // Apply user's edited name
     updatedFood.numberOfServings = userServings
+    if shouldShowMealItemsEditor {
+        updatedFood.mealItems = mealItems
+    }
 
     let mealLabel = selectedMealPeriod.displayName
     
@@ -1951,6 +2257,73 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
             string.removeLast()
         }
         return string
+    }
+
+    private func removeMealItem(_ id: UUID) {
+        withAnimation {
+            mealItems.removeAll { $0.id == id }
+            expandedMealItemIDs.remove(id)
+        }
+    }
+
+    private func deleteMealItems(at offsets: IndexSet) {
+        mealItems.remove(atOffsets: offsets)
+    }
+
+    private func recalculateMealItemNutrition() {
+        guard shouldShowMealItemsEditor else { return }
+        if mealItems.isEmpty {
+            let emptyTotals = MacroTotals.zero
+            baseCalories = 0
+            baseProtein = 0
+            baseCarbs = 0
+            baseFat = 0
+            updateBaseNutrients(with: emptyTotals)
+            updateNutritionValues()
+            return
+        }
+        let totals = ConfirmLogView.macroTotals(for: mealItems)
+        baseCalories = totals.calories
+        baseProtein = totals.protein
+        baseCarbs = totals.carbs
+        baseFat = totals.fat
+        updateBaseNutrients(with: totals)
+        updateNutritionValues()
+    }
+
+    private func updateBaseNutrients(with totals: MacroTotals) {
+        baseNutrientValues[ConfirmLogView.normalizedNutrientKey("Energy")] = RawNutrientValue(value: totals.calories, unit: "kcal")
+        baseNutrientValues[ConfirmLogView.normalizedNutrientKey("Protein")] = RawNutrientValue(value: totals.protein, unit: "g")
+        baseNutrientValues[ConfirmLogView.normalizedNutrientKey("Carbohydrate, by difference")] = RawNutrientValue(value: totals.carbs, unit: "g")
+        baseNutrientValues[ConfirmLogView.normalizedNutrientKey("Total lipid (fat)")] = RawNutrientValue(value: totals.fat, unit: "g")
+    }
+
+    private static func macroTotals(for items: [MealItem]) -> MacroTotals {
+        items.reduce(into: MacroTotals.zero) { partialResult, item in
+            partialResult.add(macroTotals(for: item))
+        }
+    }
+
+    private static func macroTotals(for item: MealItem) -> MacroTotals {
+        let scale = max(item.macroScalingFactor, 0)
+        var totals = MacroTotals(
+            calories: item.calories * scale,
+            protein: item.protein * scale,
+            carbs: item.carbs * scale,
+            fat: item.fat * scale
+        )
+
+        if let subs = item.subitems {
+            var childTotals = MacroTotals.zero
+            for sub in subs {
+                childTotals.add(macroTotals(for: sub))
+            }
+            if totals.isZero {
+                totals = childTotals
+            }
+        }
+
+        return totals
     }
 
     private func parseServingsInput(_ text: String) -> Double? {
@@ -2091,6 +2464,36 @@ private struct MacroSegment {
     let fraction: Double
 }
 
+private struct MacroTotals {
+    var calories: Double
+    var protein: Double
+    var carbs: Double
+    var fat: Double
+
+    static let zero = MacroTotals(calories: 0, protein: 0, carbs: 0, fat: 0)
+
+    mutating func add(_ other: MacroTotals) {
+        calories += other.calories
+        protein += other.protein
+        carbs += other.carbs
+        fat += other.fat
+    }
+
+    var isZero: Bool {
+        calories == 0 && protein == 0 && carbs == 0 && fat == 0
+    }
+}
+
+private extension ConfirmLogView {
+    static let servingFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        formatter.minimum = 0
+        return formatter
+    }()
+}
+
 private struct RawNutrientValue {
     let value: Double
     let unit: String?
@@ -2118,6 +2521,41 @@ private struct NutrientRowDescriptor: Identifiable {
         self.color = color
     }
 }
+
+#if DEBUG
+private struct MealItemServingControlsPreview: View {
+    @State private var item = MealItem(
+        name: "Greek Yogurt",
+        serving: 1,
+        servingUnit: "cup",
+        calories: 120,
+        protein: 20,
+        carbs: 9,
+        fat: 0,
+        subitems: nil,
+        baselineServing: 1,
+        measures: [
+            MealItemMeasure(unit: "cup", description: "1 cup (227 g)", gramWeight: 227),
+            MealItemMeasure(unit: "tbsp", description: "1 tbsp (15 g)", gramWeight: 15),
+            MealItemMeasure(unit: "oz", description: "1 oz (28 g)", gramWeight: 28)
+        ]
+    )
+
+    var body: some View {
+        MealItemServingControls(item: $item)
+            .padding()
+            .background(Color("iosnp"))
+            .previewLayout(.sizeThatFits)
+    }
+}
+
+#Preview("Meal Item Measure Picker") {
+    MealItemServingControlsPreview()
+        .padding()
+        .background(Color("iosbg"))
+        .preferredColorScheme(.dark)
+}
+#endif
 
 private enum NutrientValueSource {
     case macro(MacroType)

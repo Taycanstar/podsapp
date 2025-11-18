@@ -52,6 +52,7 @@ struct Food: Codable, Identifiable, Hashable{
     var healthAnalysis: HealthAnalysis?
     var aiInsight: String? = nil
     var nutritionScore: Double? = nil
+    var mealItems: [MealItem]? = nil
     
     var id: Int { fdcId }
     
@@ -61,6 +62,7 @@ struct Food: Codable, Identifiable, Hashable{
         case healthAnalysis = "health_analysis"
         case aiInsight = "ai_insight"
         case nutritionScore = "nutrition_score"
+        case mealItems = "meal_items"
     }
     
     var calories: Double? {
@@ -127,6 +129,218 @@ struct Nutrient: Codable {
     // Add a computed property that always returns a non-optional Double
     var safeValue: Double {
         return value ?? 0.0
+    }
+}
+
+struct MealItemMeasure: Codable, Hashable, Identifiable {
+    typealias ID = UUID
+
+    let id: ID
+    var unit: String
+    var description: String
+    var gramWeight: Double
+
+    enum CodingKeys: String, CodingKey {
+        case unit
+        case description
+        case gramWeight = "gram_weight"
+    }
+
+    init(unit: String, description: String, gramWeight: Double) {
+        self.id = UUID()
+        self.unit = unit
+        self.description = description
+        self.gramWeight = gramWeight
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedUnit = try container.decodeIfPresent(String.self, forKey: .unit)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let decodedDescription = try container.decodeIfPresent(String.self, forKey: .description)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let doubleValue = try? container.decode(Double.self, forKey: .gramWeight) {
+            self.gramWeight = doubleValue
+        } else if let stringValue = try? container.decode(String.self, forKey: .gramWeight),
+                  let doubleValue = Double(stringValue) {
+            self.gramWeight = doubleValue
+        } else {
+            self.gramWeight = 0
+        }
+        self.unit = (decodedUnit?.isEmpty == false ? decodedUnit! : "serving")
+        self.description = (decodedDescription?.isEmpty == false ? decodedDescription! : self.unit)
+        self.id = UUID()
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(unit, forKey: .unit)
+        try container.encode(description, forKey: .description)
+        try container.encode(gramWeight, forKey: .gramWeight)
+    }
+
+    func toDictionary() -> [String: Any] {
+        [
+            "unit": unit,
+            "description": description,
+            "gram_weight": gramWeight
+        ]
+    }
+}
+
+struct MealItem: Codable, Identifiable, Hashable {
+    let id: UUID
+    var name: String
+    var serving: Double
+    var servingUnit: String?
+    var calories: Double
+    var protein: Double
+    var carbs: Double
+    var fat: Double
+    var subitems: [MealItem]?
+    var baselineServing: Double
+    var measures: [MealItemMeasure]
+    var selectedMeasureId: MealItemMeasure.ID?
+    private(set) var baselineMeasureId: MealItemMeasure.ID?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case serving
+        case servingUnit = "serving_unit"
+        case calories
+        case protein
+        case carbs
+        case fat
+        case subitems
+        case measures
+    }
+
+    init(name: String,
+         serving: Double = 1.0,
+         servingUnit: String? = "serving",
+         calories: Double = 0,
+         protein: Double = 0,
+         carbs: Double = 0,
+         fat: Double = 0,
+         subitems: [MealItem]? = nil,
+         baselineServing: Double? = nil,
+         measures: [MealItemMeasure] = []) {
+        self.id = UUID()
+        self.name = name
+        self.serving = serving
+        self.servingUnit = servingUnit
+        self.calories = calories
+        self.protein = protein
+        self.carbs = carbs
+        self.fat = fat
+        self.subitems = subitems
+        self.baselineServing = baselineServing ?? serving
+        self.measures = MealItem.sanitizedMeasures(measures)
+        self.baselineMeasureId = MealItem.matchingBaselineMeasure(servingUnit: servingUnit, in: self.measures)
+        self.selectedMeasureId = self.baselineMeasureId ?? self.measures.first?.id
+        alignServingUnitWithSelection()
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.serving = try container.decodeIfPresent(Double.self, forKey: .serving) ?? 1.0
+        self.servingUnit = try container.decodeIfPresent(String.self, forKey: .servingUnit)
+        self.calories = try container.decodeIfPresent(Double.self, forKey: .calories) ?? 0
+        self.protein = try container.decodeIfPresent(Double.self, forKey: .protein) ?? 0
+        self.carbs = try container.decodeIfPresent(Double.self, forKey: .carbs) ?? 0
+        self.fat = try container.decodeIfPresent(Double.self, forKey: .fat) ?? 0
+        self.subitems = try container.decodeIfPresent([MealItem].self, forKey: .subitems)
+        let decodedMeasures = try container.decodeIfPresent([MealItemMeasure].self, forKey: .measures) ?? []
+        self.measures = MealItem.sanitizedMeasures(decodedMeasures)
+        self.id = UUID()
+        self.baselineServing = self.serving
+        self.baselineMeasureId = MealItem.matchingBaselineMeasure(servingUnit: servingUnit, in: self.measures)
+        self.selectedMeasureId = self.baselineMeasureId ?? self.measures.first?.id
+        alignServingUnitWithSelection()
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encode(serving, forKey: .serving)
+        try container.encodeIfPresent(servingUnit, forKey: .servingUnit)
+        try container.encode(calories, forKey: .calories)
+        try container.encode(protein, forKey: .protein)
+        try container.encode(carbs, forKey: .carbs)
+        try container.encode(fat, forKey: .fat)
+        try container.encodeIfPresent(subitems, forKey: .subitems)
+        if !measures.isEmpty {
+            try container.encode(measures, forKey: .measures)
+        }
+    }
+
+    func toDictionary() -> [String: Any] {
+        var dict: [String: Any] = [
+            "name": name,
+            "serving": serving,
+            "serving_unit": servingUnit ?? "serving",
+            "calories": calories,
+            "protein": protein,
+            "carbs": carbs,
+            "fat": fat
+        ]
+        if let subitems {
+            dict["subitems"] = subitems.map { $0.toDictionary() }
+        }
+        if !measures.isEmpty {
+            dict["measures"] = measures.map { $0.toDictionary() }
+        }
+        return dict
+    }
+
+    var hasMeasureOptions: Bool {
+        !measures.isEmpty
+    }
+
+    var baselineMeasure: MealItemMeasure? {
+        guard let baselineMeasureId else { return nil }
+        return measures.first(where: { $0.id == baselineMeasureId })
+    }
+
+    var selectedMeasure: MealItemMeasure? {
+        if let selectedMeasureId,
+           let match = measures.first(where: { $0.id == selectedMeasureId }) {
+            return match
+        }
+        return baselineMeasure ?? measures.first
+    }
+
+    var macroScalingFactor: Double {
+        guard baselineServing > 0 else { return 1 }
+        if let baselineWeight = baselineMeasure?.gramWeight,
+           baselineWeight > 0,
+           let selectedWeight = selectedMeasure?.gramWeight,
+           selectedWeight > 0 {
+            return (serving * selectedWeight) / (baselineServing * baselineWeight)
+        }
+        return serving / baselineServing
+    }
+
+    private mutating func alignServingUnitWithSelection() {
+        guard servingUnit == nil || servingUnit?.isEmpty == true,
+              let selectedUnit = selectedMeasure?.unit else { return }
+        servingUnit = selectedUnit
+    }
+
+    private static func sanitizedMeasures(_ measures: [MealItemMeasure]) -> [MealItemMeasure] {
+        measures.filter { $0.gramWeight > 0 }
+    }
+
+    private static func matchingBaselineMeasure(servingUnit: String?, in measures: [MealItemMeasure]) -> MealItemMeasure.ID? {
+        guard let unit = servingUnit?.lowercased(), !unit.isEmpty else { return nil }
+        return measures.first(where: { $0.unit.lowercased() == unit })?.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: MealItem, rhs: MealItem) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
@@ -340,6 +554,7 @@ struct LoggedFoodItem: Codable {
     let foodNutrients: [Nutrient]?  // Add complete nutrients array from backend
     let aiInsight: String?
     let nutritionScore: Double?
+    var mealItems: [MealItem]?
     
     enum CodingKeys: String, CodingKey {
         case foodLogId, fdcId, displayName, calories, servingSizeText, numberOfServings, brandText, protein, carbs, fat
@@ -347,6 +562,7 @@ struct LoggedFoodItem: Codable {
         case foodNutrients
         case aiInsight = "ai_insight"
         case nutritionScore = "nutrition_score"
+        case mealItems = "meal_items"
     }
 }
 
@@ -512,12 +728,13 @@ extension LoggedFoodItem {
             foodMeasures: [],
             healthAnalysis: self.healthAnalysis,  // Preserve health analysis
             aiInsight: self.aiInsight,
-            nutritionScore: self.nutritionScore
+            nutritionScore: self.nutritionScore,
+            mealItems: self.mealItems
         )
     }
     
     // Helper to create LoggedFoodItem without foodLogId (for backward compatibility)
-    init(fdcId: Int, displayName: String, calories: Double, servingSizeText: String, numberOfServings: Double, brandText: String?, protein: Double?, carbs: Double?, fat: Double?, healthAnalysis: HealthAnalysis? = nil, aiInsight: String? = nil, nutritionScore: Double? = nil) {
+    init(fdcId: Int, displayName: String, calories: Double, servingSizeText: String, numberOfServings: Double, brandText: String?, protein: Double?, carbs: Double?, fat: Double?, healthAnalysis: HealthAnalysis? = nil, aiInsight: String? = nil, nutritionScore: Double? = nil, mealItems: [MealItem]? = nil) {
         self.foodLogId = nil
         self.fdcId = fdcId
         self.displayName = displayName
@@ -532,6 +749,7 @@ extension LoggedFoodItem {
         self.foodNutrients = nil
         self.aiInsight = aiInsight
         self.nutritionScore = nutritionScore
+        self.mealItems = mealItems
     }
 }
 
