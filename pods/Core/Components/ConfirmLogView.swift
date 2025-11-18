@@ -717,12 +717,12 @@ private struct MealItemServingControls: View {
         onChange()
     }
 
-private func unitLabel(for measure: MealItemMeasure?) -> String {
-    guard let measure else { return "Select" }
-    let description = sanitizedDescription(measure.description)
-    if !description.isEmpty {
-        return description
-    }
+    private func unitLabel(for measure: MealItemMeasure?) -> String {
+        guard let measure else { return "Select" }
+        let description = sanitizedDescription(measure.description)
+        if !description.isEmpty {
+            return description
+        }
     return canonicalUnit(from: measure.unit)
 }
 
@@ -749,8 +749,9 @@ private func canonicalUnit(from rawUnit: String) -> String {
     let lower = rawUnit.lowercased()
     let mapping: [(String, [String])] = [
         ("cup", ["cup", "cups"]),
-        ("serving", ["serving", "portion", "tray", "plate", "meal"]),
-        ("piece", ["piece", "pieces", "roll", "rolls", "slice", "slices", "stick", "sticks", "item", "items"]),
+        ("serving", ["serving", "portion", "tray", "plate", "meal", "container", "box", "pack", "package", "dip"]),
+        ("piece", ["piece", "pieces", "roll", "rolls", "slice", "slices", "stick", "sticks", "item", "items", "ball", "balls"]),
+        ("egg", ["egg", "eggs"]),
         ("tbsp", ["tbsp", "tablespoon", "tablespoons"]),
         ("tsp", ["tsp", "teaspoon", "teaspoons"]),
         ("g", ["g", "gram", "grams"]),
