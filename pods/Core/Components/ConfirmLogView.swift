@@ -517,7 +517,7 @@ struct ConfirmLogView: View {
                 .font(.body)
                 .foregroundColor(.primary)
 
-            HStack(spacing: 6) {
+            HStack(alignment: .center, spacing: 6) {
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
                         .font(.caption)
@@ -528,7 +528,7 @@ struct ConfirmLogView: View {
 
                 Text(macroSummary(for: totals))
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.primary)
 
                 Spacer()
 
@@ -536,18 +536,21 @@ struct ConfirmLogView: View {
             }
 
             if let subitems = item.subitems, !subitems.isEmpty {
+                Divider()
+                    .padding(.top, 4)
+
                 DisclosureGroup(isExpanded: bindingForExpansion(item.id)) {
                     VStack(alignment: .leading, spacing: 6) {
-                        ForEach(subitems) { sub in
-                            subitemCard(for: sub)
+                        ForEach(Array(subitems.enumerated()), id: \.element.id) { subIndex, _ in
+                            subitemCard(for: bindingForSubitem(parent: itemBinding, index: subIndex))
                         }
                     }
                     .padding(.top, 6)
                 } label: {
-                    Text("Ingredients")
+                    Text(expandedMealItemIDs.contains(item.id) ? "Collapse Ingredients" : "Expand Ingredients")
                         .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.accentColor)
+                        .fontWeight(.regular)
+                        .foregroundColor(.primary)
                 }
             }
         }
@@ -613,16 +616,39 @@ struct ConfirmLogView: View {
         )
     }
 
-private func subitemCard(for item: MealItem) -> some View {
+    private func bindingForSubitem(parent: Binding<MealItem>, index: Int) -> Binding<MealItem> {
+        Binding<MealItem>(
+            get: {
+                parent.wrappedValue.subitems?[index] ?? MealItem(name: "")
+            },
+            set: { newValue in
+                var parentValue = parent.wrappedValue
+                if parentValue.subitems != nil {
+                    parentValue.subitems![index] = newValue
+                }
+                parent.wrappedValue = parentValue
+                recalculateMealItemNutrition()
+            }
+        )
+    }
+
+    private func subitemCard(for binding: Binding<MealItem>) -> some View {
+        let item = binding.wrappedValue
         let totals = ConfirmLogView.macroTotals(for: item)
-        return VStack(alignment: .leading, spacing: 4) {
+        return VStack(alignment: .leading, spacing: 6) {
             Text(item.name)
                 .font(.subheadline)
-            Text(macroSummary(for: totals))
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            HStack {
+                Text(macroSummary(for: totals))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+                MealItemServingControls(item: binding) {
+                    recalculateMealItemNutrition()
+                }
+            }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
     }
 
 private struct MealItemServingControls: View {
@@ -643,10 +669,10 @@ private struct MealItemServingControls: View {
             if item.hasMeasureOptions {
                 measureMenu
             } else {
-                TextField("Unit", text: servingUnitBinding)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.primary.opacity(0.06))
+            TextField("Unit", text: servingUnitBinding)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.primary.opacity(0.06))
                     .cornerRadius(10)
                     .frame(width: 110)
             }
@@ -2320,12 +2346,8 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         )
 
         if let subs = item.subitems {
-            var childTotals = MacroTotals.zero
             for sub in subs {
-                childTotals.add(macroTotals(for: sub))
-            }
-            if totals.isZero {
-                totals = childTotals
+                totals.add(macroTotals(for: sub))
             }
         }
 
