@@ -371,6 +371,7 @@ struct ConfirmLogView: View {
             portionDetailsCard
             if shouldShowMealItemsEditor {
                 mealItemsEditor
+                    .padding(.bottom, -12)
             }
                     if let insight = aiInsight?.trimmingCharacters(in: .whitespacesAndNewlines), !insight.isEmpty {
                         aiInsightSection(insight: insight)
@@ -484,13 +485,10 @@ struct ConfirmLogView: View {
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
             } else {
-                List {
+                VStack(spacing: 8) {
                     ForEach(Array(mealItems.enumerated()), id: \.element.id) { index, _ in
                         mealItemCard(itemBinding: $mealItems[index])
-                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            .contextMenu {
                                 Button(role: .destructive) {
                                     removeMealItem(mealItems[index].id)
                                 } label: {
@@ -498,12 +496,8 @@ struct ConfirmLogView: View {
                                 }
                             }
                     }
-                    .onDelete(perform: deleteMealItems)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .frame(minHeight: mealItemsListHeight)
-                .padding(.bottom, -8)
+                .padding(.horizontal)
             }
         }
     }
