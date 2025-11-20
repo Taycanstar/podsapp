@@ -63,6 +63,8 @@ struct ConfirmLogView: View {
     @State private var isBarcodeFood: Bool = false
     @State private var originalFood: Food? = nil
     @State private var barcodeFoodLogId: Int? = nil
+    @State private var customFoodDraft: CustomFoodDraft?
+    @State private var isSavingMeal = false
     @State private var servingUnit: String = "serving"
 
     // NEW: Base nutrition values (per single serving)
@@ -84,6 +86,7 @@ struct ConfirmLogView: View {
     @State private var baseCalcium: Double = 0
     @State private var baseIron: Double = 0
     @State private var mealItems: [MealItem] = []
+    @State private var mealItemNutrients: [UUID: [Nutrient]] = [:]
     @State private var expandedMealItemIDs: Set<UUID> = []
 
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
@@ -102,7 +105,9 @@ struct ConfirmLogView: View {
     
     private let showHealthInsights = false
     private var hasMealItems: Bool { !mealItems.isEmpty }
-    private var shouldShowMealItemsEditor: Bool { !(originalFood?.mealItems?.isEmpty ?? true) }
+    private var shouldShowMealItemsEditor: Bool {
+        !(originalFood?.mealItems?.isEmpty ?? true) || !mealItems.isEmpty
+    }
     private var mealItemsListHeight: CGFloat {
         let baseRowHeight: CGFloat = 130
         return max(CGFloat(mealItems.count) * baseRowHeight, baseRowHeight + 40)
@@ -114,6 +119,7 @@ struct ConfirmLogView: View {
         print("🔍 DEBUG ConfirmLogView: foodLogId: \(String(describing: foodLogId))")
         self._path = path
         self._title = State(initialValue: food.description)
+        self._brand = State(initialValue: food.brandText ?? "")
         self._aiInsight = State(initialValue: food.aiInsight)
         self._nutritionScore = State(initialValue: food.nutritionScore)
         let initialMealItems = food.mealItems ?? []
@@ -449,6 +455,11 @@ struct ConfirmLogView: View {
         .onReceive(goalsStore.$state) { _ in
             reloadStoredNutrientTargets()
         }
+        .sheet(item: $customFoodDraft) { draft in
+            CreateCustomFoodView(draft: draft) { updatedDraft, action in
+                handleCustomFoodSubmission(draft: updatedDraft, action: action)
+            }
+        }
         .onChange(of: mealItems) { _ in
             if shouldShowMealItemsEditor {
                 recalculateMealItemNutrition()
@@ -502,13 +513,6 @@ struct ConfirmLogView: View {
                 VStack(spacing: 8) {
                     ForEach(Array(mealItems.enumerated()), id: \.element.id) { index, _ in
                         mealItemCard(itemBinding: $mealItems[index])
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    removeMealItem(mealItems[index].id)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
                     }
                 }
                 .padding(.horizontal)
@@ -522,15 +526,34 @@ struct ConfirmLogView: View {
         let weightLabel = servingWeightLabel(for: item)
 
         return VStack(alignment: .leading, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.name)
-                    .font(.body)
-                    .foregroundColor(.primary)
-                if let servingLabel = item.preferredServingDescription {
-                    Text(servingLabel)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.name)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                    if let servingLabel = item.preferredServingDescription {
+                        Text(servingLabel)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
+                Spacer()
+                Menu {
+                    Button("Create Custom Copy") {
+                        presentCustomFoodEditor(for: item)
+                    }
+                    Button(role: .destructive) {
+                        removeMealItem(item.id)
+                    } label: {
+                        Label("Delete Food", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .padding(6)
+                }
+                .contentShape(Rectangle())
             }
 
             HStack(alignment: .center, spacing: 6) {
@@ -953,13 +976,19 @@ private func canonicalUnit(from rawUnit: String) -> String {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
                 
-                Button(action: logBarcodeFood) {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.primary)
+                Button(action: saveMealTemplate) {
+                    if isSavingMeal {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                    } else {
+                        Image(systemName: "bookmark")
+                            .font(.system(size: 18, weight: .semibold))
+                    }
                 }
-                .disabled(isCreating)
-                .opacity(isCreating ? 0.5 : 1)
+                .frame(width: 32, height: 32)
+                .foregroundColor(.primary)
+                .disabled(barcodeFoodLogId == nil || isSavingMeal)
+                .opacity((barcodeFoodLogId == nil || isSavingMeal) ? 0.5 : 1)
             }
             Divider()
                 .frame(maxWidth: .infinity)
@@ -1019,20 +1048,17 @@ private func canonicalUnit(from rawUnit: String) -> String {
                             }
                         }
                     } label: {
-                        HStack(spacing: 4) {
-                            Text(selectedMealPeriod.title)
-                            Image(systemName: "chevron.down")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                        capsulePill {
+                            HStack(spacing: 4) {
+                                Text(selectedMealPeriod.title)
+                                Image(systemName: "chevron.down")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
-                        .foregroundColor(.primary)
                     }
                     .menuStyle(.borderlessButton)
                     .menuIndicator(.hidden)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 12)
-                    .background(Color.primary.opacity(0.06))
-                    .cornerRadius(12)
                     
                     capsulePill {
                         DatePicker("", selection: $mealTime, displayedComponents: .hourAndMinute)
@@ -2291,6 +2317,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                         foodManager.showLogSuccess = false
                     }
+                    self.barcodeFoodLogId = logged.foodLogId
                 }
 
                 // 8. Finally dismiss
@@ -2324,11 +2351,207 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         withAnimation {
             mealItems.removeAll { $0.id == id }
             expandedMealItemIDs.remove(id)
+            mealItemNutrients[id] = nil
         }
     }
 
     private func deleteMealItems(at offsets: IndexSet) {
+        let ids = offsets.map { mealItems[$0].id }
         mealItems.remove(atOffsets: offsets)
+        ids.forEach { mealItemNutrients[$0] = nil }
+    }
+
+    private func presentCustomFoodEditor(for mealItem: MealItem? = nil) {
+        guard let payload = buildCustomFoodPayload(for: mealItem) else {
+            errorMessage = "Unable to prepare custom food data."
+            showErrorAlert = true
+            return
+        }
+        customFoodDraft = payload
+    }
+
+    private func buildCustomFoodPayload(for mealItem: MealItem? = nil) -> CustomFoodDraft? {
+        guard let food = originalFood else { return nil }
+        if let mealItem {
+            let servingDescription = mealItem.preferredServingDescription ?? "\(mealItem.serving.cleanZeroDecimal) \(mealItem.servingUnit ?? "serving")"
+            let nutrients = mealItemNutrients[mealItem.id] ?? buildNutrients(for: mealItem)
+            return CustomFoodDraft(
+                name: mealItem.name,
+                brand: brand.isEmpty ? (food.brandText ?? "") : brand,
+                servingText: servingDescription,
+                servings: mealItem.serving,
+                mealItems: [mealItem],
+                nutrients: nutrients
+            )
+        }
+
+        let mealItemsPayload = shouldShowMealItemsEditor ? mealItems : (food.mealItems ?? [])
+        let nutrientsPayload = food.foodNutrients
+        let displayName = title.isEmpty ? food.description : title
+        let displayBrand = brand.isEmpty ? (food.brandText ?? "") : brand
+        let servingDescription = servingSize.isEmpty ? (food.householdServingFullText ?? "") : servingSize
+        return CustomFoodDraft(
+            name: displayName,
+            brand: displayBrand,
+            servingText: servingDescription,
+            servings: numberOfServings,
+            mealItems: mealItemsPayload,
+            nutrients: nutrientsPayload
+        )
+    }
+
+    private func handleCustomFoodSubmission(draft: CustomFoodDraft, action: CustomFoodAction) {
+        let foodPayload = foodFromDraft(draft)
+        foodManager.createManualFood(food: foodPayload, showPreview: false) { result in
+            switch result {
+            case .success(_):
+                if action == .createAndAdd {
+                    appendCustomMealItem(from: draft)
+                }
+            case .failure(let error):
+                errorMessage = error.localizedDescription
+                showErrorAlert = true
+            }
+        }
+    }
+
+    private func foodFromDraft(_ draft: CustomFoodDraft) -> Food {
+        let trimmedBrand = draft.brand.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedBrand = trimmedBrand.isEmpty ? nil : trimmedBrand
+        let servingText = draft.servingText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedServingText = servingText.isEmpty ? "1 serving" : servingText
+        let servingUnit = parsedServingUnit(from: resolvedServingText)
+        let measureId = Int.random(in: 100_000...999_999)
+        let measure = FoodMeasure(
+            disseminationText: resolvedServingText,
+            gramWeight: 0,
+            id: measureId,
+            modifier: resolvedServingText,
+            measureUnitName: servingUnit,
+            rank: 1
+        )
+
+        return Food(
+            fdcId: Int.random(in: 10_000_000...99_999_999),
+            description: draft.name,
+            brandOwner: resolvedBrand,
+            brandName: resolvedBrand,
+            servingSize: 1,
+            numberOfServings: draft.servings,
+            servingSizeUnit: servingUnit,
+            householdServingFullText: resolvedServingText,
+            foodNutrients: draft.nutrients,
+            foodMeasures: [measure],
+            healthAnalysis: nil,
+            aiInsight: nil,
+            nutritionScore: nil,
+            mealItems: draft.mealItems.isEmpty ? nil : draft.mealItems
+        )
+    }
+
+    private func appendCustomMealItem(from draft: CustomFoodDraft) {
+        let newItem = mealItem(from: draft)
+        withAnimation {
+            mealItems.append(newItem)
+        }
+        mealItemNutrients[newItem.id] = draft.nutrients
+        recalculateMealItemNutrition()
+    }
+
+    private func mealItem(from draft: CustomFoodDraft) -> MealItem {
+        let servingsValue = draft.servings > 0 ? draft.servings : 1
+        let calories = nutrientValue(names: ["Energy"], in: draft.nutrients) * servingsValue
+        let protein = nutrientValue(names: ["Protein"], in: draft.nutrients) * servingsValue
+        let carbs = nutrientValue(names: ["Carbohydrate, by difference"], in: draft.nutrients) * servingsValue
+        let fat = nutrientValue(names: ["Total lipid (fat)"], in: draft.nutrients) * servingsValue
+        let servingDescriptor = draft.servingText.isEmpty ? nil : MealItemServingDescriptor(amount: nil, unit: nil, text: draft.servingText)
+
+        return MealItem(
+            name: draft.name,
+            serving: servingsValue,
+            servingUnit: parsedServingUnit(from: draft.servingText),
+            calories: calories,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+            subitems: nil,
+            baselineServing: servingsValue,
+            measures: [],
+            originalServing: servingDescriptor
+        )
+    }
+
+    private func nutrientValue(names: [String], in nutrients: [Nutrient]) -> Double {
+        for name in names {
+            if let match = nutrients.first(where: { $0.nutrientName.caseInsensitiveCompare(name) == .orderedSame }) {
+                return match.safeValue
+            }
+        }
+        return 0
+    }
+
+    private func parsedServingUnit(from text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "serving" }
+        let tokens = trimmed.split(whereSeparator: { $0 == " " || $0 == "\u{00A0}" })
+        if tokens.count >= 2, Double(tokens[0].replacingOccurrences(of: ",", with: ".")) != nil {
+            return canonicalUnitLabel(String(tokens[1]))
+        }
+        return canonicalUnitLabel(trimmed)
+    }
+
+    private func canonicalUnitLabel(_ rawUnit: String) -> String {
+        let cleaned = rawUnit
+            .lowercased()
+            .trimmingCharacters(in: CharacterSet(charactersIn: "()"))
+        let mapping: [String: [String]] = [
+            "cup": ["cup", "cups"],
+            "serving": ["serving", "servings", "portion"],
+            "piece": ["piece", "pieces", "slice", "slices", "item", "items"],
+            "tbsp": ["tbsp", "tablespoon", "tablespoons"],
+            "tsp": ["tsp", "teaspoon", "teaspoons"],
+            "g": ["g", "gram", "grams"],
+            "oz": ["oz", "ounce", "ounces"],
+            "ml": ["ml", "milliliter", "milliliters"],
+            "lb": ["lb", "lbs", "pound", "pounds"],
+            "can": ["can", "cans"],
+            "bottle": ["bottle", "bottles"]
+        ]
+
+        for (canonical, matches) in mapping {
+            if matches.contains(where: { cleaned.contains($0) }) {
+                return canonical
+            }
+        }
+        return cleaned.isEmpty ? "serving" : cleaned
+    }
+
+    private func buildNutrients(for mealItem: MealItem) -> [Nutrient] {
+        [
+            Nutrient(nutrientName: "Energy", value: mealItem.calories, unitName: "kcal"),
+            Nutrient(nutrientName: "Protein", value: mealItem.protein, unitName: "g"),
+            Nutrient(nutrientName: "Carbohydrate, by difference", value: mealItem.carbs, unitName: "g"),
+            Nutrient(nutrientName: "Total lipid (fat)", value: mealItem.fat, unitName: "g")
+        ]
+    }
+
+    private func saveMealTemplate() {
+        guard let logId = barcodeFoodLogId else {
+            errorMessage = "Log this food before saving it as a meal."
+            showErrorAlert = true
+            return
+        }
+        guard !isSavingMeal else { return }
+        isSavingMeal = true
+        foodManager.saveMeal(itemType: .foodLog, itemId: logId, customName: title.isEmpty ? nil : title) { result in
+            DispatchQueue.main.async {
+                self.isSavingMeal = false
+                if case let .failure(error) = result {
+                    self.errorMessage = error.localizedDescription
+                    self.showErrorAlert = true
+                }
+            }
+        }
     }
 
     private func recalculateMealItemNutrition() {
@@ -2562,6 +2785,21 @@ private struct RawNutrientValue {
     let unit: String?
 }
 
+struct CustomFoodDraft: Identifiable {
+    let id = UUID()
+    var name: String
+    var brand: String
+    var servingText: String
+    var servings: Double
+    var mealItems: [MealItem]
+    var nutrients: [Nutrient]
+}
+
+enum CustomFoodAction {
+    case createOnly
+    case createAndAdd
+}
+
 private struct NutrientRowDescriptor: Identifiable {
     let id: String
     let label: String
@@ -2642,7 +2880,7 @@ private enum NutrientComputation {
     case calories
 }
 
-private extension Double {
+extension Double {
     var cleanOneDecimal: String {
         if self.isNaN { return "0" }
         return String(format: "%.1f", self)
