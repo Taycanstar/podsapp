@@ -104,6 +104,7 @@ struct ConfirmLogView: View {
     @State private var nutritionScore: Double? = nil
     
     private let showHealthInsights = false
+    private let baselineNutrientValues: [String: RawNutrientValue]
     private var hasMealItems: Bool { !mealItems.isEmpty }
     private var shouldShowMealItemsEditor: Bool {
         !(originalFood?.mealItems?.isEmpty ?? true) || !mealItems.isEmpty
@@ -301,6 +302,7 @@ struct ConfirmLogView: View {
             nutrientDictionary[ConfirmLogView.normalizedNutrientKey("Carbohydrate, by difference")] = RawNutrientValue(value: totals.carbs, unit: "g")
             nutrientDictionary[ConfirmLogView.normalizedNutrientKey("Total lipid (fat)")] = RawNutrientValue(value: totals.fat, unit: "g")
         }
+        self.baselineNutrientValues = nutrientDictionary
         self._baseNutrientValues = State(initialValue: nutrientDictionary)
 
         let nutrientTargets = NutritionGoalsStore.shared.currentTargets
@@ -2562,7 +2564,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
             baseProtein = 0
             baseCarbs = 0
             baseFat = 0
-            updateBaseNutrients(with: emptyTotals)
+            rebuildBaseNutrientValues(with: emptyTotals)
             updateNutritionValues()
             return
         }
@@ -2571,15 +2573,50 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         baseProtein = totals.protein
         baseCarbs = totals.carbs
         baseFat = totals.fat
-        updateBaseNutrients(with: totals)
+        rebuildBaseNutrientValues(with: totals)
         updateNutritionValues()
     }
 
-    private func updateBaseNutrients(with totals: MacroTotals) {
-        baseNutrientValues[ConfirmLogView.normalizedNutrientKey("Energy")] = RawNutrientValue(value: totals.calories, unit: "kcal")
-        baseNutrientValues[ConfirmLogView.normalizedNutrientKey("Protein")] = RawNutrientValue(value: totals.protein, unit: "g")
-        baseNutrientValues[ConfirmLogView.normalizedNutrientKey("Carbohydrate, by difference")] = RawNutrientValue(value: totals.carbs, unit: "g")
-        baseNutrientValues[ConfirmLogView.normalizedNutrientKey("Total lipid (fat)")] = RawNutrientValue(value: totals.fat, unit: "g")
+    private func rebuildBaseNutrientValues(with totals: MacroTotals) {
+        var merged = baselineNutrientValues
+        let energyKey = ConfirmLogView.normalizedNutrientKey("Energy")
+        let proteinKey = ConfirmLogView.normalizedNutrientKey("Protein")
+        let carbKey = ConfirmLogView.normalizedNutrientKey("Carbohydrate, by difference")
+        let fatKey = ConfirmLogView.normalizedNutrientKey("Total lipid (fat)")
+
+        merged[energyKey] = RawNutrientValue(value: totals.calories, unit: "kcal")
+        merged[proteinKey] = RawNutrientValue(value: totals.protein, unit: "g")
+        merged[carbKey] = RawNutrientValue(value: totals.carbs, unit: "g")
+        merged[fatKey] = RawNutrientValue(value: totals.fat, unit: "g")
+
+        applyCustomNutrientContributions(into: &merged)
+        baseNutrientValues = merged
+    }
+
+    private func applyCustomNutrientContributions(into values: inout [String: RawNutrientValue]) {
+        let macroKeys: Set<String> = [
+            ConfirmLogView.normalizedNutrientKey("Energy"),
+            ConfirmLogView.normalizedNutrientKey("Protein"),
+            ConfirmLogView.normalizedNutrientKey("Carbohydrate, by difference"),
+            ConfirmLogView.normalizedNutrientKey("Total lipid (fat)")
+        ]
+
+        for item in mealItems {
+            guard let nutrients = mealItemNutrients[item.id], !nutrients.isEmpty else { continue }
+            let baselineServing = item.baselineServing == 0 ? 1 : item.baselineServing
+            let multiplier = item.serving / baselineServing
+
+            for nutrient in nutrients {
+                let key = ConfirmLogView.normalizedNutrientKey(nutrient.nutrientName)
+                if macroKeys.contains(key) { continue }
+                let addition = nutrient.safeValue * multiplier
+                if let existing = values[key] {
+                    values[key] = RawNutrientValue(value: existing.value + addition, unit: existing.unit ?? nutrient.unitName)
+                } else {
+                    values[key] = RawNutrientValue(value: addition, unit: nutrient.unitName)
+                }
+            }
+        }
     }
 
     private static func macroTotals(for items: [MealItem]) -> MacroTotals {
