@@ -362,6 +362,16 @@ struct MealItem: Codable, Identifiable, Hashable {
         return baselineMeasure ?? measures.first
     }
 
+    var servingWeightInGrams: Double? {
+        if let measure = selectedMeasure {
+            return measure.gramWeight * serving
+        }
+        if let gramsMeasure = measures.first(where: { canonicalUnitLabel($0.unit) == "g" }) {
+            return gramsMeasure.gramWeight * serving
+        }
+        return nil
+    }
+
     var macroScalingFactor: Double {
         guard baselineServing > 0 else { return 1 }
         if let baselineWeight = baselineMeasure?.gramWeight,

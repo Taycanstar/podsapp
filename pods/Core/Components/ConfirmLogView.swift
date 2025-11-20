@@ -519,6 +519,7 @@ struct ConfirmLogView: View {
     private func mealItemCard(itemBinding: Binding<MealItem>) -> some View {
         let item = itemBinding.wrappedValue
         let totals = ConfirmLogView.macroTotals(for: item)
+        let weightLabel = servingWeightLabel(for: item)
 
         return VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
@@ -541,7 +542,7 @@ struct ConfirmLogView: View {
                 }
                 .font(.footnote)
 
-                Text(macroSummary(for: totals))
+                Text(macroSummary(for: totals, weightLabel: weightLabel))
                     .font(.caption)
                     .foregroundColor(.primary)
 
@@ -603,11 +604,11 @@ struct ConfirmLogView: View {
         .padding(.horizontal)
     }
 
-    private func macroSummary(for totals: MacroTotals) -> String {
+    private func macroSummary(for totals: MacroTotals, weightLabel: String? = nil) -> String {
         let proteinText = "\(macroValueString(totals.protein))P"
         let fatText = "\(macroValueString(totals.fat))F"
         let carbText = "\(macroValueString(totals.carbs))C"
-        let gramText = "\(macroValueString(totals.protein + totals.carbs + totals.fat))G"
+        let gramText = weightLabel ?? "\(macroValueString(totals.protein + totals.carbs + totals.fat))G"
         return "\(proteinText) \(fatText) \(carbText) • \(gramText)"
     }
 
@@ -616,6 +617,11 @@ struct ConfirmLogView: View {
             return String(Int(value.rounded()))
         }
         return String(format: "%.1f", value)
+    }
+
+    private func servingWeightLabel(for item: MealItem) -> String? {
+        guard let grams = item.servingWeightInGrams, grams > 0 else { return nil }
+        return "\(macroValueString(grams))g"
     }
 
     private func bindingForExpansion(_ id: UUID) -> Binding<Bool> {
@@ -650,6 +656,7 @@ struct ConfirmLogView: View {
     private func subitemCard(for binding: Binding<MealItem>) -> some View {
         let item = binding.wrappedValue
         let totals = ConfirmLogView.macroTotals(for: item)
+        let weightLabel = servingWeightLabel(for: item)
         return VStack(alignment: .leading, spacing: 6) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name)
@@ -661,7 +668,7 @@ struct ConfirmLogView: View {
                 }
             }
             HStack {
-                Text(macroSummary(for: totals))
+                Text(macroSummary(for: totals, weightLabel: weightLabel))
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
