@@ -118,6 +118,21 @@ struct ConfirmLogView: View {
         self._nutritionScore = State(initialValue: food.nutritionScore)
         let initialMealItems = food.mealItems ?? []
         self._mealItems = State(initialValue: initialMealItems)
+        if !initialMealItems.isEmpty {
+            print("🍽 [MealItemsDebug] Received \(initialMealItems.count) meal items")
+            for item in initialMealItems {
+                let label = item.originalServing?.resolvedText ?? "<none>"
+                print("   • \(item.name): originalServing=\(label)")
+                if let subs = item.subitems, !subs.isEmpty {
+                    for sub in subs {
+                        let subLabel = sub.originalServing?.resolvedText ?? "<none>"
+                        print("      - sub \(sub.name): originalServing=\(subLabel)")
+                    }
+                }
+            }
+        } else {
+            print("🍽 [MealItemsDebug] No meal items received")
+        }
         
         // Debug print full barcode food response
         print("====== BARCODE FOOD API RESPONSE ======")
@@ -371,7 +386,6 @@ struct ConfirmLogView: View {
             portionDetailsCard
             if shouldShowMealItemsEditor {
                 mealItemsEditor
-                    .padding(.bottom, -12)
             }
                     if let insight = aiInsight?.trimmingCharacters(in: .whitespacesAndNewlines), !insight.isEmpty {
                         aiInsightSection(insight: insight)
@@ -507,9 +521,16 @@ struct ConfirmLogView: View {
         let totals = ConfirmLogView.macroTotals(for: item)
 
         return VStack(alignment: .leading, spacing: 8) {
-            Text(item.name)
-                .font(.body)
-                .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                    .font(.body)
+                    .foregroundColor(.primary)
+                if let servingLabel = item.preferredServingDescription {
+                    Text(servingLabel)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
 
             HStack(alignment: .center, spacing: 6) {
                 HStack(spacing: 4) {
@@ -630,8 +651,15 @@ struct ConfirmLogView: View {
         let item = binding.wrappedValue
         let totals = ConfirmLogView.macroTotals(for: item)
         return VStack(alignment: .leading, spacing: 6) {
-            Text(item.name)
-                .font(.subheadline)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                    .font(.subheadline)
+                if let servingLabel = item.preferredServingDescription {
+                    Text(servingLabel)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
             HStack {
                 Text(macroSummary(for: totals))
                     .font(.caption2)
@@ -2332,20 +2360,30 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
 
     private static func macroTotals(for item: MealItem) -> MacroTotals {
         let scale = max(item.macroScalingFactor, 0)
-        var totals = MacroTotals(
+        if let subitems = item.subitems, !subitems.isEmpty {
+            let childTotals = macroTotals(for: subitems)
+            if childTotals.isZero {
+                return MacroTotals(
+                    calories: item.calories * scale,
+                    protein: item.protein * scale,
+                    carbs: item.carbs * scale,
+                    fat: item.fat * scale
+                )
+            }
+            return MacroTotals(
+                calories: childTotals.calories * scale,
+                protein: childTotals.protein * scale,
+                carbs: childTotals.carbs * scale,
+                fat: childTotals.fat * scale
+            )
+        }
+
+        return MacroTotals(
             calories: item.calories * scale,
             protein: item.protein * scale,
             carbs: item.carbs * scale,
             fat: item.fat * scale
         )
-
-        if let subs = item.subitems {
-            for sub in subs {
-                totals.add(macroTotals(for: sub))
-            }
-        }
-
-        return totals
     }
 
     static func parseServingsInput(_ text: String) -> Double? {

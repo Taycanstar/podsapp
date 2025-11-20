@@ -186,6 +186,26 @@ struct MealItemMeasure: Codable, Hashable, Identifiable {
     }
 }
 
+struct MealItemServingDescriptor: Codable, Hashable {
+    var amount: Double?
+    var unit: String?
+    var text: String?
+
+    var resolvedText: String? {
+        if let text, !text.isEmpty {
+            return text
+        }
+        if let amount {
+            let formatted = amount.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(amount)) : String(format: "%.2f", amount)
+            if let unit, !unit.isEmpty {
+                return "\(formatted) \(unit)"
+            }
+            return formatted
+        }
+        return nil
+    }
+}
+
 struct MealItem: Codable, Identifiable, Hashable {
     let id: UUID
     var name: String
@@ -200,6 +220,7 @@ struct MealItem: Codable, Identifiable, Hashable {
     var measures: [MealItemMeasure]
     var selectedMeasureId: MealItemMeasure.ID?
     private(set) var baselineMeasureId: MealItemMeasure.ID?
+    var originalServing: MealItemServingDescriptor?
 
     enum CodingKeys: String, CodingKey {
         case name
@@ -211,6 +232,7 @@ struct MealItem: Codable, Identifiable, Hashable {
         case fat
         case subitems
         case measures
+        case originalServing = "original_serving"
     }
 
     init(name: String,
@@ -220,9 +242,10 @@ struct MealItem: Codable, Identifiable, Hashable {
          protein: Double = 0,
          carbs: Double = 0,
          fat: Double = 0,
-         subitems: [MealItem]? = nil,
-         baselineServing: Double? = nil,
-         measures: [MealItemMeasure] = []) {
+        subitems: [MealItem]? = nil,
+        baselineServing: Double? = nil,
+        measures: [MealItemMeasure] = [],
+        originalServing: MealItemServingDescriptor? = nil) {
         self.id = UUID()
         self.name = name
         self.serving = serving
@@ -236,6 +259,7 @@ struct MealItem: Codable, Identifiable, Hashable {
         self.measures = MealItem.sanitizedMeasures(measures)
         self.baselineMeasureId = MealItem.matchingBaselineMeasure(servingUnit: servingUnit, in: self.measures)
         self.selectedMeasureId = self.baselineMeasureId ?? self.measures.first?.id
+        self.originalServing = originalServing
         alignServingUnitWithSelection()
     }
 
@@ -255,6 +279,7 @@ struct MealItem: Codable, Identifiable, Hashable {
         self.baselineServing = self.serving
         self.baselineMeasureId = MealItem.matchingBaselineMeasure(servingUnit: servingUnit, in: self.measures)
         self.selectedMeasureId = self.baselineMeasureId ?? self.measures.first?.id
+        self.originalServing = try container.decodeIfPresent(MealItemServingDescriptor.self, forKey: .originalServing)
         alignServingUnitWithSelection()
     }
 
@@ -271,6 +296,7 @@ struct MealItem: Codable, Identifiable, Hashable {
         if !measures.isEmpty {
             try container.encode(measures, forKey: .measures)
         }
+        try container.encodeIfPresent(originalServing, forKey: .originalServing)
     }
 
     func toDictionary() -> [String: Any] {
@@ -289,11 +315,38 @@ struct MealItem: Codable, Identifiable, Hashable {
         if !measures.isEmpty {
             dict["measures"] = measures.map { $0.toDictionary() }
         }
+        if let originalServing {
+            var originalDict: [String: Any] = [:]
+            if let amount = originalServing.amount {
+                originalDict["amount"] = amount
+            }
+            if let unit = originalServing.unit {
+                originalDict["unit"] = unit
+            }
+            if let text = originalServing.text {
+                originalDict["text"] = text
+            }
+            dict["original_serving"] = originalDict
+        }
         return dict
     }
 
     var hasMeasureOptions: Bool {
         !measures.isEmpty
+    }
+
+    var preferredServingDescription: String? {
+        if let label = originalServing?.resolvedText, !label.isEmpty {
+            return label
+        }
+        let formatter = NumberFormatter()
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        let amount = formatter.string(from: NSNumber(value: serving)) ?? String(format: "%.2f", serving)
+        if let unit = servingUnit, !unit.isEmpty {
+            return "\(amount) \(unit)"
+        }
+        return amount
     }
 
     var baselineMeasure: MealItemMeasure? {
