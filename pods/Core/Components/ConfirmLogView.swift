@@ -2360,30 +2360,26 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
 
     private static func macroTotals(for item: MealItem) -> MacroTotals {
         let scale = max(item.macroScalingFactor, 0)
-        if let subitems = item.subitems, !subitems.isEmpty {
-            let childTotals = macroTotals(for: subitems)
-            if childTotals.isZero {
-                return MacroTotals(
-                    calories: item.calories * scale,
-                    protein: item.protein * scale,
-                    carbs: item.carbs * scale,
-                    fat: item.fat * scale
-                )
-            }
-            return MacroTotals(
-                calories: childTotals.calories * scale,
-                protein: childTotals.protein * scale,
-                carbs: childTotals.carbs * scale,
-                fat: childTotals.fat * scale
-            )
-        }
-
-        return MacroTotals(
+        let parentTotals = MacroTotals(
             calories: item.calories * scale,
             protein: item.protein * scale,
             carbs: item.carbs * scale,
             fat: item.fat * scale
         )
+
+        if let subitems = item.subitems, !subitems.isEmpty {
+            let childTotals = macroTotals(for: subitems)
+            if parentTotals.isZero && !childTotals.isZero {
+                return MacroTotals(
+                    calories: childTotals.calories * scale,
+                    protein: childTotals.protein * scale,
+                    carbs: childTotals.carbs * scale,
+                    fat: childTotals.fat * scale
+                )
+            }
+        }
+
+        return parentTotals
     }
 
     static func parseServingsInput(_ text: String) -> Double? {

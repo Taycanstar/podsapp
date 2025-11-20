@@ -384,8 +384,9 @@ struct MealItem: Codable, Identifiable, Hashable {
     }
 
     private static func matchingBaselineMeasure(servingUnit: String?, in measures: [MealItemMeasure]) -> MealItemMeasure.ID? {
-        guard let unit = servingUnit?.lowercased(), !unit.isEmpty else { return nil }
-        return measures.first(where: { $0.unit.lowercased() == unit })?.id
+        guard let unit = servingUnit, !unit.isEmpty else { return nil }
+        let target = canonicalUnitLabel(unit)
+        return measures.first(where: { canonicalUnitLabel($0.unit) == target })?.id
     }
 
     func hash(into hasher: inout Hasher) {
@@ -405,6 +406,29 @@ struct FoodMeasure: Codable, Hashable {
     let measureUnitName: String
     let rank: Int
     
+}
+
+fileprivate func canonicalUnitLabel(_ rawUnit: String) -> String {
+    let lower = rawUnit.lowercased()
+    let mapping: [(String, [String])] = [
+        ("cup", ["cup", "cups"]),
+        ("serving", ["serving", "servings", "portion", "tray", "plate", "meal", "container", "box", "pack", "package", "dip"]),
+        ("piece", ["piece", "pieces", "roll", "rolls", "slice", "slices", "stick", "sticks", "item", "items", "ball", "balls"]),
+        ("egg", ["egg", "eggs"]),
+        ("tbsp", ["tbsp", "tablespoon", "tablespoons"]),
+        ("tsp", ["tsp", "teaspoon", "teaspoons"]),
+        ("g", ["g", "gram", "grams"]),
+        ("oz", ["oz", "ounce", "ounces"]),
+        ("lb", ["lb", "lbs", "pound", "pounds"]),
+        ("ml", ["ml", "milliliter", "milliliters"]),
+    ]
+
+    for (canonical, tokens) in mapping {
+        if tokens.contains(where: { lower.contains($0) }) {
+            return canonical
+        }
+    }
+    return rawUnit.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
 class FoodService {
