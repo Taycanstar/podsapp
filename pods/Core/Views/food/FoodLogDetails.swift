@@ -674,7 +674,9 @@ extension FoodLogDetails {
             carbs: 20,
             fat: 2,
             healthAnalysis: nil,
-            foodNutrients: nil
+            foodNutrients: nil,
+            aiInsight: "Balanced snack—add veggies for more fiber.",
+            nutritionScore: 68
         ),
         mealType: "Lunch",
         mealLogId: nil,

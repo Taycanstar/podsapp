@@ -11,6 +11,7 @@ struct ConfirmLogView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var foodManager: FoodManager
     @EnvironmentObject private var viewModel: OnboardingViewModel
+    @ObservedObject private var goalsStore = NutritionGoalsStore.shared
     
     @Binding var path: NavigationPath
     
@@ -18,15 +19,13 @@ struct ConfirmLogView: View {
     @State private var title: String = ""
     @State private var servingSize: String = ""
     @State private var numberOfServings: Double = 1
+    @State private var servingsInput: String = "1"
     @State private var calories: String = ""
     
     // Basic nutrition facts
     @State private var protein: String = ""
     @State private var carbs: String = ""
     @State private var fat: String = ""
-    
-    // Flag to show additional nutrients
-    @State private var showMoreNutrients: Bool = false
     
     // Additional nutrients
     @State private var saturatedFat: String = ""
@@ -42,6 +41,12 @@ struct ConfirmLogView: View {
     @State private var vitaminC: String = ""
     @State private var calcium: String = ""
     @State private var iron: String = ""
+    @State private var nutrientTargets: [String: NutrientTargetDetails] = [:]
+    @State private var baseNutrientValues: [String: RawNutrientValue] = [:]
+
+    // Meal + time selections
+    @State private var selectedMealPeriod: MealPeriod = .lunch
+    @State private var mealTime: Date = Date()
     
     // Brand information
     @State private var brand: String = ""
@@ -58,7 +63,10 @@ struct ConfirmLogView: View {
     @State private var isBarcodeFood: Bool = false
     @State private var originalFood: Food? = nil
     @State private var barcodeFoodLogId: Int? = nil
+    @State private var customFoodDraft: CustomFoodDraft?
+    @State private var isSavingMeal = false
     @State private var servingUnit: String = "serving"
+    private let saveNetworkManager = NetworkManager()
 
     // NEW: Base nutrition values (per single serving)
     @State private var baseCalories: Double = 0
@@ -78,6 +86,9 @@ struct ConfirmLogView: View {
     @State private var baseVitaminC: Double = 0
     @State private var baseCalcium: Double = 0
     @State private var baseIron: Double = 0
+    @State private var mealItems: [MealItem] = []
+    @State private var mealItemNutrients: [UUID: [Nutrient]] = [:]
+    @State private var expandedMealItemIDs: Set<UUID> = []
 
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     
@@ -90,6 +101,19 @@ struct ConfirmLogView: View {
     @State private var isLiquid: Bool = false // Detect if it's a beverage
     @State private var expandedNegativeIndices: Set<Int> = []
     @State private var expandedPositiveIndices: Set<Int> = []
+    @State private var aiInsight: String? = nil
+    @State private var nutritionScore: Double? = nil
+    
+    private let showHealthInsights = false
+    private let baselineNutrientValues: [String: RawNutrientValue]
+    private var hasMealItems: Bool { !mealItems.isEmpty }
+    private var shouldShowMealItemsEditor: Bool {
+        !(originalFood?.mealItems?.isEmpty ?? true) || !mealItems.isEmpty
+    }
+    private var mealItemsListHeight: CGFloat {
+        let baseRowHeight: CGFloat = 130
+        return max(CGFloat(mealItems.count) * baseRowHeight, baseRowHeight + 40)
+    }
     
     // This view is ONLY for logging scanned foods
     init(path: Binding<NavigationPath>, food: Food, foodLogId: Int? = nil) {
@@ -97,6 +121,26 @@ struct ConfirmLogView: View {
         print("🔍 DEBUG ConfirmLogView: foodLogId: \(String(describing: foodLogId))")
         self._path = path
         self._title = State(initialValue: food.description)
+        self._brand = State(initialValue: food.brandText ?? "")
+        self._aiInsight = State(initialValue: food.aiInsight)
+        self._nutritionScore = State(initialValue: food.nutritionScore)
+        let initialMealItems = food.mealItems ?? []
+        self._mealItems = State(initialValue: initialMealItems)
+        if !initialMealItems.isEmpty {
+            print("🍽 [MealItemsDebug] Received \(initialMealItems.count) meal items")
+            for item in initialMealItems {
+                let label = item.originalServing?.resolvedText ?? "<none>"
+                print("   • \(item.name): originalServing=\(label)")
+                if let subs = item.subitems, !subs.isEmpty {
+                    for sub in subs {
+                        let subLabel = sub.originalServing?.resolvedText ?? "<none>"
+                        print("      - sub \(sub.name): originalServing=\(subLabel)")
+                    }
+                }
+            }
+        } else {
+            print("🍽 [MealItemsDebug] No meal items received")
+        }
         
         // Debug print full barcode food response
         print("====== BARCODE FOOD API RESPONSE ======")
@@ -142,23 +186,26 @@ struct ConfirmLogView: View {
         // Set serving size information
         // Prioritize householdServingFullText when available (more detailed format)
         if let servingText = food.householdServingFullText, !servingText.isEmpty {
-            self._servingSize = State(initialValue: servingText)
-            self._servingUnit = State(initialValue: food.servingSizeUnit ?? "serving")
-        } else if let servingSize = food.servingSize, let unit = food.servingSizeUnit {
-            // Format serving size to remove unnecessary decimal places (1.0 → 1, 1.5 → 1.5)
-            let formattedSize = servingSize == floor(servingSize) ? String(Int(servingSize)) : String(servingSize)
+        self._servingSize = State(initialValue: servingText)
+        self._servingUnit = State(initialValue: food.servingSizeUnit ?? "serving")
+    } else if let servingSize = food.servingSize, let unit = food.servingSizeUnit {
+        // Format serving size to remove unnecessary decimal places (1.0 → 1, 1.5 → 1.5)
+        let formattedSize = servingSize == floor(servingSize) ? String(Int(servingSize)) : String(servingSize)
             self._servingSize = State(initialValue: "\(formattedSize) \(unit)")
             self._servingUnit = State(initialValue: unit)
         }
         
         // Set number of servings (default to 1 if nil)
-        self._numberOfServings = State(initialValue: food.numberOfServings ?? 1)
+        let initialServings = food.numberOfServings ?? 1
+        self._numberOfServings = State(initialValue: initialServings)
+        self._servingsInput = State(initialValue: ConfirmLogView.formattedServings(initialServings))
         
         // Calculate nutrition value variables without modifying state directly
         var tmpCalories: Double = 0
         var tmpProtein: Double = 0
         var tmpCarbs: Double = 0
         var tmpFat: Double = 0
+        var aggregatedMealItemTotals: MacroTotals? = nil
         
         // Extract nutrient values directly from food.foodNutrients
         for nutrient in food.foodNutrients {
@@ -174,6 +221,14 @@ struct ConfirmLogView: View {
             if nutrient.nutrientName == "Total lipid (fat)" {
                 tmpFat = nutrient.value ?? 0
             }
+        }
+        if !initialMealItems.isEmpty {
+            let totals = ConfirmLogView.macroTotals(for: initialMealItems)
+            aggregatedMealItemTotals = totals
+            tmpCalories = totals.calories
+            tmpProtein = totals.protein
+            tmpCarbs = totals.carbs
+            tmpFat = totals.fat
         }
         
         // Now set the base values and string display values
@@ -234,6 +289,25 @@ struct ConfirmLogView: View {
                 break
             }
         }
+
+        var nutrientDictionary: [String: RawNutrientValue] = [:]
+        for nutrient in food.foodNutrients {
+            if let value = nutrient.value {
+                let key = ConfirmLogView.normalizedNutrientKey(nutrient.nutrientName)
+                nutrientDictionary[key] = RawNutrientValue(value: value, unit: nutrient.unitName)
+            }
+        }
+        if let totals = aggregatedMealItemTotals {
+            nutrientDictionary[ConfirmLogView.normalizedNutrientKey("Energy")] = RawNutrientValue(value: totals.calories, unit: "kcal")
+            nutrientDictionary[ConfirmLogView.normalizedNutrientKey("Protein")] = RawNutrientValue(value: totals.protein, unit: "g")
+            nutrientDictionary[ConfirmLogView.normalizedNutrientKey("Carbohydrate, by difference")] = RawNutrientValue(value: totals.carbs, unit: "g")
+            nutrientDictionary[ConfirmLogView.normalizedNutrientKey("Total lipid (fat)")] = RawNutrientValue(value: totals.fat, unit: "g")
+        }
+        self.baselineNutrientValues = nutrientDictionary
+        self._baseNutrientValues = State(initialValue: nutrientDictionary)
+
+        let nutrientTargets = NutritionGoalsStore.shared.currentTargets
+        self._nutrientTargets = State(initialValue: nutrientTargets)
         
         // Set flags for barcode food
         self.isBarcodeFood = true
@@ -252,61 +326,111 @@ struct ConfirmLogView: View {
             unit.contains("ml") || unit.contains("fl") || unit.contains("oz")
         )
     }
+
+    private let proteinColor = Color("protein")
+    private let fatColor = Color("fat")
+    private let carbColor = Color("carbs")
+
+    private var adjustedProtein: Double {
+        calculateAdjustedValue(baseProtein, servings: numberOfServings)
+    }
+
+    private var adjustedCarbs: Double {
+        calculateAdjustedValue(baseCarbs, servings: numberOfServings)
+    }
+
+    private var adjustedFat: Double {
+        calculateAdjustedValue(baseFat, servings: numberOfServings)
+    }
+
+    private var adjustedFiber: Double {
+        calculateAdjustedValue(baseFiber, servings: numberOfServings)
+    }
+
+    private var adjustedCalories: Double {
+        calculateAdjustedValue(baseCalories, servings: numberOfServings)
+    }
+
+    private var macroSegments: [MacroSegment] {
+        let proteinCalories = adjustedProtein * 4
+        let carbCalories = adjustedCarbs * 4
+        let fatCalories = adjustedFat * 9
+        let total = max(proteinCalories + carbCalories + fatCalories, 1)
+        return [
+            MacroSegment(color: proteinColor, fraction: proteinCalories / total),
+            MacroSegment(color: fatColor, fraction: fatCalories / total),
+            MacroSegment(color: carbColor, fraction: carbCalories / total),
+        ]
+    }
+
+    private var shouldShowGoalsLoader: Bool {
+        nutrientTargets.isEmpty && goalsStore.isLoading
+    }
+
+    private var proteinGoalPercent: Double {
+        guard dayLogsVM.proteinGoal > 0 else { return 0 }
+        return (adjustedProtein / dayLogsVM.proteinGoal) * 100
+    }
+
+    private var fatGoalPercent: Double {
+        guard dayLogsVM.fatGoal > 0 else { return 0 }
+        return (adjustedFat / dayLogsVM.fatGoal) * 100
+    }
+
+    private var carbGoalPercent: Double {
+        guard dayLogsVM.carbsGoal > 0 else { return 0 }
+        return (adjustedCarbs / dayLogsVM.carbsGoal) * 100
+    }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // Basic food info card
-                basicInfoCard
-                
-                // Health analysis section (moved above nutrition facts)
-                healthAnalysisCard
-                
-                // Nutrition facts section
-                nutritionFactsCard
-                
-                // Additional nutrients section (collapsible)
-                if showMoreNutrients {
-                    additionalNutrientsCard
-                }
-                
-                Spacer().frame(height: 40) // extra bottom space
+        VStack(spacing: 0) {
+            headerBar
+                .padding(.horizontal)
+                .padding(.top, 16)
+                .padding(.bottom, 0)
+    
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+            macroSummaryCard
+            portionDetailsCard
+            if shouldShowMealItemsEditor {
+                mealItemsEditor
             }
-            .padding(.top, 16)
+                    if let insight = aiInsight?.trimmingCharacters(in: .whitespacesAndNewlines), !insight.isEmpty {
+                        aiInsightSection(insight: insight)
+                    }
+                    if showHealthInsights {
+                        healthAnalysisCard
+                    }
+                    dailyGoalShareCard
+                    if shouldShowGoalsLoader {
+                        goalsLoadingView
+                    } else if nutrientTargets.isEmpty {
+                        missingTargetsCallout
+                    } else {
+                        totalCarbsSection
+                        fatTotalsSection
+                        proteinTotalsSection
+                        vitaminSection
+                        mineralSection
+                        otherNutrientSection
+                    }
+                    Spacer(minLength: 40)
+                }
+                .padding(.top, 16)
+                .padding(.bottom, 12)
+            }
+
+            footerBar
         }
-        .background(Color("iosbg"))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("Log Food")
-                    .font(.headline)
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: logBarcodeFood) {
-                    Text("Log")
-                        .fontWeight(.semibold)
-                }
-                .disabled(isCreating)
-            }
-            
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .foregroundColor(.accentColor)
-            }
-            
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                }
-            }
-        }
-        .navigationBarBackButtonHidden(true)
+        .background(Color("iosbg").ignoresSafeArea())
+        .navigationBarHidden(true)
         .onAppear {
             setupHealthAnalysis()
+            goalsStore.ensureGoalsAvailable(email: viewModel.email, forceRefresh: false)
+            if shouldShowMealItemsEditor {
+                recalculateMealItemNutrition()
+            }
         }
         .alert(isPresented: $showErrorAlert) {
             Alert(
@@ -328,442 +452,1080 @@ struct ConfirmLogView: View {
                 }
             }
         )
-        // .onAppear {
-        //     // Auto-focus the servings field when the view appears
-        //     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-        //         isServingsFocused = true
-        //     }
-        // }
-
+        .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
+            reloadStoredNutrientTargets()
+        }
+        .onReceive(goalsStore.$state) { _ in
+            reloadStoredNutrientTargets()
+        }
+        .sheet(item: $customFoodDraft) { draft in
+            CreateCustomFoodView(draft: draft) { updatedDraft, action in
+                handleCustomFoodSubmission(draft: updatedDraft, action: action)
+            }
+        }
+        .onChange(of: mealItems) { _ in
+            if shouldShowMealItemsEditor {
+                recalculateMealItemNutrition()
+            }
+        }
     }
     
-    // MARK: - Card Views
-    private var basicInfoCard: some View {
-        ZStack(alignment: .top) {
-            // Background with rounded corners
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color("iosnp"))
+    private var footerBar: some View {
+        VStack(spacing: 16) {
+            Divider()
+                .padding(.horizontal, -16)
             
-            // Content
-            VStack(spacing: 0) {
-                // Title
-                TextField("Title", text: $title)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal)
+            Button(action: logBarcodeFood) {
+                Text(isCreating ? "Logging..." : "Log Food")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                
-                // Divider
-                Divider()
-                    .padding(.leading, 16)
-                
-                // Serving Size Row - with label on left and input on right
-                HStack {
-                    Text("Serving Size")
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    TextField("e.g., 1 cup, 2 tbsp", text: $servingSize)
-                    .keyboardType(.asciiCapable)
-                    .textFieldStyle(.plain)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 200)
-                }
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
-                
-                // Divider
-                Divider()
-                    .padding(.leading, 16)
-                
-                // Number of Servings
-                servingsRowView
-                
-                // Divider
-                Divider()
-                    .padding(.leading, 16)
-                
-                // Calories Row
-                caloriesRowView
-                
-                // Divider 
-                Divider()
-                    .padding(.leading, 16)
-                
-                // Health Score Row
-                healthScoreRowView
             }
+            .buttonStyle(.plain)
+            .background(
+                RoundedRectangle(cornerRadius: 999, style: .continuous)
+                    .fill(Color("background"))
+            )
+            .foregroundColor(Color("text"))
+            .disabled(isCreating)
+            .opacity(isCreating ? 0.7 : 1)
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 24)
+        .background(
+            Color("iosbg")
+                .ignoresSafeArea(edges: .bottom)
+        )
+    }
+
+    // MARK: - Card Views
+    private var mealItemsEditor: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Meal Items")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .padding(.horizontal)
+
+            if mealItems.isEmpty {
+                Text("No items detected")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(Array(mealItems.enumerated()), id: \.element.id) { index, _ in
+                        mealItemCard(itemBinding: $mealItems[index])
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+
+    private func mealItemCard(itemBinding: Binding<MealItem>) -> some View {
+        let item = itemBinding.wrappedValue
+        let totals = ConfirmLogView.macroTotals(for: item)
+        let weightLabel = servingWeightLabel(for: item)
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.name)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                    if let servingLabel = item.preferredServingDescription {
+                        Text(servingLabel)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                Spacer()
+                Menu {
+                    Button("Create Custom Copy") {
+                        presentCustomFoodEditor(for: item)
+                    }
+                    Button(role: .destructive) {
+                        removeMealItem(item.id)
+                    } label: {
+                        Label("Delete Food", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .padding(6)
+                }
+                .contentShape(Rectangle())
+            }
+
+            HStack(alignment: .center, spacing: 6) {
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .font(.caption)
+                        .foregroundColor(.primary)
+                    Text("\(Int(totals.calories.rounded())) cal")
+                }
+                .font(.footnote)
+
+                Text(macroSummary(for: totals, weightLabel: weightLabel))
+                    .font(.caption)
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                servingEditor(for: itemBinding)
+            }
+
+            if let subitems = item.subitems, !subitems.isEmpty {
+                Divider()
+                    .padding(.top, 4)
+
+                DisclosureGroup(isExpanded: bindingForExpansion(item.id)) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(subitems.enumerated()), id: \.element.id) { subIndex, _ in
+                            subitemCard(for: bindingForSubitem(parent: itemBinding, index: subIndex))
+                        }
+                    }
+                    .padding(.top, 6)
+                } label: {
+                    Text(expandedMealItemIDs.contains(item.id) ? "Collapse Ingredients" : "Expand Ingredients")
+                        .font(.caption)
+                        .fontWeight(.regular)
+                        .foregroundColor(.primary)
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color("iosnp"))
+        )
+    }
+
+    private var macroSummaryCard: some View {
+        HStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 12) {
+                macroStatRow(title: "Protein", value: adjustedProtein, unit: "g", color: proteinColor)
+                Divider().background(Color.white.opacity(0.2))
+                macroStatRow(title: "Fat", value: adjustedFat, unit: "g", color: fatColor)
+                Divider().background(Color.white.opacity(0.2))
+                macroStatRow(title: "Carbs", value: adjustedCarbs, unit: "g", color: carbColor)
+            }
+            
+            Spacer()
+            
+            MacroRingView(calories: adjustedCalories, arcs: macroArcs)
+                .frame(width: 100, height: 100)
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(
+                    LinearGradient(colors: [Color("iosnp"), Color("iosnp").opacity(0.8)],
+                                   startPoint: .topLeading,
+                                   endPoint: .bottomTrailing)
+                )
+        )
+        .padding(.horizontal)
+    }
+
+    private func macroSummary(for totals: MacroTotals, weightLabel: String? = nil) -> String {
+        let proteinText = "\(macroValueString(totals.protein))P"
+        let fatText = "\(macroValueString(totals.fat))F"
+        let carbText = "\(macroValueString(totals.carbs))C"
+        let gramText = weightLabel ?? "\(macroValueString(totals.protein + totals.carbs + totals.fat))G"
+        return "\(proteinText) \(fatText) \(carbText) • \(gramText)"
+    }
+
+    private func macroValueString(_ value: Double) -> String {
+        if abs(value.rounded() - value) < 0.01 {
+            return String(Int(value.rounded()))
+        }
+        return String(format: "%.1f", value)
+    }
+
+    private func servingWeightLabel(for item: MealItem) -> String? {
+        guard let grams = item.servingWeightInGrams, grams > 0 else { return nil }
+        return "\(macroValueString(grams))g"
+    }
+
+    private func bindingForExpansion(_ id: UUID) -> Binding<Bool> {
+        Binding(
+            get: { expandedMealItemIDs.contains(id) },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedMealItemIDs.insert(id)
+                } else {
+                    expandedMealItemIDs.remove(id)
+                }
+            }
+        )
+    }
+
+    private func bindingForSubitem(parent: Binding<MealItem>, index: Int) -> Binding<MealItem> {
+        Binding<MealItem>(
+            get: {
+                parent.wrappedValue.subitems?[index] ?? MealItem(name: "")
+            },
+            set: { newValue in
+                var parentValue = parent.wrappedValue
+                if parentValue.subitems != nil {
+                    parentValue.subitems![index] = newValue
+                }
+                parent.wrappedValue = parentValue
+                recalculateMealItemNutrition()
+            }
+        )
+    }
+
+    private func subitemCard(for binding: Binding<MealItem>) -> some View {
+        let item = binding.wrappedValue
+        let totals = ConfirmLogView.macroTotals(for: item)
+        let weightLabel = servingWeightLabel(for: item)
+        return VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                    .font(.subheadline)
+                if let servingLabel = item.preferredServingDescription {
+                    Text(servingLabel)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            HStack {
+                Text(macroSummary(for: totals, weightLabel: weightLabel))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+                MealItemServingControls(item: binding) {
+                    recalculateMealItemNutrition()
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+private struct MealItemServingControls: View {
+    @Binding var item: MealItem
+    var onChange: () -> Void = {}
+
+    var body: some View {
+        HStack(spacing: 6) {
+            TextField("Qty", text: servingTextBinding)
+                .keyboardType(.numbersAndPunctuation)
+                .submitLabel(.done)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.primary.opacity(0.06))
+                .cornerRadius(10)
+                .frame(width: 54)
+
+            if item.hasMeasureOptions {
+                measureMenu
+            } else {
+            TextField("Unit", text: servingUnitBinding)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.primary.opacity(0.06))
+                    .cornerRadius(10)
+                    .frame(width: 110)
+            }
+        }
+        .font(.subheadline)
+    }
+
+    private var measureMenu: some View {
+        Menu {
+            ForEach(item.measures) { measure in
+                Button(action: { selectMeasure(measure) }) {
+                    HStack {
+                        Text(unitLabel(for: measure))
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(1)
+                            Spacer()
+                            if measure.id == item.selectedMeasureId {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.accentColor)
+                            }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(unitLabel(for: item.selectedMeasure))
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .foregroundColor(.primary)
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.primary.opacity(0.06))
+            .cornerRadius(10)
+            .frame(minWidth: 110, maxWidth: 140, alignment: .leading)
+        }
+        .menuStyle(.borderlessButton)
+        .frame(minWidth: 110, maxWidth: 140, alignment: .leading)
+    }
+
+    private var servingUnitBinding: Binding<String> {
+        Binding<String>(
+            get: { item.servingUnit ?? "" },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                item.servingUnit = trimmed.isEmpty ? nil : trimmed
+                onChange()
+            }
+        )
+    }
+
+    private var servingTextBinding: Binding<String> {
+        Binding<String>(
+            get: { ConfirmLogView.formattedServings(item.serving) },
+            set: { newValue in
+                guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
+                if abs(parsed - item.serving) > 0.0001 {
+                    item.serving = parsed
+                    onChange()
+                }
+            }
+        )
+    }
+
+    private func selectMeasure(_ measure: MealItemMeasure) {
+        guard item.selectedMeasureId != measure.id else { return }
+        item.selectedMeasureId = measure.id
+        item.servingUnit = measure.unit
+        onChange()
+    }
+
+    private func unitLabel(for measure: MealItemMeasure?) -> String {
+        guard let measure else { return "Select" }
+        let description = sanitizedDescription(measure.description)
+        if !description.isEmpty {
+            return description
+        }
+    return canonicalUnit(from: measure.unit)
+}
+
+private func sanitizedDescription(_ text: String) -> String {
+    var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.isEmpty { return "" }
+
+    let lower = trimmed.lowercased()
+    if ["g", "gram", "grams", "oz", "ounce", "ounces", "lb", "pound", "pounds"].contains(lower) {
+        return ""
+    }
+
+    if let range = trimmed.range(of: "(") {
+        trimmed = String(trimmed[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    trimmed = trimmed.replacingOccurrences(of: "portion", with: "serving", options: .caseInsensitive)
+    trimmed = trimmed.replacingOccurrences(of: "as served", with: "", options: .caseInsensitive)
+    trimmed = trimmed.replacingOccurrences(of: "as logged", with: "", options: .caseInsensitive)
+    trimmed = trimmed.replacingOccurrences(of: "  ", with: " ")
+    return trimmed.trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+private func canonicalUnit(from rawUnit: String) -> String {
+    let lower = rawUnit.lowercased()
+    let mapping: [(String, [String])] = [
+        ("cup", ["cup", "cups"]),
+        ("serving", ["serving", "portion", "tray", "plate", "meal", "container", "box", "pack", "package", "dip"]),
+        ("piece", ["piece", "pieces", "roll", "rolls", "slice", "slices", "stick", "sticks", "item", "items", "ball", "balls"]),
+        ("egg", ["egg", "eggs"]),
+        ("tbsp", ["tbsp", "tablespoon", "tablespoons"]),
+        ("tsp", ["tsp", "teaspoon", "teaspoons"]),
+        ("g", ["g", "gram", "grams"]),
+        ("oz", ["oz", "ounce", "ounces"]),
+        ("lb", ["lb", "lbs", "pound", "pounds"]),
+    ]
+
+    for (canonical, tokens) in mapping {
+        if tokens.contains(where: { lower.contains($0) }) {
+            return canonical
+        }
+    }
+    return rawUnit.trimmingCharacters(in: .whitespacesAndNewlines)
+}
+}
+
+    private func servingEditor(for itemBinding: Binding<MealItem>) -> some View {
+        MealItemServingControls(item: itemBinding) {
+            recalculateMealItemNutrition()
+        }
+    }
+
+    @ViewBuilder
+    private func aiInsightSection(insight: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("AI Insight")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(insight)
+                    .font(.body)
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 22)
+
+                if let score = nutritionScore {
+                    insightScale(score: score)
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color("iosnp"))
+            )
+        }
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private func insightScale(score: Double) -> some View {
+        let normalized = max(0, min(100, score))
+        let labels = ["Limited", "Fair", "Good", "Nutritious"]
+
+        VStack(spacing: 0) {
+            GeometryReader { geo in
+                HStack(spacing: 5) {
+                    ForEach(0..<labels.count, id: \.self) { index in
+                        Capsule()
+                            .fill(indexForScore(normalized) == index ? segmentColor(for: index) : Color.primary.opacity(0.15))
+                            .frame(height: 4)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.vertical, 4)
+                .overlay(
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 18, height: 18)
+                        .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+                        .overlay(
+                        Circle()
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 1.5)
+                        )
+                        .offset(x: sliderOffset(for: normalized, width: geo.size.width - 5 * CGFloat(labels.count - 1)), y: 0),
+                    alignment: .leading
+                )
+            }
+            .frame(height: 24)
+
+            HStack {
+                ForEach(labels, id: \.self) { label in
+                    Text(label)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        }
+    }
+
+    private func indexForScore(_ score: Double) -> Int {
+        switch score {
+        case ..<25: return 0
+        case ..<50: return 1
+        case ..<75: return 2
+        default: return 3
+        }
+    }
+
+    private func segmentColor(for index: Int) -> Color {
+        switch index {
+        case 0: return Color("limited")
+        case 1: return Color("fair")
+        case 2: return Color("good")
+        default: return Color("nut")
+        }
+    }
+
+    private func sliderOffset(for score: Double, width: CGFloat) -> CGFloat {
+        let clamped = max(0, min(100, score)) / 100
+        let availableWidth = max(0, width - 18)
+        return CGFloat(clamped) * availableWidth
+    }
+    
+    private var macroArcs: [MacroArc] {
+        var running: Double = 0
+        return macroSegments.map { segment in
+            let arc = MacroArc(start: running, end: running + segment.fraction, color: segment.color)
+            running += segment.fraction
+            return arc
+        }
+    }
+
+    private var headerBar: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 16) {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.primary)
+                        .frame(width: 32, height: 32)
+                }
+                
+                Text(title.isEmpty ? "Log Food" : title)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                
+                Spacer().frame(width: 32, height: 32)
+            }
+            Divider()
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, -16)
+        }
+    }
+    
+    private func macroStatRow(title: String, value: Double, unit: String, color: Color) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Circle()
+                .fill(color)
+                .frame(width: 10, height: 10)
+            
+            Text(title.capitalized)
+                .font(.body)
+                .foregroundColor(.primary)
+            Spacer()
+            Text("\(value.cleanOneDecimal)\(unit)")
+                .font(.body)
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    private var portionDetailsCard: some View {
+        VStack(spacing: 0) {
+            labeledRow("Serving Size") {
+                TextField("e.g., 1 cup, 2 tbsp", text: $servingSize)
+                    .textFieldStyle(.plain)
+                    .multilineTextAlignment(.trailing)
+            }
+            
+            Divider().padding(.leading, 16)
+            
+            labeledRow("Servings") {
+                TextField("Enter servings (e.g., 1.5 or 1/2)", text: $servingsInput)
+                    .keyboardType(.numbersAndPunctuation)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 100)
+                    .focused($isServingsFocused)
+                    .onChange(of: servingsInput) { newValue in
+                        guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
+                        if abs(parsed - numberOfServings) > 0.0001 {
+                            numberOfServings = parsed
+                            updateNutritionValues()
+                        }
+                    }
+            }
+            
+            Divider().padding(.leading, 16)
+            
+            labeledRow("Time", verticalPadding: 6) {
+                HStack(spacing: 8) {
+                    Menu {
+                        ForEach(MealPeriod.allCases) { period in
+                            Button(period.title) {
+                                selectedMealPeriod = period
+                            }
+                        }
+                    } label: {
+                        capsulePill {
+                            HStack(spacing: 4) {
+                                Text(selectedMealPeriod.title)
+                                Image(systemName: "chevron.down")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    
+                    capsulePill {
+                        DatePicker("", selection: $mealTime, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .tint(.primary)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color("iosnp"))
+        )
+        .padding(.horizontal)
+    }
+    
+    private func labeledRow<Content: View>(
+        _ label: String,
+        verticalPadding: CGFloat = 10,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(alignment: .center) {
+            Text(label)
+                .foregroundColor(.primary)
+            Spacer()
+            content()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, verticalPadding)
+    }
+    
+    private func capsulePill<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
+            .foregroundColor(.primary)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .background(Color("iosnp"))
+            .cornerRadius(12)
+    }
+    
+    private var mealChips: some View {
+        HStack(spacing: 8) {
+            ForEach(MealPeriod.allCases) { period in
+                let isSelected = selectedMealPeriod == period
+                Text(period.title)
+                    .font(.caption)
+                    .fontWeight(isSelected ? .semibold : .regular)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.3), lineWidth: 1)
+                    )
+                    .foregroundColor(isSelected ? .accentColor : .primary)
+                    .onTapGesture {
+                        selectedMealPeriod = period
+                    }
+            }
+        }
+    }
+    
+private enum MealPeriod: String, CaseIterable, Identifiable {
+        case breakfast, lunch, dinner, snack
+        
+        var id: String { rawValue }
+        
+        var title: String {
+            switch self {
+            case .breakfast: return "Breakfast"
+            case .lunch: return "Lunch"
+            case .dinner: return "Dinner"
+            case .snack: return "Snack"
+            }
+        }
+        
+        var displayName: String { title }
+    }
+    
+    private var mealTimeFormatted: String {
+        mealTime.formatted(date: .omitted, time: .shortened)
+    }
+
+    private var dailyGoalShareCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Daily Goal Share")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            HStack(spacing: 12) {
+                GoalShareBubble(title: "Protein",
+                                percent: proteinGoalPercent,
+                                grams: adjustedProtein,
+                                goal: dayLogsVM.proteinGoal,
+                                color: proteinColor)
+                GoalShareBubble(title: "Fat",
+                                percent: fatGoalPercent,
+                                grams: adjustedFat,
+                                goal: dayLogsVM.fatGoal,
+                                color: fatColor)
+                GoalShareBubble(title: "Carbs",
+                                percent: carbGoalPercent,
+                                grams: adjustedCarbs,
+                                goal: dayLogsVM.carbsGoal,
+                                color: carbColor)
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color("iosnp"))
+            )
         }
         .padding(.horizontal)
     }
     
-    private var servingsRowView: some View {
-        HStack {
-            Text("Number of Servings")
-                .foregroundColor(.primary)
-            Spacer()
-            TextField("Servings", value: $numberOfServings, format: .number)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .frame(width: 80)
-                .focused($isServingsFocused)
-                .onChange(of: numberOfServings) { _ in
-                    updateNutritionValues()
-                }
-        }
-        .padding()
+    private var totalCarbsSection: some View {
+        nutrientSection(title: "Total Carbs", rows: totalCarbRows)
     }
-    
-    private var caloriesRowView: some View {
-        HStack {
-            Text("Calories")
-                .foregroundColor(.primary)
-            Spacer()
-            Text(calories.isEmpty ? "0" : calories)
+
+    private var fatTotalsSection: some View {
+        nutrientSection(title: "Fat Totals", rows: fatRows)
+    }
+
+    private var proteinTotalsSection: some View {
+        nutrientSection(title: "Protein Totals", rows: proteinRows)
+    }
+
+    private var vitaminSection: some View {
+        nutrientSection(title: "Vitamins", rows: vitaminRows)
+    }
+
+    private var mineralSection: some View {
+        nutrientSection(title: "Minerals", rows: mineralRows)
+    }
+
+    private var otherNutrientSection: some View {
+        nutrientSection(title: "Other", rows: otherRows)
+    }
+
+    private var goalsLoadingView: some View {
+        VStack(spacing: 12) {
+            ProgressView("Syncing your targets…")
+                .progressViewStyle(CircularProgressViewStyle())
+            Text("Hang tight while we fetch your personalized nutrient plan.")
+                .font(.caption)
                 .foregroundColor(.secondary)
-                .multilineTextAlignment(.trailing)
         }
-        .padding()
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color("iosnp"))
+        )
+        .padding(.horizontal)
     }
-    
-    private var healthScoreRowView: some View {
-        HStack {
-            Text("Health Score")
-                .foregroundColor(.primary)
-            Spacer()
-            if let health = healthAnalysis {
-                Text("\(health.score)/100")
-                    .foregroundColor(healthColor(for: health.color))
-                    .fontWeight(.medium)
-            } else {
-                Text("Not available")
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding()
-    }
-    
-    
-    private var nutritionFactsCard: some View {
+
+    private var missingTargetsCallout: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Nutrition Facts")
-                .font(.title2)
-                .fontWeight(.bold)
-                .padding(.horizontal)
-            
-            ZStack(alignment: .top) {
-                // Background with rounded corners
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color("iosnp"))
-                
-                // Content
-                VStack(spacing: 0) {
-                    // Protein (read-only)
-                    HStack {
-                        Text("Protein (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(protein.isEmpty ? "0" : protein)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    // Divider
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Carbs (read-only)
-                    HStack {
-                        Text("Carbs (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(carbs.isEmpty ? "0" : carbs)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    // Divider
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Fat (read-only)
-                    HStack {
-                        Text("Total Fat (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(fat.isEmpty ? "0" : fat)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                }
-            }
-            .padding(.horizontal)
-            
-            // Show More Nutrients button
+            Text("Finish goal setup to unlock detailed targets")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+            Text("We’ll automatically sync your nutrition plan and show daily percentages once it’s ready.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
             Button(action: {
-                withAnimation {
-                    showMoreNutrients.toggle()
-                }
+                dayLogsVM.refreshNutritionGoals(forceRefresh: true)
             }) {
                 HStack {
-                    Text(showMoreNutrients ? "Hide Additional Nutrients" : "Show More Nutrients")
-                        .foregroundColor(.accentColor)
-                    
-                    Image(systemName: showMoreNutrients ? "chevron.up" : "chevron.down")
-                        .foregroundColor(.accentColor)
+                    if dayLogsVM.isRefreshingNutritionGoals {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(0.8)
+                    }
+                    Text(dayLogsVM.isRefreshingNutritionGoals ? "Syncing Targets" : "Sync Now")
+                        .fontWeight(.semibold)
                 }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 14)
-                .background(Color("iosnp"))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.accentColor.opacity(dayLogsVM.isRefreshingNutritionGoals ? 0.4 : 0.15))
+                .foregroundColor(.accentColor)
                 .cornerRadius(12)
             }
-            .padding(.horizontal)
+            .disabled(dayLogsVM.isRefreshingNutritionGoals)
         }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color("iosnp"))
+        )
+        .padding(.horizontal)
     }
-    
-    private var additionalNutrientsCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ZStack(alignment: .top) {
-                // Background with rounded corners
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color("iosnp"))
-                
-                // Content
-                VStack(spacing: 0) {
-                    // Saturated Fat
-                    HStack {
-                        Text("Saturated Fat (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(saturatedFat.isEmpty ? "0" : saturatedFat)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Polyunsaturated Fat
-                    HStack {
-                        Text("Polyunsaturated Fat (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(polyunsaturatedFat.isEmpty ? "0" : polyunsaturatedFat)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Monounsaturated Fat
-                    HStack {
-                        Text("Monounsaturated Fat (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(monounsaturatedFat.isEmpty ? "0" : monounsaturatedFat)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Trans Fat
-                    HStack {
-                        Text("Trans Fat (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(transFat.isEmpty ? "0" : transFat)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Cholesterol
-                    HStack {
-                        Text("Cholesterol (mg)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(cholesterol.isEmpty ? "0" : cholesterol)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Sodium
-                    HStack {
-                        Text("Sodium (mg)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(sodium.isEmpty ? "0" : sodium)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Potassium
-                    HStack {
-                        Text("Potassium (mg)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(potassium.isEmpty ? "0" : potassium)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Sugar
-                    HStack {
-                        Text("Sugar (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(sugar.isEmpty ? "0" : sugar)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Fiber
-                    HStack {
-                        Text("Fiber (g)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(fiber.isEmpty ? "0" : fiber)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Vitamin A
-                    HStack {
-                        Text("Vitamin A (%)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(vitaminA.isEmpty ? "0" : vitaminA)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Vitamin C
-                    HStack {
-                        Text("Vitamin C (%)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(vitaminC.isEmpty ? "0" : vitaminC)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Calcium
-                    HStack {
-                        Text("Calcium (%)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(calcium.isEmpty ? "0" : calcium)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
-                    
-                    Divider()
-                        .padding(.leading, 16)
-                    
-                    // Iron
-                    HStack {
-                        Text("Iron (%)")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Text(iron.isEmpty ? "0" : iron)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.trailing) 
-                    }
-                        .padding(.horizontal)
-                        .padding(.vertical, 16)
+
+    private func nutrientSection(title: String, rows: [NutrientRowDescriptor]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            VStack(spacing: 16) {
+                ForEach(rows) { descriptor in
+                    nutrientRow(for: descriptor)
                 }
             }
-            .padding(.horizontal)
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color("iosnp"))
+            )
         }
-        .transition(.opacity)
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private func nutrientRow(for descriptor: NutrientRowDescriptor) -> some View {
+        let value = nutrientValue(for: descriptor)
+        let goal = nutrientGoal(for: descriptor)
+        let unit = nutrientUnit(for: descriptor)
+        let percentage = nutrientPercentage(value: value, goal: goal)
+        let ratio = nutrientRatioText(value: value, goal: goal, unit: unit)
+        let progress = nutrientProgressValue(value: value, goal: goal)
+
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(descriptor.label)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text(ratio)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Text(percentage)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(descriptor.color)
+            }
+
+            ProgressView(value: progress)
+                .tint(descriptor.color)
+                .scaleEffect(x: 1, y: 1.2, anchor: .center)
+        }
+    }
+
+    private func reloadStoredNutrientTargets() {
+        nutrientTargets = goalsStore.currentTargets
+    }
+
+    private var totalCarbRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Carbs", slug: "carbs", defaultUnit: "g", source: .macro(.carbs), color: carbColor),
+            NutrientRowDescriptor(label: "Fiber", slug: "fiber", defaultUnit: "g", source: .nutrient(names: ["fiber, total dietary", "dietary fiber"]), color: carbColor),
+            NutrientRowDescriptor(label: "Net (Non-fiber)", slug: "net_carbs", defaultUnit: "g", source: .computed(.netCarbs), color: carbColor),
+            NutrientRowDescriptor(label: "Sugars", slug: "sugars", defaultUnit: "g", source: .nutrient(names: ["sugars, total including nlea", "sugars, total", "sugar"]), color: carbColor),
+            NutrientRowDescriptor(label: "Sugars Added", slug: "added_sugars", defaultUnit: "g", source: .nutrient(names: ["sugars, added", "added sugars"]), color: carbColor)
+        ]
+    }
+
+    private var fatRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Fat", slug: "fat", defaultUnit: "g", source: .macro(.fat), color: fatColor),
+            NutrientRowDescriptor(label: "Monounsaturated", slug: "monounsaturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total monounsaturated"]), color: fatColor),
+            NutrientRowDescriptor(label: "Polyunsaturated", slug: "polyunsaturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total polyunsaturated"]), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-3", slug: "omega_3_total", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-3", "omega 3", "omega-3"]), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-3 ALA", slug: "omega_3_ala", defaultUnit: "g", source: .nutrient(names: ["18:3 n-3 c,c,c (ala)", "alpha-linolenic acid", "omega-3 ala", "omega 3 ala"]), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-3 EPA", slug: "omega_3_epa_dha", defaultUnit: "mg", source: .nutrient(names: ["20:5 n-3 (epa)", "22:6 n-3 (dha)", "epa", "dha", "eicosapentaenoic acid", "docosahexaenoic acid", "omega-3 epa + dha"], aggregation: .sum), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-6", slug: "omega_6", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-6", "omega 6", "omega-6"]), color: fatColor),
+            NutrientRowDescriptor(label: "Saturated", slug: "saturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total saturated"]), color: fatColor),
+            NutrientRowDescriptor(label: "Trans Fat", slug: "trans_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total trans"]), color: fatColor)
+        ]
+    }
+
+    private var proteinRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Protein", slug: "protein", defaultUnit: "g", source: .macro(.protein), color: proteinColor),
+            NutrientRowDescriptor(label: "Cysteine", slug: "cysteine", defaultUnit: "mg", source: .nutrient(names: ["cysteine", "cystine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Histidine", slug: "histidine", defaultUnit: "mg", source: .nutrient(names: ["histidine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Isoleucine", slug: "isoleucine", defaultUnit: "mg", source: .nutrient(names: ["isoleucine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Leucine", slug: "leucine", defaultUnit: "mg", source: .nutrient(names: ["leucine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Lysine", slug: "lysine", defaultUnit: "mg", source: .nutrient(names: ["lysine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Methionine", slug: "methionine", defaultUnit: "mg", source: .nutrient(names: ["methionine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Phenylalanine", slug: "phenylalanine", defaultUnit: "mg", source: .nutrient(names: ["phenylalanine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Threonine", slug: "threonine", defaultUnit: "mg", source: .nutrient(names: ["threonine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Tryptophan", slug: "tryptophan", defaultUnit: "mg", source: .nutrient(names: ["tryptophan"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Tyrosine", slug: "tyrosine", defaultUnit: "mg", source: .nutrient(names: ["tyrosine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Valine", slug: "valine", defaultUnit: "mg", source: .nutrient(names: ["valine"]), color: proteinColor)
+        ]
+    }
+
+    private var vitaminRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "B1, Thiamine", slug: "vitamin_b1_thiamin", defaultUnit: "mg", source: .nutrient(names: ["thiamin", "vitamin b-1"]), color: .orange),
+            NutrientRowDescriptor(label: "B2, Riboflavin", slug: "vitamin_b2_riboflavin", defaultUnit: "mg", source: .nutrient(names: ["riboflavin", "vitamin b-2"]), color: .orange),
+            NutrientRowDescriptor(label: "B3, Niacin", slug: "vitamin_b3_niacin", defaultUnit: "mg", source: .nutrient(names: ["niacin", "vitamin b-3"]), color: .orange),
+            NutrientRowDescriptor(label: "B6, Pyridoxine", slug: "vitamin_b6_pyridoxine", defaultUnit: "mg", source: .nutrient(names: ["vitamin b-6", "pyridoxine", "vitamin b6"]), color: .orange),
+            NutrientRowDescriptor(label: "B5, Pantothenic Acid", slug: "vitamin_b5_pantothenic_acid", defaultUnit: "mg", source: .nutrient(names: ["pantothenic acid"]), color: .orange),
+            NutrientRowDescriptor(label: "B12, Cobalamin", slug: "vitamin_b12_cobalamin", defaultUnit: "mcg", source: .nutrient(names: ["vitamin b-12", "cobalamin"]), color: .orange),
+            NutrientRowDescriptor(label: "Biotin", slug: "biotin", defaultUnit: "mcg", source: .nutrient(names: ["biotin"]), color: .orange),
+            NutrientRowDescriptor(label: "Folate", slug: "folate", defaultUnit: "mcg", source: .nutrient(names: ["folate, total", "folic acid"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin A", slug: "vitamin_a", defaultUnit: "mcg", source: .nutrient(names: ["vitamin a, rae", "vitamin a"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin C", slug: "vitamin_c", defaultUnit: "mg", source: .nutrient(names: ["vitamin c, total ascorbic acid", "vitamin c"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin D", slug: "vitamin_d", defaultUnit: "IU", source: .nutrient(names: ["vitamin d (d2 + d3)", "vitamin d"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin E", slug: "vitamin_e", defaultUnit: "mg", source: .nutrient(names: ["vitamin e (alpha-tocopherol)", "vitamin e"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin K", slug: "vitamin_k", defaultUnit: "mcg", source: .nutrient(names: ["vitamin k (phylloquinone)", "vitamin k"]), color: .orange)
+        ]
+    }
+
+    private var mineralRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Calcium", slug: "calcium", defaultUnit: "mg", source: .nutrient(names: ["calcium, ca"]), color: .blue),
+            NutrientRowDescriptor(label: "Copper", slug: "copper", defaultUnit: "mcg", source: .nutrient(names: ["copper, cu"]), color: .blue),
+            NutrientRowDescriptor(label: "Iron", slug: "iron", defaultUnit: "mg", source: .nutrient(names: ["iron, fe"]), color: .blue),
+            NutrientRowDescriptor(label: "Magnesium", slug: "magnesium", defaultUnit: "mg", source: .nutrient(names: ["magnesium, mg"]), color: .blue),
+            NutrientRowDescriptor(label: "Manganese", slug: "manganese", defaultUnit: "mg", source: .nutrient(names: ["manganese, mn"]), color: .blue),
+            NutrientRowDescriptor(label: "Phosphorus", slug: "phosphorus", defaultUnit: "mg", source: .nutrient(names: ["phosphorus, p"]), color: .blue),
+            NutrientRowDescriptor(label: "Potassium", slug: "potassium", defaultUnit: "mg", source: .nutrient(names: ["potassium, k"]), color: .blue),
+            NutrientRowDescriptor(label: "Selenium", slug: "selenium", defaultUnit: "mcg", source: .nutrient(names: ["selenium, se"]), color: .blue),
+            NutrientRowDescriptor(label: "Sodium", slug: "sodium", defaultUnit: "mg", source: .nutrient(names: ["sodium, na"]), color: .blue),
+            NutrientRowDescriptor(label: "Zinc", slug: "zinc", defaultUnit: "mg", source: .nutrient(names: ["zinc, zn"]), color: .blue)
+        ]
+    }
+
+    private var otherRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Calories", slug: "calories", defaultUnit: "kcal", source: .computed(.calories), color: .purple),
+            NutrientRowDescriptor(label: "Alcohol", slug: "alcohol", defaultUnit: "g", source: .nutrient(names: ["alcohol, ethyl"]), color: .purple),
+            NutrientRowDescriptor(label: "Caffeine", slug: "caffeine", defaultUnit: "mg", source: .nutrient(names: ["caffeine"]), color: .purple),
+            NutrientRowDescriptor(label: "Cholesterol", slug: "cholesterol", defaultUnit: "mg", source: .nutrient(names: ["cholesterol"]), color: .purple),
+            NutrientRowDescriptor(label: "Choline", slug: "choline", defaultUnit: "mg", source: .nutrient(names: ["choline, total"]), color: .purple),
+            NutrientRowDescriptor(label: "Water", slug: "water", defaultUnit: "ml", source: .nutrient(names: ["water"]), color: .purple)
+        ]
+    }
+
+    private func nutrientValue(for descriptor: NutrientRowDescriptor) -> Double {
+        switch descriptor.source {
+        case .macro(let macro):
+            switch macro {
+            case .protein: return adjustedProtein
+            case .carbs: return adjustedCarbs
+            case .fat: return adjustedFat
+            }
+        case .nutrient(let names, let aggregation):
+            let matches = names.compactMap { baseNutrientValues[ConfirmLogView.normalizedNutrientKey($0)] }
+            guard !matches.isEmpty else { return 0 }
+            let perServing: Double
+            switch aggregation {
+            case .first:
+                perServing = matches.first?.value ?? 0
+            case .sum:
+                perServing = matches.reduce(0) { $0 + $1.value }
+            }
+            let sourceUnit = matches.first?.unit
+            let targetUnit = nutrientUnit(for: descriptor)
+            let converted = convert(perServing, from: sourceUnit, to: targetUnit)
+            return calculateAdjustedValue(converted, servings: numberOfServings)
+        case .computed(let computation):
+            switch computation {
+            case .netCarbs:
+                return max(adjustedCarbs - adjustedFiber, 0)
+            case .calories:
+                return adjustedCalories
+            }
+        }
+    }
+
+    private func nutrientGoal(for descriptor: NutrientRowDescriptor) -> Double? {
+        var resolvedGoal: Double?
+        if let slug = descriptor.slug,
+           let details = nutrientTargets[slug] {
+            if let target = details.target, target > 0 {
+                resolvedGoal = target
+            } else if let max = details.max, max > 0 {
+                resolvedGoal = max
+            } else if let idealMax = details.idealMax, idealMax > 0 {
+                resolvedGoal = idealMax
+            }
+        }
+        if let resolvedGoal {
+            return convertGoal(resolvedGoal, for: descriptor)
+        }
+
+        switch descriptor.source {
+        case .macro(let macro):
+            switch macro {
+            case .protein: return dayLogsVM.proteinGoal
+            case .carbs: return dayLogsVM.carbsGoal
+            case .fat: return dayLogsVM.fatGoal
+            }
+        case .computed(let computation):
+            switch computation {
+            case .calories:
+                return dayLogsVM.calorieGoal
+            case .netCarbs:
+                if let target = nutrientTargets["net_carbs"]?.target {
+                    return convertGoal(target, for: descriptor)
+                }
+                return nil
+            }
+        default:
+            return nil
+        }
+    }
+
+    private func convertGoal(_ goal: Double, for descriptor: NutrientRowDescriptor) -> Double {
+        guard let slug = descriptor.slug else { return goal }
+        switch slug {
+        case "alcohol":
+            // Convert drinks/week guidance to grams per day assuming 14g per standard drink
+            return (goal / 7) * 14
+        default:
+            return goal
+        }
+    }
+
+    private func nutrientUnit(for descriptor: NutrientRowDescriptor) -> String {
+        if descriptor.defaultUnit.isEmpty,
+           let slug = descriptor.slug,
+           let unit = nutrientTargets[slug]?.unit,
+           !unit.isEmpty {
+            return unit
+        }
+        return descriptor.defaultUnit
+    }
+
+    private func nutrientPercentage(value: Double, goal: Double?) -> String {
+        guard let goal, goal > 0 else { return "--" }
+        let percent = (value / goal) * 100
+        return "\(percent.cleanZeroDecimal)%"
+    }
+
+    private func nutrientProgressValue(value: Double, goal: Double?) -> Double {
+        guard let goal, goal > 0 else { return 0 }
+        return min(max(value / goal, 0), 1)
+    }
+
+    private func nutrientRatioText(value: Double, goal: Double?, unit: String) -> String {
+        let valueText = value.goalShareFormatted
+        let goalText = goal.map { $0.goalShareFormatted } ?? "--"
+        let trimmedUnit = unit.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedUnit.isEmpty {
+            return "\(valueText)/\(goalText)"
+        } else {
+            return "\(valueText)/\(goalText) \(trimmedUnit)"
+        }
+    }
+
+    private func convert(_ value: Double, from sourceUnit: String?, to targetUnit: String?) -> Double {
+        let from = normalizedUnit(sourceUnit)
+        let to = normalizedUnit(targetUnit)
+        guard !from.isEmpty, !to.isEmpty, from != to else { return value }
+
+        switch (from, to) {
+        case ("g", "mg"): return value * 1000
+        case ("mg", "g"): return value / 1000
+        case ("g", "mcg"): return value * 1_000_000
+        case ("mcg", "g"): return value / 1_000_000
+        case ("mg", "mcg"): return value * 1000
+        case ("mcg", "mg"): return value / 1000
+        case ("g", "ml"): return value * 1 // Approximate density of water
+        case ("ml", "g"): return value * 1
+        default: return value
+        }
+    }
+
+    private func normalizedUnit(_ unit: String?) -> String {
+        guard let unit = unit?.trimmingCharacters(in: .whitespacesAndNewlines), !unit.isEmpty else { return "" }
+        let lower = unit.lowercased()
+        if lower.contains("mcg") { return "mcg" }
+        if lower.contains("mg") { return "mg" }
+        if lower.contains("g") { return "g" }
+        if lower.contains("ml") { return "ml" }
+        if lower.contains("kcal") { return "kcal" }
+        if lower.contains("iu") { return "iu" }
+        return unit
     }
     
     // MARK: - Health Analysis Card
@@ -1471,7 +2233,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         showErrorAlert = true
         return
     }
-    guard let caloriesValue = Double(calories) else {
+    guard Double(calories) != nil else {
         errorMessage = "Calories must be a valid number"
         showErrorAlert = true
         return
@@ -1491,14 +2253,19 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
     var updatedFood      = food
     updatedFood.description = title  // Apply user's edited name
     updatedFood.numberOfServings = userServings
+    if shouldShowMealItemsEditor {
+        updatedFood.mealItems = mealItems
+    }
 
+    let mealLabel = selectedMealPeriod.displayName
+    
     // 3. Fire the real network call
     foodManager.logFood(
         email:    viewModel.email,
         food:     updatedFood,
-        meal:     "Lunch",                     // or pass in a variable
+        meal:     mealLabel,
         servings: userServings,
-        date:     Date(),
+        date:     mealTime,
         notes:    nil
     ) { result in
         DispatchQueue.main.async {
@@ -1510,14 +2277,14 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                     type:            .food,
                     status:          logged.status,
                     calories:        Double(logged.food.calories),
-                    message:         "\(logged.food.displayName) - \(logged.mealType)",
+                    message:         "\(logged.food.displayName) - \(mealLabel)",
                     foodLogId:       logged.foodLogId,
                     food:            logged.food,
-                    mealType:        logged.mealType,
+                    mealType:        mealLabel,
                     mealLogId:       nil,
                     meal:            nil,
-                    mealTime:        nil,
-                    scheduledAt:     Date(),
+                    mealTime:        mealLabel,
+                    scheduledAt:     mealTime,
                     recipeLogId:     nil,
                     recipe:          nil,
                     servingsConsumed:nil
@@ -1541,6 +2308,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                         foodManager.showLogSuccess = false
                     }
+                    self.barcodeFoodLogId = logged.foodLogId
                 }
 
                 // 8. Finally dismiss
@@ -1556,6 +2324,329 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
 }
 
     
+    private static func formattedServings(_ value: Double) -> String {
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(Int(value))
+        }
+        var string = String(format: "%.2f", value)
+        while string.last == "0" {
+            string.removeLast()
+        }
+        if string.last == "." {
+            string.removeLast()
+        }
+        return string
+    }
+
+    private func removeMealItem(_ id: UUID) {
+        withAnimation {
+            mealItems.removeAll { $0.id == id }
+            expandedMealItemIDs.remove(id)
+            mealItemNutrients[id] = nil
+        }
+    }
+
+    private func deleteMealItems(at offsets: IndexSet) {
+        let ids = offsets.map { mealItems[$0].id }
+        mealItems.remove(atOffsets: offsets)
+        ids.forEach { mealItemNutrients[$0] = nil }
+    }
+
+    private func presentCustomFoodEditor(for mealItem: MealItem? = nil) {
+        guard let payload = buildCustomFoodPayload(for: mealItem) else {
+            errorMessage = "Unable to prepare custom food data."
+            showErrorAlert = true
+            return
+        }
+        customFoodDraft = payload
+    }
+
+    private func buildCustomFoodPayload(for mealItem: MealItem? = nil) -> CustomFoodDraft? {
+        guard let food = originalFood else { return nil }
+        if let mealItem {
+            let servingDescription = mealItem.preferredServingDescription ?? "\(mealItem.serving.cleanZeroDecimal) \(mealItem.servingUnit ?? "serving")"
+            let nutrients = mealItemNutrients[mealItem.id] ?? buildNutrients(for: mealItem)
+            return CustomFoodDraft(
+                name: mealItem.name,
+                brand: brand.isEmpty ? (food.brandText ?? "") : brand,
+                servingText: servingDescription,
+                servings: mealItem.serving,
+                mealItems: [mealItem],
+                nutrients: nutrients
+            )
+        }
+
+        let mealItemsPayload = shouldShowMealItemsEditor ? mealItems : (food.mealItems ?? [])
+        let nutrientsPayload = food.foodNutrients
+        let displayName = title.isEmpty ? food.description : title
+        let displayBrand = brand.isEmpty ? (food.brandText ?? "") : brand
+        let servingDescription = servingSize.isEmpty ? (food.householdServingFullText ?? "") : servingSize
+        return CustomFoodDraft(
+            name: displayName,
+            brand: displayBrand,
+            servingText: servingDescription,
+            servings: numberOfServings,
+            mealItems: mealItemsPayload,
+            nutrients: nutrientsPayload
+        )
+    }
+
+    private func handleCustomFoodSubmission(draft: CustomFoodDraft, action: CustomFoodAction) {
+        let foodPayload = foodFromDraft(draft)
+        foodManager.createManualFood(food: foodPayload, showPreview: false) { result in
+            switch result {
+            case .success(_):
+                if action == .createAndAdd {
+                    appendCustomMealItem(from: draft)
+                }
+            case .failure(let error):
+                errorMessage = error.localizedDescription
+                showErrorAlert = true
+            }
+        }
+    }
+
+    private func foodFromDraft(_ draft: CustomFoodDraft) -> Food {
+        let trimmedBrand = draft.brand.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedBrand = trimmedBrand.isEmpty ? nil : trimmedBrand
+        let servingText = draft.servingText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedServingText = servingText.isEmpty ? "1 serving" : servingText
+        let servingUnit = parsedServingUnit(from: resolvedServingText)
+        let measureId = Int.random(in: 100_000...999_999)
+        let measure = FoodMeasure(
+            disseminationText: resolvedServingText,
+            gramWeight: 0,
+            id: measureId,
+            modifier: resolvedServingText,
+            measureUnitName: servingUnit,
+            rank: 1
+        )
+
+        return Food(
+            fdcId: Int.random(in: 10_000_000...99_999_999),
+            description: draft.name,
+            brandOwner: resolvedBrand,
+            brandName: resolvedBrand,
+            servingSize: 1,
+            numberOfServings: draft.servings,
+            servingSizeUnit: servingUnit,
+            householdServingFullText: resolvedServingText,
+            foodNutrients: draft.nutrients,
+            foodMeasures: [measure],
+            healthAnalysis: nil,
+            aiInsight: nil,
+            nutritionScore: nil,
+            mealItems: draft.mealItems.isEmpty ? nil : draft.mealItems
+        )
+    }
+
+    private func appendCustomMealItem(from draft: CustomFoodDraft) {
+        let newItem = mealItem(from: draft)
+        withAnimation {
+            mealItems.append(newItem)
+        }
+        mealItemNutrients[newItem.id] = draft.nutrients
+        recalculateMealItemNutrition()
+    }
+
+    private func mealItem(from draft: CustomFoodDraft) -> MealItem {
+        let servingsValue = draft.servings > 0 ? draft.servings : 1
+        let calories = nutrientValue(names: ["Energy"], in: draft.nutrients) * servingsValue
+        let protein = nutrientValue(names: ["Protein"], in: draft.nutrients) * servingsValue
+        let carbs = nutrientValue(names: ["Carbohydrate, by difference"], in: draft.nutrients) * servingsValue
+        let fat = nutrientValue(names: ["Total lipid (fat)"], in: draft.nutrients) * servingsValue
+        let servingDescriptor = draft.servingText.isEmpty ? nil : MealItemServingDescriptor(amount: nil, unit: nil, text: draft.servingText)
+
+        return MealItem(
+            name: draft.name,
+            serving: servingsValue,
+            servingUnit: parsedServingUnit(from: draft.servingText),
+            calories: calories,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+            subitems: nil,
+            baselineServing: servingsValue,
+            measures: [],
+            originalServing: servingDescriptor
+        )
+    }
+
+    private func nutrientValue(names: [String], in nutrients: [Nutrient]) -> Double {
+        for name in names {
+            if let match = nutrients.first(where: { $0.nutrientName.caseInsensitiveCompare(name) == .orderedSame }) {
+                return match.safeValue
+            }
+        }
+        return 0
+    }
+
+    private func parsedServingUnit(from text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "serving" }
+        let tokens = trimmed.split(whereSeparator: { $0 == " " || $0 == "\u{00A0}" })
+        if tokens.count >= 2, Double(tokens[0].replacingOccurrences(of: ",", with: ".")) != nil {
+            return canonicalUnitLabel(String(tokens[1]))
+        }
+        return canonicalUnitLabel(trimmed)
+    }
+
+    private func canonicalUnitLabel(_ rawUnit: String) -> String {
+        let cleaned = rawUnit
+            .lowercased()
+            .trimmingCharacters(in: CharacterSet(charactersIn: "()"))
+        let mapping: [String: [String]] = [
+            "cup": ["cup", "cups"],
+            "serving": ["serving", "servings", "portion"],
+            "piece": ["piece", "pieces", "slice", "slices", "item", "items"],
+            "tbsp": ["tbsp", "tablespoon", "tablespoons"],
+            "tsp": ["tsp", "teaspoon", "teaspoons"],
+            "g": ["g", "gram", "grams"],
+            "oz": ["oz", "ounce", "ounces"],
+            "ml": ["ml", "milliliter", "milliliters"],
+            "lb": ["lb", "lbs", "pound", "pounds"],
+            "can": ["can", "cans"],
+            "bottle": ["bottle", "bottles"]
+        ]
+
+        for (canonical, matches) in mapping {
+            if matches.contains(where: { cleaned.contains($0) }) {
+                return canonical
+            }
+        }
+        return cleaned.isEmpty ? "serving" : cleaned
+    }
+
+    private func buildNutrients(for mealItem: MealItem) -> [Nutrient] {
+        [
+            Nutrient(nutrientName: "Energy", value: mealItem.calories, unitName: "kcal"),
+            Nutrient(nutrientName: "Protein", value: mealItem.protein, unitName: "g"),
+            Nutrient(nutrientName: "Carbohydrate, by difference", value: mealItem.carbs, unitName: "g"),
+            Nutrient(nutrientName: "Total lipid (fat)", value: mealItem.fat, unitName: "g")
+        ]
+    }
+
+
+    private func recalculateMealItemNutrition() {
+        guard shouldShowMealItemsEditor else { return }
+        if mealItems.isEmpty {
+            let emptyTotals = MacroTotals.zero
+            baseCalories = 0
+            baseProtein = 0
+            baseCarbs = 0
+            baseFat = 0
+            rebuildBaseNutrientValues(with: emptyTotals)
+            updateNutritionValues()
+            return
+        }
+        let totals = ConfirmLogView.macroTotals(for: mealItems)
+        baseCalories = totals.calories
+        baseProtein = totals.protein
+        baseCarbs = totals.carbs
+        baseFat = totals.fat
+        rebuildBaseNutrientValues(with: totals)
+        updateNutritionValues()
+    }
+
+    private func rebuildBaseNutrientValues(with totals: MacroTotals) {
+        var merged = baselineNutrientValues
+        let energyKey = ConfirmLogView.normalizedNutrientKey("Energy")
+        let proteinKey = ConfirmLogView.normalizedNutrientKey("Protein")
+        let carbKey = ConfirmLogView.normalizedNutrientKey("Carbohydrate, by difference")
+        let fatKey = ConfirmLogView.normalizedNutrientKey("Total lipid (fat)")
+
+        merged[energyKey] = RawNutrientValue(value: totals.calories, unit: "kcal")
+        merged[proteinKey] = RawNutrientValue(value: totals.protein, unit: "g")
+        merged[carbKey] = RawNutrientValue(value: totals.carbs, unit: "g")
+        merged[fatKey] = RawNutrientValue(value: totals.fat, unit: "g")
+
+        applyCustomNutrientContributions(into: &merged)
+        baseNutrientValues = merged
+    }
+
+    private func applyCustomNutrientContributions(into values: inout [String: RawNutrientValue]) {
+        let macroKeys: Set<String> = [
+            ConfirmLogView.normalizedNutrientKey("Energy"),
+            ConfirmLogView.normalizedNutrientKey("Protein"),
+            ConfirmLogView.normalizedNutrientKey("Carbohydrate, by difference"),
+            ConfirmLogView.normalizedNutrientKey("Total lipid (fat)")
+        ]
+
+        for item in mealItems {
+            guard let nutrients = mealItemNutrients[item.id], !nutrients.isEmpty else { continue }
+            let baselineServing = item.baselineServing == 0 ? 1 : item.baselineServing
+            let multiplier = item.serving / baselineServing
+
+            for nutrient in nutrients {
+                let key = ConfirmLogView.normalizedNutrientKey(nutrient.nutrientName)
+                if macroKeys.contains(key) { continue }
+                let addition = nutrient.safeValue * multiplier
+                if let existing = values[key] {
+                    values[key] = RawNutrientValue(value: existing.value + addition, unit: existing.unit ?? nutrient.unitName)
+                } else {
+                    values[key] = RawNutrientValue(value: addition, unit: nutrient.unitName)
+                }
+            }
+        }
+    }
+
+    private static func macroTotals(for items: [MealItem]) -> MacroTotals {
+        items.reduce(into: MacroTotals.zero) { partialResult, item in
+            partialResult.add(macroTotals(for: item))
+        }
+    }
+
+    private static func macroTotals(for item: MealItem) -> MacroTotals {
+        let scale = max(item.macroScalingFactor, 0)
+        let parentTotals = MacroTotals(
+            calories: item.calories * scale,
+            protein: item.protein * scale,
+            carbs: item.carbs * scale,
+            fat: item.fat * scale
+        )
+
+        if let subitems = item.subitems, !subitems.isEmpty {
+            let childTotals = macroTotals(for: subitems)
+            if parentTotals.isZero && !childTotals.isZero {
+                return MacroTotals(
+                    calories: childTotals.calories * scale,
+                    protein: childTotals.protein * scale,
+                    carbs: childTotals.carbs * scale,
+                    fat: childTotals.fat * scale
+                )
+            }
+        }
+
+        return parentTotals
+    }
+
+    static func parseServingsInput(_ text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let tokens = trimmed.split(whereSeparator: { $0 == " " }).map(String.init)
+        if tokens.count == 2,
+           let base = Double(tokens[0]),
+           let fraction = parseFraction(tokens[1]) {
+            return base + fraction
+        }
+
+        if let fraction = parseFraction(trimmed) {
+            return fraction
+        }
+
+        return Double(trimmed)
+    }
+
+    private static func parseFraction(_ component: String) -> Double? {
+        let parts = component.split(separator: "/").map(String.init)
+        guard parts.count == 2,
+              let numerator = Double(parts[0]),
+              let denominator = Double(parts[1]),
+              denominator != 0 else { return nil }
+        return numerator / denominator
+    }
+
     // Helper method to calculate adjusted values based on number of servings
     private func calculateAdjustedValue(_ baseValue: Double, servings: Double) -> Double {
         return (baseValue * servings).rounded(toPlaces: 1)
@@ -1583,15 +2674,255 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         vitaminC = String(format: "%.1f", baseVitaminC * numberOfServings)
         calcium = String(format: "%.1f", baseCalcium * numberOfServings)
         iron = String(format: "%.1f", baseIron * numberOfServings)
+
+        let formatted = ConfirmLogView.formattedServings(numberOfServings)
+        if formatted != servingsInput {
+            servingsInput = formatted
+        }
     }
 }
 
+// MARK: - Supporting Views & Helpers
+private struct GoalShareBubble: View {
+    let title: String
+    let percent: Double
+    let grams: Double
+    let goal: Double
+    let color: Color
+    
+    private var progress: Double {
+        min(max(percent / 100, 0), 1)
+    }
+    
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            ZStack {
+                Circle()
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 8)
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Text("\(Int(percent.rounded()))%")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+            }
+            .frame(width: 76, height: 76)
+            Text("\(grams.goalShareFormatted) / \(goal.goalShareFormatted)")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct MacroRingView: View {
+    let calories: Double
+    let arcs: [MacroArc]
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.08), lineWidth: 8)
+            
+            ForEach(arcs.indices, id: \.self) { index in
+                let arc = arcs[index]
+                Circle()
+                    .trim(from: CGFloat(arc.start), to: CGFloat(arc.end))
+                    .stroke(arc.color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+            
+            VStack(spacing: -4) {
+                Text(String(format: "%.1f", calories))
+                    .font(.system(size: 20, weight: .medium))
+                Text("cals")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
+private struct MacroArc {
+    let start: Double
+    let end: Double
+    let color: Color
+}
+
+private struct MacroSegment {
+    let color: Color
+    let fraction: Double
+}
+
+private struct MacroTotals {
+    var calories: Double
+    var protein: Double
+    var carbs: Double
+    var fat: Double
+
+    static let zero = MacroTotals(calories: 0, protein: 0, carbs: 0, fat: 0)
+
+    mutating func add(_ other: MacroTotals) {
+        calories += other.calories
+        protein += other.protein
+        carbs += other.carbs
+        fat += other.fat
+    }
+
+    var isZero: Bool {
+        calories == 0 && protein == 0 && carbs == 0 && fat == 0
+    }
+}
+
+private extension ConfirmLogView {
+    static let servingFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        formatter.minimum = 0
+        return formatter
+    }()
+}
+
+private struct RawNutrientValue {
+    let value: Double
+    let unit: String?
+}
+
+struct CustomFoodDraft: Identifiable {
+    let id = UUID()
+    var name: String
+    var brand: String
+    var servingText: String
+    var servings: Double
+    var mealItems: [MealItem]
+    var nutrients: [Nutrient]
+}
+
+enum CustomFoodAction {
+    case createOnly
+    case createAndAdd
+}
+
+private struct NutrientRowDescriptor: Identifiable {
+    let id: String
+    let label: String
+    let slug: String?
+    let defaultUnit: String
+    let source: NutrientValueSource
+    let color: Color
+
+    init(id: String? = nil,
+         label: String,
+         slug: String?,
+         defaultUnit: String,
+         source: NutrientValueSource,
+         color: Color) {
+        self.id = id ?? slug ?? label
+        self.label = label
+        self.slug = slug
+        self.defaultUnit = defaultUnit
+        self.source = source
+        self.color = color
+    }
+}
+
+#if DEBUG
+private struct MealItemServingControlsPreview: View {
+    @State private var item = MealItem(
+        name: "Greek Yogurt",
+        serving: 1,
+        servingUnit: "cup",
+        calories: 120,
+        protein: 20,
+        carbs: 9,
+        fat: 0,
+        subitems: nil,
+        baselineServing: 1,
+        measures: [
+            MealItemMeasure(unit: "cup", description: "1 cup (227 g)", gramWeight: 227),
+            MealItemMeasure(unit: "tbsp", description: "1 tbsp (15 g)", gramWeight: 15),
+            MealItemMeasure(unit: "oz", description: "1 oz (28 g)", gramWeight: 28)
+        ]
+    )
+
+    var body: some View {
+        MealItemServingControls(item: $item)
+            .padding()
+            .background(Color("iosnp"))
+            .previewLayout(.sizeThatFits)
+    }
+}
+
+#Preview("Meal Item Measure Picker") {
+    MealItemServingControlsPreview()
+        .padding()
+        .background(Color("iosbg"))
+        .preferredColorScheme(.dark)
+}
+#endif
+
+private enum NutrientValueSource {
+    case macro(MacroType)
+    case nutrient(names: [String], aggregation: NutrientAggregation = .first)
+    case computed(NutrientComputation)
+}
+
+private enum MacroType {
+    case protein
+    case carbs
+    case fat
+}
+
+private enum NutrientAggregation {
+    case first
+    case sum
+}
+
+private enum NutrientComputation {
+    case netCarbs
+    case calories
+}
+
+extension Double {
+    var cleanOneDecimal: String {
+        if self.isNaN { return "0" }
+        return String(format: "%.1f", self)
+    }
+    
+    var cleanZeroDecimal: String {
+        if self.isNaN { return "0" }
+        if abs(self - rounded()) < 0.01 {
+            return String(format: "%.0f", self)
+        } else {
+            return String(format: "%.1f", self)
+        }
+    }
+
+    var goalShareFormatted: String {
+        if self.isNaN || self.isInfinite { return "0" }
+        let roundedValue = (self * 10).rounded() / 10
+        if roundedValue.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(Int(roundedValue))
+        }
+        return String(format: "%.1f", roundedValue)
+    }
+}
 
 extension ConfirmLogView {
+    static func normalizedNutrientKey(_ name: String) -> String {
+        var cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        cleaned = cleaned.replacingOccurrences(of: "\\([^\\)]*\\)", with: " ", options: .regularExpression)
+        let filtered = cleaned.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }
+        return String(String.UnicodeScalarView(filtered))
+    }
+
     // Helper function to hide keyboard
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
-
-

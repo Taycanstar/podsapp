@@ -465,6 +465,13 @@ struct TextLogView: View {
                 return Nutrient(nutrientName: name, value: value, unitName: unit)
             }
         }
+        let aiInsight = foodData["ai_insight"] as? String
+        let nutritionScore: Double? = {
+            if let value = foodData["nutrition_score"] as? Double { return value }
+            if let value = foodData["nutrition_score"] as? NSNumber { return value.doubleValue }
+            if let value = foodData["nutrition_score"] as? String, let double = Double(value) { return double }
+            return nil
+        }()
         
         // Create LoggedFoodItem from response
         let loggedFoodItem = LoggedFoodItem(
@@ -479,7 +486,9 @@ struct TextLogView: View {
             carbs: foodData["carbs"] as? Double ?? 0.0,
             fat: foodData["fat"] as? Double ?? 0.0,
             healthAnalysis: healthAnalysisData,
-            foodNutrients: foodNutrients
+            foodNutrients: foodNutrients,
+            aiInsight: aiInsight,
+            nutritionScore: nutritionScore
         )
         
         // Create CombinedLog for dashboard display

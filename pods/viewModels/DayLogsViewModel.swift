@@ -18,9 +18,13 @@ final class DayLogsViewModel: ObservableObject {
   @Published var proteinGoal      : Double = 150
   @Published var carbsGoal        : Double = 200
   @Published var fatGoal          : Double = 70
-@Published var remainingCalories: Double = 2_000   // always ≥ 0
+  @Published var remainingCalories: Double = 2_000   // always ≥ 0
+  @Published var hasAdvancedNutritionTargets: Bool = false
+  @Published var nutritionGoalsVersion = UUID()
+  @Published var isRefreshingNutritionGoals = false
 
   private var pendingByDate: [Date: [CombinedLog]] = [:]
+  private var currentSnapshotDate: Date?
   @Published var error        : Error?
   @Published var isLoading    = false
   @Published var selectedDate = Date()
@@ -78,9 +82,11 @@ final class DayLogsViewModel: ObservableObject {
 
   private let repository = DayLogsRepository.shared
   private let logNetwork = LogRepository()
+  private let goalsStore = NutritionGoalsStore.shared
   private(set) var email = ""
   private weak var healthViewModel: HealthKitViewModel?
   private var cancellables: Set<AnyCancellable> = []
+  private var goalsStoreCancellable: AnyCancellable?
 
   enum ScheduledLogAction: String {
     case log
@@ -94,6 +100,7 @@ final class DayLogsViewModel: ObservableObject {
     self.email = email
     self.healthViewModel = healthViewModel
     clearPendingCache()
+    observeGoalsStore()
 
     if !email.isEmpty {
       configureRepository(for: email)
@@ -148,17 +155,36 @@ final class DayLogsViewModel: ObservableObject {
     }
   }
 
+  private func observeGoalsStore() {
+    goalsStoreCancellable = goalsStore.$state
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] state in
+        guard let self else { return }
+        switch state {
+        case .loading:
+          self.isRefreshingNutritionGoals = true
+        case .ready(let goals):
+          self.isRefreshingNutritionGoals = false
+          self.applyNutritionGoals(goals, persist: false)
+        case .error:
+          self.isRefreshingNutritionGoals = false
+        case .idle:
+          self.isRefreshingNutritionGoals = false
+        }
+      }
+  }
+
   // MARK: - Public Methods
   
   /// Force refresh nutrition goals from UserDefaults
   /// This ensures the ViewModel has the most up-to-date values
-  func refreshNutritionGoals() {
-    fetchNutritionGoals()
+  func refreshNutritionGoals(forceRefresh: Bool = false) {
+    fetchNutritionGoals(forceRefresh: forceRefresh)
   }
 
 
   // MARK: – Goal helpers ------------------------------------------------------
- func fetchCalorieGoal() {
+func fetchCalorieGoal() {
     // 1) Highest priority: explicit dailyCalorieGoal if non-zero
     if let g = UserDefaults.standard.value(forKey: "dailyCalorieGoal") as? Double, g > 0 {
         calorieGoal = g
@@ -179,6 +205,40 @@ final class DayLogsViewModel: ObservableObject {
     }
     remainingCalories = max(0, calorieGoal - totalCalories)
 }
+
+  private func applyNutritionGoals(_ goals: NutritionGoals, persist: Bool) {
+    if goals.calories > 0 {
+      calorieGoal = goals.calories
+    }
+    proteinGoal = goals.protein
+    carbsGoal = goals.carbs
+    fatGoal = goals.fat
+
+    if let desiredKg = goals.desiredWeightKg {
+      desiredWeightKg = desiredKg
+      desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
+    } else if let desiredLbs = goals.desiredWeightLbs {
+      desiredWeightLbs = desiredLbs
+      desiredWeightKg = desiredLbs / 2.20462
+    }
+
+    hasAdvancedNutritionTargets = !(goals.nutrients?.isEmpty ?? true)
+    nutritionGoalsVersion = UUID()
+    remainingCalories = max(0, calorieGoal - totalCalories)
+
+    guard persist else { return }
+    NutritionGoalsStore.shared.cache(goals: goals)
+  }
+
+  private func applyFallbackNutritionGoals() {
+    let goals = UserGoalsManager.shared.dailyGoals
+    proteinGoal = Double(goals.protein)
+    carbsGoal = Double(goals.carbs)
+    fatGoal = Double(goals.fat)
+    hasAdvancedNutritionTargets = false
+    remainingCalories = max(0, calorieGoal - totalCalories)
+  }
+
 
   func processScheduledLog(
     _ preview: ScheduledLogPreview,
@@ -267,33 +327,16 @@ final class DayLogsViewModel: ObservableObject {
 
   }
 
- func fetchNutritionGoals() {
-    // First try to fetch the calorie goal (keeps existing logic)
+ func fetchNutritionGoals(forceRefresh: Bool = false) {
     fetchCalorieGoal()
-    
-    // Then fetch protein, carbs, and fat goals
-    if let data = UserDefaults.standard.data(forKey: "nutritionGoalsData"),
-       let goals = try? JSONDecoder().decode(NutritionGoals.self, from: data) {
-        proteinGoal = goals.protein
-        carbsGoal = goals.carbs
-        fatGoal = goals.fat
-        
-        // Store desired weight if available
-        if let desiredKg = goals.desiredWeightKg {
-            desiredWeightKg = desiredKg
-            // Convert kg to lbs if desiredWeightLbs is not available
-            desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
-        } else if let desiredLbs = goals.desiredWeightLbs {
-            desiredWeightLbs = desiredLbs
-            // Convert lbs to kg if desiredWeightKg is not available
-            desiredWeightKg = desiredLbs / 2.20462
-        }
+
+    if let goals = goalsStore.cachedGoals {
+        applyNutritionGoals(goals, persist: false)
     } else {
-        // Use UserGoalsManager for defaults
-        proteinGoal = Double(UserGoalsManager.shared.dailyGoals.protein)
-        carbsGoal = Double(UserGoalsManager.shared.dailyGoals.carbs)
-        fatGoal = Double(UserGoalsManager.shared.dailyGoals.fat)
+        applyFallbackNutritionGoals()
     }
+
+    goalsStore.ensureGoalsAvailable(email: email, forceRefresh: forceRefresh)
 }
 
 
@@ -468,17 +511,18 @@ private func deleteOnServer(_ log: CombinedLog) async throws {
 
 func loadLogs(for date: Date, force: Bool = false) {
   let newKey = Calendar.current.startOfDay(for: date)
-  let currentKey = logs.isEmpty ? nil : Calendar.current.startOfDay(for: selectedDate)
+  let displayedKey = currentSnapshotDate ?? (logs.isEmpty ? nil : Calendar.current.startOfDay(for: selectedDate))
 
-  // CRITICAL FIX: Clear logs immediately when changing dates to prevent showing stale data
-  if currentKey != newKey {
+  // Clear the in-memory logs as soon as we target a different day so UI never shows stale data
+  if displayedKey != newKey {
     logs = []
 
-    // Clear pending cache for the date we're leaving to prevent stale data
-    if let currentKey = currentKey {
-      pendingByDate.removeValue(forKey: currentKey)
-      print("[DayLogsVM] Cleared pending cache for date: \(currentKey)")
+    if let displayedKey {
+      pendingByDate.removeValue(forKey: displayedKey)
+      print("[DayLogsVM] Cleared pending cache for date: \(displayedKey)")
     }
+
+    currentSnapshotDate = nil
   }
 
   selectedDate = date
@@ -494,6 +538,16 @@ func loadLogs(for date: Date, force: Bool = false) {
   Task { @MainActor [weak self] in
     guard let self else { return }
     await self.repository.refresh(date: date, force: force)
+    let calendar = Calendar.current
+    let requestedDay = calendar.startOfDay(for: date)
+    let activeDay = calendar.startOfDay(for: self.selectedDate)
+    // Ignore responses for stale date selections so fast switching can't overwrite the UI with old data
+    guard requestedDay == activeDay else {
+      print("[DayLogsVM] Skipping snapshot apply - selectedDate changed from \(requestedDay) to \(activeDay)")
+      self.isLoading = false
+      self.pendingNotificationReload = false
+      return
+    }
     if let snapshot = self.repository.snapshot(for: date) {
       self.applySnapshot(snapshot)
     } else {
@@ -505,6 +559,7 @@ func loadLogs(for date: Date, force: Bool = false) {
 
 private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   let key = Calendar.current.startOfDay(for: snapshot.date)
+  currentSnapshotDate = key
   let serverLogs = snapshot.combined
   reconcilePlaceholders(with: serverLogs)
   let pending = pendingByDate[key] ?? []
@@ -603,25 +658,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   }
 
   if let goals = snapshot.goals {
-    let serverCal = goals.calories
-    if serverCal > 0 {
-      calorieGoal = serverCal
-    }
-    proteinGoal = goals.protein
-    carbsGoal = goals.carbs
-    fatGoal = goals.fat
-
-    if let desiredKg = goals.desiredWeightKg {
-      desiredWeightKg = desiredKg
-      desiredWeightLbs = goals.desiredWeightLbs ?? (desiredKg * 2.20462)
-    } else if let desiredLbs = goals.desiredWeightLbs {
-      desiredWeightLbs = desiredLbs
-      desiredWeightKg = desiredLbs / 2.20462
-    }
-
-    if let encoded = try? JSONEncoder().encode(goals) {
-      UserDefaults.standard.set(encoded, forKey: "nutritionGoalsData")
-    }
+    applyNutritionGoals(goals, persist: true)
   }
 
   remainingCalories = max(0, calorieGoal - totalCalories)
@@ -738,20 +775,22 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                                 // Avoid division by zero
                                 let servingsCount = max(updatedFoodLog.servings, 0.1)
                                 
-                                updatedLog.food = LoggedFoodItem(
-                                    foodLogId: food.foodLogId,
-                                    fdcId: food.fdcId,
-                                    displayName: food.displayName,
-                                    calories: calories / servingsCount, // Store per-serving value
-                                    servingSizeText: food.servingSizeText,
-                                    numberOfServings: updatedFoodLog.servings,
-                                    brandText: food.brandText,
-                                    protein: protein / servingsCount,
-                                    carbs: carbs / servingsCount,
-                                    fat: fat / servingsCount,
-                                    healthAnalysis: food.healthAnalysis,
-                                    foodNutrients: food.foodNutrients
-                                )
+                               updatedLog.food = LoggedFoodItem(
+                                   foodLogId: food.foodLogId,
+                                   fdcId: food.fdcId,
+                                   displayName: food.displayName,
+                                   calories: calories / servingsCount, // Store per-serving value
+                                   servingSizeText: food.servingSizeText,
+                                   numberOfServings: updatedFoodLog.servings,
+                                   brandText: food.brandText,
+                                   protein: protein / servingsCount,
+                                   carbs: carbs / servingsCount,
+                                   fat: fat / servingsCount,
+                                   healthAnalysis: food.healthAnalysis,
+                                    foodNutrients: food.foodNutrients,
+                                    aiInsight: food.aiInsight,
+                                    nutritionScore: food.nutritionScore
+                               )
                                 
                                 print("✅ Updated food log locally (date change) with per-serving values: cal=\(calories / servingsCount), prot=\(protein / servingsCount), carbs=\(carbs / servingsCount), fat=\(fat / servingsCount)")
                             }
@@ -786,20 +825,22 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                                 // Avoid division by zero
                                 let servingsCount = max(updatedFoodLog.servings, 0.1)
                                 
-                                updatedLog.food = LoggedFoodItem(
-                                    foodLogId: food.foodLogId,
-                                    fdcId: food.fdcId,
-                                    displayName: food.displayName,
-                                    calories: calories / servingsCount, // Store per-serving value
-                                    servingSizeText: food.servingSizeText,
-                                    numberOfServings: updatedFoodLog.servings,
-                                    brandText: food.brandText,
-                                    protein: protein / servingsCount,
-                                    carbs: carbs / servingsCount,
-                                    fat: fat / servingsCount,
-                                    healthAnalysis: food.healthAnalysis,
-                                    foodNutrients: food.foodNutrients
-                                )
+                               updatedLog.food = LoggedFoodItem(
+                                   foodLogId: food.foodLogId,
+                                   fdcId: food.fdcId,
+                                   displayName: food.displayName,
+                                   calories: calories / servingsCount, // Store per-serving value
+                                   servingSizeText: food.servingSizeText,
+                                   numberOfServings: updatedFoodLog.servings,
+                                   brandText: food.brandText,
+                                   protein: protein / servingsCount,
+                                   carbs: carbs / servingsCount,
+                                   fat: fat / servingsCount,
+                                   healthAnalysis: food.healthAnalysis,
+                                    foodNutrients: food.foodNutrients,
+                                    aiInsight: food.aiInsight,
+                                    nutritionScore: food.nutritionScore
+                               )
                                 
                                 print("✅ Updated food log locally (same date) with per-serving values: cal=\(calories / servingsCount), prot=\(protein / servingsCount), carbs=\(carbs / servingsCount), fat=\(fat / servingsCount)")
                             }
@@ -1106,7 +1147,9 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       image: summaryImage(for: sourceLog),
       protein: summaryProtein(for: sourceLog),
       carbs: summaryCarbs(for: sourceLog),
-      fat: summaryFat(for: sourceLog)
+      fat: summaryFat(for: sourceLog),
+      aiInsight: sourceLog.food?.aiInsight,
+      nutritionScore: sourceLog.food?.nutritionScore
     )
 
     let preview = ScheduledLogPreview(
@@ -1176,7 +1219,9 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
         carbs: preview.summary.carbs,
         fat: preview.summary.fat,
         healthAnalysis: nil,
-        foodNutrients: nil
+        foodNutrients: nil,
+        aiInsight: preview.summary.aiInsight,
+        nutritionScore: preview.summary.nutritionScore
       )
 
       combined = CombinedLog(

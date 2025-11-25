@@ -41,7 +41,10 @@ extension Food {
             carbs: self.carbs,
             fat: self.fat,
             healthAnalysis: nil,
-            foodNutrients: self.foodNutrients
+            foodNutrients: self.foodNutrients,
+            aiInsight: self.aiInsight,
+            nutritionScore: self.nutritionScore,
+            mealItems: self.mealItems
         )
     }
 }
@@ -590,7 +593,10 @@ class FoodManager: ObservableObject {
     }
     
     /// Helper method to create LoggedFoodItem from response dictionary
-    private func createLoggedFoodItemFromResponse(foodDict: [String: Any]) throws -> LoggedFoodItem {
+    private func createLoggedFoodItemFromResponse(
+        foodDict: [String: Any],
+        fallbackHealthAnalysis: [String: Any]? = nil
+    ) throws -> LoggedFoodItem {
         let fdcId = foodDict["fdcId"] as? Int ?? 0
         let description = foodDict["description"] as? String ?? "Unknown Food"
         let brandName = foodDict["brandName"] as? String
@@ -630,6 +636,21 @@ class FoodManager: ObservableObject {
             }
         }
         
+        let aiInsight = foodDict["ai_insight"] as? String
+        let nutritionScore: Double? = {
+            if let value = foodDict["nutrition_score"] as? Double {
+                return value
+            }
+            if let value = foodDict["nutrition_score"] as? NSNumber {
+                return value.doubleValue
+            }
+            if let value = foodDict["nutrition_score"] as? String,
+               let double = Double(value) {
+                return double
+            }
+            return nil
+        }()
+
         // Extract health analysis
         var healthAnalysis: HealthAnalysis?
         if let healthDict = foodDict["health_analysis"] as? [String: Any] {
@@ -638,6 +659,13 @@ class FoodManager: ObservableObject {
                 healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthData)
             } catch {
                 print("⚠️ Failed to decode health analysis: \(error)")
+            }
+        } else if let fallbackDict = fallbackHealthAnalysis {
+            do {
+                let healthData = try JSONSerialization.data(withJSONObject: fallbackDict)
+                healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthData)
+            } catch {
+                print("⚠️ Failed to decode fallback health analysis: \(error)")
             }
         }
         
@@ -653,8 +681,20 @@ class FoodManager: ObservableObject {
             carbs: carbs,
             fat: fat,
             healthAnalysis: healthAnalysis,
-            foodNutrients: foodNutrients.isEmpty ? nil : foodNutrients
+            foodNutrients: foodNutrients.isEmpty ? nil : foodNutrients,
+            aiInsight: aiInsight,
+            nutritionScore: nutritionScore,
+            mealItems: decodeMealItems(from: foodDict)
         )
+    }
+
+    private func decodeMealItems(from foodDict: [String: Any]) -> [MealItem]? {
+        guard let rawItems = foodDict["meal_items"] as? [[String: Any]] ?? foodDict["mealItems"] as? [[String: Any]],
+              !rawItems.isEmpty,
+              let data = try? JSONSerialization.data(withJSONObject: rawItems)
+        else { return nil }
+
+        return try? JSONDecoder().decode([MealItem].self, from: data)
     }
 
     
@@ -2929,21 +2969,31 @@ trackTimer(progressTimer)
                 }
             }
             
-            // Create LoggedFoodItem from creation response
-            let loggedFoodItem = LoggedFoodItem(
-                foodLogId: nil,  // No log ID when not logged yet
-                fdcId: fdcId,
-                displayName: description,
-                calories: calories,
-                servingSizeText: householdServingFullText ?? "\(Int(servingSize)) \(servingSizeUnit)",
-                numberOfServings: numberOfServings,
-                brandText: brandName,
-                protein: protein,
-                carbs: carbs,
-                fat: fat,
-                healthAnalysis: healthAnalysis,
-                foodNutrients: nil   // Could extract if needed
-            )
+        let aiInsight = foodDict["ai_insight"] as? String
+        let nutritionScore: Double? = {
+            if let value = foodDict["nutrition_score"] as? Double { return value }
+            if let value = foodDict["nutrition_score"] as? NSNumber { return value.doubleValue }
+            if let value = foodDict["nutrition_score"] as? String, let double = Double(value) { return double }
+            return nil
+        }()
+
+        // Create LoggedFoodItem from creation response
+        let loggedFoodItem = LoggedFoodItem(
+            foodLogId: nil,  // No log ID when not logged yet
+            fdcId: fdcId,
+            displayName: description,
+            calories: calories,
+            servingSizeText: householdServingFullText ?? "\(Int(servingSize)) \(servingSizeUnit)",
+            numberOfServings: numberOfServings,
+            brandText: brandName,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+            healthAnalysis: healthAnalysis,
+            foodNutrients: nil,   // Could extract if needed
+            aiInsight: aiInsight,
+            nutritionScore: nutritionScore
+        )
             
             // Extract other fields
             let status = payload["status"] as? String ?? "success"
@@ -3180,97 +3230,26 @@ func analyzeNutritionLabel(
         // When shouldLog=false, backend returns creation response without foodLogId
         print("🔍 DEBUG FoodManager: Decoding creation response (shouldLog=false)")
         
-        // Extract the food from the creation response and convert to LoggedFoodItem
         guard let foodDict = payload["food"] as? [String: Any] else {
           throw NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No food data in creation response"])
         }
-        
-        // Extract basic food info
-        let fdcId = foodDict["fdcId"] as? Int ?? 0
-        let description = foodDict["description"] as? String ?? "Unknown Food"
-        let brandName = foodDict["brandName"] as? String
-        let servingSize = foodDict["servingSize"] as? Double ?? 1
-        let servingSizeUnit = foodDict["servingSizeUnit"] as? String ?? "serving"
-        let householdServingFullText = foodDict["householdServingFullText"] as? String
-        let numberOfServings = foodDict["numberOfServings"] as? Double ?? 1
-        
-        // Extract calories from nutrients
-        var calories: Double = 0
-        var protein: Double = 0
-        var carbs: Double = 0
-        var fat: Double = 0
-        
-        if let nutrients = foodDict["foodNutrients"] as? [[String: Any]] {
-          for nutrient in nutrients {
-            let name = nutrient["nutrientName"] as? String ?? ""
-            let value = nutrient["value"] as? Double ?? 0
-            
-            switch name {
-            case "Energy":
-              calories = value
-            case "Protein":
-              protein = value
-            case "Carbohydrate, by difference":
-              carbs = value  
-            case "Total lipid (fat)":
-              fat = value
-            default:
-              break
-            }
-          }
-        }
-        
-        // Extract health analysis if available
-        var healthAnalysis: HealthAnalysis? = nil
-        // First try to get health analysis from food object (correct location for nutrition labels)
-        if let foodDict = payload["food"] as? [String: Any],
-           let healthAnalysisDict = foodDict["health_analysis"] as? [String: Any] {
-          do {
-            let healthAnalysisData = try JSONSerialization.data(withJSONObject: healthAnalysisDict)
-            healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthAnalysisData)
-            print("🩺 [DEBUG] Health analysis extracted from nutrition label food object: score=\(healthAnalysis?.score ?? 0)")
-          } catch {
-            print("⚠️ [DEBUG] Failed to decode health analysis from nutrition label food object: \(error)")
-          }
-        }
-        // Fallback: try top-level health_analysis (for backward compatibility)
-        else if let healthAnalysisDict = payload["health_analysis"] as? [String: Any] {
-          do {
-            let healthAnalysisData = try JSONSerialization.data(withJSONObject: healthAnalysisDict)
-            healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthAnalysisData)
-            print("🩺 [DEBUG] Health analysis extracted from top-level payload: score=\(healthAnalysis?.score ?? 0)")
-          } catch {
-            print("⚠️ [DEBUG] Failed to decode health analysis from top-level payload: \(error)")
-          }
-        }
-        
-        // Create LoggedFoodItem from creation response
-        let loggedFoodItem = LoggedFoodItem(
-          foodLogId: nil,  // No log ID when not logged yet
-          fdcId: fdcId,
-          displayName: description,
-          calories: calories,
-          servingSizeText: householdServingFullText ?? "\(Int(servingSize)) \(servingSizeUnit)",
-          numberOfServings: numberOfServings,
-          brandText: brandName,
-          protein: protein,
-          carbs: carbs,
-          fat: fat,
-          healthAnalysis: healthAnalysis,
-          foodNutrients: nil   // Could extract if needed
+
+        let fallbackHealth = payload["health_analysis"] as? [String: Any]
+        let loggedFoodItem = try createLoggedFoodItemFromResponse(
+          foodDict: foodDict,
+          fallbackHealthAnalysis: fallbackHealth
         )
-        
-        // Extract other fields
+
         let status = payload["status"] as? String ?? "success"
         let message = payload["message"] as? String ?? "Food created"
         let mealType = payload["meal_type"] as? String ?? "Lunch"
-        
+
         combinedLog = CombinedLog(
           type:        .food,
           status:      status,
-          calories:    calories,
+          calories:    loggedFoodItem.calories,
           message:     message,
-          foodLogId:   nil,  // No log ID when shouldLog=false
+          foodLogId:   nil,
           food:        loggedFoodItem,
           mealType:    mealType,
           mealLogId:   nil,
@@ -4472,8 +4451,7 @@ func analyzeNutritionLabel(
                         // Parse as LoggedFood and create CombinedLog (same as successful nutrition label scan)
                         let jsonData = try JSONSerialization.data(withJSONObject: payload)
                         let decoder = JSONDecoder()
-                        // Remove snake case conversion since backend now sends camelCase directly
-                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
                         
                         let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
                         
@@ -4739,8 +4717,7 @@ func analyzeNutritionLabel(
                         
                         let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
-                        // Remove snake case conversion since backend now sends camelCase directly
-                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
                         
                         // Debug: Print the actual JSON being decoded
                         if let jsonString = String(data: jsonData, encoding: .utf8) {
@@ -4844,8 +4821,7 @@ func analyzeNutritionLabel(
                         
                         let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
-                        // Remove snake case conversion since backend now sends camelCase directly
-                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
                         let food = try decoder.decode(Food.self, from: jsonData)
                         
                         print("🩺 [DEBUG] Food decoded (analyzeFoodImageForCreation). Health analysis present: \(food.healthAnalysis != nil)")
@@ -5045,8 +5021,7 @@ func analyzeNutritionLabel(
                         
                         let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
-                        // Remove snake case conversion since backend now sends camelCase directly
-                        // decoder.keyDecodingStrategy = .convertFromSnakeCase
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
                         
                         // Debug: Print the actual JSON being decoded
                         if let jsonString = String(data: jsonData, encoding: .utf8) {

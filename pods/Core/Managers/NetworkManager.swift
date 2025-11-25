@@ -5571,26 +5571,28 @@ func completeAppleSignup(idToken: String,
     print("- date: \(ISO8601DateFormatter().string(from: date))")
     
     // Don't send calories directly since the backend calculates it from food.calories * servings
-    let parameters: [String: Any] = [
-        "user_email": userEmail,
-        "food": [
-            "fdcId": food.fdcId,
-            "description": food.displayName,
-            "brandOwner": food.brandText ?? "",
-            "servingSize": food.servingSize ?? 0,
-            "servingSizeUnit": food.servingSizeUnit ?? "",
-            "householdServingFullText": food.servingSizeText,
-            "foodNutrients": nutrients
-        ],
-        "meal_type": mealType,
-        "servings": servings,
-        "date": ISO8601DateFormatter().string(from: date),
-        "notes": notes ?? ""
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "food": [
+                "fdcId": food.fdcId,
+                "description": food.displayName,
+                "brandOwner": food.brandText ?? "",
+                "servingSize": food.servingSize ?? 0,
+                "servingSizeUnit": food.servingSizeUnit ?? "",
+                "householdServingFullText": food.servingSizeText,
+                "foodNutrients": nutrients,
+                "meal_items": food.mealItems?.map { $0.toDictionary() } ?? []
+            ],
+            "meal_type": mealType,
+            "servings": servings,
+            "date": ISO8601DateFormatter().string(from: date),
+            "notes": notes ?? ""
     ]
     
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.timeoutInterval = 180
     
     do {
         request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
@@ -5679,7 +5681,10 @@ func completeAppleSignup(idToken: String,
                     carbs: carbs,
                     fat: fat,
                     healthAnalysis: nil,
-                    foodNutrients: nil
+                    foodNutrients: nil,
+                    aiInsight: food.aiInsight,
+                    nutritionScore: food.nutritionScore,
+                    mealItems: food.mealItems
                 )
                 
                 // Create LoggedFood with default status if missing
@@ -5925,6 +5930,7 @@ func createMeal(
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.timeoutInterval = 180
     
     do {
         request.httpBody = try JSONSerialization.data(withJSONObject: parameters)

@@ -49,6 +49,8 @@ struct ScheduledLogSummary: Codable {
     let protein: Double?
     let carbs: Double?
     let fat: Double?
+    let aiInsight: String?
+    let nutritionScore: Double?
 
     enum CodingKeys: String, CodingKey {
         case title
@@ -59,6 +61,8 @@ struct ScheduledLogSummary: Codable {
         case protein
         case carbs
         case fat
+        case aiInsight = "ai_insight"
+        case nutritionScore = "nutrition_score"
     }
 }
 

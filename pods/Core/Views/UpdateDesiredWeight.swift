@@ -132,51 +132,23 @@ struct UpdateDesiredWeight: View {
             return
         }
         
-        // Prepare the request parameters
-        let parameters: [String: Any] = [
-            "user_email": userEmail,
-            "desired_weight_kg": desiredWeightKg,
-            "desired_weight_lbs": desiredWeightLbs
-        ]
-        
-        // Convert parameters to JSON
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: parameters) else {
-            print("Error converting parameters to JSON")
-            return
-        }
-        
-        // Create the request
-        guard let url = URL(string: "https://fitness-cal.stumpwm.org/update_nutrition_goals/") else {
-            print("Error creating URL")
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.httpBody = jsonData
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        // Perform the request
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                print("Error updating nutrition goals: \(error.localizedDescription)")
-                return
-            }
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                print("Invalid response")
-                return
-            }
-            
-            if httpResponse.statusCode == 200 {
+        NetworkManagerTwo.shared.updateNutritionGoals(
+            userEmail: userEmail,
+            overrides: [:],
+            removeOverrides: [],
+            clearAll: false,
+            additionalFields: [
+                "desired_weight_kg": desiredWeightKg,
+                "desired_weight_lbs": desiredWeightLbs
+            ]
+        ) { result in
+            switch result {
+            case .success:
                 print("Successfully updated weight goal on server")
-            } else {
-                print("Server error: \(httpResponse.statusCode)")
-                if let data = data, let errorMessage = String(data: data, encoding: .utf8) {
-                    print("Server error message: \(errorMessage)")
-                }
+            case .failure(let error):
+                print("Error updating nutrition goals: \(error.localizedDescription)")
             }
-        }.resume()
+        }
     }
 }
 

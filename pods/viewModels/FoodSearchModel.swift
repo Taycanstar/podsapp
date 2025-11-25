@@ -27,6 +27,11 @@ struct BarcodeLookupResponse: Codable {
         food = try container.decode(Food.self, forKey: .food)
     }
     
+    init(food: Food, foodLogId: Int?) {
+        self.food = food
+        self.foodLogId = foodLogId
+    }
+    
     private enum CodingKeys: String, CodingKey {
         case foodLogId = "food_log_id"
         case food
@@ -45,6 +50,9 @@ struct Food: Codable, Identifiable, Hashable{
     var foodNutrients: [Nutrient]
     let foodMeasures: [FoodMeasure]
     var healthAnalysis: HealthAnalysis?
+    var aiInsight: String? = nil
+    var nutritionScore: Double? = nil
+    var mealItems: [MealItem]? = nil
     
     var id: Int { fdcId }
     
@@ -52,6 +60,9 @@ struct Food: Codable, Identifiable, Hashable{
         case fdcId, description, brandOwner, brandName, servingSize, numberOfServings
         case servingSizeUnit, householdServingFullText, foodNutrients, foodMeasures
         case healthAnalysis = "health_analysis"
+        case aiInsight = "ai_insight"
+        case nutritionScore = "nutrition_score"
+        case mealItems = "meal_items"
     }
     
     var calories: Double? {
@@ -121,6 +132,282 @@ struct Nutrient: Codable {
     }
 }
 
+struct MealItemMeasure: Codable, Hashable, Identifiable {
+    typealias ID = UUID
+
+    let id: ID
+    var unit: String
+    var description: String
+    var gramWeight: Double
+
+    enum CodingKeys: String, CodingKey {
+        case unit
+        case description
+        case gramWeight = "gram_weight"
+    }
+
+    init(unit: String, description: String, gramWeight: Double) {
+        self.id = UUID()
+        self.unit = unit
+        self.description = description
+        self.gramWeight = gramWeight
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedUnit = try container.decodeIfPresent(String.self, forKey: .unit)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let decodedDescription = try container.decodeIfPresent(String.self, forKey: .description)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let doubleValue = try? container.decode(Double.self, forKey: .gramWeight) {
+            self.gramWeight = doubleValue
+        } else if let stringValue = try? container.decode(String.self, forKey: .gramWeight),
+                  let doubleValue = Double(stringValue) {
+            self.gramWeight = doubleValue
+        } else {
+            self.gramWeight = 0
+        }
+        self.unit = (decodedUnit?.isEmpty == false ? decodedUnit! : "serving")
+        self.description = (decodedDescription?.isEmpty == false ? decodedDescription! : self.unit)
+        self.id = UUID()
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(unit, forKey: .unit)
+        try container.encode(description, forKey: .description)
+        try container.encode(gramWeight, forKey: .gramWeight)
+    }
+
+    func toDictionary() -> [String: Any] {
+        [
+            "unit": unit,
+            "description": description,
+            "gram_weight": gramWeight
+        ]
+    }
+}
+
+struct MealItemServingDescriptor: Codable, Hashable {
+    var amount: Double?
+    var unit: String?
+    var text: String?
+
+    var resolvedText: String? {
+        if let text, !text.isEmpty {
+            return text
+        }
+        if let amount {
+            let formatted = amount.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(amount)) : String(format: "%.2f", amount)
+            if let unit, !unit.isEmpty {
+                return "\(formatted) \(unit)"
+            }
+            return formatted
+        }
+        return nil
+    }
+}
+
+struct MealItem: Codable, Identifiable, Hashable {
+    let id: UUID
+    var name: String
+    var serving: Double
+    var servingUnit: String?
+    var calories: Double
+    var protein: Double
+    var carbs: Double
+    var fat: Double
+    var subitems: [MealItem]?
+    var baselineServing: Double
+    var measures: [MealItemMeasure]
+    var selectedMeasureId: MealItemMeasure.ID?
+    private(set) var baselineMeasureId: MealItemMeasure.ID?
+    var originalServing: MealItemServingDescriptor?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case serving
+        case servingUnit = "serving_unit"
+        case calories
+        case protein
+        case carbs
+        case fat
+        case subitems
+        case measures
+        case originalServing = "original_serving"
+    }
+
+    init(name: String,
+         serving: Double = 1.0,
+         servingUnit: String? = "serving",
+         calories: Double = 0,
+         protein: Double = 0,
+         carbs: Double = 0,
+         fat: Double = 0,
+        subitems: [MealItem]? = nil,
+        baselineServing: Double? = nil,
+        measures: [MealItemMeasure] = [],
+        originalServing: MealItemServingDescriptor? = nil) {
+        self.id = UUID()
+        self.name = name
+        self.serving = serving
+        self.servingUnit = servingUnit
+        self.calories = calories
+        self.protein = protein
+        self.carbs = carbs
+        self.fat = fat
+        self.subitems = subitems
+        self.baselineServing = baselineServing ?? serving
+        self.measures = MealItem.sanitizedMeasures(measures)
+        self.baselineMeasureId = MealItem.matchingBaselineMeasure(servingUnit: servingUnit, in: self.measures)
+        self.selectedMeasureId = self.baselineMeasureId ?? self.measures.first?.id
+        self.originalServing = originalServing
+        alignServingUnitWithSelection()
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.serving = try container.decodeIfPresent(Double.self, forKey: .serving) ?? 1.0
+        self.servingUnit = try container.decodeIfPresent(String.self, forKey: .servingUnit)
+        self.calories = try container.decodeIfPresent(Double.self, forKey: .calories) ?? 0
+        self.protein = try container.decodeIfPresent(Double.self, forKey: .protein) ?? 0
+        self.carbs = try container.decodeIfPresent(Double.self, forKey: .carbs) ?? 0
+        self.fat = try container.decodeIfPresent(Double.self, forKey: .fat) ?? 0
+        self.subitems = try container.decodeIfPresent([MealItem].self, forKey: .subitems)
+        let decodedMeasures = try container.decodeIfPresent([MealItemMeasure].self, forKey: .measures) ?? []
+        self.measures = MealItem.sanitizedMeasures(decodedMeasures)
+        self.id = UUID()
+        self.baselineServing = self.serving
+        self.baselineMeasureId = MealItem.matchingBaselineMeasure(servingUnit: servingUnit, in: self.measures)
+        self.selectedMeasureId = self.baselineMeasureId ?? self.measures.first?.id
+        self.originalServing = try container.decodeIfPresent(MealItemServingDescriptor.self, forKey: .originalServing)
+        alignServingUnitWithSelection()
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encode(serving, forKey: .serving)
+        try container.encodeIfPresent(servingUnit, forKey: .servingUnit)
+        try container.encode(calories, forKey: .calories)
+        try container.encode(protein, forKey: .protein)
+        try container.encode(carbs, forKey: .carbs)
+        try container.encode(fat, forKey: .fat)
+        try container.encodeIfPresent(subitems, forKey: .subitems)
+        if !measures.isEmpty {
+            try container.encode(measures, forKey: .measures)
+        }
+        try container.encodeIfPresent(originalServing, forKey: .originalServing)
+    }
+
+    func toDictionary() -> [String: Any] {
+        var dict: [String: Any] = [
+            "name": name,
+            "serving": serving,
+            "serving_unit": servingUnit ?? "serving",
+            "calories": calories,
+            "protein": protein,
+            "carbs": carbs,
+            "fat": fat
+        ]
+        if let subitems {
+            dict["subitems"] = subitems.map { $0.toDictionary() }
+        }
+        if !measures.isEmpty {
+            dict["measures"] = measures.map { $0.toDictionary() }
+        }
+        if let originalServing {
+            var originalDict: [String: Any] = [:]
+            if let amount = originalServing.amount {
+                originalDict["amount"] = amount
+            }
+            if let unit = originalServing.unit {
+                originalDict["unit"] = unit
+            }
+            if let text = originalServing.text {
+                originalDict["text"] = text
+            }
+            dict["original_serving"] = originalDict
+        }
+        return dict
+    }
+
+    var hasMeasureOptions: Bool {
+        !measures.isEmpty
+    }
+
+    var preferredServingDescription: String? {
+        if let label = originalServing?.resolvedText, !label.isEmpty {
+            return label
+        }
+        let formatter = NumberFormatter()
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        let amount = formatter.string(from: NSNumber(value: serving)) ?? String(format: "%.2f", serving)
+        if let unit = servingUnit, !unit.isEmpty {
+            return "\(amount) \(unit)"
+        }
+        return amount
+    }
+
+    var baselineMeasure: MealItemMeasure? {
+        guard let baselineMeasureId else { return nil }
+        return measures.first(where: { $0.id == baselineMeasureId })
+    }
+
+    var selectedMeasure: MealItemMeasure? {
+        if let selectedMeasureId,
+           let match = measures.first(where: { $0.id == selectedMeasureId }) {
+            return match
+        }
+        return baselineMeasure ?? measures.first
+    }
+
+    var servingWeightInGrams: Double? {
+        if let measure = selectedMeasure {
+            return measure.gramWeight * serving
+        }
+        if let gramsMeasure = measures.first(where: { canonicalUnitLabel($0.unit) == "g" }) {
+            return gramsMeasure.gramWeight * serving
+        }
+        return nil
+    }
+
+    var macroScalingFactor: Double {
+        guard baselineServing > 0 else { return 1 }
+        if let baselineWeight = baselineMeasure?.gramWeight,
+           baselineWeight > 0,
+           let selectedWeight = selectedMeasure?.gramWeight,
+           selectedWeight > 0 {
+            return (serving * selectedWeight) / (baselineServing * baselineWeight)
+        }
+        return serving / baselineServing
+    }
+
+    private mutating func alignServingUnitWithSelection() {
+        guard servingUnit == nil || servingUnit?.isEmpty == true,
+              let selectedUnit = selectedMeasure?.unit else { return }
+        servingUnit = selectedUnit
+    }
+
+    private static func sanitizedMeasures(_ measures: [MealItemMeasure]) -> [MealItemMeasure] {
+        measures.filter { $0.gramWeight > 0 }
+    }
+
+    private static func matchingBaselineMeasure(servingUnit: String?, in measures: [MealItemMeasure]) -> MealItemMeasure.ID? {
+        guard let unit = servingUnit, !unit.isEmpty else { return nil }
+        let target = canonicalUnitLabel(unit)
+        return measures.first(where: { canonicalUnitLabel($0.unit) == target })?.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: MealItem, rhs: MealItem) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
 struct FoodMeasure: Codable, Hashable {
     let disseminationText: String // This contains the human-readable measure (e.g., "1 cup", "2 eggs")
     let gramWeight: Double
@@ -129,6 +416,29 @@ struct FoodMeasure: Codable, Hashable {
     let measureUnitName: String
     let rank: Int
     
+}
+
+fileprivate func canonicalUnitLabel(_ rawUnit: String) -> String {
+    let lower = rawUnit.lowercased()
+    let mapping: [(String, [String])] = [
+        ("cup", ["cup", "cups"]),
+        ("serving", ["serving", "servings", "portion", "tray", "plate", "meal", "container", "box", "pack", "package", "dip"]),
+        ("piece", ["piece", "pieces", "roll", "rolls", "slice", "slices", "stick", "sticks", "item", "items", "ball", "balls"]),
+        ("egg", ["egg", "eggs"]),
+        ("tbsp", ["tbsp", "tablespoon", "tablespoons"]),
+        ("tsp", ["tsp", "teaspoon", "teaspoons"]),
+        ("g", ["g", "gram", "grams"]),
+        ("oz", ["oz", "ounce", "ounces"]),
+        ("lb", ["lb", "lbs", "pound", "pounds"]),
+        ("ml", ["ml", "milliliter", "milliliters"]),
+    ]
+
+    for (canonical, tokens) in mapping {
+        if tokens.contains(where: { lower.contains($0) }) {
+            return canonical
+        }
+    }
+    return rawUnit.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
 class FoodService {
@@ -329,11 +639,17 @@ struct LoggedFoodItem: Codable {
     let fat: Double?
     let healthAnalysis: HealthAnalysis?  // Add health analysis field
     let foodNutrients: [Nutrient]?  // Add complete nutrients array from backend
+    let aiInsight: String?
+    let nutritionScore: Double?
+    var mealItems: [MealItem]?
     
     enum CodingKeys: String, CodingKey {
         case foodLogId, fdcId, displayName, calories, servingSizeText, numberOfServings, brandText, protein, carbs, fat
         case healthAnalysis = "health_analysis"
         case foodNutrients
+        case aiInsight = "ai_insight"
+        case nutritionScore = "nutrition_score"
+        case mealItems = "meal_items"
     }
 }
 
@@ -497,12 +813,15 @@ extension LoggedFoodItem {
             householdServingFullText: servingSizeText,
             foodNutrients: nutrients,
             foodMeasures: [],
-            healthAnalysis: self.healthAnalysis  // Preserve health analysis
+            healthAnalysis: self.healthAnalysis,  // Preserve health analysis
+            aiInsight: self.aiInsight,
+            nutritionScore: self.nutritionScore,
+            mealItems: self.mealItems
         )
     }
     
     // Helper to create LoggedFoodItem without foodLogId (for backward compatibility)
-    init(fdcId: Int, displayName: String, calories: Double, servingSizeText: String, numberOfServings: Double, brandText: String?, protein: Double?, carbs: Double?, fat: Double?, healthAnalysis: HealthAnalysis? = nil) {
+    init(fdcId: Int, displayName: String, calories: Double, servingSizeText: String, numberOfServings: Double, brandText: String?, protein: Double?, carbs: Double?, fat: Double?, healthAnalysis: HealthAnalysis? = nil, aiInsight: String? = nil, nutritionScore: Double? = nil, mealItems: [MealItem]? = nil) {
         self.foodLogId = nil
         self.fdcId = fdcId
         self.displayName = displayName
@@ -515,6 +834,9 @@ extension LoggedFoodItem {
         self.fat = fat
         self.healthAnalysis = healthAnalysis
         self.foodNutrients = nil
+        self.aiInsight = aiInsight
+        self.nutritionScore = nutritionScore
+        self.mealItems = mealItems
     }
 }
 
@@ -1354,6 +1676,35 @@ struct InsightDetails: Codable {
     }
 }
 
+extension InsightDetails {
+    static func decodeLooseJSON(_ raw: String) -> InsightDetails? {
+        guard let data = normalizedInsightData(from: raw) else { return nil }
+        let decoder = JSONDecoder()
+        return try? decoder.decode(InsightDetails.self, from: data)
+    }
+
+    private static func normalizedInsightData(from raw: String) -> Data? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let data = trimmed.data(using: .utf8),
+           (try? JSONSerialization.jsonObject(with: data)) != nil {
+            return data
+        }
+
+        let pattern = "(?<!\\\\)'"
+        let replaced = trimmed.replacingOccurrences(of: pattern,
+                                                    with: "\"",
+                                                    options: .regularExpression)
+
+        guard let data = replaced.data(using: .utf8),
+              (try? JSONSerialization.jsonObject(with: data)) != nil else {
+            return nil
+        }
+
+        return data
+    }
+}
+
 // Add this extension to allow .isEmpty checks
 extension InsightDetails {
     var isEmpty: Bool {
@@ -1413,6 +1764,54 @@ extension InsightDetails {
     }
 }
 
+struct NutrientTargetDetails: Codable {
+    let label: String?
+    let category: String?
+    let categoryLabel: String?
+    let unit: String?
+    let note: String?
+    let min: Double?
+    let target: Double?
+    let max: Double?
+    let defaultMin: Double?
+    let defaultTarget: Double?
+    let defaultMax: Double?
+    let pctOfCalories: Double?
+    let pctOfTotalFat: Double?
+    let gPerKg: Double?
+    let mgPerKg: Double?
+    let idealMax: Double?
+    let performanceDoseMg: Double?
+    let liters: Double?
+    let formula: String?
+    let source: String?
+    let displayOrder: Int?
+    let tdee: Double?
+    let bmr: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case label, category, unit, note, min, target, max, formula, source, tdee, bmr
+        case categoryLabel = "category_label"
+        case defaultMin = "default_min"
+        case defaultTarget = "default_target"
+        case defaultMax = "default_max"
+        case pctOfCalories = "pct_of_calories"
+        case pctOfTotalFat = "pct_of_total_fat"
+        case gPerKg = "g_per_kg"
+        case mgPerKg = "mg_per_kg"
+        case idealMax = "ideal_max"
+        case performanceDoseMg = "performance_dose_mg"
+        case liters
+        case displayOrder = "display_order"
+    }
+}
+
+struct NutrientOverride: Codable, Equatable {
+    let min: Double?
+    let target: Double?
+    let max: Double?
+}
+
 struct NutritionGoals: Codable {
     let bmr: Double?
     let tdee: Double?
@@ -1424,6 +1823,8 @@ struct NutritionGoals: Codable {
     let nutritionInsights: InsightDetails?
     let desiredWeightKg: Double?
     let desiredWeightLbs: Double?
+    let nutrients: [String: NutrientTargetDetails]?
+    let overrides: [String: NutrientOverride]?
     
     // Add initializer with default values for optional fields
     init(bmr: Double? = nil, 
@@ -1435,7 +1836,9 @@ struct NutritionGoals: Codable {
          metabolismInsights: InsightDetails? = nil, 
          nutritionInsights: InsightDetails? = nil,
          desiredWeightKg: Double? = nil,
-         desiredWeightLbs: Double? = nil) {
+         desiredWeightLbs: Double? = nil,
+         nutrients: [String: NutrientTargetDetails]? = nil,
+         overrides: [String: NutrientOverride]? = nil) {
         self.bmr = bmr
         self.tdee = tdee
         self.calories = calories
@@ -1446,6 +1849,8 @@ struct NutritionGoals: Codable {
         self.nutritionInsights = nutritionInsights
         self.desiredWeightKg = desiredWeightKg
         self.desiredWeightLbs = desiredWeightLbs
+        self.nutrients = nutrients
+        self.overrides = overrides
     }
     
     // Implement custom decoding to handle missing fields
@@ -1461,18 +1866,49 @@ struct NutritionGoals: Codable {
         // Optional fields - decode if present, use nil if missing
         bmr = try container.decodeIfPresent(Double.self, forKey: .bmr)
         tdee = try container.decodeIfPresent(Double.self, forKey: .tdee)
-        metabolismInsights = try container.decodeIfPresent(InsightDetails.self, forKey: .metabolismInsights)
-        nutritionInsights = try container.decodeIfPresent(InsightDetails.self, forKey: .nutritionInsights)
+        metabolismInsights = NutritionGoals.decodeInsights(from: container, forKey: .metabolismInsights)
+        nutritionInsights = NutritionGoals.decodeInsights(from: container, forKey: .nutritionInsights)
         desiredWeightKg = try container.decodeIfPresent(Double.self, forKey: .desiredWeightKg)
         desiredWeightLbs = try container.decodeIfPresent(Double.self, forKey: .desiredWeightLbs)
+        nutrients = try container.decodeIfPresent([String: NutrientTargetDetails].self, forKey: .nutrients)
+        overrides = try container.decodeIfPresent([String: NutrientOverride].self, forKey: .overrides)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(calories, forKey: .calories)
+        try container.encode(protein, forKey: .protein)
+        try container.encode(carbs, forKey: .carbs)
+        try container.encode(fat, forKey: .fat)
+        try container.encodeIfPresent(bmr, forKey: .bmr)
+        try container.encodeIfPresent(tdee, forKey: .tdee)
+        try container.encodeIfPresent(metabolismInsights, forKey: .metabolismInsights)
+        try container.encodeIfPresent(nutritionInsights, forKey: .nutritionInsights)
+        try container.encodeIfPresent(desiredWeightKg, forKey: .desiredWeightKg)
+        try container.encodeIfPresent(desiredWeightLbs, forKey: .desiredWeightLbs)
+        try container.encodeIfPresent(nutrients, forKey: .nutrients)
+        try container.encodeIfPresent(overrides, forKey: .overrides)
     }
     
     enum CodingKeys: String, CodingKey {
-        case bmr, tdee, calories, protein, carbs, fat
+        case bmr, tdee, calories, protein, carbs, fat, nutrients, overrides
         case metabolismInsights = "metabolism_insights"
         case nutritionInsights = "nutrition_insights"
         case desiredWeightKg = "desired_weight_kg"
         case desiredWeightLbs = "desired_weight_lbs"
+    }
+
+    private static func decodeInsights(from container: KeyedDecodingContainer<CodingKeys>, forKey key: CodingKeys) -> InsightDetails? {
+        if let details = try? container.decodeIfPresent(InsightDetails.self, forKey: key) {
+            return details
+        }
+
+        guard let rawString = try? container.decodeIfPresent(String.self, forKey: key),
+              !rawString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        return InsightDetails.decodeLooseJSON(rawString)
     }
 }
 

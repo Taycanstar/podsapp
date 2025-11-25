@@ -8,6 +8,20 @@
 import Foundation
 import SwiftUI
 
+struct GoalOverridePayload {
+    var min: Double?
+    var target: Double?
+    var max: Double?
+
+    var dictionary: [String: Double] {
+        var payload: [String: Double] = [:]
+        if let min { payload["min"] = min }
+        if let target { payload["target"] = target }
+        if let max { payload["max"] = max }
+        return payload
+    }
+}
+
 class NetworkManagerTwo {
     // Shared instance (singleton)
     static let shared = NetworkManagerTwo()
@@ -25,15 +39,11 @@ class NetworkManagerTwo {
     }()
 
     
+    // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+    let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.4:8000"
 
-// let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-  let baseUrl = "http://192.168.1.92:8000"
-// let baseUrl = "http://172.20.10.4:8000"
-
-// let baseUrl = "http://172.20.10.4:8000"
-
-
-  // ### STAGING ###
+    // ### STAGING ###
     // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
 
     // Network errors - scoped to NetworkManagerTwo
@@ -457,6 +467,7 @@ class NetworkManagerTwo {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 180
 
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
@@ -722,37 +733,123 @@ class NetworkManagerTwo {
                 return
             }
             
-            // Check if there's an error response
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let errorMessage = json["error"] as? String {
-                DispatchQueue.main.async {
-                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(message: errorMessage)))
+                    }
+                    return
                 }
-                return
+
+                if let response = Self.makeFallbackBarcodeResponse(from: json) {
+                    DispatchQueue.main.async {
+                        print("✅ Parsed barcode response (manual) for: \(response.food.displayName)")
+                        completion(.success(response))
+                    }
+                    return
+                }
             }
-            
+
             do {
                 let decoder = JSONDecoder()
-                // Don't use convertFromSnakeCase as our structs handle key mapping manually
-                
-                // Try to parse as BarcodeLookupResponse
                 let response = try decoder.decode(BarcodeLookupResponse.self, from: data)
-                
                 DispatchQueue.main.async {
                     print("✅ Successfully looked up food by barcode: \(response.food.displayName), foodLogId: \(response.foodLogId)")
                     completion(.success(response))
                 }
-                
             } catch {
                 print("❌ Decoding error in barcode lookup: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("Response data: \(json)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
             }
         }.resume()
+    }
+
+    private static func makeFallbackBarcodeResponse(from json: [String: Any]) -> BarcodeLookupResponse? {
+        guard let foodDict = json["food"] as? [String: Any] else { return nil }
+        guard let food = makeFood(from: foodDict) else { return nil }
+        let foodLogId = (json["food_log_id"] as? Int) ?? (json["foodLogId"] as? Int)
+        return BarcodeLookupResponse(food: food, foodLogId: foodLogId)
+    }
+
+    private static func makeFood(from dict: [String: Any]) -> Food? {
+        guard let fdcId = dict["fdcId"] as? Int,
+              let description = dict["description"] as? String else { return nil }
+
+        let servingSize = doubleValue(dict["servingSize"]) ?? (dict["serving_size"] as? Double)
+        let numberOfServings = doubleValue(dict["numberOfServings"]) ?? (dict["number_of_servings"] as? Double)
+        let nutrients = ((dict["foodNutrients"] as? [[String: Any]]) ?? []).compactMap { makeNutrient(from: $0) }
+        let measures = ((dict["foodMeasures"] as? [[String: Any]]) ?? []).compactMap { makeMeasure(from: $0) }
+
+        var food = Food(
+            fdcId: fdcId,
+            description: description,
+            brandOwner: dict["brandOwner"] as? String,
+            brandName: dict["brandName"] as? String,
+            servingSize: servingSize,
+            numberOfServings: numberOfServings,
+            servingSizeUnit: dict["servingSizeUnit"] as? String,
+            householdServingFullText: dict["householdServingFullText"] as? String,
+            foodNutrients: nutrients.isEmpty ? defaultNutrients(from: dict) : nutrients,
+            foodMeasures: measures,
+            healthAnalysis: nil,
+            aiInsight: dict["ai_insight"] as? String,
+            nutritionScore: doubleValue(dict["nutrition_score"])
+        )
+        if let mealItemsArray = dict["meal_items"] as? [[String: Any]] ?? dict["mealItems"] as? [[String: Any]],
+           let data = try? JSONSerialization.data(withJSONObject: mealItemsArray),
+           let decoded = try? JSONDecoder().decode([MealItem].self, from: data) {
+            food.mealItems = decoded
+        }
+        return food
+    }
+
+    private static func defaultNutrients(from dict: [String: Any]) -> [Nutrient] {
+        var nutrients: [Nutrient] = []
+        if let calories = doubleValue(dict["calories"]) {
+            nutrients.append(Nutrient(nutrientName: "Energy", value: calories, unitName: "kcal"))
+        }
+        if let protein = doubleValue(dict["protein"]) {
+            nutrients.append(Nutrient(nutrientName: "Protein", value: protein, unitName: "g"))
+        }
+        if let carbs = doubleValue(dict["carbs"]) {
+            nutrients.append(Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "g"))
+        }
+        if let fat = doubleValue(dict["fat"]) {
+            nutrients.append(Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "g"))
+        }
+        return nutrients
+    }
+
+    private static func makeNutrient(from dict: [String: Any]) -> Nutrient? {
+        guard let name = dict["nutrientName"] as? String,
+              let unit = dict["unitName"] as? String,
+              let value = doubleValue(dict["value"]) else { return nil }
+        return Nutrient(nutrientName: name, value: value, unitName: unit)
+    }
+
+    private static func makeMeasure(from dict: [String: Any]) -> FoodMeasure? {
+        guard let gramWeight = doubleValue(dict["gramWeight"]),
+              let id = dict["id"] as? Int,
+              let measureUnitName = dict["measureUnitName"] as? String,
+              let rank = dict["rank"] as? Int else { return nil }
+        let text = dict["disseminationText"] as? String ?? dict["modifier"] as? String ?? ""
+        return FoodMeasure(disseminationText: text,
+                           gramWeight: gramWeight,
+                           id: id,
+                           modifier: dict["modifier"] as? String,
+                           measureUnitName: measureUnitName,
+                           rank: rank)
+    }
+
+    private static func doubleValue(_ value: Any?) -> Double? {
+        switch value {
+        case let d as Double: return d
+        case let n as NSNumber: return n.doubleValue
+        case let s as String: return Double(s)
+        default: return nil
+        }
     }
 
     // MARK: - Food Audio Transcription
@@ -1144,83 +1241,66 @@ class NetworkManagerTwo {
                             return
                         }
                         
-                        // Extract nutrition goals
-                        var calories: Double = 0
-                        var protein: Double = 0
-                        var carbs: Double = 0
-                        var fat: Double = 0
-                        
-                        print("🔍 DEBUG: Looking for nutrition goals in JSON: \(json.keys)")
-                        
-                        // Try different JSON structures that might contain the nutrition goals
-                        if let nutritionGoals = json["nutrition_goals"] as? [String: Any] {
-                            print("✅ Found nutrition_goals key")
-                            calories = nutritionGoals["calories"] as? Double ?? 0
-                            protein = nutritionGoals["protein"] as? Double ?? 0
-                            carbs = nutritionGoals["carbohydrates"] as? Double ?? 0
-                            fat = nutritionGoals["fats"] as? Double ?? 0
-                        } else if let dailyGoals = json["daily_goals"] as? [String: Any] {
-                            print("✅ Found daily_goals key: \(dailyGoals)")
-                            calories = dailyGoals["calories"] as? Double ?? 0
-                            protein = dailyGoals["protein"] as? Double ?? 0
-                            carbs = dailyGoals["carbs"] as? Double ?? 0
-                            fat = dailyGoals["fat"] as? Double ?? 0
-                        } else if let goals = json["goals"] as? [String: Any] {
-                            print("✅ Found goals key")
-                            calories = goals["calories"] as? Double ?? 0
-                            protein = goals["protein"] as? Double ?? 0
-                            carbs = goals["carbs"] as? Double ?? 0
-                            fat = goals["fat"] as? Double ?? 0
-                        } else {
-                            print("⚠️ Could not find nutrition goals in JSON structure")
+                        var parsedGoals: NutritionGoals?
+                        let decoder = JSONDecoder()
+                        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+                        if let goalsPayload = json["goals"] as? [String: Any] {
+                            let payloadData = try JSONSerialization.data(withJSONObject: goalsPayload)
+                            parsedGoals = try decoder.decode(NutritionGoals.self, from: payloadData)
                         }
-                        
-                        // Extract BMR and TDEE if available
-                        let bmr = (json["bmr"] as? Double) ?? 0
-                        let tdee = (json["tdee"] as? Double) ?? 0
-                        
-                        // Extract insights if available
-                        var metabolismInsights: InsightDetails? = nil
-                        var nutritionInsights: InsightDetails? = nil
-                        
-                        if let insights = json["insights"] as? [String: Any] {
-                            if let metabolism = insights["metabolism"] as? [String: Any] {
-                                let metabolismData = try? JSONSerialization.data(withJSONObject: metabolism)
-                                metabolismInsights = metabolismData.flatMap { try? JSONDecoder().decode(InsightDetails.self, from: $0) }
+
+                        if parsedGoals == nil {
+                            print("⚠️ Could not find structured goals payload, falling back to legacy fields.")
+                            var calories: Double = 0
+                            var protein: Double = 0
+                            var carbs: Double = 0
+                            var fat: Double = 0
+
+                            if let nutritionGoals = json["nutrition_goals"] as? [String: Any] {
+                                calories = nutritionGoals["calories"] as? Double ?? 0
+                                protein = nutritionGoals["protein"] as? Double ?? 0
+                                carbs = nutritionGoals["carbohydrates"] as? Double ?? 0
+                                fat = nutritionGoals["fats"] as? Double ?? 0
+                            } else if let dailyGoals = json["daily_goals"] as? [String: Any] {
+                                calories = dailyGoals["calories"] as? Double ?? 0
+                                protein = dailyGoals["protein"] as? Double ?? 0
+                                carbs = dailyGoals["carbs"] as? Double ?? 0
+                                fat = dailyGoals["fat"] as? Double ?? 0
                             }
-                            if let nutrition = insights["nutrition"] as? [String: Any] {
-                                let nutritionData = try? JSONSerialization.data(withJSONObject: nutrition)
-                                nutritionInsights = nutritionData.flatMap { try? JSONDecoder().decode(InsightDetails.self, from: $0) }
-                            }
+
+                            let bmr = (json["bmr"] as? Double)
+                            let tdee = (json["tdee"] as? Double)
+                            parsedGoals = NutritionGoals(
+                                bmr: bmr,
+                                tdee: tdee,
+                                calories: calories,
+                                protein: protein,
+                                carbs: carbs,
+                                fat: fat
+                            )
                         }
-                        
-                        // Create nutrition goals object
-                        let goals = NutritionGoals(
-                            bmr: bmr,
-                            tdee: tdee,
-                            calories: calories,
-                            protein: protein,
-                            carbs: carbs,
-                            fat: fat,
-                            metabolismInsights: metabolismInsights,
-                            nutritionInsights: nutritionInsights
-                        )
+
+                        guard let goals = parsedGoals else {
+                            completion(.failure(NetworkError.decodingError))
+                            return
+                        }
                         
                         // Save goals to UserDefaults for other parts of the app
                         // Avoid overwriting with zeros when API omits fields
-                        if calories > 0 || protein > 0 || carbs > 0 || fat > 0 {
+                        if goals.calories > 0 || goals.protein > 0 || goals.carbs > 0 || goals.fat > 0 {
                             UserGoalsManager.shared.dailyGoals = DailyGoals(
-                                calories: max(Int(calories), 0),
-                                protein: max(Int(protein), 0),
-                                carbs: max(Int(carbs), 0),
-                                fat: max(Int(fat), 0)
+                                calories: max(Int(goals.calories), 0),
+                                protein: max(Int(goals.protein), 0),
+                                carbs: max(Int(goals.carbs), 0),
+                                fat: max(Int(goals.fat), 0)
                             )
                         }
                         
-                        print("📝 DEBUG: Saving to UserGoalsManager: Calories=\(Int(calories)), Protein=\(Int(protein))g, Carbs=\(Int(carbs))g, Fat=\(Int(fat))g")
+                        print("📝 DEBUG: Saving to UserGoalsManager: Calories=\(Int(goals.calories)), Protein=\(Int(goals.protein))g, Carbs=\(Int(goals.carbs))g, Fat=\(Int(goals.fat))g")
                         
-                        print("✅ Successfully parsed nutrition goals: Calories=\(calories), Protein=\(protein)g, Carbs=\(carbs)g, Fat=\(fat)g")
-                        print("📊 BMR=\(bmr), TDEE=\(tdee)")
+                        print("✅ Successfully parsed nutrition goals: Calories=\(goals.calories), Protein=\(goals.protein)g, Carbs=\(goals.carbs)g, Fat=\(goals.fat)g")
+                        print("📊 BMR=\(goals.bmr ?? 0), TDEE=\(goals.tdee ?? 0)")
                         
                         completion(.success(goals))
                     } else {
@@ -2120,20 +2200,13 @@ class NetworkManagerTwo {
 
     // MARK: - Nutrition Goals
 
-    /// Update a user's nutrition goals
-    /// - Parameters:
-    ///   - userEmail: User's email address
-    ///   - caloriesGoal: Daily calorie goal
-    ///   - proteinGoal: Daily protein goal in grams
-    ///   - carbsGoal: Daily carbs goal in grams
-    ///   - fatGoal: Daily fat goal in grams
-    ///   - completion: Result callback with updated goals or error
+    /// Update a user's nutrition goals with custom overrides.
     func updateNutritionGoals(
         userEmail: String,
-        caloriesGoal: Double,
-        proteinGoal: Double,
-        carbsGoal: Double,
-        fatGoal: Double,
+        overrides: [String: GoalOverridePayload] = [:],
+        removeOverrides: [String] = [],
+        clearAll: Bool = false,
+        additionalFields: [String: Any] = [:],
         completion: @escaping (Result<NutritionGoalsResponse, Error>) -> Void
     ) {
         let urlString = "\(baseUrl)/update-nutrition-goals/"
@@ -2143,14 +2216,24 @@ class NetworkManagerTwo {
             return
         }
         
-        // Create request body
-        let parameters: [String: Any] = [
-            "user_email": userEmail,
-            "calories_goal": caloriesGoal,
-            "protein_goal": proteinGoal,
-            "carbs_goal": carbsGoal,
-            "fat_goal": fatGoal
-        ]
+        var parameters: [String: Any] = ["user_email": userEmail]
+
+        let overridePayload = overrides.compactMapValues { payload -> [String: Double]? in
+            let dict = payload.dictionary
+            return dict.isEmpty ? nil : dict
+        }
+        if !overridePayload.isEmpty {
+            parameters["overrides"] = overridePayload
+        }
+        if !removeOverrides.isEmpty {
+            parameters["remove_overrides"] = removeOverrides
+        }
+        if clearAll {
+            parameters["clear_all"] = true
+        }
+        for (key, value) in additionalFields {
+            parameters[key] = value
+        }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
