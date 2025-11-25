@@ -66,6 +66,7 @@ struct ConfirmLogView: View {
     @State private var customFoodDraft: CustomFoodDraft?
     @State private var isSavingMeal = false
     @State private var servingUnit: String = "serving"
+    private let saveNetworkManager = NetworkManager()
 
     // NEW: Base nutrition values (per single serving)
     @State private var baseCalories: Double = 0
@@ -978,19 +979,7 @@ private func canonicalUnit(from rawUnit: String) -> String {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
                 
-                Button(action: saveMealTemplate) {
-                    if isSavingMeal {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                    } else {
-                        Image(systemName: "bookmark")
-                            .font(.system(size: 18, weight: .semibold))
-                    }
-                }
-                .frame(width: 32, height: 32)
-                .foregroundColor(.primary)
-                .disabled(barcodeFoodLogId == nil || isSavingMeal)
-                .opacity((barcodeFoodLogId == nil || isSavingMeal) ? 0.5 : 1)
+                Spacer().frame(width: 32, height: 32)
             }
             Divider()
                 .frame(maxWidth: .infinity)
@@ -2537,24 +2526,6 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         ]
     }
 
-    private func saveMealTemplate() {
-        guard let logId = barcodeFoodLogId else {
-            errorMessage = "Log this food before saving it as a meal."
-            showErrorAlert = true
-            return
-        }
-        guard !isSavingMeal else { return }
-        isSavingMeal = true
-        foodManager.saveMeal(itemType: .foodLog, itemId: logId, customName: title.isEmpty ? nil : title) { result in
-            DispatchQueue.main.async {
-                self.isSavingMeal = false
-                if case let .failure(error) = result {
-                    self.errorMessage = error.localizedDescription
-                    self.showErrorAlert = true
-                }
-            }
-        }
-    }
 
     private func recalculateMealItemNutrition() {
         guard shouldShowMealItemsEditor else { return }
