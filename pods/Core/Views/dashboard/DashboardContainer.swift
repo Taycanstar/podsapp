@@ -3,7 +3,7 @@
 //  pods
 //
 //  Container view that manages inverted navigation hierarchy:
-//  ChatsView (root) → DashboardView (auto-pushed)
+//  ChatsView (root) → NewHomeView (auto-pushed)
 //
 
 import SwiftUI
@@ -42,7 +42,7 @@ struct DashboardContainer: View {
             .navigationBarHidden(true)
             .background(
                 NavigationLink(
-                    destination: DashboardView(
+                    destination: NewHomeView(
                         agentText: $agentText,
                         onPlusTapped: onPlusTapped,
                         onBarcodeTapped: onBarcodeTapped,

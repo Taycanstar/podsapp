@@ -189,6 +189,104 @@ class NetworkManagerTwo {
         }
     }
 
+    struct ExpenditureSnapshot: Codable, Identifiable, Equatable {
+        let date: String
+        let tdeeCore: Double?
+        let tdeeDisplay: Double?
+        let impliedExpenditure: Double?
+        let caloriesLogged: Double?
+        let weightKg: Double?
+        let trendWeightKg: Double?
+        let loggingQuality: Double?
+        let steps: Double?
+        let sleepMinutes: Double?
+        let hrvScore: Double?
+        let activityOverlay: Double?
+        let observationNoise: Double?
+        let processNoise: Double?
+        let notes: [String: Bool]?
+        let updatedAt: String?
+
+        var id: String { date }
+
+        var dateValue: Date? {
+            ExpenditureSnapshot.dateFormatter.date(from: date)
+        }
+
+        var updatedAtValue: Date? {
+            guard let updatedAt else { return nil }
+            return ExpenditureSnapshot.updatedFormatter.date(from: updatedAt)
+        }
+
+        private static let dateFormatter: DateFormatter = {
+            let formatter = DateFormatter()
+            formatter.calendar = Calendar(identifier: .iso8601)
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            formatter.dateFormat = "yyyy-MM-dd"
+            return formatter
+        }()
+
+        private static let updatedFormatter: ISO8601DateFormatter = {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            return formatter
+        }()
+    }
+
+    struct HealthMetricComponents: Codable, Equatable {
+        let readiness: [String: Double]?
+        let sleep: [String: Double]?
+        let activity: [String: Double]?
+        let stress: [String: Double]?
+    }
+
+    struct HealthMetricsSnapshot: Codable, Equatable {
+        let date: String
+        let readiness: Double?
+        let sleep: Double?
+        let activity: Double?
+        let stress: Double?
+        let confidence: String?
+        let isEmpty: Bool?
+        let components: HealthMetricComponents?
+
+        var dateValue: Date? {
+            HealthMetricsSnapshot.dateFormatter.date(from: date)
+        }
+
+        private static let dateFormatter: DateFormatter = {
+            let formatter = DateFormatter()
+            formatter.calendar = Calendar(identifier: .iso8601)
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            formatter.dateFormat = "yyyy-MM-dd"
+            return formatter
+        }()
+    }
+
+    struct ExpenditureState: Codable {
+        let tdeeEstimate: Double?
+        let stateVariance: Double?
+        let trendWeightKg: Double?
+        let rollingIntakeAvg: Double?
+        let baselineSteps: Double?
+        let baselineSleepMinutes: Double?
+        let baselineHrv: Double?
+        let loggingQuality: Double?
+        let lastActivityOverlay: Double?
+        let lastObservationDate: String?
+        let updatedAt: String?
+    }
+
+    struct ExpenditureSummaryResponse: Codable {
+        let summary: ExpenditureSnapshot
+        let state: ExpenditureState?
+    }
+
+    struct ExpenditureHistoryResponse: Codable {
+        let days: [ExpenditureSnapshot]
+        let count: Int
+    }
+
     struct WorkoutResponse: Codable {
         struct Workout: Codable {
             let id: Int
@@ -762,6 +860,173 @@ class NetworkManagerTwo {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
+            }
+        }.resume()
+    }
+
+    func fetchExpenditureSummary(
+        userEmail: String,
+        forceRecompute: Bool = false,
+        timezoneOffsetMinutes: Int? = nil,
+        completion: @escaping (Result<ExpenditureSummaryResponse, Error>) -> Void
+    ) {
+        guard var components = URLComponents(string: "\(baseUrl)/expenditure/summary/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        var queryItems = [URLQueryItem(name: "user_email", value: userEmail)]
+        if forceRecompute {
+            queryItems.append(URLQueryItem(name: "force_recompute", value: "true"))
+        }
+        if let offset = timezoneOffsetMinutes {
+            queryItems.append(URLQueryItem(name: "timezone_offset", value: "\(offset)"))
+        }
+        components.queryItems = queryItems
+        guard let url = components.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 30
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let http = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            guard (200 ... 299).contains(http.statusCode) else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.requestFailed(statusCode: http.statusCode))) }
+                return
+            }
+            guard let data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let payload = try decoder.decode(ExpenditureSummaryResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(payload)) }
+            } catch {
+                DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
+            }
+        }.resume()
+    }
+
+    func fetchExpenditureHistory(
+        userEmail: String,
+        days: Int = 30,
+        timezoneOffsetMinutes: Int? = nil,
+        completion: @escaping (Result<ExpenditureHistoryResponse, Error>) -> Void
+    ) {
+        guard var components = URLComponents(string: "\(baseUrl)/expenditure/history/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        var items = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "days", value: "\(days)")
+        ]
+        if let offset = timezoneOffsetMinutes {
+            items.append(URLQueryItem(name: "timezone_offset", value: "\(offset)"))
+        }
+        components.queryItems = items
+        guard let url = components.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 30
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let http = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            guard (200 ... 299).contains(http.statusCode) else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.requestFailed(statusCode: http.statusCode))) }
+                return
+            }
+            guard let data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let payload = try decoder.decode(ExpenditureHistoryResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(payload)) }
+            } catch {
+                DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
+            }
+        }.resume()
+    }
+
+    func fetchHealthMetrics(
+        userEmail: String,
+        timezoneOffsetMinutes: Int? = nil,
+        completion: @escaping (Result<HealthMetricsSnapshot, Error>) -> Void
+    ) {
+        guard var components = URLComponents(string: "\(baseUrl)/health-metrics/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        var items = [URLQueryItem(name: "user_email", value: userEmail)]
+        if let offset = timezoneOffsetMinutes {
+            items.append(URLQueryItem(name: "timezone_offset", value: "\(offset)"))
+        }
+        components.queryItems = items
+        guard let url = components.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let http = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            guard (200 ... 299).contains(http.statusCode) else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.requestFailed(statusCode: http.statusCode))) }
+                return
+            }
+            guard let data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let snapshot = try decoder.decode(HealthMetricsSnapshot.self, from: data)
+                DispatchQueue.main.async { completion(.success(snapshot)) }
+            } catch {
+                DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
             }
         }.resume()
     }

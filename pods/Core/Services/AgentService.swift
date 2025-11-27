@@ -23,6 +23,9 @@ struct AgentDailyMetricsPayload {
     var equipmentAvailable: [String]?
     var readinessNotes: String?
     var walkingHeartRateAverage: Double?
+    var sleepMetrics: [String: Any]?
+    var respiratoryRate: Double?
+    var skinTemperatureC: Double?
 
     func dictionary(dateFormatter: ISO8601DateFormatter) -> [String: Any] {
         var dict: [String: Any] = [
@@ -50,6 +53,9 @@ struct AgentDailyMetricsPayload {
         dict["equipment_available"] = equipmentAvailable
         dict["readiness_notes"] = readinessNotes
         dict["walking_heart_rate_average"] = walkingHeartRateAverage
+        dict["sleep_metrics"] = sleepMetrics
+        dict["respiratory_rate"] = respiratoryRate
+        dict["skin_temperature_c"] = skinTemperatureC
         return dict.compactMapValues { $0 }
     }
 }

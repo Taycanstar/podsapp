@@ -90,6 +90,7 @@
 		363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201362C97812B00BC1815 /* MyTeamMembersView.swift */; };
 		363201392C9CFDCF00BC1815 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363201382C9CFDCF00BC1815 /* TrendsView.swift */; };
 		36368E7F2ECF8AA000A8F390 /* CreateCustomFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36368E7E2ECF8AA000A8F390 /* CreateCustomFoodView.swift */; };
+		36368E812ED69CEE00A8F390 /* NewHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36368E802ED69CDD00A8F390 /* NewHomeView.swift */; };
 		3637F0A62CE13F3F0010624A /* DatePickerWheel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3637F0A52CE13F3F0010624A /* DatePickerWheel.swift */; };
 		3638893F2BAA8E6A0062631B /* VideoEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */; };
 		363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 363889402BAA92010062631B /* VideoEditorRepresentable.swift */; };
@@ -494,6 +495,7 @@
 		363201362C97812B00BC1815 /* MyTeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTeamMembersView.swift; sourceTree = "<group>"; };
 		363201382C9CFDCF00BC1815 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
 		36368E7E2ECF8AA000A8F390 /* CreateCustomFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateCustomFoodView.swift; sourceTree = "<group>"; };
+		36368E802ED69CDD00A8F390 /* NewHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewHomeView.swift; sourceTree = "<group>"; };
 		3637F0A52CE13F3F0010624A /* DatePickerWheel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerWheel.swift; sourceTree = "<group>"; };
 		3638893E2BAA8E6A0062631B /* VideoEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorViewController.swift; sourceTree = "<group>"; };
 		363889402BAA92010062631B /* VideoEditorRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoEditorRepresentable.swift; sourceTree = "<group>"; };
@@ -1408,6 +1410,7 @@
 		36ED35AC2DD53B5C00D174FB /* dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				36368E802ED69CDD00A8F390 /* NewHomeView.swift */,
 				36F2C8F32EB3F34F002BC4E9 /* ChatsView.swift */,
 				36F2C8F12EB3F1DD002BC4E9 /* DashboardContainer.swift */,
 				361FF3462E2A011700B7F68E /* TextLogView.swift */,
@@ -1803,6 +1806,7 @@
 				363889412BAA92010062631B /* VideoEditorRepresentable.swift in Sources */,
 				368D67182BDCC454000434E0 /* PodItemCellImage.swift in Sources */,
 				3698E4F22C21F9730040AF60 /* ResetPasswordView.swift in Sources */,
+				36368E812ED69CEE00A8F390 /* NewHomeView.swift in Sources */,
 				36D647D12C092A1C002F1047 /* SplashScreenView.swift in Sources */,
 				36D3A4FB2E8B8F6D00AD6B94 /* StartupView.swift in Sources */,
 				3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */,

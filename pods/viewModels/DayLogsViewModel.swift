@@ -39,6 +39,10 @@ final class DayLogsViewModel: ObservableObject {
   private var skippedScheduledDates: [Int: Date] = [:]
   private var localScheduledOverrides: [Int: ScheduledLogPreview] = [:]
   private var pendingNotificationReload = false
+  private var lastExpenditureRefresh: Date?
+  private let expenditureRefreshInterval: TimeInterval = 900
+  private var lastHealthMetricsRefresh: Date?
+  private let healthMetricsRefreshInterval: TimeInterval = 600
 
   // Daily totals
   @Published var totalCalories: Double = 0
@@ -74,6 +78,15 @@ final class DayLogsViewModel: ObservableObject {
   // Water logs for the current day
   @Published var waterLogs: [WaterLogResponse] = []
   @Published var scheduledPreviews: [ScheduledLogPreview] = []
+  @Published var expenditureSnapshot: NetworkManagerTwo.ExpenditureSnapshot?
+  @Published var expenditureState: NetworkManagerTwo.ExpenditureState?
+  @Published var expenditureHistory: [NetworkManagerTwo.ExpenditureSnapshot] = []
+  @Published var isLoadingExpenditure = false
+  @Published var expenditureErrorMessage: String?
+  @Published var healthMetricsSnapshot: NetworkManagerTwo.HealthMetricsSnapshot?
+  @Published var isLoadingHealthMetrics = false
+  @Published var healthMetricsErrorMessage: String?
+
   
   // Navigation properties
   @Published var navigateToEditHeight: Bool = false
@@ -115,6 +128,10 @@ final class DayLogsViewModel: ObservableObject {
     // Clear pending cache when switching users
     clearPendingCache()
     configureRepository(for: newEmail)
+    refreshExpenditureData(force: true)
+    healthMetricsSnapshot = nil
+    lastHealthMetricsRefresh = nil
+    refreshHealthMetrics(force: true)
   }
   
   func preloadForStartup(email: String) {
@@ -129,6 +146,8 @@ final class DayLogsViewModel: ObservableObject {
     }
 
     loadLogs(for: selectedDate)
+    refreshExpenditureData()
+    refreshHealthMetrics()
   }
   
   func setHealthViewModel(_ healthViewModel: HealthKitViewModel) {
@@ -327,7 +346,7 @@ func fetchCalorieGoal() {
 
   }
 
- func fetchNutritionGoals(forceRefresh: Bool = false) {
+  func fetchNutritionGoals(forceRefresh: Bool = false) {
     fetchCalorieGoal()
 
     if let goals = goalsStore.cachedGoals {
@@ -337,7 +356,67 @@ func fetchCalorieGoal() {
     }
 
     goalsStore.ensureGoalsAvailable(email: email, forceRefresh: forceRefresh)
-}
+  }
+
+  func refreshExpenditureData(force: Bool = false, historyDays: Int = 30) {
+    guard !email.isEmpty else { return }
+    let now = Date()
+    if !force, let lastExpenditureRefresh, now.timeIntervalSince(lastExpenditureRefresh) < expenditureRefreshInterval {
+      return
+    }
+    lastExpenditureRefresh = now
+    isLoadingExpenditure = true
+    expenditureErrorMessage = nil
+
+    let offsetMinutes = TimeZone.current.secondsFromGMT() / 60
+
+    NetworkManagerTwo.shared.fetchExpenditureSummary(userEmail: email, forceRecompute: force, timezoneOffsetMinutes: offsetMinutes) { [weak self] result in
+      guard let self else { return }
+      self.isLoadingExpenditure = false
+      switch result {
+      case .success(let payload):
+        self.expenditureSnapshot = payload.summary
+        self.expenditureState = payload.state
+      case .failure(let error):
+        self.expenditureErrorMessage = error.localizedDescription
+      }
+    }
+
+    NetworkManagerTwo.shared.fetchExpenditureHistory(userEmail: email, days: historyDays, timezoneOffsetMinutes: offsetMinutes) { [weak self] result in
+      guard let self else { return }
+      switch result {
+      case .success(let response):
+        self.expenditureHistory = response.days.sorted {
+          ($0.dateValue ?? Date.distantPast) < ($1.dateValue ?? Date.distantPast)
+        }
+      case .failure(let error):
+        self.expenditureErrorMessage = error.localizedDescription
+      }
+    }
+  }
+
+  func refreshHealthMetrics(force: Bool = false) {
+    guard !email.isEmpty else { return }
+    let now = Date()
+    if !force, let lastHealthMetricsRefresh, now.timeIntervalSince(lastHealthMetricsRefresh) < healthMetricsRefreshInterval {
+      return
+    }
+    lastHealthMetricsRefresh = now
+    isLoadingHealthMetrics = true
+    healthMetricsErrorMessage = nil
+
+    let offsetMinutes = TimeZone.current.secondsFromGMT() / 60
+    NetworkManagerTwo.shared.fetchHealthMetrics(userEmail: email, timezoneOffsetMinutes: offsetMinutes) { [weak self] result in
+      guard let self else { return }
+      self.isLoadingHealthMetrics = false
+      switch result {
+      case .success(let snapshot):
+        self.healthMetricsSnapshot = snapshot
+      case .failure(let error):
+        self.healthMetricsErrorMessage = error.localizedDescription
+      }
+    }
+  }
 
 
 

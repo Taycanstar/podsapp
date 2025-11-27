@@ -626,6 +626,9 @@ struct AgentChatView: View {
             }
         }
 
+        let aiInsight = foodData["aiInsight"] as? String ?? foodData["ai_insight"] as? String
+        let nutritionScore = foodData["nutritionScore"] as? Double ?? foodData["nutrition_score"] as? Double
+
         let loggedFoodItem = LoggedFoodItem(
             foodLogId: foodLogId,
             fdcId: foodData["fdcId"] as? Int ?? foodLogId,
@@ -638,7 +641,9 @@ struct AgentChatView: View {
             carbs: foodData["carbs"] as? Double,
             fat: foodData["fat"] as? Double,
             healthAnalysis: healthAnalysisData,
-            foodNutrients: foodNutrients
+            foodNutrients: foodNutrients,
+            aiInsight: aiInsight,
+            nutritionScore: nutritionScore
         )
 
         return CombinedLog(

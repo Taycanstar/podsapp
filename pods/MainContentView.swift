@@ -541,6 +541,9 @@ struct MainContentView: View {
             }
         }
 
+        let aiInsight = foodData["aiInsight"] as? String ?? foodData["ai_insight"] as? String
+        let nutritionScore = foodData["nutritionScore"] as? Double ?? foodData["nutrition_score"] as? Double
+
         let loggedFoodItem = LoggedFoodItem(
             foodLogId: foodLogId,
             fdcId: foodData["fdcId"] as? Int ?? 0,
@@ -553,7 +556,9 @@ struct MainContentView: View {
             carbs: foodData["carbs"] as? Double ?? 0.0,
             fat: foodData["fat"] as? Double ?? 0.0,
             healthAnalysis: healthAnalysisData,
-            foodNutrients: foodNutrients
+            foodNutrients: foodNutrients,
+            aiInsight: aiInsight,
+            nutritionScore: nutritionScore
         )
 
         let combinedLog = CombinedLog(

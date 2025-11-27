@@ -651,6 +651,40 @@ struct LoggedFoodItem: Codable {
         case nutritionScore = "nutrition_score"
         case mealItems = "meal_items"
     }
+
+    init(
+        foodLogId: Int?,
+        fdcId: Int,
+        displayName: String,
+        calories: Double,
+        servingSizeText: String,
+        numberOfServings: Double,
+        brandText: String?,
+        protein: Double?,
+        carbs: Double?,
+        fat: Double?,
+        healthAnalysis: HealthAnalysis?,
+        foodNutrients: [Nutrient]?,
+        aiInsight: String? = nil,
+        nutritionScore: Double? = nil,
+        mealItems: [MealItem]? = nil
+    ) {
+        self.foodLogId = foodLogId
+        self.fdcId = fdcId
+        self.displayName = displayName
+        self.calories = calories
+        self.servingSizeText = servingSizeText
+        self.numberOfServings = numberOfServings
+        self.brandText = brandText
+        self.protein = protein
+        self.carbs = carbs
+        self.fat = fat
+        self.healthAnalysis = healthAnalysis
+        self.foodNutrients = foodNutrients
+        self.aiInsight = aiInsight
+        self.nutritionScore = nutritionScore
+        self.mealItems = mealItems
+    }
 }
 
 struct LoggedFood: Codable, Identifiable {

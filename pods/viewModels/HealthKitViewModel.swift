@@ -32,6 +32,8 @@ final class HealthKitViewModel: ObservableObject {
     // Sleep data properties
     @Published var sleepHours: Double = 0 // Total sleep time in hours
     @Published var sleepMinutes: Int = 0  // Remaining minutes after hours
+    @Published var respiratoryRate: Double?
+    @Published var bodyTemperature: Double?
     @Published var recommendedSleepHours: Double = 8.0 // Default recommended amount
     
     // Track the currently displayed date
@@ -40,6 +42,14 @@ final class HealthKitViewModel: ObservableObject {
     private let healthKitManager = HealthKitManager.shared
     private var cancellables = Set<AnyCancellable>()
     private let metricsUploader = AgentMetricsUploader.shared
+    private var latestSleepSummary: SleepSummary?
+    private var sleepSummaryCache: [Date: SleepSummary] = [:]
+
+    private let payloadDateTimeFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
     
     // Computed property for sleep progress
     var sleepProgress: Double {
@@ -113,7 +123,7 @@ final class HealthKitViewModel: ObservableObject {
                     // If permissions granted, reload the data
                     if granted {
                         self.reloadHealthData(for: self.currentDate)
-                        self.syncRecentMetricsIfNeeded()
+                        self.ensureWearableSync(force: true)
                     }
                 }
             }
@@ -130,7 +140,7 @@ final class HealthKitViewModel: ObservableObject {
                 if granted {
                     // Refresh data immediately when permissions are granted
                     self.reloadHealthData(for: self.currentDate)
-                    self.syncRecentMetricsIfNeeded()
+                    self.ensureWearableSync(force: true)
                     // Post notification that health data is now available
                     NotificationCenter.default.post(name: NSNotification.Name("HealthDataAvailableNotification"), object: nil)
                 }
@@ -327,17 +337,18 @@ final class HealthKitViewModel: ObservableObject {
         
         // Fetch sleep data for the specified date
         group.enter()
-        healthKitManager.fetchSleepData(for: date) { [weak self] sleepDuration, error in
+        healthKitManager.fetchSleepSummary(for: date) { [weak self] summary, error in
             Task { @MainActor [weak self] in
                 defer { group.leave() }
                 guard let self else { return }
 
-                if let sleepDuration = sleepDuration {
-                    // Convert sleep duration to hours and minutes
-                    let totalHours = sleepDuration / 3600 // Total hours including fraction
-                    self.sleepHours = floor(totalHours) // Just the whole hours
-
-                    self.sleepMinutes = Int((totalHours - self.sleepHours) * 60)
+                if let summary = summary {
+                    self.latestSleepSummary = summary
+                    let dayKey = self.calendar.startOfDay(for: date)
+                    self.sleepSummaryCache[dayKey] = summary
+                    let totalHours = summary.totalSleepMinutes / 60.0
+                    self.sleepHours = floor(totalHours)
+                    self.sleepMinutes = Int((totalHours - self.sleepHours) * 60.0)
                 }
                 if let error = error {
                     self.error = error
@@ -395,6 +406,32 @@ final class HealthKitViewModel: ObservableObject {
                 }
             }
         }
+
+        group.enter()
+        healthKitManager.fetchRespiratoryRate(for: date) { [weak self] value, error in
+            Task { @MainActor [weak self] in
+                defer { group.leave() }
+                guard let self else { return }
+
+                self.respiratoryRate = value
+                if let error = error {
+                    self.error = error
+                }
+            }
+        }
+
+        group.enter()
+        healthKitManager.fetchBodyTemperature(for: date) { [weak self] value, error in
+            Task { @MainActor [weak self] in
+                defer { group.leave() }
+                guard let self else { return }
+
+                self.bodyTemperature = value
+                if let error = error {
+                    self.error = error
+                }
+            }
+        }
         
         // Fetch recent workouts - Use a date range from the week before the selected date
         group.enter()
@@ -421,7 +458,7 @@ final class HealthKitViewModel: ObservableObject {
             guard let self else { return }
             self.isLoading = false
             self.metricsUploader.uploadSnapshot(from: self, date: date)
-            self.syncRecentMetricsIfNeeded()
+            self.ensureWearableSync()
         }
     }
     
@@ -532,14 +569,26 @@ final class HealthKitViewModel: ObservableObject {
 }
 
 extension HealthKitViewModel {
-    private func syncRecentMetricsIfNeeded(days: Int = 7) {
-        guard isAuthorized else { return }
-        let lastSyncDate = UserDefaults.standard.object(forKey: wearableBackfillKey) as? Date
-        let startOfToday = calendar.startOfDay(for: Date())
-        if let lastSyncDate = lastSyncDate, calendar.isDate(lastSyncDate, inSameDayAs: startOfToday) {
+    func ensureWearableSync(force: Bool = false, days: Int = 7) {
+        print("[HealthKitVM] ensureWearableSync invoked force=\(force)")
+        syncRecentMetricsIfNeeded(force: force, days: days)
+    }
+
+    private func syncRecentMetricsIfNeeded(force: Bool, days: Int) {
+        guard isAuthorized else {
+            print("[HealthKitVM] wearable sync skipped – not authorized")
             return
         }
-        guard !isBackfilling else { return }
+        let lastSyncDate = UserDefaults.standard.object(forKey: wearableBackfillKey) as? Date
+        let startOfToday = calendar.startOfDay(for: Date())
+        if !force, let lastSyncDate = lastSyncDate, calendar.isDate(lastSyncDate, inSameDayAs: startOfToday) {
+            print("[HealthKitVM] wearable sync already ran for today")
+            return
+        }
+        guard !isBackfilling else {
+            print("[HealthKitVM] wearable sync already in progress")
+            return
+        }
         isBackfilling = true
         Task { [weak self] in
             await self?.syncRecentMetrics(days: days)
@@ -555,6 +604,8 @@ extension HealthKitViewModel {
         let startOfToday = calendar.startOfDay(for: Date())
         var uploadedAny = false
 
+        print("[HealthKitVM] wearable sync started for user \(userEmail), days=\(days)")
+
         for offset in 0..<days {
             guard let targetDate = calendar.date(byAdding: .day, value: -offset, to: startOfToday) else { continue }
             if let payload = await buildPayload(for: targetDate, userEmail: userEmail) {
@@ -569,16 +620,30 @@ extension HealthKitViewModel {
     }
 
     private func buildPayload(for date: Date, userEmail: String) async -> AgentDailyMetricsPayload? {
+        print("[HealthKitVM] building wearable payload for \(date)")
         let stepCountValue = await fetchDouble(for: date, using: healthKitManager.fetchStepCount)
-        let sleepDuration = await fetchSleepDuration(for: date)
+        let sleepSummary = await fetchSleepSummary(for: date)
+        let dayKey = calendar.startOfDay(for: date)
+        if let summary = sleepSummary {
+            sleepSummaryCache[dayKey] = summary
+        }
+        var effectiveSleepSummary = sleepSummaryCache[dayKey]
+        if effectiveSleepSummary == nil,
+           dayKey == calendar.startOfDay(for: currentDate),
+           let latest = latestSleepSummary {
+            sleepSummaryCache[dayKey] = latest
+            effectiveSleepSummary = latest
+        }
         let activeEnergy = await fetchDouble(for: date, using: healthKitManager.fetchActiveEnergy)
         let basalEnergy = await fetchDouble(for: date, using: healthKitManager.fetchBasalEnergy)
         let waterLiters = await fetchDouble(for: date, using: healthKitManager.fetchWaterIntake)
         let restingHR = await fetchDouble(for: date, using: healthKitManager.fetchRestingHeartRate)
         let hrvScore = await fetchDouble(for: date, using: healthKitManager.fetchHeartRateVariability)
         let walkingHR = await fetchDouble(for: date, using: healthKitManager.fetchWalkingHeartRateAverage)
+        let respiratoryRate = await fetchDouble(for: date, using: healthKitManager.fetchRespiratoryRate)
+        let bodyTemperature = await fetchDouble(for: date, using: healthKitManager.fetchBodyTemperature)
 
-        let sleepHours = sleepDuration.map { $0 / 3600.0 }
+        let sleepHours = effectiveSleepSummary.map { $0.totalSleepMinutes / 60.0 }
         let hydrationOz = waterLiters.map { $0 * 33.814 }
 
         let caloriesBurned: Double?
@@ -601,10 +666,24 @@ extension HealthKitViewModel {
             caloriesBurned != nil,
             restingHR != nil,
             hrvScore != nil,
-            walkingHR != nil
+            walkingHR != nil,
+            respiratoryRate != nil,
+            bodyTemperature != nil,
+            sleepSummary != nil
         ].contains(true)
 
-        guard hasSignal else { return nil }
+        guard hasSignal else {
+            print("[HealthKitVM] skipping wearable payload for \(payloadDateTimeFormatter.string(from: date)) - no HealthKit signals")
+            return nil
+        }
+
+        let sleepMetricsDict = effectiveSleepSummary?.dictionaryRepresentation(formatter: payloadDateTimeFormatter)
+
+        if let dict = sleepMetricsDict {
+            print("[HealthKitVM] uploading sleep metrics for \(payloadDateTimeFormatter.string(from: date)):", dict)
+        } else {
+            print("[HealthKitVM] no sleep metrics for \(payloadDateTimeFormatter.string(from: date))")
+        }
 
         return AgentDailyMetricsPayload(
             userEmail: userEmail,
@@ -627,7 +706,10 @@ extension HealthKitViewModel {
             calendarConstraints: nil,
             equipmentAvailable: nil,
             readinessNotes: nil,
-            walkingHeartRateAverage: walkingHR
+            walkingHeartRateAverage: walkingHR,
+            sleepMetrics: sleepMetricsDict,
+            respiratoryRate: respiratoryRate,
+            skinTemperatureC: bodyTemperature
         )
     }
 
@@ -642,13 +724,18 @@ extension HealthKitViewModel {
         }
     }
 
-    private func fetchSleepDuration(for date: Date) async -> Double? {
+    private func fetchSleepSummary(for date: Date) async -> SleepSummary? {
         await withCheckedContinuation { continuation in
-            healthKitManager.fetchSleepData(for: date) { duration, error in
+            healthKitManager.fetchSleepSummary(for: date) { summary, error in
                 if let error = error {
                     print("⚠️ HealthKit sleep fetch error: \(error.localizedDescription)")
                 }
-                continuation.resume(returning: duration)
+                if let summary {
+                    print("[HealthKitVM] fetched sleep summary for \(date): total=\(summary.totalSleepMinutes) inBed=\(summary.inBedMinutes)")
+                } else {
+                    print("[HealthKitVM] no sleep summary from HealthKit for \(date)")
+                }
+                continuation.resume(returning: summary)
             }
         }
     }

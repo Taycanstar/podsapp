@@ -1,6 +1,55 @@
 import Foundation
 import HealthKit
 
+struct SleepSummary {
+    let totalSleepMinutes: Double
+    let inBedMinutes: Double
+    let coreMinutes: Double
+    let deepMinutes: Double
+    let remMinutes: Double
+    let awakeMinutes: Double
+    let sleepOnset: Date?
+    let sleepOffset: Date?
+
+    var efficiency: Double? {
+        guard inBedMinutes > 0 else { return nil }
+        return max(0.0, min(1.0, totalSleepMinutes / inBedMinutes))
+    }
+
+    var midpointMinutes: Double? {
+        guard let start = sleepOnset, let end = sleepOffset else { return nil }
+        let midpoint = start.addingTimeInterval(end.timeIntervalSince(start) / 2.0)
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute], from: midpoint)
+        guard let hour = components.hour, let minute = components.minute else { return nil }
+        return Double(hour * 60 + minute)
+    }
+
+    func dictionaryRepresentation(formatter: ISO8601DateFormatter) -> [String: Any] {
+        var dict: [String: Any] = [
+            "total_minutes": totalSleepMinutes,
+            "in_bed_minutes": inBedMinutes,
+            "core_minutes": coreMinutes,
+            "deep_minutes": deepMinutes,
+            "rem_minutes": remMinutes,
+            "awake_minutes": awakeMinutes,
+        ]
+        if let efficiency = efficiency {
+            dict["efficiency"] = efficiency
+        }
+        if let midpoint = midpointMinutes {
+            dict["midpoint_minutes"] = midpoint
+        }
+        if let onset = sleepOnset {
+            dict["sleep_onset"] = formatter.string(from: onset)
+        }
+        if let offset = sleepOffset {
+            dict["sleep_offset"] = formatter.string(from: offset)
+        }
+        return dict
+    }
+}
+
 class HealthKitManager {
     /// Human‑readable name for the HKCategoryValueSleepAnalysis value.
     private static func sleepStageName(for value: Int) -> String {
@@ -636,7 +685,7 @@ class HealthKitManager {
     }
     
     // Fetch sleep data for a specific date
-    func fetchSleepData(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
+    func fetchSleepSummary(for date: Date, completion: @escaping (SleepSummary?, Error?) -> Void) {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
             DispatchQueue.main.async {
                 completion(nil, NSError(domain: "com.pods.healthkit", code: 1, userInfo: [NSLocalizedDescriptionKey: "Sleep analysis type not available"]))
@@ -688,13 +737,40 @@ class HealthKitManager {
             }
 
             let sleepSamples = samples as? [HKCategorySample] ?? []
-     
-            for s in sleepSamples {
-                let stage = HealthKitManager.sleepStageName(for: s.value)
-                let mins  = Int(s.endDate.timeIntervalSince(s.startDate) / 60)
-          
+            var remMinutes: Double = 0
+            var deepMinutes: Double = 0
+            var coreMinutes: Double = 0
+            var awakeMinutes: Double = 0
+            var inBedStart: Date?
+            var inBedEnd: Date?
+            var sleepStart: Date?
+            var sleepEnd: Date?
+
+            for sample in sleepSamples {
+                let minutes = sample.endDate.timeIntervalSince(sample.startDate) / 60.0
+                switch sample.value {
+                case HKCategoryValueSleepAnalysis.asleepREM.rawValue:
+                    remMinutes += minutes
+                case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:
+                    deepMinutes += minutes
+                case HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                     HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:
+                    coreMinutes += minutes
+                case HKCategoryValueSleepAnalysis.awake.rawValue:
+                    awakeMinutes += minutes
+                case HKCategoryValueSleepAnalysis.inBed.rawValue:
+                    inBedStart = min(inBedStart ?? sample.startDate, sample.startDate)
+                    inBedEnd = max(inBedEnd ?? sample.endDate, sample.endDate)
+                default:
+                    break
+                }
+
+                if sample.value != HKCategoryValueSleepAnalysis.awake.rawValue
+                    && sample.value != HKCategoryValueSleepAnalysis.inBed.rawValue {
+                    sleepStart = min(sleepStart ?? sample.startDate, sample.startDate)
+                    sleepEnd = max(sleepEnd ?? sample.endDate, sample.endDate)
+                }
             }
-        
 
             // Filter to only asleep stages and avoid overlapping periods
             let asleepSamples = sleepSamples.filter { sample in
@@ -738,10 +814,28 @@ class HealthKitManager {
                 totalSleepSeconds += period.end.timeIntervalSince(period.start)
             }
             
-            print("🛌 Merged \(sortedAsleepSamples.count) samples into \(mergedPeriods.count) periods")
-            print("🛌 Total sleep time: \(totalSleepSeconds/3600) hours (\(Int(totalSleepSeconds/60)) minutes)")
-            
-            DispatchQueue.main.async { completion(totalSleepSeconds, nil) }
+            let totalMinutes = totalSleepSeconds / 60.0
+            let inBedMinutes: Double
+            if let start = inBedStart, let end = inBedEnd {
+                inBedMinutes = max(0, end.timeIntervalSince(start) / 60.0)
+            } else if let start = sleepStart, let end = sleepEnd {
+                inBedMinutes = max(0, end.timeIntervalSince(start) / 60.0)
+            } else {
+                inBedMinutes = totalMinutes
+            }
+
+            let summary = SleepSummary(
+                totalSleepMinutes: totalMinutes,
+                inBedMinutes: inBedMinutes,
+                coreMinutes: coreMinutes,
+                deepMinutes: deepMinutes,
+                remMinutes: remMinutes,
+                awakeMinutes: awakeMinutes,
+                sleepOnset: sleepStart,
+                sleepOffset: sleepEnd
+            )
+
+            DispatchQueue.main.async { completion(summary, nil) }
         }
         
         healthStore.execute(query)
@@ -842,6 +936,24 @@ class HealthKitManager {
         }
         let bpmUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
         fetchAverageQuantity(type: type, unit: bpmUnit, date: date, completion: completion)
+    }
+
+    func fetchRespiratoryRate(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .respiratoryRate) else {
+            completion(nil, NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Respiratory rate not available"]))
+            return
+        }
+        let unit = HKUnit.count().unitDivided(by: HKUnit.minute())
+        fetchAverageQuantity(type: type, unit: unit, date: date, completion: completion)
+    }
+
+    func fetchBodyTemperature(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .bodyTemperature) else {
+            completion(nil, NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Body temperature not available"]))
+            return
+        }
+        let unit = HKUnit.degreeCelsius()
+        fetchAverageQuantity(type: type, unit: unit, date: date, completion: completion)
     }
     
     // MARK: - Helper Methods
