@@ -19,6 +19,7 @@ struct NewHomeView: View {
     @EnvironmentObject private var mealReminderService: MealReminderService
     @EnvironmentObject private var proFeatureGate: ProFeatureGate
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("isAuthenticated") private var isAuthenticated: Bool = false
     @AppStorage(WaterUnit.storageKey) private var storedWaterUnitRawValue: String = WaterUnit.defaultUnit.rawValue
     @ObservedObject private var workoutManager = WorkoutManager.shared
@@ -53,6 +54,10 @@ struct NewHomeView: View {
 
     // ─── Sort state ─────────────────────────────────────────────────────────
     @State private var sortOption: LogSortOption = .date
+    @State private var nutritionCarouselSelection: Int = 0
+    @State private var showHealthSyncFlash = false
+    @State private var healthSyncFlashProgress: Double = 0
+    @State private var healthSyncFlashHideWorkItem: DispatchWorkItem?
     
     enum LogSortOption: String, CaseIterable {
         case date = "Date"
@@ -353,11 +358,70 @@ private var remainingCal: Double { vm.remainingCalories }
     }
 
 
-private var navTitle: String {
+    private var navTitle: String {
         if isToday      { return "Today" }
         if isYesterday  { return "Yesterday" }
         let f = DateFormatter(); f.dateFormat = "EEEE, MMM d"
         return f.string(from: vm.selectedDate)
+    }
+
+    private var headerTitle: String {
+        isHealthMetricsUpdating ? "Updating..." : navTitle
+    }
+
+    private var isHealthMetricsUpdating: Bool {
+        vm.isLoadingHealthMetrics && isToday
+    }
+
+    private func handleHealthMetricsLoadingChange(_ isLoading: Bool) {
+        guard isToday else {
+            cancelHealthSyncFlash()
+            return
+        }
+
+        if isLoading {
+            cancelHealthSyncFlash()
+            return
+        }
+
+        guard vm.healthMetricsSnapshot != nil else { return }
+        triggerHealthSyncFlashAnimation()
+    }
+
+    private func triggerHealthSyncFlashAnimation() {
+        healthSyncFlashHideWorkItem?.cancel()
+        showHealthSyncFlash = true
+        healthSyncFlashProgress = 0
+
+        withAnimation(.easeOut(duration: 0.45)) {
+            healthSyncFlashProgress = 1
+        }
+
+        let workItem = DispatchWorkItem {
+            guard !vm.isLoadingHealthMetrics else { return }
+            guard isToday else {
+                healthSyncFlashHideWorkItem = nil
+                showHealthSyncFlash = false
+                healthSyncFlashProgress = 0
+                return
+            }
+
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showHealthSyncFlash = false
+            }
+            healthSyncFlashProgress = 0
+            healthSyncFlashHideWorkItem = nil
+        }
+
+        healthSyncFlashHideWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
+    }
+
+    private func cancelHealthSyncFlash() {
+        healthSyncFlashHideWorkItem?.cancel()
+        healthSyncFlashHideWorkItem = nil
+        showHealthSyncFlash = false
+        healthSyncFlashProgress = 0
     }
     
     private var currentUserEmail: String? {
@@ -495,6 +559,10 @@ private var navTitle: String {
             }
 
             healthViewModel.reloadHealthData(for: vm.selectedDate)
+            vm.refreshHealthMetrics(force: true, targetDate: vm.selectedDate)
+            vm.refreshWeeklyNutritionSummaries(endingAt: vm.selectedDate)
+            vm.refreshExpenditureData(force: false, historyDays: 30)
+            handleHealthMetricsLoadingChange(vm.isLoadingHealthMetrics)
         }
             .onChange(of: onboarding.email) { newEmail in
                 print("🔄 DashboardView - User email changed to: \(newEmail)")
@@ -521,6 +589,7 @@ private var navTitle: String {
                     
                     // Preload data for new user
                     preloadHealthData()
+                    vm.refreshWeeklyNutritionSummaries(endingAt: vm.selectedDate, force: true)
                 }
 
             }
@@ -531,6 +600,21 @@ private var navTitle: String {
 
                 // Update health data for the selected date
                 healthViewModel.reloadHealthData(for: newDate)
+
+                vm.refreshHealthMetrics(force: true, targetDate: newDate)
+                vm.refreshWeeklyNutritionSummaries(endingAt: newDate)
+
+                if !Calendar.current.isDateInToday(newDate) {
+                    cancelHealthSyncFlash()
+                } else {
+                    handleHealthMetricsLoadingChange(vm.isLoadingHealthMetrics)
+                }
+            }
+            .onChange(of: vm.logs) { _ in
+                vm.refreshWeeklyNutritionSummaries(endingAt: vm.selectedDate)
+            }
+            .onChange(of: vm.isLoadingHealthMetrics) { isLoading in
+                handleHealthMetricsLoadingChange(isLoading)
             }
             .onChange(of: foodMgr.foodScanningState) { oldState, newState in
 
@@ -1034,6 +1118,25 @@ private struct ExpenditureSparkline: View {
 // MARK: -- Sub-views
 // ────────────────────────────────────────────────────────────────────────────
 private extension NewHomeView {
+    @ViewBuilder
+    private var healthSyncFlashBar: some View {
+        if showHealthSyncFlash {
+            Capsule()
+                .fill(Color.blue.opacity(0.18))
+                .frame(height: 4)
+                .overlay(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.blue)
+                        .frame(height: 4)
+                        .scaleEffect(x: CGFloat(max(0.0, min(1.0, healthSyncFlashProgress))), y: 1, anchor: .leading)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+                .padding(.bottom, 4)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+
     private var dashboardHeader: some View {
         HStack(spacing: 16) {
             Button {
@@ -1046,54 +1149,51 @@ private extension NewHomeView {
 
             Spacer(minLength: 12)
 
-            HStack(spacing: 12) {
-                Button {
-                    vm.selectedDate.addDays(-1)
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
-                }
+            if isHealthMetricsUpdating {
+                Text(headerTitle)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.primary)
+            } else {
+                HStack(spacing: 12) {
+                    Button {
+                        vm.selectedDate.addDays(-1)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
 
-                Button {
-                    showDatePicker = true
-                } label: {
-                    Text(navTitle)
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
-                }
+                    Button {
+                        showDatePicker = true
+                    } label: {
+                        Text(headerTitle)
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
 
-                Button {
-                    vm.selectedDate.addDays(+1)
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
+                    Button {
+                        vm.selectedDate.addDays(+1)
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
                 }
             }
 
             Spacer(minLength: 12)
 
-            HStack(spacing: 14) {
-                StreaksView(
-                    currentStreak: $streakManager.currentStreak,
-                    longestStreak: $streakManager.longestStreak,
-                    streakAsset: $streakManager.streakAsset,
-                    isVisible: $onboarding.isStreakVisible
-                )
-
-                Button {
-                    showDatePicker = true
-                } label: {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                }
+            Button {
+                showDatePicker = true
+            } label: {
+                Image(systemName: "newspaper")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
             }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(Color("primarybg"))
+        .background(Color("sheetbg"))
         .overlay(Divider().foregroundColor(Color.primary.opacity(0.08)), alignment: .bottom)
     }
 
@@ -1101,16 +1201,20 @@ private extension NewHomeView {
         List {
             Section {
                 healthMetricsCard
+                    .padding(.top, 16)
                     .padding(.horizontal)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 10)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    .listRowSpacing(0)
                 nutritionSummaryCard
+                    .padding(.top, 0)
                     .padding(.horizontal, -16)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    .listRowSpacing(0)
                 expenditureSummaryCard
                     .padding(.horizontal)
                     .padding(.top, 8)
@@ -1221,9 +1325,10 @@ private extension NewHomeView {
     }
     private var dashboardContent: some View {
         ZStack(alignment: .bottom) {
-            Color("primarybg").ignoresSafeArea()
+            Color("sheetbg").ignoresSafeArea()
 
             VStack(spacing: 0) {
+                healthSyncFlashBar
                 dashboardHeader
 
                 dashboardList
@@ -1247,66 +1352,680 @@ private extension NewHomeView {
         }
     }
     // ① Nutrition summary ----------------------------------------------------
+    private var nutritionCardHeight: CGFloat { 300 }
+
     var nutritionSummaryCard: some View {
-        VStack(spacing: 0) {
-            GeometryReader { geometry in
-                TabView {
-                    // Page 1: Original cards
-                    VStack(spacing: 10) {
-                        remainingCaloriesCard
-                        macrosCard
+        VStack(spacing: 4) {
+            TabView(selection: $nutritionCarouselSelection) {
+                DailyIntakeCardView(
+                    calories: vm.totalCalories,
+                    calorieGoal: calorieGoal,
+                    macros: [
+                        DailyIntakeCardView.Macro(label: "Protein", value: vm.totalProtein, goal: proteinGoal, color: IntakeColors.protein),
+                        DailyIntakeCardView.Macro(label: "Fat", value: vm.totalFat, goal: fatGoal, color: IntakeColors.fat),
+                        DailyIntakeCardView.Macro(label: "Carbs", value: vm.totalCarbs, goal: carbsGoal, color: IntakeColors.carbs)
+                    ]
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+                .tag(0)
+                .frame(maxWidth: .infinity)
+                .frame(height: nutritionCardHeight, alignment: .top)
 
-                    }
-                    .padding(.trailing, 16) // Add horizontal padding for spacing between pages
-                         .padding(.leading, 16)
-                    .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
-                    .padding(.top, 8)
-                    
-                    // Page 2: Health data summary
-                    VStack(spacing: 10) {
-                        macroCirclesCard
-                        healthSummaryCard
-                    }
-                    .padding(.leading, 16)
-                    .padding(.trailing, 16) // Add horizontal padding for spacing between pages
-                       
-                    .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
-                    .padding(.top, 8)
-                    
-                    // Page 3: Health Data
-                    VStack(spacing: 10) {
-                        sleepCard
-                        .padding(.bottom, 0)
+                WeeklyIntakeCardView(
+                    summaries: vm.weeklyNutritionSummaries,
+                    calorieGoal: calorieGoal,
+                    macroGoals: MacroGoalTargets(protein: proteinGoal, carbs: carbsGoal, fat: fatGoal)
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+                .tag(1)
+                .frame(maxWidth: .infinity)
+                .frame(height: nutritionCardHeight, alignment: .top)
 
-                            // Match the healthSummaryCard approach (uses content height + padding)
-                        HStack(spacing: 10) {
-                            heightCard
-                            weightCard
-                        }
-                          .frame(height: 100)
-                    }
-                    .padding(.leading, 16)
-                    .padding(.trailing, 16) // Add horizontal padding for spacing between pages
-                    
-                    .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
-                    .padding(.top, 8)
+                VStack(spacing: 0) {
+                    EnergyBalanceCardView(
+                        weekData: vm.energyBalanceWeek,
+                        monthData: vm.energyBalanceMonth
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
-                .frame(height: 300) // Enough height so cards fully visible, with 8px above page dots
-                .tabViewStyle(PageTabViewStyle())
-                .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+                .tag(2)
+                .frame(maxWidth: .infinity)
+                .frame(height: nutritionCardHeight, alignment: .top)
             }
-            .frame(height: 300) // Set the same height for GeometryReader
-    }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+
+            HStack(spacing: 6) {
+                ForEach(0..<3, id: \.self) { index in
+                    Capsule()
+                        .fill(nutritionCarouselSelection == index ? Color.primary.opacity(0.8) : Color.primary.opacity(0.2))
+                        .frame(width: nutritionCarouselSelection == index ? 18 : 8, height: 4)
+                        .animation(.easeInOut(duration: 0.2), value: nutritionCarouselSelection)
+                }
+            }
+            .padding(.top, 2)
+        }
+        .frame(height: nutritionCardHeight + 12)
         .padding(.horizontal)
     }
+
+    private enum IntakeColors {
+        static let calories = Color(red: 1.0, green: 0.176, blue: 0.333)
+        static let protein = Color(red: 0.0, green: 0.478, blue: 1.0)
+        static let fat = Color(red: 1.0, green: 0.839, blue: 0.039)
+        static let carbs = Color(red: 0.188, green: 0.82, blue: 0.345)
+    }
+
+    private struct MacroGoalTargets {
+        let protein: Double
+        let carbs: Double
+        let fat: Double
+    }
+
+    private struct IntakeCardStyle: ViewModifier {
+        func body(content: Content) -> some View {
+            content
+                .background(Color("sheetcard"), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(Color.primary.opacity(0.05))
+                )
+        }
+    }
+
+    private struct DailyIntakeCardView: View {
+        struct Macro: Identifiable {
+            let label: String
+            let value: Double
+            let goal: Double
+            let color: Color
+
+            var id: String { label }
+        }
+
+        let calories: Double
+        let calorieGoal: Double
+        let macros: [Macro]
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Daily Intake")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                HStack(alignment: .center) {
+                    metricColumn(title: "Left", value: remainingText)
+
+                    Spacer()
+
+                    VStack(spacing: 4) {
+                        ActivityRingView(
+                            value: calories,
+                            goal: calorieGoal,
+                            color: IntakeColors.calories,
+                            size: 92,
+                            lineWidth: 9,
+                            label: "cals",
+                            showGoal: false
+                        )
+
+                        Text("Consumed")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.secondary)
+                            .textCase(.uppercase)
+                            .padding(.top, 6)
+                    }
+
+                    Spacer()
+
+                    metricColumn(title: "Goal", value: formatNumber(calorieGoal))
+                }
+
+                HStack(spacing: 8) {
+                    ForEach(macros) { macro in
+                        VStack(spacing: 8) {
+                            ActivityRingView(
+                                value: macro.value,
+                                goal: macro.goal,
+                                color: macro.color,
+                                size: 46,
+                                lineWidth: 3.5,
+                                label: nil,
+                                showGoal: false,
+                                hideCenter: true
+                            )
+
+                            VStack(spacing: 4) {
+                                Text(macro.label)
+                                    .font(.system(size: 12, weight: .regular))
+                                    .foregroundColor(.primary)
+
+                                Text("\(formatNumber(macro.value))/\(formatNumber(macro.goal))g")
+                                    .font(.system(size: 10, weight: .regular))
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            .padding(20)
+            .modifier(IntakeCardStyle())
+        }
+
+        private var remainingText: String {
+            let remaining = max(calorieGoal - calories, 0)
+            return formatNumber(remaining)
+        }
+
+        private func metricColumn(title: String, value: String) -> some View {
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+
+                Text(value)
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+            }
+            .frame(width: 70)
+        }
+
+        private func formatNumber(_ value: Double) -> String {
+            DailyIntakeCardView.numberFormatter.string(from: NSNumber(value: value.rounded())) ?? "0"
+        }
+
+        private static let numberFormatter: NumberFormatter = {
+            let formatter = NumberFormatter()
+            formatter.maximumFractionDigits = 0
+            formatter.minimumFractionDigits = 0
+            return formatter
+        }()
+    }
+
+    private struct ActivityRingView: View {
+        let value: Double
+        let goal: Double
+        let color: Color
+        var size: CGFloat = 80
+        var lineWidth: CGFloat = 8
+        var label: String? = nil
+        var showGoal: Bool = true
+        var hideCenter: Bool = false
+
+        private var progress: CGFloat {
+            guard goal > 0 else { return 0 }
+            return CGFloat(min(max(value / goal, 0), 1))
+        }
+
+        var body: some View {
+            ZStack {
+                Circle()
+                    .stroke(lineWidth: lineWidth)
+                    .foregroundColor(Color(.systemGray5))
+
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                    .foregroundColor(color)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeOut(duration: 0.4), value: progress)
+
+                if !hideCenter {
+                    VStack(spacing: 2) {
+                        Text(formatNumber(value))
+                            .font(.system(size: size >= 100 ? 24 : 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+
+                        if showGoal {
+                            Text("of \(formatNumber(goal))")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.secondary)
+                    } else if let label {
+                        Text(label)
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            }
+            .frame(width: size, height: size)
+        }
+
+        private func formatNumber(_ value: Double) -> String {
+            ActivityRingView.numberFormatter.string(from: NSNumber(value: value.rounded())) ?? "0"
+        }
+
+        private static let numberFormatter: NumberFormatter = {
+            let formatter = NumberFormatter()
+            formatter.maximumFractionDigits = 0
+            formatter.minimumFractionDigits = 0
+            return formatter
+        }()
+    }
+
+    private struct WeeklyIntakeCardView: View {
+        struct DayValue: Identifiable, Equatable {
+            let id = UUID()
+            let label: String
+            let value: Double
+            let goal: Double
+        }
+
+        let summaries: [DailyNutritionSummary]
+        let calorieGoal: Double
+        let macroGoals: MacroGoalTargets
+
+        @State private var selectedDayIndex: Int
+
+        init(summaries: [DailyNutritionSummary], calorieGoal: Double, macroGoals: MacroGoalTargets) {
+            self.summaries = summaries
+            self.calorieGoal = calorieGoal
+            self.macroGoals = macroGoals
+
+            let referenceDate = summaries.sorted { $0.date < $1.date }.last?.date ?? Date()
+            let defaultIndex = WeeklyIntakeCardView.defaultSelectedIndex(for: referenceDate)
+            _selectedDayIndex = State(initialValue: defaultIndex)
+        }
+
+        private var orderedSummaries: [DailyNutritionSummary] {
+            let calendar = Calendar.current
+            let referenceDate = summaries.sorted { $0.date < $1.date }.last?.date ?? Date()
+            let startOfWeek = WeeklyIntakeCardView.startOfWeek(for: referenceDate)
+
+            return (0..<7).compactMap { offset in
+                guard let day = calendar.date(byAdding: .day, value: offset, to: startOfWeek) else { return nil }
+                if let summary = summaries.first(where: { calendar.isDate($0.date, inSameDayAs: day) }) {
+                    return summary
+                } else {
+                    return DailyNutritionSummary(date: day, calories: 0, protein: 0, carbs: 0, fat: 0)
+                }
+            }
+        }
+
+        private static func startOfWeek(for date: Date) -> Date {
+            let calendar = Calendar.current
+            let startOfDay = calendar.startOfDay(for: date)
+            let weekday = calendar.component(.weekday, from: startOfDay)
+            let daysFromSunday = (weekday + 6) % 7
+            return calendar.date(byAdding: .day, value: -daysFromSunday, to: startOfDay) ?? startOfDay
+        }
+
+        private static func defaultSelectedIndex(for referenceDate: Date) -> Int {
+            let calendar = Calendar.current
+            let start = startOfWeek(for: referenceDate)
+            let diff = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: referenceDate)).day ?? 6
+            return min(max(diff, 0), 6)
+        }
+
+        private let dayLabels = ["S", "M", "T", "W", "T", "F", "S"]
+
+        private var selectedSummary: DailyNutritionSummary? {
+            guard selectedDayIndex < orderedSummaries.count else { return nil }
+            return orderedSummaries[selectedDayIndex]
+        }
+
+        private func dayValues(for keyPath: KeyPath<DailyNutritionSummary, Double>, goal: Double) -> [DayValue] {
+            orderedSummaries.enumerated().map { index, summary in
+                DayValue(label: dayLabels[index % dayLabels.count], value: summary[keyPath: keyPath], goal: goal)
+            }
+        }
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Weekly Intake")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .padding(.bottom, 2)
+
+                if summaries.isEmpty {
+                    Text("Keep logging meals to unlock weekly insights.")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 16)
+                } else {
+                    VStack(spacing: 14) {
+                        WeeklyMetricRow(
+                            title: "Calories",
+                            color: IntakeColors.calories,
+                            unit: "cal",
+                            selectedIndex: $selectedDayIndex,
+                            entries: dayValues(for: \.calories, goal: calorieGoal)
+                        )
+
+                        WeeklyMetricRow(
+                            title: "Protein",
+                            color: IntakeColors.protein,
+                            unit: "g",
+                            selectedIndex: $selectedDayIndex,
+                            entries: dayValues(for: \.protein, goal: macroGoals.protein)
+                        )
+
+                        WeeklyMetricRow(
+                            title: "Fat",
+                            color: IntakeColors.fat,
+                            unit: "g",
+                            selectedIndex: $selectedDayIndex,
+                            entries: dayValues(for: \.fat, goal: macroGoals.fat)
+                        )
+
+                        WeeklyMetricRow(
+                            title: "Carbs",
+                            color: IntakeColors.carbs,
+                            unit: "g",
+                            selectedIndex: $selectedDayIndex,
+                            entries: dayValues(for: \.carbs, goal: macroGoals.carbs)
+                        )
+                    }
+
+                }
+            }
+            .padding(20)
+            .modifier(IntakeCardStyle())
+            .onChange(of: summaries) { newValue in
+                let referenceDate = newValue.sorted { $0.date < $1.date }.last?.date ?? Date()
+                selectedDayIndex = WeeklyIntakeCardView.defaultSelectedIndex(for: referenceDate)
+            }
+        }
+
+        private func formatted(_ value: Double) -> String {
+            "\(Int(value.rounded()))"
+        }
+    }
+
+    private struct WeeklyMetricRow: View {
+        let title: String
+        let color: Color
+        let unit: String
+        @Binding var selectedIndex: Int
+        let entries: [WeeklyIntakeCardView.DayValue]
+
+        var body: some View {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(.primary)
+
+                    Text(valueText)
+                        .font(.system(size: 13, weight: .regular, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer(minLength: 12)
+
+                WeeklyMiniRingView(entries: entries, color: color, selectedIndex: $selectedIndex)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+
+        private var valueText: String {
+            guard selectedIndex < entries.count else { return "--" }
+            let entry = entries[selectedIndex]
+            return "\(Int(entry.value.rounded()))/\(Int(entry.goal.rounded())) \(unit)"
+        }
+    }
+
+    private struct WeeklyMiniRingView: View {
+        let entries: [WeeklyIntakeCardView.DayValue]
+        let color: Color
+        @Binding var selectedIndex: Int
+
+        var body: some View {
+            HStack(spacing: 8) {
+                ForEach(Array(entries.enumerated()), id: \.offset) { index, entry in
+                    Button {
+                        selectedIndex = index
+                    } label: {
+                        VStack(spacing: 4) {
+                            ZStack {
+                                Circle()
+                                    .stroke(lineWidth: 2.5)
+                                    .foregroundColor(Color(.systemGray5))
+
+                                Circle()
+                                    .trim(from: 0, to: progress(for: entry))
+                                    .stroke(style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                                    .foregroundColor(color)
+                                    .rotationEffect(.degrees(-90))
+                                    .opacity(selectedIndex == index ? 1 : 0.35)
+                            }
+                            .frame(width: 26, height: 26)
+
+                            Text(entry.label)
+                                .font(.system(size: 10, weight: .regular))
+                                .foregroundColor(selectedIndex == index ? .primary : .secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+
+        private func progress(for entry: WeeklyIntakeCardView.DayValue) -> CGFloat {
+            guard entry.goal > 0 else { return 0 }
+            return CGFloat(min(max(entry.value / entry.goal, 0), 1))
+        }
+    }
+
+    private struct EnergyBalanceCardView: View {
+        enum Period: String, CaseIterable { case week = "W", month = "M" }
+
+        let weekData: [EnergyBalancePoint]
+        let monthData: [EnergyBalancePoint]
+        @State private var period: Period = .week
+
+        private let chartHeight: CGFloat = 110
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 14) {
+                header
+                energyChart
+                equationRow
+            }
+            .padding(20)
+            .modifier(IntakeCardStyle())
+        }
+
+        private var rawData: [EnergyBalancePoint] {
+            period == .week ? weekData : monthData
+        }
+
+        private var currentData: [EnergyBalancePoint] {
+            let data = rawData
+            if data.isEmpty {
+                return placeholderData(count: period == .week ? 7 : 30)
+            }
+            return data
+        }
+
+        private var realizedData: [EnergyBalancePoint] {
+            let today = Calendar.current.startOfDay(for: Date())
+            return rawData.filter { $0.date <= today }
+        }
+
+        private var maxBalanceMagnitude: Double {
+            max(currentData.map { abs($0.balance) }.max() ?? 0, 1)
+        }
+
+        private var averageIntake: Double {
+            guard !realizedData.isEmpty else { return 0 }
+            return realizedData.reduce(0) { $0 + $1.intake } / Double(realizedData.count)
+        }
+
+        private var averageExpenditure: Double {
+            guard !realizedData.isEmpty else { return 0 }
+            return realizedData.reduce(0) { $0 + $1.expenditure } / Double(realizedData.count)
+        }
+
+        private var averageBalance: Double { averageIntake - averageExpenditure }
+
+        private var header: some View {
+            HStack {
+                Text("Energy Balance")
+                    .font(.system(size: 20, weight: .semibold))
+                    .padding(.bottom, 2)
+                Spacer()
+                SegmentedPicker(selection: $period)
+            }
+        }
+
+        private var energyChart: some View {
+            VStack(spacing: 0) {
+                ZStack {
+                    gridLines
+                    GeometryReader { geometry in
+                        let width = geometry.size.width
+                        let spacing: CGFloat = period == .week ? 10 : 5
+                        let count = max(currentData.count, 1)
+                        let barWidth = max(3, (width - CGFloat(count - 1) * spacing) / CGFloat(count))
+                        let baseline = chartHeight / 2
+
+                        ForEach(Array(currentData.enumerated()), id: \.offset) { index, point in
+                            let balance = point.balance
+                            let ratio = maxBalanceMagnitude > 0 ? abs(balance) / maxBalanceMagnitude : 0
+                            let calculatedHeight = CGFloat(ratio) * (baseline - 6)
+                            let height = max(calculatedHeight, 3)
+                            let isPositive = balance >= 0
+
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color(red: 1.0, green: 0.176, blue: 0.333))
+                                .frame(width: barWidth, height: height)
+                                .position(
+                                    x: (barWidth / 2) + CGFloat(index) * (barWidth + spacing),
+                                    y: isPositive ? baseline - height / 2 : baseline + height / 2
+                                )
+                        }
+                    }
+                    .frame(height: chartHeight)
+                }
+
+                labelsRow
+            }
+        }
+
+        private var gridLines: some View {
+            ZStack(alignment: .top) {
+                VStack(spacing: chartHeight / 4) {
+                    ForEach(0..<5, id: \.self) { _ in
+                        Divider().background(Color.gray.opacity(0.2))
+                    }
+                }
+                Rectangle()
+                    .fill(Color.gray.opacity(0.45))
+                    .frame(height: 1)
+                    .padding(.top, chartHeight / 2)
+            }
+            .frame(height: chartHeight)
+        }
+
+        private var labelsRow: some View {
+            HStack(spacing: 0) {
+                ForEach(Array(currentData.enumerated()), id: \.offset) { _, point in
+                    Text(labelText(for: point.date))
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.top, 6)
+        }
+
+        private func labelText(for date: Date) -> String {
+            if period == .week {
+                return shortWeekday(for: date)
+            }
+            let markers: Set<Int> = [1, 8, 15, 22, 29]
+            let day = Calendar.current.component(.day, from: date)
+            return markers.contains(day) ? "\(day)" : ""
+        }
+
+        private var equationRow: some View {
+            HStack(alignment: .top, spacing: 24) {
+                metricColumn(title: "Intake", value: averageIntake)
+                equationSymbol("−")
+                metricColumn(title: "Expenditure", value: averageExpenditure)
+                equationSymbol("=")
+                metricColumn(title: "Balance", value: averageBalance, highlight: true)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 12)
+        }
+
+        private func equationSymbol(_ symbol: String) -> some View {
+            Text(symbol)
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(.secondary)
+                .padding(.top, 2)
+        }
+
+        private func metricColumn(title: String, value: Double, highlight: Bool = false) -> some View {
+            VStack(spacing: 4) {
+                Text(highlight ? signedValue(value) : plainValue(value))
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+
+        private func plainValue(_ value: Double) -> String {
+            "\(Int(value.rounded()))"
+        }
+
+        private func signedValue(_ value: Double) -> String {
+            let rounded = Int(value.rounded())
+            if rounded >= 0 { return "\(rounded)" }
+            return "\(rounded)"
+        }
+
+        private func shortWeekday(for date: Date) -> String {
+            let formatter = DateFormatter()
+            formatter.locale = Locale.current
+            formatter.setLocalizedDateFormatFromTemplate("E")
+            return formatter.string(from: date).prefix(1).uppercased()
+        }
+
+        private func placeholderData(count: Int) -> [EnergyBalancePoint] {
+            let today = Date()
+            return (0..<count).compactMap { index -> EnergyBalancePoint? in
+                guard let date = Calendar.current.date(byAdding: .day, value: -(count - 1 - index), to: today) else { return nil }
+                return EnergyBalancePoint(date: date, intake: 0, expenditure: 0)
+            }
+        }
+
+        private struct SegmentedPicker: View {
+            @Binding var selection: Period
+
+            var body: some View {
+                Picker("Period", selection: $selection) {
+                    ForEach(Period.allCases, id: \.self) { period in
+                        Text(period.rawValue).tag(period)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 140)
+            }
+        }
+    }
+
 
     private var healthMetricItems: [(title: String, icon: String, value: Double?)] {
         let snapshot = vm.healthMetricsSnapshot
         return [
             ("Readiness", "leaf", snapshot?.readiness),
-            ("Sleep", "moon.stars", snapshot?.sleep),
+            ("Sleep", "moon", snapshot?.sleep),
             ("Activity", "flame", snapshot?.activity),
-            ("Stress", "waveform.path.ecg", snapshot?.stress),
+            ("Stress", "water.waves", snapshot?.stress),
         ]
     }
 
@@ -1315,45 +2034,12 @@ private extension NewHomeView {
         return "\(Int(value.rounded()))"
     }
 
-    private var healthMetricInsights: String? {
-        guard let components = vm.healthMetricsSnapshot?.components else { return nil }
-        var insights: [String] = []
-        if let readiness = components.readiness,
-           let weakest = readiness.sorted(by: { $0.value < $1.value }).first {
-            insights.append("Readiness limited by \(friendlyMetricName(weakest.key)) (\(Int(weakest.value)))")
-        }
-        if let sleep = components.sleep,
-           let weakest = sleep.sorted(by: { $0.value < $1.value }).first {
-            insights.append("Sleep focus: \(friendlyMetricName(weakest.key)) (\(Int(weakest.value)))")
-        }
-        return insights.joined(separator: " • ")
-    }
-
-    private func friendlyMetricName(_ key: String) -> String {
-        key.replacingOccurrences(of: "_", with: " ").capitalized
-    }
-
     @ViewBuilder
     private var healthMetricsCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Daily Metrics")
-                    .font(.headline)
-                Spacer()
-                if vm.isLoadingHealthMetrics && vm.healthMetricsSnapshot == nil {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else {
-                    Button {
-                        HapticFeedback.generate()
-                        vm.refreshHealthMetrics(force: true)
-                    } label: {
-                        Image(systemName: vm.isLoadingHealthMetrics ? "arrow.clockwise.circle" : "arrow.clockwise")
-                            .font(.system(size: 15, weight: .semibold))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Refresh health metrics")
-                }
+            if vm.isLoadingHealthMetrics && vm.healthMetricsSnapshot == nil {
+                ProgressView()
+                    .scaleEffect(0.8)
             }
 
             let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
@@ -1363,33 +2049,28 @@ private extension NewHomeView {
                         VStack(spacing: 6) {
                             Image(systemName: item.element.icon)
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(Color(.systemGray3))
+                                .foregroundColor(.primary)
                             Text(metricValueText(item.element.value))
                                 .font(.system(size: 20, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color.primary)
+                                .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity)
                         }
                         .frame(width: 70, height: 70)
-                        .background(Color(uiColor: .secondarySystemBackground), in: Circle())
+                        .background(
+                            Circle()
+                                .fill(
+                                    colorScheme == .dark
+                                        ? Color.white.opacity(0.075)
+                                        : Color(red: 0.98039216, green: 0.98039216, blue: 0.98039216)
+                                )
+                        )
 
                         Text(item.element.title)
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundColor(.primary)
                     }
                     .frame(maxWidth: .infinity)
                 }
-            }
-
-            if let confidence = vm.healthMetricsSnapshot?.confidence, !confidence.isEmpty {
-                Text("Confidence: \(confidence.capitalized)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            if let insight = healthMetricInsights, !insight.isEmpty {
-                Text(insight)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.leading)
             }
 
             if let error = vm.healthMetricsErrorMessage {
@@ -1398,8 +2079,9 @@ private extension NewHomeView {
                     .foregroundStyle(.red)
             }
         }
-        .padding()
-        .background(Color("primarybg"), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color("sheetcard"), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(Color.primary.opacity(0.05))

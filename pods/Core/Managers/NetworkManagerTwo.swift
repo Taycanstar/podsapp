@@ -981,6 +981,7 @@ class NetworkManagerTwo {
     func fetchHealthMetrics(
         userEmail: String,
         timezoneOffsetMinutes: Int? = nil,
+        targetDate: Date? = nil,
         completion: @escaping (Result<HealthMetricsSnapshot, Error>) -> Void
     ) {
         guard var components = URLComponents(string: "\(baseUrl)/health-metrics/") else {
@@ -990,6 +991,9 @@ class NetworkManagerTwo {
         var items = [URLQueryItem(name: "user_email", value: userEmail)]
         if let offset = timezoneOffsetMinutes {
             items.append(URLQueryItem(name: "timezone_offset", value: "\(offset)"))
+        }
+        if let targetDate {
+            items.append(URLQueryItem(name: "target_date", value: Self.isoDayFormatter.string(from: targetDate)))
         }
         components.queryItems = items
         guard let url = components.url else {
@@ -1030,6 +1034,15 @@ class NetworkManagerTwo {
             }
         }.resume()
     }
+
+    private static let isoDayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 
     private static func makeFallbackBarcodeResponse(from json: [String: Any]) -> BarcodeLookupResponse? {
         guard let foodDict = json["food"] as? [String: Any] else { return nil }

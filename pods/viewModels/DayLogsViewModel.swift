@@ -9,6 +9,25 @@ import Foundation
 import SwiftUI
 import Combine
 
+struct DailyNutritionSummary: Identifiable, Equatable {
+  let date: Date
+  let calories: Double
+  let protein: Double
+  let carbs: Double
+  let fat: Double
+
+  var id: Date { date }
+}
+
+struct EnergyBalancePoint: Identifiable, Equatable {
+  let date: Date
+  let intake: Double
+  let expenditure: Double
+
+  var id: Date { date }
+  var balance: Double { intake - expenditure }
+}
+
 @MainActor
 final class DayLogsViewModel: ObservableObject {
       @Published var logs         : [CombinedLog] = [] {
@@ -86,6 +105,21 @@ final class DayLogsViewModel: ObservableObject {
   @Published var healthMetricsSnapshot: NetworkManagerTwo.HealthMetricsSnapshot?
   @Published var isLoadingHealthMetrics = false
   @Published var healthMetricsErrorMessage: String?
+  @Published var weeklyNutritionSummaries: [DailyNutritionSummary] = []
+  var energyBalanceWeek: [EnergyBalancePoint] {
+    let calendar = Calendar.current
+    let today = calendar.startOfDay(for: Date())
+    let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? today
+    return energyBalancePoints(startingAt: startOfWeek, days: 7)
+  }
+  var energyBalanceMonth: [EnergyBalancePoint] {
+    let calendar = Calendar.current
+    let today = calendar.startOfDay(for: Date())
+    let monthStartComponents = calendar.dateComponents([.year, .month], from: today)
+    let startOfMonth = calendar.date(from: monthStartComponents) ?? today
+    let daysInMonth = calendar.range(of: .day, in: .month, for: today)?.count ?? 30
+    return energyBalancePoints(startingAt: startOfMonth, days: daysInMonth)
+  }
 
   
   // Navigation properties
@@ -131,7 +165,7 @@ final class DayLogsViewModel: ObservableObject {
     refreshExpenditureData(force: true)
     healthMetricsSnapshot = nil
     lastHealthMetricsRefresh = nil
-    refreshHealthMetrics(force: true)
+    refreshHealthMetrics(force: true, targetDate: selectedDate)
   }
   
   func preloadForStartup(email: String) {
@@ -147,7 +181,7 @@ final class DayLogsViewModel: ObservableObject {
 
     loadLogs(for: selectedDate)
     refreshExpenditureData()
-    refreshHealthMetrics()
+    refreshHealthMetrics(targetDate: selectedDate)
   }
   
   func setHealthViewModel(_ healthViewModel: HealthKitViewModel) {
@@ -359,11 +393,21 @@ func fetchCalorieGoal() {
   }
 
   func refreshExpenditureData(force: Bool = false, historyDays: Int = 30) {
-    guard !email.isEmpty else { return }
-    let now = Date()
-    if !force, let lastExpenditureRefresh, now.timeIntervalSince(lastExpenditureRefresh) < expenditureRefreshInterval {
+    print("🔄 refreshExpenditureData called: force=\(force), historyDays=\(historyDays), email=\(email)")
+    guard !email.isEmpty else {
+      print("❌ refreshExpenditureData: No email, aborting")
       return
     }
+    let now = Date()
+    if !force, let lastExpenditureRefresh, now.timeIntervalSince(lastExpenditureRefresh) < expenditureRefreshInterval {
+      print("⏸️ refreshExpenditureData: Skipping - last refresh was \(Int(now.timeIntervalSince(lastExpenditureRefresh)))s ago")
+      return
+    }
+    let calendar = Calendar.current
+    let today = calendar.startOfDay(for: now)
+    let daysInMonth = calendar.range(of: .day, in: .month, for: today)?.count ?? historyDays
+    let fetchDays = max(historyDays, daysInMonth)
+    print("✅ refreshExpenditureData: Starting API fetch for \(fetchDays) days")
     lastExpenditureRefresh = now
     isLoadingExpenditure = true
     expenditureErrorMessage = nil
@@ -382,10 +426,17 @@ func fetchCalorieGoal() {
       }
     }
 
-    NetworkManagerTwo.shared.fetchExpenditureHistory(userEmail: email, days: historyDays, timezoneOffsetMinutes: offsetMinutes) { [weak self] result in
+    NetworkManagerTwo.shared.fetchExpenditureHistory(userEmail: email, days: fetchDays, timezoneOffsetMinutes: offsetMinutes) { [weak self] result in
       guard let self else { return }
       switch result {
       case .success(let response):
+        print("🔍 API returned \(response.days.count) days of expenditure history (requested \(fetchDays))")
+        for (index, day) in response.days.prefix(5).enumerated() {
+          let formatter = DateFormatter()
+          formatter.dateFormat = "MMM dd"
+          let dateStr = day.dateValue.map { formatter.string(from: $0) } ?? "nil"
+          print("  Day \(index + 1) [\(dateStr)]: intake=\(day.caloriesLogged ?? 0), tdee=\(day.tdeeDisplay ?? 0)")
+        }
         self.expenditureHistory = response.days.sorted {
           ($0.dateValue ?? Date.distantPast) < ($1.dateValue ?? Date.distantPast)
         }
@@ -395,7 +446,7 @@ func fetchCalorieGoal() {
     }
   }
 
-  func refreshHealthMetrics(force: Bool = false) {
+  func refreshHealthMetrics(force: Bool = false, targetDate: Date? = nil) {
     guard !email.isEmpty else { return }
     let now = Date()
     if !force, let lastHealthMetricsRefresh, now.timeIntervalSince(lastHealthMetricsRefresh) < healthMetricsRefreshInterval {
@@ -406,7 +457,12 @@ func fetchCalorieGoal() {
     healthMetricsErrorMessage = nil
 
     let offsetMinutes = TimeZone.current.secondsFromGMT() / 60
-    NetworkManagerTwo.shared.fetchHealthMetrics(userEmail: email, timezoneOffsetMinutes: offsetMinutes) { [weak self] result in
+    let requestedDate = targetDate ?? selectedDate
+    NetworkManagerTwo.shared.fetchHealthMetrics(
+      userEmail: email,
+      timezoneOffsetMinutes: offsetMinutes,
+      targetDate: requestedDate
+    ) { [weak self] result in
       guard let self else { return }
       self.isLoadingHealthMetrics = false
       switch result {
@@ -781,6 +837,125 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
 
       remainingCalories = max(0, calorieGoal - totalCalories)
     }
+
+  // MARK: - Multi-day nutrition summaries
+
+  func refreshWeeklyNutritionSummaries(endingAt date: Date = Date(), force: Bool = false) {
+    Task { [weak self] in
+      guard let self else { return }
+      let summaries = await self.calculateNutritionSummaries(days: 7, endingAt: date, force: force)
+      await MainActor.run {
+        self.weeklyNutritionSummaries = summaries
+      }
+    }
+  }
+
+  private func calculateNutritionSummaries(days: Int, endingAt date: Date, force: Bool) async -> [DailyNutritionSummary] {
+    guard days > 0 else { return [] }
+    var summaries: [DailyNutritionSummary] = []
+    let calendar = Calendar.current
+    let normalizedEnd = calendar.startOfDay(for: date)
+
+    for offset in stride(from: days - 1, through: 0, by: -1) {
+      guard let target = calendar.date(byAdding: .day, value: -offset, to: normalizedEnd) else { continue }
+      if !calendar.isDate(target, inSameDayAs: calendar.startOfDay(for: selectedDate)) {
+        if force {
+          await repository.refresh(date: target, force: true)
+        } else if repository.snapshot(for: target) == nil {
+          await repository.refresh(date: target, force: false)
+        }
+      }
+
+      if let summary = nutritionSummary(for: target) {
+        summaries.append(summary)
+      }
+    }
+
+    return summaries
+  }
+
+  private func nutritionSummary(for date: Date) -> DailyNutritionSummary? {
+    let calendar = Calendar.current
+    let normalized = calendar.startOfDay(for: date)
+    let selectedDay = calendar.startOfDay(for: selectedDate)
+
+    if normalized == selectedDay {
+      return DailyNutritionSummary(
+        date: normalized,
+        calories: totalCalories,
+        protein: totalProtein,
+        carbs: totalCarbs,
+        fat: totalFat
+      )
+    }
+
+    guard let snapshot = repository.snapshot(for: normalized) else { return nil }
+    return DayLogsViewModel.aggregateNutritionTotals(from: snapshot.combined, date: normalized)
+  }
+
+  private static func aggregateNutritionTotals(from logs: [CombinedLog], date: Date) -> DailyNutritionSummary {
+    var calories: Double = 0
+    var protein: Double = 0
+    var carbs: Double = 0
+    var fat: Double = 0
+
+    for log in logs {
+      switch log.type {
+      case .activity, .workout:
+        break
+      default:
+        calories += log.displayCalories
+      }
+
+      protein += (log.food?.protein ?? 0)
+      protein += (log.meal?.protein ?? 0)
+      protein += (log.recipe?.protein ?? 0)
+
+      carbs += (log.food?.carbs ?? 0)
+      carbs += (log.meal?.carbs ?? 0)
+      carbs += (log.recipe?.carbs ?? 0)
+
+      fat += (log.food?.fat ?? 0)
+      fat += (log.meal?.fat ?? 0)
+      fat += (log.recipe?.fat ?? 0)
+    }
+
+    return DailyNutritionSummary(
+      date: date,
+      calories: calories,
+      protein: protein,
+      carbs: carbs,
+      fat: fat
+    )
+  }
+
+  private func energyBalancePoints(startingAt startDate: Date, days: Int) -> [EnergyBalancePoint] {
+    guard days > 0 else { return [] }
+    let calendar = Calendar.current
+    let start = calendar.startOfDay(for: startDate)
+    var map: [Date: NetworkManagerTwo.ExpenditureSnapshot] = [:]
+    for snapshot in expenditureHistory {
+      if let date = snapshot.dateValue {
+        map[calendar.startOfDay(for: date)] = snapshot
+      }
+    }
+
+    var points: [EnergyBalancePoint] = []
+    for offset in 0..<days {
+      guard let date = calendar.date(byAdding: .day, value: offset, to: start) else { continue }
+      let day = calendar.startOfDay(for: date)
+      let snapshot = map[day]
+      let intake = snapshot?.caloriesLogged ?? 0
+      let expenditure = snapshot?.tdeeDisplay ?? snapshot?.impliedExpenditure ?? snapshot?.tdeeCore ?? 0
+      let formatter = DateFormatter()
+      formatter.dateFormat = "MMM dd"
+      print("📊 Energy Balance [\(formatter.string(from: day))]: Intake=\(Int(intake)), Expend=\(Int(expenditure)), Balance=\(Int(intake - expenditure))")
+      points.append(EnergyBalancePoint(date: day, intake: intake, expenditure: expenditure))
+    }
+
+    print("📊 Total energy balance points from \(start) spanning \(days) day(s): \(points.count)")
+    return points
+  }
 
     // MARK: - Profile Data Refresh
     

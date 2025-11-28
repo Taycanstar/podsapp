@@ -10,6 +10,7 @@ struct SleepSummary {
     let awakeMinutes: Double
     let sleepOnset: Date?
     let sleepOffset: Date?
+    let latencyMinutes: Double?
 
     var efficiency: Double? {
         guard inBedMinutes > 0 else { return nil }
@@ -34,6 +35,9 @@ struct SleepSummary {
             "rem_minutes": remMinutes,
             "awake_minutes": awakeMinutes,
         ]
+        if let latencyMinutes {
+            dict["latency_minutes"] = latencyMinutes
+        }
         if let efficiency = efficiency {
             dict["efficiency"] = efficiency
         }
@@ -824,6 +828,11 @@ class HealthKitManager {
                 inBedMinutes = totalMinutes
             }
 
+            var latencyMinutes: Double?
+            if let bedStart = inBedStart, let start = sleepStart {
+                latencyMinutes = max(0, start.timeIntervalSince(bedStart) / 60.0)
+            }
+
             let summary = SleepSummary(
                 totalSleepMinutes: totalMinutes,
                 inBedMinutes: inBedMinutes,
@@ -832,7 +841,8 @@ class HealthKitManager {
                 remMinutes: remMinutes,
                 awakeMinutes: awakeMinutes,
                 sleepOnset: sleepStart,
-                sleepOffset: sleepEnd
+                sleepOffset: sleepEnd,
+                latencyMinutes: latencyMinutes
             )
 
             DispatchQueue.main.async { completion(summary, nil) }
