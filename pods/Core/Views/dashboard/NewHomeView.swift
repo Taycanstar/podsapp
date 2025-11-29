@@ -61,6 +61,8 @@ struct NewHomeView: View {
     @State private var showHealthSyncFlash = false
     @State private var healthSyncFlashProgress: Double = 0
     @State private var healthSyncFlashHideWorkItem: DispatchWorkItem?
+    private let fallbackIntakeCardHeight: CGFloat = 290
+    @State private var intakeCardHeight: CGFloat = 0
     
     enum LogSortOption: String, CaseIterable {
         case date = "Date"
@@ -1358,7 +1360,10 @@ private extension NewHomeView {
         }
     }
     // ① Nutrition summary ----------------------------------------------------
-    private var nutritionCardHeight: CGFloat { 300 }
+    private var resolvedIntakeCardHeight: CGFloat {
+        intakeCardHeight > 0 ? intakeCardHeight : fallbackIntakeCardHeight
+    }
+    private var nutritionCardHeight: CGFloat { resolvedIntakeCardHeight }
     private var workoutHighlightsCardHeight: CGFloat { 240 }
 
     var nutritionSummaryCard: some View {
@@ -1377,6 +1382,7 @@ private extension NewHomeView {
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
                     .tag(0)
+                    .background(IntakeCardHeightReader())
                     .frame(maxWidth: .infinity)
                     .frame(height: nutritionCardHeight, alignment: .top)
 
@@ -1388,6 +1394,7 @@ private extension NewHomeView {
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
                     .tag(1)
+                    .background(IntakeCardHeightReader())
                     .frame(maxWidth: .infinity)
                     .frame(height: nutritionCardHeight, alignment: .top)
 
@@ -1401,10 +1408,15 @@ private extension NewHomeView {
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
                     .tag(2)
+                    .background(IntakeCardHeightReader())
                     .frame(maxWidth: .infinity)
                     .frame(height: nutritionCardHeight, alignment: .top)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .onPreferenceChange(IntakeCardHeightPreferenceKey.self) { height in
+                    guard height > 0 else { return }
+                    intakeCardHeight = height
+                }
 
                 HStack(spacing: 6) {
                     ForEach(0..<3, id: \.self) { index in
@@ -1501,6 +1513,22 @@ private extension NewHomeView {
         }
     }
 
+    private struct IntakeCardHeightPreferenceKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+            value = max(value, nextValue())
+        }
+    }
+
+    private struct IntakeCardHeightReader: View {
+        var body: some View {
+            GeometryReader { proxy in
+                Color.clear.preference(key: IntakeCardHeightPreferenceKey.self, value: proxy.size.height)
+            }
+        }
+    }
+
     private struct DailyIntakeCardView: View {
         struct Macro: Identifiable {
             let label: String
@@ -1580,6 +1608,7 @@ private extension NewHomeView {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .modifier(IntakeCardStyle())
         }
 
@@ -2052,6 +2081,7 @@ private extension NewHomeView {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .modifier(IntakeCardStyle())
             .onChange(of: summaries) { newValue in
                 let referenceDate = newValue.sorted { $0.date < $1.date }.last?.date ?? Date()
@@ -2155,6 +2185,7 @@ private extension NewHomeView {
                 equationRow
             }
             .padding(20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .modifier(IntakeCardStyle())
         }
 
