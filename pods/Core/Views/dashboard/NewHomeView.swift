@@ -1607,7 +1607,8 @@ private extension NewHomeView {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 10)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .modifier(IntakeCardStyle())
         }
@@ -2080,7 +2081,8 @@ private extension NewHomeView {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 10)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .modifier(IntakeCardStyle())
             .onChange(of: summaries) { newValue in
@@ -2184,7 +2186,9 @@ private extension NewHomeView {
                 energyChart
                 equationRow
             }
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 10)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .modifier(IntakeCardStyle())
         }
