@@ -1470,6 +1470,7 @@ private extension NewHomeView {
                     .frame(maxWidth: .infinity)
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .padding(.bottom, -4)
 
             HStack(spacing: 6) {
                 ForEach(0..<3, id: \.self) { index in
@@ -1677,7 +1678,6 @@ private extension NewHomeView {
 
         private var workoutContent: some View {
             VStack(alignment: .leading, spacing: 16) {
-                Spacer()
                 HStack(alignment: .top, spacing: 16) {
                     Image(systemName: iconName)
                         .font(.system(size: 24, weight: .semibold))
@@ -1701,10 +1701,9 @@ private extension NewHomeView {
                         metricColumn(title: "Load", value: loadDescription, color: .primary)
                     }
                 }
-                Spacer(minLength: 0)
 
                 if !muscles.isEmpty {
-                    Spacer(minLength: 24)
+                    Spacer(minLength: 12)
 
                     HStack(spacing: 8) {
                         ForEach(Array(muscles.prefix(4)), id: \.self) { muscle in
@@ -1717,8 +1716,6 @@ private extension NewHomeView {
                                 .clipShape(Capsule())
                         }
                     }
-
-                    Spacer(minLength: 10)
                 }
             }
         }
@@ -1838,16 +1835,17 @@ private extension NewHomeView {
                 }
 
                 if let metrics {
-                    Spacer(minLength: statsTopInset)
-
-                    HStack(alignment: .center, spacing: 18) {
+                    HStack(alignment: .top, spacing: 0) {
                         StrengthBalanceRingsView(metrics: metrics)
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
                         VStack(alignment: .leading, spacing: 10) {
                             balanceRow(title: "Push", sets: metrics.pushSets, goal: metrics.goalSets, color: pushColor)
                             balanceRow(title: "Pull", sets: metrics.pullSets, goal: metrics.goalSets, color: pullColor)
                             balanceRow(title: "Legs", sets: metrics.legsSets, goal: metrics.goalSets, color: legsColor)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 18)
                     }
                 }
             }
@@ -1856,10 +1854,6 @@ private extension NewHomeView {
             .frame(maxWidth: .infinity, alignment: .top)
             .frame(height: height, alignment: .top)
             .modifier(IntakeCardStyle())
-        }
-
-        private var statsTopInset: CGFloat {
-            max(height / 2 - 40, 0)
         }
 
         private func balanceRow(title: String, sets: Int, goal: Int, color: Color) -> some View {
