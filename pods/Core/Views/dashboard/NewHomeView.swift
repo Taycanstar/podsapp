@@ -1676,8 +1676,10 @@ private extension NewHomeView {
             .modifier(IntakeCardStyle())
         }
 
+        private static let sectionSpacing: CGFloat = 14
+
         private var workoutContent: some View {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Self.sectionSpacing) {
                 HStack(alignment: .top, spacing: 16) {
                     Image(systemName: iconName)
                         .font(.system(size: 24, weight: .semibold))
@@ -1703,8 +1705,6 @@ private extension NewHomeView {
                 }
 
                 if !muscles.isEmpty {
-                    Spacer(minLength: 12)
-
                     HStack(spacing: 8) {
                         ForEach(Array(muscles.prefix(4)), id: \.self) { muscle in
                             Text(muscle)
@@ -1837,7 +1837,7 @@ private extension NewHomeView {
                 if let metrics {
                     HStack(alignment: .top, spacing: 0) {
                         StrengthBalanceRingsView(metrics: metrics)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(maxWidth: .infinity, alignment: .center)
 
                         VStack(alignment: .leading, spacing: 10) {
                             balanceRow(title: "Push", sets: metrics.pushSets, goal: metrics.goalSets, color: pushColor)
@@ -1870,8 +1870,8 @@ private extension NewHomeView {
 
     private struct StrengthBalanceRingsView: View {
         let metrics: MuscleRecoveryService.StrengthBalanceMetrics
-        private let ringWidth: CGFloat = 7
-        private let ringSpacing: CGFloat = 4
+        private let ringWidth: CGFloat = 9
+        private let ringSpacing: CGFloat = 5
 
         private let ringColors = [
             Color(red: 1.0, green: 0.18, blue: 0.33),
@@ -1902,7 +1902,7 @@ private extension NewHomeView {
                         .frame(width: radius * 2, height: radius * 2)
                 }
             }
-            .frame(width: 105, height: 105)
+            .frame(width: 120, height: 120)
         }
     }
 
