@@ -162,7 +162,7 @@ class MuscleRecoveryService: ObservableObject {
             case .glutes, .hamstrings, .quadriceps: return "2x"
             }
         }
-        
+
         var priority: Int {
             // Higher numbers = higher priority for workout selection
             if isMainMuscleGroup {
@@ -176,8 +176,29 @@ class MuscleRecoveryService: ObservableObject {
                 return 0 // Accessory muscles
             }
         }
+
+        var contributesToPush: Bool {
+            switch self {
+            case .chest, .shoulders, .triceps: return true
+            default: return false
+            }
+        }
+
+        var contributesToPull: Bool {
+            switch self {
+            case .back, .biceps, .forearms, .trapezius: return true
+            default: return false
+            }
+        }
+
+        var contributesToLegs: Bool {
+            switch self {
+            case .quadriceps, .hamstrings, .glutes, .calves, .lowerBack, .abductors, .adductors: return true
+            default: return false
+            }
+        }
     }
-    
+
     // MARK: - Recovery Data Models
     
     struct MuscleRecoveryData: Codable {
@@ -202,6 +223,17 @@ class MuscleRecoveryService: ObservableObject {
         let intensity: Double           // Based on volume, sets, reps
         let exercises: [Int]           // Exercise IDs that contributed
         let totalVolume: Double        // Total weight × reps
+    }
+
+    struct StrengthBalanceMetrics {
+        let pushSets: Int
+        let pullSets: Int
+        let legsSets: Int
+        let goalSets: Int
+
+        var hasData: Bool {
+            pushSets > 0 || pullSets > 0 || legsSets > 0
+        }
     }
     
     // MARK: - Public Methods
@@ -660,6 +692,47 @@ class MuscleRecoveryService: ObservableObject {
 
         print("🧭 Schedule-optimized muscles: \(result)")
         return result
+    }
+
+    func getStrengthBalanceMetrics(goalPerCategory: Int = 20) -> StrengthBalanceMetrics {
+        let calendar = Calendar.current
+        let today = Date()
+        let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: today))
+            ?? calendar.startOfDay(for: today)
+
+        let history = UserProfileService.shared.getWorkoutHistory()
+        let relevantEntries = history.filter { $0.date >= startOfWeek }
+
+        var pushSets = 0
+        var pullSets = 0
+        var legSets = 0
+
+        for entry in relevantEntries {
+            for exercise in entry.exercises {
+                let groups = getMuscleGroupsForExercise(exerciseId: exercise.exerciseId)
+                var setCount = exercise.sets.filter { $0.completed }.count
+                if setCount == 0 { setCount = exercise.sets.count }
+                guard setCount > 0 else { continue }
+
+                if groups.contains(where: { $0.contributesToPush }) {
+                    pushSets += setCount
+                }
+                if groups.contains(where: { $0.contributesToPull }) {
+                    pullSets += setCount
+                }
+                if groups.contains(where: { $0.contributesToLegs }) {
+                    legSets += setCount
+                }
+            }
+        }
+
+        var goal = goalPerCategory
+        let storedGoal = UserDefaults.standard.integer(forKey: "strengthBalanceGoalSets")
+        if storedGoal > 0 {
+            goal = storedGoal
+        }
+
+        return StrengthBalanceMetrics(pushSets: pushSets, pullSets: pullSets, legsSets: legSets, goalSets: goal)
     }
 
     // MARK: - Training Split Logic

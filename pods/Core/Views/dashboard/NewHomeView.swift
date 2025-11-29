@@ -55,6 +55,9 @@ struct NewHomeView: View {
     // ─── Sort state ─────────────────────────────────────────────────────────
     @State private var sortOption: LogSortOption = .date
     @State private var nutritionCarouselSelection: Int = 0
+    @State private var workoutCarouselSelection: Int = 0
+    @State private var muscleRecoverySnapshot: [MuscleRecoveryService.MuscleRecoveryData] = []
+    @State private var strengthBalanceSnapshot: MuscleRecoveryService.StrengthBalanceMetrics?
     @State private var showHealthSyncFlash = false
     @State private var healthSyncFlashProgress: Double = 0
     @State private var healthSyncFlashHideWorkItem: DispatchWorkItem?
@@ -484,6 +487,61 @@ private var remainingCal: Double { vm.remainingCalories }
             dashboardContent
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    HapticFeedback.generateRigid()
+                    onShowChats()
+                } label: {
+                    ProfileInitialCircle(initial: userInitial, showsBorder: shouldShowProfileBorder)
+                }
+                .buttonStyle(.plain)
+            }
+
+            ToolbarItem(placement: .principal) {
+                if isHealthMetricsUpdating {
+                    Text(headerTitle)
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.primary)
+                } else {
+                    HStack(spacing: 12) {
+                        Button {
+                            vm.selectedDate.addDays(-1)
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.primary)
+                        }
+
+                        Button {
+                            showDatePicker = true
+                        } label: {
+                            Text(headerTitle)
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.primary)
+                        }
+
+                        Button {
+                            vm.selectedDate.addDays(+1)
+                        } label: {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showDatePicker = true
+                } label: {
+                    Image(systemName: "newspaper")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                }
+            }
+        }
         .sheet(item: $scheduleSheetLog) { log in
             ScheduleMealSheet(initialMealType: initialMealType(for: log)) { selection in
                 scheduleLog(selection: selection, for: log)
@@ -1132,70 +1190,10 @@ private extension NewHomeView {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 4)
-                .padding(.bottom, 4)
                 .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
-    private var dashboardHeader: some View {
-        HStack(spacing: 16) {
-            Button {
-                HapticFeedback.generateRigid()
-                onShowChats()
-            } label: {
-                ProfileInitialCircle(initial: userInitial, showsBorder: shouldShowProfileBorder)
-            }
-            .buttonStyle(.plain)
-
-            Spacer(minLength: 12)
-
-            if isHealthMetricsUpdating {
-                Text(headerTitle)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.primary)
-            } else {
-                HStack(spacing: 12) {
-                    Button {
-                        vm.selectedDate.addDays(-1)
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.primary)
-                    }
-
-                    Button {
-                        showDatePicker = true
-                    } label: {
-                        Text(headerTitle)
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.primary)
-                    }
-
-                    Button {
-                        vm.selectedDate.addDays(+1)
-                    } label: {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.primary)
-                    }
-                }
-            }
-
-            Spacer(minLength: 12)
-
-            Button {
-                showDatePicker = true
-            } label: {
-                Image(systemName: "newspaper")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.primary)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(Color("sheetbg"))
-        .overlay(Divider().foregroundColor(Color.primary.opacity(0.08)), alignment: .bottom)
-    }
 
     private var dashboardList: some View {
         List {
@@ -1271,6 +1269,15 @@ private extension NewHomeView {
         .onTapGesture {
             isAgentInputFocused = false
         }
+        .onAppear {
+            refreshTrainingInsights()
+        }
+        .onChange(of: workoutManager.todayWorkout) { _ in
+            refreshTrainingInsights()
+        }
+        .onChange(of: workoutManager.hasCompletedWorkoutToday) { _ in
+            refreshTrainingInsights()
+        }
     }
 
     @ViewBuilder
@@ -1329,7 +1336,6 @@ private extension NewHomeView {
 
             VStack(spacing: 0) {
                 healthSyncFlashBar
-                dashboardHeader
 
                 dashboardList
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1353,63 +1359,122 @@ private extension NewHomeView {
     }
     // ① Nutrition summary ----------------------------------------------------
     private var nutritionCardHeight: CGFloat { 300 }
+    private var workoutHighlightsCardHeight: CGFloat { 240 }
 
     var nutritionSummaryCard: some View {
+        VStack(spacing: 8) {
+            VStack(spacing: 4) {
+                TabView(selection: $nutritionCarouselSelection) {
+                    DailyIntakeCardView(
+                        calories: vm.totalCalories,
+                        calorieGoal: calorieGoal,
+                        macros: [
+                            DailyIntakeCardView.Macro(label: "Protein", value: vm.totalProtein, goal: proteinGoal, color: IntakeColors.protein),
+                            DailyIntakeCardView.Macro(label: "Fat", value: vm.totalFat, goal: fatGoal, color: IntakeColors.fat),
+                            DailyIntakeCardView.Macro(label: "Carbs", value: vm.totalCarbs, goal: carbsGoal, color: IntakeColors.carbs)
+                        ]
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .tag(0)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: nutritionCardHeight, alignment: .top)
+
+                    WeeklyIntakeCardView(
+                        summaries: vm.weeklyNutritionSummaries,
+                        calorieGoal: calorieGoal,
+                        macroGoals: MacroGoalTargets(protein: proteinGoal, carbs: carbsGoal, fat: fatGoal)
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .tag(1)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: nutritionCardHeight, alignment: .top)
+
+                    VStack(spacing: 0) {
+                        EnergyBalanceCardView(
+                            weekData: vm.energyBalanceWeek,
+                            monthData: vm.energyBalanceMonth
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .tag(2)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: nutritionCardHeight, alignment: .top)
+                }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+
+                HStack(spacing: 6) {
+                    ForEach(0..<3, id: \.self) { index in
+                        Capsule()
+                            .fill(nutritionCarouselSelection == index ? Color.primary.opacity(0.8) : Color.primary.opacity(0.2))
+                            .frame(width: nutritionCarouselSelection == index ? 18 : 8, height: 4)
+                            .animation(.easeInOut(duration: 0.2), value: nutritionCarouselSelection)
+                    }
+                }
+                .padding(.top, 2)
+            }
+            .frame(height: nutritionCardHeight + 12)
+
+            workoutHighlightsCarousel
+        }
+        .padding(.horizontal)
+    }
+
+    var workoutHighlightsCarousel: some View {
         VStack(spacing: 4) {
-            TabView(selection: $nutritionCarouselSelection) {
-                DailyIntakeCardView(
-                    calories: vm.totalCalories,
-                    calorieGoal: calorieGoal,
-                    macros: [
-                        DailyIntakeCardView.Macro(label: "Protein", value: vm.totalProtein, goal: proteinGoal, color: IntakeColors.protein),
-                        DailyIntakeCardView.Macro(label: "Fat", value: vm.totalFat, goal: fatGoal, color: IntakeColors.fat),
-                        DailyIntakeCardView.Macro(label: "Carbs", value: vm.totalCarbs, goal: carbsGoal, color: IntakeColors.carbs)
-                    ]
+            TabView(selection: $workoutCarouselSelection) {
+                TodaysWorkoutCompactCard(
+                    workout: workoutManager.todayWorkout,
+                    title: workoutManager.todayWorkoutDisplayTitle,
+                    goalName: workoutManager.todayWorkout?.fitnessGoal.displayName ?? workoutManager.effectiveFitnessGoal.displayName,
+                    durationMinutes: workoutManager.todayWorkout?.estimatedDuration ?? 0,
+                    intensity: intensityStyle(for: workoutManager.todayWorkout?.difficulty),
+                    loadDescription: loadDescription(for: workoutManager.todayWorkout?.fitnessGoal),
+                    muscles: targetedMuscles(for: workoutManager.todayWorkout),
+                    iconName: workoutManager.todayWorkout.map { workoutIconName(for: $0) } ?? "figure.strengthtraining.traditional"
                 )
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
                 .tag(0)
                 .frame(maxWidth: .infinity)
-                .frame(height: nutritionCardHeight, alignment: .top)
+                .frame(height: workoutHighlightsCardHeight, alignment: .top)
 
-                WeeklyIntakeCardView(
-                    summaries: vm.weeklyNutritionSummaries,
-                    calorieGoal: calorieGoal,
-                    macroGoals: MacroGoalTargets(protein: proteinGoal, carbs: carbsGoal, fat: fatGoal)
+                MuscleRecoveryDashboardCard(
+                    recoveryData: Array(muscleRecoverySnapshot.prefix(10)),
+                    height: workoutHighlightsCardHeight
                 )
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
-                .tag(1)
-                .frame(maxWidth: .infinity)
-                .frame(height: nutritionCardHeight, alignment: .top)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .tag(1)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: workoutHighlightsCardHeight, alignment: .top)
 
-                VStack(spacing: 0) {
-                    EnergyBalanceCardView(
-                        weekData: vm.energyBalanceWeek,
-                        monthData: vm.energyBalanceMonth
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
-                .tag(2)
-                .frame(maxWidth: .infinity)
-                .frame(height: nutritionCardHeight, alignment: .top)
+                StrengthBalanceCompactCard(
+                    metrics: strengthBalanceSnapshot,
+                    height: workoutHighlightsCardHeight
+                )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .tag(2)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: workoutHighlightsCardHeight, alignment: .top)
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
 
             HStack(spacing: 6) {
                 ForEach(0..<3, id: \.self) { index in
                     Capsule()
-                        .fill(nutritionCarouselSelection == index ? Color.primary.opacity(0.8) : Color.primary.opacity(0.2))
-                        .frame(width: nutritionCarouselSelection == index ? 18 : 8, height: 4)
-                        .animation(.easeInOut(duration: 0.2), value: nutritionCarouselSelection)
+                        .fill(workoutCarouselSelection == index ? Color.primary.opacity(0.8) : Color.primary.opacity(0.2))
+                        .frame(width: workoutCarouselSelection == index ? 18 : 8, height: 4)
+                        .animation(.easeInOut(duration: 0.2), value: workoutCarouselSelection)
                 }
             }
             .padding(.top, 2)
         }
-        .frame(height: nutritionCardHeight + 12)
-        .padding(.horizontal)
+        .frame(height: workoutHighlightsCardHeight + 12)
     }
 
     private enum IntakeColors {
@@ -1513,7 +1578,8 @@ private extension NewHomeView {
                     }
                 }
             }
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
             .modifier(IntakeCardStyle())
         }
 
@@ -1548,6 +1614,264 @@ private extension NewHomeView {
         }()
     }
 
+    private struct WorkoutIntensityStyle {
+        let label: String
+        let color: Color
+    }
+
+    private struct TodaysWorkoutCompactCard: View {
+        let workout: TodayWorkout?
+        let title: String
+        let goalName: String
+        let durationMinutes: Int
+        let intensity: WorkoutIntensityStyle
+        let loadDescription: String
+        let muscles: [String]
+        let iconName: String
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Today's Workout")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                if workout != nil {
+                    workoutContent
+                } else {
+                    Text("Create a workout to unlock recommendations.")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(20)
+            .modifier(IntakeCardStyle())
+            .frame(maxWidth: .infinity)
+        }
+
+        private var workoutContent: some View {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 16) {
+                    Image(systemName: iconName)
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.primary)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.body)
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                        Text("\(durationMinutes) min")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer(minLength: 12)
+
+                    HStack(alignment: .top, spacing: 24) {
+                        metricColumn(title: "Intensity", value: intensity.label, color: intensity.color)
+                        metricColumn(title: "Load", value: loadDescription, color: .primary)
+                    }
+                }
+
+                if !muscles.isEmpty {
+                    HStack(spacing: 8) {
+                        ForEach(Array(muscles.prefix(4)), id: \.self) { muscle in
+                            Text(muscle)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.primary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color(.systemGray6))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+        }
+
+        private func metricColumn(title: String, value: String, color: Color) -> some View {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                Text(value)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
+            }
+            .frame(alignment: .leading)
+        }
+    }
+
+    private struct MuscleRecoveryDashboardCard: View {
+        let recoveryData: [MuscleRecoveryService.MuscleRecoveryData]
+        let height: CGFloat
+
+        private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Muscle Recovery")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                if recoveryData.isEmpty {
+                    Text("Complete workouts to see recovery insights.")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 24)
+                } else {
+                    let displayed = Array(recoveryData.prefix(10))
+                    LazyVGrid(columns: columns, spacing: 12) {
+                        ForEach(displayed, id: \.muscleGroup) { muscle in
+                            RecoveryRingView(
+                                value: muscle.recoveryPercentage,
+                                label: muscle.muscleGroup.displayName
+                            )
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .frame(height: height)
+            .modifier(IntakeCardStyle())
+        }
+    }
+
+    private struct RecoveryRingView: View {
+        let value: Double
+        let label: String
+
+        private var ringColor: Color {
+            switch value {
+            case 75...:
+                return Color(red: 0.19, green: 0.82, blue: 0.34)
+            case 50..<75:
+                return Color(red: 1.0, green: 0.84, blue: 0.04)
+            default:
+                return Color(red: 1.0, green: 0.27, blue: 0.23)
+            }
+        }
+
+        var body: some View {
+            VStack(spacing: 6) {
+                ZStack {
+                    Circle()
+                        .stroke(Color.gray.opacity(0.15), lineWidth: 2)
+                        .frame(width: 34, height: 34)
+
+                    Circle()
+                        .trim(from: 0, to: CGFloat(min(max(value / 100.0, 0), 1)))
+                        .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                        .foregroundColor(ringColor)
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 34, height: 34)
+
+                    Text("\(Int(value.rounded()))")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundColor(.primary)
+                }
+
+                Text(label)
+                    .font(.system(size: 11))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    private struct StrengthBalanceCompactCard: View {
+        let metrics: MuscleRecoveryService.StrengthBalanceMetrics?
+        let height: CGFloat
+
+        private let pushColor = Color(red: 1.0, green: 0.18, blue: 0.33)
+        private let pullColor = Color(red: 0.0, green: 0.48, blue: 1.0)
+        private let legsColor = Color(red: 0.20, green: 0.82, blue: 0.35)
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Strength Balance")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Text("This Week")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+
+                if let metrics {
+                    HStack(alignment: .center, spacing: 18) {
+                        StrengthBalanceRingsView(metrics: metrics)
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            balanceRow(title: "Push", sets: metrics.pushSets, goal: metrics.goalSets, color: pushColor)
+                            balanceRow(title: "Pull", sets: metrics.pullSets, goal: metrics.goalSets, color: pullColor)
+                            balanceRow(title: "Legs", sets: metrics.legsSets, goal: metrics.goalSets, color: legsColor)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .frame(height: height)
+            .modifier(IntakeCardStyle())
+        }
+
+        private func balanceRow(title: String, sets: Int, goal: Int, color: Color) -> some View {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12))
+                    .foregroundColor(.primary)
+                Text("\(sets)/\(goal)sets")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(color)
+            }
+        }
+    }
+
+    private struct StrengthBalanceRingsView: View {
+        let metrics: MuscleRecoveryService.StrengthBalanceMetrics
+        private let ringWidth: CGFloat = 7
+        private let ringSpacing: CGFloat = 4
+
+        private let ringColors = [
+            Color(red: 1.0, green: 0.18, blue: 0.33),
+            Color(red: 0.0, green: 0.48, blue: 1.0),
+            Color(red: 0.20, green: 0.82, blue: 0.35)
+        ]
+
+        private var values: [Int] {
+            [metrics.pushSets, metrics.pullSets, metrics.legsSets]
+        }
+
+        var body: some View {
+            ZStack {
+                ForEach(0..<values.count, id: \.self) { index in
+                    let radius = 48 - CGFloat(index) * (ringWidth + ringSpacing)
+                    let denominator = max(metrics.goalSets, 1)
+                    let progress = min(max(Double(values[index]) / Double(denominator), 0), 1)
+
+                    Circle()
+                        .stroke(Color.gray.opacity(0.15), lineWidth: ringWidth)
+                        .frame(width: radius * 2, height: radius * 2)
+
+                    Circle()
+                        .trim(from: 0, to: CGFloat(progress))
+                        .stroke(style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
+                        .foregroundColor(ringColors[index])
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: radius * 2, height: radius * 2)
+                }
+            }
+            .frame(width: 105, height: 105)
+        }
+    }
+
     private struct ActivityRingView: View {
         let value: Double
         let goal: Double
@@ -1567,7 +1891,7 @@ private extension NewHomeView {
             ZStack {
                 Circle()
                     .stroke(lineWidth: lineWidth)
-                    .foregroundColor(Color(.systemGray5))
+                    .foregroundColor(Color.primary.opacity(0.15))
 
                 Circle()
                     .trim(from: 0, to: progress)
@@ -1690,7 +2014,7 @@ private extension NewHomeView {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 16)
                 } else {
-                    VStack(spacing: 14) {
+                    VStack(spacing: 10) {
                         WeeklyMetricRow(
                             title: "Calories",
                             color: IntakeColors.calories,
@@ -1726,7 +2050,8 @@ private extension NewHomeView {
 
                 }
             }
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
             .modifier(IntakeCardStyle())
             .onChange(of: summaries) { newValue in
                 let referenceDate = newValue.sorted { $0.date < $1.date }.last?.date ?? Date()
@@ -1787,7 +2112,7 @@ private extension NewHomeView {
                             ZStack {
                                 Circle()
                                     .stroke(lineWidth: 2.5)
-                                    .foregroundColor(Color(.systemGray5))
+                                    .foregroundColor(Color.primary.opacity(0.15))
 
                                 Circle()
                                     .trim(from: 0, to: progress(for: entry))
@@ -2027,6 +2352,65 @@ private extension NewHomeView {
             ("Activity", "flame", snapshot?.activity),
             ("Stress", "water.waves", snapshot?.stress),
         ]
+    }
+
+    private func refreshTrainingInsights() {
+        muscleRecoverySnapshot = MuscleRecoveryService.shared.getMuscleRecoveryData()
+        strengthBalanceSnapshot = MuscleRecoveryService.shared.getStrengthBalanceMetrics()
+    }
+
+    private func intensityStyle(for difficulty: Int?) -> WorkoutIntensityStyle {
+        let level = difficulty ?? 2
+        switch level {
+        case ..<2:
+            return WorkoutIntensityStyle(label: "Light", color: Color(red: 0.19, green: 0.82, blue: 0.34))
+        case 2:
+            return WorkoutIntensityStyle(label: "Moderate", color: Color(red: 1.0, green: 0.84, blue: 0.04))
+        case 3:
+            return WorkoutIntensityStyle(label: "High", color: Color(red: 1.0, green: 0.58, blue: 0.0))
+        default:
+            return WorkoutIntensityStyle(label: "Peak", color: Color(red: 1.0, green: 0.18, blue: 0.33))
+        }
+    }
+
+    private func loadDescription(for goal: FitnessGoal?) -> String {
+        switch goal?.normalized ?? workoutManager.effectiveFitnessGoal {
+        case .strength, .powerlifting, .olympicWeightlifting:
+            return "Heavy"
+        case .hypertrophy:
+            return "Medium-Heavy"
+        case .circuitTraining:
+            return "Moderate"
+        case .general:
+            return "Balanced"
+        @unknown default:
+            return "Balanced"
+        }
+    }
+
+    private func targetedMuscles(for workout: TodayWorkout?) -> [String] {
+        if let custom = workoutManager.baselineCustomMuscles, !custom.isEmpty {
+            return custom.map { formattedMuscleName($0) }
+        }
+
+        guard let workout else { return [] }
+        var counts: [String: Int] = [:]
+        for exercise in workout.exercises {
+            let bodyPart = exercise.exercise.bodyPart
+            if !bodyPart.isEmpty {
+                counts[bodyPart, default: 0] += 1
+            } else if !exercise.exercise.target.isEmpty {
+                counts[exercise.exercise.target, default: 0] += 1
+            }
+        }
+        return counts
+            .sorted { $0.value > $1.value }
+            .prefix(4)
+            .map { formattedMuscleName($0.key) }
+    }
+
+    private func formattedMuscleName(_ raw: String) -> String {
+        raw.replacingOccurrences(of: "_", with: " ").capitalized
     }
 
     private func metricValueText(_ value: Double?) -> String {
