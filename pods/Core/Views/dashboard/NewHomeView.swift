@@ -1480,7 +1480,7 @@ private extension NewHomeView {
                         .animation(.easeInOut(duration: 0.2), value: workoutCarouselSelection)
                 }
             }
-            .padding(.top, 2)
+            .padding(.top, 4)
         }
         .frame(height: workoutHighlightsCardHeight + 12)
     }
@@ -1697,12 +1697,13 @@ private extension NewHomeView {
                     }
 
                     Spacer(minLength: 12)
-
-                    HStack(alignment: .top, spacing: 24) {
-                        metricColumn(title: "Intensity", value: intensity.label, color: intensity.color)
-                        metricColumn(title: "Load", value: loadDescription, color: .primary)
-                    }
                 }
+
+                HStack(spacing: 24) {
+                    metricColumn(title: "Intensity", value: intensity.label, color: intensity.color)
+                    metricColumn(title: "Load", value: loadDescription, color: .primary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 if !muscles.isEmpty {
                     HStack(spacing: 8) {
