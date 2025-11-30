@@ -1172,6 +1172,7 @@ private struct ExpenditureSparkline: View {
             return CGPoint(x: x, y: y)
         }
     }
+
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -1203,7 +1204,7 @@ private extension NewHomeView {
                 healthMetricsCard
                     .padding(.top, 16)
                     .padding(.horizontal)
-                    .padding(.bottom, 10)
+                    .padding(.bottom, 8)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -1363,10 +1364,10 @@ private extension NewHomeView {
     private var resolvedIntakeCardHeight: CGFloat { 290 }
     private var nutritionCardHeight: CGFloat { resolvedIntakeCardHeight }
     private var workoutHighlightsCardHeight: CGFloat { 200 }
-    private var pagerDotPadding: CGFloat { 7 }
+    private var pagerDotPadding: CGFloat { 8 }
 
     var nutritionSummaryCard: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 3) {
             VStack(spacing: 4) {
                 TabView(selection: $nutritionCarouselSelection) {
                     VStack(spacing: 0) {
@@ -1576,19 +1577,19 @@ private extension NewHomeView {
 
                 HStack(spacing: 8) {
                     ForEach(macros) { macro in
-                        VStack(spacing: 8) {
+                        VStack(spacing: 3) {
                             ActivityRingView(
                                 value: macro.value,
                                 goal: macro.goal,
                                 color: macro.color,
-                                size: 42,
-                                lineWidth: 3.0,
+                                size: 40,
+                                lineWidth: 4.0,
                                 label: nil,
                                 showGoal: false,
                                 hideCenter: true
                             )
 
-                            VStack(spacing: 4) {
+                            VStack(spacing: 3) {
                                 Text(macro.label)
                                     .font(.system(size: 12, weight: .regular))
                                     .foregroundColor(.primary)
@@ -1673,7 +1674,7 @@ private extension NewHomeView {
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
-            .padding(.bottom, 16)
+            .padding(.bottom, 22)
             .frame(maxWidth: .infinity, alignment: .top)
             .frame(height: height, alignment: .top)
             .modifier(IntakeCardStyle())
@@ -1706,6 +1707,7 @@ private extension NewHomeView {
                         metricColumn(title: "Load", value: loadDescription, color: .primary)
                     }
                 }
+                .padding(.top, 16)
 
                 if !muscles.isEmpty {
                     HStack(spacing: 8) {
@@ -1719,6 +1721,7 @@ private extension NewHomeView {
                                 .clipShape(Capsule())
                         }
                     }
+                    .padding(.top, 5)
                 }
             }
         }
@@ -1758,7 +1761,7 @@ private extension NewHomeView {
                         .padding(.vertical, 20)
                 } else {
                     let displayed = Array(recoveryData.prefix(10))
-                    LazyVGrid(columns: columns, spacing: 6) {
+                    LazyVGrid(columns: columns, spacing: 10) {
                         ForEach(displayed, id: \.muscleGroup) { muscle in
                             RecoveryRingView(
                                 value: muscle.recoveryPercentage,
@@ -1769,7 +1772,7 @@ private extension NewHomeView {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 12)
+            .padding(.top, 20)
             .padding(.bottom, 14)
             .frame(maxWidth: .infinity, alignment: .top)
             .frame(height: height, alignment: .top)
@@ -1796,12 +1799,12 @@ private extension NewHomeView {
             VStack(spacing: 4) {
                 ZStack {
                     Circle()
-                        .stroke(Color.gray.opacity(0.15), lineWidth: 2)
+                        .stroke(Color.gray.opacity(0.15), lineWidth: 3)
                         .frame(width: 34, height: 34)
 
                     Circle()
                         .trim(from: 0, to: CGFloat(min(max(value / 100.0, 0), 1)))
-                        .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                        .stroke(style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .foregroundColor(ringColor)
                         .rotationEffect(.degrees(-90))
                         .frame(width: 34, height: 34)
@@ -1855,7 +1858,7 @@ private extension NewHomeView {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 12)
+            .padding(.top, 20)
             .padding(.bottom, 14)
             .frame(maxWidth: .infinity, alignment: .top)
             .frame(height: height, alignment: .top)
@@ -2191,10 +2194,11 @@ private extension NewHomeView {
         private let chartHeight: CGFloat = 110
 
         var body: some View {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 10) {
                 header
                 energyChart
                 equationRow
+                    .padding(.top, 4)
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
@@ -2278,6 +2282,7 @@ private extension NewHomeView {
 
                 labelsRow
             }
+            .padding(.bottom, 4)
         }
 
         private var gridLines: some View {
@@ -2327,7 +2332,7 @@ private extension NewHomeView {
                 metricColumn(title: "Balance", value: averageBalance, highlight: true)
             }
             .frame(maxWidth: .infinity)
-            .padding(.top, 12)
+            .padding(.top, 5)
         }
 
         private func equationSymbol(_ symbol: String) -> some View {
