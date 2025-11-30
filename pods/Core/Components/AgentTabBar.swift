@@ -44,7 +44,7 @@ struct AgentTabBar: View {
             ZStack(alignment: .topLeading) {
                 // Placeholder text
                 if text.isEmpty {
-                    Text("Ask or Log Anything")
+                    Text("Log or ask anything...")
                         .font(.system(size: 15))
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 4)
