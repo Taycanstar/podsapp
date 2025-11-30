@@ -1360,43 +1360,50 @@ private extension NewHomeView {
         }
     }
     // ① Nutrition summary ----------------------------------------------------
-    private var resolvedIntakeCardHeight: CGFloat {
-        intakeCardHeight > 0 ? intakeCardHeight : fallbackIntakeCardHeight
-    }
+    private var resolvedIntakeCardHeight: CGFloat { 290 }
     private var nutritionCardHeight: CGFloat { resolvedIntakeCardHeight }
     private var workoutHighlightsCardHeight: CGFloat { 200 }
+    private var pagerDotPadding: CGFloat { 7 }
 
     var nutritionSummaryCard: some View {
         VStack(spacing: 8) {
             VStack(spacing: 4) {
                 TabView(selection: $nutritionCarouselSelection) {
-                    DailyIntakeCardView(
-                        calories: vm.totalCalories,
-                        calorieGoal: calorieGoal,
-                        macros: [
-                            DailyIntakeCardView.Macro(label: "Protein", value: vm.totalProtein, goal: proteinGoal, color: IntakeColors.protein),
-                            DailyIntakeCardView.Macro(label: "Fat", value: vm.totalFat, goal: fatGoal, color: IntakeColors.fat),
-                            DailyIntakeCardView.Macro(label: "Carbs", value: vm.totalCarbs, goal: carbsGoal, color: IntakeColors.carbs)
-                        ]
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 4)
-                    .tag(0)
-                    .background(IntakeCardHeightReader())
-                    .frame(maxWidth: .infinity)
-                    .frame(height: nutritionCardHeight, alignment: .top)
+                    VStack(spacing: 0) {
+                        DailyIntakeCardView(
+                            calories: vm.totalCalories,
+                            calorieGoal: calorieGoal,
+                            macros: [
+                                DailyIntakeCardView.Macro(label: "Protein", value: vm.totalProtein, goal: proteinGoal, color: IntakeColors.protein),
+                                DailyIntakeCardView.Macro(label: "Fat", value: vm.totalFat, goal: fatGoal, color: IntakeColors.fat),
+                                DailyIntakeCardView.Macro(label: "Carbs", value: vm.totalCarbs, goal: carbsGoal, color: IntakeColors.carbs)
+                            ]
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.top, 4)
+                        .background(IntakeCardHeightReader())
+                        .frame(maxWidth: .infinity)
+                        .frame(height: nutritionCardHeight, alignment: .top)
 
-                    WeeklyIntakeCardView(
-                        summaries: vm.weeklyNutritionSummaries,
-                        calorieGoal: calorieGoal,
-                        macroGoals: MacroGoalTargets(protein: proteinGoal, carbs: carbsGoal, fat: fatGoal)
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 4)
+                        Spacer(minLength: pagerDotPadding)
+                    }
+                    .tag(0)
+
+                    VStack(spacing: 0) {
+                        WeeklyIntakeCardView(
+                            summaries: vm.weeklyNutritionSummaries,
+                            calorieGoal: calorieGoal,
+                            macroGoals: MacroGoalTargets(protein: proteinGoal, carbs: carbsGoal, fat: fatGoal)
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.top, 4)
+                        .background(IntakeCardHeightReader())
+                        .frame(maxWidth: .infinity)
+                        .frame(height: nutritionCardHeight, alignment: .top)
+
+                        Spacer(minLength: pagerDotPadding)
+                    }
                     .tag(1)
-                    .background(IntakeCardHeightReader())
-                    .frame(maxWidth: .infinity)
-                    .frame(height: nutritionCardHeight, alignment: .top)
 
                     VStack(spacing: 0) {
                         EnergyBalanceCardView(
@@ -1404,31 +1411,23 @@ private extension NewHomeView {
                             monthData: vm.energyBalanceMonth
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 4)
+                        .background(IntakeCardHeightReader())
+                        .frame(height: nutritionCardHeight, alignment: .top)
+
+                        Spacer(minLength: pagerDotPadding)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 4)
                     .tag(2)
-                    .background(IntakeCardHeightReader())
-                    .frame(maxWidth: .infinity)
-                    .frame(height: nutritionCardHeight, alignment: .top)
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+                .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
                 .onPreferenceChange(IntakeCardHeightPreferenceKey.self) { height in
                     guard height > 0 else { return }
                     intakeCardHeight = height
                 }
-
-                HStack(spacing: 6) {
-                    ForEach(0..<3, id: \.self) { index in
-                        Capsule()
-                            .fill(nutritionCarouselSelection == index ? Color.primary.opacity(0.8) : Color.primary.opacity(0.2))
-                            .frame(width: nutritionCarouselSelection == index ? 18 : 8, height: 4)
-                            .animation(.easeInOut(duration: 0.2), value: nutritionCarouselSelection)
-                    }
-                }
-                .padding(.top, 2)
             }
-            .frame(height: nutritionCardHeight + 12)
+            .frame(height: nutritionCardHeight + pagerDotPadding)
 
             workoutHighlightsCarousel
         }
@@ -1436,53 +1435,55 @@ private extension NewHomeView {
     }
 
     var workoutHighlightsCarousel: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 0) {
             TabView(selection: $workoutCarouselSelection) {
-                TodaysWorkoutCompactCard(
-                    workout: workoutManager.todayWorkout,
-                    title: workoutManager.todayWorkoutDisplayTitle,
-                    goalName: workoutManager.todayWorkout?.fitnessGoal.displayName ?? workoutManager.effectiveFitnessGoal.displayName,
-                    durationMinutes: workoutManager.todayWorkout?.estimatedDuration ?? 0,
-                    intensity: intensityStyle(for: workoutManager.todayWorkout?.difficulty),
-                    loadDescription: loadDescription(for: workoutManager.todayWorkout?.fitnessGoal),
-                    muscles: targetedMuscles(for: workoutManager.todayWorkout),
-                    iconName: workoutManager.todayWorkout.map { workoutIconName(for: $0) } ?? "figure.strengthtraining.traditional",
-                    height: workoutHighlightsCardHeight
-                )
-                .padding(.horizontal, 16)
-                .tag(0)
-                .frame(maxWidth: .infinity)
-
-                MuscleRecoveryDashboardCard(
-                    recoveryData: Array(muscleRecoverySnapshot.prefix(10)),
-                    height: workoutHighlightsCardHeight
-                )
+                VStack(spacing: 0) {
+                    TodaysWorkoutCompactCard(
+                        workout: workoutManager.todayWorkout,
+                        title: workoutManager.todayWorkoutDisplayTitle,
+                        goalName: workoutManager.todayWorkout?.fitnessGoal.displayName ?? workoutManager.effectiveFitnessGoal.displayName,
+                        durationMinutes: workoutManager.todayWorkout?.estimatedDuration ?? 0,
+                        intensity: intensityStyle(for: workoutManager.todayWorkout?.difficulty),
+                        loadDescription: loadDescription(for: workoutManager.todayWorkout?.fitnessGoal),
+                        muscles: targetedMuscles(for: workoutManager.todayWorkout),
+                        iconName: workoutManager.todayWorkout.map { workoutIconName(for: $0) } ?? "figure.strengthtraining.traditional",
+                        height: workoutHighlightsCardHeight
+                    )
                     .padding(.horizontal, 16)
-                    .tag(1)
                     .frame(maxWidth: .infinity)
 
-                StrengthBalanceCompactCard(
-                    metrics: strengthBalanceSnapshot,
-                    height: workoutHighlightsCardHeight
-                )
-                    .padding(.horizontal, 16)
-                    .tag(2)
-                    .frame(maxWidth: .infinity)
-            }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-            .padding(.bottom, -4)
-
-            HStack(spacing: 6) {
-                ForEach(0..<3, id: \.self) { index in
-                    Capsule()
-                        .fill(workoutCarouselSelection == index ? Color.primary.opacity(0.8) : Color.primary.opacity(0.2))
-                        .frame(width: workoutCarouselSelection == index ? 18 : 8, height: 4)
-                        .animation(.easeInOut(duration: 0.2), value: workoutCarouselSelection)
+                    Spacer(minLength: pagerDotPadding)
                 }
+                .tag(0)
+
+                VStack(spacing: 0) {
+                    MuscleRecoveryDashboardCard(
+                        recoveryData: Array(muscleRecoverySnapshot.prefix(10)),
+                        height: workoutHighlightsCardHeight
+                    )
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity)
+
+                    Spacer(minLength: pagerDotPadding)
+                }
+                .tag(1)
+
+                VStack(spacing: 0) {
+                    StrengthBalanceCompactCard(
+                        metrics: strengthBalanceSnapshot,
+                        height: workoutHighlightsCardHeight
+                    )
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity)
+
+                    Spacer(minLength: pagerDotPadding)
+                }
+                .tag(2)
             }
-            .padding(.top, 4)
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+            .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
         }
-        .frame(height: workoutHighlightsCardHeight + 12)
+        .frame(height: workoutHighlightsCardHeight + pagerDotPadding)
     }
 
     private enum IntakeColors {
@@ -1580,8 +1581,8 @@ private extension NewHomeView {
                                 value: macro.value,
                                 goal: macro.goal,
                                 color: macro.color,
-                                size: 46,
-                                lineWidth: 3.5,
+                                size: 42,
+                                lineWidth: 3.0,
                                 label: nil,
                                 showGoal: false,
                                 hideCenter: true
@@ -1670,7 +1671,9 @@ private extension NewHomeView {
                         .foregroundColor(.secondary)
                 }
             }
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
             .frame(maxWidth: .infinity, alignment: .top)
             .frame(height: height, alignment: .top)
             .modifier(IntakeCardStyle())
@@ -1697,13 +1700,12 @@ private extension NewHomeView {
                     }
 
                     Spacer(minLength: 12)
-                }
 
-                HStack(spacing: 24) {
-                    metricColumn(title: "Intensity", value: intensity.label, color: intensity.color)
-                    metricColumn(title: "Load", value: loadDescription, color: .primary)
+                    HStack(alignment: .top, spacing: 24) {
+                        metricColumn(title: "Intensity", value: intensity.label, color: intensity.color)
+                        metricColumn(title: "Load", value: loadDescription, color: .primary)
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
 
                 if !muscles.isEmpty {
                     HStack(spacing: 8) {
@@ -1740,10 +1742,10 @@ private extension NewHomeView {
         let recoveryData: [MuscleRecoveryService.MuscleRecoveryData]
         let height: CGFloat
 
-        private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+        private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 5)
 
         var body: some View {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Muscle Recovery")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.primary)
@@ -1753,10 +1755,10 @@ private extension NewHomeView {
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 24)
+                        .padding(.vertical, 20)
                 } else {
                     let displayed = Array(recoveryData.prefix(10))
-                    LazyVGrid(columns: columns, spacing: 12) {
+                    LazyVGrid(columns: columns, spacing: 6) {
                         ForEach(displayed, id: \.muscleGroup) { muscle in
                             RecoveryRingView(
                                 value: muscle.recoveryPercentage,
@@ -1766,7 +1768,9 @@ private extension NewHomeView {
                     }
                 }
             }
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 14)
             .frame(maxWidth: .infinity, alignment: .top)
             .frame(height: height, alignment: .top)
             .modifier(IntakeCardStyle())
@@ -1789,7 +1793,7 @@ private extension NewHomeView {
         }
 
         var body: some View {
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
                 ZStack {
                     Circle()
                         .stroke(Color.gray.opacity(0.15), lineWidth: 2)
@@ -1824,7 +1828,7 @@ private extension NewHomeView {
         private let legsColor = Color(red: 0.20, green: 0.82, blue: 0.35)
 
         var body: some View {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("Strength Balance")
                         .font(.system(size: 20, weight: .semibold))
@@ -1840,7 +1844,7 @@ private extension NewHomeView {
                         StrengthBalanceRingsView(metrics: metrics)
                             .frame(maxWidth: .infinity, alignment: .center)
 
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 8) {
                             balanceRow(title: "Push", sets: metrics.pushSets, goal: metrics.goalSets, color: pushColor)
                             balanceRow(title: "Pull", sets: metrics.pullSets, goal: metrics.goalSets, color: pullColor)
                             balanceRow(title: "Legs", sets: metrics.legsSets, goal: metrics.goalSets, color: legsColor)
@@ -1851,19 +1855,20 @@ private extension NewHomeView {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 14)
             .frame(maxWidth: .infinity, alignment: .top)
             .frame(height: height, alignment: .top)
             .modifier(IntakeCardStyle())
         }
 
         private func balanceRow(title: String, sets: Int, goal: Int, color: Color) -> some View {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .font(.system(size: 12))
                     .foregroundColor(.primary)
                 Text("\(sets)/\(goal) sets")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(color)
             }
         }
@@ -1871,7 +1876,7 @@ private extension NewHomeView {
 
     private struct StrengthBalanceRingsView: View {
         let metrics: MuscleRecoveryService.StrengthBalanceMetrics
-        private let ringWidth: CGFloat = 9
+        private let ringWidth: CGFloat = 12
         private let ringSpacing: CGFloat = 5
 
         private let ringColors = [
@@ -1903,7 +1908,7 @@ private extension NewHomeView {
                         .frame(width: radius * 2, height: radius * 2)
                 }
             }
-            .frame(width: 120, height: 120)
+            .frame(width: 140, height: 140)
         }
     }
 
