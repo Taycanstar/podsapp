@@ -54,6 +54,11 @@ struct SleepSummary {
     }
 }
 
+struct HealthQuantitySample {
+    let value: Double
+    let date: Date
+}
+
 class HealthKitManager {
     /// Human‑readable name for the HKCategoryValueSleepAnalysis value.
     private static func sleepStageName(for value: Int) -> String {
@@ -615,6 +620,33 @@ class HealthKitManager {
             completion(weightInKg, nil)
         }
         
+        healthStore.execute(query)
+    }
+
+    func fetchBodyFatPercentageSamples(limit: Int = 7, completion: @escaping ([HealthQuantitySample]?, Error?) -> Void) {
+        let fatType = HKQuantityType.quantityType(forIdentifier: .bodyFatPercentage)!
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+
+        let query = HKSampleQuery(
+            sampleType: fatType,
+            predicate: nil,
+            limit: limit,
+            sortDescriptors: [sortDescriptor]
+        ) { _, samples, error in
+            if let error = error {
+                completion(nil, error)
+                return
+            }
+
+            let mapped = samples?.compactMap { sample -> HealthQuantitySample? in
+                guard let quantitySample = sample as? HKQuantitySample else { return nil }
+                let percent = quantitySample.quantity.doubleValue(for: HKUnit.percent()) * 100
+                return HealthQuantitySample(value: percent, date: quantitySample.endDate)
+            } ?? []
+
+            completion(mapped, nil)
+        }
+
         healthStore.execute(query)
     }
 

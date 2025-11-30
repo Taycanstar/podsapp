@@ -51,6 +51,17 @@ struct NewHomeView: View {
     // ─── Keyboard focus state ──────────────────────────────────────────────
     @FocusState private var isAgentInputFocused: Bool
     private let relativeFormatter = RelativeDateTimeFormatter()
+    private let iso8601WithFractionalFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private let iso8601BasicFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 
     // ─── Sort state ─────────────────────────────────────────────────────────
     @State private var sortOption: LogSortOption = .date
@@ -63,6 +74,8 @@ struct NewHomeView: View {
     @State private var healthSyncFlashHideWorkItem: DispatchWorkItem?
     private let fallbackIntakeCardHeight: CGFloat = 290
     @State private var intakeCardHeight: CGFloat = 0
+    @State private var weightTrendEntries: [BodyCompositionEntry] = []
+    @State private var bodyFatTrendEntries: [BodyCompositionEntry] = []
     
     enum LogSortOption: String, CaseIterable {
         case date = "Date"
@@ -542,6 +555,20 @@ private var remainingCal: Double { vm.remainingCalories }
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.primary)
                 }
+            }
+        }
+        .task {
+            refreshWeightTrendEntries()
+            fetchBodyFatHistoryIfNeeded()
+        }
+        .onReceive(onboarding.$profileData) { _ in
+            refreshWeightTrendEntries()
+        }
+        .onChange(of: healthViewModel.isAuthorized) { authorized in
+            if authorized {
+                fetchBodyFatHistoryIfNeeded()
+            } else {
+                bodyFatTrendEntries = []
             }
         }
         .sheet(item: $scheduleSheetLog) { log in
@@ -1135,45 +1162,6 @@ private var remainingCal: Double { vm.remainingCalories }
     }
 }
 
-private struct ExpenditureSparkline: View {
-    let values: [Double]
-
-    var body: some View {
-        GeometryReader { geometry in
-            let points = normalizedPoints(in: geometry.size)
-            Path { path in
-                guard let first = points.first else { return }
-                path.move(to: first)
-                for point in points.dropFirst() {
-                    path.addLine(to: point)
-                }
-            }
-            .stroke(LinearGradient(colors: [Color.blue, Color.purple], startPoint: .leading, endPoint: .trailing), lineWidth: 2)
-            .background(
-                LinearGradient(colors: [Color.blue.opacity(0.15), Color.clear],
-                               startPoint: .top,
-                               endPoint: .bottom)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            )
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func normalizedPoints(in size: CGSize) -> [CGPoint] {
-        guard let minValue = values.min(), let maxValue = values.max(), size.width > 0 else {
-            return []
-        }
-        let delta = max(maxValue - minValue, 1)
-        let stepX = values.count > 1 ? size.width / CGFloat(values.count - 1) : 0
-        return values.enumerated().map { index, value in
-            let x = CGFloat(index) * stepX
-            let normalizedY = 1 - CGFloat((value - minValue) / delta)
-            let y = normalizedY * size.height
-            return CGPoint(x: x, y: y)
-        }
-    }
-
-}
 
 // ────────────────────────────────────────────────────────────────────────────
 // MARK: -- Sub-views
@@ -1216,12 +1204,6 @@ private extension NewHomeView {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowSpacing(0)
-                expenditureSummaryCard
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
 
                 if isToday && !isTodayWorkoutDismissed && !hideWorkoutPreviews {
                     todayWorkoutCard
@@ -1367,7 +1349,7 @@ private extension NewHomeView {
     private var pagerDotPadding: CGFloat { 8 }
 
     var nutritionSummaryCard: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: 8) {
             VStack(spacing: 4) {
                 TabView(selection: $nutritionCarouselSelection) {
                     VStack(spacing: 0) {
@@ -1431,6 +1413,9 @@ private extension NewHomeView {
             .frame(height: nutritionCardHeight + pagerDotPadding)
 
             workoutHighlightsCarousel
+
+            bodyCompositionSection
+                .padding(.top, 8)
         }
         .padding(.horizontal)
     }
@@ -1496,6 +1481,76 @@ private extension NewHomeView {
             .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
         }
         .frame(height: workoutHighlightsCardHeight + pagerDotPadding)
+    }
+
+    private var bodyCompositionSection: some View {
+        BodyCompositionSection(
+            cards: bodyCompositionCardModels,
+            onShowAll: showAllBodyComposition
+        )
+    }
+
+    private var bodyCompositionCardModels: [BodyCompositionCardModel] {
+        [weightBodyCompositionModel, bodyFatBodyCompositionModel]
+    }
+
+    private var weightBodyCompositionModel: BodyCompositionCardModel {
+        let entries = weightTrendEntries
+        let values = entries.map(\.value)
+        let fallbackValue = vm.weight > 0 ? convertWeightToDisplayUnit(vm.weight) : nil
+        let currentValue = entries.last?.value ?? fallbackValue
+        let delta = entries.count >= 2 ? (entries.last!.value - entries.first!.value) : nil
+        let subtitle = entries.isEmpty ? "No entries yet" : "Last \(entries.count) Entries"
+        let fallbackTrend = entries.isEmpty ? "Add a weight log" : "Stable"
+
+        return BodyCompositionCardModel(
+            title: "Weight",
+            subtitle: subtitle,
+            unit: weightUnit,
+            values: values,
+            currentValue: currentValue,
+            delta: delta,
+            decimals: 1,
+            color: .indigo,
+            fallbackTrendText: fallbackTrend,
+            trendThreshold: 0.05,
+            showsChevron: true
+        )
+    }
+
+    private var bodyFatBodyCompositionModel: BodyCompositionCardModel {
+        let entries = bodyFatTrendEntries
+        let values = entries.map(\.value)
+        let isHealthAuthorized = HealthKitManager.shared.isAuthorized
+        let subtitle: String
+        let fallbackTrend: String
+
+        if !isHealthAuthorized {
+            subtitle = "Connect Apple Health"
+            fallbackTrend = "Sync to track"
+        } else if entries.isEmpty {
+            subtitle = "Waiting for entries"
+            fallbackTrend = "Need more data"
+        } else {
+            subtitle = "Last \(entries.count) Entries"
+            fallbackTrend = "Stable"
+        }
+
+        let delta = entries.count >= 2 ? (entries.last!.value - entries.first!.value) : nil
+
+        return BodyCompositionCardModel(
+            title: "Body Fat",
+            subtitle: subtitle,
+            unit: "%",
+            values: values,
+            currentValue: entries.last?.value,
+            delta: delta,
+            decimals: 1,
+            color: .indigo,
+            fallbackTrendText: fallbackTrend,
+            trendThreshold: 0.1,
+            showsChevron: true
+        )
     }
 
     private enum IntakeColors {
@@ -1791,9 +1846,9 @@ private extension NewHomeView {
         }
     }
 
-    private struct RecoveryRingView: View {
-        let value: Double
-        let label: String
+private struct RecoveryRingView: View {
+    let value: Double
+    let label: String
 
         private var ringColor: Color {
             switch value {
@@ -2534,109 +2589,6 @@ private extension NewHomeView {
     }
 
     @ViewBuilder
-    private var expenditureSummaryCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Calorie Expenditure")
-                        .font(.headline)
-                    Text("Powered by Humuli Expenditure Engine")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if vm.isLoadingExpenditure {
-                    ProgressView()
-                } else {
-                    Button {
-                        HapticFeedback.generate()
-                        vm.refreshExpenditureData(force: true)
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 15, weight: .semibold))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Refresh expenditure")
-                }
-            }
-
-            if let snapshot = vm.expenditureSnapshot {
-                expenditureMetricCard(title: "Daily Expenditure", value: formatCalories(snapshot.tdeeCore))
-                    .padding(.vertical, 4)
-
-                if let history = sparklineValues, !history.isEmpty {
-                    ExpenditureSparkline(values: history)
-                        .frame(height: 56)
-                        .padding(.top, 6)
-
-                    if let deltaText = expenditureTrendText {
-                        Text(deltaText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if let updated = snapshot.updatedAtValue {
-                    Text("Updated \(relativeString(for: updated))")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            } else if vm.isLoadingExpenditure {
-                Text("Crunching the latest logs…")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(vm.expenditureErrorMessage ?? "Log food or weight to unlock your true daily burn.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding()
-        .background(Color("primarybg"), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.primary.opacity(0.05))
-        )
-    }
-
-    private func expenditureMetricCard(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title3)
-                .fontWeight(.semibold)
-        }
-    }
-
-    private var sparklineValues: [Double]? {
-        let values = vm.expenditureHistory.compactMap { $0.tdeeCore }
-        return values.count >= 2 ? values : nil
-    }
-
-    private var expenditureTrendText: String? {
-        guard let values = sparklineValues,
-              let first = values.first,
-              let last = values.last else { return nil }
-        let delta = last - first
-        guard abs(delta) >= 5 else { return "Steady over the last \(values.count)d" }
-        let sign = delta >= 0 ? "+" : "−"
-        return "\(sign)\(abs(Int(delta))) kcal over \(values.count)d"
-    }
-
-    private func formatCalories(_ value: Double?, suffix: String = "kcal") -> String {
-        guard let value else { return "--" }
-        let rounded = Int(value.rounded())
-        return suffix.isEmpty ? "\(rounded)" : "\(rounded) \(suffix)"
-    }
-
-    private func relativeString(for date: Date?) -> String {
-        guard let date else { return "recently" }
-        return relativeFormatter.localizedString(for: date, relativeTo: Date())
-    }
-
-    @ViewBuilder
     var todayWorkoutCard: some View {
         if let workout = workoutManager.todayWorkout,
            Calendar.current.isDate(workout.date, inSameDayAs: Date()) {
@@ -2738,6 +2690,78 @@ private extension NewHomeView {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    // Body composition helpers ------------------------------------------------
+    private func refreshWeightTrendEntries() {
+        var resolvedLogs: [WeightLogResponse] = []
+
+        if let profileLogs = onboarding.profileData?.weightLogsRecent, !profileLogs.isEmpty {
+            resolvedLogs = profileLogs
+        } else if let cachedLogs = loadCachedWeightLogs() {
+            resolvedLogs = cachedLogs
+        }
+
+        var entries: [BodyCompositionEntry] = resolvedLogs.compactMap { log in
+            guard let date = parseLogDate(log.dateLogged) else { return nil }
+            return BodyCompositionEntry(value: convertWeightToDisplayUnit(log.weightKg), date: date)
+        }
+        .sorted { $0.date > $1.date }
+
+        if entries.isEmpty, vm.weight > 0 {
+            entries = [BodyCompositionEntry(value: convertWeightToDisplayUnit(vm.weight), date: Date())]
+        }
+
+        weightTrendEntries = Array(entries.prefix(7)).sorted { $0.date < $1.date }
+    }
+
+    private func fetchBodyFatHistoryIfNeeded() {
+        guard HealthKitManager.shared.isHealthDataAvailable, HealthKitManager.shared.isAuthorized else {
+            return
+        }
+
+        HealthKitManager.shared.fetchBodyFatPercentageSamples(limit: 7) { samples, error in
+            DispatchQueue.main.async {
+                if let samples = samples {
+                    let sorted = samples.sorted { $0.date < $1.date }
+                    self.bodyFatTrendEntries = sorted.map { BodyCompositionEntry(value: $0.value, date: $0.date) }
+                } else {
+                    if let error = error {
+                        print("Error fetching body fat samples: \(error)")
+                    }
+                    self.bodyFatTrendEntries = []
+                }
+            }
+        }
+    }
+
+    private func loadCachedWeightLogs() -> [WeightLogResponse]? {
+        guard let data = UserDefaults.standard.data(forKey: "preloadedWeightLogs"),
+              let response = try? JSONDecoder().decode(WeightLogsResponse.self, from: data) else {
+            return nil
+        }
+        return response.logs
+    }
+
+    private func parseLogDate(_ dateString: String) -> Date? {
+        if let date = iso8601WithFractionalFormatter.date(from: dateString) {
+            return date
+        }
+        return iso8601BasicFormatter.date(from: dateString)
+    }
+
+    private func convertWeightToDisplayUnit(_ weightKg: Double) -> Double {
+        switch onboarding.unitsSystem {
+        case .imperial:
+            return weightKg * 2.20462
+        case .metric:
+            return weightKg
+        }
+    }
+
+    private func showAllBodyComposition() {
+        HapticFeedback.generate()
+        vm.navigateToWeightData = true
     }
 
     // Remaining calories card
@@ -3167,6 +3191,212 @@ private extension NewHomeView {
         .background(Color("containerbg"))
         // .cornerRadius(12)
         .cornerRadius(24)
+    }
+}
+
+private struct BodyCompositionEntry: Identifiable {
+    let id = UUID()
+    let value: Double
+    let date: Date
+}
+
+private struct BodyCompositionCardModel: Identifiable {
+    enum TrendDirection {
+        case up, down, stable
+    }
+
+    let id = UUID()
+    let title: String
+    let subtitle: String
+    let unit: String
+    let values: [Double]
+    let currentValue: Double?
+    let delta: Double?
+    let decimals: Int
+    let color: Color
+    let fallbackTrendText: String
+    let trendThreshold: Double
+    let showsChevron: Bool
+
+    var trendDirection: TrendDirection {
+        guard let delta else { return .stable }
+        if abs(delta) < trendThreshold { return .stable }
+        return delta > 0 ? .up : .down
+    }
+
+    var trendText: String {
+        guard let delta else { return fallbackTrendText }
+        if abs(delta) < trendThreshold {
+            return "Stable"
+        }
+
+        let symbol = delta > 0 ? "↑" : "↓"
+        let formatted = Self.formatValue(abs(delta), decimals: decimals)
+        return "\(symbol) \(formatted) \(unit)"
+    }
+
+    var formattedCurrentValue: String? {
+        guard let currentValue else { return nil }
+        return Self.formatValue(currentValue, decimals: decimals)
+    }
+
+    private static func formatValue(_ value: Double, decimals: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.maximumFractionDigits = decimals
+        formatter.minimumFractionDigits = decimals
+        formatter.numberStyle = .decimal
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.\(decimals)f", value)
+    }
+}
+
+private struct BodyCompositionSection: View {
+    let cards: [BodyCompositionCardModel]
+    let onShowAll: () -> Void
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("Body Composition")
+                    .font(.system(size: 22, weight: .semibold))
+                Spacer()
+                Button(action: onShowAll) {
+                    Text("Show All")
+                        .font(.system(size: 15, weight: .regular))
+                        .tracking(-0.1)
+                        .foregroundColor(.accentColor)
+                }
+            }
+
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(cards) { card in
+                    BodyCompositionTrendCard(model: card)
+                }
+            }
+        }
+        .padding(.horizontal)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct BodyCompositionTrendCard: View {
+    let model: BodyCompositionCardModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(model.title)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Text(model.subtitle)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                if model.showsChevron {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Color(.systemGray3))
+                }
+            }
+
+            BodyCompositionSparkline(values: model.values, lineColor: model.color)
+                .frame(height: 32)
+
+            HStack(alignment: .lastTextBaseline) {
+                if let valueText = model.formattedCurrentValue {
+                    HStack(alignment: .lastTextBaseline, spacing: 4) {
+                        Text(valueText)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(.primary)
+                        Text(model.unit)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    Text("--")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Text(model.trendText)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(16)
+        .background(Color("sheetcard"), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.primary.opacity(0.05))
+        )
+    }
+}
+
+private struct BodyCompositionSparkline: View {
+    let values: [Double]
+    let lineColor: Color
+
+    var body: some View {
+        GeometryReader { geometry in
+            let points = makePoints(in: geometry.size)
+            Path { path in
+                guard let first = points.first else {
+                    let y = geometry.size.height / 2
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: y))
+                    return
+                }
+                path.move(to: first)
+                for point in points.dropFirst() {
+                    path.addLine(to: point)
+                }
+            }
+            .stroke(lineColor, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+            .opacity(values.count >= 2 ? 1 : 0.35)
+
+            if values.count >= 2 {
+                ForEach(Array(points.enumerated()), id: \.offset) { item in
+                    Circle()
+                        .fill(lineColor)
+                        .frame(width: 6, height: 6)
+                        .position(item.element)
+                }
+            }
+        }
+    }
+
+    private func makePoints(in size: CGSize) -> [CGPoint] {
+        guard size.width > 0, size.height > 0 else { return [] }
+
+        guard values.count >= 2 else {
+            let y = size.height / 2
+            return [
+                CGPoint(x: 0, y: y),
+                CGPoint(x: size.width, y: y)
+            ]
+        }
+
+        guard let minValue = values.min(), let maxValue = values.max() else {
+            return []
+        }
+        let range = max(maxValue - minValue, 0.001)
+        let stepX = size.width / CGFloat(values.count - 1)
+
+        return values.enumerated().map { index, value in
+            let normalized = (value - minValue) / range
+            let clamped = max(0, min(1, normalized))
+            let x = CGFloat(index) * stepX
+            let y = size.height - CGFloat(clamped) * size.height
+            return CGPoint(x: x, y: y)
+        }
     }
 }
 
