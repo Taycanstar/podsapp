@@ -1439,19 +1439,30 @@ private extension NewHomeView {
         VStack(spacing: 0) {
             TabView(selection: $workoutCarouselSelection) {
                 VStack(spacing: 0) {
-                    TodaysWorkoutCompactCard(
-                        workout: workoutManager.todayWorkout,
-                        title: workoutManager.todayWorkoutDisplayTitle,
-                        goalName: workoutManager.todayWorkout?.fitnessGoal.displayName ?? workoutManager.effectiveFitnessGoal.displayName,
-                        durationMinutes: workoutManager.todayWorkout?.estimatedDuration ?? 0,
-                        intensity: intensityStyle(for: workoutManager.todayWorkout?.difficulty),
-                        loadDescription: loadDescription(for: workoutManager.todayWorkout?.fitnessGoal),
-                        muscles: targetedMuscles(for: workoutManager.todayWorkout),
-                        iconName: workoutManager.todayWorkout.map { workoutIconName(for: $0) } ?? "figure.strengthtraining.traditional",
-                        height: workoutHighlightsCardHeight
-                    )
-                    .padding(.horizontal, 16)
-                    .frame(maxWidth: .infinity)
+                    Button {
+                        HapticFeedback.generate()
+                        workoutSelectedTab = 0
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("ShowWorkoutContainerFromDashboard"),
+                            object: nil,
+                            userInfo: ["selectedTab": workoutSelectedTab]
+                        )
+                    } label: {
+                        TodaysWorkoutCompactCard(
+                            workout: workoutManager.todayWorkout,
+                            title: workoutManager.todayWorkoutDisplayTitle,
+                            goalName: workoutManager.todayWorkout?.fitnessGoal.displayName ?? workoutManager.effectiveFitnessGoal.displayName,
+                            durationMinutes: workoutManager.todayWorkout?.estimatedDuration ?? 0,
+                            intensity: intensityStyle(for: workoutManager.todayWorkout?.difficulty),
+                            loadDescription: loadDescription(for: workoutManager.todayWorkout?.fitnessGoal),
+                            muscles: targetedMuscles(for: workoutManager.todayWorkout),
+                            iconName: workoutManager.todayWorkout.map { workoutIconName(for: $0) } ?? "figure.strengthtraining.traditional",
+                            height: workoutHighlightsCardHeight
+                        )
+                        .padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
 
                     Spacer(minLength: pagerDotPadding)
                 }
