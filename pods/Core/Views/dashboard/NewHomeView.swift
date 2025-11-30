@@ -1202,7 +1202,7 @@ private extension NewHomeView {
         List {
             Section {
                 healthMetricsCard
-                    .padding(.top, 16)
+                    .padding(.top, 10)
                     .padding(.horizontal)
                     .padding(.bottom, 8)
                     .listRowInsets(EdgeInsets())
