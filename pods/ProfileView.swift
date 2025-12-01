@@ -9,6 +9,7 @@ import SwiftUI
 import MessageUI
 import GoogleSignIn
 import Combine
+import UIKit
 
 struct ProfileView: View {
     @Environment(\.colorScheme) var colorScheme
@@ -149,6 +150,12 @@ struct ProfileView: View {
         Section(header: Text("Data Sharing")) {
             NavigationLink(destination: AppleHealthSettingsView()) {
                 Label("Apple Health", systemImage: "heart.text.square")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
+
+            NavigationLink(destination: OuraSettingsView()) {
+                Label("Oura Ring", systemImage: "circle")
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
@@ -652,6 +659,129 @@ struct AppleHealthSettingsView: View {
         if let healthURL = URL(string: "x-apple-health://") {
             UIApplication.shared.open(healthURL)
         }
+    }
+}
+
+struct OuraSettingsView: View {
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @Environment(\.colorScheme) var colorScheme
+    @State private var status: NetworkManagerTwo.OuraStatusResponse?
+    @State private var isLoading = false
+    @State private var syncing = false
+    @State private var alertMessage: String?
+
+    private var isConnected: Bool {
+        status?.connected == true
+    }
+
+    var body: some View {
+        Form {
+            Section(footer: footerText) {
+                HStack {
+                    Text("Status")
+                    Spacer()
+                    Text(isConnected ? "Connected" : "Not Connected")
+                        .foregroundColor(isConnected ? .green : .secondary)
+                }
+
+                if let last = formattedDate(from: status?.lastSyncedAt) {
+                    HStack {
+                        Text("Last Sync")
+                        Spacer()
+                        Text(last)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                if syncing {
+                    HStack {
+                        ProgressView()
+                        Text("Syncing...")
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                if isConnected {
+                    Button(role: .destructive, action: disconnect) {
+                        Text("Disconnect Oura")
+                    }
+                } else {
+                    Button(action: startConnection) {
+                        Label("Connect Oura", systemImage: "link")
+                    }
+                }
+            }
+
+            Section {
+                Button("Refresh Status", action: fetchStatus)
+                    .disabled(isLoading)
+            }
+        }
+        .navigationTitle("Oura")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear(perform: fetchStatus)
+        .onReceive(
+            NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
+        ) { _ in
+            fetchStatus()
+        }
+        .alert(isPresented: Binding(get: { alertMessage != nil }, set: { if !$0 { alertMessage = nil } })) {
+            Alert(title: Text("Oura"), message: Text(alertMessage ?? ""), dismissButton: .default(Text("OK")))
+        }
+    }
+
+    private var footerText: some View {
+        Text("After approving access in your browser, return to Metryc. We'll automatically refresh when you come back.")
+    }
+
+    private func fetchStatus() {
+        guard !viewModel.email.isEmpty else { return }
+        isLoading = true
+        NetworkManagerTwo.shared.fetchOuraStatus(email: viewModel.email) { result in
+            isLoading = false
+            switch result {
+            case .success(let response):
+                status = response
+            case .failure(let error):
+                alertMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func startConnection() {
+        guard !viewModel.email.isEmpty else { return }
+        NetworkManagerTwo.shared.startOuraAuthorization(email: viewModel.email) { result in
+            switch result {
+            case .success(let urlString):
+                if let url = URL(string: urlString) {
+                    UIApplication.shared.open(url)
+                } else {
+                    alertMessage = "Unable to open authorization link."
+                }
+            case .failure(let error):
+                alertMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func disconnect() {
+        guard !viewModel.email.isEmpty else { return }
+        NetworkManagerTwo.shared.disconnectOura(email: viewModel.email) { result in
+            switch result {
+            case .success:
+                status = nil
+            case .failure(let error):
+                alertMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func formattedDate(from isoString: String?) -> String? {
+        guard let isoString, let date = ISO8601DateFormatter().date(from: isoString) else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 

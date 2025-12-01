@@ -189,6 +189,28 @@ class NetworkManagerTwo {
         }
     }
 
+    struct OuraStatusResponse: Codable {
+        let connected: Bool
+        let lastSyncedAt: String?
+        let ouraUserId: String?
+        let scopes: String?
+
+        enum CodingKeys: String, CodingKey {
+            case connected
+            case lastSyncedAt = "last_synced_at"
+            case ouraUserId = "oura_user_id"
+            case scopes
+        }
+    }
+
+    private struct OuraAuthResponse: Codable {
+        let authorizationUrl: String
+
+        enum CodingKeys: String, CodingKey {
+            case authorizationUrl = "authorization_url"
+        }
+    }
+
     struct ExpenditureSnapshot: Codable, Identifiable, Equatable {
         let date: String
         let tdeeCore: Double?
@@ -4041,6 +4063,151 @@ class NetworkManagerTwo {
                 }
             }
         }.resume()
+    }
+
+    // MARK: - Oura Integration
+
+    func fetchOuraStatus(email: String, completion: @escaping (Result<OuraStatusResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/oura/status/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["email": email])
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                do {
+                    let decoded = try JSONDecoder().decode(OuraStatusResponse.self, from: data)
+                    DispatchQueue.main.async { completion(.success(decoded)) }
+                } catch {
+                    DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
+                }
+            } else {
+                let message = self.parseServerError(from: data) ?? "Failed to fetch Oura status"
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: message))) }
+            }
+        }.resume()
+    }
+
+    func startOuraAuthorization(email: String, completion: @escaping (Result<String, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/oura/start/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["email": email])
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                do {
+                    let decoded = try JSONDecoder().decode(OuraAuthResponse.self, from: data)
+                    DispatchQueue.main.async { completion(.success(decoded.authorizationUrl)) }
+                } catch {
+                    DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
+                }
+            } else {
+                let message = self.parseServerError(from: data) ?? "Failed to start Oura authorization"
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: message))) }
+            }
+        }.resume()
+    }
+
+    func disconnectOura(email: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/oura/disconnect/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["email": email])
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                DispatchQueue.main.async { completion(.success(())) }
+            } else {
+                let message = self.parseServerError(from: data) ?? "Failed to disconnect Oura"
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: message))) }
+            }
+        }.resume()
+    }
+
+    func syncOura(email: String, days: Int = 7, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/oura/sync/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let payload: [String: Any] = ["email": email, "days": days]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                DispatchQueue.main.async { completion(.success(())) }
+            } else {
+                let message = self.parseServerError(from: data) ?? "Failed to sync Oura data"
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: message))) }
+            }
+        }.resume()
+    }
+
+    private func parseServerError(from data: Data?) -> String? {
+        guard let data = data,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let errorMessage = json["error"] as? String
+        else { return nil }
+        return errorMessage
     }
 
     // MARK: - Unified Meal and Activity Analysis
