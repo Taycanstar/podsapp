@@ -76,6 +76,7 @@ struct NewHomeView: View {
     @State private var intakeCardHeight: CGFloat = 0
     @State private var weightTrendEntries: [BodyCompositionEntry] = []
     @State private var bodyFatTrendEntries: [BodyCompositionEntry] = []
+    @State private var showHealthMetricsDetail = false
     
     enum LogSortOption: String, CaseIterable {
         case date = "Date"
@@ -596,6 +597,9 @@ private var remainingCal: Double { vm.remainingCalories }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(date: $vm.selectedDate,
                             isPresented: $showDatePicker)
+        }
+        .sheet(isPresented: $showHealthMetricsDetail) {
+            HealthDataDetailView(date: vm.selectedDate)
         }
         .alert("Product Name Required", isPresented: $foodMgr.showNutritionNameInput) {
             TextField("Enter product name", text: $nutritionProductName)
@@ -1317,7 +1321,7 @@ private extension NewHomeView {
     }
     private var dashboardContent: some View {
         ZStack(alignment: .bottom) {
-            Color("sheetbg").ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
             VStack(spacing: 0) {
                 healthSyncFlashBar
@@ -1415,7 +1419,8 @@ private extension NewHomeView {
             workoutHighlightsCarousel
 
             bodyCompositionSection
-                .padding(.top, 8)
+
+            healthMetricsSection
         }
         .padding(.horizontal)
     }
@@ -1494,6 +1499,24 @@ private extension NewHomeView {
         [weightBodyCompositionModel, bodyFatBodyCompositionModel]
     }
 
+    private var healthMetricsSection: some View {
+        HealthMetricsSection(
+            tiles: healthMetricTiles,
+            isAuthorized: healthViewModel.isAuthorized,
+            onShowAll: showAllHealthMetrics
+        )
+        .padding(.top, 10)
+    }
+
+    private var healthMetricTiles: [HealthMetricTileModel] {
+        [
+            heartRateVariabilityTile,
+            restingHeartRateTile,
+            respiratoryRateTile,
+            temperatureTile
+        ]
+    }
+
     private var weightBodyCompositionModel: BodyCompositionCardModel {
         let entries = weightTrendEntries
         let values = entries.map(\.value)
@@ -1503,9 +1526,11 @@ private extension NewHomeView {
         let subtitle = entries.isEmpty ? "No entries yet" : "Last \(entries.count) Entries"
         let fallbackTrend = entries.isEmpty ? "Add a weight log" : "Stable"
 
+        let lastEntryText = formattedLastEntryText(from: entries)
+
         return BodyCompositionCardModel(
             title: "Weight",
-            subtitle: subtitle,
+            subtitle: entries.isEmpty ? subtitle : nil,
             unit: weightUnit,
             values: values,
             currentValue: currentValue,
@@ -1514,7 +1539,8 @@ private extension NewHomeView {
             color: .indigo,
             fallbackTrendText: fallbackTrend,
             trendThreshold: 0.05,
-            showsChevron: true
+            showsChevron: true,
+            lastEntryDescription: lastEntryText
         )
     }
 
@@ -1538,9 +1564,11 @@ private extension NewHomeView {
 
         let delta = entries.count >= 2 ? (entries.last!.value - entries.first!.value) : nil
 
+        let lastEntryText = formattedLastEntryText(from: entries)
+
         return BodyCompositionCardModel(
             title: "Body Fat",
-            subtitle: subtitle,
+            subtitle: entries.isEmpty ? subtitle : (!isHealthAuthorized ? subtitle : nil),
             unit: "%",
             values: values,
             currentValue: entries.last?.value,
@@ -1549,7 +1577,82 @@ private extension NewHomeView {
             color: .indigo,
             fallbackTrendText: fallbackTrend,
             trendThreshold: 0.1,
-            showsChevron: true
+            showsChevron: true,
+            lastEntryDescription: lastEntryText
+        )
+    }
+
+    private var heartRateVariabilityTile: HealthMetricTileModel {
+        let value = (healthViewModel.isAuthorized && healthViewModel.heartRateVariability > 0)
+            ? healthViewModel.heartRateVariability
+            : nil
+        let descriptor = value.flatMap(hrvStatusDescriptor(for:))
+        return HealthMetricTileModel(
+            title: "HRV",
+            valueText: value.map { formatMetricValue($0, decimals: 0) },
+            unit: "ms",
+            status: descriptor?.status,
+            statusText: descriptor?.text,
+            progress: descriptor?.progress,
+            iconName: "waveform.path.ecg"
+        )
+    }
+
+    private var restingHeartRateTile: HealthMetricTileModel {
+        let value = (healthViewModel.isAuthorized && healthViewModel.restingHeartRate > 0)
+            ? healthViewModel.restingHeartRate
+            : nil
+        let descriptor = value.flatMap(restingHeartRateStatus(for:))
+        return HealthMetricTileModel(
+            title: "Resting HR",
+            valueText: value.map { formatMetricValue($0, decimals: 0) },
+            unit: "bpm",
+            status: descriptor?.status,
+            statusText: descriptor?.text,
+            progress: descriptor?.progress,
+            iconName: "heart"
+        )
+    }
+
+    private var respiratoryRateTile: HealthMetricTileModel {
+        let value = healthViewModel.isAuthorized ? healthViewModel.respiratoryRate : nil
+        let descriptor = value.flatMap(respiratoryRateStatus(for:))
+        return HealthMetricTileModel(
+            title: "Respiratory Rate",
+            valueText: value.map { formatMetricValue($0, decimals: 1) },
+            unit: "rpm",
+            status: descriptor?.status,
+            statusText: descriptor?.text,
+            progress: descriptor?.progress,
+            iconName: "wind"
+        )
+    }
+
+    private var temperatureTile: HealthMetricTileModel {
+        guard healthViewModel.isAuthorized, let raw = healthViewModel.bodyTemperature else {
+            return HealthMetricTileModel(
+                title: "Temperature",
+                valueText: nil,
+                unit: "°",
+                status: nil,
+                statusText: nil,
+                progress: nil,
+                iconName: "thermometer"
+            )
+        }
+
+        let delta = raw - 36.7
+        let descriptor = temperatureStatus(for: delta)
+        let valueText = String(format: delta >= 0 ? "+%.1f" : "%.1f", delta)
+
+        return HealthMetricTileModel(
+            title: "Temperature",
+            valueText: valueText,
+            unit: "°",
+            status: descriptor.status,
+            statusText: descriptor.text,
+            progress: descriptor.progress,
+            iconName: "thermometer"
         )
     }
 
@@ -2759,9 +2862,84 @@ private struct RecoveryRingView: View {
         }
     }
 
+    private func formattedLastEntryText(from entries: [BodyCompositionEntry]) -> String? {
+        guard let lastDate = entries.last?.date else { return nil }
+        let calendar = Calendar.current
+
+        if calendar.isDateInToday(lastDate) {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "h:mm a"
+            return formatter.string(from: lastDate)
+        }
+
+        if calendar.isDateInYesterday(lastDate) {
+            return "Yesterday"
+        }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: lastDate)
+    }
+
     private func showAllBodyComposition() {
         HapticFeedback.generate()
         vm.navigateToWeightData = true
+    }
+
+    private func showAllHealthMetrics() {
+        HapticFeedback.generate()
+        showHealthMetricsDetail = true
+    }
+
+    private func formatMetricValue(_ value: Double, decimals: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.minimumFractionDigits = decimals
+        formatter.maximumFractionDigits = decimals
+        formatter.numberStyle = .decimal
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.\(decimals)f", value)
+    }
+
+    private func hrvStatusDescriptor(for value: Double) -> HealthMetricStatusDescriptor {
+        if value >= 70 {
+            return HealthMetricStatusDescriptor(status: .normal, text: "Stable", progress: min(value / 120.0, 1.0))
+        } else if value >= 50 {
+            return HealthMetricStatusDescriptor(status: .elevated, text: "Slight dip", progress: max(value / 120.0, 0.5))
+        } else {
+            return HealthMetricStatusDescriptor(status: .low, text: "Needs recovery", progress: max(value / 120.0, 0.25))
+        }
+    }
+
+    private func restingHeartRateStatus(for value: Double) -> HealthMetricStatusDescriptor {
+        if value < 50 {
+            return HealthMetricStatusDescriptor(status: .normal, text: "Excellent", progress: 0.9)
+        } else if value <= 65 {
+            return HealthMetricStatusDescriptor(status: .normal, text: "Stable", progress: 0.75)
+        } else if value <= 80 {
+            return HealthMetricStatusDescriptor(status: .elevated, text: "Slightly elevated", progress: 0.45)
+        } else {
+            return HealthMetricStatusDescriptor(status: .elevated, text: "High", progress: 0.3)
+        }
+    }
+
+    private func respiratoryRateStatus(for value: Double) -> HealthMetricStatusDescriptor {
+        if value < 11 {
+            return HealthMetricStatusDescriptor(status: .low, text: "Below average", progress: max(value / 25.0, 0.2))
+        } else if value <= 20 {
+            return HealthMetricStatusDescriptor(status: .normal, text: "Normal", progress: min(value / 25.0, 1.0))
+        } else {
+            return HealthMetricStatusDescriptor(status: .elevated, text: "Slightly elevated", progress: min(value / 25.0, 1.0))
+        }
+    }
+
+    private func temperatureStatus(for delta: Double) -> HealthMetricStatusDescriptor {
+        let magnitude = min(abs(delta) / 1.5, 1.0)
+        if abs(delta) < 0.3 {
+            return HealthMetricStatusDescriptor(status: .normal, text: "Stable", progress: 0.5)
+        } else if delta > 0 {
+            return HealthMetricStatusDescriptor(status: .elevated, text: "Above average", progress: magnitude)
+        } else {
+            return HealthMetricStatusDescriptor(status: .low, text: "Below average", progress: magnitude)
+        }
     }
 
     // Remaining calories card
@@ -3200,6 +3378,53 @@ private struct BodyCompositionEntry: Identifiable {
     let date: Date
 }
 
+private struct HealthMetricTileModel: Identifiable {
+    let id = UUID()
+    let title: String
+    let valueText: String?
+    let unit: String
+    let status: HealthMetricStatus?
+    let statusText: String?
+    let progress: Double?
+    let iconName: String
+
+    var isEmpty: Bool { valueText == nil }
+}
+
+private struct HealthMetricStatusDescriptor {
+    let status: HealthMetricStatus
+    let text: String
+    let progress: Double
+}
+
+private enum HealthMetricStatus {
+    case normal
+    case elevated
+    case low
+
+    var color: Color {
+        switch self {
+        case .normal:
+            return Color(red: 0.2, green: 0.82, blue: 0.35)
+        case .elevated:
+            return Color("darkYellow")
+        case .low:
+            return Color(red: 1.0, green: 0.18, blue: 0.33)
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .normal:
+            return "checkmark"
+        case .elevated:
+            return "arrow.up"
+        case .low:
+            return "arrow.down"
+        }
+    }
+}
+
 private struct BodyCompositionCardModel: Identifiable {
     enum TrendDirection {
         case up, down, stable
@@ -3207,7 +3432,7 @@ private struct BodyCompositionCardModel: Identifiable {
 
     let id = UUID()
     let title: String
-    let subtitle: String
+    let subtitle: String?
     let unit: String
     let values: [Double]
     let currentValue: Double?
@@ -3217,6 +3442,7 @@ private struct BodyCompositionCardModel: Identifiable {
     let fallbackTrendText: String
     let trendThreshold: Double
     let showsChevron: Bool
+    let lastEntryDescription: String?
 
     var trendDirection: TrendDirection {
         guard let delta else { return .stable }
@@ -3287,35 +3513,48 @@ private struct BodyCompositionTrendCard: View {
     let model: BodyCompositionCardModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(model.title)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.primary)
-                    Text(model.subtitle)
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                }
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(model.title)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+
                 Spacer()
-                if model.showsChevron {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color(.systemGray3))
+
+                HStack(spacing: 4) {
+                    if let lastEntryDescription = model.lastEntryDescription {
+                        Text(lastEntryDescription)
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
+
+                    if model.showsChevron {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(Color(.systemGray3))
+                    }
                 }
+            }
+            .padding(.bottom, 14)
+
+            if let subtitle = model.subtitle {
+                Text(subtitle)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
             }
 
             BodyCompositionSparkline(values: model.values, lineColor: model.color)
-                .frame(height: 32)
+                .frame(height: 20)
 
             HStack(alignment: .lastTextBaseline) {
                 if let valueText = model.formattedCurrentValue {
-                    HStack(alignment: .lastTextBaseline, spacing: 4) {
+                    HStack(alignment: .lastTextBaseline, spacing: 0) {
                         Text(valueText)
-                            .font(.system(size: 22, weight: .semibold))
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
                             .foregroundColor(.primary)
+
                         Text(model.unit)
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
                             .foregroundColor(.secondary)
                     }
                 } else {
@@ -3330,8 +3569,10 @@ private struct BodyCompositionTrendCard: View {
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
             }
+            .padding(.top, 2)
         }
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .background(Color("sheetcard"), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -3397,6 +3638,136 @@ private struct BodyCompositionSparkline: View {
             let y = size.height - CGFloat(clamped) * size.height
             return CGPoint(x: x, y: y)
         }
+    }
+}
+
+private struct HealthMetricsSection: View {
+    let tiles: [HealthMetricTileModel]
+    let isAuthorized: Bool
+    let onShowAll: () -> Void
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("Health Metrics")
+                    .font(.system(size: 22, weight: .semibold))
+                Spacer()
+                Button(action: onShowAll) {
+                    Text("Show All")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.accentColor)
+                }
+            }
+
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(tiles) { tile in
+                    HealthMetricTileView(model: tile, isAuthorized: isAuthorized)
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+private struct HealthMetricTileView: View {
+    let model: HealthMetricTileModel
+    let isAuthorized: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: model.iconName)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.primary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(model.title)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                if let valueText = model.valueText {
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(valueText)
+                            .font(.system(size: 20, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                        if !model.unit.isEmpty {
+                            Text(model.unit)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } else {
+                    Text("--")
+                        .font(.system(size: 20, weight: .semibold, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+
+                if let status = model.status, let text = model.statusText, !model.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: status.iconName)
+                            .font(.system(size: 10, weight: .bold))
+                        Text(text)
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(status.color)
+                } else {
+                    Text(isAuthorized ? "No data" : "Connect Apple Health")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            HealthMetricProgressBar(progress: model.progress, status: model.status, isEmpty: model.isEmpty)
+        }
+        .padding(12)
+        .background(Color("sheetcard"), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.05))
+        )
+    }
+}
+
+private struct HealthMetricProgressBar: View {
+    let progress: Double?
+    let status: HealthMetricStatus?
+    let isEmpty: Bool
+
+    var body: some View {
+        GeometryReader { geo in
+            RoundedRectangle(cornerRadius: geo.size.width / 2)
+                .fill(Color(.systemGray5))
+
+            if let progress, !isEmpty {
+                let clamped = max(0, min(progress, 1))
+                let fillHeight = max(geo.size.height * CGFloat(clamped), 4)
+                RoundedRectangle(cornerRadius: geo.size.width / 2)
+                    .fill(status?.color ?? .accentColor)
+                    .frame(height: fillHeight)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+
+                let circleSize: CGFloat = 12
+                let yPosition = geo.size.height - fillHeight + circleSize / 2
+
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: circleSize, height: circleSize)
+                    .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.black.opacity(0.05))
+                    )
+                    .position(x: geo.size.width / 2, y: max(circleSize / 2, min(geo.size.height - circleSize / 2, yPosition)))
+            }
+        }
+        .frame(width: 6, height: 50)
     }
 }
 
