@@ -21,8 +21,8 @@ final class HealthKitViewModel: ObservableObject {
     @Published var distance: Double = 0
     @Published var recentWorkouts: [HKWorkout] = []
     @Published var nutritionData: [HKQuantityTypeIdentifier: Double] = [:]
-    @Published var restingHeartRate: Double = 0
-    @Published var heartRateVariability: Double = 0
+    @Published var restingHeartRate: Double?
+    @Published var heartRateVariability: Double?
     @Published var walkingHeartRateAverage: Double = 0
     
     // Height and weight properties
@@ -362,11 +362,7 @@ final class HealthKitViewModel: ObservableObject {
                 defer { group.leave() }
                 guard let self else { return }
 
-                if let value = value {
-                    self.restingHeartRate = value
-                } else {
-                    self.restingHeartRate = 0
-                }
+                self.restingHeartRate = value
                 if let error = error {
                     self.error = error
                 }
@@ -379,11 +375,7 @@ final class HealthKitViewModel: ObservableObject {
                 defer { group.leave() }
                 guard let self else { return }
 
-                if let value = value {
-                    self.heartRateVariability = value
-                } else {
-                    self.heartRateVariability = 0
-                }
+                self.heartRateVariability = value
                 if let error = error {
                     self.error = error
                 }

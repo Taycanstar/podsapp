@@ -348,8 +348,8 @@ final class AgentMetricsUploader {
         guard let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty else { return }
 
         let sleepTotal = Double(healthVM.sleepHours) + Double(healthVM.sleepMinutes) / 60.0
-        let restingHR: Double? = healthVM.restingHeartRate > 0 ? healthVM.restingHeartRate : nil
-        let hrvScore: Double? = healthVM.heartRateVariability > 0 ? healthVM.heartRateVariability : nil
+        let restingHR: Double? = healthVM.restingHeartRate
+        let hrvScore: Double? = healthVM.heartRateVariability
         let walkingHR: Double? = healthVM.walkingHeartRateAverage > 0 ? healthVM.walkingHeartRateAverage : nil
 
         let payload = AgentDailyMetricsPayload(

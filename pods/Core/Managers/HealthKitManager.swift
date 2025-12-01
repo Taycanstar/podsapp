@@ -83,6 +83,8 @@ class HealthKitManager {
         return HKHealthStore.isHealthDataAvailable()
     }
     
+    private let preferredReadinessSources = ["oura"]
+    
     // Check if user has authorized HealthKit access
     var isAuthorized: Bool {
         guard HKHealthStore.isHealthDataAvailable() else { return false }
@@ -959,7 +961,11 @@ class HealthKitManager {
             return
         }
         let bpmUnit = HKUnit.count().unitDivided(by: HKUnit.minute())
-        fetchAverageQuantity(type: type, unit: bpmUnit, date: date, completion: completion)
+        fetchLatestQuantity(type: type,
+                            unit: bpmUnit,
+                            predicate: createOvernightPredicate(for: date),
+                            preferredSources: preferredReadinessSources,
+                            completion: completion)
     }
 
     func fetchHeartRateVariability(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
@@ -968,7 +974,11 @@ class HealthKitManager {
             return
         }
         let unit = HKUnit.secondUnit(with: .milli)
-        fetchAverageQuantity(type: type, unit: unit, date: date, completion: completion)
+        fetchLatestQuantity(type: type,
+                            unit: unit,
+                            predicate: createOvernightPredicate(for: date),
+                            preferredSources: preferredReadinessSources,
+                            completion: completion)
     }
 
     func fetchWalkingHeartRateAverage(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
@@ -986,16 +996,53 @@ class HealthKitManager {
             return
         }
         let unit = HKUnit.count().unitDivided(by: HKUnit.minute())
-        fetchAverageQuantity(type: type, unit: unit, date: date, completion: completion)
+        fetchLatestQuantity(type: type,
+                            unit: unit,
+                            predicate: createOvernightPredicate(for: date),
+                            preferredSources: preferredReadinessSources,
+                            completion: completion)
     }
 
     func fetchBodyTemperature(for date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        let predicate = createOvernightPredicate(for: date)
+        let unit = HKUnit.degreeCelsius()
+
+        if #available(iOS 17.0, *),
+           let wristType = HKQuantityType.quantityType(forIdentifier: .appleSleepingWristTemperature) {
+            fetchLatestQuantity(type: wristType,
+                                unit: unit,
+                                predicate: predicate,
+                                preferredSources: preferredReadinessSources) { value, error in
+                if let value = value {
+                    completion(value, nil)
+                } else if let error = error {
+                    completion(nil, error)
+                } else {
+                    self.fetchLegacyBodyTemperature(unit: unit, predicate: predicate, completion: completion)
+                }
+            }
+        } else {
+            fetchLegacyBodyTemperature(unit: unit, predicate: predicate, completion: completion)
+        }
+    }
+
+    private func fetchLegacyBodyTemperature(unit: HKUnit,
+                                            predicate: NSPredicate,
+                                            completion: @escaping (Double?, Error?) -> Void) {
         guard let type = HKQuantityType.quantityType(forIdentifier: .bodyTemperature) else {
             completion(nil, NSError(domain: "HealthKitManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Body temperature not available"]))
             return
         }
-        let unit = HKUnit.degreeCelsius()
-        fetchAverageQuantity(type: type, unit: unit, date: date, completion: completion)
+        fetchLatestQuantity(type: type,
+                            unit: unit,
+                            predicate: predicate,
+                            preferredSources: preferredReadinessSources) { value, error in
+            if let value = value {
+                completion(value - 36.7, nil)
+            } else {
+                completion(value, error)
+            }
+        }
     }
     
     // MARK: - Helper Methods
@@ -1035,5 +1082,49 @@ class HealthKitManager {
 
         healthStore.execute(query)
     }
+
+    private func fetchLatestQuantity(
+        type: HKQuantityType,
+        unit: HKUnit,
+        predicate: NSPredicate?,
+        preferredSources: [String]? = nil,
+        completion: @escaping (Double?, Error?) -> Void
+    ) {
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let limit = preferredSources == nil ? 1 : 20
+        let query = HKSampleQuery(sampleType: type,
+                                  predicate: predicate,
+                                  limit: limit,
+                                  sortDescriptors: [sort]) { _, samples, error in
+            if let error = error {
+                completion(nil, error)
+                return
+            }
+
+            guard let samples = samples as? [HKQuantitySample], !samples.isEmpty else {
+                completion(nil, nil)
+                return
+            }
+
+            let match = preferredSources.flatMap { preferred -> HKQuantitySample? in
+                let lowerPreferred = preferred.map { $0.lowercased() }
+                return samples.first { sample in
+                    let sourceName = sample.sourceRevision.source.name.lowercased()
+                    return lowerPreferred.contains(where: { sourceName.contains($0) })
+                }
+            } ?? samples.first
+
+            completion(match?.quantity.doubleValue(for: unit), nil)
+        }
+
+        healthStore.execute(query)
+    }
+
+    private func createOvernightPredicate(for date: Date) -> NSPredicate {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let start = calendar.date(byAdding: .hour, value: -18, to: startOfDay) ?? startOfDay.addingTimeInterval(-18 * 3600)
+        let end = calendar.date(byAdding: .hour, value: 12, to: startOfDay) ?? startOfDay.addingTimeInterval(12 * 3600)
+        return HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+    }
 }
- 

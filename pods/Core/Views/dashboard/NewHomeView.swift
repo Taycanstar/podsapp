@@ -1583,9 +1583,7 @@ private extension NewHomeView {
     }
 
     private var heartRateVariabilityTile: HealthMetricTileModel {
-        let value = (healthViewModel.isAuthorized && healthViewModel.heartRateVariability > 0)
-            ? healthViewModel.heartRateVariability
-            : nil
+        let value = healthViewModel.isAuthorized ? healthViewModel.heartRateVariability : nil
         let descriptor = value.flatMap(hrvStatusDescriptor(for:))
         return HealthMetricTileModel(
             title: "HRV",
@@ -1599,9 +1597,7 @@ private extension NewHomeView {
     }
 
     private var restingHeartRateTile: HealthMetricTileModel {
-        let value = (healthViewModel.isAuthorized && healthViewModel.restingHeartRate > 0)
-            ? healthViewModel.restingHeartRate
-            : nil
+        let value = healthViewModel.isAuthorized ? healthViewModel.restingHeartRate : nil
         let descriptor = value.flatMap(restingHeartRateStatus(for:))
         return HealthMetricTileModel(
             title: "Resting HR",
@@ -1629,7 +1625,7 @@ private extension NewHomeView {
     }
 
     private var temperatureTile: HealthMetricTileModel {
-        guard healthViewModel.isAuthorized, let raw = healthViewModel.bodyTemperature else {
+        guard healthViewModel.isAuthorized, let delta = healthViewModel.bodyTemperature else {
             return HealthMetricTileModel(
                 title: "Temperature",
                 valueText: nil,
@@ -1641,7 +1637,6 @@ private extension NewHomeView {
             )
         }
 
-        let delta = raw - 36.7
         let descriptor = temperatureStatus(for: delta)
         let valueText = String(format: delta >= 0 ? "+%.1f" : "%.1f", delta)
 
