@@ -62,6 +62,7 @@ struct podsApp: App {
 
     // CRITICAL FIX: Prevent data architecture from reinitializing on every resume
     @State private var hasInitializedDataArchitecture = false
+    @State private var hasLoggedOuraStatus = false
 
     var body: some Scene {
         WindowGroup {
@@ -113,6 +114,11 @@ struct podsApp: App {
                         dayLogs: dayLogsVM,
                         subscriptionManager: subscriptionManager
                     )
+
+                    if !hasLoggedOuraStatus {
+                        hasLoggedOuraStatus = true
+                        logOuraStatusOnStartup()
+                    }
                 }
                 .onChange(of: scenePhase) { newPhase in
                     if newPhase == .active {
@@ -165,6 +171,41 @@ struct podsApp: App {
 
             // REMOVED: Demo operations that were adding fake sync work on every init
             // This was causing unnecessary notification storms on app resume
+        }
+    }
+
+    /// Fetch and log Oura connection status once per launch to verify backend data
+    private func logOuraStatusOnStartup() {
+        let resolvedEmail: String?
+        if !onboardingViewModel.email.isEmpty {
+            resolvedEmail = onboardingViewModel.email
+        } else if let stored = UserDefaults.standard.string(forKey: "userEmail"), !stored.isEmpty {
+            resolvedEmail = stored
+        } else {
+            resolvedEmail = nil
+        }
+
+        guard let email = resolvedEmail else {
+            print("ℹ️ OuraStatus: Skipping fetch because no authenticated user was found")
+            return
+        }
+
+        print("🔍 OuraStatus: Fetching remote state for \(email)")
+        NetworkManagerTwo.shared.fetchOuraStatus(email: email) { result in
+            switch result {
+            case .success(let status):
+                print("✅ OuraStatus: connected=\(status.connected) userId=\(status.ouraUserId ?? "nil")")
+                if let lastSynced = status.lastSyncedAt {
+                    print("   └── lastSyncedAt=\(lastSynced)")
+                } else {
+                    print("   └── lastSyncedAt=nil")
+                }
+                if let scopes = status.scopes, !scopes.isEmpty {
+                    print("   └── scopes=\(scopes)")
+                }
+            case .failure(let error):
+                print("❌ OuraStatus: Failed to fetch status for \(email) - \(error.localizedDescription)")
+            }
         }
     }
     

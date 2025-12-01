@@ -159,6 +159,12 @@ struct ProfileView: View {
                     .foregroundColor(iconColor)
             }
             .listRowBackground(rowBackgroundColor)
+
+            NavigationLink(destination: DataSourcesView()) {
+                Label("Data Sources", systemImage: "square.3.layers.3d")
+                    .foregroundColor(iconColor)
+            }
+            .listRowBackground(rowBackgroundColor)
         }
     }
 
@@ -667,7 +673,6 @@ struct OuraSettingsView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var status: NetworkManagerTwo.OuraStatusResponse?
     @State private var isLoading = false
-    @State private var syncing = false
     @State private var alertMessage: String?
 
     private var isConnected: Bool {
@@ -689,14 +694,6 @@ struct OuraSettingsView: View {
                         Text("Last Sync")
                         Spacer()
                         Text(last)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                if syncing {
-                    HStack {
-                        ProgressView()
-                        Text("Syncing...")
                             .foregroundColor(.secondary)
                     }
                 }
@@ -783,6 +780,314 @@ struct OuraSettingsView: View {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
+}
+
+// MARK: - Data Sources
+
+struct DataSourcesView: View {
+    private static let lastOuraStatusKey = "data_sources_last_oura_status"
+
+    @EnvironmentObject var viewModel: OnboardingViewModel
+    @State private var metricSelections: [MetricSelection] = MetricType.allCases.map { MetricSelection(metric: $0) }
+    @State private var isOuraConnected = UserDefaults.standard.bool(forKey: DataSourcesView.lastOuraStatusKey)
+    @State private var isLoading = false
+    @State private var alertMessage: String?
+
+    var body: some View {
+        List {
+            Text("Choose which device or service should be treated as the default source for each metric.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+
+            ForEach(metricSelections) { selection in
+                Section(header: MetricHeaderView(metric: selection.metric)) {
+                    NavigationLink(destination: MetricSourcePickerView(
+                        metric: selection.metric,
+                        availableSources: availableSources(for: selection.metric),
+                        selectedSourceID: selection.selectedSource?.id,
+                        onSelect: { option in
+                            setSelection(option, for: selection.metric)
+                        }
+                    )) {
+                        MetricSourceSummaryView(selection: selection)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Data Sources")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear(perform: loadData)
+        .alert(isPresented: Binding(get: { alertMessage != nil }, set: { if !$0 { alertMessage = nil } })) {
+            Alert(title: Text("Data Sources"), message: Text(alertMessage ?? ""), dismissButton: .default(Text("OK")))
+        }
+    }
+
+    private func loadData() {
+        isOuraConnected = UserDefaults.standard.bool(forKey: Self.lastOuraStatusKey)
+        loadSelections()
+        fetchOuraStatus()
+    }
+
+    private func fetchOuraStatus() {
+        guard !viewModel.email.isEmpty else { return }
+        isLoading = true
+        NetworkManagerTwo.shared.fetchOuraStatus(email: viewModel.email) { result in
+            isLoading = false
+            switch result {
+            case .success(let response):
+                isOuraConnected = response.connected
+                UserDefaults.standard.set(response.connected, forKey: Self.lastOuraStatusKey)
+                loadSelections()
+            case .failure(let error):
+                alertMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func loadSelections() {
+        metricSelections = MetricType.allCases.map { metric in
+            let savedID = UserDefaults.standard.string(forKey: metric.storageKey)
+            let options = availableSources(for: metric)
+            let option = options.first(where: { $0.id == savedID }) ?? options.first
+            return MetricSelection(metric: metric, selectedSource: option)
+        }
+    }
+
+    private func setSelection(_ option: DataSourceOption?, for metric: MetricType) {
+        if let option {
+            UserDefaults.standard.set(option.id, forKey: metric.storageKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: metric.storageKey)
+        }
+
+        loadSelections()
+    }
+
+    private func availableSources(for metric: MetricType) -> [DataSourceOption] {
+        var options: [DataSourceOption] = []
+
+        if metric.supportsOura && isOuraConnected {
+            options.append(.oura)
+        }
+
+        if metric.supportsAppleHealth {
+            options.append(.appleHealth)
+        }
+
+        if metric.supportsManualEntry {
+            options.append(.manual)
+        }
+
+        return options
+    }
+}
+
+private struct MetricSelection: Identifiable {
+    let metric: MetricType
+    var selectedSource: DataSourceOption?
+
+    var id: String { metric.rawValue }
+}
+
+private struct MetricSourceSummaryView: View {
+    let selection: MetricSelection
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(selection.selectedSource?.title ?? "No source selected")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.primary)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct MetricSourcePickerView: View {
+    let metric: MetricType
+    let availableSources: [DataSourceOption]
+    let selectedSourceID: String?
+    let onSelect: (DataSourceOption?) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        List {
+            if availableSources.isEmpty {
+                Text("No data available")
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(availableSources) { option in
+                    Button(action: {
+                        onSelect(option)
+                        dismiss()
+                    }) {
+                        HStack {
+                            Image(systemName: option.icon)
+                                .foregroundColor(.accentColor)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(option.title)
+                                    .foregroundColor(.primary)
+                                if let subtitle = option.subtitle {
+                                    Text(subtitle)
+                                        .font(.footnote)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            Spacer()
+                            if option.id == selectedSourceID {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                    }
+                }
+
+                Button("Clear Selection", role: .cancel) {
+                    onSelect(nil)
+                    dismiss()
+                }
+            }
+        }
+        .navigationTitle(metric.displayName)
+    }
+}
+
+private enum MetricType: String, CaseIterable {
+    case restingEnergy
+    case activeEnergy
+    case sleep
+    case heartRate
+    case hrv
+    case bloodOxygen
+    case respiratoryRate
+    case vo2Max
+    case wristTemperature
+    case restingHeartRate
+    case workouts
+    case water
+    case weight
+
+    var displayName: String {
+        switch self {
+        case .restingEnergy: return "Resting Energy"
+        case .activeEnergy: return "Active Energy"
+        case .sleep: return "Sleep"
+        case .heartRate: return "Heart Rate"
+        case .hrv: return "Heart Rate Variability"
+        case .bloodOxygen: return "Blood Oxygen"
+        case .respiratoryRate: return "Respiratory Rate"
+        case .vo2Max: return "VO₂ Max"
+        case .wristTemperature: return "Wrist Temperature"
+        case .restingHeartRate: return "Resting Heart Rate"
+        case .workouts: return "Workouts"
+        case .water: return "Water"
+        case .weight: return "Weight"
+        }
+    }
+
+    var storageKey: String { "metric_source_\(rawValue)" }
+
+    var supportsManualEntry: Bool {
+        switch self {
+        case .water, .weight:
+            return true
+        default:
+            return false
+        }
+    }
+
+    var supportsOura: Bool {
+        switch self {
+        case .water, .weight:
+            return false
+        default:
+            return true
+        }
+    }
+
+    var supportsAppleHealth: Bool {
+        switch self {
+        case .water:
+            return false
+        default:
+            return true
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .restingEnergy, .activeEnergy:
+            return "arrow.triangle.swap"
+        case .sleep:
+            return "moon.fill"
+        case .heartRate:
+            return "heart.fill"
+        case .hrv:
+            return "waveform.path.ecg"
+        case .bloodOxygen:
+            return "drop.degreesign"
+        case .respiratoryRate, .vo2Max:
+            return "lungs.fill"
+        case .wristTemperature:
+            return "thermometer.medium"
+        case .restingHeartRate:
+            return "heart"
+        case .workouts:
+            return "figure.run"
+        case .water:
+            return "drop.fill"
+        case .weight:
+            return "scalemass.fill"
+        }
+    }
+
+    var iconColor: Color {
+        switch self {
+        case .restingEnergy:
+            return .pink
+        case .activeEnergy:
+            return .orange
+        case .sleep:
+            return .indigo
+        case .heartRate, .restingHeartRate:
+            return .red
+        case .hrv:
+            return .red
+        case .bloodOxygen, .respiratoryRate, .vo2Max:
+            return .blue
+        case .wristTemperature:
+            return .orange
+        case .workouts:
+            return .green
+        case .water:
+            return .blue
+        case .weight:
+            return .indigo
+        }
+    }
+}
+
+private struct MetricHeaderView: View {
+    let metric: MetricType
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: metric.icon)
+                .foregroundColor(metric.iconColor)
+            Text(metric.displayName.uppercased())
+        }
+        .font(.caption.weight(.semibold))
+    }
+}
+
+private struct DataSourceOption: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let subtitle: String?
+    let icon: String
+
+    static let appleHealth = DataSourceOption(id: "apple_health", title: "Apple Health", subtitle: "Default device", icon: "heart.text.square")
+    static let oura = DataSourceOption(id: "oura", title: "Oura Ring", subtitle: nil, icon: "circle")
+    static let manual = DataSourceOption(id: "manual", title: "Manual", subtitle: "User-entered data", icon: "pencil")
 }
 
 struct MyTeamsView: View {
