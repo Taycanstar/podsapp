@@ -1,6 +1,7 @@
 import SwiftUI
 import HealthKit
 import Combine
+import Charts
 
 struct NewHomeView: View {
     @Binding var agentText: String
@@ -458,6 +459,15 @@ private var remainingCal: Double { vm.remainingCalories }
         switch onboarding.unitsSystem {
         case .imperial:
             return "lb"
+        case .metric:
+            return "kg"
+        }
+    }
+    
+    private var weightUnitDisplay: String {
+        switch onboarding.unitsSystem {
+        case .imperial:
+            return "lbs"
         case .metric:
             return "kg"
         }
@@ -1430,6 +1440,14 @@ private extension NewHomeView {
                 onShowAll: {}
             )
             .padding(.top, 20)
+
+            if !analyticsCardModels.isEmpty {
+                AnalyticsInsightsSection(
+                    cards: analyticsCardModels,
+                    onShowAll: {}
+                )
+                .padding(.top, 20)
+            }
         }
         .padding(.horizontal)
     }
@@ -1506,6 +1524,17 @@ private extension NewHomeView {
 
     private var bodyCompositionCardModels: [BodyCompositionCardModel] {
         [weightBodyCompositionModel, bodyFatBodyCompositionModel]
+    }
+
+    private var analyticsCardModels: [AnalyticsCardModel] {
+        var models: [AnalyticsCardModel] = []
+        if let expenditure = expenditureAnalyticsCard {
+            models.append(expenditure)
+        }
+        if let weightTrend = weightTrendAnalyticsCard {
+            models.append(weightTrend)
+        }
+        return models
     }
 
     private var healthMetricsSection: some View {
@@ -1588,6 +1617,61 @@ private extension NewHomeView {
             trendThreshold: 0.1,
             showsChevron: true,
             lastEntryDescription: lastEntryText
+        )
+    }
+
+    private var expenditureAnalyticsCard: AnalyticsCardModel? {
+        let sortedSnapshots = vm.expenditureHistory
+            .compactMap { snapshot -> (Date, Double)? in
+                guard let date = snapshot.dateValue else { return nil }
+                let expenditure = snapshot.tdeeDisplay ?? snapshot.impliedExpenditure ?? snapshot.tdeeCore
+                guard let expenditure else { return nil }
+                return (date, expenditure)
+            }
+            .sorted { $0.0 < $1.0 }
+
+        let recent = Array(sortedSnapshots.suffix(7))
+        guard !recent.isEmpty else { return nil }
+        let values = recent.map { $0.1 }
+        guard let latest = values.last else { return nil }
+
+        return AnalyticsCardModel(
+            title: "Expenditure",
+            subtitle: "Past Week",
+            valueText: analyticsFormattedValue(latest, decimals: 0),
+            unit: "cals",
+            dataPoints: values,
+            lineColor: .pink,
+            tintColor: .pink
+        )
+    }
+
+    private var weightTrendAnalyticsCard: AnalyticsCardModel? {
+        let snapshotValues = vm.expenditureHistory
+            .compactMap { snapshot -> (Date, Double)? in
+                guard let date = snapshot.dateValue,
+                      let trendKg = snapshot.trendWeightKg else { return nil }
+                return (date, convertWeightToDisplayUnit(trendKg))
+            }
+            .sorted { $0.0 < $1.0 }
+
+        var values = Array(snapshotValues.suffix(7)).map { $0.1 }
+
+        if values.isEmpty {
+            values = Array(weightTrendEntries.suffix(7)).map { $0.value }
+        }
+
+        guard !values.isEmpty else { return nil }
+        let latest = values.last ?? 0
+
+        return AnalyticsCardModel(
+            title: "Weight Trend",
+            subtitle: "Past Week",
+            valueText: analyticsFormattedValue(latest, decimals: 1),
+            unit: weightUnitDisplay,
+            dataPoints: values,
+            lineColor: .pink,
+            tintColor: .pink
         )
     }
 
@@ -2869,6 +2953,14 @@ private struct RecoveryRingView: View {
             return weightKg
         }
     }
+    
+    private func analyticsFormattedValue(_ value: Double, decimals: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = decimals
+        formatter.maximumFractionDigits = decimals
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%0.*f", decimals, value)
+    }
 
     private func formattedLastEntryText(from entries: [BodyCompositionEntry]) -> String? {
         guard let lastDate = entries.last?.date else { return nil }
@@ -3620,10 +3712,6 @@ private struct HabitConsistencyCard: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color("sheetcard"))
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.primary.opacity(0.05))
-        )
     }
 
     private func color(for intensity: Int) -> Color {
@@ -3643,6 +3731,122 @@ private struct HabitConsistencyPalette {
 
     static let weighIn = HabitConsistencyPalette(base: .indigo)
     static let foodLogging = HabitConsistencyPalette(base: .green)
+}
+
+private struct AnalyticsCardModel: Identifiable {
+    let id = UUID()
+    let title: String
+    let subtitle: String
+    let valueText: String
+    let unit: String
+    let dataPoints: [Double]
+    let lineColor: Color
+    let tintColor: Color
+}
+
+private struct AnalyticsInsightsSection: View {
+    let cards: [AnalyticsCardModel]
+    var onShowAll: () -> Void
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Analytics & Insights")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.primary)
+                Spacer()
+                Button(action: onShowAll) {
+                    Text("Show All")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.accentColor)
+                }
+            }
+
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(cards) { card in
+                    AnalyticsCardView(model: card)
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+private struct AnalyticsCardView: View {
+    let model: AnalyticsCardModel
+
+    private var points: [AnalyticsDataPoint] {
+        model.dataPoints.enumerated().map { AnalyticsDataPoint(index: $0.offset, value: $0.element) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Text(model.title)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+
+            Text(model.subtitle)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+                .padding(.bottom, 10)
+
+            Chart(points) { point in
+                LineMark(
+                    x: .value("Index", point.index),
+                    y: .value("Value", point.value)
+                )
+                .interpolationMethod(.monotone)
+                .foregroundStyle(model.lineColor)
+                .lineStyle(StrokeStyle(lineWidth: 2))
+
+                PointMark(
+                    x: .value("Index", point.index),
+                    y: .value("Value", point.value)
+                )
+                .symbolSize(20)
+                .foregroundStyle(model.lineColor)
+            }
+            .frame(height: 28)
+            .chartXAxis(.hidden)
+            .chartYAxis(.hidden)
+            .chartLegend(.hidden)
+
+            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                Text(model.valueText)
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+
+                Text(model.unit)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.top, 6)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color("sheetcard"))
+        )
+    }
+}
+
+private struct AnalyticsDataPoint: Identifiable {
+    let index: Int
+    let value: Double
+    var id: Int { index }
 }
 
 private struct BodyCompositionTrendCard: View {
@@ -3710,10 +3914,6 @@ private struct BodyCompositionTrendCard: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color("sheetcard"), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.primary.opacity(0.05))
-        )
     }
 }
 
