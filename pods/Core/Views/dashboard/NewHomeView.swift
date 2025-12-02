@@ -1419,8 +1419,17 @@ private extension NewHomeView {
             workoutHighlightsCarousel
 
             bodyCompositionSection
+                .padding(.top, 15)
 
             healthMetricsSection
+                .padding(.top, 15)
+
+            ConsistencySection(
+                weightData: vm.weightConsistency,
+                foodData: vm.foodConsistency,
+                onShowAll: {}
+            )
+            .padding(.top, 20)
         }
         .padding(.horizontal)
     }
@@ -1643,7 +1652,7 @@ private extension NewHomeView {
         }
 
         let descriptor = temperatureStatus(for: delta)
-        let valueText = String(format: delta >= 0 ? "+%.2f" : "%.2f", delta)
+        let valueText = String(format: delta >= 0 ? "+%.1f" : "%.1f", delta)
         return HealthMetricTileModel(
             title: "Temperature",
             valueText: valueText,
@@ -3506,6 +3515,134 @@ private struct BodyCompositionSection: View {
         .padding(.horizontal)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
+
+private struct ConsistencySection: View {
+    let weightData: HabitConsistencyData?
+    let foodData: HabitConsistencyData?
+    var onShowAll: () -> Void
+
+    private let placeholderLevels = Array(repeating: 0, count: 30)
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Consistency")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.primary)
+                Spacer()
+                Button(action: onShowAll) {
+                    Text("Show All")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.accentColor)
+                }
+            }
+
+            LazyVGrid(columns: columns, spacing: 12) {
+                habitCard(
+                    for: weightData,
+                    fallbackTitle: "Weigh-In",
+                    palette: .weighIn
+                )
+
+                habitCard(
+                    for: foodData,
+                    fallbackTitle: "Food Logging",
+                    palette: .foodLogging
+                )
+            }
+        }
+        .padding(.horizontal)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func habitCard(
+        for data: HabitConsistencyData?,
+        fallbackTitle: String,
+        palette: HabitConsistencyPalette
+    ) -> some View {
+        if let data {
+            HabitConsistencyCard(data: data, palette: palette)
+        } else {
+            let placeholder = HabitConsistencyData(
+                title: fallbackTitle,
+                weeklyCompleted: 0,
+                weeklyTotal: 0,
+                gridLevels: placeholderLevels
+            )
+            HabitConsistencyCard(data: placeholder, palette: palette)
+                .redacted(reason: .placeholder)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+private struct HabitConsistencyCard: View {
+    let data: HabitConsistencyData
+    let palette: HabitConsistencyPalette
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 10)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Text(data.title)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+
+            Text("Past Month")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+                .padding(.bottom, 16)
+
+            LazyVGrid(columns: columns, spacing: 4) {
+                ForEach(Array(data.gridLevels.enumerated()), id: \.offset) { item in
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(color(for: item.element))
+                        .aspectRatio(1, contentMode: .fit)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color("sheetcard"))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.primary.opacity(0.05))
+        )
+    }
+
+    private func color(for intensity: Int) -> Color {
+        palette.color(for: intensity)
+    }
+}
+
+private struct HabitConsistencyPalette {
+    let base: Color
+
+    func color(for intensity: Int) -> Color {
+        guard intensity > 0 else { return Color(UIColor.systemGray5) }
+        let clamped = min(max(intensity, 1), 4)
+        let opacities: [Double] = [0.35, 0.55, 0.75, 1.0]
+        return base.opacity(opacities[clamped - 1])
+    }
+
+    static let weighIn = HabitConsistencyPalette(base: .indigo)
+    static let foodLogging = HabitConsistencyPalette(base: .green)
 }
 
 private struct BodyCompositionTrendCard: View {

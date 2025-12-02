@@ -28,10 +28,20 @@ struct EnergyBalancePoint: Identifiable, Equatable {
   var balance: Double { intake - expenditure }
 }
 
+struct HabitConsistencyData {
+  let title: String
+  let weeklyCompleted: Int
+  let weeklyTotal: Int
+  let gridLevels: [Int]
+}
+
 @MainActor
 final class DayLogsViewModel: ObservableObject {
       @Published var logs         : [CombinedLog] = [] {
-    didSet { recalculateTotals() }
+    didSet {
+      recalculateTotals()
+      refreshConsistency(force: true, refreshWeight: false)
+    }
   }
   @Published var calorieGoal      : Double = 2_000
   @Published var proteinGoal      : Double = 150
@@ -112,6 +122,8 @@ final class DayLogsViewModel: ObservableObject {
   @Published var isLoadingHealthMetrics = false
   @Published var healthMetricsErrorMessage: String?
   @Published var weeklyNutritionSummaries: [DailyNutritionSummary] = []
+  @Published var weightConsistency: HabitConsistencyData?
+  @Published var foodConsistency: HabitConsistencyData?
   var energyBalanceWeek: [EnergyBalancePoint] {
     let calendar = Calendar.current
     let today = calendar.startOfDay(for: Date())
@@ -141,6 +153,7 @@ final class DayLogsViewModel: ObservableObject {
   private var cancellables: Set<AnyCancellable> = []
   private var notificationCancellables: Set<AnyCancellable> = []
   private var goalsStoreCancellable: AnyCancellable?
+  private var consistencyTask: Task<Void, Never>?
 
   enum ScheduledLogAction: String {
     case log
@@ -173,7 +186,10 @@ final class DayLogsViewModel: ObservableObject {
     refreshExpenditureData(force: true)
     healthMetricsSnapshot = nil
     lastHealthMetricsRefresh = nil
+    weightConsistency = nil
+    foodConsistency = nil
     refreshHealthMetrics(force: true, targetDate: selectedDate)
+    refreshConsistency()
   }
   
   func preloadForStartup(email: String) {
@@ -190,6 +206,9 @@ final class DayLogsViewModel: ObservableObject {
     loadLogs(for: selectedDate)
     refreshExpenditureData()
     refreshHealthMetrics(targetDate: selectedDate)
+    if weightConsistency == nil || foodConsistency == nil {
+        refreshConsistency()
+    }
   }
   
   func setHealthViewModel(_ healthViewModel: HealthKitViewModel) {
@@ -241,6 +260,20 @@ final class DayLogsViewModel: ObservableObject {
       .sink { [weak self] _ in
         guard let self else { return }
         self.refreshHealthMetrics(force: true, targetDate: self.selectedDate)
+      }
+      .store(in: &notificationCancellables)
+
+    NotificationCenter.default.publisher(for: Notification.Name("WeightLoggedNotification"))
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in
+        self?.refreshConsistency(refreshWeight: true)
+      }
+      .store(in: &notificationCancellables)
+
+    NotificationCenter.default.publisher(for: Notification.Name("FoodLogUpdated"))
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in
+        self?.refreshConsistency(force: true, refreshWeight: false)
       }
       .store(in: &notificationCancellables)
   }
@@ -489,6 +522,38 @@ func fetchCalorieGoal() {
         self.logHealthMetricsSnapshot(snapshot, requestedDate: requestedDate)
       case .failure(let error):
         self.healthMetricsErrorMessage = error.localizedDescription
+      }
+    }
+  }
+
+  func refreshConsistency(force: Bool = false, refreshWeight: Bool = true) {
+    guard !email.isEmpty else { return }
+    if !force, weightConsistency != nil, foodConsistency != nil { return }
+
+    consistencyTask?.cancel()
+    let currentEmail = email
+    let cachedWeight = weightConsistency
+    let cachedFood = foodConsistency
+    let shouldComputeWeight = refreshWeight || weightConsistency == nil
+    let shouldComputeFood = force || foodConsistency == nil
+
+    consistencyTask = Task.detached(priority: .background) { [weak self] in
+      let weightResult: HabitConsistencyData? = shouldComputeWeight
+        ? await DayLogsViewModel.computeWeightConsistency(for: currentEmail)
+        : cachedWeight
+      let foodResult: HabitConsistencyData? = shouldComputeFood
+        ? await DayLogsViewModel.computeFoodConsistency(for: currentEmail)
+        : cachedFood
+
+      await MainActor.run {
+        guard let self else { return }
+        if Task.isCancelled { return }
+        if shouldComputeWeight {
+          self.weightConsistency = weightResult
+        }
+        if shouldComputeFood {
+          self.foodConsistency = foodResult
+        }
       }
     }
   }
@@ -1874,4 +1939,185 @@ private func summaryImage(for log: CombinedLog) -> String? {
     return nil
   }
 }
+}
+
+// MARK: - Habit Consistency Helpers
+
+private extension DayLogsViewModel {
+  static let consistencyWindowDays = 30
+  static let weightLogFetchLimit = 200
+
+  static let iso8601WithFractionalSeconds: ISO8601DateFormatter = {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return formatter
+  }()
+
+  static let iso8601BasicFormatter: ISO8601DateFormatter = {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    return formatter
+  }()
+
+  static func computeFoodConsistency(for email: String) async -> HabitConsistencyData? {
+    guard !email.isEmpty else { return nil }
+    let counts = await fetchDailyLogCounts(days: consistencyWindowDays) { log in
+      switch log.type {
+      case .food, .meal, .recipe:
+        return true
+      case .activity, .workout:
+        return false
+      }
+    }
+    return buildConsistencyData(title: "Food Logging", counts: counts, days: consistencyWindowDays)
+  }
+
+  static func computeWeightConsistency(for email: String) async -> HabitConsistencyData? {
+    guard !email.isEmpty else { return nil }
+    let counts = await fetchWeightLogCounts(email: email, days: consistencyWindowDays)
+    return buildConsistencyData(title: "Weigh-In", counts: counts, days: consistencyWindowDays)
+  }
+
+  static func fetchDailyLogCounts(
+    days: Int,
+    filter: @escaping (CombinedLog) -> Bool
+  ) async -> [Date: Int] {
+    var counts: [Date: Int] = [:]
+    let calendar = Calendar.current
+    let today = calendar.startOfDay(for: Date())
+
+    for offset in 0..<days {
+      if Task.isCancelled { break }
+      guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
+      let key = calendar.startOfDay(for: date)
+
+      var snapshot: DayLogsSnapshot? = await MainActor.run {
+        DayLogsRepository.shared.snapshot(for: key)
+      }
+
+      if snapshot == nil {
+        await DayLogsRepository.shared.refresh(date: key, force: false)
+        snapshot = await MainActor.run {
+          DayLogsRepository.shared.snapshot(for: key)
+        }
+      }
+
+      let filteredCount = snapshot?.combined.filter(filter).count ?? 0
+      counts[key] = filteredCount
+    }
+
+    return counts
+  }
+
+  static func fetchWeightLogCounts(email: String, days: Int) async -> [Date: Int] {
+    let logs = await fetchWeightLogs(email: email, limit: weightLogFetchLimit)
+    guard !logs.isEmpty else { return [:] }
+
+    let calendar = Calendar.current
+    let today = calendar.startOfDay(for: Date())
+    guard let startDate = calendar.date(byAdding: .day, value: -(days - 1), to: today) else {
+      return [:]
+    }
+
+    var counts: [Date: Int] = [:]
+    for log in logs {
+      if Task.isCancelled { break }
+      guard let parsedDate = parseWeightDate(log.dateLogged) else { continue }
+      let normalized = calendar.startOfDay(for: parsedDate)
+      guard normalized >= startDate, normalized <= today else { continue }
+      counts[normalized, default: 0] += 1
+    }
+
+    return counts
+  }
+
+  static func fetchWeightLogs(email: String, limit: Int) async -> [WeightLogResponse] {
+    await withCheckedContinuation { continuation in
+      NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: limit, offset: 0) { result in
+        switch result {
+        case .success(let response):
+          continuation.resume(returning: response.logs)
+        case .failure:
+          continuation.resume(returning: [])
+        }
+      }
+    }
+  }
+
+  static func parseWeightDate(_ raw: String) -> Date? {
+    if let date = iso8601WithFractionalSeconds.date(from: raw) {
+      return date
+    }
+    return iso8601BasicFormatter.date(from: raw)
+  }
+
+  static func buildConsistencyData(
+    title: String,
+    counts: [Date: Int],
+    days: Int
+  ) -> HabitConsistencyData {
+    let calendar = Calendar.current
+    let today = calendar.startOfDay(for: Date())
+    guard let startDate = calendar.date(byAdding: .day, value: -(days - 1), to: today) else {
+      return HabitConsistencyData(
+        title: title,
+        weeklyCompleted: 0,
+        weeklyTotal: 0,
+        gridLevels: Array(repeating: 0, count: days)
+      )
+    }
+
+    var levels: [Int] = []
+    for offset in 0..<days {
+      guard let date = calendar.date(byAdding: .day, value: offset, to: startDate) else { continue }
+      let normalized = calendar.startOfDay(for: date)
+      let count = counts[normalized] ?? 0
+      levels.append(intensity(for: count))
+    }
+
+    if levels.count < days {
+      levels.append(contentsOf: Array(repeating: 0, count: days - levels.count))
+    }
+
+    var weeklyCompleted = 0
+    var weeklyTotal = 0
+    if let interval = calendar.dateInterval(of: .weekOfYear, for: today) {
+      var cursor = interval.start
+      let weekEnd = min(
+        today,
+        calendar.date(byAdding: .day, value: 6, to: interval.start) ?? today
+      )
+
+      while cursor <= weekEnd {
+        weeklyTotal += 1
+        if (counts[cursor] ?? 0) > 0 {
+          weeklyCompleted += 1
+        }
+
+        guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+        cursor = next
+      }
+    }
+
+    return HabitConsistencyData(
+      title: title,
+      weeklyCompleted: weeklyCompleted,
+      weeklyTotal: weeklyTotal,
+      gridLevels: levels
+    )
+  }
+
+  static func intensity(for count: Int) -> Int {
+    guard count > 0 else { return 0 }
+    switch count {
+    case 1:
+      return 4
+    case 2:
+      return 3
+    case 3:
+      return 2
+    default:
+      return 1
+    }
+  }
 }
