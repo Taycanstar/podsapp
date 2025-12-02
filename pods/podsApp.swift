@@ -63,6 +63,8 @@ struct podsApp: App {
     // CRITICAL FIX: Prevent data architecture from reinitializing on every resume
     @State private var hasInitializedDataArchitecture = false
     @State private var hasLoggedOuraStatus = false
+    @State private var hasSyncedOuraOnLaunch = false
+    @State private var isSyncingOuraData = false
 
     var body: some Scene {
         WindowGroup {
@@ -203,10 +205,43 @@ struct podsApp: App {
                 if let scopes = status.scopes, !scopes.isEmpty {
                     print("   └── scopes=\(scopes)")
                 }
+                if let payload = prettyPrintedJSONString(from: status) {
+                    print("📦 OuraStatus Payload:\n\(payload)")
+                }
+                if status.connected && !hasSyncedOuraOnLaunch {
+                    hasSyncedOuraOnLaunch = true
+                    syncOuraData(for: email, reason: "startup_status")
+                }
             case .failure(let error):
                 print("❌ OuraStatus: Failed to fetch status for \(email) - \(error.localizedDescription)")
             }
         }
+    }
+
+    private func syncOuraData(for email: String, reason: String) {
+        guard !isSyncingOuraData else {
+            print("⏱️ OuraSync[\(reason)]: Skipping because a sync is already running")
+            return
+        }
+
+        isSyncingOuraData = true
+        print("🔄 OuraSync[\(reason)]: Requesting latest data for \(email)")
+        NetworkManagerTwo.shared.syncOura(email: email, days: 14) { result in
+            switch result {
+            case .success:
+                print("✅ OuraSync[\(reason)]: Completed successfully for \(email)")
+            case .failure(let error):
+                print("❌ OuraSync[\(reason)]: Failed for \(email) - \(error.localizedDescription)")
+            }
+            self.isSyncingOuraData = false
+        }
+    }
+
+    private func prettyPrintedJSONString(from status: NetworkManagerTwo.OuraStatusResponse) -> String? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(status) else { return nil }
+        return String(data: data, encoding: .utf8)
     }
     
     /// Create ModelContainer with migration error handling

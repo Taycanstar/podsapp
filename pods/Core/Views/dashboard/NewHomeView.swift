@@ -1582,8 +1582,12 @@ private extension NewHomeView {
         )
     }
 
+    private var wearableRawMetrics: NetworkManagerTwo.HealthMetricRawMetrics? {
+        vm.healthMetricsSnapshot?.rawMetrics
+    }
+
     private var heartRateVariabilityTile: HealthMetricTileModel {
-        let value = healthViewModel.isAuthorized ? healthViewModel.heartRateVariability : nil
+        let value = wearableRawMetrics?.hrv ?? (healthViewModel.isAuthorized ? healthViewModel.heartRateVariability : nil)
         let descriptor = value.flatMap(hrvStatusDescriptor(for:))
         return HealthMetricTileModel(
             title: "HRV",
@@ -1597,7 +1601,7 @@ private extension NewHomeView {
     }
 
     private var restingHeartRateTile: HealthMetricTileModel {
-        let value = healthViewModel.isAuthorized ? healthViewModel.restingHeartRate : nil
+        let value = wearableRawMetrics?.restingHeartRate ?? (healthViewModel.isAuthorized ? healthViewModel.restingHeartRate : nil)
         let descriptor = value.flatMap(restingHeartRateStatus(for:))
         return HealthMetricTileModel(
             title: "Resting HR",
@@ -1611,7 +1615,7 @@ private extension NewHomeView {
     }
 
     private var respiratoryRateTile: HealthMetricTileModel {
-        let value = healthViewModel.isAuthorized ? healthViewModel.respiratoryRate : nil
+        let value = wearableRawMetrics?.respiratoryRate ?? (healthViewModel.isAuthorized ? healthViewModel.respiratoryRate : nil)
         let descriptor = value.flatMap(respiratoryRateStatus(for:))
         return HealthMetricTileModel(
             title: "Respiratory Rate",
@@ -1625,11 +1629,12 @@ private extension NewHomeView {
     }
 
     private var temperatureTile: HealthMetricTileModel {
-        guard healthViewModel.isAuthorized, let delta = healthViewModel.bodyTemperature else {
+        let value = wearableRawMetrics?.skinTemperatureC ?? (healthViewModel.isAuthorized ? healthViewModel.bodyTemperature : nil)
+        guard let delta = value else {
             return HealthMetricTileModel(
                 title: "Temperature",
                 valueText: nil,
-                unit: "°",
+                unit: "°C",
                 status: nil,
                 statusText: nil,
                 progress: nil,
@@ -1638,12 +1643,11 @@ private extension NewHomeView {
         }
 
         let descriptor = temperatureStatus(for: delta)
-        let valueText = String(format: delta >= 0 ? "+%.1f" : "%.1f", delta)
-
+        let valueText = String(format: delta >= 0 ? "+%.2f" : "%.2f", delta)
         return HealthMetricTileModel(
             title: "Temperature",
             valueText: valueText,
-            unit: "°",
+            unit: "°C",
             status: descriptor.status,
             statusText: descriptor.text,
             progress: descriptor.progress,

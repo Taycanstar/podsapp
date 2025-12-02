@@ -40,8 +40,8 @@ class NetworkManagerTwo {
 
     
     // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-    // let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.4:8000"
+    let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.4:8000"
 
     // ### STAGING ###
     // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
@@ -262,6 +262,38 @@ class NetworkManagerTwo {
         let stress: [String: Double]?
     }
 
+    struct HealthMetricRawMetrics: Codable, Equatable {
+        struct SleepStageMinutes: Codable, Equatable {
+            let deep: Double?
+            let rem: Double?
+            let core: Double?
+            let awake: Double?
+        }
+
+        let hrv: Double?
+        let hrvShortTerm: Double?
+        let hrvBaseline: Double?
+        let restingHeartRate: Double?
+        let sleepHours: Double?
+        let sleepScore: Double?
+        let steps: Double?
+        let caloriesBurned: Double?
+        let respiratoryRate: Double?
+        let respiratoryRatePrevious: Double?
+        let skinTemperatureC: Double?
+        let skinTemperaturePrevious: Double?
+        let sleepLatencyMinutes: Double?
+        let sleepMidpointMinutes: Double?
+        let sleepNeedHours: Double?
+        let strainRatio: Double?
+        let totalSleepMinutes: Double?
+        let sleepStageMinutes: SleepStageMinutes?
+        let inBedMinutes: Double?
+        let sleepEfficiency: Double?
+        let sleepSource: String?
+        let fallbackSleepDate: String?
+    }
+
     struct HealthMetricsSnapshot: Codable, Equatable {
         let date: String
         let readiness: Double?
@@ -270,7 +302,11 @@ class NetworkManagerTwo {
         let stress: Double?
         let confidence: String?
         let isEmpty: Bool?
+        let scoreSource: String?
+        let sourceScores: [String: Double]?
+        let sleepSourceDate: String?
         let components: HealthMetricComponents?
+        let rawMetrics: HealthMetricRawMetrics?
 
         var dateValue: Date? {
             HealthMetricsSnapshot.dateFormatter.date(from: date)

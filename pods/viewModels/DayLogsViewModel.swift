@@ -62,6 +62,12 @@ final class DayLogsViewModel: ObservableObject {
   private let expenditureRefreshInterval: TimeInterval = 900
   private var lastHealthMetricsRefresh: Date?
   private let healthMetricsRefreshInterval: TimeInterval = 600
+  private let metricsDebugFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd HH:mm"
+    formatter.timeZone = .current
+    return formatter
+  }()
 
   // Daily totals
   @Published var totalCalories: Double = 0
@@ -468,9 +474,113 @@ func fetchCalorieGoal() {
       switch result {
       case .success(let snapshot):
         self.healthMetricsSnapshot = snapshot
+        self.logHealthMetricsSnapshot(snapshot, requestedDate: requestedDate)
       case .failure(let error):
         self.healthMetricsErrorMessage = error.localizedDescription
       }
+    }
+  }
+
+  private func logHealthMetricsSnapshot(_ snapshot: NetworkManagerTwo.HealthMetricsSnapshot, requestedDate: Date?) {
+    var context = "payload_date=\(snapshot.date)"
+    if let requestedDate {
+      context += " | requested=\(metricsDebugFormatter.string(from: requestedDate))"
+    }
+    print("📈 OuraMetrics Snapshot: \(context)")
+
+    logMetricValue("Readiness", value: snapshot.readiness)
+    logMetricValue("Sleep", value: snapshot.sleep)
+    logMetricValue("Activity", value: snapshot.activity)
+    logMetricValue("Stress", value: snapshot.stress)
+
+    if let confidence = snapshot.confidence, !confidence.isEmpty {
+      print("   • confidence: \(confidence)")
+    }
+    if let isEmpty = snapshot.isEmpty {
+      print("   • isEmpty: \(isEmpty)")
+    }
+    if let source = snapshot.scoreSource {
+      print("   • scoreSource: \(source)")
+    }
+    if let sourceScores = snapshot.sourceScores, !sourceScores.isEmpty {
+      print("   • source scores:")
+      for key in sourceScores.keys.sorted() {
+        if let value = sourceScores[key] {
+          print("       - \(key): \(String(format: "%.2f", value))")
+        }
+      }
+    }
+
+    if let components = snapshot.components {
+      logMetricComponent("Readiness", values: components.readiness)
+      logMetricComponent("Sleep", values: components.sleep)
+      logMetricComponent("Activity", values: components.activity)
+      logMetricComponent("Stress", values: components.stress)
+    } else {
+      print("   • components: none returned")
+    }
+
+    if let raw = snapshot.rawMetrics {
+      logRawMetrics(raw)
+    }
+  }
+
+  private func logMetricValue(_ label: String, value: Double?) {
+    guard let value else { return }
+    print("   • \(label): \(String(format: "%.2f", value))")
+  }
+
+  private func logMetricComponent(_ label: String, values: [String: Double]?) {
+    guard let values, !values.isEmpty else { return }
+    print("   • \(label) components:")
+    for key in values.keys.sorted() {
+      if let value = values[key] {
+        print("       - \(key): \(String(format: "%.2f", value))")
+      }
+    }
+  }
+
+  private func logRawMetrics(_ raw: NetworkManagerTwo.HealthMetricRawMetrics) {
+    print("   • raw metrics:")
+    logRawMetric("HRV", value: raw.hrv, suffix: "ms")
+    logRawMetric("HRV (short term)", value: raw.hrvShortTerm, suffix: "ms")
+    logRawMetric("HRV baseline", value: raw.hrvBaseline, suffix: "ms")
+    logRawMetric("Resting HR", value: raw.restingHeartRate, suffix: "bpm")
+    logRawMetric("Sleep hours", value: raw.sleepHours)
+    logRawMetric("Sleep score", value: raw.sleepScore)
+    logRawMetric("Steps", value: raw.steps)
+    logRawMetric("Calories burned", value: raw.caloriesBurned)
+    logRawMetric("Respiratory rate", value: raw.respiratoryRate)
+    logRawMetric("Skin temperature", value: raw.skinTemperatureC)
+    logRawMetric("Sleep latency", value: raw.sleepLatencyMinutes, suffix: "min")
+    logRawMetric("Sleep midpoint", value: raw.sleepMidpointMinutes, suffix: "min")
+    logRawMetric("Sleep need", value: raw.sleepNeedHours, suffix: "h")
+    logRawMetric("Strain ratio", value: raw.strainRatio)
+    logRawMetric("Total sleep", value: raw.totalSleepMinutes, suffix: "min")
+    logRawMetric("In bed", value: raw.inBedMinutes, suffix: "min")
+    logRawMetric("Sleep efficiency", value: raw.sleepEfficiency)
+    if let sleepSource = raw.sleepSource {
+      print("     • sleep source: \(sleepSource)")
+    }
+    if let fallbackDate = raw.fallbackSleepDate {
+      print("     • fallback sleep date: \(fallbackDate)")
+    }
+    if let stages = raw.sleepStageMinutes {
+      print("     • sleep stages:")
+      logRawMetric("Deep", value: stages.deep, suffix: "min", indent: "       ")
+      logRawMetric("REM", value: stages.rem, suffix: "min", indent: "       ")
+      logRawMetric("Core", value: stages.core, suffix: "min", indent: "       ")
+      logRawMetric("Awake", value: stages.awake, suffix: "min", indent: "       ")
+    }
+  }
+
+  private func logRawMetric(_ label: String, value: Double?, suffix: String? = nil, indent: String = "     • ") {
+    guard let value else { return }
+    let formatted = String(format: "%.2f", value)
+    if let suffix {
+      print("\(indent)\(label): \(formatted) \(suffix)")
+    } else {
+      print("\(indent)\(label): \(formatted)")
     }
   }
 

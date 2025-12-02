@@ -672,7 +672,8 @@ struct OuraSettingsView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
     @Environment(\.colorScheme) var colorScheme
     @State private var status: NetworkManagerTwo.OuraStatusResponse?
-    @State private var isLoading = false
+    @State private var isFetchingStatus = false
+    @State private var isSyncing = false
     @State private var alertMessage: String?
 
     private var isConnected: Bool {
@@ -710,17 +711,45 @@ struct OuraSettingsView: View {
             }
 
             Section {
-                Button("Refresh Status", action: fetchStatus)
-                    .disabled(isLoading)
+                Button(action: { fetchStatus(triggerSync: true, reason: "refresh_button") }) {
+                    HStack(spacing: 8) {
+                        if isFetchingStatus {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        Text(isFetchingStatus ? "Refreshing..." : "Refresh Status & Sync")
+                    }
+                }
+                .disabled(isFetchingStatus || isSyncing)
+
+                if isSyncing {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("Syncing fresh Oura data...")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
+            if let payload = statusPayloadText {
+                Section(header: Text("Raw Payload")) {
+                    Text(payload)
+                        .font(.system(.caption, design: .monospaced))
+                        .lineLimit(nil)
+                        .textSelection(.enabled)
+                        .padding(.vertical, 4)
+                }
             }
         }
         .navigationTitle("Oura")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear(perform: fetchStatus)
+        .onAppear { fetchStatus(reason: "view_appear") }
         .onReceive(
             NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
         ) { _ in
-            fetchStatus()
+            fetchStatus(reason: "foreground")
         }
         .alert(isPresented: Binding(get: { alertMessage != nil }, set: { if !$0 { alertMessage = nil } })) {
             Alert(title: Text("Oura"), message: Text(alertMessage ?? ""), dismissButton: .default(Text("OK")))
@@ -731,14 +760,36 @@ struct OuraSettingsView: View {
         Text("After approving access in your browser, return to Metryc. We'll automatically refresh when you come back.")
     }
 
-    private func fetchStatus() {
+    private var statusPayloadText: String? {
+        guard let status else { return nil }
+        return payloadString(from: status)
+    }
+
+    private func fetchStatus(triggerSync: Bool = false, reason: String = "") {
         guard !viewModel.email.isEmpty else { return }
-        isLoading = true
+        guard !isFetchingStatus else {
+            print("ℹ️ OuraStatusView: Ignoring fetch because another request is running")
+            return
+        }
+
+        let context = reason.isEmpty ? "general" : reason
+        print("🔎 OuraStatusView: Fetching status [\(context)]")
+        isFetchingStatus = true
         NetworkManagerTwo.shared.fetchOuraStatus(email: viewModel.email) { result in
-            isLoading = false
+            isFetchingStatus = false
             switch result {
             case .success(let response):
                 status = response
+                if let payload = payloadString(from: response) {
+                    print("📦 OuraStatusView: Payload\n\(payload)")
+                }
+                if triggerSync {
+                    guard response.connected else {
+                        alertMessage = "Connect Oura before syncing data."
+                        return
+                    }
+                    syncOura(reason: context)
+                }
             case .failure(let error):
                 alertMessage = error.localizedDescription
             }
@@ -773,12 +824,40 @@ struct OuraSettingsView: View {
         }
     }
 
+    private func syncOura(reason: String) {
+        guard !viewModel.email.isEmpty else { return }
+        guard !isSyncing else {
+            print("ℹ️ OuraStatusView: Sync already in progress")
+            return
+        }
+
+        isSyncing = true
+        print("🔄 OuraStatusView: Sync requested [\(reason)]")
+        NetworkManagerTwo.shared.syncOura(email: viewModel.email, days: 14) { result in
+            isSyncing = false
+            switch result {
+            case .success:
+                alertMessage = "Requested the latest data from Oura. We'll refresh shortly."
+                fetchStatus(triggerSync: false, reason: "post_sync")
+            case .failure(let error):
+                alertMessage = error.localizedDescription
+            }
+        }
+    }
+
     private func formattedDate(from isoString: String?) -> String? {
         guard let isoString, let date = ISO8601DateFormatter().date(from: isoString) else { return nil }
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+
+    private func payloadString(from response: NetworkManagerTwo.OuraStatusResponse) -> String? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(response) else { return nil }
+        return String(data: data, encoding: .utf8)
     }
 }
 
