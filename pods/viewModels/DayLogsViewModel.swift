@@ -139,6 +139,7 @@ final class DayLogsViewModel: ObservableObject {
   private(set) var email = ""
   private weak var healthViewModel: HealthKitViewModel?
   private var cancellables: Set<AnyCancellable> = []
+  private var notificationCancellables: Set<AnyCancellable> = []
   private var goalsStoreCancellable: AnyCancellable?
 
   enum ScheduledLogAction: String {
@@ -154,6 +155,7 @@ final class DayLogsViewModel: ObservableObject {
     self.healthViewModel = healthViewModel
     clearPendingCache()
     observeGoalsStore()
+    observeSyncNotifications()
 
     if !email.isEmpty {
       configureRepository(for: email)
@@ -231,6 +233,16 @@ final class DayLogsViewModel: ObservableObject {
           self.isRefreshingNutritionGoals = false
         }
       }
+  }
+
+  private func observeSyncNotifications() {
+    NotificationCenter.default.publisher(for: .ouraSyncCompleted)
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in
+        guard let self else { return }
+        self.refreshHealthMetrics(force: true, targetDate: self.selectedDate)
+      }
+      .store(in: &notificationCancellables)
   }
 
   // MARK: - Public Methods

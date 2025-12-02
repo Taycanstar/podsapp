@@ -230,6 +230,7 @@ struct podsApp: App {
             switch result {
             case .success:
                 print("✅ OuraSync[\(reason)]: Completed successfully for \(email)")
+                NotificationCenter.default.post(name: .ouraSyncCompleted, object: nil)
             case .failure(let error):
                 print("❌ OuraSync[\(reason)]: Failed for \(email) - \(error.localizedDescription)")
             }

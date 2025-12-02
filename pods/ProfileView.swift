@@ -838,6 +838,7 @@ struct OuraSettingsView: View {
             switch result {
             case .success:
                 alertMessage = "Requested the latest data from Oura. We'll refresh shortly."
+                NotificationCenter.default.post(name: .ouraSyncCompleted, object: nil)
                 fetchStatus(triggerSync: false, reason: "post_sync")
             case .failure(let error):
                 alertMessage = error.localizedDescription

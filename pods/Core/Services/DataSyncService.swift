@@ -451,4 +451,5 @@ struct SyncOperation: Codable, Identifiable {
 
 extension Notification.Name {
     static let dataUpdated = Notification.Name("dataUpdated")
-} 
+    static let ouraSyncCompleted = Notification.Name("ouraSyncCompleted")
+}
