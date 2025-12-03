@@ -61,20 +61,14 @@ struct DesiredWeightSelectionView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
-            NavigationBarStyler.beginOnboardingAppearance()
             loadInitialWeight()
             viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 12)
             UserDefaults.standard.set("DesiredWeightSelectionView", forKey: "currentOnboardingStep")
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
             UserDefaults.standard.synchronize()
-        }
-        .onDisappear {
-            NavigationBarStyler.endOnboardingAppearance()
         }
         .onChange(of: viewModel.unitsSystem) { newUnit in
             handleUnitChange(from: previousUnits, to: newUnit)

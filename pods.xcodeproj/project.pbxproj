@@ -278,7 +278,6 @@
 		36D3A5082E8C6F7E00AD6B94 /* ReviewEquipmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5072E8C6F7800AD6B94 /* ReviewEquipmentView.swift */; };
 		36D3A50A2E8CCB2700AD6B94 /* ScheduleSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5092E8CCB0D00AD6B94 /* ScheduleSelectionView.swift */; };
 		36D3A50C2E8D8A1400AD6B94 /* EnableNotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A50B2E8D8A0B00AD6B94 /* EnableNotificationsView.swift */; };
-		36D3A50E2E8E2BF300AD6B94 /* NavigationBarStyler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A50D2E8E2BED00AD6B94 /* NavigationBarStyler.swift */; };
 		36D3A5102E8E2EC000AD6B94 /* OnboardingColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A50F2E8E2EB900AD6B94 /* OnboardingColors.swift */; };
 		36D3A5122E8EBD3400AD6B94 /* DietPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5112E8EBD2700AD6B94 /* DietPreferencesView.swift */; };
 		36D3A5122E8EBD5D00AD6B94 /* DietPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D3A5112E8EBD2700AD6B94 /* DietPreferencesView.swift */; };
@@ -682,7 +681,6 @@
 		36D3A5072E8C6F7800AD6B94 /* ReviewEquipmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewEquipmentView.swift; sourceTree = "<group>"; };
 		36D3A5092E8CCB0D00AD6B94 /* ScheduleSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSelectionView.swift; sourceTree = "<group>"; };
 		36D3A50B2E8D8A0B00AD6B94 /* EnableNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnableNotificationsView.swift; sourceTree = "<group>"; };
-		36D3A50D2E8E2BED00AD6B94 /* NavigationBarStyler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBarStyler.swift; sourceTree = "<group>"; };
 		36D3A50F2E8E2EB900AD6B94 /* OnboardingColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingColors.swift; sourceTree = "<group>"; };
 		36D3A5112E8EBD2700AD6B94 /* DietPreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DietPreferencesView.swift; sourceTree = "<group>"; };
 		36D3A5132E8EDC6900AD6B94 /* AllowHealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllowHealthView.swift; sourceTree = "<group>"; };
@@ -1395,7 +1393,6 @@
 				36D3A5132E8EDC6900AD6B94 /* AllowHealthView.swift */,
 				36D3A5112E8EBD2700AD6B94 /* DietPreferencesView.swift */,
 				36D3A50F2E8E2EB900AD6B94 /* OnboardingColors.swift */,
-				36D3A50D2E8E2BED00AD6B94 /* NavigationBarStyler.swift */,
 				36D3A50B2E8D8A0B00AD6B94 /* EnableNotificationsView.swift */,
 				36D3A5092E8CCB0D00AD6B94 /* ScheduleSelectionView.swift */,
 				36D3A5072E8C6F7800AD6B94 /* ReviewEquipmentView.swift */,
@@ -2011,7 +2008,6 @@
 				361FF31D2E20618800B7F68E /* SetInstance.swift in Sources */,
 				362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */,
 				36881DF12E6E04F900262045 /* WorkoutScheduleSettingsView.swift in Sources */,
-				36D3A50E2E8E2BF300AD6B94 /* NavigationBarStyler.swift in Sources */,
 				36D3A50A2E8CCB2700AD6B94 /* ScheduleSelectionView.swift in Sources */,
 				36ED35D62DDBD5ED00D174FB /* UpdateDesiredWeight.swift in Sources */,
 				36D044102C71196900B01998 /* InvitationView.swift in Sources */,

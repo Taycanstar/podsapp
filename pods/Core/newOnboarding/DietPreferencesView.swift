@@ -24,20 +24,14 @@ struct DietPreferencesView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
-            NavigationBarStyler.beginOnboardingAppearance()
             selectedDiet = viewModel.selectedDietPreference
             viewModel.newOnboardingStepIndex = 8
             UserDefaults.standard.set("DietPreferencesView", forKey: "currentOnboardingStep")
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
             UserDefaults.standard.synchronize()
-        }
-        .onDisappear {
-            NavigationBarStyler.endOnboardingAppearance()
         }
         .onChange(of: viewModel.selectedDietPreference) { _, newValue in
             selectedDiet = newValue

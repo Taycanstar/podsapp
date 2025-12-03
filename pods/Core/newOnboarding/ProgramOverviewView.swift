@@ -35,8 +35,6 @@ struct ProgramOverviewView: View {
             .navigationTitle("Plan Overview")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
@@ -48,7 +46,6 @@ struct ProgramOverviewView: View {
                 }
             }
         }
-        .onDisappear { NavigationBarStyler.endOnboardingAppearance() }
     }
 
     private var headerSection: some View {
@@ -171,7 +168,6 @@ struct ProgramOverviewView: View {
     }
 
     private func handleAppear() {
-        NavigationBarStyler.beginOnboardingAppearance()
         viewModel.newOnboardingStepIndex = viewModel.newOnboardingTotalSteps
         UserDefaults.standard.set("ProgramOverviewView", forKey: "currentOnboardingStep")
         UserDefaults.standard.set(true, forKey: "onboardingInProgress")

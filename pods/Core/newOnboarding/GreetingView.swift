@@ -57,12 +57,9 @@ struct GreetingView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear(perform: handleAppear)
-        .onDisappear { NavigationBarStyler.endOnboardingAppearance() }
     }
 
     private var continueButton: some View {
@@ -115,7 +112,6 @@ struct GreetingView: View {
     }
 
     private func handleAppear() {
-        NavigationBarStyler.beginOnboardingAppearance()
         viewModel.newOnboardingStepIndex = 2
         saveProgressMarker()
     }

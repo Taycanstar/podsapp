@@ -59,12 +59,9 @@ struct EnterNameView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear(perform: handleAppear)
-        .onDisappear { NavigationBarStyler.endOnboardingAppearance() }
         .onTapGesture {
             isNameFieldFocused = false
         }
@@ -122,7 +119,6 @@ struct EnterNameView: View {
     }
 
     private func handleAppear() {
-        NavigationBarStyler.beginOnboardingAppearance()
         name = trimmedNameIfNeeded(from: viewModel.name)
         viewModel.newOnboardingStepIndex = 1
         saveProgressMarker()

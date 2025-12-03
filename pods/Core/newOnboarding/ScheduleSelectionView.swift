@@ -45,21 +45,15 @@ struct ScheduleSelectionView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
-            NavigationBarStyler.beginOnboardingAppearance()
             viewModel.ensureDefaultSchedule()
             mode = .perWeek
             viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 7)
             UserDefaults.standard.set("ScheduleSelectionView", forKey: "currentOnboardingStep")
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
             UserDefaults.standard.synchronize()
-        }
-        .onDisappear {
-            NavigationBarStyler.endOnboardingAppearance()
         }
     }
 

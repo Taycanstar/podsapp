@@ -39,20 +39,14 @@ struct FitnessGoalSelectionView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
-            NavigationBarStyler.beginOnboardingAppearance()
             selectedGoal = viewModel.selectedFitnessGoal
             viewModel.newOnboardingStepIndex = 3
             UserDefaults.standard.set("FitnessGoalSelectionView", forKey: "currentOnboardingStep")
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
             UserDefaults.standard.synchronize()
-        }
-        .onDisappear {
-            NavigationBarStyler.endOnboardingAppearance()
         }
     }
     

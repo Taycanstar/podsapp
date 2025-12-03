@@ -11,6 +11,7 @@ struct AboutYouView: View {
     @State private var isShowingWeightPicker = false
 
     @State private var dobInput: String = ""
+    @State private var dobText: String = ""
     @FocusState private var isDobFieldFocused: Bool
     @State private var tempSex: SexOption = .male
 
@@ -90,27 +91,18 @@ struct AboutYouView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
-            NavigationBarStyler.beginOnboardingAppearance()
             setupInitialState()
             viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 11)
             saveProgressMarker()
             prefillFromHealthKitIfNeeded()
         }
-        .onDisappear {
-            NavigationBarStyler.endOnboardingAppearance()
-        }
         .sheet(isPresented: $isShowingDatePicker) {
             NavigationStack {
                 VStack(spacing: 24) {
-                    TextField("mm/dd/yyyy", text: Binding(
-                        get: { formattedDobInput(dobInput) },
-                        set: { newValue in dobInput = sanitizedDobInput(newValue) }
-                    ))
+                    TextField("mm/dd/yyyy", text: $dobText)
                     .keyboardType(.numbersAndPunctuation)
                     .focused($isDobFieldFocused)
                     .textInputAutocapitalization(.never)
@@ -150,6 +142,8 @@ struct AboutYouView: View {
                             guard let date = dateFromDobInput(dobInput) else { return }
                             viewModel.dateOfBirth = date
                             storeDateOfBirth(date)
+                            dobInput = digitsString(from: date)
+                            dobText = formattedDobInput(dobInput)
                             isShowingDatePicker = false
                         } label: {
                             Image(systemName: "checkmark")
@@ -160,9 +154,17 @@ struct AboutYouView: View {
                 .onAppear {
                     isDobFieldFocused = true
                 }
+                .onChange(of: dobText) { newValue in
+                    let digits = sanitizedDobInput(newValue)
+                    if digits != dobInput {
+                        dobInput = digits
+                    }
+                    let formatted = formattedDobInput(digits)
+                    if formatted != newValue {
+                        dobText = formatted
+                    }
+                }
             }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color.clear, for: .navigationBar)
             .presentationDetents([.fraction(0.35)])
         }
         .sheet(isPresented: $isShowingHeightPicker) {
@@ -222,8 +224,6 @@ struct AboutYouView: View {
                     }
                 }
             }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color.clear, for: .navigationBar)
             .presentationDetents([.fraction(0.6), .large])
         }
         .sheet(isPresented: $isShowingWeightPicker) {
@@ -271,8 +271,6 @@ struct AboutYouView: View {
                     }
                 }
             }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Color.clear, for: .navigationBar)
             .presentationDetents([.fraction(0.6), .large])
         }
     }
@@ -476,6 +474,7 @@ struct AboutYouView: View {
         } else {
             dobInput = ""
         }
+        dobText = formattedDobInput(dobInput)
 
         if let option = SexOption(rawValue: viewModel.gender.lowercased()) {
             tempSex = option
@@ -491,6 +490,7 @@ struct AboutYouView: View {
         } else {
             dobInput = ""
         }
+        dobText = formattedDobInput(dobInput)
     }
 
     private func prepareHeightState() {

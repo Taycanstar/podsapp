@@ -166,6 +166,15 @@ struct NewHomeView: View {
         let converted = waterDisplayUnit.convertFromUSFluidOunces(totalWaterIntake)
         return waterDisplayUnit.format(converted)
     }
+    private var stepGoal: Double {
+        let stored = UserDefaults.standard.double(forKey: "dailyStepGoal")
+        return stored > 0 ? stored : 10_000
+    }
+
+    private var waterGoalOz: Double {
+        let stored = UserDefaults.standard.double(forKey: "dailyWaterGoalOz")
+        return stored > 0 ? stored : 80
+    }
     private var isYesterday : Bool { Calendar.current.isDateInYesterday(vm.selectedDate) }
 
   private var calorieGoal : Double { vm.calorieGoal }
@@ -1448,6 +1457,15 @@ private extension NewHomeView {
                 )
                 .padding(.top, 20)
             }
+
+            if hasDailyEssentials {
+                DailyEssentialsSection(
+                    steps: stepsMetric,
+                    water: waterMetric,
+                    onSeeAll: {}
+                )
+                .padding(.top, 20)
+            }
         }
         .padding(.horizontal)
     }
@@ -1535,6 +1553,29 @@ private extension NewHomeView {
             models.append(weightTrend)
         }
         return models
+    }
+
+    private var hasDailyEssentials: Bool {
+        stepsMetric != nil || waterMetric != nil
+    }
+
+    private var stepsMetric: DailyStepsMetric? {
+        let goal = stepGoal
+        guard goal > 0 else { return nil }
+        let current = max(0, healthViewModel.stepCount)
+        if current <= 0 && !healthViewModel.isAuthorized {
+            return nil
+        }
+        return DailyStepsMetric(current: current, goal: goal)
+    }
+
+    private var waterMetric: DailyWaterMetric? {
+        let goalOz = waterGoalOz
+        guard goalOz > 0 else { return nil }
+        let currentOz = totalWaterIntake
+        let current = waterDisplayUnit.convertFromUSFluidOunces(currentOz)
+        let goal = waterDisplayUnit.convertFromUSFluidOunces(goalOz)
+        return DailyWaterMetric(current: current, goal: goal, unit: waterDisplayUnit.abbreviation)
     }
 
     private var healthMetricsSection: some View {
@@ -3684,7 +3725,7 @@ private struct HabitConsistencyCard: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text(data.title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
                 Spacer()
                 Image(systemName: "chevron.right")
@@ -3788,7 +3829,7 @@ private struct AnalyticsCardView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text(model.title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
                 Spacer()
                 Image(systemName: "chevron.right")
@@ -3847,6 +3888,239 @@ private struct AnalyticsDataPoint: Identifiable {
     let index: Int
     let value: Double
     var id: Int { index }
+}
+
+private struct DailyStepsMetric {
+    let current: Double
+    let goal: Double
+
+    var progress: Double {
+        guard goal > 0 else { return 0 }
+        return min(max(current / goal, 0), 1)
+    }
+
+    var formattedCurrent: String {
+        Self.formatter.string(from: NSNumber(value: current.rounded())) ?? "0"
+    }
+
+    var formattedGoal: String {
+        Self.formatter.string(from: NSNumber(value: goal.rounded())) ?? "0"
+    }
+
+    private static let formatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        formatter.minimumFractionDigits = 0
+        return formatter
+    }()
+}
+
+private struct DailyWaterMetric {
+    let current: Double
+    let goal: Double
+    let unit: String
+
+    var progress: Double {
+        guard goal > 0 else { return 0 }
+        return min(max(current / goal, 0), 1)
+    }
+
+    var formattedCurrent: String {
+        DailyWaterMetric.formatter.string(from: NSNumber(value: current)) ?? "0"
+    }
+
+    var formattedGoal: String {
+        DailyWaterMetric.formatter.string(from: NSNumber(value: goal)) ?? "0"
+    }
+
+    private static let formatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        formatter.minimumFractionDigits = 0
+        return formatter
+    }()
+}
+
+private struct DailyEssentialsSection: View {
+    let steps: DailyStepsMetric?
+    let water: DailyWaterMetric?
+    var onSeeAll: () -> Void
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Daily Essentials")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.primary)
+                Spacer()
+                Button(action: onSeeAll) {
+                    Text("See All")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.accentColor)
+                }
+            }
+
+            LazyVGrid(columns: columns, spacing: 16) {
+                if let steps {
+                    DailyStepsCard(metric: steps)
+                }
+
+                if let water {
+                    DailyWaterCard(metric: water)
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+private struct DailyStepsCard: View {
+    let metric: DailyStepsMetric
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cardHeader(title: "Steps")
+
+            Text("Today")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+                .padding(.bottom, 12)
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(metric.formattedCurrent)
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+                Text("/ \(metric.formattedGoal)")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.bottom, 12)
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.primary.opacity(0.08))
+                        .frame(height: 6)
+
+                    Capsule()
+                        .fill(LinearGradient(colors: [Color.green, Color.green.opacity(0.85)], startPoint: .leading, endPoint: .trailing))
+                        .frame(width: max(0, min(metric.progress, 1)) * proxy.size.width, height: 6)
+                }
+            }
+            .frame(height: 6)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color("sheetcard"))
+        )
+    }
+
+    private func cardHeader(title: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundColor(.primary)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+private struct DailyWaterCard: View {
+    let metric: DailyWaterMetric
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cardHeader(title: "Water")
+
+            Text("Today")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+                .padding(.bottom, 12)
+
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(metric.formattedCurrent)
+                            .font(.system(size: 28, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+
+                        Text("/ \(metric.formattedGoal) \(metric.unit)")
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                WaterGlassView(progress: metric.progress)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color("sheetcard"))
+        )
+    }
+
+    private func cardHeader(title: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundColor(.primary)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+private struct WaterGlassView: View {
+    let progress: Double
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white, Color(UIColor.systemGray6)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.primary.opacity(0.08))
+                )
+
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(red: 0.35, green: 0.79, blue: 0.98), Color(red: 0.04, green: 0.52, blue: 1.0)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(height: 48 * min(max(progress, 0), 1))
+                .padding(4)
+        }
+        .frame(width: 48, height: 48)
+    }
 }
 
 private struct BodyCompositionTrendCard: View {

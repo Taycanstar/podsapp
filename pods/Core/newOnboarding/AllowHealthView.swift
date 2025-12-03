@@ -45,21 +45,15 @@ struct AllowHealthView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
-            NavigationBarStyler.beginOnboardingAppearance()
             viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 10)
             UserDefaults.standard.set("AllowHealthView", forKey: "currentOnboardingStep")
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
             UserDefaults.standard.synchronize()
             hasExistingAuthorization = healthKitManager.isAuthorized
             healthKitUnavailable = !healthKitManager.isHealthDataAvailable
-        }
-        .onDisappear {
-            NavigationBarStyler.endOnboardingAppearance()
         }
     }
 

@@ -38,20 +38,14 @@ struct StrengthExperienceView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(backgroundColor, for: .navigationBar)
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
-            NavigationBarStyler.beginOnboardingAppearance()
             selectedOption = viewModel.selectedStrengthExperience
             viewModel.newOnboardingStepIndex = 4
             UserDefaults.standard.set("StrengthExperienceView", forKey: "currentOnboardingStep")
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
             UserDefaults.standard.synchronize()
-        }
-        .onDisappear {
-            NavigationBarStyler.endOnboardingAppearance()
         }
     }
     
