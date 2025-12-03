@@ -37,12 +37,8 @@ struct NewHomeView: View {
     @ObservedObject private var streakManager = StreakManager.shared
 
     // ─── Navigation state ──────────────────────────────────────────────────
-    @State private var selectedFoodLogId: String? = nil
-    @State private var selectedMealLogId: String? = nil
-    @State private var selectedWorkoutLogId: String? = nil
     @State private var scheduleSheetLog: CombinedLog?
     @State private var scheduleAlert: ScheduleAlert?
-    @State private var pendingLogsReload = false
     
     // ─── Nutrition label name input ────────────────────────────────────────
     @State private var nutritionProductName = ""
@@ -62,8 +58,16 @@ struct NewHomeView: View {
         return formatter
     }()
 
+    private let iso8601DayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .iso8601)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
     // ─── Sort state ─────────────────────────────────────────────────────────
-    @State private var sortOption: LogSortOption = .date
     @State private var nutritionCarouselSelection: Int = 0
     @State private var workoutCarouselSelection: Int = 0
     @State private var muscleRecoverySnapshot: [MuscleRecoveryService.MuscleRecoveryData] = []
@@ -78,19 +82,8 @@ struct NewHomeView: View {
     @State private var showHealthMetricsDetail = false
     @State private var showingWeightLogSheet = false
     @State private var showingBodyFatLogSheet = false
+    @State private var showTimelineSheet = false
     
-    enum LogSortOption: String, CaseIterable {
-        case date = "Date"
-        case meal = "Meal"
-        
-        var iconName: String {
-            switch self {
-            case .date: return "calendar"
-            case .meal: return "fork.knife"
-            }
-        }
-    }
-
     private enum ScheduleAlert: Identifiable {
         case success(String)
         case failure(String)
@@ -175,30 +168,25 @@ struct NewHomeView: View {
         let stored = UserDefaults.standard.double(forKey: "dailyWaterGoalOz")
         return stored > 0 ? stored : 80
     }
+    private var timelinePreviewEvents: [TimelineEvent] {
+        Array(timelineEvents.prefix(8))
+    }
+
+    private var timelineEvents: [TimelineEvent] {
+        var items: [TimelineEvent] = []
+        let targetDate = vm.selectedDate
+        if let wake = wakeTimelineEvent(for: targetDate) {
+            items.append(wake)
+        }
+        items.append(contentsOf: timelineEventsFromLogs(for: targetDate))
+        return items.sorted { $0.date < $1.date }
+    }
     private var isYesterday : Bool { Calendar.current.isDateInYesterday(vm.selectedDate) }
 
   private var calorieGoal : Double { vm.calorieGoal }
 private var remainingCal: Double { vm.remainingCalories }
 
     // ─── Sorted logs ────────────────────────────────────────────────────────
-    private var sortedLogs: [CombinedLog] {
-        switch sortOption {
-        case .date:
-            // Default sorting: most recent first
-            return vm.logs
-        case .meal:
-            // Sort by meal type: Breakfast, Lunch, Dinner, Snacks
-            return vm.logs.sorted { log1, log2 in
-                let mealOrder = ["Breakfast": 0, "Lunch": 1, "Dinner": 2, "Snacks": 3]
-                let meal1 = log1.mealType ?? ""
-                let meal2 = log2.mealType ?? ""
-                let order1 = mealOrder[meal1] ?? 999
-                let order2 = mealOrder[meal2] ?? 999
-                return order1 < order2
-            }
-        }
-    }
-
     private var scheduledPreviewsForSelectedDate: [ScheduledLogPreview] {
         let calendar = Calendar.current
         return vm.scheduledPreviews
@@ -235,163 +223,30 @@ private var remainingCal: Double { vm.remainingCalories }
         }
     }
 
-    @ViewBuilder
-    private var logsSection: some View {
-        if !vm.logs.isEmpty {
-            Section {
-                HStack {
-                    Text("Recent Logs")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    Spacer()
-
-                    Menu {
-                        ForEach(LogSortOption.allCases, id: \.self) { option in
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    sortOption = option
-                                }
-                            }) {
-                                HStack {
-                                    Text(option.rawValue)
-                                    Spacer()
-                                    Image(systemName: option.iconName)
-                                }
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "arrow.up.arrow.down")
-                            .font(.system(size: 17))
-                            .foregroundColor(.primary)
-                    }
-                }
-                .padding(.horizontal)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-
-            ForEach(sortedLogs) { log in
-                ZStack {
-                    LogRow(log: log)
-                        .id(log.id)
-                        .onTapGesture {
-                            if log.type == .food {
-                                selectedFoodLogId = log.id
-                            } else if log.type == .meal {
-                                selectedMealLogId = log.id
-                            } else if log.type == .workout {
-                                selectedWorkoutLogId = log.id
-                            }
-                        }
-                    // NavigationLink for food logs
-                    if log.type == .food {
-                        NavigationLink(
-                            destination: FoodLogDetails(log: log),
-                            tag: log.id,
-                            selection: $selectedFoodLogId
-                        ) {
-                            EmptyView()
-                        }
-                        .opacity(0)
-                        .frame(width: 0, height: 0)
-                    }
-
-                    // NavigationLink for meal logs
-                    if log.type == .meal {
-                        NavigationLink(
-                            destination: MealLogDetails(log: log),
-                            tag: log.id,
-                            selection: $selectedMealLogId
-                        ) {
-                            EmptyView()
-                        }
-                        .opacity(0)
-                        .frame(width: 0, height: 0)
-                    }
-
-                    if log.type == .workout {
-                        NavigationLink(
-                            destination: WorkoutLogDetailView(log: log),
-                            tag: log.id,
-                            selection: $selectedWorkoutLogId
-                        ) {
-                            EmptyView()
-                        }
-                        .opacity(0)
-                        .frame(width: 0, height: 0)
-                    }
-                }
-                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .swipeActions(edge: .leading) {
-                    // Save/Unsave action - only for meal logs and food logs
-                    if log.type == .meal || log.type == .food {
-                        let isSaved = foodMgr.isLogSaved(
-                            foodLogId: log.type == .food ? log.foodLogId : nil,
-                            mealLogId: log.type == .meal ? log.mealLogId : nil
-                        )
-
-                        Button(action: {
-                            if isSaved {
-                                unsaveMealAction(log: log)
-                            } else {
-                                saveMealAction(log: log)
-                            }
-                        }) {
-                            Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
-                        }
-                        .tint(.accentColor)
-                    }
-                }
-                .swipeActions(edge: .trailing) {
-                    // Delete action with trash icon (keep furthest trailing)
-                    Button {
-                        deleteLogItem(log: log)
-                    } label: {
-                        Image(systemName: "trash.fill")
-                    }
-                    .tint(.red)
-
-                    if canSchedule(log) {
-                        Button {
-                            handleScheduleAction(for: log)
-                        } label: {
-                            Image(systemName: "calendar.badge.plus")
-                        }
-                        .tint(.indigo)
-                    }
-                }
-                .id("\(log.id)_\(foodMgr.savedLogIds.count)")
-            }
-            .onDelete { indexSet in
-                deleteLogItems(at: indexSet)
-            }
-            
-        }
-        // .padding(.bottom, 110)
-    }
+    
 
     @ViewBuilder
-    private var emptyStateSection: some View {
-        if vm.logs.isEmpty && scheduledPreviewsForSelectedDate.isEmpty {
-            Section {
-                emptyState
-                    .padding(.horizontal)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
+    private var timelineSection: some View {
+        Section {
+            TimelineSectionView(
+                events: timelinePreviewEvents,
+                selectedDate: vm.selectedDate,
+                onShowAll: timelineEvents.count > timelinePreviewEvents.count ? { showTimelineSheet = true } : nil
+            )
+            .padding(.horizontal)
+            .padding(.top, 16)
         }
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
-
 
     private var navTitle: String {
-        if isToday      { return "Today" }
-        if isYesterday  { return "Yesterday" }
-        let f = DateFormatter(); f.dateFormat = "EEEE, MMM d"
-        return f.string(from: vm.selectedDate)
+        if isToday { return "Today" }
+        if isYesterday { return "Yesterday" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter.string(from: vm.selectedDate)
     }
 
     private var headerTitle: String {
@@ -452,7 +307,7 @@ private var remainingCal: Double { vm.remainingCalories }
         showHealthSyncFlash = false
         healthSyncFlashProgress = 0
     }
-    
+
     private var currentUserEmail: String? {
         if onboarding.email.isEmpty == false {
             return onboarding.email
@@ -485,7 +340,7 @@ private var remainingCal: Double { vm.remainingCalories }
     private var heightUnit: String {
         switch onboarding.unitsSystem {
         case .imperial:
-            return ""  // For imperial, we show the units inline (e.g., "5' 9\"")
+            return ""
         case .metric:
             return "cm"
         }
@@ -635,6 +490,9 @@ private var remainingCal: Double { vm.remainingCalories }
                 .onDisappear {
                     vm.requestLogsReloadFromNotification()
                 }
+        }
+        .sheet(isPresented: $showTimelineSheet) {
+            TimelineFullSheetView(events: timelineEvents, selectedDate: vm.selectedDate)
         }
         .alert("Product Name Required", isPresented: $foodMgr.showNutritionNameInput) {
             TextField("Enter product name", text: $nutritionProductName)
@@ -798,11 +656,7 @@ private var remainingCal: Double { vm.remainingCalories }
                     // View model already reconciled with the server; no need to refetch logs again
                     return
                 }
-                if selectedWorkoutLogId != nil {
-                    pendingLogsReload = true
-                } else {
-                    vm.requestLogsReloadFromNotification()
-                }
+                vm.requestLogsReloadFromNotification()
             }
             .onReceive(
                 NotificationCenter.default
@@ -817,17 +671,6 @@ private var remainingCal: Double { vm.remainingCalories }
                         vm.addPending(workout)
                     }
                 } else {
-                    // Fallback: refresh logs if no workout data in notification
-                    if selectedWorkoutLogId != nil {
-                        pendingLogsReload = true
-                    } else {
-                        vm.requestLogsReloadFromNotification()
-                    }
-                }
-            }
-            .onChange(of: selectedWorkoutLogId) { newValue in
-                if newValue == nil, pendingLogsReload {
-                    pendingLogsReload = false
                     vm.requestLogsReloadFromNotification()
                 }
             }
@@ -842,78 +685,6 @@ private var remainingCal: Double { vm.remainingCalories }
                 .hidden()
             )
     }
-
-    // Delete function for swipe-to-delete functionality
-    private func deleteLogItems(at indexSet: IndexSet) {
-        print("Deleting log items at indices: \(indexSet)")
-        
-        // Get the logs that should be deleted from the sorted array
-        let logsToDelete = indexSet.map { sortedLogs[$0] }
-        
-        // Log detailed information about the logs to be deleted
-        for log in logsToDelete {
-            print("🔍 Dashboard Log to delete - ID: \(log.id), Type: \(log.type)")
-            
-            // More detailed info based on type
-            switch log.type {
-            case .food:
-                print("  • Food log details:")
-                print("    - Food log ID: \(log.foodLogId ?? -1)")
-                if let food = log.food {
-                    print("    - Food ID: \(food.fdcId)")
-                    print("    - Food name: \(food.displayName)")
-                }
-            case .meal:
-                print("  • Meal log details:")
-                print("    - Meal log ID: \(log.mealLogId ?? -1)")
-                if let meal = log.meal {
-                    print("    - Meal ID: \(meal.id)")
-                    print("    - Meal title: \(meal.title)")
-                }
-            case .recipe:
-                print("  • Recipe log details:")
-                print("    - Recipe log ID: \(log.recipeLogId ?? -1)")
-                if let recipe = log.recipe {
-                    print("    - Recipe ID: \(recipe.id)")
-                    print("    - Recipe title: \(recipe.title)")
-                }
-            case .activity:
-                print("  • Activity log details:")
-                print("    - Activity ID: \(log.activityId ?? "N/A")")
-                if let activity = log.activity {
-                    print("    - Activity type: \(activity.workoutActivityType)")
-                    print("    - Activity name: \(activity.displayName)")
-                }
-            case .workout:
-                print("  • Workout log details:")
-                print("    - Workout log ID: \(log.workoutLogId ?? -1)")
-                if let workout = log.workout {
-                    print("    - Workout title: \(workout.title)")
-                    print("    - Duration: \(workout.durationMinutes ?? 0) min")
-                    print("    - Exercises: \(workout.exercisesCount)")
-                }
-            }
-        }
-        
-        // Actually delete the items – unified via DayLogsViewModel (optimistic + server rollback)
-        for log in logsToDelete {
-            switch log.type {
-            case .activity:
-                // Preserve HealthKit safeguard
-                if let activityId = log.activityId, activityId.count > 10 && activityId.contains("-") {
-                    print("🏃 HealthKit activity logs cannot be deleted (they come from Apple Health)")
-                    continue
-                }
-                fallthrough
-            case .food, .meal, .recipe:
-                HapticFeedback.generate()
-                Task { await vm.removeLog(log) }
-            case .workout:
-                print("🏋️ Workout logs cannot be deleted from the dashboard (completed sessions are permanent)")
-            }
-        }
-    }
-    
     // Save function for swipe-to-save functionality
     private func saveMealAction(log: CombinedLog) {
      
@@ -1271,16 +1042,14 @@ private extension NewHomeView {
                 }
             } else {
                 scheduledPreviewsSection
-                logsSection
-                
-                emptyStateSection
+                timelineSection
             }
         }
         .listStyle(PlainListStyle())
         .contentMargins(.bottom, 110, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
-        .animation(.default, value: sortedLogs)
+        .animation(.default, value: timelineEvents.count)
         .contentShape(Rectangle())
         .onTapGesture {
             isAgentInputFocused = false
@@ -2933,6 +2702,231 @@ private struct RecoveryRingView: View {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%0.*f", decimals, value)
     }
 
+    // MARK: - Timeline helpers
+
+    private func wakeTimelineEvent(for date: Date) -> TimelineEvent? {
+        let calendar = Calendar.current
+
+        if let summary = healthViewModel.latestSleepSummary,
+           let wakeDate = wakeDate(from: summary),
+           calendar.isDate(wakeDate, inSameDayAs: date) {
+            let readiness = vm.healthMetricsSnapshot?.readiness.map { Int($0.rounded()) }
+            let sleepQuality = vm.healthMetricsSnapshot?.sleep.map { Int($0.rounded()) }
+            return makeWakeEvent(
+                date: wakeDate,
+                durationMinutes: summary.totalSleepMinutes,
+                readinessScore: readiness,
+                sleepQuality: sleepQuality
+            )
+        }
+
+        guard let snapshot = vm.healthMetricsSnapshot,
+              let raw = snapshot.rawMetrics else {
+            return nil
+        }
+
+        let readiness = snapshot.readiness.map { Int($0.rounded()) }
+        let sleepQuality = snapshot.sleep.map { Int($0.rounded()) } ?? raw.sleepScore.map { Int($0.rounded()) }
+        let durationMinutes = timelineSleepDuration(from: raw)
+
+        if let derivedWakeDate = wakeDateFromSnapshot(snapshot,
+                                                    raw: raw,
+                                                    durationMinutes: durationMinutes,
+                                                    matching: date) {
+            return makeWakeEvent(
+                date: derivedWakeDate,
+                durationMinutes: durationMinutes,
+                readinessScore: readiness,
+                sleepQuality: sleepQuality
+            )
+        }
+
+        if let fallbackDateString = raw.fallbackSleepDate,
+           let fallbackDate = parseISODate(fallbackDateString),
+           calendar.isDate(fallbackDate, inSameDayAs: date) {
+            return makeWakeEvent(
+                date: fallbackDate,
+                durationMinutes: durationMinutes,
+                readinessScore: readiness,
+                sleepQuality: sleepQuality
+            )
+        }
+
+        return nil
+    }
+
+    private func wakeDateFromSnapshot(_ snapshot: NetworkManagerTwo.HealthMetricsSnapshot,
+                                      raw: NetworkManagerTwo.HealthMetricRawMetrics,
+                                      durationMinutes: Double?,
+                                      matching date: Date) -> Date? {
+        guard snapshotSleepSourceMatches(snapshot, date: date),
+              let midpoint = raw.sleepMidpointMinutes,
+              let duration = durationMinutes else {
+            return nil
+        }
+
+        let wakeMinutes = midpoint + (duration / 2.0)
+        return timelineDate(for: date, minutesFromStart: wakeMinutes)
+    }
+
+    private func wakeDate(from summary: SleepSummary) -> Date? {
+        if let offset = summary.sleepOffset {
+            return offset
+        }
+        if let onset = summary.sleepOnset {
+            return onset.addingTimeInterval(summary.totalSleepMinutes * 60.0)
+        }
+        return nil
+    }
+
+    private func snapshotSleepSourceMatches(_ snapshot: NetworkManagerTwo.HealthMetricsSnapshot, date: Date) -> Bool {
+        let sourceString = snapshot.sleepSourceDate ?? snapshot.date
+        let selectedString = iso8601DayFormatter.string(from: date)
+        return sourceString == selectedString
+    }
+
+    private func timelineSleepDuration(from raw: NetworkManagerTwo.HealthMetricRawMetrics) -> Double? {
+        if let total = raw.totalSleepMinutes, total > 0 { return total }
+        if let hours = raw.sleepHours, hours > 0 { return hours * 60.0 }
+        if let stageTotal = sleepStageDuration(from: raw.sleepStageMinutes) { return stageTotal }
+        if let inBed = raw.inBedMinutes, inBed > 0 { return inBed }
+        return nil
+    }
+
+    private func sleepStageDuration(from stages: NetworkManagerTwo.HealthMetricRawMetrics.SleepStageMinutes?) -> Double? {
+        guard let stages else { return nil }
+        let totals = [stages.core, stages.deep, stages.rem].compactMap { $0 }
+        let sum = totals.reduce(0, +)
+        return sum > 0 ? sum : nil
+    }
+
+    private func timelineDate(for baseDate: Date, minutesFromStart: Double) -> Date? {
+        guard minutesFromStart.isFinite else { return nil }
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: baseDate)
+        let dayOffset = Int(floor(minutesFromStart / 1440.0))
+        let normalizedMinutes = minutesFromStart - Double(dayOffset) * 1440.0
+        guard let dayAdjusted = calendar.date(byAdding: .day, value: dayOffset, to: startOfDay) else { return nil }
+        return calendar.date(byAdding: .minute, value: Int(round(normalizedMinutes)), to: dayAdjusted)
+    }
+
+    private func makeWakeEvent(date: Date, durationMinutes: Double?, readinessScore: Int?, sleepQuality: Int?) -> TimelineEvent {
+        let durationText = durationMinutes.map { formatSleepDuration(minutes: $0) }
+        let details = TimelineEventDetails(
+            sleepDurationText: durationText,
+            sleepQuality: sleepQuality,
+            readinessScore: readinessScore
+        )
+        return TimelineEvent(date: date, type: .wake, title: "Woke up", details: details)
+    }
+
+    private func timelineEventsFromLogs(for date: Date) -> [TimelineEvent] {
+        let calendar = Calendar.current
+        return vm.logs.compactMap { log in
+            guard let eventDate = timelineDate(for: log),
+                  calendar.isDate(eventDate, inSameDayAs: date) else {
+                return nil
+            }
+            return timelineEvent(from: log, at: eventDate)
+        }
+    }
+
+    private func timelineEvent(from log: CombinedLog, at date: Date) -> TimelineEvent? {
+        switch log.type {
+        case .food, .meal, .recipe:
+            let macros = macroDetails(for: log)
+            let details = TimelineEventDetails(
+                calories: Int(log.displayCalories.rounded()),
+                protein: macros.protein,
+                carbs: macros.carbs,
+                fat: macros.fat
+            )
+            return TimelineEvent(date: date, type: .food, title: timelineTitle(for: log), details: details)
+        case .activity:
+            guard let activity = log.activity else { return nil }
+            let durationMinutes = Int((activity.duration / 60).rounded())
+            let distanceMiles = activity.totalDistance.map { $0 * 0.000621371 }
+            let calories = Int((activity.totalEnergyBurned ?? log.calories).rounded())
+            let details = TimelineEventDetails(
+                calories: calories,
+                durationMinutes: durationMinutes,
+                distanceMiles: distanceMiles
+            )
+            let eventType: TimelineEvent.EventType = activity.isDistanceActivity ? .cardio : .workout
+            return TimelineEvent(date: date, type: eventType, title: activity.displayName, details: details)
+        case .workout:
+            guard let workout = log.workout else { return nil }
+            let duration = workout.durationMinutes
+                ?? workout.durationSeconds.map { max(1, Int(round(Double($0) / 60.0))) }
+            let details = TimelineEventDetails(
+                calories: Int(log.calories.rounded()),
+                durationMinutes: duration,
+                exercises: workout.exercisesCount
+            )
+            return TimelineEvent(date: date, type: .workout, title: workout.title, details: details)
+        }
+    }
+
+    private func timelineDate(for log: CombinedLog) -> Date? {
+        if let scheduled = log.scheduledAt { return scheduled }
+        if let mealDate = log.meal?.scheduledAt { return mealDate }
+        if let recipeDate = log.recipe?.scheduledAt { return recipeDate }
+        if let activityDate = log.activity?.startDate { return activityDate }
+        if let workoutDate = log.workout?.scheduledAt { return workoutDate }
+        return nil
+    }
+
+    private func timelineTitle(for log: CombinedLog) -> String {
+        switch log.type {
+        case .food:
+            return log.food?.displayName ?? log.message
+        case .meal:
+            return log.meal?.title ?? log.message
+        case .recipe:
+            return log.recipe?.title ?? log.message
+        case .activity:
+            return log.activity?.displayName ?? log.message
+        case .workout:
+            return log.workout?.title ?? log.message
+        }
+    }
+
+    private func macroDetails(for log: CombinedLog) -> (protein: Int?, carbs: Int?, fat: Int?) {
+        func normalized(_ value: Double?) -> Int? {
+            guard let value = value, value > 0 else { return nil }
+            return Int(value.rounded())
+        }
+
+        let protein = log.food?.protein ?? log.meal?.protein ?? log.recipe?.protein
+        let carbs = log.food?.carbs ?? log.meal?.carbs ?? log.recipe?.carbs
+        let fat = log.food?.fat ?? log.meal?.fat ?? log.recipe?.fat
+        return (
+            normalized(protein),
+            normalized(carbs),
+            normalized(fat)
+        )
+    }
+
+    private func parseISODate(_ string: String) -> Date? {
+        if let value = iso8601WithFractionalFormatter.date(from: string) {
+            return value
+        }
+        if let value = iso8601BasicFormatter.date(from: string) {
+            return value
+        }
+        return iso8601DayFormatter.date(from: string)
+    }
+
+    private func formatSleepDuration(minutes: Double) -> String {
+        let hours = Int(minutes) / 60
+        let mins = Int(minutes) % 60
+        if hours > 0 {
+            return "\(hours)h \(mins)m"
+        } else {
+            return "\(mins)m"
+        }
+    }
+
     private func formattedLastEntryText(from entries: [BodyCompositionEntry]) -> String? {
         guard let lastDate = entries.last?.date else { return nil }
         let calendar = Calendar.current
@@ -3269,62 +3263,6 @@ private struct RecoveryRingView: View {
         }
         .padding()
         .frame(maxWidth: .infinity)
-    }
-
-    var emptyState: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 12) {
-                let titleText = getTimeBasedGreeting()
-                
-                Text(titleText)
-                    .font(.system(size: 36))
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .fixedSize(horizontal: true, vertical: false)
-                
-                Text("Your plate is empty. Tap + to start logging.")
-                    .font(.system(size: 20))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(width: titleTextWidth(for: titleText))
-            }
-            
-            Image("plate")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 120, height: 120)
-                .opacity(0.7)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
-        .onTapGesture {
-            // Send notification to show NewSheetView
-            NotificationCenter.default.post(name: NSNotification.Name("ShowNewSheetFromDashboard"), object: nil)
-        }
-    }
-    
-    // Helper function to get time-based greeting
-    private func getTimeBasedGreeting() -> String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        
-        switch hour {
-        case 5..<12:  // 5:00 AM to 11:59 AM
-        
-            return "Good Morning"
-        case 12..<17:  // 12:00 PM to 4:59 PM
-            return "Good Afternoon"
-        default:  // 5:00 PM to 4:59 AM
-            return "Good Evening"
-        }
-    }
-    
-    // Helper function to calculate title text width
-    private func titleTextWidth(for text: String) -> CGFloat {
-        let font = UIFont.systemFont(ofSize: 36, weight: .semibold)
-        let attributes = [NSAttributedString.Key.font: font]
-        let size = (text as NSString).size(withAttributes: attributes)
-        return size.width
     }
 
     // Height card for page 3
@@ -3973,9 +3911,9 @@ private struct DailyStepsCard: View {
     }
 }
 
-    private struct DailyWaterCard: View {
-        let metric: DailyWaterMetric
-        let onLogWater: () -> Void
+private struct DailyWaterCard: View {
+    let metric: DailyWaterMetric
+    let onLogWater: () -> Void
 
         var body: some View {
             VStack(alignment: .leading, spacing: 0) {
@@ -4179,6 +4117,385 @@ private struct BodyCompositionSparkline: View {
             let x = CGFloat(index) * stepX
             let y = size.height - CGFloat(clamped) * size.height
             return CGPoint(x: x, y: y)
+        }
+    }
+}
+
+private struct TimelineEvent: Identifiable {
+    enum EventType {
+        case wake
+        case food
+        case workout
+        case cardio
+        case water
+    }
+
+    struct Details {
+        var calories: Int?
+        var protein: Int?
+        var carbs: Int?
+        var fat: Int?
+        var durationMinutes: Int?
+        var exercises: Int?
+        var distanceMiles: Double?
+        var amountText: String?
+        var milestoneText: String?
+        var sleepDurationText: String?
+        var sleepQuality: Int?
+        var readinessScore: Int?
+    }
+
+    let id = UUID()
+    let date: Date
+    let type: EventType
+    let title: String
+    let details: Details
+
+    var iconName: String {
+        switch type {
+        case .wake:
+            return "sun.max.fill"
+        case .food:
+            return "fork.knife"
+        case .workout:
+            return "figure.strengthtraining.traditional"
+        case .cardio:
+            return "figure.run"
+        case .water:
+            return "drop.fill"
+        }
+    }
+}
+
+private typealias TimelineEventDetails = TimelineEvent.Details
+
+private struct TimelineSectionView: View {
+    let events: [TimelineEvent]
+    let selectedDate: Date
+    var onShowAll: (() -> Void)? = nil
+
+    var body: some View {
+        if events.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Timeline")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("No entries yet")
+                    .font(.system(size: 15))
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            VStack(alignment: .leading, spacing: 16) {
+                if let onShowAll {
+                    HStack {
+                        Text("Timeline")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Button(action: onShowAll) {
+                            Text("Show All")
+                                .font(.system(size: 15))
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                VStack(spacing: 20) {
+                    ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
+                        TimelineEventRow(
+                            event: event,
+                            selectedDate: selectedDate,
+                            isFirst: index == 0,
+                            isLast: index == events.count - 1
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct TimelineEventRow: View {
+    let event: TimelineEvent
+    let selectedDate: Date
+    let isFirst: Bool
+    let isLast: Bool
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }()
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            TimelineConnector(
+                iconName: event.iconName,
+                isFirst: isFirst,
+                isLast: isLast
+            )
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(labelText)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+
+                TimelineEventCard(event: event)
+            }
+        }
+    }
+
+    private var labelText: String {
+        let calendar = Calendar.current
+        if calendar.isDate(event.date, inSameDayAs: selectedDate) {
+            return Self.timeFormatter.string(from: event.date)
+        }
+        return Self.dateFormatter.string(from: event.date)
+    }
+}
+
+private struct TimelineConnector: View {
+    let iconName: String
+    let isFirst: Bool
+    let isLast: Bool
+
+    private let spineColor = Color(.systemGray4)
+
+    var body: some View {
+        GeometryReader { geometry in
+            let availableHeight = max(0, geometry.size.height - 28)
+            let segmentHeight = availableHeight / 2
+
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(spineColor)
+                    .frame(width: 2, height: segmentHeight)
+                    .opacity(isFirst ? 0 : 1)
+
+                ZStack {
+                    Circle()
+                        .fill(Color(red: 0.15, green: 0.21, blue: 0.32))
+                        .frame(width: 28, height: 28)
+                    Image(systemName: iconName)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+
+                Rectangle()
+                    .fill(spineColor)
+                    .frame(width: 2, height: segmentHeight)
+                    .opacity(isLast ? 0 : 1)
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+        }
+        .frame(width: 32)
+    }
+}
+
+private struct TimelineEventCard: View {
+    let event: TimelineEvent
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(event.title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+
+            detailView
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color("sheetcard"))
+        )
+    }
+
+    @ViewBuilder
+    private var detailView: some View {
+        switch event.type {
+        case .food:
+            FoodTimelineDetails(details: event.details)
+        case .workout:
+            WorkoutTimelineDetails(details: event.details)
+        case .cardio:
+            CardioTimelineDetails(details: event.details)
+        case .water:
+            if let amount = event.details.amountText {
+                HStack(spacing: 6) {
+                    Image(systemName: "drop.fill")
+                        .font(.system(size: 13))
+                        .foregroundColor(Color.cyan)
+                    Text(amount)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+            }
+        case .wake:
+            WakeTimelineDetails(details: event.details)
+        }
+    }
+}
+
+private struct FoodTimelineDetails: View {
+    let details: TimelineEvent.Details
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let calories = details.calories {
+                label(icon: "flame.fill", text: "\(calories) cal", color: Color("brightOrange"))
+            }
+            if let protein = details.protein {
+                macroLabel(prefix: "P", value: protein)
+            }
+            if let fat = details.fat {
+                macroLabel(prefix: "F", value: fat)
+            }
+            if let carbs = details.carbs {
+                macroLabel(prefix: "C", value: carbs)
+            }
+        }
+        .font(.system(size: 13))
+        .foregroundColor(.secondary)
+    }
+
+    private func label(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(color)
+            Text(text)
+        }
+    }
+
+    private func macroLabel(prefix: String, value: Int) -> some View {
+        HStack(spacing: 2) {
+            Text(prefix)
+                .foregroundColor(.secondary)
+            Text("\(value)g")
+        }
+    }
+}
+
+private struct WorkoutTimelineDetails: View {
+    let details: TimelineEvent.Details
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let calories = details.calories {
+                detail(icon: "flame.fill", text: "\(calories) cal")
+            }
+            if let duration = details.durationMinutes {
+                detail(icon: "clock", text: "\(duration) min")
+            }
+            if let exercises = details.exercises {
+                detail(icon: "list.bullet", text: "\(exercises) exercises")
+            }
+        }
+        .font(.system(size: 13))
+        .foregroundColor(.secondary)
+    }
+
+    private func detail(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+            Text(text)
+        }
+    }
+}
+
+private struct CardioTimelineDetails: View {
+    let details: TimelineEvent.Details
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let calories = details.calories {
+                detail(icon: "flame.fill", text: "\(calories) cal")
+            }
+            if let duration = details.durationMinutes {
+                detail(icon: "clock", text: "\(duration) min")
+            }
+            if let distance = details.distanceMiles {
+                detail(icon: "mappin.and.ellipse", text: String(format: "%.2f mi", distance))
+            }
+        }
+        .font(.system(size: 13))
+        .foregroundColor(.secondary)
+    }
+
+    private func detail(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+            Text(text)
+        }
+    }
+}
+
+private struct WakeTimelineDetails: View {
+    let details: TimelineEvent.Details
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let duration = details.sleepDurationText {
+                detail(icon: "bed.double.fill", text: duration)
+            }
+            if let readiness = details.readinessScore {
+                detail(icon: "leaf.fill", text: "Readiness \(readiness)")
+            }
+            if let quality = details.sleepQuality {
+                detail(icon: "moon.fill", text: "Sleep \(quality)")
+            }
+        }
+        .font(.system(size: 13))
+        .foregroundColor(.secondary)
+    }
+
+    private func detail(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+            Text(text)
+        }
+    }
+}
+
+private struct TimelineFullSheetView: View {
+    let events: [TimelineEvent]
+    let selectedDate: Date
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                TimelineSectionView(events: events, selectedDate: selectedDate)
+                    .padding(.top, 16)
+                    .padding(.horizontal)
+            }
+            .navigationTitle("Timeline")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 }

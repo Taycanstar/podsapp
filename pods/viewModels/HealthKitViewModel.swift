@@ -42,7 +42,7 @@ final class HealthKitViewModel: ObservableObject {
     private let healthKitManager = HealthKitManager.shared
     private var cancellables = Set<AnyCancellable>()
     private let metricsUploader = AgentMetricsUploader.shared
-    private var latestSleepSummary: SleepSummary?
+    @Published private(set) var latestSleepSummary: SleepSummary?
     private var sleepSummaryCache: [Date: SleepSummary] = [:]
 
     private let payloadDateTimeFormatter: ISO8601DateFormatter = {
