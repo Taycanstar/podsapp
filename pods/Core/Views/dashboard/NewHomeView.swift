@@ -33,8 +33,6 @@ struct NewHomeView: View {
     @State private var showDatePicker = false
     @State private var showWaterLogSheet = false
     @State private var workoutSelectedTab: Int = 0
-    @State private var isTodayWorkoutDismissed = false
-    @AppStorage("hideWorkoutPreviews") private var hideWorkoutPreviews = false
     // ─── Streak state ─────────────────────────────────────────────────────
     @ObservedObject private var streakManager = StreakManager.shared
 
@@ -1240,14 +1238,6 @@ private extension NewHomeView {
                     .listRowSeparator(.hidden)
                     .listRowSpacing(0)
 
-                if isToday && !isTodayWorkoutDismissed && !hideWorkoutPreviews {
-                    todayWorkoutCard
-                        .padding(.horizontal)
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-
                 if foodMgr.foodScanningState.isActive {
                     ModernFoodLoadingCard(state: foodMgr.foodScanningState)
                         .padding(.horizontal)
@@ -1452,8 +1442,10 @@ private extension NewHomeView {
             bodyCompositionSection
                 .padding(.top, 15)
 
-            healthMetricsSection
-                .padding(.top, 15)
+            if shouldShowHealthMetricsSection {
+                healthMetricsSection
+                    .padding(.top, 15)
+            }
 
             ConsistencySection(
                 weightData: vm.weightConsistency,
@@ -1606,6 +1598,10 @@ private extension NewHomeView {
             respiratoryRateTile,
             temperatureTile
         ]
+    }
+
+    private var shouldShowHealthMetricsSection: Bool {
+        healthMetricTiles.contains { !$0.isEmpty }
     }
 
     private var weightBodyCompositionModel: BodyCompositionCardModel {
@@ -1971,6 +1967,7 @@ private extension NewHomeView {
     }
 
     private struct TodaysWorkoutCompactCard: View {
+        @Environment(\.colorScheme) private var colorScheme
         let workout: TodayWorkout?
         let title: String
         let goalName: String
@@ -2040,8 +2037,10 @@ private extension NewHomeView {
                                 .foregroundColor(.primary)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(Color(.systemGray6))
-                                .clipShape(Capsule())
+                                .background(
+                                    Capsule()
+                                        .fill(colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.05))
+                                )
                         }
                     }
                     .padding(.top, 5)
@@ -2763,7 +2762,9 @@ private struct RecoveryRingView: View {
 
     private func targetedMuscles(for workout: TodayWorkout?) -> [String] {
         if let custom = workoutManager.baselineCustomMuscles, !custom.isEmpty {
-            return custom.map { formattedMuscleName($0) }
+            return custom
+                .map { formattedMuscleName($0) }
+                .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
         }
 
         guard let workout else { return [] }
@@ -2777,7 +2778,12 @@ private struct RecoveryRingView: View {
             }
         }
         return counts
-            .sorted { $0.value > $1.value }
+            .sorted { lhs, rhs in
+                if lhs.value == rhs.value {
+                    return lhs.key.localizedCaseInsensitiveCompare(rhs.key) == .orderedAscending
+                }
+                return lhs.value > rhs.value
+            }
             .prefix(4)
             .map { formattedMuscleName($0.key) }
     }
@@ -2843,110 +2849,6 @@ private struct RecoveryRingView: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(Color.primary.opacity(0.05))
         )
-    }
-
-    @ViewBuilder
-    var todayWorkoutCard: some View {
-        if let workout = workoutManager.todayWorkout,
-           Calendar.current.isDate(workout.date, inSameDayAs: Date()) {
-            Button {
-                HapticFeedback.generate()
-                workoutSelectedTab = 0
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("ShowWorkoutContainerFromDashboard"),
-                    object: nil,
-                    userInfo: ["selectedTab": workoutSelectedTab]
-                )
-            } label: {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(alignment: .top, spacing: 16) {
-                        Image(systemName: workoutIconName(for: workout))
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundColor(.primary)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(workoutManager.todayWorkoutDisplayTitle)
-                                .font(.body)
-                                .fontWeight(.regular)
-                                .foregroundColor(.primary)
-                                .lineLimit(2)
-
-                            Text("Today's Workout")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Spacer()
-
-                        HStack(alignment: .center, spacing: 12) {
-                            Menu {
-                                ShareLink(item: generateWorkoutShareURL(workout)) {
-                                    Label("Share", systemImage: "square.and.arrow.up")
-                                }
-
-                                Button {
-                                    HapticFeedback.generate()
-                                    NotificationCenter.default.post(
-                                        name: NSNotification.Name("ShowWorkoutContainerFromDashboard"),
-                                        object: nil,
-                                        userInfo: ["selectedTab": workoutSelectedTab]
-                                    )
-                                } label: {
-                                    Label("See Details", systemImage: "info.circle")
-                                }
-
-                                Button(role: .destructive) {
-                                    HapticFeedback.generate()
-                                    withAnimation {
-                                        hideWorkoutPreviews = true
-                                    }
-                                } label: {
-                                    Label("Stop Showing", systemImage: "nosign")
-                                }
-                            } label: {
-                                Image(systemName: "ellipsis")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.primary)
-                            }
-                            .buttonStyle(.plain)
-
-                            Button {
-                                HapticFeedback.generate()
-                                withAnimation {
-                                    isTodayWorkoutDismissed = true
-                                }
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.primary)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 8) {
-                            summaryChip(text: formattedDurationLabel(for: workout))
-                            summaryChip(text: "\(workout.exercises.count) exercises")
-                            summaryChip(text: workout.fitnessGoal.displayName)
-                        }
-                    }
-                }
-                .padding(.vertical, 16)
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(cardBackgroundColor)
-                        .shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 8)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Color.primary.opacity(0.04), lineWidth: 1)
-                )
-            }
-            .buttonStyle(.plain)
-        }
     }
 
     // Body composition helpers ------------------------------------------------
@@ -4074,16 +3976,10 @@ private struct DailyStepsCard: View {
                     .padding(.bottom, 12)
 
                 HStack(alignment: .center, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(metric.formattedCurrent)
-                                .font(.system(size: 28, weight: .semibold, design: .rounded))
-                                .foregroundColor(.primary)
-
-                            Text(metric.unit)
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(metric.formattedCurrent)
+                            .font(.system(size: 28, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
 
                         Text("/ \(metric.formattedGoal) \(metric.unit)")
                             .font(.system(size: 15, weight: .regular))
@@ -4453,25 +4349,6 @@ private extension NewHomeView {
         return prioritized
     }
 
-    @ViewBuilder
-    func summaryChip(icon: String? = nil, text: String) -> some View {
-        HStack(spacing: 6) {
-            if let icon = icon {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.secondary)
-            }
-            Text(text)
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
-        }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 12)
-        .background(Color(.systemGray5))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-    
     var cardBackgroundColor: Color {
         Color("containerbg")
     }

@@ -1021,6 +1021,7 @@ class OnboardingViewModel: ObservableObject {
     private let subscriptionRepository = SubscriptionRepository.shared
     private var repositoryEmail: String?
     private var cancellables: Set<AnyCancellable> = []
+    private let initialWeightLogKeyPrefix = "initialWeightLogCreated_"
 
     init() {
         loadOnboardingState()
@@ -1359,7 +1360,6 @@ class OnboardingViewModel: ObservableObject {
                         self.onboardingCompleted = true
                         self.isShowingOnboarding = false
 
-                        // Save completion status
                         UserDefaults.standard.set(true, forKey: "onboardingCompleted")
                         UserDefaults.standard.set(self.email, forKey: "userEmail")
 
@@ -1368,7 +1368,6 @@ class OnboardingViewModel: ObservableObject {
                         print("   └── Data saved locally and sent to backend")
                     } else {
                         print("❌ OnboardingViewModel: Backend save failed - \(errorMessage ?? "Unknown error")")
-                        // Even if backend fails, we saved locally, so still complete onboarding
                         self.onboardingCompleted = true
                         self.isShowingOnboarding = false
                         UserDefaults.standard.set(true, forKey: "onboardingCompleted")
@@ -1377,6 +1376,33 @@ class OnboardingViewModel: ObservableObject {
                         print("⚠️ OnboardingViewModel: Completed with local save only (backend sync failed)")
                         self.errorMessage = "Onboarding saved locally. Backend sync failed: \(errorMessage ?? "Unknown error")"
                     }
+
+                    self.logInitialWeightIfNeeded()
+                }
+            }
+        }
+    }
+
+    private func logInitialWeightIfNeeded() {
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard weightKg > 0, !normalizedEmail.isEmpty else { return }
+
+        let key = initialWeightLogKeyPrefix + normalizedEmail.lowercased()
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+
+        NetworkManagerTwo.shared.logWeight(
+            userEmail: normalizedEmail,
+            weightKg: weightKg,
+            notes: "Logged during onboarding"
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    UserDefaults.standard.set(true, forKey: key)
+                    NotificationCenter.default.post(name: Notification.Name("WeightLoggedNotification"), object: nil)
+                    print("✅ OnboardingViewModel: Initial weight log created during onboarding")
+                case .failure(let error):
+                    print("⚠️ OnboardingViewModel: Failed to log initial weight - \(error.localizedDescription)")
                 }
             }
         }
