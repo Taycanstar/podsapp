@@ -78,6 +78,8 @@ struct NewHomeView: View {
     @State private var weightTrendEntries: [BodyCompositionEntry] = []
     @State private var bodyFatTrendEntries: [BodyCompositionEntry] = []
     @State private var showHealthMetricsDetail = false
+    @State private var showingWeightLogSheet = false
+    @State private var showingBodyFatLogSheet = false
     
     enum LogSortOption: String, CaseIterable {
         case date = "Date"
@@ -619,6 +621,16 @@ private var remainingCal: Double { vm.remainingCalories }
         }
         .sheet(isPresented: $showHealthMetricsDetail) {
             HealthDataDetailView(date: vm.selectedDate)
+        }
+        .sheet(isPresented: $showingWeightLogSheet) {
+            EditWeightView(onWeightSaved: {
+                refreshWeightTrendEntries()
+            })
+        }
+        .sheet(isPresented: $showingBodyFatLogSheet) {
+            BodyFatLogView {
+                fetchBodyFatHistoryIfNeeded()
+            }
         }
         .alert("Product Name Required", isPresented: $foodMgr.showNutritionNameInput) {
             TextField("Enter product name", text: $nutritionProductName)
@@ -1602,8 +1614,9 @@ private extension NewHomeView {
         let fallbackValue = vm.weight > 0 ? convertWeightToDisplayUnit(vm.weight) : nil
         let currentValue = entries.last?.value ?? fallbackValue
         let delta = entries.count >= 2 ? (entries.last!.value - entries.first!.value) : nil
-        let subtitle = entries.isEmpty ? "No entries yet" : "Last \(entries.count) Entries"
-        let fallbackTrend = entries.isEmpty ? "Add a weight log" : "Stable"
+        let subtitle = entries.isEmpty ? "No data" : "Last \(entries.count) Entries"
+        let fallbackTrend = entries.isEmpty ? "No data" : "Stable"
+        let addAction: (() -> Void)? = entries.isEmpty ? { showingWeightLogSheet = true } : nil
 
         let lastEntryText = formattedLastEntryText(from: entries)
 
@@ -1619,7 +1632,8 @@ private extension NewHomeView {
             fallbackTrendText: fallbackTrend,
             trendThreshold: 0.05,
             showsChevron: true,
-            lastEntryDescription: lastEntryText
+            lastEntryDescription: lastEntryText,
+            addEntryAction: addAction
         )
     }
 
@@ -1634,8 +1648,8 @@ private extension NewHomeView {
             subtitle = "Connect Apple Health"
             fallbackTrend = "Sync to track"
         } else if entries.isEmpty {
-            subtitle = "Waiting for entries"
-            fallbackTrend = "Need more data"
+            subtitle = "No data"
+            fallbackTrend = "No data"
         } else {
             subtitle = "Last \(entries.count) Entries"
             fallbackTrend = "Stable"
@@ -1657,7 +1671,8 @@ private extension NewHomeView {
             fallbackTrendText: fallbackTrend,
             trendThreshold: 0.1,
             showsChevron: true,
-            lastEntryDescription: lastEntryText
+            lastEntryDescription: lastEntryText,
+            addEntryAction: entries.isEmpty ? { showingBodyFatLogSheet = true } : nil
         )
     }
 
@@ -1702,13 +1717,19 @@ private extension NewHomeView {
             values = Array(weightTrendEntries.suffix(7)).map { $0.value }
         }
 
-        guard !values.isEmpty else { return nil }
-        let latest = values.last ?? 0
+        let hasValues = !values.isEmpty
+        let latestText: String
+
+        if let latest = values.last {
+            latestText = analyticsFormattedValue(latest, decimals: 1)
+        } else {
+            latestText = "—"
+        }
 
         return AnalyticsCardModel(
             title: "Weight Trend",
-            subtitle: "Past Week",
-            valueText: analyticsFormattedValue(latest, decimals: 1),
+            subtitle: hasValues ? "Past Week" : "No data",
+            valueText: latestText,
             unit: weightUnitDisplay,
             dataPoints: values,
             lineColor: .pink,
@@ -3584,6 +3605,7 @@ private struct BodyCompositionCardModel: Identifiable {
     let trendThreshold: Double
     let showsChevron: Bool
     let lastEntryDescription: String?
+    let addEntryAction: (() -> Void)?
 
     var trendDirection: TrendDirection {
         guard let delta else { return .stable }
@@ -4179,9 +4201,19 @@ private struct BodyCompositionTrendCard: View {
 
                 Spacer()
 
-                Text(model.trendText)
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                if model.values.isEmpty, let addAction = model.addEntryAction {
+                    Button(action: addAction) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(.indigo)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Add \(model.title) log")
+                } else {
+                    Text(model.trendText)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
             }
             .padding(.top, 2)
         }

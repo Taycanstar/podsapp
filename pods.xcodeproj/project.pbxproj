@@ -331,6 +331,7 @@
 		36ED35B62DD7F28900D174FB /* EditHeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B52DD7F28900D174FB /* EditHeightView.swift */; };
 		36ED35B82DD92FF000D174FB /* UserDataModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B72DD92FF000D174FB /* UserDataModel.swift */; };
 		36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B92DD938B900D174FB /* WeightDataView.swift */; };
+		C5815F6130304BA3D7590704 /* BodyFatLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */; };
 		36ED35BC2DD938C800D174FB /* HeightDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35BB2DD938C800D174FB /* HeightDataView.swift */; };
 		36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */; };
 		36ED35C02DDBB0C100D174FB /* GoalProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35BF2DDBB0C100D174FB /* GoalProgress.swift */; };
@@ -732,6 +733,7 @@
 		36ED35B52DD7F28900D174FB /* EditHeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditHeightView.swift; sourceTree = "<group>"; };
 		36ED35B72DD92FF000D174FB /* UserDataModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDataModel.swift; sourceTree = "<group>"; };
 		36ED35B92DD938B900D174FB /* WeightDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightDataView.swift; sourceTree = "<group>"; };
+		89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyFatLogView.swift; sourceTree = "<group>"; };
 		36ED35BB2DD938C800D174FB /* HeightDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightDataView.swift; sourceTree = "<group>"; };
 		36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodLogDetails.swift; sourceTree = "<group>"; };
 		36ED35BF2DDBB0C100D174FB /* GoalProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalProgress.swift; sourceTree = "<group>"; };
@@ -1420,6 +1422,7 @@
 				36ED35B32DD7F27900D174FB /* EditWeightView.swift */,
 				36ED35B52DD7F28900D174FB /* EditHeightView.swift */,
 				36ED35B92DD938B900D174FB /* WeightDataView.swift */,
+				89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */,
 				36ED35BB2DD938C800D174FB /* HeightDataView.swift */,
 				36ED35BF2DDBB0C100D174FB /* GoalProgress.swift */,
 				36F5C5A02F11B8E700D8F4B2 /* NutrientGoalEditorView.swift */,
@@ -1912,6 +1915,7 @@
 				3615D1112EAF108D0063EB8B /* MainActorDiagnostics.swift in Sources */,
 				3625329F2E629D1A003C3B8D /* CircularProgressView.swift in Sources */,
 				36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */,
+				C5815F6130304BA3D7590704 /* BodyFatLogView.swift in Sources */,
 				3615D1132EAFEA320063EB8B /* AgentTabBar.swift in Sources */,
 				36FFF1012FBEBE6000A1C0DE /* AgentModels.swift in Sources */,
 				36FFF1112FBEBE6000A1C0DE /* AgentService.swift in Sources */,

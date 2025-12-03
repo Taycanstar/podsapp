@@ -652,6 +652,30 @@ class HealthKitManager {
         healthStore.execute(query)
     }
 
+    func saveBodyFatSample(percentage: Double, date: Date, completion: @escaping (Bool, Error?) -> Void) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            let error = NSError(
+                domain: "com.podsapp.healthkit",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Health data isn't available on this device."]
+            )
+            DispatchQueue.main.async {
+                completion(false, error)
+            }
+            return
+        }
+
+        let fatType = HKQuantityType.quantityType(forIdentifier: .bodyFatPercentage)!
+        let quantity = HKQuantity(unit: HKUnit.percent(), doubleValue: percentage / 100.0)
+        let sample = HKQuantitySample(type: fatType, quantity: quantity, start: date, end: date)
+
+        healthStore.save(sample) { success, error in
+            DispatchQueue.main.async {
+                completion(success, error)
+            }
+        }
+    }
+
     // Fetch date of birth from HealthKit characteristics
     func fetchDateOfBirth(completion: @escaping (Date?, Error?) -> Void) {
         do {
