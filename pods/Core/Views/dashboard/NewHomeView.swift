@@ -630,6 +630,12 @@ private var remainingCal: Double { vm.remainingCalories }
                 fetchBodyFatHistoryIfNeeded()
             }
         }
+        .sheet(isPresented: $showWaterLogSheet) {
+            LogWaterView()
+                .onDisappear {
+                    vm.requestLogsReloadFromNotification()
+                }
+        }
         .alert("Product Name Required", isPresented: $foodMgr.showNutritionNameInput) {
             TextField("Enter product name", text: $nutritionProductName)
                 .textInputAutocapitalization(.words)
@@ -1466,7 +1472,8 @@ private extension NewHomeView {
                 DailyEssentialsSection(
                     steps: stepsMetric,
                     water: waterMetric,
-                    onSeeAll: {}
+                    onSeeAll: {},
+                    onLogWater: { showWaterLogSheet = true }
                 )
                 .padding(.top, 20)
             }
@@ -3869,10 +3876,11 @@ private struct DailyWaterMetric {
     }()
 }
 
-private struct DailyEssentialsSection: View {
-    let steps: DailyStepsMetric?
-    let water: DailyWaterMetric?
-    var onSeeAll: () -> Void
+    private struct DailyEssentialsSection: View {
+        let steps: DailyStepsMetric?
+        let water: DailyWaterMetric?
+        var onSeeAll: () -> Void
+        var onLogWater: () -> Void
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -3899,7 +3907,7 @@ private struct DailyEssentialsSection: View {
                 }
 
                 if let water {
-                    DailyWaterCard(metric: water)
+                    DailyWaterCard(metric: water, onLogWater: onLogWater)
                 }
             }
         }
@@ -3967,6 +3975,7 @@ private struct DailyStepsCard: View {
 
     private struct DailyWaterCard: View {
         let metric: DailyWaterMetric
+        let onLogWater: () -> Void
 
         var body: some View {
             VStack(alignment: .leading, spacing: 0) {
@@ -3978,25 +3987,27 @@ private struct DailyStepsCard: View {
                     .padding(.top, 4)
                     .padding(.bottom, 12)
 
-                HStack(alignment: .center, spacing: 12) {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(metric.formattedCurrent)
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
+        HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(metric.formattedCurrent)
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
 
-                    Text("/\(metric.formattedGoal) \(metric.unit)")
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(.secondary)
-                }
+                Text("/\(metric.formattedGoal) \(metric.unit)")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.secondary)
+            }
 
-                    Spacer()
+            Spacer()
 
-                    Image(systemName: "waterbottle.fill")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .padding(.trailing, 2)
-                }
-                .padding(.bottom, 12)
+            Button(action: onLogWater) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundColor(.cyan)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.bottom, 12)
 
                 GeometryReader { proxy in
                     ZStack(alignment: .leading) {
@@ -5196,15 +5207,6 @@ private extension NewHomeView {
             .padding(.trailing, 4)
         }
         .frame(maxWidth: .infinity)
-        .sheet(isPresented: $showWaterLogSheet) {
-            LogWaterView()
-                .onDisappear {
-                    // Refresh logs data when sheet is dismissed
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        vm.loadLogs(for: vm.selectedDate)
-                    }
-                }
-        }
     }
 }
 
