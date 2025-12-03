@@ -4050,7 +4050,7 @@ private struct DailyStepsCard: View {
     private func cardHeader(title: String) -> some View {
         HStack {
             Text(title)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundColor(.primary)
             Spacer()
             Image(systemName: "chevron.right")
@@ -4060,90 +4060,80 @@ private struct DailyStepsCard: View {
     }
 }
 
-private struct DailyWaterCard: View {
-    let metric: DailyWaterMetric
+    private struct DailyWaterCard: View {
+        let metric: DailyWaterMetric
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            cardHeader(title: "Water")
+        var body: some View {
+            VStack(alignment: .leading, spacing: 0) {
+                cardHeader(title: "Water")
 
-            Text("Today")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.top, 4)
-                .padding(.bottom, 12)
+                Text("Today")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 4)
+                    .padding(.bottom, 12)
 
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(metric.formattedCurrent)
-                            .font(.system(size: 28, weight: .semibold, design: .rounded))
-                            .foregroundColor(.primary)
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(metric.formattedCurrent)
+                                .font(.system(size: 28, weight: .semibold, design: .rounded))
+                                .foregroundColor(.primary)
+
+                            Text(metric.unit)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
 
                         Text("/ \(metric.formattedGoal) \(metric.unit)")
                             .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.secondary)
                     }
+
+                    Spacer()
+
+                    Image(systemName: "waterbottle.fill")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .padding(.trailing, 2)
                 }
+                .padding(.bottom, 12)
 
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.primary.opacity(0.08))
+                            .frame(height: 6)
+
+                        Capsule()
+                            .fill(
+                                LinearGradient(colors: [Color.cyan, Color.cyan.opacity(0.7)], startPoint: .leading, endPoint: .trailing)
+                            )
+                            .frame(width: max(0, min(metric.progress, 1)) * proxy.size.width, height: 6)
+                    }
+                }
+                .frame(height: 6)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color("sheetcard"))
+            )
+        }
+
+        private func cardHeader(title: String) -> some View {
+            HStack {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
                 Spacer()
-
-                WaterGlassView(progress: metric.progress)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color("sheetcard"))
-        )
     }
-
-    private func cardHeader(title: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundColor(.primary)
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.secondary)
-        }
-    }
-}
-
-private struct WaterGlassView: View {
-    let progress: Double
-
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.white, Color(UIColor.systemGray6)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.primary.opacity(0.08))
-                )
-
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(red: 0.35, green: 0.79, blue: 0.98), Color(red: 0.04, green: 0.52, blue: 1.0)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(height: 48 * min(max(progress, 0), 1))
-                .padding(4)
-        }
-        .frame(width: 48, height: 48)
-    }
-}
 
 private struct BodyCompositionTrendCard: View {
     let model: BodyCompositionCardModel
