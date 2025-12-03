@@ -3928,7 +3928,7 @@ private struct DailyStepsCard: View {
                 .padding(.top, 4)
                 .padding(.bottom, 12)
 
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text(metric.formattedCurrent)
                     .font(.system(size: 28, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
@@ -3988,7 +3988,7 @@ private struct DailyStepsCard: View {
                     .padding(.bottom, 12)
 
         HStack(alignment: .center, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text(metric.formattedCurrent)
                     .font(.system(size: 28, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
