@@ -3836,6 +3836,7 @@ private struct DailyStepsMetric {
         formatter.numberStyle = .decimal
         formatter.maximumFractionDigits = 0
         formatter.minimumFractionDigits = 0
+        formatter.usesGroupingSeparator = false
         return formatter
     }()
 }
@@ -3863,6 +3864,7 @@ private struct DailyWaterMetric {
         formatter.numberStyle = .decimal
         formatter.maximumFractionDigits = 0
         formatter.minimumFractionDigits = 0
+        formatter.usesGroupingSeparator = false
         return formatter
     }()
 }
@@ -3918,14 +3920,9 @@ private struct DailyStepsCard: View {
                 .padding(.top, 4)
                 .padding(.bottom, 12)
 
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(metric.formattedCurrent)
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
-                Text("/ \(metric.formattedGoal)")
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundColor(.secondary)
-            }
+            Text("\(metric.formattedCurrent)/\(metric.formattedGoal)")
+                .font(.system(size: 28, weight: .semibold, design: .rounded))
+                .foregroundColor(.primary)
             .padding(.bottom, 12)
 
             GeometryReader { proxy in
@@ -3976,15 +3973,9 @@ private struct DailyStepsCard: View {
                     .padding(.bottom, 12)
 
                 HStack(alignment: .center, spacing: 12) {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(metric.formattedCurrent)
-                            .font(.system(size: 28, weight: .semibold, design: .rounded))
-                            .foregroundColor(.primary)
-
-                        Text("/ \(metric.formattedGoal) \(metric.unit)")
-                            .font(.system(size: 15, weight: .regular))
-                            .foregroundColor(.secondary)
-                    }
+                    Text("\(metric.formattedCurrent)/\(metric.formattedGoal) \(metric.unit)")
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .foregroundColor(.primary)
 
                     Spacer()
 
