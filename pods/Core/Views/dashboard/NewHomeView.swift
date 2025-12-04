@@ -4430,10 +4430,17 @@ private struct TimelineSpineOverlay: View {
     var body: some View {
         GeometryReader { geometry in
             let color = colorScheme == .dark ? Color(.systemGray3) : Color(.systemGray4)
-            Rectangle()
-                .fill(color)
-                .frame(width: 2, height: geometry.size.height)
-                .position(x: TimelineConnector.iconSize / 2, y: geometry.size.height / 2)
+            ZStack(alignment: .center) {
+                Rectangle()
+                    .fill(color)
+                    .frame(width: 2, height: geometry.size.height)
+                    .position(x: TimelineConnector.iconSize / 2, y: geometry.size.height / 2)
+
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
+                    .position(x: TimelineConnector.iconSize / 2, y: geometry.size.height - 4)
+            }
         }
         .allowsHitTesting(false)
     }
