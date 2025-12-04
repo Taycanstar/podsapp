@@ -4297,10 +4297,8 @@ private struct TimelineEvent: Identifiable {
             return "sun.max.fill"
         case .food:
             return "fork.knife"
-        case .workout:
-            return "figure.strengthtraining.traditional"
-        case .cardio:
-            return "figure.run"
+        case .workout, .cardio:
+            return "flame.fill"
         case .water:
             return "drop.fill"
         }
@@ -4318,6 +4316,7 @@ private struct TimelineSectionView: View {
 
     var body: some View {
         let rowSpacing: CGFloat = 20
+        let eventIDs = events.map(\.id)
 
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -4355,7 +4354,12 @@ private struct TimelineSectionView: View {
                                 event: event,
                                 selectedDate: selectedDate
                             )
+                            .transition(.move(edge: .top).combined(with: .opacity))
                         }
+                        .animation(
+                            .spring(response: 0.5, dampingFraction: 0.85),
+                            value: eventIDs
+                        )
                     }
                 }
             }
