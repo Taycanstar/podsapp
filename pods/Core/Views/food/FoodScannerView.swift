@@ -152,13 +152,10 @@ struct FoodScannerView: View {
                             
                             self.scannedBarcode = barcode
                             
+                            processBarcodeDirectly(barcode)
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                 print("📸 Auto-capturing photo for barcode: \(barcode)")
                                 takePhoto()
-                                
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                    processBarcodeDirectly(barcode)
-                                }
                             }
                         }
                     )

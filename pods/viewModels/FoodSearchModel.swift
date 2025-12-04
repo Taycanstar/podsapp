@@ -53,6 +53,7 @@ struct Food: Codable, Identifiable, Hashable{
     var aiInsight: String? = nil
     var nutritionScore: Double? = nil
     var mealItems: [MealItem]? = nil
+    var barcode: String? = nil
     
     var id: Int { fdcId }
     
@@ -63,6 +64,7 @@ struct Food: Codable, Identifiable, Hashable{
         case aiInsight = "ai_insight"
         case nutritionScore = "nutrition_score"
         case mealItems = "meal_items"
+        case barcode
     }
     
     var calories: Double? {

@@ -3,6 +3,297 @@ import SwiftUI
 import Combine
 import Mixpanel
 
+enum NutritionixServiceError: LocalizedError {
+    case credentialsMissing
+    case invalidRequest
+    case invalidResponse
+    case noResults
+    case statusCode(Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .credentialsMissing:
+            return "Nutritionix credentials are missing"
+        case .invalidRequest:
+            return "Unable to build Nutritionix request"
+        case .invalidResponse:
+            return "Nutritionix returned an invalid response"
+        case .noResults:
+            return "No nutrition data found for this barcode"
+        case .statusCode(let code):
+            return "Nutritionix request failed with status code \(code)"
+        }
+    }
+}
+
+final class NutritionixService {
+    static let shared = NutritionixService()
+
+    private let session: URLSession
+    private let appId: String
+    private let apiKey: String
+
+    init(session: URLSession = .shared, configurationManager: ConfigurationManager = .shared) {
+        self.session = session
+        self.appId = configurationManager.getValue(forKey: "NUTRITIONIX_APP_ID") as? String ?? ""
+        self.apiKey = configurationManager.getValue(forKey: "NUTRITIONIX_KEY") as? String ?? ""
+    }
+
+    var isConfigured: Bool {
+        !appId.isEmpty && !apiKey.isEmpty
+    }
+
+    func lookupFood(by barcode: String, userEmail: String?, completion: @escaping (Result<Food, Error>) -> Void) {
+        guard isConfigured else {
+            completion(.failure(NutritionixServiceError.credentialsMissing))
+            return
+        }
+
+        guard var components = URLComponents(string: "https://trackapi.nutritionix.com/v2/search/item") else {
+            completion(.failure(NutritionixServiceError.invalidRequest))
+            return
+        }
+        components.queryItems = [URLQueryItem(name: "upc", value: barcode)]
+        guard let url = components.url else {
+            completion(.failure(NutritionixServiceError.invalidRequest))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(appId, forHTTPHeaderField: "x-app-id")
+        request.setValue(apiKey, forHTTPHeaderField: "x-app-key")
+        if let userEmail, !userEmail.isEmpty {
+            request.setValue(userEmail, forHTTPHeaderField: "x-remote-user-id")
+        }
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        session.dataTask(with: request) { [weak self] data, response, error in
+            guard let self else { return }
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { completion(.failure(NutritionixServiceError.invalidResponse)) }
+                return
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                if httpResponse.statusCode == 404 {
+                    DispatchQueue.main.async { completion(.failure(NutritionixServiceError.noResults)) }
+                } else {
+                    DispatchQueue.main.async { completion(.failure(NutritionixServiceError.statusCode(httpResponse.statusCode))) }
+                }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NutritionixServiceError.invalidResponse)) }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let itemResponse = try decoder.decode(NutritionixItemResponse.self, from: data)
+                guard let food = self.makeFood(from: itemResponse, barcode: barcode) else {
+                    throw NutritionixServiceError.noResults
+                }
+                DispatchQueue.main.async { completion(.success(food)) }
+            } catch {
+                DispatchQueue.main.async { completion(.failure(error)) }
+            }
+        }.resume()
+    }
+
+    private func makeFood(from response: NutritionixItemResponse, barcode: String) -> Food? {
+        guard let item = response.foods?.first ?? response.branded?.first else {
+            return nil
+        }
+
+        let name = item.brandNameItemName ?? item.foodName ?? "Food"
+        let brand = item.brandName ?? item.brandOwner
+        let servingQty = item.servingQty ?? 1
+        let servingUnit = item.servingUnit ?? "serving"
+        let servingWeight = item.servingWeightGrams
+        let calories = item.nfCalories ?? 0
+        let protein = item.nfProtein ?? 0
+        let carbs = item.nfTotalCarbohydrate ?? 0
+        let fat = item.nfTotalFat ?? 0
+        let sugars = item.nfSugars
+        let fiber = item.nfDietaryFiber
+        let sodium = item.nfSodium
+
+        var nutrients: [Nutrient] = []
+        var addedKeys = Set<String>()
+
+        func appendNutrient(name: String, value: Double?, unit: String) {
+            guard let value, value > 0 else { return }
+            if !addedKeys.contains(name) {
+                nutrients.append(Nutrient(nutrientName: name, value: value, unitName: unit))
+                addedKeys.insert(name)
+            }
+        }
+
+        appendNutrient(name: "Energy", value: calories, unit: "kcal")
+        appendNutrient(name: "Protein", value: protein, unit: "g")
+        appendNutrient(name: "Carbohydrate, by difference", value: carbs, unit: "g")
+        appendNutrient(name: "Total lipid (fat)", value: fat, unit: "g")
+        appendNutrient(name: "Sugars, total including NLEA", value: sugars, unit: "g")
+        appendNutrient(name: "Fiber, total dietary", value: fiber, unit: "g")
+        appendNutrient(name: "Sodium, Na", value: sodium, unit: "mg")
+
+        if let fullNutrients = item.fullNutrients {
+            for nutrient in fullNutrients {
+                guard let mapping = NutritionixService.attrIdMap[nutrient.attrId] else { continue }
+                appendNutrient(name: mapping.name, value: nutrient.value, unit: mapping.unit)
+            }
+        }
+
+        let measures = item.altMeasures?.compactMap { alt -> MealItemMeasure? in
+            guard let weight = alt.servingWeight, weight > 0 else { return nil }
+            _ = alt.qty ?? 1
+            let description = alt.measure?.isEmpty == false ? alt.measure! : "serving"
+            return MealItemMeasure(unit: description, description: description, gramWeight: weight)
+        } ?? []
+
+        let foodMeasures: [FoodMeasure] = measures.enumerated().map { index, measure in
+            FoodMeasure(
+                disseminationText: measure.description,
+                gramWeight: measure.gramWeight,
+                id: index,
+                modifier: measure.description,
+                measureUnitName: measure.unit,
+                rank: index
+            )
+        }
+
+        let originalServing = MealItemServingDescriptor(
+            amount: servingQty,
+            unit: servingUnit,
+            text: formattedServingText(qty: servingQty, unit: servingUnit, grams: servingWeight)
+        )
+
+        let mealItem = MealItem(
+            name: name,
+            serving: servingQty,
+            servingUnit: servingUnit,
+            calories: calories,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+            subitems: nil,
+            baselineServing: servingQty,
+            measures: measures,
+            originalServing: originalServing
+        )
+
+        let pseudoId = makePseudoFdcId(from: barcode)
+        let servingText = formattedServingText(qty: servingQty, unit: servingUnit, grams: servingWeight)
+
+        return Food(
+            fdcId: pseudoId,
+            description: name,
+            brandOwner: brand,
+            brandName: brand,
+            servingSize: servingQty,
+            numberOfServings: 1,
+            servingSizeUnit: servingUnit,
+            householdServingFullText: servingText,
+            foodNutrients: nutrients,
+            foodMeasures: foodMeasures,
+            healthAnalysis: nil,
+            aiInsight: defaultInsight(for: item),
+            nutritionScore: nil,
+            mealItems: [mealItem],
+            barcode: barcode
+        )
+    }
+
+    private func formattedServingText(qty: Double?, unit: String?, grams: Double?) -> String {
+        var components: [String] = []
+        if let qty {
+            let formatter = NumberFormatter()
+            formatter.minimumFractionDigits = 0
+            formatter.maximumFractionDigits = 2
+            let text = formatter.string(from: NSNumber(value: qty)) ?? "\(qty)"
+            if let unit, !unit.isEmpty {
+                components.append("\(text) \(unit)")
+            } else {
+                components.append(text)
+            }
+        }
+        if let grams, grams > 0 {
+            components.append("(\(String(format: "%.0f", grams)) g)")
+        }
+        return components.joined(separator: " ")
+    }
+
+    private func defaultInsight(for item: NutritionixFood) -> String? {
+        guard let brand = item.brandName else { return nil }
+        return "Nutrition data provided by \(brand)."
+    }
+
+    private func makePseudoFdcId(from barcode: String) -> Int {
+        if let numeric = Int(barcode) {
+            return numeric
+        }
+        let scalars = barcode.unicodeScalars.map { UInt32($0.value) }
+        let hash = scalars.reduce(UInt64(5381)) { ($0 << 5) &+ $0 &+ UInt64($1) }
+        return Int(hash % 1_000_000_000) + 900_000_000
+    }
+
+    private static let attrIdMap: [Int: (name: String, unit: String)] = [
+        269: ("Sugars, total including NLEA", "g"),
+        291: ("Fiber, total dietary", "g"),
+        307: ("Sodium, Na", "mg"),
+        601: ("Cholesterol", "mg"),
+        605: ("Fatty acids, total trans", "g"),
+        606: ("Fatty acids, total saturated", "g"),
+        306: ("Potassium, K", "mg"),
+        301: ("Calcium, Ca", "mg"),
+        303: ("Iron, Fe", "mg")
+    ]
+}
+
+private struct NutritionixItemResponse: Decodable {
+    let foods: [NutritionixFood]?
+    let branded: [NutritionixFood]?
+}
+
+private struct NutritionixFood: Decodable {
+    let foodName: String?
+    let brandName: String?
+    let brandOwner: String?
+    let brandNameItemName: String?
+    let servingQty: Double?
+    let servingUnit: String?
+    let servingWeightGrams: Double?
+    let nfCalories: Double?
+    let nfProtein: Double?
+    let nfTotalCarbohydrate: Double?
+    let nfTotalFat: Double?
+    let nfSugars: Double?
+    let nfDietaryFiber: Double?
+    let nfSodium: Double?
+    let nfIngredientStatement: String?
+    let altMeasures: [NutritionixAltMeasure]?
+    let fullNutrients: [NutritionixFullNutrient]?
+}
+
+private struct NutritionixAltMeasure: Decodable {
+    let servingWeight: Double?
+    let measure: String?
+    let qty: Double?
+}
+
+private struct NutritionixFullNutrient: Decodable {
+    let attrId: Int
+    let value: Double?
+}
+
 // Memory tracking helper for crash debugging (duplicated from FoodScannerView)
 func getMemoryUsage() -> (used: Double, available: Double) {
     var info = mach_task_basic_info()
@@ -3470,6 +3761,43 @@ func analyzeNutritionLabel(
     // MARK: - Direct Barcode Logging (no preview)
     @MainActor
     func lookupFoodByBarcodeDirect(barcode: String, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, String?) -> Void) {
+        guard !isAnalyzingFood else { return }
+        let currentEmail = userEmail
+        if NutritionixService.shared.isConfigured {
+            NutritionixService.shared.lookupFood(by: barcode, userEmail: currentEmail) { [weak self] result in
+                guard let self = self else { return }
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(var food):
+                        if food.barcode == nil {
+                            food.barcode = barcode
+                        }
+                        self.processDirectNutritionixFood(food: food, mealType: mealType, completion: completion)
+                    case .failure(let error):
+                        print("❌ Nutritionix direct lookup failed: \(error.localizedDescription)")
+                        self.legacyLookupFoodByBarcodeDirect(
+                            barcode: barcode,
+                            userEmail: currentEmail,
+                            mealType: mealType,
+                            completion: completion
+                        )
+                    }
+                }
+            }
+            return
+        }
+
+        legacyLookupFoodByBarcodeDirect(barcode: barcode, userEmail: userEmail, mealType: mealType, completion: completion)
+    }
+
+    private func processDirectNutritionixFood(food: Food, mealType: String, completion: @escaping (Bool, String?) -> Void) {
+        isAnalyzingFood = false
+        finishLogging(food: food, mealType: mealType) {
+            completion(true, nil)
+        }
+    }
+
+    private func legacyLookupFoodByBarcodeDirect(barcode: String, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, String?) -> Void) {
         print("🔍 Starting direct barcode lookup for: \(barcode)")
         
         // MODERN: Use modern FoodScanningState system with proper state progression
@@ -3632,6 +3960,127 @@ func analyzeNutritionLabel(
     // MARK: - Enhanced Barcode Lookup
     @MainActor
     func lookupFoodByBarcodeEnhanced(barcode: String, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, String?) -> Void) {
+        let shouldShowLoaderCard = false
+        if NutritionixService.shared.isConfigured {
+            NutritionixService.shared.lookupFood(by: barcode, userEmail: userEmail) { [weak self] result in
+                guard let self = self else { return }
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(var food):
+                        if food.barcode == nil {
+                            food.barcode = barcode
+                        }
+                        self.processEnhancedNutritionixFood(
+                            food: food,
+                            barcode: barcode,
+                            mealType: mealType,
+                            shouldShowLoaderCard: shouldShowLoaderCard,
+                            userEmail: userEmail,
+                            completion: completion
+                        )
+                    case .failure(let error):
+                        print("❌ Nutritionix enhanced lookup failed: \(error.localizedDescription)")
+                        self.legacyLookupFoodByBarcodeEnhanced(
+                            barcode: barcode,
+                            userEmail: userEmail,
+                            mealType: mealType,
+                            completion: completion
+                        )
+                    }
+                }
+            }
+            return
+        }
+
+        legacyLookupFoodByBarcodeEnhanced(
+            barcode: barcode,
+            userEmail: userEmail,
+            mealType: mealType,
+            completion: completion
+        )
+    }
+
+    private func processEnhancedNutritionixFood(
+        food: Food,
+        barcode: String,
+        mealType: String,
+        shouldShowLoaderCard: Bool,
+        userEmail: String,
+        completion: @escaping (Bool, String?) -> Void
+    ) {
+        var enrichedFood = food
+        if enrichedFood.barcode == nil {
+            enrichedFood.barcode = barcode
+        }
+        print("✅ Enhanced barcode lookup successful: \(enrichedFood.displayName)")
+        let calories = enrichedFood.calories ?? 0
+        let protein = enrichedFood.protein ?? 0
+        let carbs = enrichedFood.carbs ?? 0
+        let fat = enrichedFood.fat ?? 0
+        print("🍽️ Enhanced barcode macros – calories: \(calories), protein: \(protein)g, carbs: \(carbs)g, fat: \(fat)g")
+
+        Mixpanel.mainInstance().track(event: "Barcode Scan", properties: [
+            "food_name": enrichedFood.displayName,
+            "barcode": barcode,
+            "calories": calories,
+            "user_email": userEmail
+        ])
+
+        Mixpanel.mainInstance().track(event: "Barcode Food Identified", properties: [
+            "food_name": enrichedFood.displayName,
+            "barcode": barcode,
+            "calories": calories,
+            "user_email": userEmail
+        ])
+
+        self.aiGeneratedFood = enrichedFood.asLoggedFoodItem
+        self.lastLoggedFoodId = enrichedFood.fdcId
+
+        let combinedLog = CombinedLog(
+            type: .food,
+            status: "success",
+            calories: calories,
+            message: "Barcode scan: \(barcode) - \(enrichedFood.displayName)",
+            foodLogId: nil,
+            food: enrichedFood.asLoggedFoodItem,
+            mealType: mealType,
+            mealLogId: nil,
+            meal: nil,
+            mealTime: nil,
+            scheduledAt: Date(),
+            recipeLogId: nil,
+            recipe: nil,
+            servingsConsumed: nil
+        )
+
+        if shouldShowLoaderCard {
+            updateFoodScanningState(.completed(result: combinedLog))
+            lastLoggedItem = (name: enrichedFood.displayName, calories: calories)
+            showLogSuccess = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                self.showLogSuccess = false
+            }
+        } else {
+            updateFoodScanningState(.inactive)
+        }
+
+        isScanningBarcode = false
+        isLoading = false
+        barcodeLoadingMessage = ""
+        isAnalyzingFood = false
+
+        NotificationCenter.default.post(
+            name: NSNotification.Name("ShowFoodConfirmation"),
+            object: nil,
+            userInfo: [
+                "food": enrichedFood,
+                "barcode": barcode
+            ]
+        )
+        completion(true, nil)
+    }
+
+    private func legacyLookupFoodByBarcodeEnhanced(barcode: String, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, String?) -> Void) {
         print("🔍 Starting enhanced barcode lookup for: \(barcode)")
         let shouldShowLoaderCard = false
         var barcodeTimer: Timer?
