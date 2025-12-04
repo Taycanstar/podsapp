@@ -4338,7 +4338,8 @@ private struct TimelineSectionView: View {
                 TimelineEmptyQuickActionsRow(
                     onAddActivity: onAddActivity,
                     onScanMeal: onScanMeal,
-                    connectsToNext: !events.isEmpty
+                    connectsToNext: !events.isEmpty,
+                    spacingBelow: events.isEmpty ? 0 : rowSpacing
                 )
 
                 if events.isEmpty {
@@ -4347,19 +4348,14 @@ private struct TimelineSectionView: View {
                         .foregroundColor(.secondary)
                         .padding(.top, rowSpacing)
                 } else {
-                    TimelineConnectorBridge(height: rowSpacing)
-
                     ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
                         TimelineEventRow(
                             event: event,
                             selectedDate: selectedDate,
                             isFirst: false,
-                            isLast: index == events.count - 1
+                            isLast: index == events.count - 1,
+                            spacingBelow: index == events.count - 1 ? 0 : rowSpacing
                         )
-
-                        if index != events.count - 1 {
-                            TimelineConnectorBridge(height: rowSpacing)
-                        }
                     }
                 }
             }
@@ -4371,35 +4367,42 @@ private struct TimelineEmptyQuickActionsRow: View {
     var onAddActivity: (() -> Void)?
     var onScanMeal: (() -> Void)?
     var connectsToNext: Bool
+    var spacingBelow: CGFloat
 
     private let foregroundColor = Color("text")
 
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        HStack(alignment: .timelineIcon, spacing: 12) {
-            TimelineConnector(
-                iconName: "plus",
-                isFirst: true,
-                isLast: !connectsToNext,
-                overrideColor: plusColor
-            )
-
-            HStack(spacing: 12) {
-                quickActionChip(
-                    title: "Add Activity",
-                    systemImage: "flame.fill",
-                    action: onAddActivity
+        VStack(spacing: 0) {
+            HStack(alignment: .timelineIcon, spacing: 12) {
+                TimelineConnector(
+                    iconName: "plus",
+                    isFirst: true,
+                    isLast: !connectsToNext,
+                    overrideColor: plusColor
                 )
 
-                quickActionChip(
-                    title: "Scan Meal",
-                    systemImage: "fork.knife",
-                    action: onScanMeal
-                )
+                HStack(spacing: 12) {
+                    quickActionChip(
+                        title: "Add Activity",
+                        systemImage: "flame.fill",
+                        action: onAddActivity
+                    )
+
+                    quickActionChip(
+                        title: "Scan Meal",
+                        systemImage: "fork.knife",
+                        action: onScanMeal
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if spacingBelow > 0 {
+                TimelineSpineSegment(height: spacingBelow)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func quickActionChip(title: String, systemImage: String, action: (() -> Void)?) -> some View {
@@ -4414,7 +4417,7 @@ private struct TimelineEmptyQuickActionsRow: View {
             }
             .foregroundColor(foregroundColor)
             .padding(.horizontal, 16)
-            .padding(.vertical, 6)
+            .padding(.vertical, 8)
             .background(Color("background"))
             .clipShape(Capsule())
         }
@@ -4446,6 +4449,7 @@ private struct TimelineEventRow: View {
     let selectedDate: Date
     let isFirst: Bool
     let isLast: Bool
+    let spacingBelow: CGFloat
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -4459,27 +4463,31 @@ private struct TimelineEventRow: View {
         return formatter
     }()
 
-    private static let timeAlignmentOffset: CGFloat = 1.5
-
     var body: some View {
-        HStack(alignment: .timelineIcon, spacing: 12) {
-            TimelineConnector(
-                iconName: event.iconName,
-                isFirst: isFirst,
-                isLast: isLast
-            )
+        VStack(spacing: 0) {
+            HStack(alignment: .timelineIcon, spacing: 12) {
+                TimelineConnector(
+                    iconName: event.iconName,
+                    isFirst: isFirst,
+                    isLast: isLast
+                )
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(labelText)
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: TimelineConnector.iconSize, alignment: .center)
-                    .alignmentGuide(.timelineIcon) { dimensions in
-                        dimensions[VerticalAlignment.center] + TimelineEventRow.timeAlignmentOffset
-                    }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(labelText)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(height: TimelineConnector.iconSize, alignment: .center)
 
-                TimelineEventCard(event: event)
+                    TimelineEventCard(event: event)
+                }
+                .alignmentGuide(.timelineIcon) { dimensions in
+                    dimensions[VerticalAlignment.top] + TimelineConnector.iconSize / 2
+                }
+            }
+
+            if spacingBelow > 0 {
+                TimelineSpineSegment(height: spacingBelow)
             }
         }
     }
@@ -4537,7 +4545,7 @@ private struct TimelineConnector: View {
     }
 }
 
-private struct TimelineConnectorBridge: View {
+private struct TimelineSpineSegment: View {
     @Environment(\.colorScheme) private var colorScheme
     let height: CGFloat
 
@@ -4595,24 +4603,11 @@ private struct AddActivityView: View {
     @State private var showMoreActivities = false
     @State private var isSubmitting = false
     @State private var errorMessage: String?
-    @State private var activeEditor: DetailEditor?
+    @State private var showStartPicker = false
+    @State private var showDurationPicker = false
 
     private let durationHourOptions = Array(0...12)
     private let durationMinuteOptions = Array(0..<60)
-
-    private enum DetailEditor: String, Identifiable {
-        case startTime
-        case duration
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .startTime: return "Start time"
-            case .duration: return "Duration"
-            }
-        }
-    }
 
     init(recentActivities: [String], defaultStartDate: Date, onSubmit: @escaping (QuickActivityInput, @escaping (Result<Void, Error>) -> Void) -> Void) {
         self.recentActivities = recentActivities
@@ -4639,7 +4634,7 @@ private struct AddActivityView: View {
             }
             .scrollIndicators(.hidden)
             .background(backgroundColor)
-            .navigationTitle("Add an activity")
+            .navigationTitle("Add Activity")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -4651,7 +4646,7 @@ private struct AddActivityView: View {
                 }
 
                 ToolbarItem(placement: .principal) {
-                    Text("Add an activity")
+                    Text("Add Activity")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(textPrimary)
                 }
@@ -4673,11 +4668,8 @@ private struct AddActivityView: View {
             }
             .sheet(isPresented: $showMoreActivities) {
                 ActivitySearchSheet { activity in
-                    selectedActivity = activity
+                    selectedActivity = activity.trimmed()
                 }
-            }
-            .sheet(item: $activeEditor) { editor in
-                detailEditorSheet(for: editor)
             }
         }
         .background(backgroundColor.ignoresSafeArea())
@@ -4692,7 +4684,7 @@ private struct AddActivityView: View {
             VStack(spacing: 12) {
                 ForEach(displayedRecentActivities, id: \.self) { activity in
                     Button {
-                        selectedActivity = activity
+                        selectedActivity = activity.trimmed()
                     } label: {
                         Text(activity)
                             .font(.system(size: 16, weight: .medium))
@@ -4740,21 +4732,35 @@ private struct AddActivityView: View {
 
             VStack(spacing: 0) {
                 Button {
-                    activeEditor = .startTime
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                        showStartPicker.toggle()
+                        if showStartPicker { showDurationPicker = false }
+                    }
                 } label: {
                     detailRowContent(title: "Start time", value: startTimeDisplay)
                 }
                 .buttonStyle(.plain)
 
+                if showStartPicker {
+                    startPickerInline
+                }
+
                 Divider()
                     .padding(.leading, 20)
 
                 Button {
-                    activeEditor = .duration
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                        showDurationPicker.toggle()
+                        if showDurationPicker { showStartPicker = false }
+                    }
                 } label: {
                     detailRowContent(title: "Duration", value: durationDisplay)
                 }
                 .buttonStyle(.plain)
+
+                if showDurationPicker {
+                    durationPickerInline
+                }
 
                 Divider()
                     .padding(.leading, 20)
@@ -4787,80 +4793,44 @@ private struct AddActivityView: View {
         .contentShape(Rectangle())
     }
 
-    private func detailEditorSheet(for editor: DetailEditor) -> some View {
-        VStack(spacing: 20) {
-            Capsule()
-                .fill(Color.secondary.opacity(0.3))
-                .frame(width: 40, height: 5)
-                .padding(.top, 8)
-
-            Text(editor.title)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(textPrimary)
-
-            editorContent(for: editor)
-                .frame(maxWidth: .infinity)
-
-            Button {
-                activeEditor = nil
-            } label: {
-                Text("Done")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.accentColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 24)
-        .background(backgroundColor.ignoresSafeArea())
-        .presentationDetents([.fraction(0.45), .medium])
-        .presentationDragIndicator(.visible)
+    private var startPickerInline: some View {
+        DatePicker(
+            "",
+            selection: $startTime,
+            in: Date.distantPast...Date(),
+            displayedComponents: [.date, .hourAndMinute]
+        )
+        .datePickerStyle(.wheel)
+        .labelsHidden()
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
+        .transition(.opacity)
     }
 
-    @ViewBuilder
-    private func editorContent(for editor: DetailEditor) -> some View {
-        switch editor {
-        case .startTime:
-            DatePicker(
-                "",
-                selection: $startTime,
-                in: Date.distantPast...Date(),
-                displayedComponents: [.date, .hourAndMinute]
-            )
-            .datePickerStyle(.wheel)
-            .labelsHidden()
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(sheetCardColor)
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-
-        case .duration:
-            HStack(spacing: 0) {
-                Picker("Hours", selection: durationHoursBinding) {
-                    ForEach(durationHourOptions, id: \.self) { value in
-                        Text("\(value) hr").tag(value)
-                    }
+    private var durationPickerInline: some View {
+        HStack(spacing: 0) {
+            Picker("Hours", selection: durationHoursBinding) {
+                ForEach(durationHourOptions, id: \.self) { value in
+                    Text("\(value) hr").tag(value)
                 }
-                .labelsHidden()
-                .pickerStyle(.wheel)
-                .frame(maxWidth: .infinity)
-
-                Picker("Minutes", selection: durationMinutesComponentBinding) {
-                    ForEach(durationMinuteOptions, id: \.self) { value in
-                        Text(String(format: "%02d min", value)).tag(value)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.wheel)
-                .frame(maxWidth: .infinity)
             }
-            .padding()
-            .background(sheetCardColor)
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .labelsHidden()
+            .pickerStyle(.wheel)
+            .frame(maxWidth: .infinity)
+
+            Picker("Minutes", selection: durationMinutesComponentBinding) {
+                ForEach(durationMinuteOptions, id: \.self) { value in
+                    Text(String(format: "%02d min", value)).tag(value)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.wheel)
+            .frame(maxWidth: .infinity)
         }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
+        .transition(.opacity)
     }
 
     private func submit() {
@@ -4937,10 +4907,19 @@ private struct AddActivityView: View {
     }
 
     private var displayedRecentActivities: [String] {
-        if recentActivities.isEmpty {
-            return ["Running", "Biking", "Weightlifting"]
+        var activities = recentActivities.isEmpty ? fallbackRecentActivities : Array(recentActivities.prefix(5))
+        let trimmed = selectedActivity.trimmed()
+        if trimmed.isEmpty == false && activities.contains(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame }) == false {
+            activities.insert(trimmed, at: 0)
+            if activities.count > 5 {
+                activities.removeLast()
+            }
         }
-        return Array(recentActivities.prefix(5))
+        return activities
+    }
+
+    private var fallbackRecentActivities: [String] {
+        ["Running", "Biking", "Weightlifting"]
     }
 
     private var durationHoursBinding: Binding<Int> {
@@ -5004,10 +4983,14 @@ private struct ActivitySearchSheet: View {
             }
             .listStyle(.plain)
             .searchable(text: $searchText)
-            .navigationTitle("More Activities")
+            .navigationTitle("More activities")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
                 }
             }
         }
