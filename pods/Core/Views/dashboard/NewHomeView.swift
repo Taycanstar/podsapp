@@ -231,7 +231,9 @@ private var remainingCal: Double { vm.remainingCalories }
             TimelineSectionView(
                 events: timelinePreviewEvents,
                 selectedDate: vm.selectedDate,
-                onShowAll: timelineEvents.count > timelinePreviewEvents.count ? { showTimelineSheet = true } : nil
+                onShowAll: timelineEvents.count > timelinePreviewEvents.count ? { showTimelineSheet = true } : nil,
+                onAddActivity: { presentWorkoutLogging(tab: 0) },
+                onScanMeal: onBarcodeTapped
             )
             .padding(.horizontal)
             .padding(.top, 16)
@@ -437,6 +439,27 @@ private var remainingCal: Double { vm.remainingCalories }
             fetchBodyFatHistoryIfNeeded()
         }
         .onReceive(onboarding.$profileData) { _ in
+            refreshWeightTrendEntries()
+        }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("WeightLoggedNotification"))
+                .receive(on: RunLoop.main)
+        ) { _ in
+            refreshWeightTrendEntries()
+        }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("WeightLogUpdatedNotification"))
+                .receive(on: RunLoop.main)
+        ) { _ in
+            refreshWeightTrendEntries()
+        }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: Notification.Name("WeightLogDeletedNotification"))
+                .receive(on: RunLoop.main)
+        ) { _ in
             refreshWeightTrendEntries()
         }
         .onChange(of: healthViewModel.isAuthorized) { authorized in
@@ -2643,8 +2666,11 @@ private struct RecoveryRingView: View {
         }
         .sorted { $0.date > $1.date }
 
-        if entries.isEmpty, vm.weight > 0 {
-            entries = [BodyCompositionEntry(value: convertWeightToDisplayUnit(vm.weight), date: Date())]
+        if entries.isEmpty {
+            let fallbackWeight = vm.weight > 0 ? vm.weight : (onboarding.weightKg > 0 ? onboarding.weightKg : nil)
+            if let fallback = fallbackWeight {
+                entries = [BodyCompositionEntry(value: convertWeightToDisplayUnit(fallback), date: Date())]
+            }
         }
 
         weightTrendEntries = Array(entries.prefix(7)).sorted { $0.date < $1.date }
@@ -2707,9 +2733,13 @@ private struct RecoveryRingView: View {
     private func wakeTimelineEvent(for date: Date) -> TimelineEvent? {
         let calendar = Calendar.current
 
-        if let summary = healthViewModel.latestSleepSummary,
+        let summary = healthViewModel.sleepSummary(for: date)
+        print("[Timeline] evaluating wake event for", date, "summary:", summary != nil, "snapshot:", vm.healthMetricsSnapshot != nil)
+
+        if let summary,
            let wakeDate = wakeDate(from: summary),
            calendar.isDate(wakeDate, inSameDayAs: date) {
+            print("[Timeline] using HealthKit wake", wakeDate, "duration", summary.totalSleepMinutes)
             let readiness = vm.healthMetricsSnapshot?.readiness.map { Int($0.rounded()) }
             let sleepQuality = vm.healthMetricsSnapshot?.sleep.map { Int($0.rounded()) }
             return makeWakeEvent(
@@ -2722,17 +2752,20 @@ private struct RecoveryRingView: View {
 
         guard let snapshot = vm.healthMetricsSnapshot,
               let raw = snapshot.rawMetrics else {
+            print("[Timeline] no snapshot/raw metrics for", date)
             return nil
         }
 
         let readiness = snapshot.readiness.map { Int($0.rounded()) }
         let sleepQuality = snapshot.sleep.map { Int($0.rounded()) } ?? raw.sleepScore.map { Int($0.rounded()) }
         let durationMinutes = timelineSleepDuration(from: raw)
+        print("[Timeline] evaluating snapshot fallback for", date, "duration", durationMinutes ?? -1, "midpoint", raw.sleepMidpointMinutes ?? -1)
 
         if let derivedWakeDate = wakeDateFromSnapshot(snapshot,
                                                     raw: raw,
                                                     durationMinutes: durationMinutes,
                                                     matching: date) {
+            print("[Timeline] using snapshot midpoint wake", derivedWakeDate)
             return makeWakeEvent(
                 date: derivedWakeDate,
                 durationMinutes: durationMinutes,
@@ -2744,6 +2777,7 @@ private struct RecoveryRingView: View {
         if let fallbackDateString = raw.fallbackSleepDate,
            let fallbackDate = parseISODate(fallbackDateString),
            calendar.isDate(fallbackDate, inSameDayAs: date) {
+            print("[Timeline] using fallback sleep date", fallbackDate)
             return makeWakeEvent(
                 date: fallbackDate,
                 durationMinutes: durationMinutes,
@@ -2752,6 +2786,7 @@ private struct RecoveryRingView: View {
             )
         }
 
+        print("[Timeline] no wake event derived for", date)
         return nil
     }
 
@@ -2829,6 +2864,15 @@ private struct RecoveryRingView: View {
             }
             return timelineEvent(from: log, at: eventDate)
         }
+    }
+
+    private func presentWorkoutLogging(tab: Int) {
+        workoutSelectedTab = tab
+        NotificationCenter.default.post(
+            name: NSNotification.Name("ShowWorkoutContainerFromDashboard"),
+            object: nil,
+            userInfo: ["selectedTab": workoutSelectedTab]
+        )
     }
 
     private func timelineEvent(from log: CombinedLog, at date: Date) -> TimelineEvent? {
@@ -4173,17 +4217,21 @@ private struct TimelineSectionView: View {
     let events: [TimelineEvent]
     let selectedDate: Date
     var onShowAll: (() -> Void)? = nil
+    var onAddActivity: (() -> Void)? = nil
+    var onScanMeal: (() -> Void)? = nil
 
     var body: some View {
         if events.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 16) {
                 Text("Timeline")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text("No entries yet")
-                    .font(.system(size: 15))
-                    .foregroundColor(.secondary)
+
+                TimelineEmptyQuickActionsRow(
+                    onAddActivity: onAddActivity,
+                    onScanMeal: onScanMeal
+                )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } else {
@@ -4215,6 +4263,63 @@ private struct TimelineSectionView: View {
                 }
             }
         }
+    }
+}
+
+private struct TimelineEmptyQuickActionsRow: View {
+    var onAddActivity: (() -> Void)?
+    var onScanMeal: (() -> Void)?
+
+    private let foregroundColor = Color("text")
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            TimelineConnector(iconName: "plus", isFirst: true, isLast: true, overrideColor: plusColor)
+
+            HStack(spacing: 12) {
+                quickActionChip(
+                    title: "Add Activity",
+                    systemImage: "flame.fill",
+                    action: onAddActivity
+                )
+
+                quickActionChip(
+                    title: "Scan a Meal",
+                    systemImage: "fork.knife",
+                    action: onScanMeal
+                )
+            }
+        }
+    }
+
+    private func quickActionChip(title: String, systemImage: String, action: (() -> Void)?) -> some View {
+        Button {
+            action?()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 13, weight: .regular))
+                Text(title)
+                    .font(.system(size: 13, weight: .regular))
+            }
+            .foregroundColor(foregroundColor)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color("background"))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(action == nil)
+        .opacity(action == nil ? 0.5 : 1)
+    }
+
+    private var plusColor: Color {
+        if colorScheme == .dark {
+            return Color(.systemGray2)
+        }
+        return Color(red: 0.15, green: 0.21, blue: 0.32)
     }
 }
 
@@ -4267,12 +4372,13 @@ private struct TimelineConnector: View {
     let iconName: String
     let isFirst: Bool
     let isLast: Bool
+    var overrideColor: Color? = nil
 
     private let spineColor = Color(.systemGray4)
 
     var body: some View {
         GeometryReader { geometry in
-            let availableHeight = max(0, geometry.size.height - 28)
+            let availableHeight = max(0, geometry.size.height - 35)
             let segmentHeight = availableHeight / 2
 
             VStack(spacing: 0) {
@@ -4283,8 +4389,8 @@ private struct TimelineConnector: View {
 
                 ZStack {
                     Circle()
-                        .fill(Color(red: 0.15, green: 0.21, blue: 0.32))
-                        .frame(width: 28, height: 28)
+                        .fill(overrideColor ?? Color(red: 0.15, green: 0.21, blue: 0.32))
+                        .frame(width: 35, height: 35)
                     Image(systemName: iconName)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.white)
@@ -4851,6 +4957,9 @@ private extension NewHomeView {
                     if let encodedData = try? JSONEncoder().encode(response) {
                         UserDefaults.standard.set(encodedData, forKey: "preloadedWeightLogs")
                         UserDefaults.standard.set(Date(), forKey: weightKey)
+                        DispatchQueue.main.async {
+                            self.refreshWeightTrendEntries()
+                        }
                     }
                 case .failure(let error):
                     print("Error preloading weight logs: \(error)")

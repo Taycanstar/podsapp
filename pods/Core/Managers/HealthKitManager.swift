@@ -65,6 +65,7 @@ class HealthKitManager {
         switch value {
         case HKCategoryValueSleepAnalysis.inBed.rawValue:            return "inBed"
         case HKCategoryValueSleepAnalysis.awake.rawValue:            return "awake"
+        case HKCategoryValueSleepAnalysis.asleep.rawValue:           return "asleep"
         case HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:return "asleepUnspecified"
         case HKCategoryValueSleepAnalysis.asleepCore.rawValue:       return "asleepCore"
         case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:       return "asleepDeep"
@@ -816,7 +817,8 @@ class HealthKitManager {
                 case HKCategoryValueSleepAnalysis.asleepDeep.rawValue:
                     deepMinutes += minutes
                 case HKCategoryValueSleepAnalysis.asleepCore.rawValue,
-                     HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:
+                     HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+                     HKCategoryValueSleepAnalysis.asleep.rawValue:
                     coreMinutes += minutes
                 case HKCategoryValueSleepAnalysis.awake.rawValue:
                     awakeMinutes += minutes
@@ -840,7 +842,8 @@ class HealthKitManager {
                 case HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
                      HKCategoryValueSleepAnalysis.asleepCore.rawValue,
                      HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
-                     HKCategoryValueSleepAnalysis.asleepREM.rawValue:
+                     HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+                     HKCategoryValueSleepAnalysis.asleep.rawValue:
                     return true
                 default:
                     return false

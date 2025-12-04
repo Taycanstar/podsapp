@@ -95,6 +95,18 @@ final class HealthKitViewModel: ObservableObject {
         // Only check current authorization status - never automatically request permissions
         checkAuthorization()
     }
+
+    func sleepSummary(for date: Date) -> SleepSummary? {
+        let dayKey = calendar.startOfDay(for: date)
+        if let cached = sleepSummaryCache[dayKey] {
+            return cached
+        }
+        let currentKey = calendar.startOfDay(for: currentDate)
+        if calendar.isDate(dayKey, inSameDayAs: currentKey) {
+            return latestSleepSummary
+        }
+        return nil
+    }
     
     // MARK: - Authorization methods
     
