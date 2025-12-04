@@ -18,10 +18,10 @@ struct ScanLogView: View {
     private let galleryImportKey = "scanPreview_galleryImport"
     
     // State for toggle switches - initialized from UserDefaults with fallback to defaults
-    @State private var photoScanEnabled: Bool = UserDefaults.standard.object(forKey: "scanPreview_photoScan") as? Bool ?? false
+    @State private var photoScanEnabled: Bool = UserDefaults.standard.object(forKey: "scanPreview_photoScan") as? Bool ?? true
     @State private var foodLabelEnabled: Bool = UserDefaults.standard.object(forKey: "scanPreview_foodLabel") as? Bool ?? true
     @State private var barcodeEnabled: Bool = UserDefaults.standard.object(forKey: "scanPreview_barcode") as? Bool ?? true
-    @State private var galleryImportEnabled: Bool = UserDefaults.standard.object(forKey: "scanPreview_galleryImport") as? Bool ?? false
+    @State private var galleryImportEnabled: Bool = UserDefaults.standard.object(forKey: "scanPreview_galleryImport") as? Bool ?? true
     
     var body: some View {
         Form {

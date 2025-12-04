@@ -3535,6 +3535,11 @@ func analyzeNutritionLabel(
                 let food = payload.food
                 
                 print("✅ Direct barcode lookup successful: \(food.displayName)")
+                let calories = food.calories ?? 0
+                let protein = food.protein ?? 0
+                let carbs = food.carbs ?? 0
+                let fat = food.fat ?? 0
+                print("🍽️ Direct barcode macros – calories: \(calories), protein: \(protein)g, carbs: \(carbs)g, fat: \(fat)g")
                 
                 // Track barcode scanning in Mixpanel
                 Mixpanel.mainInstance().track(event: "Barcode Scan", properties: [
@@ -3628,42 +3633,33 @@ func analyzeNutritionLabel(
     @MainActor
     func lookupFoodByBarcodeEnhanced(barcode: String, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, String?) -> Void) {
         print("🔍 Starting enhanced barcode lookup for: \(barcode)")
+        let shouldShowLoaderCard = false
+        var barcodeTimer: Timer?
         
-        // MODERN: Use modern FoodScanningState system with proper state progression
-        updateFoodScanningState(.initializing)
-        
-        // Smooth transition to analyzing state after a brief delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.updateFoodScanningState(.analyzing)
-        }
-        
-        // Legacy state for backward compatibility (will be removed later)
-        isScanningBarcode = true  // This triggers BarcodeAnalysisCard in DashboardView
-        isLoading = true
-        barcodeLoadingMessage = "Looking up barcode..."
-        uploadProgress = 0.2
-        
-        // Legacy timer for backward compatibility (will be removed later)
-        // Create a timer to cycle through analysis stages for UI feedback
-        let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
-            guard let self = self else { 
-                timer.invalidate()
-                return 
+        if shouldShowLoaderCard {
+            updateFoodScanningState(.initializing)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.updateFoodScanningState(.analyzing)
             }
-            
-            // CRITICAL FIX: Ensure all @Published updates happen on main thread
-            DispatchQueue.main.async {
-                // Update barcode loading message
-                self.barcodeLoadingMessage = [
-                    "Looking up barcode...",
-                    "Searching nutrition databases...",
-                    "Enhancing with web search...",
-                    "Finalizing food data..."
-                ].randomElement() ?? "Processing barcode..."
-                
-                // Gradually increase progress
-                self.uploadProgress = min(self.uploadProgress + 0.1, 0.9)
-                print("🔍 CRASH_DEBUG: Barcode progress updated to \(self.uploadProgress) [MAIN THREAD]")
+            isScanningBarcode = true
+            isLoading = true
+            barcodeLoadingMessage = "Looking up barcode..."
+            uploadProgress = 0.2
+            barcodeTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
+                guard let self = self else {
+                    timer.invalidate()
+                    return
+                }
+                DispatchQueue.main.async {
+                    self.barcodeLoadingMessage = [
+                        "Looking up barcode...",
+                        "Searching nutrition databases...",
+                        "Enhancing with web search...",
+                        "Finalizing food data..."
+                    ].randomElement() ?? "Processing barcode..."
+                    self.uploadProgress = min(self.uploadProgress + 0.1, 0.9)
+                    print("🔍 CRASH_DEBUG: Barcode progress updated to \(self.uploadProgress) [MAIN THREAD]")
+                }
             }
         }
         
@@ -3680,19 +3676,26 @@ func analyzeNutritionLabel(
             date: dateString3
         ) { [weak self] result in
             guard let self = self else {
-                timer.invalidate()
+                barcodeTimer?.invalidate()
                 return
             }
             
             // Stop the timer and update progress
-            timer.invalidate()
-            self.uploadProgress = 1.0
+            barcodeTimer?.invalidate()
+            if shouldShowLoaderCard {
+                self.uploadProgress = 1.0
+            }
             
             switch result {
             case .success(let payload):
                 let food = payload.food
                 
                 print("✅ Enhanced barcode lookup successful: \(food.displayName)")
+                let calories = food.calories ?? 0
+                let protein = food.protein ?? 0
+                let carbs = food.carbs ?? 0
+                let fat = food.fat ?? 0
+                print("🍽️ Enhanced barcode macros – calories: \(calories), protein: \(protein)g, carbs: \(carbs)g, fat: \(fat)g")
                 
                 // Track barcode scanning in Mixpanel
                 Mixpanel.mainInstance().track(event: "Barcode Scan", properties: [
@@ -3714,14 +3717,6 @@ func analyzeNutritionLabel(
                 self.aiGeneratedFood = food.asLoggedFoodItem
                 self.lastLoggedFoodId = food.fdcId
                 
-                // MODERN: Update to completed state with result (enhanced shows preview)
-                
-                
-                // Reset legacy barcode scanning states (backward compatibility)
-                self.isScanningBarcode = false
-                self.isLoading = false
-                self.barcodeLoadingMessage = ""
-                
                 // Create a CombinedLog for optimistic UI update (but don't add to logs yet)
                 let combinedLog = CombinedLog(
                     type: .food,
@@ -3739,17 +3734,21 @@ func analyzeNutritionLabel(
                     recipe: nil,
                     servingsConsumed: nil
                 )
-                self.updateFoodScanningState(.completed(result: combinedLog))
                 
-                // Show success message briefly
-                self.lastLoggedItem = (name: food.displayName, calories: food.calories ?? 0)
-                self.showLogSuccess = true
-                
-                // Auto-hide success message after 2 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    self.showLogSuccess = false
+                if shouldShowLoaderCard {
+                    self.updateFoodScanningState(.completed(result: combinedLog))
+                    self.lastLoggedItem = (name: food.displayName, calories: food.calories ?? 0)
+                    self.showLogSuccess = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        self.showLogSuccess = false
+                    }
+                } else {
+                    self.updateFoodScanningState(.inactive)
                 }
                 
+                self.isScanningBarcode = false
+                self.isLoading = false
+                self.barcodeLoadingMessage = ""
                 // Trigger navigation to confirmation view
                 // This will be handled by the DashboardView or ContentView
                 print("🩺 [DEBUG] Barcode food.healthAnalysis: \(food.healthAnalysis?.score ?? -1)")

@@ -835,9 +835,12 @@ class NetworkManagerTwo {
         mealType: String = "Lunch",
         shouldLog: Bool = false,
         date: String? = nil,
+        useNutritionixOnly: Bool = true,
         completion: @escaping (Result<BarcodeLookupResponse, Error>) -> Void
     ) {
-        let urlString = "\(baseUrl)/lookup_food_by_barcode/"
+        let endpoint = useNutritionixOnly ? "/lookup_food_by_barcode_nutritionix/" : "/lookup_food_by_barcode/"
+        print("🌐 Barcode lookup endpoint: \(endpoint) (NutritionixOnly=\(useNutritionixOnly))")
+        let urlString = "\(baseUrl)\(endpoint)"
         
         guard let url = URL(string: urlString) else {
             completion(.failure(NetworkError.invalidURL))
@@ -890,6 +893,9 @@ class NetworkManagerTwo {
             }
             
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let source = json["source"] as? String {
+                    print("🍽️ Server barcode source: \(source)")
+                }
                 if let errorMessage = json["error"] as? String {
                     DispatchQueue.main.async {
                         completion(.failure(NetworkError.serverError(message: errorMessage)))
