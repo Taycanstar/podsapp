@@ -83,6 +83,10 @@ struct NewHomeView: View {
     @State private var showingWeightLogSheet = false
     @State private var showingBodyFatLogSheet = false
     @State private var showTimelineSheet = false
+    @State private var showAddActivitySheet = false
+    @State private var recentQuickActivities: [String] = []
+    @State private var showQuickActivityToast = false
+    @State private var quickActivityErrorMessage: String?
     
     private enum ScheduleAlert: Identifiable {
         case success(String)
@@ -232,7 +236,7 @@ private var remainingCal: Double { vm.remainingCalories }
                 events: timelinePreviewEvents,
                 selectedDate: vm.selectedDate,
                 onShowAll: timelineEvents.count > timelinePreviewEvents.count ? { showTimelineSheet = true } : nil,
-                onAddActivity: { presentWorkoutLogging(tab: 0) },
+                onAddActivity: { showAddActivitySheet = true },
                 onScanMeal: onBarcodeTapped
             )
             .padding(.horizontal)
@@ -517,6 +521,15 @@ private var remainingCal: Double { vm.remainingCalories }
         .sheet(isPresented: $showTimelineSheet) {
             TimelineFullSheetView(events: timelineEvents, selectedDate: vm.selectedDate)
         }
+        .sheet(isPresented: $showAddActivitySheet) {
+            AddActivityView(
+                recentActivities: recentQuickActivities,
+                defaultStartDate: defaultQuickActivityDate,
+                onSubmit: { input, completion in
+                    logQuickActivity(input, completion: completion)
+                }
+            )
+        }
         .alert("Product Name Required", isPresented: $foodMgr.showNutritionNameInput) {
             TextField("Enter product name", text: $nutritionProductName)
                 .textInputAutocapitalization(.words)
@@ -555,8 +568,17 @@ private var remainingCal: Double { vm.remainingCalories }
                 return Alert(title: Text("Error"), message: Text(message), dismissButton: .default(Text("OK")))
             }
         }
+        .alert("Unable to Log Activity", isPresented: Binding(
+            get: { quickActivityErrorMessage != nil },
+            set: { if !$0 { quickActivityErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { quickActivityErrorMessage = nil }
+        } message: {
+            Text(quickActivityErrorMessage ?? "")
+        }
         .onAppear {
             configureOnAppear()
+            loadRecentActivities()
 
             if !onboarding.email.isEmpty {
                 foodMgr.initialize(userEmail: onboarding.email)
@@ -1099,6 +1121,15 @@ private extension NewHomeView {
             .zIndex(3)
             .transition(.opacity)
             .animation(.spring(), value: foodMgr.showAIGenerationSuccess)
+        } else if showQuickActivityToast {
+            VStack {
+                Spacer()
+                BottomPopup(message: "Activity logged")
+                    .padding(.bottom, 90)
+            }
+            .zIndex(3)
+            .transition(.opacity)
+            .animation(.spring(), value: showQuickActivityToast)
         } else if foodMgr.showLogSuccess, let item = foodMgr.lastLoggedItem {
             VStack {
                 Spacer()
@@ -2866,6 +2897,40 @@ private struct RecoveryRingView: View {
         }
     }
 
+    private func logQuickActivity(_ input: QuickActivityInput, completion: @escaping (Result<Void, Error>) -> Void) {
+        let isoDate = iso8601WithFractionalFormatter.string(from: input.startTime)
+        let timeFormatter = DateFormatter()
+        timeFormatter.timeStyle = .short
+        let startText = timeFormatter.string(from: input.startTime)
+        let prompt = "I completed \(input.activityName) for \(input.durationMinutes) minutes at \(input.intensity.displayName.lowercased()) intensity starting at \(startText). Please log this as a physical activity and estimate calories burned based on that description."
+
+        NetworkManagerTwo.shared.analyzeMealOrActivity(
+            description: prompt,
+            mealType: "snack",
+            date: isoDate
+        ) { [self] result in
+            switch result {
+            case .success(let payload):
+                guard let entryType = payload["entry_type"] as? String, entryType == "activity" else {
+                    let error = NSError(domain: "QuickActivity", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unexpected response from server."])
+                    completion(.failure(error))
+                    quickActivityErrorMessage = error.localizedDescription
+                    return
+                }
+                saveRecentActivity(input.activityName)
+                vm.loadLogs(for: vm.selectedDate, force: true)
+                showQuickActivityToast = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    showQuickActivityToast = false
+                }
+                completion(.success(()))
+            case .failure(let error):
+                quickActivityErrorMessage = error.localizedDescription
+                completion(.failure(error))
+            }
+        }
+    }
+
     private func presentWorkoutLogging(tab: Int) {
         workoutSelectedTab = tab
         NotificationCenter.default.post(
@@ -2873,6 +2938,32 @@ private struct RecoveryRingView: View {
             object: nil,
             userInfo: ["selectedTab": workoutSelectedTab]
         )
+    }
+
+    private var defaultQuickActivityDate: Date {
+        let calendar = Calendar.current
+        let now = Date()
+        var dayComponents = calendar.dateComponents([.year, .month, .day], from: vm.selectedDate)
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: now)
+        dayComponents.hour = timeComponents.hour
+        dayComponents.minute = timeComponents.minute
+        return calendar.date(from: dayComponents) ?? vm.selectedDate
+    }
+
+    private func loadRecentActivities() {
+        if let stored = UserDefaults.standard.stringArray(forKey: "recentQuickActivities") {
+            recentQuickActivities = stored
+        }
+    }
+
+    private func saveRecentActivity(_ activity: String) {
+        var updated = recentQuickActivities.filter { $0.caseInsensitiveCompare(activity) != .orderedSame }
+        updated.insert(activity, at: 0)
+        if updated.count > 3 {
+            updated = Array(updated.prefix(3))
+        }
+        recentQuickActivities = updated
+        UserDefaults.standard.set(updated, forKey: "recentQuickActivities")
     }
 
     private func timelineEvent(from log: CombinedLog, at date: Date) -> TimelineEvent? {
@@ -4059,6 +4150,11 @@ private struct BodyCompositionTrendCard: View {
                 Text(subtitle)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
+            } else {
+                Text("placeholder")
+                    .font(.system(size: 13))
+                    .foregroundColor(.clear)
+                    .hidden()
             }
 
             BodyCompositionSparkline(values: model.values, lineColor: model.color)
@@ -4221,44 +4317,49 @@ private struct TimelineSectionView: View {
     var onScanMeal: (() -> Void)? = nil
 
     var body: some View {
-        if events.isEmpty {
-            VStack(alignment: .leading, spacing: 16) {
+        let rowSpacing: CGFloat = 20
+
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
                 Text("Timeline")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
+                Spacer()
+                if let onShowAll, !events.isEmpty {
+                    Button(action: onShowAll) {
+                        Text("Show All")
+                            .font(.system(size: 15))
+                            .foregroundColor(.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            VStack(spacing: 0) {
                 TimelineEmptyQuickActionsRow(
                     onAddActivity: onAddActivity,
-                    onScanMeal: onScanMeal
+                    onScanMeal: onScanMeal,
+                    connectsToNext: !events.isEmpty
                 )
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } else {
-            VStack(alignment: .leading, spacing: 16) {
-                if let onShowAll {
-                    HStack {
-                        Text("Timeline")
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Button(action: onShowAll) {
-                            Text("Show All")
-                                .font(.system(size: 15))
-                                .foregroundColor(.accentColor)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
 
-                VStack(spacing: 20) {
+                if events.isEmpty {
+                    Text("No entries yet")
+                        .font(.system(size: 15))
+                        .foregroundColor(.secondary)
+                        .padding(.top, rowSpacing)
+                } else {
+                    TimelineConnectorBridge(height: rowSpacing)
+
                     ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
                         TimelineEventRow(
                             event: event,
                             selectedDate: selectedDate,
-                            isFirst: index == 0,
+                            isFirst: false,
                             isLast: index == events.count - 1
                         )
+
+                        if index != events.count - 1 {
+                            TimelineConnectorBridge(height: rowSpacing)
+                        }
                     }
                 }
             }
@@ -4269,14 +4370,20 @@ private struct TimelineSectionView: View {
 private struct TimelineEmptyQuickActionsRow: View {
     var onAddActivity: (() -> Void)?
     var onScanMeal: (() -> Void)?
+    var connectsToNext: Bool
 
     private let foregroundColor = Color("text")
 
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            TimelineConnector(iconName: "plus", isFirst: true, isLast: true, overrideColor: plusColor)
+        HStack(alignment: .timelineIcon, spacing: 12) {
+            TimelineConnector(
+                iconName: "plus",
+                isFirst: true,
+                isLast: !connectsToNext,
+                overrideColor: plusColor
+            )
 
             HStack(spacing: 12) {
                 quickActionChip(
@@ -4286,12 +4393,13 @@ private struct TimelineEmptyQuickActionsRow: View {
                 )
 
                 quickActionChip(
-                    title: "Scan a Meal",
+                    title: "Scan Meal",
                     systemImage: "fork.knife",
                     action: onScanMeal
                 )
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func quickActionChip(title: String, systemImage: String, action: (() -> Void)?) -> some View {
@@ -4306,7 +4414,7 @@ private struct TimelineEmptyQuickActionsRow: View {
             }
             .foregroundColor(foregroundColor)
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.vertical, 6)
             .background(Color("background"))
             .clipShape(Capsule())
         }
@@ -4319,8 +4427,18 @@ private struct TimelineEmptyQuickActionsRow: View {
         if colorScheme == .dark {
             return Color(.systemGray2)
         }
-        return Color(red: 0.15, green: 0.21, blue: 0.32)
+        return Color.black.opacity(0.9)
     }
+}
+
+private extension VerticalAlignment {
+    private enum TimelineIconAlignment: AlignmentID {
+        static func defaultValue(in dimensions: ViewDimensions) -> CGFloat {
+            dimensions[VerticalAlignment.center]
+        }
+    }
+
+    static let timelineIcon = VerticalAlignment(TimelineIconAlignment.self)
 }
 
 private struct TimelineEventRow: View {
@@ -4341,8 +4459,10 @@ private struct TimelineEventRow: View {
         return formatter
     }()
 
+    private static let timeAlignmentOffset: CGFloat = 1.5
+
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .timelineIcon, spacing: 12) {
             TimelineConnector(
                 iconName: event.iconName,
                 isFirst: isFirst,
@@ -4353,6 +4473,11 @@ private struct TimelineEventRow: View {
                 Text(labelText)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: TimelineConnector.iconSize, alignment: .center)
+                    .alignmentGuide(.timelineIcon) { dimensions in
+                        dimensions[VerticalAlignment.center] + TimelineEventRow.timeAlignmentOffset
+                    }
 
                 TimelineEventCard(event: event)
             }
@@ -4369,17 +4494,20 @@ private struct TimelineEventRow: View {
 }
 
 private struct TimelineConnector: View {
+    @Environment(\.colorScheme) private var colorScheme
     let iconName: String
     let isFirst: Bool
     let isLast: Bool
     var overrideColor: Color? = nil
 
-    private let spineColor = Color(.systemGray4)
+    static let iconSize: CGFloat = 34
 
     var body: some View {
         GeometryReader { geometry in
-            let availableHeight = max(0, geometry.size.height - 35)
+            let availableHeight = max(0, geometry.size.height - Self.iconSize)
             let segmentHeight = availableHeight / 2
+            let spineColor = colorScheme == .dark ? Color(.systemGray3) : Color(.systemGray4)
+            let circleColor = overrideColor ?? (colorScheme == .dark ? Color(.systemGray2) : Color.black.opacity(0.9))
 
             VStack(spacing: 0) {
                 Rectangle()
@@ -4389,8 +4517,8 @@ private struct TimelineConnector: View {
 
                 ZStack {
                     Circle()
-                        .fill(overrideColor ?? Color(red: 0.15, green: 0.21, blue: 0.32))
-                        .frame(width: 35, height: 35)
+                        .fill(circleColor)
+                        .frame(width: Self.iconSize, height: Self.iconSize)
                     Image(systemName: iconName)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.white)
@@ -4404,8 +4532,495 @@ private struct TimelineConnector: View {
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
         .frame(width: 32)
+        .frame(minHeight: Self.iconSize)
+        .alignmentGuide(.timelineIcon) { _ in TimelineConnector.iconSize / 2 }
     }
 }
+
+private struct TimelineConnectorBridge: View {
+    @Environment(\.colorScheme) private var colorScheme
+    let height: CGFloat
+
+    var body: some View {
+        let spineColor = colorScheme == .dark ? Color(.systemGray3) : Color(.systemGray4)
+
+        HStack(spacing: 12) {
+            Rectangle()
+                .fill(spineColor)
+                .frame(width: 2, height: height)
+                .frame(width: 32)
+                .alignmentGuide(.timelineIcon) { _ in height / 2 }
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Quick Activity Logging Helpers
+
+private struct QuickActivityInput {
+    let activityName: String
+    let startTime: Date
+    let durationMinutes: Int
+    let intensity: ActivityIntensity
+}
+
+private enum ActivityIntensity: String, CaseIterable, Identifiable {
+    case easy
+    case moderate
+    case hard
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .easy: return "Easy"
+        case .moderate: return "Moderate"
+        case .hard: return "Hard"
+        }
+    }
+}
+
+private struct AddActivityView: View {
+    let recentActivities: [String]
+    let onSubmit: (QuickActivityInput, @escaping (Result<Void, Error>) -> Void) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var selectedActivity: String = ""
+    @State private var startTime: Date
+    @State private var durationMinutes: Int = 30
+    @State private var intensity: ActivityIntensity = .moderate
+    @State private var showMoreActivities = false
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+    @State private var activeEditor: DetailEditor?
+
+    private let durationHourOptions = Array(0...12)
+    private let durationMinuteOptions = Array(0..<60)
+
+    private enum DetailEditor: String, Identifiable {
+        case startTime
+        case duration
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .startTime: return "Start time"
+            case .duration: return "Duration"
+            }
+        }
+    }
+
+    init(recentActivities: [String], defaultStartDate: Date, onSubmit: @escaping (QuickActivityInput, @escaping (Result<Void, Error>) -> Void) -> Void) {
+        self.recentActivities = recentActivities
+        self.onSubmit = onSubmit
+        _startTime = State(initialValue: defaultStartDate)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    recentActivitiesSection
+                    moreActivitiesButton
+                    detailsSection
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                    }
+                }
+                .padding(.vertical, 24)
+                .padding(.horizontal, 20)
+            }
+            .scrollIndicators(.hidden)
+            .background(backgroundColor)
+            .navigationTitle("Add an activity")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(textPrimary)
+                    }
+                }
+
+                ToolbarItem(placement: .principal) {
+                    Text("Add an activity")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(textPrimary)
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: submit) {
+                        if isSubmitting {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                                .tint(Color.accentColor)
+                        } else {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(isSubmitDisabled ? Color.secondary : Color.accentColor)
+                        }
+                    }
+                    .disabled(isSubmitDisabled)
+                }
+            }
+            .sheet(isPresented: $showMoreActivities) {
+                ActivitySearchSheet { activity in
+                    selectedActivity = activity
+                }
+            }
+            .sheet(item: $activeEditor) { editor in
+                detailEditorSheet(for: editor)
+            }
+        }
+        .background(backgroundColor.ignoresSafeArea())
+    }
+
+    private var recentActivitiesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Recent activities")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.secondary)
+
+            VStack(spacing: 12) {
+                ForEach(displayedRecentActivities, id: \.self) { activity in
+                    Button {
+                        selectedActivity = activity
+                    } label: {
+                        Text(activity)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(selectedActivity == activity ? Color.white : textPrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .fill(selectedActivity == activity ? Color.accentColor : sheetCardColor)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var moreActivitiesButton: some View {
+        Button {
+            showMoreActivities = true
+        } label: {
+            HStack {
+                Text("More activities")
+                    .font(.system(size: 16, weight: .medium))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(secondaryTextColor)
+            }
+            .foregroundColor(textPrimary)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .background(sheetCardColor)
+            .cornerRadius(18)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var detailsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Add details")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.secondary)
+
+            VStack(spacing: 0) {
+                Button {
+                    activeEditor = .startTime
+                } label: {
+                    detailRowContent(title: "Start time", value: startTimeDisplay)
+                }
+                .buttonStyle(.plain)
+
+                Divider()
+                    .padding(.leading, 20)
+
+                Button {
+                    activeEditor = .duration
+                } label: {
+                    detailRowContent(title: "Duration", value: durationDisplay)
+                }
+                .buttonStyle(.plain)
+
+                Divider()
+                    .padding(.leading, 20)
+
+                Menu {
+                    ForEach(ActivityIntensity.allCases) { level in
+                        Button(level.displayName) { intensity = level }
+                    }
+                } label: {
+                    detailRowContent(title: "Intensity", value: intensity.displayName)
+                }
+            }
+            .background(sheetCardColor)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+    }
+
+    private func detailRowContent(title: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(textPrimary)
+            Spacer()
+            Text(value)
+                .font(.system(size: 15))
+                .foregroundColor(secondaryTextColor)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .contentShape(Rectangle())
+    }
+
+    private func detailEditorSheet(for editor: DetailEditor) -> some View {
+        VStack(spacing: 20) {
+            Capsule()
+                .fill(Color.secondary.opacity(0.3))
+                .frame(width: 40, height: 5)
+                .padding(.top, 8)
+
+            Text(editor.title)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(textPrimary)
+
+            editorContent(for: editor)
+                .frame(maxWidth: .infinity)
+
+            Button {
+                activeEditor = nil
+            } label: {
+                Text("Done")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.accentColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 24)
+        .background(backgroundColor.ignoresSafeArea())
+        .presentationDetents([.fraction(0.45), .medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    @ViewBuilder
+    private func editorContent(for editor: DetailEditor) -> some View {
+        switch editor {
+        case .startTime:
+            DatePicker(
+                "",
+                selection: $startTime,
+                in: Date.distantPast...Date(),
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .datePickerStyle(.wheel)
+            .labelsHidden()
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(sheetCardColor)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+
+        case .duration:
+            HStack(spacing: 0) {
+                Picker("Hours", selection: durationHoursBinding) {
+                    ForEach(durationHourOptions, id: \.self) { value in
+                        Text("\(value) hr").tag(value)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+
+                Picker("Minutes", selection: durationMinutesComponentBinding) {
+                    ForEach(durationMinuteOptions, id: \.self) { value in
+                        Text(String(format: "%02d min", value)).tag(value)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+            }
+            .padding()
+            .background(sheetCardColor)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        }
+    }
+
+    private func submit() {
+        guard isSubmitDisabled == false else { return }
+        let trimmed = selectedActivity.trimmed()
+        guard trimmed.isEmpty == false else {
+            errorMessage = "Select an activity"
+            return
+        }
+        isSubmitting = true
+        errorMessage = nil
+        let input = QuickActivityInput(
+            activityName: trimmed,
+            startTime: startTime,
+            durationMinutes: durationMinutes,
+            intensity: intensity
+        )
+        onSubmit(input) { result in
+            switch result {
+            case .success:
+                isSubmitting = false
+                dismiss()
+            case .failure(let error):
+                isSubmitting = false
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private var sheetCardColor: Color { Color("sheetcard") }
+
+    private var textPrimary: Color {
+        colorScheme == .dark ? Color.white : Color("text")
+    }
+
+    private var secondaryTextColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.7) : Color.secondary
+    }
+
+    private var backgroundColor: Color {
+        Color("sheetbg")
+    }
+
+    private var startTimeDisplay: String {
+        let time = Self.timeFormatter.string(from: startTime)
+        let calendar = Calendar.current
+        if calendar.isDateInToday(startTime) {
+            return "Today at \(time)"
+        }
+        if calendar.isDateInYesterday(startTime) {
+            return "Yesterday at \(time)"
+        }
+        return "\(Self.dayFormatter.string(from: startTime)) at \(time)"
+    }
+
+    private var durationDisplay: String {
+        let hours = durationMinutes / 60
+        let minutes = durationMinutes % 60
+        switch (hours, minutes) {
+        case (0, 0):
+            return "0 min"
+        case (_, 0):
+            return hours == 1 ? "1 hr" : "\(hours) hrs"
+        case (0, _):
+            return "\(minutes) min"
+        default:
+            let hourText = hours == 1 ? "1 hr" : "\(hours) hrs"
+            return "\(hourText) \(minutes) min"
+        }
+    }
+
+    private var isSubmitDisabled: Bool {
+        selectedActivity.trimmed().isEmpty || isSubmitting
+    }
+
+    private var displayedRecentActivities: [String] {
+        if recentActivities.isEmpty {
+            return ["Running", "Biking", "Weightlifting"]
+        }
+        return Array(recentActivities.prefix(5))
+    }
+
+    private var durationHoursBinding: Binding<Int> {
+        Binding<Int>(
+            get: { durationMinutes / 60 },
+            set: { newValue in
+                let minutesPart = durationMinutes % 60
+                durationMinutes = max(0, newValue) * 60 + minutesPart
+            }
+        )
+    }
+
+    private var durationMinutesComponentBinding: Binding<Int> {
+        Binding<Int>(
+            get: { durationMinutes % 60 },
+            set: { newValue in
+                let hoursPart = durationMinutes / 60
+                let clamped = max(0, min(59, newValue))
+                durationMinutes = hoursPart * 60 + clamped
+            }
+        )
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "E MMM d"
+        return formatter
+    }()
+}
+
+private struct ActivitySearchSheet: View {
+    let onSelect: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
+
+    private var filteredOptions: [String] {
+        let base = ActivityLibrary.all
+        guard !searchText.isEmpty else { return base }
+        return base.filter { $0.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(filteredOptions, id: \.self) { activity in
+                    Button {
+                        onSelect(activity)
+                        dismiss()
+                    } label: {
+                        Text(activity)
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
+            .listStyle(.plain)
+            .searchable(text: $searchText)
+            .navigationTitle("More Activities")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+private enum ActivityLibrary {
+    static let all: [String] = [
+        "Archery", "Badminton", "Barre", "Baseball", "Basketball", "Bowling", "Boxing", "Cardiovascular exercise", "Climbing", "Core exercise", "Cricket", "Cross-country skiing", "Cross-training", "Cycling", "Dance", "Disc sports", "Diving", "Downhill skiing", "Elliptical", "Finnish baseball", "Fishing", "Fitness class", "Flexibility", "Floorball", "American Football", "Golf", "Gymnastics", "HIIT", "Handball", "Hiking", "Hockey", "Horseback riding", "Housework", "Hula hoop", "Hunting", "Ice skating", "Jumping rope", "Kettlebell", "Kite skiing", "Kitesurfing", "Lacrosse", "Martial arts", "Motorsport", "Mountain biking", "Musical instrument", "Nordic walking", "Orienteering", "Paddle sports", "Padel", "Pickelball", "Pilates", "Racquetball", "Roller skiing", "Rollerblading", "Rowing", "Rugby", "Running", "Sailing", "Skateboarding", "Snowboarding", "Snowshoeing", "Soccer", "Softball", "Squash", "Stair exercise", "Stremgth training", "Stretching", "Surfing", "Swimming", "Table tennis", "Tai chi", "Tennis", "Trampoline", "Virtual reality", "Volleyball", "Walking", "Water fitness", "Weightlifting", "Windsurfing", "Wrestling", "Yardwork", "Yoga", "Other"
+    ]
+}
+
+
 
 private struct TimelineEventCard: View {
     let event: TimelineEvent
