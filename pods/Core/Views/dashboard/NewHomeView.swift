@@ -4334,29 +4334,28 @@ private struct TimelineSectionView: View {
                     .buttonStyle(.plain)
                 }
             }
-            VStack(spacing: rowSpacing) {
-                TimelineEmptyQuickActionsRow(
-                    onAddActivity: onAddActivity,
-                    onScanMeal: onScanMeal,
-                    connectsToNext: !events.isEmpty,
-                    spacingBelow: events.isEmpty ? 0 : rowSpacing
-                )
 
-                if events.isEmpty {
-                    Text("No entries yet")
-                        .font(.system(size: 15))
-                        .foregroundColor(.secondary)
-                        .padding(.top, rowSpacing)
-                } else {
-                    ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
-                        TimelineEventRow(
-                            event: event,
-                            selectedDate: selectedDate,
-                            isFirst: false,
-                            isLast: index == events.count - 1,
-                            spacingAbove: 0,
-                            spacingBelow: index == events.count - 1 ? 0 : rowSpacing
-                        )
+            ZStack(alignment: .leading) {
+                TimelineSpineOverlay()
+
+                VStack(spacing: rowSpacing) {
+                    TimelineEmptyQuickActionsRow(
+                        onAddActivity: onAddActivity,
+                        onScanMeal: onScanMeal
+                    )
+
+                    if events.isEmpty {
+                        Text("No entries yet")
+                            .font(.system(size: 15))
+                            .foregroundColor(.secondary)
+                            .padding(.top, rowSpacing)
+                    } else {
+                        ForEach(events) { event in
+                            TimelineEventRow(
+                                event: event,
+                                selectedDate: selectedDate
+                            )
+                        }
                     }
                 }
             }
@@ -4367,22 +4366,16 @@ private struct TimelineSectionView: View {
 private struct TimelineEmptyQuickActionsRow: View {
     var onAddActivity: (() -> Void)?
     var onScanMeal: (() -> Void)?
-    var connectsToNext: Bool
-    var spacingBelow: CGFloat
 
     private let foregroundColor = Color("text")
 
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        HStack(alignment: .timelineIcon, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             TimelineConnector(
                 iconName: "plus",
-                isFirst: true,
-                isLast: !connectsToNext,
-                overrideColor: plusColor,
-                spacingAbove: 0,
-                spacingBelow: spacingBelow
+                overrideColor: plusColor
             )
 
             HStack(spacing: 12) {
@@ -4431,23 +4424,24 @@ private struct TimelineEmptyQuickActionsRow: View {
     }
 }
 
-private extension VerticalAlignment {
-    private enum TimelineIconAlignment: AlignmentID {
-        static func defaultValue(in dimensions: ViewDimensions) -> CGFloat {
-            dimensions[VerticalAlignment.center]
-        }
-    }
+private struct TimelineSpineOverlay: View {
+    @Environment(\.colorScheme) private var colorScheme
 
-    static let timelineIcon = VerticalAlignment(TimelineIconAlignment.self)
+    var body: some View {
+        GeometryReader { geometry in
+            let color = colorScheme == .dark ? Color(.systemGray3) : Color(.systemGray4)
+            Rectangle()
+                .fill(color)
+                .frame(width: 2, height: geometry.size.height)
+                .position(x: TimelineConnector.iconSize / 2, y: geometry.size.height / 2)
+        }
+        .allowsHitTesting(false)
+    }
 }
 
 private struct TimelineEventRow: View {
     let event: TimelineEvent
     let selectedDate: Date
-    let isFirst: Bool
-    let isLast: Bool
-    let spacingAbove: CGFloat
-    let spacingBelow: CGFloat
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -4466,15 +4460,8 @@ private struct TimelineEventRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: labelSpacing) {
             HStack(alignment: .center, spacing: 12) {
-                TimelineConnector(
-                    iconName: event.iconName,
-                    isFirst: false,
-                    isLast: false,
-                    spacingAbove: spacingAbove,
-                    spacingBelow: labelSpacing,
-                    showsIcon: true
-                )
-                .frame(height: TimelineConnector.iconSize)
+                TimelineConnector(iconName: event.iconName)
+                    .frame(height: TimelineConnector.iconSize)
 
                 Text(labelText)
                     .font(.system(size: 13))
@@ -4482,14 +4469,7 @@ private struct TimelineEventRow: View {
             }
 
             HStack(alignment: .top, spacing: 12) {
-                TimelineConnector(
-                    iconName: event.iconName,
-                    isFirst: isFirst,
-                    isLast: isLast,
-                    spacingAbove: 0,
-                    spacingBelow: spacingBelow,
-                    showsIcon: false
-                )
+                TimelineConnectorSpacer()
 
                 TimelineEventCard(event: event)
             }
@@ -4508,71 +4488,29 @@ private struct TimelineEventRow: View {
 private struct TimelineConnector: View {
     @Environment(\.colorScheme) private var colorScheme
     let iconName: String
-    let isFirst: Bool
-    let isLast: Bool
     var overrideColor: Color? = nil
-    var spacingAbove: CGFloat = 0
-    var spacingBelow: CGFloat = 0
-    var showsIcon: Bool = true
 
     static let iconSize: CGFloat = 34
 
     var body: some View {
-        let spineColor = colorScheme == .dark ? Color(.systemGray3) : Color(.systemGray4)
         let circleColor = overrideColor ?? (colorScheme == .dark ? Color(.systemGray2) : Color.black.opacity(0.9))
 
-        return VStack(spacing: 0) {
-            if spacingAbove > 0 {
-                Rectangle()
-                    .fill(spineColor)
-                    .frame(width: 2, height: spacingAbove)
-                    .opacity(isFirst ? 0 : 1)
-            }
-
-            GeometryReader { geometry in
-                if showsIcon {
-                    let availableHeight = max(0, geometry.size.height - Self.iconSize)
-                    let segmentHeight = availableHeight / 2
-
-                    VStack(spacing: 0) {
-                        Rectangle()
-                            .fill(spineColor)
-                            .frame(width: 2, height: segmentHeight)
-                            .opacity(isFirst ? 0 : 1)
-
-                        ZStack {
-                            Circle()
-                                .fill(circleColor)
-                                .frame(width: Self.iconSize, height: Self.iconSize)
-                            Image(systemName: iconName)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
-
-                        Rectangle()
-                            .fill(spineColor)
-                            .frame(width: 2, height: segmentHeight)
-                            .opacity(isLast ? 0 : 1)
-                    }
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                } else {
-                    Rectangle()
-                        .fill(spineColor)
-                        .frame(width: 2, height: geometry.size.height)
-                }
-            }
-            .frame(width: 32)
-            .frame(minHeight: showsIcon ? Self.iconSize : 0)
-
-            if spacingBelow > 0 {
-                Rectangle()
-                    .fill(spineColor)
-                    .frame(width: 2, height: spacingBelow)
-                    .opacity(isLast ? 0 : 1)
-            }
+        return ZStack {
+            Circle()
+                .fill(circleColor)
+                .frame(width: Self.iconSize, height: Self.iconSize)
+            Image(systemName: iconName)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white)
         }
-        .frame(width: 32)
-        .alignmentGuide(.timelineIcon) { _ in TimelineConnector.iconSize / 2 }
+        .frame(width: Self.iconSize, height: Self.iconSize)
+    }
+}
+
+private struct TimelineConnectorSpacer: View {
+    var body: some View {
+        Color.clear
+            .frame(width: TimelineConnector.iconSize)
     }
 }
 
