@@ -2309,7 +2309,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                         foodManager.showLogSuccess = false
                     }
                     self.barcodeFoodLogId = logged.foodLogId
-                    self.dayLogsVM.loadLogs(for: self.dayLogsVM.selectedDate, force: true)
+                    self.dayLogsVM.refreshLogsQuietly(for: self.dayLogsVM.selectedDate, force: true)
                 case .failure:
                     self.dayLogsVM.removeOptimisticLog(identifier: placeholderIdentifier)
                     self.removeCombinedLog(identifier: placeholderIdentifier)

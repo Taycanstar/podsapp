@@ -938,6 +938,16 @@ func loadLogs(for date: Date, force: Bool = false) {
   }
 }
 
+  func refreshLogsQuietly(for date: Date, force: Bool = true) {
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      await self.repository.refresh(date: date, force: force)
+      if let snapshot = self.repository.snapshot(for: date) {
+        self.applySnapshot(snapshot)
+      }
+    }
+  }
+
 private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   let key = Calendar.current.startOfDay(for: snapshot.date)
   currentSnapshotDate = key
