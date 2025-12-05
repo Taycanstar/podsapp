@@ -162,10 +162,6 @@ struct FoodScannerView: View {
                             self.scannedBarcode = sanitizedBarcode
                             
                             processBarcodeDirectly(sanitizedBarcode)
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                print("📸 Auto-capturing photo for barcode: \(sanitizedBarcode)")
-                                takePhoto()
-                            }
                         }
                     )
                     .edgesIgnoringSafeArea(.all)
@@ -590,6 +586,7 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
 
     private func processBarcodeDirectly(_ barcode: String) {
         guard !isAnalyzing, let userEmail = currentUserEmail else { return }
+        isAnalyzing = true
         performProcessBarcode(barcode, userEmail: userEmail)
     }
     
@@ -638,21 +635,15 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
         foodManager.loadingMessage = "Looking up barcode..."
         foodManager.uploadProgress = 0.1
 
-        isPresented = false
-        isAnalyzing = false
-        isProcessingBarcode = false
-
         if barcodePreviewEnabled {
             foodManager.lookupFoodByBarcodeEnhanced(
                 barcode: barcode,
                 userEmail: userEmail,
                 mealType: selectedMeal
             ) { success, message in
-                if success {
-                    print("✅ Enhanced barcode lookup success for: \(barcode)")
-                } else {
-                    print("❌ Enhanced barcode lookup failed: \(message ?? "Unknown error")")
-                }
+                self.handleBarcodeLookupCompletion(success: success,
+                                                   message: message,
+                                                   barcode: barcode)
             }
         } else {
             foodManager.lookupFoodByBarcodeDirect(
@@ -660,11 +651,26 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
                 userEmail: userEmail,
                 mealType: selectedMeal
             ) { success, message in
-                if success {
-                    print("✅ Direct barcode lookup success for: \(barcode)")
-                } else {
-                    print("❌ Direct barcode lookup failed: \(message ?? "Unknown error")")
-                }
+                self.handleBarcodeLookupCompletion(success: success,
+                                                   message: message,
+                                                   barcode: barcode)
+            }
+        }
+    }
+
+    private func handleBarcodeLookupCompletion(success: Bool,
+                                                message: String?,
+                                                barcode: String) {
+        DispatchQueue.main.async {
+            self.isAnalyzing = false
+            self.isProcessingBarcode = false
+
+            if success {
+                print("✅ Barcode lookup success for: \(barcode)")
+                self.isPresented = false
+            } else {
+                print("❌ Barcode lookup failed: \(message ?? "Unknown error")")
+                self.lastProcessedBarcode = nil
             }
         }
     }

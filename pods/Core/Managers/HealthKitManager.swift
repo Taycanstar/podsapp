@@ -98,10 +98,6 @@ class HealthKitManager {
         // Even when it shows "denied" (status 1), data queries often work
         // So we'll assume it's authorized if UserDefaults says so
         
-        print("🔍 HealthKit Authorization Check:")
-        print("  - UserDefaults enabled: \(userDefaultsEnabled)")
-        print("  - Final result: \(userDefaultsEnabled) (ignoring unreliable auth status)")
-        
         return userDefaultsEnabled
     }
     

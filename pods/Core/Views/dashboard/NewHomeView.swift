@@ -2808,12 +2808,10 @@ private struct RecoveryRingView: View {
         let calendar = Calendar.current
 
         let summary = healthViewModel.sleepSummary(for: date)
-        print("[Timeline] evaluating wake event for", date, "summary:", summary != nil, "snapshot:", vm.healthMetricsSnapshot != nil)
 
         if let summary,
            let wakeDate = wakeDate(from: summary),
            calendar.isDate(wakeDate, inSameDayAs: date) {
-            print("[Timeline] using HealthKit wake", wakeDate, "duration", summary.totalSleepMinutes)
             let readiness = vm.healthMetricsSnapshot?.readiness.map { Int($0.rounded()) }
             let sleepQuality = vm.healthMetricsSnapshot?.sleep.map { Int($0.rounded()) }
             return makeWakeEvent(
@@ -2826,20 +2824,17 @@ private struct RecoveryRingView: View {
 
         guard let snapshot = vm.healthMetricsSnapshot,
               let raw = snapshot.rawMetrics else {
-            print("[Timeline] no snapshot/raw metrics for", date)
             return nil
         }
 
         let readiness = snapshot.readiness.map { Int($0.rounded()) }
         let sleepQuality = snapshot.sleep.map { Int($0.rounded()) } ?? raw.sleepScore.map { Int($0.rounded()) }
         let durationMinutes = timelineSleepDuration(from: raw)
-        print("[Timeline] evaluating snapshot fallback for", date, "duration", durationMinutes ?? -1, "midpoint", raw.sleepMidpointMinutes ?? -1)
 
         if let derivedWakeDate = wakeDateFromSnapshot(snapshot,
                                                     raw: raw,
                                                     durationMinutes: durationMinutes,
                                                     matching: date) {
-            print("[Timeline] using snapshot midpoint wake", derivedWakeDate)
             return makeWakeEvent(
                 date: derivedWakeDate,
                 durationMinutes: durationMinutes,
@@ -2851,7 +2846,6 @@ private struct RecoveryRingView: View {
         if let fallbackDateString = raw.fallbackSleepDate,
            let fallbackDate = parseISODate(fallbackDateString),
            calendar.isDate(fallbackDate, inSameDayAs: date) {
-            print("[Timeline] using fallback sleep date", fallbackDate)
             return makeWakeEvent(
                 date: fallbackDate,
                 durationMinutes: durationMinutes,
@@ -2860,7 +2854,6 @@ private struct RecoveryRingView: View {
             )
         }
 
-        print("[Timeline] no wake event derived for", date)
         return nil
     }
 

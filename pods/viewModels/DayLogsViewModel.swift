@@ -1193,13 +1193,8 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       let snapshot = map[day]
       let intake = snapshot?.caloriesLogged ?? 0
       let expenditure = snapshot?.tdeeDisplay ?? snapshot?.impliedExpenditure ?? snapshot?.tdeeCore ?? 0
-      let formatter = DateFormatter()
-      formatter.dateFormat = "MMM dd"
-      print("📊 Energy Balance [\(formatter.string(from: day))]: Intake=\(Int(intake)), Expend=\(Int(expenditure)), Balance=\(Int(intake - expenditure))")
       points.append(EnergyBalancePoint(date: day, intake: intake, expenditure: expenditure))
     }
-
-    print("📊 Total energy balance points from \(start) spanning \(days) day(s): \(points.count)")
     return points
   }
 
