@@ -287,6 +287,8 @@ class OnboardingViewModel: ObservableObject {
     @Published var currentStep: OnboardingStep = .landing
     @Published var currentFlowStep: OnboardingFlowStep = .gender
     @Published var onboardingCompleted: Bool = false
+    private let nutritionSeedDefaultsKey = "hasSeededNutritionGoals"
+    @Published private(set) var hasSeededNutritionProfile: Bool = UserDefaults.standard.bool(forKey: "hasSeededNutritionGoals")
     @Published var email: String = "" {
         didSet {
             if !email.isEmpty {
@@ -1217,6 +1219,147 @@ class OnboardingViewModel: ObservableObject {
         
         print("✅ OnboardingViewModel: Validation passed")
         return true
+    }
+
+    func trySeedRemoteNutritionProfile(force: Bool = false) {
+        if !force, hasSeededNutritionProfile {
+            return
+        }
+
+        guard let resolvedEmail = resolvedUserEmail() else {
+            return
+        }
+
+        let payload = buildOnboardingSeedPayload()
+
+        NetworkManagerTwo.shared.ensureNutritionGoals(
+            userEmail: resolvedEmail,
+            fallbackOnboardingPayload: payload
+        ) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let response):
+                NutritionGoalsStore.shared.cache(goals: response.goals)
+                self.markNutritionProfileSeeded()
+            case .failure(let error):
+                print("⚠️ OnboardingViewModel: ensureNutritionGoals failed - \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func markNutritionProfileSeeded() {
+        hasSeededNutritionProfile = true
+        UserDefaults.standard.set(true, forKey: nutritionSeedDefaultsKey)
+    }
+
+    private func resolvedUserEmail() -> String? {
+        if !email.isEmpty {
+            return email
+        }
+        if let stored = UserDefaults.standard.string(forKey: "userEmail"), !stored.isEmpty {
+            return stored
+        }
+        return nil
+    }
+
+    private func buildOnboardingSeedPayload() -> [String: Any]? {
+        let defaults = UserDefaults.standard
+
+        let resolvedGender = !gender.isEmpty ? gender : (defaults.string(forKey: "gender") ?? "")
+        let resolvedDOB: String? = {
+            if let dob = dateOfBirth {
+                return dobFormatter.string(from: dob)
+            }
+            if let stored = defaults.string(forKey: "dateOfBirth"), !stored.isEmpty {
+                return stored
+            }
+            return nil
+        }()
+
+        var resolvedHeight = heightCm
+        if resolvedHeight <= 0 {
+            let stored = defaults.double(forKey: "heightCentimeters")
+            if stored > 0 { resolvedHeight = stored }
+        }
+
+        var resolvedWeight = weightKg
+        if resolvedWeight <= 0 {
+            let stored = defaults.double(forKey: "weightKilograms")
+            if stored > 0 { resolvedWeight = stored }
+        }
+
+        guard !resolvedGender.isEmpty,
+              let dobString = resolvedDOB,
+              !dobString.isEmpty,
+              resolvedHeight > 0,
+              resolvedWeight > 0 else {
+            return nil
+        }
+
+        var payload: [String: Any] = [
+            "gender": resolvedGender,
+            "date_of_birth": dobString,
+            "height_cm": resolvedHeight,
+            "weight_kg": resolvedWeight,
+        ]
+
+        let resolvedDesiredWeight = desiredWeightKg > 0 ? desiredWeightKg : defaults.double(forKey: "desiredWeightKilograms")
+        if resolvedDesiredWeight > 0 {
+            payload["desired_weight_kg"] = resolvedDesiredWeight
+        }
+
+        let resolvedDietGoal = !dietGoal.isEmpty ? dietGoal : (defaults.string(forKey: "dietGoal") ?? "")
+        payload["diet_goal"] = resolvedDietGoal.isEmpty ? "maintain" : resolvedDietGoal
+
+        let resolvedFitnessGoal = !fitnessGoal.isEmpty ? fitnessGoal : (defaults.string(forKey: "fitnessGoal") ?? "")
+        payload["fitness_goal"] = resolvedFitnessGoal.isEmpty ? "general" : resolvedFitnessGoal
+
+        let resolvedFrequency = !workoutFrequency.isEmpty ? workoutFrequency : (defaults.string(forKey: "workoutFrequency") ?? "")
+        payload["workout_frequency"] = resolvedFrequency.isEmpty ? "medium" : resolvedFrequency
+
+        let resolvedDietPreference = !dietPreference.isEmpty ? dietPreference : (defaults.string(forKey: "dietPreference") ?? "")
+        payload["diet_preference"] = resolvedDietPreference.isEmpty ? "balanced" : resolvedDietPreference
+
+        if goalTimeframeWeeks > 0 {
+            payload["goal_timeframe_weeks"] = goalTimeframeWeeks
+        } else if defaults.integer(forKey: "goalTimeframeWeeks") > 0 {
+            payload["goal_timeframe_weeks"] = defaults.integer(forKey: "goalTimeframeWeeks")
+        }
+
+        if weeklyWeightChange > 0 {
+            payload["weekly_weight_change"] = weeklyWeightChange
+        } else if defaults.double(forKey: "weeklyWeightChange") > 0 {
+            payload["weekly_weight_change"] = defaults.double(forKey: "weeklyWeightChange")
+        }
+
+        if workoutDaysPerWeek > 0 {
+            payload["workout_days_per_week"] = workoutDaysPerWeek
+        } else if defaults.integer(forKey: "workout_days_per_week") > 0 {
+            payload["workout_days_per_week"] = defaults.integer(forKey: "workout_days_per_week")
+        }
+
+        if preferredWorkoutDuration > 0 {
+            payload["preferred_workout_duration"] = preferredWorkoutDuration
+        }
+
+        if !restDays.isEmpty {
+            payload["rest_days"] = restDays
+        } else if let storedRest = defaults.array(forKey: "rest_days") as? [String], !storedRest.isEmpty {
+            payload["rest_days"] = storedRest
+        }
+
+        if !availableEquipment.isEmpty {
+            payload["available_equipment"] = availableEquipment
+        }
+
+        payload["add_calories_burned"] = addCaloriesBurned || defaults.bool(forKey: "addCaloriesBurned")
+        payload["rollover_calories"] = rolloverCalories || defaults.bool(forKey: "rolloverCalories")
+
+        if let sport = UserDefaults.standard.string(forKey: "sportType"), !sport.isEmpty {
+            payload["sport_type"] = sport
+        }
+
+        return payload
     }
 
     func signupOnboardingPayload() -> [String: Any]? {

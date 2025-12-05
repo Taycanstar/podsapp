@@ -374,6 +374,7 @@ struct AboutYouView: View {
     private var continueButton: some View {
         Button {
             persistCurrentValues()
+            viewModel.trySeedRemoteNutritionProfile()
             viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 12)
             viewModel.currentStep = .desiredWeight
         } label: {

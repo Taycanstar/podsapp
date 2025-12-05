@@ -135,26 +135,35 @@ struct FoodScannerView: View {
                                 print("🚫 Barcode detected but ignored - not in barcode mode")
                                 return 
                             }
+
+                            let sanitizedBarcode = sanitizeBarcode(barcode)
+                            guard !sanitizedBarcode.isEmpty else { return }
+
+                            guard isSupportedBarcodeValue(sanitizedBarcode) else {
+                                print("⚠️ Unsupported barcode detected: \(barcode)")
+                                foodManager.handleScanFailure(.unsupportedBarcode)
+                                return
+                            }
                             
-                            guard !isProcessingBarcode && barcode != lastProcessedBarcode else {
+                            guard !isProcessingBarcode && sanitizedBarcode != lastProcessedBarcode else {
                                 print("⏱️ Ignoring barcode - already being processed or same as last")
                                 return
                             }
                             
-                            print("🔍 BARCODE DETECTED IN UI: \(barcode) - preparing to process")
+                            print("🔍 BARCODE DETECTED IN UI: \(sanitizedBarcode) - preparing to process")
                             
                             let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                             impactFeedback.prepare()
                             impactFeedback.impactOccurred()
                             
                             isProcessingBarcode = true
-                            lastProcessedBarcode = barcode
+                            lastProcessedBarcode = sanitizedBarcode
                             
-                            self.scannedBarcode = barcode
+                            self.scannedBarcode = sanitizedBarcode
                             
-                            processBarcodeDirectly(barcode)
+                            processBarcodeDirectly(sanitizedBarcode)
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                print("📸 Auto-capturing photo for barcode: \(barcode)")
+                                print("📸 Auto-capturing photo for barcode: \(sanitizedBarcode)")
                                 takePhoto()
                             }
                         }
@@ -666,6 +675,19 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
         }
     }
 
+    private func sanitizeBarcode(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func isSupportedBarcodeValue(_ value: String) -> Bool {
+        guard !value.isEmpty,
+              value.rangeOfCharacter(from: CharacterSet.decimalDigits.inverted) == nil,
+              (8...18).contains(value.count) else {
+            return false
+        }
+        return true
+    }
+
     private func processSelectedImages(_ images: [UIImage]) {
         guard let email = currentUserEmail else { return }
         let isPro = proFeatureGate.hasActiveSubscription()
@@ -899,11 +921,10 @@ struct CameraPreviewView: UIViewRepresentable {
             
             print("Available metadata types: \(metadataOutput.availableMetadataObjectTypes)")
             
-            // Check if EAN-13 barcode format is supported
+            // Check if UPC/EAN barcode formats are supported
             if metadataOutput.availableMetadataObjectTypes.contains(.ean13) {
-                // Set all supported barcode types
-                metadataOutput.metadataObjectTypes = [.ean13, .ean8, .upce, .code128, .code39, .code93, .qr, .pdf417, .aztec]
-                print("Barcode scanning ready with supported formats")
+                metadataOutput.metadataObjectTypes = [.ean13, .ean8, .upce]
+                print("Barcode scanning ready with UPC/EAN formats")
                 coordinator.metadataOutput = metadataOutput
             }
             
@@ -959,11 +980,9 @@ struct CameraPreviewView: UIViewRepresentable {
         // Toggle barcode scanning based on mode
         func updateBarcodeScanning(isBarcode: Bool) {
             if isBarcode {
-                // Enable all supported barcode formats when in barcode mode
-                metadataOutput?.metadataObjectTypes = [.ean13, .ean8, .upce, .code128, .code39, .code93, .qr, .pdf417, .aztec]
-                print("Barcode scanning ENABLED with all supported formats")
+                metadataOutput?.metadataObjectTypes = [.ean13, .ean8, .upce]
+                print("Barcode scanning ENABLED for UPC/EAN formats")
             } else {
-                // Disable barcode scanning when not in barcode mode
                 metadataOutput?.metadataObjectTypes = []
                 print("Barcode scanning DISABLED")
             }

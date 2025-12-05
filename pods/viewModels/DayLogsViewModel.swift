@@ -715,6 +715,65 @@ func addPending(_ log: CombinedLog) {
   StreakManager.shared.updateStreak(activityDate: log.scheduledAt ?? Date())
 }
 
+func replaceOptimisticLog(identifier: String, with resolvedLog: CombinedLog) {
+  var resolved = resolvedLog
+  resolved.isOptimistic = false
+
+  // Remove the placeholder from any pending caches so it doesn't linger once confirmed
+  let placeholderRemoved = removeOptimisticPlaceholder(identifier: identifier)
+
+  // Update the visible logs if we're currently viewing this day
+  var updatedLogs = logs
+  if let index = updatedLogs.firstIndex(where: { $0.id == identifier }) {
+    updatedLogs[index] = resolved
+    logs = sortLogs(updatedLogs)
+  } else if Calendar.current.isDate(resolved.scheduledAt ?? selectedDate, inSameDayAs: selectedDate) {
+    updatedLogs.append(resolved)
+    logs = sortLogs(updatedLogs)
+  } else if !placeholderRemoved {
+    // If the placeholder wasn't present anywhere, nothing else to update
+    return
+  }
+
+  triggerProfileDataRefresh(localOnly: false)
+}
+
+func removeOptimisticLog(identifier: String) {
+  let removedFromPending = removeOptimisticPlaceholder(identifier: identifier)
+  let originalCount = logs.count
+  logs.removeAll { $0.id == identifier }
+
+  if removedFromPending || logs.count != originalCount {
+    triggerProfileDataRefresh(localOnly: true)
+  }
+}
+
+@discardableResult
+private func removeOptimisticPlaceholder(identifier: String) -> Bool {
+  var didRemove = false
+  for key in Array(pendingByDate.keys) {
+    var pending = pendingByDate[key] ?? []
+    let originalCount = pending.count
+    pending.removeAll { $0.id == identifier }
+    if pending.isEmpty && originalCount > 0 {
+      pendingByDate.removeValue(forKey: key)
+      didRemove = true
+    } else if pending.count != originalCount {
+      pendingByDate[key] = pending
+      didRemove = true
+    }
+  }
+  return didRemove
+}
+
+private func sortLogs(_ logs: [CombinedLog]) -> [CombinedLog] {
+  logs.sorted { first, second in
+    let firstDate = first.scheduledAt ?? Date.distantPast
+    let secondDate = second.scheduledAt ?? Date.distantPast
+    return firstDate > secondDate
+  }
+}
+
 func removeLog(_ log: CombinedLog) async {
     print("[DayLogsVM] removeLog( id:\(log.id), type:\(log.type) ) – optimistic remove + server sync")
 

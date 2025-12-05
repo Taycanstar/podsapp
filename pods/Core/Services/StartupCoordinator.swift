@@ -77,6 +77,7 @@ final class StartupCoordinator: ObservableObject {
         }
 
         foodManager.initialize(userEmail: email)
+        onboarding.trySeedRemoteNutritionProfile()
         dayLogs.setEmail(email)
         dayLogs.preloadForStartup(email: email)
 

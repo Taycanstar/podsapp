@@ -40,11 +40,11 @@ class NetworkManagerTwo {
 
     
     // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-    // let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.4:8000"
 
     // ### STAGING ###
     // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+    // ### LOCAL ###
+    let baseUrl = "http://172.20.10.4:8000"
 
     // Network errors - scoped to NetworkManagerTwo
     enum NetworkError: LocalizedError {
@@ -2712,6 +2712,72 @@ class NetworkManagerTwo {
                 }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+
+    /// Ensure the backend has onboarding + nutrition goal records for the user.
+    func ensureNutritionGoals(
+        userEmail: String,
+        fallbackOnboardingPayload: [String: Any]? = nil,
+        completion: @escaping (Result<NutritionGoalsResponse, Error>) -> Void
+    ) {
+        let urlString = "\(baseUrl)/ensure-nutrition-goals/"
+
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var body: [String: Any] = ["user_email": userEmail]
+        if let payload = fallbackOnboardingPayload, !payload.isEmpty {
+            body["fallback_onboarding_data"] = payload
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+
+            guard let data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let response = try decoder.decode(NutritionGoalsResponse.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(response))
+                }
+            } catch {
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(message: errorMessage)))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.decodingError))
+                    }
                 }
             }
         }.resume()

@@ -425,7 +425,8 @@ enum FoodScanError: LocalizedError {
     case invalidResponse
     case analysisTimeout
     case userCancelled
-    
+    case unsupportedBarcode
+
     var errorDescription: String? {
         switch self {
         case .imageProcessingFailed:
@@ -438,6 +439,8 @@ enum FoodScanError: LocalizedError {
             return "Analysis took too long. Please try again."
         case .userCancelled:
             return "Scan cancelled"
+        case .unsupportedBarcode:
+            return "This code isn't a nutrition barcode. Please scan the UPC/EAN printed near the nutrition label."
         }
     }
 }

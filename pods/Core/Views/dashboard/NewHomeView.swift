@@ -87,6 +87,10 @@ struct NewHomeView: View {
     @State private var recentQuickActivities: [String] = []
     @State private var showQuickActivityToast = false
     @State private var quickActivityErrorMessage: String?
+    @State private var timelineAnimationEnabled = false
+    @State private var previousTimelineLogIDs: Set<String> = []
+    @State private var hasInitializedTimelineAnimation = false
+    @State private var timelineAnimationResetWorkItem: DispatchWorkItem?
     
     private enum ScheduleAlert: Identifiable {
         case success(String)
@@ -235,6 +239,7 @@ private var remainingCal: Double { vm.remainingCalories }
             TimelineSectionView(
                 events: timelinePreviewEvents,
                 selectedDate: vm.selectedDate,
+                animateEvents: timelineAnimationEnabled,
                 onShowAll: timelineEvents.count > timelinePreviewEvents.count ? { showTimelineSheet = true } : nil,
                 onAddActivity: { showAddActivitySheet = true },
                 onScanMeal: onBarcodeTapped
@@ -638,9 +643,12 @@ private var remainingCal: Double { vm.remainingCalories }
                 } else {
                     handleHealthMetricsLoadingChange(vm.isLoadingHealthMetrics)
                 }
+
+                resetTimelineAnimationTracking()
             }
-            .onChange(of: vm.logs) { _ in
+            .onChange(of: vm.logs) { newLogs in
                 vm.refreshWeeklyNutritionSummaries(endingAt: vm.selectedDate)
+                handleTimelineAnimation(for: newLogs)
             }
             .onChange(of: vm.isLoadingHealthMetrics) { isLoading in
                 handleHealthMetricsLoadingChange(isLoading)
@@ -1094,7 +1102,6 @@ private extension NewHomeView {
         .contentMargins(.bottom, 110, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
-        .animation(.default, value: timelineEvents.count)
         .contentShape(Rectangle())
         .onTapGesture {
             isAgentInputFocused = false
@@ -2759,6 +2766,42 @@ private struct RecoveryRingView: View {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%0.*f", decimals, value)
     }
 
+    private func handleTimelineAnimation(for logs: [CombinedLog]) {
+        let currentIDs = Set(logs.map(\.id))
+        defer { previousTimelineLogIDs = currentIDs }
+
+        guard hasInitializedTimelineAnimation else {
+            hasInitializedTimelineAnimation = true
+            return
+        }
+
+        guard !currentIDs.subtracting(previousTimelineLogIDs).isEmpty else {
+            return
+        }
+
+        triggerTimelineAnimation()
+    }
+
+    private func triggerTimelineAnimation() {
+        timelineAnimationResetWorkItem?.cancel()
+        timelineAnimationEnabled = true
+
+        let workItem = DispatchWorkItem {
+            timelineAnimationEnabled = false
+            timelineAnimationResetWorkItem = nil
+        }
+        timelineAnimationResetWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: workItem)
+    }
+
+    private func resetTimelineAnimationTracking() {
+        hasInitializedTimelineAnimation = false
+        previousTimelineLogIDs = Set(vm.logs.map(\.id))
+        timelineAnimationResetWorkItem?.cancel()
+        timelineAnimationResetWorkItem = nil
+        timelineAnimationEnabled = false
+    }
+
     // MARK: - Timeline helpers
 
     private func wakeTimelineEvent(for date: Date) -> TimelineEvent? {
@@ -4310,6 +4353,7 @@ private typealias TimelineEventDetails = TimelineEvent.Details
 private struct TimelineSectionView: View {
     let events: [TimelineEvent]
     let selectedDate: Date
+    var animateEvents: Bool = false
     var onShowAll: (() -> Void)? = nil
     var onAddActivity: (() -> Void)? = nil
     var onScanMeal: (() -> Void)? = nil
@@ -4357,7 +4401,7 @@ private struct TimelineSectionView: View {
                             .transition(.move(edge: .top).combined(with: .opacity))
                         }
                         .animation(
-                            .spring(response: 0.5, dampingFraction: 0.85),
+                            animateEvents ? .spring(response: 0.5, dampingFraction: 0.85) : nil,
                             value: eventIDs
                         )
                     }

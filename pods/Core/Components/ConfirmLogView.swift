@@ -68,6 +68,20 @@ struct ConfirmLogView: View {
     @State private var isSavingMeal = false
     @State private var servingUnit: String = "serving"
     private let saveNetworkManager = NetworkManager()
+    private static let isoDayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .iso8601)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+    private static let weekdayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = "EEEE"
+        return formatter
+    }()
 
     // NEW: Base nutrition values (per single serving)
     @State private var baseCalories: Double = 0
@@ -119,7 +133,7 @@ struct ConfirmLogView: View {
         let baseRowHeight: CGFloat = 130
         return max(CGFloat(mealItems.count) * baseRowHeight, baseRowHeight + 40)
     }
-    private var hasMeasureOptions: Bool { !availableMeasures.isEmpty }
+    private var hasMeasureOptions: Bool { availableMeasures.count > 1 }
     private var selectedMeasure: FoodMeasure? {
         guard let id = selectedMeasureId else { return nil }
         return availableMeasures.first(where: { $0.id == id })
@@ -371,6 +385,8 @@ struct ConfirmLogView: View {
             resolvedMeasures = [fallback]
         }
         self._availableMeasures = State(initialValue: resolvedMeasures)
+        let measureDescriptions = resolvedMeasures.map { $0.disseminationText }
+        print("🍽 [ServingMenu] Available measures (\(measureDescriptions.count)): \(measureDescriptions)")
         let baselineMeasure = ConfirmLogView.resolveBaselineMeasure(for: food, measures: resolvedMeasures)
         self._selectedMeasureId = State(initialValue: baselineMeasure?.id ?? resolvedMeasures.first?.id)
         self.baselineMeasureGramWeight = baselineMeasure?.gramWeight ?? resolvedMeasures.first?.gramWeight ?? max(food.servingSize ?? 1, 1)
@@ -487,19 +503,6 @@ struct ConfirmLogView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
-        .overlay(
-            Group {
-                if isCreating {
-                    Color.black.opacity(0.4)
-                        .edgesIgnoringSafeArea(.all)
-                        .overlay(
-                            ProgressView()
-                                .scaleEffect(1.5)
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        )
-                }
-            }
-        )
         .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
             reloadStoredNutrientTargets()
         }
@@ -567,7 +570,7 @@ struct ConfirmLogView: View {
             }
         }
         .padding(.horizontal)
-        .padding(.bottom, 24)
+        .padding(.bottom, 12)
         .background(
             Color("iosbg")
                 .ignoresSafeArea(edges: .bottom)
@@ -995,9 +998,9 @@ private struct MealItemServingControls: View {
                         )
                     }
                 } else {
-                    TextField("e.g., 1 cup, 2 tbsp", text: $servingSize)
-                        .textFieldStyle(.plain)
-                        .multilineTextAlignment(.trailing)
+                    Text(selectedMeasureLabel)
+                        .font(.body)
+                        .foregroundColor(.secondary)
                 }
             }
             
@@ -2231,85 +2234,74 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
 
 
     private func logBarcodeFood() {
-    print("🔍 DEBUG ConfirmLogView: logBarcodeFood() called")
-    print("🔍 DEBUG ConfirmLogView: barcodeFoodLogId = \(String(describing: barcodeFoodLogId))")
-    print("🔍 DEBUG ConfirmLogView: This will log the food to database")
-    
-    // 1. Validate inputs
-    guard !title.isEmpty, !calories.isEmpty else {
-        errorMessage = "Title and calories are required"
-        showErrorAlert = true
-        return
-    }
-    guard Double(calories) != nil else {
-        errorMessage = "Calories must be a valid number"
-        showErrorAlert = true
-        return
-    }
+        guard !title.isEmpty, !calories.isEmpty else {
+            errorMessage = "Title and calories are required"
+            showErrorAlert = true
+            return
+        }
+        guard Double(calories) != nil else {
+            errorMessage = "Calories must be a valid number"
+            showErrorAlert = true
+            return
+        }
+        guard let food = originalFood else {
+            errorMessage = "Original food data not found"
+            showErrorAlert = true
+            return
+        }
 
-    guard let food = originalFood else {
-        errorMessage = "Original food data not found"
-        showErrorAlert = true
-        return
-    }
+        isCreating = true
 
-    isCreating = true
+        var updatedFood = food
+        updatedFood.description = title
+        updatedFood.householdServingFullText = selectedMeasureLabel
+        updatedFood.numberOfServings = numberOfServings
+        if shouldShowMealItemsEditor {
+            updatedFood.mealItems = mealItems
+        }
 
-    // 2. Compute adjusted food with user servings
-    let originalServings = food.numberOfServings ?? 1
-    let userServings     = numberOfServings
-    var updatedFood      = food
-    updatedFood.description = title  // Apply user's edited name
-    updatedFood.numberOfServings = userServings
-    if shouldShowMealItemsEditor {
-        updatedFood.mealItems = mealItems
-    }
+        let mealLabel = selectedMealPeriod.displayName
+        let placeholderId = generateTemporaryFoodLogID()
+        let optimisticLog = makeOptimisticCombinedLog(from: updatedFood, placeholderId: placeholderId, mealLabel: mealLabel)
+        let placeholderIdentifier = optimisticLog.id
 
-    let mealLabel = selectedMealPeriod.displayName
-    
-    // 3. Fire the real network call
-    foodManager.logFood(
-        email:    viewModel.email,
-        food:     updatedFood,
-        meal:     mealLabel,
-        servings: userServings,
-        date:     mealTime,
-        notes:    nil
-    ) { result in
-        DispatchQueue.main.async {
-            self.isCreating = false
-            switch result {
-            case .success(let logged):
-                // 4. Build your CombinedLog from the server response
-                let combined = CombinedLog(
-                    type:            .food,
-                    status:          logged.status,
-                    calories:        Double(logged.food.calories),
-                    message:         "\(logged.food.displayName) - \(mealLabel)",
-                    foodLogId:       logged.foodLogId,
-                    food:            logged.food,
-                    mealType:        mealLabel,
-                    mealLogId:       nil,
-                    meal:            nil,
-                    mealTime:        mealLabel,
-                    scheduledAt:     mealTime,
-                    recipeLogId:     nil,
-                    recipe:          nil,
-                    servingsConsumed:nil
-                )
+        dayLogsVM.addPending(optimisticLog)
+        upsertCombinedLog(optimisticLog)
 
-                // Ensure all @Published property updates happen on main thread
-                DispatchQueue.main.async {
-                    // 5. Optimistically insert into today's view
-                    dayLogsVM.addPending(combined)
+        dismiss()
 
-                    // 6. Also insert into the global timeline, de-duplicating first
-                    if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combined.foodLogId }) {
-                        foodManager.combinedLogs.remove(at: idx)
-                    }
-                    foodManager.combinedLogs.insert(combined, at: 0)
+        foodManager.logFood(
+            email:    viewModel.email,
+            food:     updatedFood,
+            meal:     mealLabel,
+            servings: numberOfServings,
+            date:     mealTime,
+            notes:    nil
+        ) { result in
+            DispatchQueue.main.async {
+                self.isCreating = false
+                switch result {
+                case .success(let logged):
+                    let combined = CombinedLog(
+                        type:            .food,
+                        status:          logged.status,
+                        calories:        Double(logged.food.calories),
+                        message:         "\(logged.food.displayName) - \(mealLabel)",
+                        foodLogId:       logged.foodLogId,
+                        food:            logged.food,
+                        mealType:        mealLabel,
+                        mealLogId:       nil,
+                        meal:            nil,
+                        mealTime:        mealLabel,
+                        scheduledAt:     mealTime,
+                        recipeLogId:     nil,
+                        recipe:          nil,
+                        servingsConsumed:nil
+                    )
 
-                    // 7. Show the success toast
+                    self.dayLogsVM.replaceOptimisticLog(identifier: placeholderIdentifier, with: combined)
+                    self.upsertCombinedLog(combined, replacing: placeholderIdentifier)
+
                     foodManager.lastLoggedItem = (name: combined.food?.displayName ?? title,
                                                   calories: combined.displayCalories)
                     foodManager.showLogSuccess = true
@@ -2317,19 +2309,81 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                         foodManager.showLogSuccess = false
                     }
                     self.barcodeFoodLogId = logged.foodLogId
+                    self.dayLogsVM.loadLogs(for: self.dayLogsVM.selectedDate, force: true)
+                case .failure:
+                    self.dayLogsVM.removeOptimisticLog(identifier: placeholderIdentifier)
+                    self.removeCombinedLog(identifier: placeholderIdentifier)
                 }
-
-                // 8. Finally dismiss
-                dismiss()
-
-            case .failure(let error):
-                // 9. Show error to the user
-                errorMessage = error.localizedDescription
-                showErrorAlert = true
             }
         }
     }
-}
+
+    private func makeOptimisticCombinedLog(from food: Food, placeholderId: Int, mealLabel: String) -> CombinedLog {
+        let loggedItem = LoggedFoodItem(
+            foodLogId: placeholderId,
+            fdcId: food.fdcId,
+            displayName: food.description,
+            calories: perServingValue(adjustedCalories),
+            servingSizeText: selectedMeasureLabel,
+            numberOfServings: numberOfServings,
+            brandText: brand.isEmpty ? food.brandText : brand,
+            protein: perServingValue(adjustedProtein),
+            carbs: perServingValue(adjustedCarbs),
+            fat: perServingValue(adjustedFat),
+            healthAnalysis: food.healthAnalysis,
+            foodNutrients: food.foodNutrients,
+            aiInsight: food.aiInsight,
+            nutritionScore: food.nutritionScore,
+            mealItems: food.mealItems
+        )
+
+        let logDate = ConfirmLogView.isoDayFormatter.string(from: mealTime)
+        let dayName = ConfirmLogView.weekdayFormatter.string(from: mealTime)
+
+        return CombinedLog(
+            type:            .food,
+            status:          "pending",
+            calories:        adjustedCalories,
+            message:         "\(loggedItem.displayName) - \(mealLabel)",
+            foodLogId:       placeholderId,
+            food:            loggedItem,
+            mealType:        mealLabel,
+            mealLogId:       nil,
+            meal:            nil,
+            mealTime:        mealLabel,
+            scheduledAt:     mealTime,
+            recipeLogId:     nil,
+            recipe:          nil,
+            servingsConsumed:nil,
+            activityId:      nil,
+            activity:        nil,
+            logDate:         logDate,
+            dayOfWeek:       dayName,
+            isOptimistic:    true
+        )
+    }
+
+    private func perServingValue(_ total: Double) -> Double {
+        let servings = max(numberOfServings, 0.0001)
+        return total / servings
+    }
+
+    private func upsertCombinedLog(_ log: CombinedLog, replacing identifier: String? = nil) {
+        if let identifier {
+            foodManager.combinedLogs.removeAll { $0.id == identifier }
+        }
+        foodManager.combinedLogs.removeAll { $0.id == log.id }
+        foodManager.combinedLogs.insert(log, at: 0)
+    }
+
+    private func removeCombinedLog(identifier: String) {
+        foodManager.combinedLogs.removeAll { $0.id == identifier }
+    }
+
+    private func generateTemporaryFoodLogID() -> Int {
+        let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+        return -abs(timestamp)
+    }
 
     private func handleAddToPlate() {
         guard let entry = buildPlateEntry() else { return }
