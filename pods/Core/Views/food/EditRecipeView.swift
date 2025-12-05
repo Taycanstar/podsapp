@@ -679,30 +679,6 @@ struct EditRecipeView: View {
     }
     
     // Calculation
-    private struct MacroTotals {
-        var calories: Double = 0
-        var protein: Double = 0
-        var carbs: Double = 0
-        var fat: Double = 0
-        
-        var totalMacros: Double { protein + carbs + fat }
-        
-        var proteinPercentage: Double {
-            guard totalMacros > 0 else { return 0 }
-            return (protein / totalMacros) * 100
-        }
-        
-        var carbsPercentage: Double {
-            guard totalMacros > 0 else { return 0 }
-            return (carbs / totalMacros) * 100
-        }
-        
-        var fatPercentage: Double {
-            guard totalMacros > 0 else { return 0 }
-            return (fat / totalMacros) * 100
-        }
-    }
-    
     private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
         var totals = MacroTotals()
         

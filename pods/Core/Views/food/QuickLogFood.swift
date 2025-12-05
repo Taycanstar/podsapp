@@ -28,6 +28,7 @@ struct QuickLogFood: View {
     
     // For LogFood required parameters
     @State private var selectedLogTab: Int = 0
+    var onFoodCreated: ((Food) -> Void)? = nil
     
     // Meal type options
     let mealTypes = ["Breakfast", "Lunch", "Dinner", "Snack"]
@@ -253,13 +254,7 @@ struct QuickLogFood: View {
         
         // Show loading state
         isLogging = true
-        
-        // First immediately close the sheet to return to the main view
-        isPresented = false
-        
-        // Also set viewModel.isShowingFoodContainer to false to ensure we return to DashboardView
-        viewModel.isShowingFoodContainer = false
-        
+
         // Get food details from text fields
         let title = foodTitle.isEmpty ? "Unnamed Food" : foodTitle
         let calories = Double(foodCalories) ?? 0
@@ -286,7 +281,20 @@ struct QuickLogFood: View {
             ],
             foodMeasures: []
         )
+
+        if let onFoodCreated {
+            isLogging = false
+            isPresented = false
+            onFoodCreated(quickLoggedFood)
+            return
+        }
+
+        // First immediately close the sheet to return to the main view
+        isPresented = false
         
+        // Also set viewModel.isShowingFoodContainer to false to ensure we return to DashboardView
+        viewModel.isShowingFoodContainer = false
+
         // Log the food
         let email = viewModel.email
         
@@ -343,30 +351,6 @@ struct QuickLogFood: View {
     }
     
     // MARK: - Helper Methods
-    
-    private struct MacroTotals {
-        var calories: Double = 0
-        var protein: Double = 0
-        var carbs: Double = 0
-        var fat: Double = 0
-        
-        var totalMacros: Double { protein + carbs + fat }
-        
-        var proteinPercentage: Double {
-            guard totalMacros > 0 else { return 0 }
-            return (protein / totalMacros) * 100
-        }
-        
-        var carbsPercentage: Double {
-            guard totalMacros > 0 else { return 0 }
-            return (carbs / totalMacros) * 100
-        }
-        
-        var fatPercentage: Double {
-            guard totalMacros > 0 else { return 0 }
-            return (fat / totalMacros) * 100
-        }
-    }
     
     private func calculateTotalMacros(_ foods: [Food]) -> MacroTotals {
         var totals = MacroTotals()
@@ -440,4 +424,3 @@ struct QuickLogFood: View {
         return result
     }
 }
-

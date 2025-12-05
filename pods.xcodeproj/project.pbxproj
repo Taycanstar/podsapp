@@ -259,6 +259,8 @@
 		36CB032C2D5AAD5C006A74E9 /* LogFood.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB032B2D5AAD5C006A74E9 /* LogFood.swift */; };
 		36CB032E2D5AAFA0006A74E9 /* FoodContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB032D2D5AAFA0006A74E9 /* FoodContainerView.swift */; };
 		36CB03302D5B04DD006A74E9 /* FoodSearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB032F2D5B04DD006A74E9 /* FoodSearchModel.swift */; };
+		492A0CD08D31DADDF32E3CFF /* NutritionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F13F3ECC08E9A4061384C6 /* NutritionModels.swift */; };
+		769EDF00E677512728718F0D /* PlateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B846A68C19E7A724CEDBCEC /* PlateViewModel.swift */; };
 		36CB03332D5BA200006A74E9 /* FoodDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB03322D5BA200006A74E9 /* FoodDetailView.swift */; };
 		36CB03352D5BA5AC006A74E9 /* UserGoals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB03342D5BA5AC006A74E9 /* UserGoals.swift */; };
 		36CB03372D5C6D68006A74E9 /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = 36CB03362D5C6D68006A74E9 /* Mixpanel */; };
@@ -663,6 +665,7 @@
 		36CB032B2D5AAD5C006A74E9 /* LogFood.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogFood.swift; sourceTree = "<group>"; };
 		36CB032D2D5AAFA0006A74E9 /* FoodContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodContainerView.swift; sourceTree = "<group>"; };
 		36CB032F2D5B04DD006A74E9 /* FoodSearchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodSearchModel.swift; path = Pods/viewModels/FoodSearchModel.swift; sourceTree = SOURCE_ROOT; };
+		0B846A68C19E7A724CEDBCEC /* PlateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlateViewModel.swift; path = Pods/viewModels/PlateViewModel.swift; sourceTree = SOURCE_ROOT; };
 		36CB03322D5BA200006A74E9 /* FoodDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodDetailView.swift; sourceTree = "<group>"; };
 		36CB03342D5BA5AC006A74E9 /* UserGoals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserGoals.swift; sourceTree = "<group>"; };
 		36CB03382D5E4B2A006A74E9 /* FoodManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodManager.swift; sourceTree = "<group>"; };
@@ -798,6 +801,7 @@
 		828AD9036235BA1CC3FDB722 /* Pods-Podstack-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.release.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
 		83EDB7BB4B1CA39393C90454 /* Pods-podsTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-podsTests.debug.xcconfig"; path = "Target Support Files/Pods-podsTests/Pods-podsTests.debug.xcconfig"; sourceTree = "<group>"; };
 		9D174B3487294C0999CCBCD6 /* ProFeatureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProFeatureModels.swift; path = Pods/Core/Models/ProFeatureModels.swift; sourceTree = SOURCE_ROOT; };
+		B6F13F3ECC08E9A4061384C6 /* NutritionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionModels.swift; path = Pods/Core/Models/NutritionModels.swift; sourceTree = SOURCE_ROOT; };
 		A0C6B5CEE1B4DF7C2A254720 /* Pods_Podstack_podsUITests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Podstack_podsUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A8FF55E88400FA719CC858C9 /* Pods-pods.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pods.debug.xcconfig"; path = "Target Support Files/Pods-pods/Pods-pods.debug.xcconfig"; sourceTree = "<group>"; };
 		D92FAAFEE961B65BFA364123 /* Pods-podsTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-podsTests.release.xcconfig"; path = "Target Support Files/Pods-podsTests/Pods-podsTests.release.xcconfig"; sourceTree = "<group>"; };
@@ -900,6 +904,7 @@
 			children = (
 				36DB82D12EBA99FD004BA082 /* WorkoutContextV1.swift */,
 				9D174B3487294C0999CCBCD6 /* ProFeatureModels.swift */,
+				B6F13F3ECC08E9A4061384C6 /* NutritionModels.swift */,
 				36881DF62E736C2400262045 /* WorkoutBlockModels.swift */,
 				36A851AA2E5E3334004E5CED /* DynamicWorkoutModels.swift */,
 				36A8519C2E5A10A0004E5CED /* ExerciseNotesData.swift */,
@@ -997,6 +1002,7 @@
 				3629CE972BCECCA100040725 /* UploadViewModel.swift */,
 				363AFA1A2D474FB400C91A14 /* PodsViewModel.swift */,
 				36CB032F2D5B04DD006A74E9 /* FoodSearchModel.swift */,
+				0B846A68C19E7A724CEDBCEC /* PlateViewModel.swift */,
 				36ED35A22DD0DE6000D174FB /* DayLogsViewModel.swift */,
 				36ED35AA2DD529D600D174FB /* HealthKitViewModel.swift */,
 				36ED35B72DD92FF000D174FB /* UserDataModel.swift */,
@@ -1947,6 +1953,8 @@
 				363068DD2E132EE400F2D4EC /* MyProfileView.swift in Sources */,
 				36A85CFB2DB693D800DD4266 /* OnboardingFlowContainer.swift in Sources */,
 				36CB03392D5E4B2A006A74E9 /* FoodManager.swift in Sources */,
+				492A0CD08D31DADDF32E3CFF /* NutritionModels.swift in Sources */,
+				769EDF00E677512728718F0D /* PlateViewModel.swift in Sources */,
 				364A83C82DA7738B009D2620 /* CreateFoodView.swift in Sources */,
 				363068E62E1B3FC700F2D4EC /* EditProfilePhotoView.swift in Sources */,
 				36A851B12E5FD728004E5CED /* ExerciseComplexityService.swift in Sources */,

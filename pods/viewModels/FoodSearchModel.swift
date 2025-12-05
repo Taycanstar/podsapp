@@ -208,6 +208,28 @@ struct MealItemServingDescriptor: Codable, Hashable {
     }
 }
 
+extension Food {
+    static func from(loggedItem: LoggedFoodItem) -> Food {
+        Food(
+            fdcId: loggedItem.fdcId,
+            description: loggedItem.displayName,
+            brandOwner: loggedItem.brandText,
+            brandName: loggedItem.brandText,
+            servingSize: nil,
+            numberOfServings: loggedItem.numberOfServings,
+            servingSizeUnit: nil,
+            householdServingFullText: loggedItem.servingSizeText,
+            foodNutrients: loggedItem.foodNutrients ?? [],
+            foodMeasures: [],
+            healthAnalysis: loggedItem.healthAnalysis,
+            aiInsight: loggedItem.aiInsight,
+            nutritionScore: loggedItem.nutritionScore,
+            mealItems: loggedItem.mealItems,
+            barcode: nil
+        )
+    }
+}
+
 struct MealItem: Codable, Identifiable, Hashable {
     let id: UUID
     var name: String

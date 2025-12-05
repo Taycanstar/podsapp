@@ -37,11 +37,15 @@ struct TextLogView: View {
     // Upgrade retry handling
     @State private var pendingRetryDescription: String?
     @State private var pendingRetryMealType: String?
+    var onFoodGenerated: ((Food) -> Void)? = nil
+    var autoStartListening: Bool = false
     
-    init(isPresented: Binding<Bool>, selectedMeal: String, initialDescription: String = "") {
+    init(isPresented: Binding<Bool>, selectedMeal: String, initialDescription: String = "", onFoodGenerated: ((Food) -> Void)? = nil, autoStartListening: Bool = false) {
         _isPresented = isPresented
         self.selectedMeal = selectedMeal
         _mealDescription = State(initialValue: initialDescription)
+        self.onFoodGenerated = onFoodGenerated
+        self.autoStartListening = autoStartListening
     }
     
     var body: some View {
@@ -238,6 +242,9 @@ struct TextLogView: View {
         .onAppear {
             // Auto-focus the input immediately when sheet appears
             isInputFocused = true
+            if autoStartListening && !isListening {
+                toggleSpeechRecognition()
+            }
         }
         // Dismiss TextLogView whenever the scanner sheet closes
         .onChange(of: showFoodScanner) { _, newValue in
@@ -490,7 +497,15 @@ struct TextLogView: View {
             aiInsight: aiInsight,
             nutritionScore: nutritionScore
         )
-        
+
+        if let onFoodGenerated {
+            let generatedFood = Food.from(loggedItem: loggedFoodItem)
+            DispatchQueue.main.async {
+                onFoodGenerated(generatedFood)
+            }
+            return
+        }
+
         // Create CombinedLog for dashboard display
         let combinedLog = CombinedLog(
             type: .food,

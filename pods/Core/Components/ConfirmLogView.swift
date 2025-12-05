@@ -14,6 +14,7 @@ struct ConfirmLogView: View {
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
     
     @Binding var path: NavigationPath
+    private let existingPlateViewModel: PlateViewModel?
     
     // Basic food info
     @State private var title: String = ""
@@ -89,6 +90,12 @@ struct ConfirmLogView: View {
     @State private var mealItems: [MealItem] = []
     @State private var mealItemNutrients: [UUID: [Nutrient]] = [:]
     @State private var expandedMealItemIDs: Set<UUID> = []
+    @State private var availableMeasures: [FoodMeasure] = []
+    @State private var selectedMeasureId: Int?
+    private let referenceMacroTotals: MacroTotals
+    private let baselineMeasureGramWeight: Double
+    @State private var plateBuilderViewModel: PlateViewModel?
+    @State private var showPlateBuilder = false
 
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     
@@ -101,8 +108,6 @@ struct ConfirmLogView: View {
     @State private var isLiquid: Bool = false // Detect if it's a beverage
     @State private var expandedNegativeIndices: Set<Int> = []
     @State private var expandedPositiveIndices: Set<Int> = []
-    @State private var aiInsight: String? = nil
-    @State private var nutritionScore: Double? = nil
     
     private let showHealthInsights = false
     private let baselineNutrientValues: [String: RawNutrientValue]
@@ -114,16 +119,45 @@ struct ConfirmLogView: View {
         let baseRowHeight: CGFloat = 130
         return max(CGFloat(mealItems.count) * baseRowHeight, baseRowHeight + 40)
     }
+    private var hasMeasureOptions: Bool { !availableMeasures.isEmpty }
+    private var selectedMeasure: FoodMeasure? {
+        guard let id = selectedMeasureId else { return nil }
+        return availableMeasures.first(where: { $0.id == id })
+    }
+    private var measureScalingFactor: Double {
+        guard let measure = selectedMeasure,
+              baselineMeasureGramWeight > 0,
+              measure.gramWeight > 0 else { return 1 }
+        return measure.gramWeight / baselineMeasureGramWeight
+    }
+
+    private func scaledValue(_ value: Double) -> Double {
+        value * measureScalingFactor
+    }
+
+    private var selectedMeasureLabel: String {
+        if let measure = selectedMeasure {
+            let text = measure.disseminationText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty {
+                return text
+            }
+            if let modifier = measure.modifier?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !modifier.isEmpty {
+                return modifier
+            }
+            return measure.measureUnitName
+        }
+        return servingSize.isEmpty ? "1 serving" : servingSize
+    }
     
     // This view is ONLY for logging scanned foods
-    init(path: Binding<NavigationPath>, food: Food, foodLogId: Int? = nil) {
+    init(path: Binding<NavigationPath>, food: Food, foodLogId: Int? = nil, plateViewModel: PlateViewModel? = nil) {
         print("🔍 DEBUG ConfirmLogView: Initializing with food: \(food.description), fdcId: \(food.fdcId)")
         print("🔍 DEBUG ConfirmLogView: foodLogId: \(String(describing: foodLogId))")
         self._path = path
+        self.existingPlateViewModel = plateViewModel
         self._title = State(initialValue: food.description)
         self._brand = State(initialValue: food.brandText ?? "")
-        self._aiInsight = State(initialValue: food.aiInsight)
-        self._nutritionScore = State(initialValue: food.nutritionScore)
         let initialMealItems = food.mealItems ?? []
         self._mealItems = State(initialValue: initialMealItems)
         if !initialMealItems.isEmpty {
@@ -185,21 +219,24 @@ struct ConfirmLogView: View {
         
         // Set serving size information
         // Prioritize householdServingFullText when available (more detailed format)
-        if let servingText = food.householdServingFullText, !servingText.isEmpty {
-        self._servingSize = State(initialValue: servingText)
-        self._servingUnit = State(initialValue: food.servingSizeUnit ?? "serving")
-    } else if let servingSize = food.servingSize, let unit = food.servingSizeUnit {
-        // Format serving size to remove unnecessary decimal places (1.0 → 1, 1.5 → 1.5)
-        let formattedSize = servingSize == floor(servingSize) ? String(Int(servingSize)) : String(servingSize)
+        let resolvedServingText: String? = food.householdServingFullText?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let servingText = resolvedServingText, !servingText.isEmpty {
+            self._servingSize = State(initialValue: servingText)
+            self._servingUnit = State(initialValue: food.servingSizeUnit ?? "serving")
+        } else if let servingSize = food.servingSize, let unit = food.servingSizeUnit {
+            let formattedSize = servingSize == floor(servingSize) ? String(Int(servingSize)) : String(servingSize)
             self._servingSize = State(initialValue: "\(formattedSize) \(unit)")
             self._servingUnit = State(initialValue: unit)
+        } else {
+            self._servingSize = State(initialValue: "1 serving")
+            self._servingUnit = State(initialValue: "serving")
         }
         
         // Set number of servings (default to 1 if nil)
         let initialServings = food.numberOfServings ?? 1
         self._numberOfServings = State(initialValue: initialServings)
         self._servingsInput = State(initialValue: ConfirmLogView.formattedServings(initialServings))
-        
+
         // Calculate nutrition value variables without modifying state directly
         var tmpCalories: Double = 0
         var tmpProtein: Double = 0
@@ -231,6 +268,9 @@ struct ConfirmLogView: View {
             tmpFat = totals.fat
         }
         
+        let macroReference = MacroTotals(calories: tmpCalories, protein: tmpProtein, carbs: tmpCarbs, fat: tmpFat)
+        self.referenceMacroTotals = macroReference
+
         // Now set the base values and string display values
         self._baseCalories = State(initialValue: tmpCalories)
         self._baseProtein = State(initialValue: tmpProtein)
@@ -325,6 +365,15 @@ struct ConfirmLogView: View {
             name.contains("tea") || name.contains("can") || name.contains("bottle") ||
             unit.contains("ml") || unit.contains("fl") || unit.contains("oz")
         )
+
+        var resolvedMeasures = food.foodMeasures.filter { $0.gramWeight > 0 }
+        if resolvedMeasures.isEmpty, let fallback = ConfirmLogView.fallbackMeasure(for: food) {
+            resolvedMeasures = [fallback]
+        }
+        self._availableMeasures = State(initialValue: resolvedMeasures)
+        let baselineMeasure = ConfirmLogView.resolveBaselineMeasure(for: food, measures: resolvedMeasures)
+        self._selectedMeasureId = State(initialValue: baselineMeasure?.id ?? resolvedMeasures.first?.id)
+        self.baselineMeasureGramWeight = baselineMeasure?.gramWeight ?? resolvedMeasures.first?.gramWeight ?? max(food.servingSize ?? 1, 1)
     }
 
     private let proteinColor = Color("protein")
@@ -332,23 +381,23 @@ struct ConfirmLogView: View {
     private let carbColor = Color("carbs")
 
     private var adjustedProtein: Double {
-        calculateAdjustedValue(baseProtein, servings: numberOfServings)
+        calculateAdjustedValue(scaledValue(baseProtein), servings: numberOfServings)
     }
 
     private var adjustedCarbs: Double {
-        calculateAdjustedValue(baseCarbs, servings: numberOfServings)
+        calculateAdjustedValue(scaledValue(baseCarbs), servings: numberOfServings)
     }
 
     private var adjustedFat: Double {
-        calculateAdjustedValue(baseFat, servings: numberOfServings)
+        calculateAdjustedValue(scaledValue(baseFat), servings: numberOfServings)
     }
 
     private var adjustedFiber: Double {
-        calculateAdjustedValue(baseFiber, servings: numberOfServings)
+        calculateAdjustedValue(scaledValue(baseFiber), servings: numberOfServings)
     }
 
     private var adjustedCalories: Double {
-        calculateAdjustedValue(baseCalories, servings: numberOfServings)
+        calculateAdjustedValue(scaledValue(baseCalories), servings: numberOfServings)
     }
 
     private var macroSegments: [MacroSegment] {
@@ -384,24 +433,13 @@ struct ConfirmLogView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            headerBar
-                .padding(.horizontal)
-                .padding(.top, 16)
-                .padding(.bottom, 0)
-    
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
             macroSummaryCard
             portionDetailsCard
-            if shouldShowMealItemsEditor {
-                mealItemsEditor
+            if showHealthInsights {
+                healthAnalysisCard
             }
-                    if let insight = aiInsight?.trimmingCharacters(in: .whitespacesAndNewlines), !insight.isEmpty {
-                        aiInsightSection(insight: insight)
-                    }
-                    if showHealthInsights {
-                        healthAnalysisCard
-                    }
                     dailyGoalShareCard
                     if shouldShowGoalsLoader {
                         goalsLoadingView
@@ -424,10 +462,20 @@ struct ConfirmLogView: View {
             footerBar
         }
         .background(Color("iosbg").ignoresSafeArea())
-        .navigationBarHidden(true)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(title.isEmpty ? (originalFood?.displayName ?? "Log Food") : title)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.primary)
+                }
+            }
+        }
         .onAppear {
             setupHealthAnalysis()
-            goalsStore.ensureGoalsAvailable(email: viewModel.email, forceRefresh: false)
             if shouldShowMealItemsEditor {
                 recalculateMealItemNutrition()
             }
@@ -468,28 +516,55 @@ struct ConfirmLogView: View {
                 recalculateMealItemNutrition()
             }
         }
+        .sheet(isPresented: $showPlateBuilder, onDismiss: {
+            plateBuilderViewModel = nil
+        }) {
+            if let builder = plateBuilderViewModel {
+                NavigationView {
+                    PlateView(viewModel: builder,
+                              selectedMealPeriod: selectedMealPeriod,
+                              mealTime: mealTime)
+                }
+            }
+        }
     }
     
     private var footerBar: some View {
         VStack(spacing: 16) {
             Divider()
                 .padding(.horizontal, -16)
-            
-            Button(action: logBarcodeFood) {
-                Text(isCreating ? "Logging..." : "Log Food")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+
+            HStack(spacing: 12) {
+                Button(action: logBarcodeFood) {
+                    Text(isCreating ? "Logging..." : "Log Food")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 999, style: .continuous)
+                        .fill(Color("background"))
+                )
+                .foregroundColor(Color("text"))
+                .disabled(isCreating)
+                .opacity(isCreating ? 0.7 : 1)
+
+                Button(action: handleAddToPlate) {
+                    Text("Add to Plate")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 999, style: .continuous)
+                        .fill(Color("background"))
+                )
+                .foregroundColor(Color("text"))
             }
-            .buttonStyle(.plain)
-            .background(
-                RoundedRectangle(cornerRadius: 999, style: .continuous)
-                    .fill(Color("background"))
-            )
-            .foregroundColor(Color("text"))
-            .disabled(isCreating)
-            .opacity(isCreating ? 0.7 : 1)
         }
         .padding(.horizontal)
         .padding(.bottom, 24)
@@ -809,50 +884,50 @@ private struct MealItemServingControls: View {
         if !description.isEmpty {
             return description
         }
-    return canonicalUnit(from: measure.unit)
-}
-
-private func sanitizedDescription(_ text: String) -> String {
-    var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-    if trimmed.isEmpty { return "" }
-
-    let lower = trimmed.lowercased()
-    if ["g", "gram", "grams", "oz", "ounce", "ounces", "lb", "pound", "pounds"].contains(lower) {
-        return ""
+        return canonicalUnit(from: measure.unit)
     }
 
-    if let range = trimmed.range(of: "(") {
-        trimmed = String(trimmed[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    trimmed = trimmed.replacingOccurrences(of: "portion", with: "serving", options: .caseInsensitive)
-    trimmed = trimmed.replacingOccurrences(of: "as served", with: "", options: .caseInsensitive)
-    trimmed = trimmed.replacingOccurrences(of: "as logged", with: "", options: .caseInsensitive)
-    trimmed = trimmed.replacingOccurrences(of: "  ", with: " ")
-    return trimmed.trimmingCharacters(in: .whitespacesAndNewlines)
-}
+    private func sanitizedDescription(_ text: String) -> String {
+        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return "" }
 
-private func canonicalUnit(from rawUnit: String) -> String {
-    let lower = rawUnit.lowercased()
-    let mapping: [(String, [String])] = [
-        ("cup", ["cup", "cups"]),
-        ("serving", ["serving", "portion", "tray", "plate", "meal", "container", "box", "pack", "package", "dip"]),
-        ("piece", ["piece", "pieces", "roll", "rolls", "slice", "slices", "stick", "sticks", "item", "items", "ball", "balls"]),
-        ("egg", ["egg", "eggs"]),
-        ("tbsp", ["tbsp", "tablespoon", "tablespoons"]),
-        ("tsp", ["tsp", "teaspoon", "teaspoons"]),
-        ("g", ["g", "gram", "grams"]),
-        ("oz", ["oz", "ounce", "ounces"]),
-        ("lb", ["lb", "lbs", "pound", "pounds"]),
-    ]
-
-    for (canonical, tokens) in mapping {
-        if tokens.contains(where: { lower.contains($0) }) {
-            return canonical
+        let lower = trimmed.lowercased()
+        if ["g", "gram", "grams", "oz", "ounce", "ounces", "lb", "pound", "pounds"].contains(lower) {
+            return ""
         }
+
+        if let range = trimmed.range(of: "(") {
+            trimmed = String(trimmed[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        trimmed = trimmed.replacingOccurrences(of: "portion", with: "serving", options: .caseInsensitive)
+        trimmed = trimmed.replacingOccurrences(of: "as served", with: "", options: .caseInsensitive)
+        trimmed = trimmed.replacingOccurrences(of: "as logged", with: "", options: .caseInsensitive)
+        trimmed = trimmed.replacingOccurrences(of: "  ", with: " ")
+        return trimmed.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    return rawUnit.trimmingCharacters(in: .whitespacesAndNewlines)
-}
-}
+
+    private func canonicalUnit(from rawUnit: String) -> String {
+        let lower = rawUnit.lowercased()
+        let mapping: [(String, [String])] = [
+            ("cup", ["cup", "cups"]),
+            ("serving", ["serving", "portion", "tray", "plate", "meal", "container", "box", "pack", "package", "dip"]),
+            ("piece", ["piece", "pieces", "roll", "rolls", "slice", "slices", "stick", "sticks", "item", "items", "ball", "balls"]),
+            ("egg", ["egg", "eggs"]),
+            ("tbsp", ["tbsp", "tablespoon", "tablespoons"]),
+            ("tsp", ["tsp", "teaspoon", "teaspoons"]),
+            ("g", ["g", "gram", "grams"]),
+            ("oz", ["oz", "ounce", "ounces"]),
+            ("lb", ["lb", "lbs", "pound", "pounds"]),
+        ]
+
+        for (canonical, tokens) in mapping {
+            if tokens.contains(where: { lower.contains($0) }) {
+                return canonical
+            }
+        }
+        return rawUnit.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    }
 
     private func servingEditor(for itemBinding: Binding<MealItem>) -> some View {
         MealItemServingControls(item: itemBinding) {
@@ -860,99 +935,14 @@ private func canonicalUnit(from rawUnit: String) -> String {
         }
     }
 
-    @ViewBuilder
-    private func aiInsightSection(insight: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("AI Insight")
-                .font(.title3)
-                .fontWeight(.semibold)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(insight)
-                    .font(.body)
-                    .foregroundColor(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 22)
-
-                if let score = nutritionScore {
-                    insightScale(score: score)
-                }
-            }
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color("iosnp"))
-            )
-        }
-        .padding(.horizontal)
+    private func handleMeasureSelection(_ measure: FoodMeasure) {
+        selectedMeasureId = measure.id
+        servingSize = measure.disseminationText ?? measure.measureUnitName
+        servingUnit = measure.measureUnitName
+        updateNutritionValues()
     }
 
     @ViewBuilder
-    private func insightScale(score: Double) -> some View {
-        let normalized = max(0, min(100, score))
-        let labels = ["Limited", "Fair", "Good", "Nutritious"]
-
-        VStack(spacing: 0) {
-            GeometryReader { geo in
-                HStack(spacing: 5) {
-                    ForEach(0..<labels.count, id: \.self) { index in
-                        Capsule()
-                            .fill(indexForScore(normalized) == index ? segmentColor(for: index) : Color.primary.opacity(0.15))
-                            .frame(height: 4)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .padding(.vertical, 4)
-                .overlay(
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 18, height: 18)
-                        .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
-                        .overlay(
-                        Circle()
-                            .stroke(Color.primary.opacity(0.08), lineWidth: 1.5)
-                        )
-                        .offset(x: sliderOffset(for: normalized, width: geo.size.width - 5 * CGFloat(labels.count - 1)), y: 0),
-                    alignment: .leading
-                )
-            }
-            .frame(height: 24)
-
-            HStack {
-                ForEach(labels, id: \.self) { label in
-                    Text(label)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-        }
-    }
-
-    private func indexForScore(_ score: Double) -> Int {
-        switch score {
-        case ..<25: return 0
-        case ..<50: return 1
-        case ..<75: return 2
-        default: return 3
-        }
-    }
-
-    private func segmentColor(for index: Int) -> Color {
-        switch index {
-        case 0: return Color("limited")
-        case 1: return Color("fair")
-        case 2: return Color("good")
-        default: return Color("nut")
-        }
-    }
-
-    private func sliderOffset(for score: Double, width: CGFloat) -> CGFloat {
-        let clamped = max(0, min(100, score)) / 100
-        let availableWidth = max(0, width - 18)
-        return CGFloat(clamped) * availableWidth
-    }
-    
     private var macroArcs: [MacroArc] {
         var running: Double = 0
         return macroSegments.map { segment in
@@ -962,31 +952,6 @@ private func canonicalUnit(from rawUnit: String) -> String {
         }
     }
 
-    private var headerBar: some View {
-        VStack(spacing: 14) {
-            HStack(spacing: 16) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(.primary)
-                        .frame(width: 32, height: 32)
-                }
-                
-                Text(title.isEmpty ? "Log Food" : title)
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                
-                Spacer().frame(width: 32, height: 32)
-            }
-            Divider()
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, -16)
-        }
-    }
-    
     private func macroStatRow(title: String, value: Double, unit: String, color: Color) -> some View {
         HStack(alignment: .center, spacing: 12) {
             Circle()
@@ -1006,9 +971,34 @@ private func canonicalUnit(from rawUnit: String) -> String {
     private var portionDetailsCard: some View {
         VStack(spacing: 0) {
             labeledRow("Serving Size") {
-                TextField("e.g., 1 cup, 2 tbsp", text: $servingSize)
-                    .textFieldStyle(.plain)
-                    .multilineTextAlignment(.trailing)
+                if hasMeasureOptions {
+                    Menu {
+                        ForEach(availableMeasures, id: \.id) { measure in
+                            Button(measure.disseminationText ?? measure.measureUnitName) {
+                                handleMeasureSelection(measure)
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(selectedMeasureLabel)
+                                .font(.body)
+                                .foregroundColor(.primary)
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(
+                            Capsule()
+                                .fill(Color("iosnp"))
+                        )
+                    }
+                } else {
+                    TextField("e.g., 1 cup, 2 tbsp", text: $servingSize)
+                        .textFieldStyle(.plain)
+                        .multilineTextAlignment(.trailing)
+                }
             }
             
             Divider().padding(.leading, 16)
@@ -1113,22 +1103,40 @@ private func canonicalUnit(from rawUnit: String) -> String {
             }
         }
     }
-    
-private enum MealPeriod: String, CaseIterable, Identifiable {
-        case breakfast, lunch, dinner, snack
-        
-        var id: String { rawValue }
-        
-        var title: String {
-            switch self {
-            case .breakfast: return "Breakfast"
-            case .lunch: return "Lunch"
-            case .dinner: return "Dinner"
-            case .snack: return "Snack"
+
+    private static func resolveBaselineMeasure(for food: Food, measures: [FoodMeasure]) -> FoodMeasure? {
+        guard !measures.isEmpty else { return nil }
+        if let unit = food.servingSizeUnit?.lowercased() {
+            if let match = measures.first(where: { $0.measureUnitName.lowercased() == unit }) {
+                return match
             }
         }
-        
-        var displayName: String { title }
+        if let text = food.householdServingFullText?.lowercased() {
+            if let match = measures.first(where: { ($0.disseminationText ?? "").lowercased() == text }) {
+                return match
+            }
+        }
+        return measures.first
+    }
+
+    private static func fallbackMeasure(for food: Food) -> FoodMeasure? {
+        let label = food.householdServingFullText?.trimmingCharacters(in: .whitespacesAndNewlines)
+            ?? {
+                guard let size = food.servingSize else { return nil }
+                let formatted = size == floor(size) ? String(Int(size)) : String(size)
+                return "\(formatted) \(food.servingSizeUnit ?? "serving")"
+            }()
+        guard let label else { return nil }
+        let unit = food.servingSizeUnit ?? "serving"
+        let measureWeight = food.servingSize ?? 0
+        return FoodMeasure(
+            disseminationText: label,
+            gramWeight: measureWeight,
+            id: food.fdcId,
+            modifier: nil,
+            measureUnitName: unit,
+            rank: 0
+        )
     }
     
     private var mealTimeFormatted: String {
@@ -1405,7 +1413,7 @@ private enum MealPeriod: String, CaseIterable, Identifiable {
             }
             let sourceUnit = matches.first?.unit
             let targetUnit = nutrientUnit(for: descriptor)
-            let converted = convert(perServing, from: sourceUnit, to: targetUnit)
+            let converted = convert(perServing * measureScalingFactor, from: sourceUnit, to: targetUnit)
             return calculateAdjustedValue(converted, servings: numberOfServings)
         case .computed(let computation):
             switch computation {
@@ -1891,12 +1899,12 @@ private func buildHealthPayload(from food: Food) -> [String: Any] {
                                     ? food.servingSize : bestMlVolume(food)) : nil,
         "product_name": food.description,
 
-        "energy_kcal": baseCalories,
-        "protein_g": baseProtein,
-        "saturated_fat_g": baseSaturatedFat,
-        "sugars_g": baseSugar,
-        "sodium_mg": baseSodium,
-        "fiber_g": baseFiber,
+        "energy_kcal": scaledValue(baseCalories),
+        "protein_g": scaledValue(baseProtein),
+        "saturated_fat_g": scaledValue(baseSaturatedFat),
+        "sugars_g": scaledValue(baseSugar),
+        "sodium_mg": scaledValue(baseSodium),
+        "fiber_g": scaledValue(baseFiber),
 
         "is_beverage": isBeverage,
         // mark as snack for chips/puffs/strips/bars
@@ -2323,6 +2331,49 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
     }
 }
 
+    private func handleAddToPlate() {
+        guard let entry = buildPlateEntry() else { return }
+        if let viewModel = existingPlateViewModel {
+            viewModel.add(entry)
+            dismiss()
+        } else {
+            let builder = PlateViewModel()
+            builder.add(entry)
+            plateBuilderViewModel = builder
+            showPlateBuilder = true
+        }
+    }
+
+    private func buildPlateEntry() -> PlateEntry? {
+        guard let food = originalFood else { return nil }
+        var updatedFood = food
+        updatedFood.description = title.isEmpty ? food.description : title
+        updatedFood.householdServingFullText = selectedMeasureLabel
+        updatedFood.numberOfServings = numberOfServings
+        updatedFood.mealItems = mealItems
+        let scaledNutrients = baseNutrientValues.reduce(into: [String: RawNutrientValue]()) { partialResult, item in
+            let scaled = item.value.value * measureScalingFactor * numberOfServings
+            partialResult[item.key] = RawNutrientValue(value: scaled, unit: item.value.unit)
+        }
+        let macroTotals = MacroTotals(
+            calories: adjustedCalories,
+            protein: adjustedProtein,
+            carbs: adjustedCarbs,
+            fat: adjustedFat
+        )
+        let description = "\(servingsInput) x \(selectedMeasureLabel)"
+        return PlateEntry(
+            food: updatedFood,
+            servings: numberOfServings,
+            servingDescription: description,
+            macroTotals: macroTotals,
+            nutrientValues: scaledNutrients,
+            mealItems: mealItems,
+            mealPeriod: selectedMealPeriod,
+            mealTime: mealTime
+        )
+    }
+
     
     private static func formattedServings(_ value: Double) -> String {
         if value.truncatingRemainder(dividingBy: 1) == 0 {
@@ -2655,25 +2706,25 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
     // Update all nutrition values when number of servings changes
     private func updateNutritionValues() {
         // Update with formatted strings
-        calories = String(format: "%.1f", baseCalories * numberOfServings)
-        protein = String(format: "%.1f", baseProtein * numberOfServings)
-        carbs = String(format: "%.1f", baseCarbs * numberOfServings)
-        fat = String(format: "%.1f", baseFat * numberOfServings)
+        calories = String(format: "%.1f", scaledValue(baseCalories) * numberOfServings)
+        protein = String(format: "%.1f", scaledValue(baseProtein) * numberOfServings)
+        carbs = String(format: "%.1f", scaledValue(baseCarbs) * numberOfServings)
+        fat = String(format: "%.1f", scaledValue(baseFat) * numberOfServings)
         
         // Update additional nutrients too with formatted strings
-        saturatedFat = String(format: "%.1f", baseSaturatedFat * numberOfServings)
-        polyunsaturatedFat = String(format: "%.1f", basePolyunsaturatedFat * numberOfServings)
-        monounsaturatedFat = String(format: "%.1f", baseMonounsaturatedFat * numberOfServings)
-        transFat = String(format: "%.1f", baseTransFat * numberOfServings)
-        cholesterol = String(format: "%.1f", baseCholesterol * numberOfServings)
-        sodium = String(format: "%.1f", baseSodium * numberOfServings)
-        potassium = String(format: "%.1f", basePotassium * numberOfServings)
-        sugar = String(format: "%.1f", baseSugar * numberOfServings)
-        fiber = String(format: "%.1f", baseFiber * numberOfServings)
-        vitaminA = String(format: "%.1f", baseVitaminA * numberOfServings)
-        vitaminC = String(format: "%.1f", baseVitaminC * numberOfServings)
-        calcium = String(format: "%.1f", baseCalcium * numberOfServings)
-        iron = String(format: "%.1f", baseIron * numberOfServings)
+        saturatedFat = String(format: "%.1f", scaledValue(baseSaturatedFat) * numberOfServings)
+        polyunsaturatedFat = String(format: "%.1f", scaledValue(basePolyunsaturatedFat) * numberOfServings)
+        monounsaturatedFat = String(format: "%.1f", scaledValue(baseMonounsaturatedFat) * numberOfServings)
+        transFat = String(format: "%.1f", scaledValue(baseTransFat) * numberOfServings)
+        cholesterol = String(format: "%.1f", scaledValue(baseCholesterol) * numberOfServings)
+        sodium = String(format: "%.1f", scaledValue(baseSodium) * numberOfServings)
+        potassium = String(format: "%.1f", scaledValue(basePotassium) * numberOfServings)
+        sugar = String(format: "%.1f", scaledValue(baseSugar) * numberOfServings)
+        fiber = String(format: "%.1f", scaledValue(baseFiber) * numberOfServings)
+        vitaminA = String(format: "%.1f", scaledValue(baseVitaminA) * numberOfServings)
+        vitaminC = String(format: "%.1f", scaledValue(baseVitaminC) * numberOfServings)
+        calcium = String(format: "%.1f", scaledValue(baseCalcium) * numberOfServings)
+        iron = String(format: "%.1f", scaledValue(baseIron) * numberOfServings)
 
         let formatted = ConfirmLogView.formattedServings(numberOfServings)
         if formatted != servingsInput {
@@ -2758,26 +2809,6 @@ private struct MacroSegment {
     let fraction: Double
 }
 
-private struct MacroTotals {
-    var calories: Double
-    var protein: Double
-    var carbs: Double
-    var fat: Double
-
-    static let zero = MacroTotals(calories: 0, protein: 0, carbs: 0, fat: 0)
-
-    mutating func add(_ other: MacroTotals) {
-        calories += other.calories
-        protein += other.protein
-        carbs += other.carbs
-        fat += other.fat
-    }
-
-    var isZero: Bool {
-        calories == 0 && protein == 0 && carbs == 0 && fat == 0
-    }
-}
-
 private extension ConfirmLogView {
     static let servingFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -2788,11 +2819,6 @@ private extension ConfirmLogView {
     }()
 }
 
-private struct RawNutrientValue {
-    let value: Double
-    let unit: String?
-}
-
 struct CustomFoodDraft: Identifiable {
     let id = UUID()
     var name: String
@@ -2801,6 +2827,445 @@ struct CustomFoodDraft: Identifiable {
     var servings: Double
     var mealItems: [MealItem]
     var nutrients: [Nutrient]
+}
+
+struct PlateView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var foodManager: FoodManager
+    @EnvironmentObject private var dayLogsVM: DayLogsViewModel
+    @EnvironmentObject private var onboardingViewModel: OnboardingViewModel
+    @EnvironmentObject private var proFeatureGate: ProFeatureGate
+
+    @ObservedObject var viewModel: PlateViewModel
+    @State private var selectedMealPeriod: MealPeriod
+    @State private var mealTime: Date
+    @State private var isLoggingPlate = false
+    @State private var showErrorAlert = false
+    @State private var errorMessage = ""
+    @State private var showScanner = false
+    @State private var showTextLog = false
+    @State private var showQuickAdd = false
+    @State private var showVoiceLog = false
+    @State private var pendingFood: Food?
+    @State private var showConfirmFood = false
+    @State private var navigationPath = NavigationPath()
+    private var totalMacros: MacroTotals { viewModel.totalMacros }
+
+    init(viewModel: PlateViewModel,
+         selectedMealPeriod: MealPeriod,
+         mealTime: Date) {
+        self.viewModel = viewModel
+        _selectedMealPeriod = State(initialValue: selectedMealPeriod)
+        _mealTime = State(initialValue: mealTime)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+                    plateItemsSection
+                    mealTimeSelector
+                    macroSummaryCard
+                    Spacer(minLength: 20)
+                }
+                .padding(.top, 16)
+                .padding(.bottom, 32)
+            }
+
+            footerBar
+        }
+        .background(Color("iosbg").ignoresSafeArea())
+        .navigationTitle("Log Plate")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.primary)
+                }
+            }
+        }
+        .alert(isPresented: $showErrorAlert) {
+            Alert(title: Text("Error"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
+        }
+        .sheet(isPresented: $showConfirmFood) {
+            if let food = pendingFood {
+                NavigationView {
+                    ConfirmLogView(
+                        path: .constant(NavigationPath()),
+                        food: food,
+                        plateViewModel: viewModel
+                    )
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showScanner) {
+            FoodScannerView(isPresented: $showScanner,
+                            selectedMeal: selectedMealPeriod.title,
+                            onFoodScanned: { food, _ in
+                                pendingFood = food
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                    showConfirmFood = true
+                                }
+                            })
+            .edgesIgnoringSafeArea(.all)
+        }
+        .sheet(isPresented: $showTextLog) {
+            TextLogView(isPresented: $showTextLog,
+                        selectedMeal: selectedMealPeriod.title,
+                        onFoodGenerated: { food in
+                            pendingFood = food
+                            showConfirmFood = true
+                        })
+                .environmentObject(foodManager)
+                .environmentObject(dayLogsVM)
+                .environmentObject(onboardingViewModel)
+                .environmentObject(proFeatureGate)
+        }
+        .sheet(isPresented: $showQuickAdd) {
+            QuickLogFood(isPresented: $showQuickAdd,
+                         onFoodCreated: { food in
+                             pendingFood = food
+                             showConfirmFood = true
+                         })
+                .environmentObject(onboardingViewModel)
+                .environmentObject(foodManager)
+                .environmentObject(dayLogsVM)
+                .environmentObject(proFeatureGate)
+        }
+        .sheet(isPresented: $showVoiceLog) {
+            TextLogView(isPresented: $showVoiceLog,
+                        selectedMeal: selectedMealPeriod.title,
+                        onFoodGenerated: { food in
+                            pendingFood = food
+                            showConfirmFood = true
+                        },
+                        autoStartListening: true)
+                .environmentObject(foodManager)
+                .environmentObject(dayLogsVM)
+                .environmentObject(onboardingViewModel)
+                .environmentObject(proFeatureGate)
+        }
+    }
+
+    private var plateItemsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Meal Items")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .padding(.horizontal)
+
+            if viewModel.entries.isEmpty {
+                Text("Add foods to build your plate")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(viewModel.entries) { entry in
+                        PlateEntryRow(entry: entry) {
+                            viewModel.remove(entry)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+
+    private var mealTimeSelector: some View {
+        VStack(spacing: 0) {
+            labeledRow("Meal") {
+                Menu {
+                    ForEach(MealPeriod.allCases) { period in
+                        Button(period.title) {
+                            selectedMealPeriod = period
+                        }
+                    }
+                } label: {
+                    capsulePill {
+                        HStack(spacing: 4) {
+                            Text(selectedMealPeriod.title)
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+
+            Divider().padding(.leading, 16)
+
+            labeledRow("Time", verticalPadding: 6) {
+                DatePicker("",
+                           selection: $mealTime,
+                           displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+            }
+        }
+        .padding(.horizontal)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color("iosnp"))
+        )
+        .padding(.horizontal)
+    }
+
+    private var macroSummaryCard: some View {
+        HStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 12) {
+                macroStatRow(title: "Protein", value: totalMacros.protein, unit: "g", color: Color("protein"))
+                Divider().background(Color.white.opacity(0.2))
+                macroStatRow(title: "Fat", value: totalMacros.fat, unit: "g", color: Color("fat"))
+                Divider().background(Color.white.opacity(0.2))
+                macroStatRow(title: "Carbs", value: totalMacros.carbs, unit: "g", color: Color("carbs"))
+            }
+
+            Spacer()
+
+            MacroRingView(calories: totalMacros.calories, arcs: macroArcs)
+                .frame(width: 100, height: 100)
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(
+                    LinearGradient(colors: [Color("iosnp"), Color("iosnp").opacity(0.8)],
+                                   startPoint: .topLeading,
+                                   endPoint: .bottomTrailing)
+                )
+        )
+        .padding(.horizontal)
+    }
+
+    private var plateMacroSegments: [MacroSegment] {
+        let proteinCalories = totalMacros.protein * 4
+        let carbCalories = totalMacros.carbs * 4
+        let fatCalories = totalMacros.fat * 9
+        let total = max(proteinCalories + carbCalories + fatCalories, 1)
+        return [
+            MacroSegment(color: Color("protein"), fraction: proteinCalories / total),
+            MacroSegment(color: Color("fat"), fraction: fatCalories / total),
+            MacroSegment(color: Color("carbs"), fraction: carbCalories / total)
+        ]
+    }
+
+    private var macroArcs: [MacroArc] {
+        var running: Double = 0
+        return plateMacroSegments.map { segment in
+            let arc = MacroArc(start: running, end: running + segment.fraction, color: segment.color)
+            running += segment.fraction
+            return arc
+        }
+    }
+
+    private func macroStatRow(title: String, value: Double, unit: String, color: Color) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Circle()
+                .fill(color)
+                .frame(width: 10, height: 10)
+
+            Text(title.capitalized)
+                .font(.body)
+                .foregroundColor(.primary)
+            Spacer()
+            Text("\(value.cleanOneDecimal)\(unit)")
+                .font(.body)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private var footerBar: some View {
+        VStack(spacing: 16) {
+            Divider()
+                .padding(.horizontal, -16)
+
+            Button(action: logPlate) {
+                Text(isLoggingPlate ? "Logging..." : "Log Plate")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            }
+            .buttonStyle(.plain)
+            .background(
+                RoundedRectangle(cornerRadius: 999, style: .continuous)
+                    .fill(Color("background"))
+            )
+            .foregroundColor(Color("text"))
+            .disabled(isLoggingPlate || viewModel.entries.isEmpty)
+            .opacity(isLoggingPlate ? 0.7 : 1)
+
+            Menu {
+                Button {
+                    showScanner = true
+                } label: {
+                    Label("Scan Food", systemImage: "barcode.viewfinder")
+                }
+
+                Button {
+                    showTextLog = true
+                } label: {
+                    Label("Text", systemImage: "text.book.closed")
+                }
+
+                Button {
+                    showQuickAdd = true
+                } label: {
+                    Label("Quick Add", systemImage: "plus.circle")
+                }
+
+                Button {
+                    showVoiceLog = true
+                } label: {
+                    Label("With Voice", systemImage: "mic")
+                }
+            } label: {
+                HStack {
+                    Text("Add Another Food")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 999, style: .continuous)
+                        .stroke(Color("background"), lineWidth: 1)
+                )
+            }
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 24)
+        .background(
+            Color("iosbg")
+                .ignoresSafeArea(edges: .bottom)
+        )
+    }
+
+    private func logPlate() {
+        guard !viewModel.entries.isEmpty else { return }
+        isLoggingPlate = true
+        logEntry(at: 0)
+    }
+
+    private func logEntry(at index: Int) {
+        if index >= viewModel.entries.count {
+            isLoggingPlate = false
+            viewModel.clear()
+            dismiss()
+            return
+        }
+
+        var food = viewModel.entries[index].food
+        food.numberOfServings = viewModel.entries[index].servings
+        let mealLabel = selectedMealPeriod.title
+
+        foodManager.logFood(
+            email: onboardingViewModel.email,
+            food: food,
+            meal: mealLabel,
+            servings: viewModel.entries[index].servings,
+            date: mealTime,
+            notes: nil
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let logged):
+                    let combined = CombinedLog(
+                        type: .food,
+                        status: logged.status,
+                        calories: Double(logged.food.calories),
+                        message: "\(logged.food.displayName) - \(mealLabel)",
+                        foodLogId: logged.foodLogId,
+                        food: logged.food,
+                        mealType: mealLabel,
+                        mealLogId: nil,
+                        meal: nil,
+                        mealTime: mealLabel,
+                        scheduledAt: mealTime,
+                        recipeLogId: nil,
+                        recipe: nil,
+                        servingsConsumed: nil
+                    )
+                    dayLogsVM.addPending(combined)
+                    logEntry(at: index + 1)
+                case .failure(let error):
+                    isLoggingPlate = false
+                    errorMessage = error.localizedDescription
+                    showErrorAlert = true
+                }
+            }
+        }
+    }
+
+    private func labeledRow(_ title: String,
+                            verticalPadding: CGFloat = 10,
+                            @ViewBuilder content: () -> some View) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Spacer()
+            content()
+        }
+        .padding(.vertical, verticalPadding)
+    }
+
+    private func capsulePill<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .background(
+                Capsule()
+                    .fill(Color("iosnp"))
+            )
+    }
+}
+
+private struct PlateEntryRow: View {
+    let entry: PlateEntry
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(entry.title)
+                        .font(.headline)
+                    if !entry.brand.isEmpty {
+                        Text(entry.brand)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Text(entry.servingDescription)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
+            }
+
+            HStack(spacing: 12) {
+                Label("\(Int(entry.macroTotals.calories)) cal", systemImage: "flame")
+                    .font(.caption)
+                    .foregroundColor(.primary)
+                Text("P \(entry.macroTotals.protein.cleanOneDecimal) • C \(entry.macroTotals.carbs.cleanOneDecimal) • F \(entry.macroTotals.fat.cleanOneDecimal)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color("iosnp"))
+        )
+    }
 }
 
 enum CustomFoodAction {
