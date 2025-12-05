@@ -590,13 +590,7 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
 
     private func processBarcodeDirectly(_ barcode: String) {
         guard !isAnalyzing, let userEmail = currentUserEmail else { return }
-        proFeatureGate.checkAccess(for: .foodScans,
-                                   userEmail: userEmail,
-                                   increment: true,
-                                   onAllowed: {
-            performProcessBarcode(barcode, userEmail: userEmail)
-        },
-                                   onBlocked: nil)
+        performProcessBarcode(barcode, userEmail: userEmail)
     }
     
     private func openGallery() {
