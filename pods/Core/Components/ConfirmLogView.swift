@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 struct ConfirmLogView: View {
     @Environment(\.dismiss) private var dismiss
@@ -636,7 +637,7 @@ struct ConfirmLogView: View {
                     Button(role: .destructive) {
                         removeMealItem(item.id)
                     } label: {
-                        Label("Delete Food", systemImage: "trash")
+                        Text("Delete Food")
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -912,6 +913,10 @@ private struct MealItemServingControls: View {
         if let range = trimmed.range(of: "(") {
             trimmed = String(trimmed[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
         }
+
+        let numberPrefixPattern = "^[0-9]+(\\.[0-9]+)?([/][0-9]+)?\\s*(x|×)?\\s*"
+        trimmed = trimmed.replacingOccurrences(of: numberPrefixPattern, with: "", options: .regularExpression)
+
         trimmed = trimmed.replacingOccurrences(of: "portion", with: "serving", options: .caseInsensitive)
         trimmed = trimmed.replacingOccurrences(of: "as served", with: "", options: .caseInsensitive)
         trimmed = trimmed.replacingOccurrences(of: "as logged", with: "", options: .caseInsensitive)
@@ -1017,11 +1022,16 @@ private struct MealItemServingControls: View {
             Divider().padding(.leading, 16)
             
             labeledRow("Servings") {
-                TextField("Enter servings (e.g., 1.5 or 1/2)", text: $servingsInput)
+                TextField("Enter servings", text: $servingsInput)
                     .keyboardType(.numbersAndPunctuation)
                     .multilineTextAlignment(.trailing)
-                    .frame(width: 100)
                     .focused($isServingsFocused)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(
+                        Capsule()
+                            .fill(Color("iosnp"))
+                    )
                     .onChange(of: servingsInput) { newValue in
                         guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
                         if abs(parsed - numberOfServings) > 0.0001 {
@@ -2941,13 +2951,10 @@ struct PlateView: View {
         }
         .sheet(isPresented: $showConfirmFood) {
             if let food = pendingFood {
-                NavigationView {
-                    ConfirmLogView(
-                        path: .constant(NavigationPath()),
-                        food: food,
-                        plateViewModel: viewModel
-                    )
-                }
+                FoodSummaryView(
+                    food: food,
+                    plateViewModel: viewModel
+                )
             }
         }
         .fullScreenCover(isPresented: $showScanner) {
@@ -2962,40 +2969,32 @@ struct PlateView: View {
             .edgesIgnoringSafeArea(.all)
         }
         .sheet(isPresented: $showTextLog) {
-            TextLogView(isPresented: $showTextLog,
-                        selectedMeal: selectedMealPeriod.title,
-                        onFoodGenerated: { food in
-                            pendingFood = food
-                            showConfirmFood = true
-                        })
-                .environmentObject(foodManager)
-                .environmentObject(dayLogsVM)
-                .environmentObject(onboardingViewModel)
-                .environmentObject(proFeatureGate)
+            TextLogSheet(isPresented: $showTextLog) { food in
+                pendingFood = food
+                showConfirmFood = true
+            }
+            .environmentObject(foodManager)
         }
         .sheet(isPresented: $showQuickAdd) {
-            QuickLogFood(isPresented: $showQuickAdd,
-                         onFoodCreated: { food in
-                             pendingFood = food
-                             showConfirmFood = true
-                         })
-                .environmentObject(onboardingViewModel)
-                .environmentObject(foodManager)
-                .environmentObject(dayLogsVM)
-                .environmentObject(proFeatureGate)
+            QuickAddView(
+                isPresented: $showQuickAdd,
+                initialMeal: selectedMealPeriod,
+                initialDate: mealTime
+            ) { food in
+                pendingFood = food
+                showConfirmFood = true
+            }
+            .environmentObject(onboardingViewModel)
+            .environmentObject(foodManager)
+            .environmentObject(dayLogsVM)
         }
         .sheet(isPresented: $showVoiceLog) {
-            TextLogView(isPresented: $showVoiceLog,
-                        selectedMeal: selectedMealPeriod.title,
-                        onFoodGenerated: { food in
-                            pendingFood = food
-                            showConfirmFood = true
-                        },
-                        autoStartListening: true)
-                .environmentObject(foodManager)
-                .environmentObject(dayLogsVM)
-                .environmentObject(onboardingViewModel)
-                .environmentObject(proFeatureGate)
+            AddToPlateWithVoice(isPresented: $showVoiceLog,
+                                selectedMeal: selectedMealPeriod.title) { food in
+                pendingFood = food
+                showConfirmFood = true
+            }
+            .environmentObject(foodManager)
         }
         .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
             reloadStoredNutrientTargets()
@@ -3525,7 +3524,7 @@ struct PlateView: View {
                     Button {
                         showTextLog = true
                     } label: {
-                        Label("Text", systemImage: "text.book.closed")
+                        Label("Text", systemImage: "textformat.abc")
                     }
 
                     Button {
@@ -3540,13 +3539,9 @@ struct PlateView: View {
                         Label("With Voice", systemImage: "mic")
                     }
                 } label: {
-                    HStack(spacing: 6) {
-                        Text("Add More")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption)
-                    }
+                    Text("Add More")
+                        .font(.headline)
+                        .fontWeight(.semibold)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(
@@ -3687,18 +3682,32 @@ private struct PlateEntryRow: View {
 
                 Spacer(minLength: 12)
 
-                HStack(spacing: 8) {
-                    servingsField
-                    measureControl
-                    Button(action: onDelete) {
-                        Image(systemName: "trash")
-                            .foregroundColor(.red)
+                Menu {
+                    Button(role: .destructive, action: onDelete) {
+                        Text("Delete Food")
                     }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .padding(6)
+                }
+            }
+
+            HStack(spacing: 8) {
+                servingsField
+                measureControl
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                        .padding(10)
+                        .background(Color.primary.opacity(0.06))
+                        .clipShape(Circle())
                 }
             }
 
             HStack(spacing: 10) {
-                Label("\(Int(entry.macroTotals.calories.rounded()))cal", systemImage: "flame")
+                Label("\(Int(entry.macroTotals.calories.rounded())) cal", systemImage: "flame")
                     .font(.caption)
                     .foregroundColor(.primary)
                 Text(macroLine)
@@ -3784,7 +3793,7 @@ private struct PlateEntryRow: View {
     private var macroLine: String {
         let totals = entry.macroTotals
         let weight = String(format: "%.1f", entry.totalGramWeight)
-        return "P \(totals.protein.cleanZeroDecimal)g C \(totals.carbs.cleanZeroDecimal)g F \(totals.fat.cleanZeroDecimal)g • \(weight)g"
+        return "P \\(totals.protein.cleanZeroDecimal)g C \\(totals.carbs.cleanZeroDecimal)g F \\(totals.fat.cleanZeroDecimal)g • \\(weight)g"
     }
 
     private func measureLabel(for measure: FoodMeasure?) -> String {
@@ -3794,6 +3803,461 @@ private struct PlateEntryRow: View {
             return trimmed
         }
         return measure.measureUnitName
+    }
+}
+
+struct FoodSummaryView: View {
+    let food: Food
+    var foodLogId: Int? = nil
+    var plateViewModel: PlateViewModel? = nil
+
+    var body: some View {
+        NavigationView {
+            ConfirmLogView(
+                path: .constant(NavigationPath()),
+                food: food,
+                foodLogId: foodLogId,
+                plateViewModel: plateViewModel
+            )
+        }
+    }
+}
+
+struct TextLogSheet: View {
+    @Binding var isPresented: Bool
+    var onFoodReady: (Food) -> Void
+
+    @EnvironmentObject private var foodManager: FoodManager
+    @State private var descriptionText: String = ""
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                TextField("Describe what you ate", text: $descriptionText, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(5, reservesSpace: true)
+
+                if isSubmitting {
+                    ProgressView("Analyzing…")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Text Log")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { isPresented = false }) {
+                        Image(systemName: "xmark")
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: submit) {
+                        Image(systemName: "checkmark")
+                    }
+                    .disabled(descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmitting)
+                }
+            }
+            .alert(isPresented: Binding<Bool>(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Alert(title: Text("Text Log"), message: Text(errorMessage ?? ""), dismissButton: .default(Text("OK")))
+            }
+        }
+    }
+
+    private func submit() {
+        let prompt = descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prompt.isEmpty else { return }
+        isSubmitting = true
+        foodManager.generateFoodWithAI(foodDescription: prompt, skipConfirmation: true) { result in
+            DispatchQueue.main.async {
+                isSubmitting = false
+                switch result {
+                case .success(let food):
+                    onFoodReady(food)
+                    isPresented = false
+                case .failure(let error):
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+}
+
+struct QuickAddView: View {
+    @Binding var isPresented: Bool
+    let initialMeal: MealPeriod
+    let initialDate: Date
+    var onFoodReady: (Food) -> Void
+
+    @EnvironmentObject private var onboarding: OnboardingViewModel
+    @EnvironmentObject private var foodManager: FoodManager
+    @EnvironmentObject private var dayLogsVM: DayLogsViewModel
+
+    @State private var title: String = ""
+    @State private var calories: String = ""
+    @State private var protein: String = ""
+    @State private var carbs: String = ""
+    @State private var fat: String = ""
+    @State private var mealPeriod: MealPeriod
+    @State private var mealTime: Date
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    init(isPresented: Binding<Bool>, initialMeal: MealPeriod, initialDate: Date, onFoodReady: @escaping (Food) -> Void) {
+        _isPresented = isPresented
+        self.initialMeal = initialMeal
+        self.initialDate = initialDate
+        self.onFoodReady = onFoodReady
+        _mealPeriod = State(initialValue: initialMeal)
+        _mealTime = State(initialValue: initialDate)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(header: Text("Details")) {
+                    TextField("Name", text: $title)
+                        .autocapitalization(.words)
+
+                    TextField("Calories", text: $calories)
+                        .keyboardType(.decimalPad)
+                    TextField("Protein (g)", text: $protein)
+                        .keyboardType(.decimalPad)
+                    TextField("Carbs (g)", text: $carbs)
+                        .keyboardType(.decimalPad)
+                    TextField("Fat (g)", text: $fat)
+                        .keyboardType(.decimalPad)
+                }
+
+                Section(header: Text("When")) {
+                    Picker("Meal", selection: $mealPeriod) {
+                        ForEach(MealPeriod.allCases) { period in
+                            Text(period.title).tag(period)
+                        }
+                    }
+
+                    DatePicker("Time", selection: $mealTime)
+                }
+
+                Section {
+                    Button(action: logFood) {
+                        Text(isSaving ? "Logging…" : "Log Food")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .disabled(isSaving || !canSave)
+
+                    Button(action: addToPlate) {
+                        Text("Add to Plate")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .disabled(!canSave)
+                }
+            }
+            .navigationTitle("Quick Add")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { isPresented = false }
+                }
+            }
+            .alert(isPresented: Binding<Bool>(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Alert(title: Text("Quick Add"), message: Text(errorMessage ?? ""), dismissButton: .default(Text("OK")))
+            }
+        }
+    }
+
+    private var canSave: Bool {
+        guard let cal = Double(calories), cal > 0 else { return false }
+        return !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func addToPlate() {
+        guard let food = makeFood() else { return }
+        onFoodReady(food)
+        isPresented = false
+    }
+
+    private func logFood() {
+        guard let food = makeFood() else { return }
+        guard !isSaving else { return }
+        isSaving = true
+
+        let email = onboarding.email.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : onboarding.email
+
+        foodManager.logFood(
+            email: email,
+            food: food,
+            meal: mealPeriod.title,
+            servings: 1,
+            date: mealTime,
+            notes: nil
+        ) { result in
+            DispatchQueue.main.async {
+                self.isSaving = false
+                switch result {
+                case .success(let logged):
+                    let combined = CombinedLog(
+                        type: .food,
+                        status: logged.status,
+                        calories: Double(logged.food.calories),
+                        message: "\(logged.food.displayName) - \(logged.mealType)",
+                        foodLogId: logged.foodLogId,
+                        food: logged.food,
+                        mealType: logged.mealType,
+                        mealLogId: nil,
+                        meal: nil,
+                        mealTime: nil,
+                        scheduledAt: mealTime,
+                        recipeLogId: nil,
+                        recipe: nil,
+                        servingsConsumed: nil,
+                        isOptimistic: true
+                    )
+                    dayLogsVM.addPending(combined)
+                    foodManager.combinedLogs.removeAll { $0.foodLogId == combined.foodLogId }
+                    foodManager.combinedLogs.insert(combined, at: 0)
+                    isPresented = false
+                case .failure(let error):
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func makeFood() -> Food? {
+        guard canSave else { return nil }
+        let caloriesValue = Double(calories) ?? 0
+        let proteinValue = Double(protein) ?? 0
+        let carbValue = Double(carbs) ?? 0
+        let fatValue = Double(fat) ?? 0
+
+        let nutrients = [
+            Nutrient(nutrientName: "Energy", value: caloriesValue, unitName: "kcal"),
+            Nutrient(nutrientName: "Protein", value: proteinValue, unitName: "g"),
+            Nutrient(nutrientName: "Carbohydrate, by difference", value: carbValue, unitName: "g"),
+            Nutrient(nutrientName: "Total lipid (fat)", value: fatValue, unitName: "g")
+        ]
+
+        return Food(
+            fdcId: Int(Date().timeIntervalSince1970 * 1000),
+            description: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: 1,
+            numberOfServings: 1,
+            servingSizeUnit: "serving",
+            householdServingFullText: "1 serving",
+            foodNutrients: nutrients,
+            foodMeasures: [],
+            mealItems: nil
+        )
+    }
+}
+
+struct AddToPlateWithVoice: View {
+    @Binding var isPresented: Bool
+    let selectedMeal: String
+    var onFoodReady: (Food) -> Void
+
+    @EnvironmentObject private var foodManager: FoodManager
+    @StateObject private var audioRecorder = CreateFoodAudioRecorder()
+    @State private var isGeneratingFood = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                LinearGradient(
+                    gradient: Gradient(colors: [Color("primarybg"), Color("chat").opacity(0.25)]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+
+                VStack {
+                    Spacer()
+
+                    VStack(spacing: 24) {
+                        VoiceFluidView(
+                            level: audioRecorder.audioLevel,
+                            samples: audioRecorder.audioSamples,
+                            isActive: audioRecorder.isRecording || audioRecorder.isProcessing || isGeneratingFood
+                        )
+                        .frame(width: min(geometry.size.width * 0.7, 260),
+                               height: min(geometry.size.width * 0.7, 260))
+
+                        if audioRecorder.isProcessing || isGeneratingFood {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.accentColor))
+                                .scaleEffect(1.2)
+                        }
+
+                        if !audioRecorder.transcribedText.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Preview")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(Color(UIColor.secondaryLabel))
+
+                                ScrollView {
+                                    Text(audioRecorder.transcribedText)
+                                        .font(.system(size: 17, weight: .medium, design: .rounded))
+                                        .foregroundColor(.primary)
+                                        .multilineTextAlignment(.leading)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .frame(maxHeight: 140)
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 20)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 28)
+
+                    Spacer()
+
+                    HStack {
+                        Button(action: {
+                            cancelRecording()
+                            isPresented = false
+                        }) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 22))
+                                .foregroundColor(.primary)
+                                .frame(width: 60, height: 60)
+                                .background(Color(.systemBackground))
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color(.systemGray3), lineWidth: 1))
+                        }
+
+                        Spacer()
+
+                        Button(action: handleConfirmTap) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 24))
+                                .foregroundColor(.primary)
+                                .frame(width: 60, height: 60)
+                                .background(Color(.systemBackground))
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color(.systemGray3), lineWidth: 1))
+                                .opacity(isGeneratingFood ? 0.5 : 1)
+                        }
+                        .disabled(isGeneratingFood)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, geometry.safeAreaInsets.bottom > 0 ? 24 : 40)
+                }
+            }
+        }
+        .onAppear {
+            AudioSessionManager.shared.activateSession()
+            checkMicrophonePermission()
+        }
+        .onDisappear {
+            cancelRecording()
+            AudioSessionManager.shared.deactivateSession()
+        }
+        .alert(isPresented: Binding<Bool>(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Alert(title: Text("Voice Logging"), message: Text(errorMessage ?? ""), dismissButton: .default(Text("OK")))
+        }
+    }
+
+    private func handleConfirmTap() {
+        guard !isGeneratingFood else { return }
+
+        if audioRecorder.isRecording {
+            audioRecorder.stopRecording()
+            waitForTranscriptionThenGenerate()
+        } else {
+            waitForTranscriptionThenGenerate()
+        }
+    }
+
+    private func waitForTranscriptionThenGenerate() {
+        if !audioRecorder.transcribedText.isEmpty {
+            generateFoodFromTranscription()
+            return
+        }
+
+        guard audioRecorder.isProcessing else {
+            errorMessage = "We couldn't capture that. Try again."
+            return
+        }
+
+        Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { timer in
+            if !audioRecorder.transcribedText.isEmpty {
+                timer.invalidate()
+                generateFoodFromTranscription()
+            } else if !audioRecorder.isProcessing {
+                timer.invalidate()
+                errorMessage = "Transcription failed. Please try again."
+            }
+        }
+    }
+
+    private func generateFoodFromTranscription() {
+        guard !audioRecorder.transcribedText.isEmpty else {
+            errorMessage = "Please describe the meal first."
+            return
+        }
+
+        isGeneratingFood = true
+        foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText, skipConfirmation: true) { result in
+            DispatchQueue.main.async {
+                isGeneratingFood = false
+                switch result {
+                case .success(let food):
+                    onFoodReady(food)
+                    isPresented = false
+                case .failure(let error):
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func checkMicrophonePermission() {
+        let audioSession = AVAudioSession.sharedInstance()
+
+        switch audioSession.recordPermission {
+        case .granted:
+            audioRecorder.startRecording()
+        case .denied:
+            errorMessage = "Microphone access is required to capture your meal."
+        case .undetermined:
+            audioSession.requestRecordPermission { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        audioRecorder.startRecording()
+                    } else {
+                        errorMessage = "Microphone access is required to capture your meal."
+                    }
+                }
+            }
+        @unknown default:
+            errorMessage = "Microphone access is required to capture your meal."
+        }
+    }
+
+    private func cancelRecording() {
+        if audioRecorder.isRecording {
+            audioRecorder.stopRecording(cancel: true)
+        }
     }
 }
 

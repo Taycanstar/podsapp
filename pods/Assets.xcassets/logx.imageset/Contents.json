@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "logo-wtv2.png",
+      "filename" : "clearbk.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
@@ -12,7 +12,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "logo-bkv2.png",
+      "filename" : "white.png",
       "idiom" : "universal",
       "scale" : "1x"
     },

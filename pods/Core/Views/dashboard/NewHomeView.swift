@@ -4571,80 +4571,85 @@ private struct SwipeableCardModifier: ViewModifier {
     let onUnsave: () -> Void
 
     @State private var offset: CGFloat = 0
+    @GestureState private var isDragging = false
 
     private let buttonWidth: CGFloat = 70
     private let swipeThreshold: CGFloat = 50
 
     func body(content: Content) -> some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .center) {
-                // Background buttons layer
-                HStack(spacing: 0) {
-                    // Save button (leading - revealed when swiping right)
-                    if canSave {
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = 0 }
-                            if isSaved { onUnsave() } else { onSave() }
-                        }) {
-                            ZStack {
-                                (isSaved ? Color(.systemGray) : Color.accentColor)
-                                Image(systemName: isSaved ? "bookmark.slash.fill" : "bookmark.fill")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                            .frame(width: buttonWidth)
+        content
+            .offset(x: offset)
+            .background(alignment: .trailing) {
+                // Delete button (trailing - revealed when swiping left)
+                if canDelete && offset < 0 {
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = 0 }
+                        onDelete()
+                    }) {
+                        ZStack {
+                            Color.red
+                            Image(systemName: "trash.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white)
                         }
-                    }
-
-                    Spacer()
-
-                    // Delete button (trailing - revealed when swiping left)
-                    if canDelete {
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = 0 }
-                            onDelete()
-                        }) {
-                            ZStack {
-                                Color.red
-                                Image(systemName: "trash.fill")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                            .frame(width: buttonWidth)
-                        }
+                        .frame(width: -offset)
                     }
                 }
-                .frame(height: geometry.size.height)
-
-                // Main content layer
-                content
-                    .frame(width: geometry.size.width)
-                    .offset(x: offset)
-                    .gesture(
-                        DragGesture(minimumDistance: 10, coordinateSpace: .local)
-                            .onChanged { value in
-                                let translation = value.translation.width
-                                // Swipe left (negative) for delete, swipe right (positive) for save
-                                if canDelete && translation < 0 {
-                                    offset = max(translation, -buttonWidth)
-                                } else if canSave && translation > 0 {
-                                    offset = min(translation, buttonWidth)
-                                }
-                            }
-                            .onEnded { value in
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    if value.translation.width < -swipeThreshold && canDelete {
-                                        offset = -buttonWidth
-                                    } else if value.translation.width > swipeThreshold && canSave {
-                                        offset = buttonWidth
-                                    } else {
-                                        offset = 0
-                                    }
-                                }
-                            }
-                    )
             }
-        }
+            .background(alignment: .leading) {
+                // Save button (leading - revealed when swiping right)
+                if canSave && offset > 0 {
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = 0 }
+                        if isSaved { onUnsave() } else { onSave() }
+                    }) {
+                        ZStack {
+                            (isSaved ? Color(.systemGray) : Color.accentColor)
+                            Image(systemName: isSaved ? "bookmark.slash.fill" : "bookmark.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                        .frame(width: offset)
+                    }
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 20)
+                    .updating($isDragging) { _, state, _ in state = true }
+                    .onChanged { value in
+                        // Only respond to horizontal swipes (horizontal > vertical)
+                        let horizontal = abs(value.translation.width)
+                        let vertical = abs(value.translation.height)
+                        guard horizontal > vertical else { return }
+
+                        let translation = value.translation.width
+                        if canDelete && translation < 0 {
+                            offset = max(translation, -buttonWidth)
+                        } else if canSave && translation > 0 {
+                            offset = min(translation, buttonWidth)
+                        }
+                    }
+                    .onEnded { value in
+                        let horizontal = abs(value.translation.width)
+                        let vertical = abs(value.translation.height)
+
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            // Only snap to button if was a horizontal swipe
+                            if horizontal > vertical {
+                                if value.translation.width < -swipeThreshold && canDelete {
+                                    offset = -buttonWidth
+                                } else if value.translation.width > swipeThreshold && canSave {
+                                    offset = buttonWidth
+                                } else {
+                                    offset = 0
+                                }
+                            } else {
+                                offset = 0
+                            }
+                        }
+                    }
+            )
     }
 }
 
