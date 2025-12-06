@@ -3029,9 +3029,12 @@ struct PlateView: View {
             FoodScannerView(isPresented: $showScanner,
                             selectedMeal: selectedMealPeriod.title,
                             onFoodScanned: { food, _ in
-                                pendingFood = food
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                    showConfirmFood = true
+                                DispatchQueue.main.async {
+                                    showScanner = false
+                                    pendingFood = food
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                        showConfirmFood = true
+                                    }
                                 }
                             })
             .edgesIgnoringSafeArea(.all)
