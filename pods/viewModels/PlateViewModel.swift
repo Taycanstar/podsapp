@@ -3,17 +3,63 @@ import SwiftUI
 
 struct PlateEntry: Identifiable, Equatable {
     let id = UUID()
-    let food: Food
-    let servings: Double
+    var food: Food
+    var servings: Double
+    var selectedMeasureId: Int?
+    let availableMeasures: [FoodMeasure]
+    let baselineGramWeight: Double
+    let baseNutrientValues: [String: RawNutrientValue]
+    let baseMacroTotals: MacroTotals
     let servingDescription: String
-    let macroTotals: MacroTotals
-    let nutrientValues: [String: RawNutrientValue]
     let mealItems: [MealItem]
     let mealPeriod: MealPeriod
     let mealTime: Date
 
     var title: String { food.displayName }
     var brand: String { food.brandText ?? "" }
+
+    var selectedMeasure: FoodMeasure? {
+        availableMeasures.first(where: { $0.id == selectedMeasureId }) ?? availableMeasures.first
+    }
+
+    var currentMeasureLabel: String {
+        if let measure = selectedMeasure {
+            let trimmed = measure.disseminationText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                return trimmed
+            }
+            return measure.measureUnitName
+        }
+        return servingDescription
+    }
+
+    private var measureScalingFactor: Double {
+        guard let measure = selectedMeasure,
+              baselineGramWeight > 0,
+              measure.gramWeight > 0 else { return 1 }
+        return measure.gramWeight / baselineGramWeight
+    }
+
+    var totalGramWeight: Double {
+        let weight = selectedMeasure?.gramWeight ?? baselineGramWeight
+        return weight * servings
+    }
+
+    var macroTotals: MacroTotals {
+        let factor = measureScalingFactor * servings
+        return MacroTotals(
+            calories: baseMacroTotals.calories * factor,
+            protein: baseMacroTotals.protein * factor,
+            carbs: baseMacroTotals.carbs * factor,
+            fat: baseMacroTotals.fat * factor
+        )
+    }
+
+    var nutrientValues: [String: RawNutrientValue] {
+        baseNutrientValues.mapValues { value in
+            RawNutrientValue(value: value.value * measureScalingFactor * servings, unit: value.unit)
+        }
+    }
 }
 
 final class PlateViewModel: ObservableObject {
@@ -46,6 +92,16 @@ final class PlateViewModel: ObservableObject {
 
     func add(_ entry: PlateEntry) {
         entries.append(entry)
+    }
+
+    func updateServings(for entryID: UUID, servings: Double) {
+        guard let index = entries.firstIndex(where: { $0.id == entryID }) else { return }
+        entries[index].servings = servings
+    }
+
+    func updateMeasure(for entryID: UUID, measureId: Int?) {
+        guard let index = entries.firstIndex(where: { $0.id == entryID }) else { return }
+        entries[index].selectedMeasureId = measureId
     }
 
     func remove(_ entry: PlateEntry) {

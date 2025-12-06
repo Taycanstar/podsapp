@@ -4546,37 +4546,104 @@ private struct TimelineEventRow: View {
     private var swipeableCard: some View {
         if let log = event.log, (canDelete || canToggleSave) {
             TimelineEventCard(event: event)
-                .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    if canDelete, let onDelete {
-                        Button(role: .destructive) {
-                            onDelete(log)
-                        } label: {
-                            Label("Delete", systemImage: "trash.fill")
-                        }
-                    }
-                }
-                .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                    if canToggleSave,
-                       let onSave,
-                       let onUnsave,
-                       let isLogSaved {
-                        let saved = isLogSaved(log)
-                        Button {
-                            if saved {
-                                onUnsave(log)
-                            } else {
-                                onSave(log)
-                            }
-                        } label: {
-                            Label(saved ? "Unsave" : "Save",
-                                  systemImage: saved ? "bookmark.slash" : "bookmark")
-                        }
-                        .tint(saved ? .gray : .accentColor)
-                    }
-                }
+                .modifier(SwipeableCardModifier(
+                    canDelete: canDelete,
+                    canSave: canToggleSave,
+                    isSaved: isLogSaved?(log) ?? false,
+                    onDelete: { onDelete?(log) },
+                    onSave: { onSave?(log) },
+                    onUnsave: { onUnsave?(log) }
+                ))
         } else {
             TimelineEventCard(event: event)
+        }
+    }
+}
+
+// MARK: - Swipeable Card Modifier
+
+private struct SwipeableCardModifier: ViewModifier {
+    let canDelete: Bool
+    let canSave: Bool
+    let isSaved: Bool
+    let onDelete: () -> Void
+    let onSave: () -> Void
+    let onUnsave: () -> Void
+
+    @State private var offset: CGFloat = 0
+
+    private let buttonWidth: CGFloat = 70
+    private let swipeThreshold: CGFloat = 50
+
+    func body(content: Content) -> some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .center) {
+                // Background buttons layer
+                HStack(spacing: 0) {
+                    // Save button (leading - revealed when swiping right)
+                    if canSave {
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = 0 }
+                            if isSaved { onUnsave() } else { onSave() }
+                        }) {
+                            ZStack {
+                                (isSaved ? Color(.systemGray) : Color.accentColor)
+                                Image(systemName: isSaved ? "bookmark.slash.fill" : "bookmark.fill")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(width: buttonWidth)
+                        }
+                    }
+
+                    Spacer()
+
+                    // Delete button (trailing - revealed when swiping left)
+                    if canDelete {
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { offset = 0 }
+                            onDelete()
+                        }) {
+                            ZStack {
+                                Color.red
+                                Image(systemName: "trash.fill")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(width: buttonWidth)
+                        }
+                    }
+                }
+                .frame(height: geometry.size.height)
+
+                // Main content layer
+                content
+                    .frame(width: geometry.size.width)
+                    .offset(x: offset)
+                    .gesture(
+                        DragGesture(minimumDistance: 10, coordinateSpace: .local)
+                            .onChanged { value in
+                                let translation = value.translation.width
+                                // Swipe left (negative) for delete, swipe right (positive) for save
+                                if canDelete && translation < 0 {
+                                    offset = max(translation, -buttonWidth)
+                                } else if canSave && translation > 0 {
+                                    offset = min(translation, buttonWidth)
+                                }
+                            }
+                            .onEnded { value in
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    if value.translation.width < -swipeThreshold && canDelete {
+                                        offset = -buttonWidth
+                                    } else if value.translation.width > swipeThreshold && canSave {
+                                        offset = buttonWidth
+                                    } else {
+                                        offset = 0
+                                    }
+                                }
+                            }
+                    )
+            }
         }
     }
 }

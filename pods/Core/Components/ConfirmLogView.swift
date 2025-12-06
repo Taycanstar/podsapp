@@ -57,6 +57,7 @@ struct ConfirmLogView: View {
     @State private var isCreating: Bool = false
     @State private var showErrorAlert: Bool = false
     @State private var errorMessage: String = ""
+    @State private var showMealTimePicker = false
     
     // Focus state for auto-focusing the servings field
     @FocusState private var isServingsFocused: Bool
@@ -110,7 +111,7 @@ struct ConfirmLogView: View {
     private let referenceMacroTotals: MacroTotals
     private let baselineMeasureGramWeight: Double
     @State private var plateBuilderViewModel: PlateViewModel?
-    @State private var showPlateBuilder = false
+    @State private var navigateToPlate = false
 
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     
@@ -429,6 +430,17 @@ struct ConfirmLogView: View {
         ]
     }
 
+    @ViewBuilder
+    private var plateBuilderDestination: some View {
+        if let builder = plateBuilderViewModel {
+            PlateView(viewModel: builder,
+                      selectedMealPeriod: selectedMealPeriod,
+                      mealTime: mealTime)
+        } else {
+            EmptyView()
+        }
+    }
+
     private var shouldShowGoalsLoader: Bool {
         nutrientTargets.isEmpty && goalsStore.isLoading
     }
@@ -450,6 +462,13 @@ struct ConfirmLogView: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            NavigationLink(isActive: $navigateToPlate) {
+                plateBuilderDestination
+            } label: {
+                EmptyView()
+            }
+            .hidden()
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
             macroSummaryCard
@@ -519,17 +538,6 @@ struct ConfirmLogView: View {
         .onChange(of: mealItems) { _ in
             if shouldShowMealItemsEditor {
                 recalculateMealItemNutrition()
-            }
-        }
-        .sheet(isPresented: $showPlateBuilder, onDismiss: {
-            plateBuilderViewModel = nil
-        }) {
-            if let builder = plateBuilderViewModel {
-                NavigationView {
-                    PlateView(viewModel: builder,
-                              selectedMealPeriod: selectedMealPeriod,
-                              mealTime: mealTime)
-                }
             }
         }
     }
@@ -1025,7 +1033,7 @@ private struct MealItemServingControls: View {
             
             Divider().padding(.leading, 16)
             
-            labeledRow("Time", verticalPadding: 6) {
+            labeledRow("Time", verticalPadding: 10) {
                 HStack(spacing: 8) {
                     Menu {
                         ForEach(MealPeriod.allCases) { period in
@@ -1045,14 +1053,36 @@ private struct MealItemServingControls: View {
                     }
                     .menuStyle(.borderlessButton)
                     .menuIndicator(.hidden)
-                    
-                    capsulePill {
-                        DatePicker("", selection: $mealTime, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
-                            .datePickerStyle(.compact)
-                            .tint(.primary)
+
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                            showMealTimePicker.toggle()
+                        }
+                    } label: {
+                        capsulePill {
+                            HStack(spacing: 6) {
+                                Text(relativeDayAndTimeString(for: mealTime))
+                                    .foregroundColor(.primary)
+                                Image(systemName: "chevron.down")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
+            }
+
+            if showMealTimePicker {
+                DatePicker("",
+                           selection: $mealTime,
+                           displayedComponents: [.date, .hourAndMinute])
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 10)
+                    .transition(.opacity)
             }
         }
         .padding(.vertical, 6)
@@ -1144,10 +1174,6 @@ private struct MealItemServingControls: View {
         )
     }
     
-    private var mealTimeFormatted: String {
-        mealTime.formatted(date: .omitted, time: .shortened)
-    }
-
     private var dailyGoalShareCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Daily Goal Share")
@@ -1185,11 +1211,11 @@ private struct MealItemServingControls: View {
     }
 
     private var fatTotalsSection: some View {
-        nutrientSection(title: "Fat Totals", rows: fatRows)
+        nutrientSection(title: "Total Fat", rows: fatRows)
     }
 
     private var proteinTotalsSection: some View {
-        nutrientSection(title: "Protein Totals", rows: proteinRows)
+        nutrientSection(title: "Total Protein", rows: proteinRows)
     }
 
     private var vitaminSection: some View {
@@ -1313,90 +1339,17 @@ private struct MealItemServingControls: View {
         nutrientTargets = goalsStore.currentTargets
     }
 
-    private var totalCarbRows: [NutrientRowDescriptor] {
-        [
-            NutrientRowDescriptor(label: "Carbs", slug: "carbs", defaultUnit: "g", source: .macro(.carbs), color: carbColor),
-            NutrientRowDescriptor(label: "Fiber", slug: "fiber", defaultUnit: "g", source: .nutrient(names: ["fiber, total dietary", "dietary fiber"]), color: carbColor),
-            NutrientRowDescriptor(label: "Net (Non-fiber)", slug: "net_carbs", defaultUnit: "g", source: .computed(.netCarbs), color: carbColor),
-            NutrientRowDescriptor(label: "Sugars", slug: "sugars", defaultUnit: "g", source: .nutrient(names: ["sugars, total including nlea", "sugars, total", "sugar"]), color: carbColor),
-            NutrientRowDescriptor(label: "Sugars Added", slug: "added_sugars", defaultUnit: "g", source: .nutrient(names: ["sugars, added", "added sugars"]), color: carbColor)
-        ]
-    }
+    private var totalCarbRows: [NutrientRowDescriptor] { NutrientDescriptors.totalCarbRows }
 
-    private var fatRows: [NutrientRowDescriptor] {
-        [
-            NutrientRowDescriptor(label: "Fat", slug: "fat", defaultUnit: "g", source: .macro(.fat), color: fatColor),
-            NutrientRowDescriptor(label: "Monounsaturated", slug: "monounsaturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total monounsaturated"]), color: fatColor),
-            NutrientRowDescriptor(label: "Polyunsaturated", slug: "polyunsaturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total polyunsaturated"]), color: fatColor),
-            NutrientRowDescriptor(label: "Omega-3", slug: "omega_3_total", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-3", "omega 3", "omega-3"]), color: fatColor),
-            NutrientRowDescriptor(label: "Omega-3 ALA", slug: "omega_3_ala", defaultUnit: "g", source: .nutrient(names: ["18:3 n-3 c,c,c (ala)", "alpha-linolenic acid", "omega-3 ala", "omega 3 ala"]), color: fatColor),
-            NutrientRowDescriptor(label: "Omega-3 EPA", slug: "omega_3_epa_dha", defaultUnit: "mg", source: .nutrient(names: ["20:5 n-3 (epa)", "22:6 n-3 (dha)", "epa", "dha", "eicosapentaenoic acid", "docosahexaenoic acid", "omega-3 epa + dha"], aggregation: .sum), color: fatColor),
-            NutrientRowDescriptor(label: "Omega-6", slug: "omega_6", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-6", "omega 6", "omega-6"]), color: fatColor),
-            NutrientRowDescriptor(label: "Saturated", slug: "saturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total saturated"]), color: fatColor),
-            NutrientRowDescriptor(label: "Trans Fat", slug: "trans_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total trans"]), color: fatColor)
-        ]
-    }
+    private var fatRows: [NutrientRowDescriptor] { NutrientDescriptors.fatRows }
 
-    private var proteinRows: [NutrientRowDescriptor] {
-        [
-            NutrientRowDescriptor(label: "Protein", slug: "protein", defaultUnit: "g", source: .macro(.protein), color: proteinColor),
-            NutrientRowDescriptor(label: "Cysteine", slug: "cysteine", defaultUnit: "mg", source: .nutrient(names: ["cysteine", "cystine"]), color: proteinColor),
-            NutrientRowDescriptor(label: "Histidine", slug: "histidine", defaultUnit: "mg", source: .nutrient(names: ["histidine"]), color: proteinColor),
-            NutrientRowDescriptor(label: "Isoleucine", slug: "isoleucine", defaultUnit: "mg", source: .nutrient(names: ["isoleucine"]), color: proteinColor),
-            NutrientRowDescriptor(label: "Leucine", slug: "leucine", defaultUnit: "mg", source: .nutrient(names: ["leucine"]), color: proteinColor),
-            NutrientRowDescriptor(label: "Lysine", slug: "lysine", defaultUnit: "mg", source: .nutrient(names: ["lysine"]), color: proteinColor),
-            NutrientRowDescriptor(label: "Methionine", slug: "methionine", defaultUnit: "mg", source: .nutrient(names: ["methionine"]), color: proteinColor),
-            NutrientRowDescriptor(label: "Phenylalanine", slug: "phenylalanine", defaultUnit: "mg", source: .nutrient(names: ["phenylalanine"]), color: proteinColor),
-            NutrientRowDescriptor(label: "Threonine", slug: "threonine", defaultUnit: "mg", source: .nutrient(names: ["threonine"]), color: proteinColor),
-            NutrientRowDescriptor(label: "Tryptophan", slug: "tryptophan", defaultUnit: "mg", source: .nutrient(names: ["tryptophan"]), color: proteinColor),
-            NutrientRowDescriptor(label: "Tyrosine", slug: "tyrosine", defaultUnit: "mg", source: .nutrient(names: ["tyrosine"]), color: proteinColor),
-            NutrientRowDescriptor(label: "Valine", slug: "valine", defaultUnit: "mg", source: .nutrient(names: ["valine"]), color: proteinColor)
-        ]
-    }
+    private var proteinRows: [NutrientRowDescriptor] { NutrientDescriptors.proteinRows }
 
-    private var vitaminRows: [NutrientRowDescriptor] {
-        [
-            NutrientRowDescriptor(label: "B1, Thiamine", slug: "vitamin_b1_thiamin", defaultUnit: "mg", source: .nutrient(names: ["thiamin", "vitamin b-1"]), color: .orange),
-            NutrientRowDescriptor(label: "B2, Riboflavin", slug: "vitamin_b2_riboflavin", defaultUnit: "mg", source: .nutrient(names: ["riboflavin", "vitamin b-2"]), color: .orange),
-            NutrientRowDescriptor(label: "B3, Niacin", slug: "vitamin_b3_niacin", defaultUnit: "mg", source: .nutrient(names: ["niacin", "vitamin b-3"]), color: .orange),
-            NutrientRowDescriptor(label: "B6, Pyridoxine", slug: "vitamin_b6_pyridoxine", defaultUnit: "mg", source: .nutrient(names: ["vitamin b-6", "pyridoxine", "vitamin b6"]), color: .orange),
-            NutrientRowDescriptor(label: "B5, Pantothenic Acid", slug: "vitamin_b5_pantothenic_acid", defaultUnit: "mg", source: .nutrient(names: ["pantothenic acid"]), color: .orange),
-            NutrientRowDescriptor(label: "B12, Cobalamin", slug: "vitamin_b12_cobalamin", defaultUnit: "mcg", source: .nutrient(names: ["vitamin b-12", "cobalamin"]), color: .orange),
-            NutrientRowDescriptor(label: "Biotin", slug: "biotin", defaultUnit: "mcg", source: .nutrient(names: ["biotin"]), color: .orange),
-            NutrientRowDescriptor(label: "Folate", slug: "folate", defaultUnit: "mcg", source: .nutrient(names: ["folate, total", "folic acid"]), color: .orange),
-            NutrientRowDescriptor(label: "Vitamin A", slug: "vitamin_a", defaultUnit: "mcg", source: .nutrient(names: ["vitamin a, rae", "vitamin a"]), color: .orange),
-            NutrientRowDescriptor(label: "Vitamin C", slug: "vitamin_c", defaultUnit: "mg", source: .nutrient(names: ["vitamin c, total ascorbic acid", "vitamin c"]), color: .orange),
-            NutrientRowDescriptor(label: "Vitamin D", slug: "vitamin_d", defaultUnit: "IU", source: .nutrient(names: ["vitamin d (d2 + d3)", "vitamin d"]), color: .orange),
-            NutrientRowDescriptor(label: "Vitamin E", slug: "vitamin_e", defaultUnit: "mg", source: .nutrient(names: ["vitamin e (alpha-tocopherol)", "vitamin e"]), color: .orange),
-            NutrientRowDescriptor(label: "Vitamin K", slug: "vitamin_k", defaultUnit: "mcg", source: .nutrient(names: ["vitamin k (phylloquinone)", "vitamin k"]), color: .orange)
-        ]
-    }
+    private var vitaminRows: [NutrientRowDescriptor] { NutrientDescriptors.vitaminRows }
 
-    private var mineralRows: [NutrientRowDescriptor] {
-        [
-            NutrientRowDescriptor(label: "Calcium", slug: "calcium", defaultUnit: "mg", source: .nutrient(names: ["calcium, ca"]), color: .blue),
-            NutrientRowDescriptor(label: "Copper", slug: "copper", defaultUnit: "mcg", source: .nutrient(names: ["copper, cu"]), color: .blue),
-            NutrientRowDescriptor(label: "Iron", slug: "iron", defaultUnit: "mg", source: .nutrient(names: ["iron, fe"]), color: .blue),
-            NutrientRowDescriptor(label: "Magnesium", slug: "magnesium", defaultUnit: "mg", source: .nutrient(names: ["magnesium, mg"]), color: .blue),
-            NutrientRowDescriptor(label: "Manganese", slug: "manganese", defaultUnit: "mg", source: .nutrient(names: ["manganese, mn"]), color: .blue),
-            NutrientRowDescriptor(label: "Phosphorus", slug: "phosphorus", defaultUnit: "mg", source: .nutrient(names: ["phosphorus, p"]), color: .blue),
-            NutrientRowDescriptor(label: "Potassium", slug: "potassium", defaultUnit: "mg", source: .nutrient(names: ["potassium, k"]), color: .blue),
-            NutrientRowDescriptor(label: "Selenium", slug: "selenium", defaultUnit: "mcg", source: .nutrient(names: ["selenium, se"]), color: .blue),
-            NutrientRowDescriptor(label: "Sodium", slug: "sodium", defaultUnit: "mg", source: .nutrient(names: ["sodium, na"]), color: .blue),
-            NutrientRowDescriptor(label: "Zinc", slug: "zinc", defaultUnit: "mg", source: .nutrient(names: ["zinc, zn"]), color: .blue)
-        ]
-    }
+    private var mineralRows: [NutrientRowDescriptor] { NutrientDescriptors.mineralRows }
 
-    private var otherRows: [NutrientRowDescriptor] {
-        [
-            NutrientRowDescriptor(label: "Calories", slug: "calories", defaultUnit: "kcal", source: .computed(.calories), color: .purple),
-            NutrientRowDescriptor(label: "Alcohol", slug: "alcohol", defaultUnit: "g", source: .nutrient(names: ["alcohol, ethyl"]), color: .purple),
-            NutrientRowDescriptor(label: "Caffeine", slug: "caffeine", defaultUnit: "mg", source: .nutrient(names: ["caffeine"]), color: .purple),
-            NutrientRowDescriptor(label: "Cholesterol", slug: "cholesterol", defaultUnit: "mg", source: .nutrient(names: ["cholesterol"]), color: .purple),
-            NutrientRowDescriptor(label: "Choline", slug: "choline", defaultUnit: "mg", source: .nutrient(names: ["choline, total"]), color: .purple),
-            NutrientRowDescriptor(label: "Water", slug: "water", defaultUnit: "ml", source: .nutrient(names: ["water"]), color: .purple)
-        ]
-    }
+    private var otherRows: [NutrientRowDescriptor] { NutrientDescriptors.otherRows }
 
     private func nutrientValue(for descriptor: NutrientRowDescriptor) -> Double {
         switch descriptor.source {
@@ -2410,10 +2363,11 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
             viewModel.add(entry)
             dismiss()
         } else {
-            let builder = PlateViewModel()
-            builder.add(entry)
-            plateBuilderViewModel = builder
-            showPlateBuilder = true
+            if plateBuilderViewModel == nil {
+                plateBuilderViewModel = PlateViewModel()
+            }
+            plateBuilderViewModel?.add(entry)
+            navigateToPlate = true
         }
     }
 
@@ -2428,19 +2382,21 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
             let scaled = item.value.value * measureScalingFactor * numberOfServings
             partialResult[item.key] = RawNutrientValue(value: scaled, unit: item.value.unit)
         }
-        let macroTotals = MacroTotals(
-            calories: adjustedCalories,
-            protein: adjustedProtein,
-            carbs: adjustedCarbs,
-            fat: adjustedFat
-        )
         let description = "\(servingsInput) x \(selectedMeasureLabel)"
         return PlateEntry(
             food: updatedFood,
             servings: numberOfServings,
+            selectedMeasureId: selectedMeasureId,
+            availableMeasures: availableMeasures,
+            baselineGramWeight: baselineMeasureGramWeight,
+            baseNutrientValues: baseNutrientValues,
+            baseMacroTotals: MacroTotals(
+                calories: baseCalories,
+                protein: baseProtein,
+                carbs: baseCarbs,
+                fat: baseFat
+            ),
             servingDescription: description,
-            macroTotals: macroTotals,
-            nutrientValues: scaledNutrients,
             mealItems: mealItems,
             mealPeriod: selectedMealPeriod,
             mealTime: mealTime
@@ -2448,7 +2404,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
     }
 
     
-    private static func formattedServings(_ value: Double) -> String {
+    static func formattedServings(_ value: Double) -> String {
         if value.truncatingRemainder(dividingBy: 1) == 0 {
             return String(Int(value))
         }
@@ -2908,6 +2864,7 @@ struct PlateView: View {
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     @EnvironmentObject private var onboardingViewModel: OnboardingViewModel
     @EnvironmentObject private var proFeatureGate: ProFeatureGate
+    @ObservedObject private var goalsStore = NutritionGoalsStore.shared
 
     @ObservedObject var viewModel: PlateViewModel
     @State private var selectedMealPeriod: MealPeriod
@@ -2921,8 +2878,10 @@ struct PlateView: View {
     @State private var showVoiceLog = false
     @State private var pendingFood: Food?
     @State private var showConfirmFood = false
-    @State private var navigationPath = NavigationPath()
+    @State private var showMealTimePicker = false
+    @State private var nutrientTargets: [String: NutrientTargetDetails] = NutritionGoalsStore.shared.currentTargets
     private var totalMacros: MacroTotals { viewModel.totalMacros }
+    private var plateNutrients: [String: RawNutrientValue] { viewModel.totalNutrients }
 
     init(viewModel: PlateViewModel,
          selectedMealPeriod: MealPeriod,
@@ -2937,8 +2896,23 @@ struct PlateView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
                     plateItemsSection
-                    mealTimeSelector
                     macroSummaryCard
+                    mealTimeSelector
+                    if viewModel.hasEntries {
+                        dailyGoalShareCard
+                        if shouldShowGoalsLoader {
+                            goalsLoadingView
+                        } else if nutrientTargets.isEmpty {
+                            missingTargetsCallout
+                        } else {
+                            totalCarbsSection
+                            fatTotalsSection
+                            proteinTotalsSection
+                            vitaminSection
+                            mineralSection
+                            otherNutrientSection
+                        }
+                    }
                     Spacer(minLength: 20)
                 }
                 .padding(.top, 16)
@@ -2948,7 +2922,7 @@ struct PlateView: View {
             footerBar
         }
         .background(Color("iosbg").ignoresSafeArea())
-        .navigationTitle("Log Plate")
+        .navigationTitle("My Plate")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -2958,6 +2932,9 @@ struct PlateView: View {
                         .foregroundColor(.primary)
                 }
             }
+        }
+        .onAppear {
+            reloadStoredNutrientTargets()
         }
         .alert(isPresented: $showErrorAlert) {
             Alert(title: Text("Error"), message: Text(errorMessage), dismissButton: .default(Text("OK")))
@@ -3020,6 +2997,12 @@ struct PlateView: View {
                 .environmentObject(onboardingViewModel)
                 .environmentObject(proFeatureGate)
         }
+        .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
+            reloadStoredNutrientTargets()
+        }
+        .onReceive(goalsStore.$state) { _ in
+            reloadStoredNutrientTargets()
+        }
     }
 
     private var plateItemsSection: some View {
@@ -3037,9 +3020,16 @@ struct PlateView: View {
             } else {
                 VStack(spacing: 12) {
                     ForEach(viewModel.entries) { entry in
-                        PlateEntryRow(entry: entry) {
-                            viewModel.remove(entry)
-                        }
+                        PlateEntryRow(
+                            entry: entry,
+                            onDelete: { viewModel.remove(entry) },
+                            onServingsChange: { servings in
+                                viewModel.updateServings(for: entry.id, servings: servings)
+                            },
+                            onMeasureChange: { measureId in
+                                viewModel.updateMeasure(for: entry.id, measureId: measureId)
+                            }
+                        )
                     }
                 }
                 .padding(.horizontal)
@@ -3066,15 +3056,44 @@ struct PlateView: View {
                         }
                     }
                 }
+                .menuIndicator(.hidden)
             }
 
             Divider().padding(.leading, 16)
 
-            labeledRow("Time", verticalPadding: 6) {
+            labeledRow("Time", verticalPadding: 10) {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                        showMealTimePicker.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(relativeDayAndTimeString(for: mealTime))
+                            .foregroundColor(.primary)
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(
+                        Capsule()
+                            .fill(Color("iosnp"))
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+
+            if showMealTimePicker {
                 DatePicker("",
                            selection: $mealTime,
-                           displayedComponents: .hourAndMinute)
+                           displayedComponents: [.date, .hourAndMinute])
+                    .datePickerStyle(.wheel)
                     .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 12)
+                    .transition(.opacity)
             }
         }
         .padding(.horizontal)
@@ -3110,6 +3129,25 @@ struct PlateView: View {
                 )
         )
         .padding(.horizontal)
+    }
+
+    private var proteinGoalPercent: Double {
+        guard dayLogsVM.proteinGoal > 0 else { return 0 }
+        return (totalMacros.protein / dayLogsVM.proteinGoal) * 100
+    }
+
+    private var fatGoalPercent: Double {
+        guard dayLogsVM.fatGoal > 0 else { return 0 }
+        return (totalMacros.fat / dayLogsVM.fatGoal) * 100
+    }
+
+    private var carbGoalPercent: Double {
+        guard dayLogsVM.carbsGoal > 0 else { return 0 }
+        return (totalMacros.carbs / dayLogsVM.carbsGoal) * 100
+    }
+
+    private var shouldShowGoalsLoader: Bool {
+        nutrientTargets.isEmpty && goalsStore.isLoading
     }
 
     private var plateMacroSegments: [MacroSegment] {
@@ -3149,65 +3187,375 @@ struct PlateView: View {
         }
     }
 
+    private var dailyGoalShareCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Daily Goal Share")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            HStack(spacing: 12) {
+                GoalShareBubble(title: "Protein",
+                                percent: proteinGoalPercent,
+                                grams: totalMacros.protein,
+                                goal: dayLogsVM.proteinGoal,
+                                color: Color("protein"))
+                GoalShareBubble(title: "Fat",
+                                percent: fatGoalPercent,
+                                grams: totalMacros.fat,
+                                goal: dayLogsVM.fatGoal,
+                                color: Color("fat"))
+                GoalShareBubble(title: "Carbs",
+                                percent: carbGoalPercent,
+                                grams: totalMacros.carbs,
+                                goal: dayLogsVM.carbsGoal,
+                                color: Color("carbs"))
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color("iosnp"))
+            )
+        }
+        .padding(.horizontal)
+    }
+
+    private var totalCarbsSection: some View {
+        nutrientSection(title: "Total Carbs", rows: NutrientDescriptors.totalCarbRows)
+    }
+
+    private var fatTotalsSection: some View {
+        nutrientSection(title: "Total Fat", rows: NutrientDescriptors.fatRows)
+    }
+
+    private var proteinTotalsSection: some View {
+        nutrientSection(title: "Total Protein", rows: NutrientDescriptors.proteinRows)
+    }
+
+    private var vitaminSection: some View {
+        nutrientSection(title: "Vitamins", rows: NutrientDescriptors.vitaminRows)
+    }
+
+    private var mineralSection: some View {
+        nutrientSection(title: "Minerals", rows: NutrientDescriptors.mineralRows)
+    }
+
+    private var otherNutrientSection: some View {
+        nutrientSection(title: "Other", rows: NutrientDescriptors.otherRows)
+    }
+
+    private var goalsLoadingView: some View {
+        VStack(spacing: 12) {
+            ProgressView("Syncing your targets…")
+                .progressViewStyle(CircularProgressViewStyle())
+            Text("Hang tight while we fetch your personalized nutrient plan.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color("iosnp"))
+        )
+        .padding(.horizontal)
+    }
+
+    private var missingTargetsCallout: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Finish goal setup to unlock detailed targets")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+            Text("We’ll automatically sync your nutrition plan and show daily percentages once it’s ready.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+            Button(action: {
+                dayLogsVM.refreshNutritionGoals(forceRefresh: true)
+            }) {
+                HStack {
+                    if dayLogsVM.isRefreshingNutritionGoals {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(0.8)
+                    }
+                    Text(dayLogsVM.isRefreshingNutritionGoals ? "Syncing Targets" : "Sync Now")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.accentColor.opacity(dayLogsVM.isRefreshingNutritionGoals ? 0.4 : 0.15))
+                .foregroundColor(.accentColor)
+                .cornerRadius(12)
+            }
+            .disabled(dayLogsVM.isRefreshingNutritionGoals)
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color("iosnp"))
+        )
+        .padding(.horizontal)
+    }
+
+    private func nutrientSection(title: String, rows: [NutrientRowDescriptor]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            VStack(spacing: 16) {
+                ForEach(rows) { descriptor in
+                    nutrientRow(for: descriptor)
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color("iosnp"))
+            )
+        }
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private func nutrientRow(for descriptor: NutrientRowDescriptor) -> some View {
+        let value = nutrientValue(for: descriptor)
+        let goal = nutrientGoal(for: descriptor)
+        let unit = nutrientUnit(for: descriptor)
+        let percentage = nutrientPercentage(value: value, goal: goal)
+        let ratio = nutrientRatioText(value: value, goal: goal, unit: unit)
+        let progress = nutrientProgressValue(value: value, goal: goal)
+
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(descriptor.label)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text(ratio)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Text(percentage)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(descriptor.color)
+            }
+
+            ProgressView(value: progress)
+                .tint(descriptor.color)
+                .scaleEffect(x: 1, y: 1.2, anchor: .center)
+        }
+    }
+
+    private func nutrientValue(for descriptor: NutrientRowDescriptor) -> Double {
+        switch descriptor.source {
+        case .macro(let macro):
+            switch macro {
+            case .protein: return totalMacros.protein
+            case .carbs: return totalMacros.carbs
+            case .fat: return totalMacros.fat
+            }
+        case .nutrient(let names, let aggregation):
+            let matches = names.compactMap { plateNutrients[ConfirmLogView.normalizedNutrientKey($0)] }
+            guard !matches.isEmpty else { return 0 }
+            let perServing: Double
+            switch aggregation {
+            case .first:
+                perServing = matches.first?.value ?? 0
+            case .sum:
+                perServing = matches.reduce(0) { $0 + $1.value }
+            }
+            let sourceUnit = matches.first?.unit
+            let targetUnit = nutrientUnit(for: descriptor)
+            return convert(perServing, from: sourceUnit, to: targetUnit)
+        case .computed(let computation):
+            switch computation {
+            case .netCarbs:
+                return max(totalMacros.carbs - plateFiberValue, 0)
+            case .calories:
+                return totalMacros.calories
+            }
+        }
+    }
+
+    private func nutrientGoal(for descriptor: NutrientRowDescriptor) -> Double? {
+        var resolvedGoal: Double?
+        if let slug = descriptor.slug,
+           let details = nutrientTargets[slug] {
+            if let target = details.target, target > 0 {
+                resolvedGoal = target
+            } else if let max = details.max, max > 0 {
+                resolvedGoal = max
+            } else if let idealMax = details.idealMax, idealMax > 0 {
+                resolvedGoal = idealMax
+            }
+        }
+        if let resolvedGoal {
+            return convertGoal(resolvedGoal, for: descriptor)
+        }
+
+        switch descriptor.source {
+        case .macro(let macro):
+            switch macro {
+            case .protein: return dayLogsVM.proteinGoal
+            case .carbs: return dayLogsVM.carbsGoal
+            case .fat: return dayLogsVM.fatGoal
+            }
+        case .computed(let computation):
+            switch computation {
+            case .calories:
+                return dayLogsVM.calorieGoal
+            case .netCarbs:
+                if let target = nutrientTargets["net_carbs"]?.target {
+                    return convertGoal(target, for: descriptor)
+                }
+                return nil
+            }
+        default:
+            return nil
+        }
+    }
+
+    private func nutrientUnit(for descriptor: NutrientRowDescriptor) -> String {
+        if descriptor.defaultUnit.isEmpty,
+           let slug = descriptor.slug,
+           let unit = nutrientTargets[slug]?.unit,
+           !unit.isEmpty {
+            return unit
+        }
+        return descriptor.defaultUnit
+    }
+
+    private func nutrientPercentage(value: Double, goal: Double?) -> String {
+        guard let goal, goal > 0 else { return "--" }
+        let percent = (value / goal) * 100
+        return "\(percent.cleanZeroDecimal)%"
+    }
+
+    private func nutrientProgressValue(value: Double, goal: Double?) -> Double {
+        guard let goal, goal > 0 else { return 0 }
+        return min(max(value / goal, 0), 1)
+    }
+
+    private func nutrientRatioText(value: Double, goal: Double?, unit: String) -> String {
+        let valueText = value.goalShareFormatted
+        let goalText = goal.map { $0.goalShareFormatted } ?? "--"
+        let trimmedUnit = unit.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedUnit.isEmpty {
+            return "\(valueText)/\(goalText)"
+        } else {
+            return "\(valueText)/\(goalText) \(trimmedUnit)"
+        }
+    }
+
+    private func convertGoal(_ goal: Double, for descriptor: NutrientRowDescriptor) -> Double {
+        guard let slug = descriptor.slug else { return goal }
+        switch slug {
+        case "alcohol":
+            return (goal / 7) * 14
+        default:
+            return goal
+        }
+    }
+
+    private func convert(_ value: Double, from sourceUnit: String?, to targetUnit: String?) -> Double {
+        let from = normalizedUnit(sourceUnit)
+        let to = normalizedUnit(targetUnit)
+        guard !from.isEmpty, !to.isEmpty, from != to else { return value }
+
+        switch (from, to) {
+        case ("g", "mg"): return value * 1000
+        case ("mg", "g"): return value / 1000
+        case ("g", "mcg"): return value * 1_000_000
+        case ("mcg", "g"): return value / 1_000_000
+        case ("mg", "mcg"): return value * 1000
+        case ("mcg", "mg"): return value / 1000
+        case ("kcal", "cal"): return value * 1000
+        case ("cal", "kcal"): return value / 1000
+        default: return value
+        }
+    }
+
+    private func normalizedUnit(_ unit: String?) -> String {
+        (unit ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private var plateFiberValue: Double {
+        let keys = ["fiber, total dietary", "dietary fiber"]
+        guard let match = keys.compactMap({ plateNutrients[ConfirmLogView.normalizedNutrientKey($0)] }).first else {
+            return 0
+        }
+        return convert(match.value, from: match.unit, to: "g")
+    }
+
+    private func reloadStoredNutrientTargets() {
+        nutrientTargets = goalsStore.currentTargets
+    }
+
     private var footerBar: some View {
         VStack(spacing: 16) {
             Divider()
                 .padding(.horizontal, -16)
 
-            Button(action: logPlate) {
-                Text(isLoggingPlate ? "Logging..." : "Log Plate")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-            }
-            .buttonStyle(.plain)
-            .background(
-                RoundedRectangle(cornerRadius: 999, style: .continuous)
-                    .fill(Color("background"))
-            )
-            .foregroundColor(Color("text"))
-            .disabled(isLoggingPlate || viewModel.entries.isEmpty)
-            .opacity(isLoggingPlate ? 0.7 : 1)
-
-            Menu {
-                Button {
-                    showScanner = true
-                } label: {
-                    Label("Scan Food", systemImage: "barcode.viewfinder")
-                }
-
-                Button {
-                    showTextLog = true
-                } label: {
-                    Label("Text", systemImage: "text.book.closed")
-                }
-
-                Button {
-                    showQuickAdd = true
-                } label: {
-                    Label("Quick Add", systemImage: "plus.circle")
-                }
-
-                Button {
-                    showVoiceLog = true
-                } label: {
-                    Label("With Voice", systemImage: "mic")
-                }
-            } label: {
-                HStack {
-                    Text("Add Another Food")
+            HStack(spacing: 12) {
+                Button(action: logPlate) {
+                    Text(isLoggingPlate ? "Logging..." : "Log Plate")
                         .font(.headline)
                         .fontWeight(.semibold)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .buttonStyle(.plain)
                 .background(
                     RoundedRectangle(cornerRadius: 999, style: .continuous)
-                        .stroke(Color("background"), lineWidth: 1)
+                        .fill(Color("background"))
                 )
+                .foregroundColor(Color("text"))
+                .disabled(isLoggingPlate || viewModel.entries.isEmpty)
+                .opacity(isLoggingPlate ? 0.7 : 1)
+
+                Menu {
+                    Button {
+                        showScanner = true
+                    } label: {
+                        Label("Scan Food", systemImage: "barcode.viewfinder")
+                    }
+
+                    Button {
+                        showTextLog = true
+                    } label: {
+                        Label("Text", systemImage: "text.book.closed")
+                    }
+
+                    Button {
+                        showQuickAdd = true
+                    } label: {
+                        Label("Quick Add", systemImage: "plus.circle")
+                    }
+
+                    Button {
+                        showVoiceLog = true
+                    } label: {
+                        Label("With Voice", systemImage: "mic")
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("Add Another Food")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 999, style: .continuous)
+                            .fill(Color("background"))
+                    )
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(Color("text"))
             }
         }
         .padding(.horizontal)
@@ -3232,15 +3580,18 @@ struct PlateView: View {
             return
         }
 
-        var food = viewModel.entries[index].food
-        food.numberOfServings = viewModel.entries[index].servings
+        let entry = viewModel.entries[index]
+
+        var food = entry.food
+        food.numberOfServings = entry.servings
+        food.householdServingFullText = entry.currentMeasureLabel
         let mealLabel = selectedMealPeriod.title
 
         foodManager.logFood(
             email: onboardingViewModel.email,
             food: food,
             meal: mealLabel,
-            servings: viewModel.entries[index].servings,
+            servings: entry.servings,
             date: mealTime,
             notes: nil
         ) { result in
@@ -3301,36 +3652,59 @@ struct PlateView: View {
 private struct PlateEntryRow: View {
     let entry: PlateEntry
     let onDelete: () -> Void
+    let onServingsChange: (Double) -> Void
+    let onMeasureChange: (Int?) -> Void
+
+    @State private var servingsInput: String
+
+    init(entry: PlateEntry,
+         onDelete: @escaping () -> Void,
+         onServingsChange: @escaping (Double) -> Void,
+         onMeasureChange: @escaping (Int?) -> Void) {
+        self.entry = entry
+        self.onDelete = onDelete
+        self.onServingsChange = onServingsChange
+        self.onMeasureChange = onMeasureChange
+        _servingsInput = State(initialValue: ConfirmLogView.formattedServings(entry.servings))
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(entry.title)
-                        .font(.headline)
                     if !entry.brand.isEmpty {
                         Text(entry.brand)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    Text(entry.servingDescription)
+                    Text(entry.title)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Text(entry.currentMeasureLabel)
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-                Spacer()
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red)
+
+                Spacer(minLength: 12)
+
+                HStack(spacing: 8) {
+                    servingsField
+                    measureControl
+                    Button(action: onDelete) {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                    }
                 }
             }
 
-            HStack(spacing: 12) {
-                Label("\(Int(entry.macroTotals.calories)) cal", systemImage: "flame")
+            HStack(spacing: 10) {
+                Label("\(Int(entry.macroTotals.calories.rounded()))cal", systemImage: "flame")
                     .font(.caption)
                     .foregroundColor(.primary)
-                Text("P \(entry.macroTotals.protein.cleanOneDecimal) • C \(entry.macroTotals.carbs.cleanOneDecimal) • F \(entry.macroTotals.fat.cleanOneDecimal)")
+                Text(macroLine)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                Spacer()
             }
         }
         .padding(16)
@@ -3338,6 +3712,88 @@ private struct PlateEntryRow: View {
             RoundedRectangle(cornerRadius: 18)
                 .fill(Color("iosnp"))
         )
+        .onChange(of: entry.servings) { newValue in
+            let formatted = ConfirmLogView.formattedServings(newValue)
+            if formatted != servingsInput {
+                servingsInput = formatted
+            }
+        }
+    }
+
+    private var servingsField: some View {
+        TextField("1", text: $servingsInput)
+            .keyboardType(.numbersAndPunctuation)
+            .submitLabel(.done)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.primary.opacity(0.06))
+            .cornerRadius(12)
+            .frame(width: 64)
+            .onChange(of: servingsInput) { newValue in
+                guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
+                onServingsChange(parsed)
+            }
+    }
+
+    @ViewBuilder
+    private var measureControl: some View {
+        if entry.availableMeasures.count > 1 {
+            Menu {
+                ForEach(entry.availableMeasures, id: \.id) { measure in
+                    Button(action: { onMeasureChange(measure.id) }) {
+                        HStack {
+                            Text(measureLabel(for: measure))
+                                .lineLimit(1)
+                            Spacer()
+                            if measure.id == entry.selectedMeasureId {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(measureLabel(for: entry.selectedMeasure))
+                        .lineLimit(1)
+                        .foregroundColor(.primary)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.primary.opacity(0.06))
+                .cornerRadius(12)
+                .frame(minWidth: 130, alignment: .leading)
+            }
+            .menuStyle(.borderlessButton)
+        } else {
+            Text(measureLabel(for: entry.selectedMeasure))
+                .font(.subheadline)
+                .foregroundColor(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.primary.opacity(0.06))
+                .cornerRadius(12)
+                .frame(minWidth: 130, alignment: .leading)
+        }
+    }
+
+    private var macroLine: String {
+        let totals = entry.macroTotals
+        let weight = String(format: "%.1f", entry.totalGramWeight)
+        return "P \(totals.protein.cleanZeroDecimal)g C \(totals.carbs.cleanZeroDecimal)g F \(totals.fat.cleanZeroDecimal)g • \(weight)g"
+    }
+
+    private func measureLabel(for measure: FoodMeasure?) -> String {
+        guard let measure else { return "Select" }
+        let trimmed = measure.disseminationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return trimmed
+        }
+        return measure.measureUnitName
     }
 }
 
@@ -3367,6 +3823,121 @@ private struct NutrientRowDescriptor: Identifiable {
         self.source = source
         self.color = color
     }
+}
+
+private enum NutrientDescriptors {
+    static let proteinColor = Color("protein")
+    static let fatColor = Color("fat")
+    static let carbColor = Color("carbs")
+
+    static var totalCarbRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Carbs", slug: "carbs", defaultUnit: "g", source: .macro(.carbs), color: carbColor),
+            NutrientRowDescriptor(label: "Fiber", slug: "fiber", defaultUnit: "g", source: .nutrient(names: ["fiber, total dietary", "dietary fiber"]), color: carbColor),
+            NutrientRowDescriptor(label: "Net (Non-fiber)", slug: "net_carbs", defaultUnit: "g", source: .computed(.netCarbs), color: carbColor),
+            NutrientRowDescriptor(label: "Sugars", slug: "sugars", defaultUnit: "g", source: .nutrient(names: ["sugars, total including nlea", "sugars, total", "sugar"]), color: carbColor),
+            NutrientRowDescriptor(label: "Sugars Added", slug: "added_sugars", defaultUnit: "g", source: .nutrient(names: ["sugars, added", "added sugars"]), color: carbColor)
+        ]
+    }
+
+    static var fatRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Fat", slug: "fat", defaultUnit: "g", source: .macro(.fat), color: fatColor),
+            NutrientRowDescriptor(label: "Monounsaturated", slug: "monounsaturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total monounsaturated"]), color: fatColor),
+            NutrientRowDescriptor(label: "Polyunsaturated", slug: "polyunsaturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total polyunsaturated"]), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-3", slug: "omega_3_total", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-3", "omega 3", "omega-3"]), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-3 ALA", slug: "omega_3_ala", defaultUnit: "g", source: .nutrient(names: ["18:3 n-3 c,c,c (ala)", "alpha-linolenic acid", "omega-3 ala", "omega 3 ala"]), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-3 EPA", slug: "omega_3_epa_dha", defaultUnit: "mg", source: .nutrient(names: ["20:5 n-3 (epa)", "22:6 n-3 (dha)", "epa", "dha", "eicosapentaenoic acid", "docosahexaenoic acid", "omega-3 epa + dha"], aggregation: .sum), color: fatColor),
+            NutrientRowDescriptor(label: "Omega-6", slug: "omega_6", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-6", "omega 6", "omega-6"]), color: fatColor),
+            NutrientRowDescriptor(label: "Saturated", slug: "saturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total saturated"]), color: fatColor),
+            NutrientRowDescriptor(label: "Trans Fat", slug: "trans_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total trans"]), color: fatColor)
+        ]
+    }
+
+    static var proteinRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Protein", slug: "protein", defaultUnit: "g", source: .macro(.protein), color: proteinColor),
+            NutrientRowDescriptor(label: "Cysteine", slug: "cysteine", defaultUnit: "mg", source: .nutrient(names: ["cysteine", "cystine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Histidine", slug: "histidine", defaultUnit: "mg", source: .nutrient(names: ["histidine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Isoleucine", slug: "isoleucine", defaultUnit: "mg", source: .nutrient(names: ["isoleucine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Leucine", slug: "leucine", defaultUnit: "mg", source: .nutrient(names: ["leucine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Lysine", slug: "lysine", defaultUnit: "mg", source: .nutrient(names: ["lysine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Methionine", slug: "methionine", defaultUnit: "mg", source: .nutrient(names: ["methionine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Phenylalanine", slug: "phenylalanine", defaultUnit: "mg", source: .nutrient(names: ["phenylalanine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Threonine", slug: "threonine", defaultUnit: "mg", source: .nutrient(names: ["threonine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Tryptophan", slug: "tryptophan", defaultUnit: "mg", source: .nutrient(names: ["tryptophan"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Tyrosine", slug: "tyrosine", defaultUnit: "mg", source: .nutrient(names: ["tyrosine"]), color: proteinColor),
+            NutrientRowDescriptor(label: "Valine", slug: "valine", defaultUnit: "mg", source: .nutrient(names: ["valine"]), color: proteinColor)
+        ]
+    }
+
+    static var vitaminRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "B1, Thiamine", slug: "vitamin_b1_thiamin", defaultUnit: "mg", source: .nutrient(names: ["thiamin", "vitamin b-1"]), color: .orange),
+            NutrientRowDescriptor(label: "B2, Riboflavin", slug: "vitamin_b2_riboflavin", defaultUnit: "mg", source: .nutrient(names: ["riboflavin", "vitamin b-2"]), color: .orange),
+            NutrientRowDescriptor(label: "B3, Niacin", slug: "vitamin_b3_niacin", defaultUnit: "mg", source: .nutrient(names: ["niacin", "vitamin b-3"]), color: .orange),
+            NutrientRowDescriptor(label: "B6, Pyridoxine", slug: "vitamin_b6_pyridoxine", defaultUnit: "mg", source: .nutrient(names: ["vitamin b-6", "pyridoxine", "vitamin b6"]), color: .orange),
+            NutrientRowDescriptor(label: "B5, Pantothenic Acid", slug: "vitamin_b5_pantothenic_acid", defaultUnit: "mg", source: .nutrient(names: ["pantothenic acid"]), color: .orange),
+            NutrientRowDescriptor(label: "B12, Cobalamin", slug: "vitamin_b12_cobalamin", defaultUnit: "mcg", source: .nutrient(names: ["vitamin b-12", "cobalamin"]), color: .orange),
+            NutrientRowDescriptor(label: "Biotin", slug: "biotin", defaultUnit: "mcg", source: .nutrient(names: ["biotin"]), color: .orange),
+            NutrientRowDescriptor(label: "Folate", slug: "folate", defaultUnit: "mcg", source: .nutrient(names: ["folate, total", "folic acid"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin A", slug: "vitamin_a", defaultUnit: "mcg", source: .nutrient(names: ["vitamin a, rae", "vitamin a"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin C", slug: "vitamin_c", defaultUnit: "mg", source: .nutrient(names: ["vitamin c, total ascorbic acid", "vitamin c"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin D", slug: "vitamin_d", defaultUnit: "IU", source: .nutrient(names: ["vitamin d (d2 + d3)", "vitamin d"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin E", slug: "vitamin_e", defaultUnit: "mg", source: .nutrient(names: ["vitamin e (alpha-tocopherol)", "vitamin e"]), color: .orange),
+            NutrientRowDescriptor(label: "Vitamin K", slug: "vitamin_k", defaultUnit: "mcg", source: .nutrient(names: ["vitamin k (phylloquinone)", "vitamin k"]), color: .orange)
+        ]
+    }
+
+    static var mineralRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Calcium", slug: "calcium", defaultUnit: "mg", source: .nutrient(names: ["calcium, ca"]), color: .blue),
+            NutrientRowDescriptor(label: "Copper", slug: "copper", defaultUnit: "mcg", source: .nutrient(names: ["copper, cu"]), color: .blue),
+            NutrientRowDescriptor(label: "Iron", slug: "iron", defaultUnit: "mg", source: .nutrient(names: ["iron, fe"]), color: .blue),
+            NutrientRowDescriptor(label: "Magnesium", slug: "magnesium", defaultUnit: "mg", source: .nutrient(names: ["magnesium, mg"]), color: .blue),
+            NutrientRowDescriptor(label: "Manganese", slug: "manganese", defaultUnit: "mg", source: .nutrient(names: ["manganese, mn"]), color: .blue),
+            NutrientRowDescriptor(label: "Phosphorus", slug: "phosphorus", defaultUnit: "mg", source: .nutrient(names: ["phosphorus, p"]), color: .blue),
+            NutrientRowDescriptor(label: "Potassium", slug: "potassium", defaultUnit: "mg", source: .nutrient(names: ["potassium, k"]), color: .blue),
+            NutrientRowDescriptor(label: "Selenium", slug: "selenium", defaultUnit: "mcg", source: .nutrient(names: ["selenium, se"]), color: .blue),
+            NutrientRowDescriptor(label: "Sodium", slug: "sodium", defaultUnit: "mg", source: .nutrient(names: ["sodium, na"]), color: .blue),
+            NutrientRowDescriptor(label: "Zinc", slug: "zinc", defaultUnit: "mg", source: .nutrient(names: ["zinc, zn"]), color: .blue)
+        ]
+    }
+
+    static var otherRows: [NutrientRowDescriptor] {
+        [
+            NutrientRowDescriptor(label: "Calories", slug: "calories", defaultUnit: "kcal", source: .computed(.calories), color: .purple),
+            NutrientRowDescriptor(label: "Alcohol", slug: "alcohol", defaultUnit: "g", source: .nutrient(names: ["alcohol, ethyl"]), color: .purple),
+            NutrientRowDescriptor(label: "Caffeine", slug: "caffeine", defaultUnit: "mg", source: .nutrient(names: ["caffeine"]), color: .purple),
+            NutrientRowDescriptor(label: "Cholesterol", slug: "cholesterol", defaultUnit: "mg", source: .nutrient(names: ["cholesterol"]), color: .purple),
+            NutrientRowDescriptor(label: "Choline", slug: "choline", defaultUnit: "mg", source: .nutrient(names: ["choline, total"]), color: .purple),
+            NutrientRowDescriptor(label: "Water", slug: "water", defaultUnit: "ml", source: .nutrient(names: ["water"]), color: .purple)
+        ]
+    }
+}
+
+private let relativeDayFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "E MMM d"
+    return formatter
+}()
+
+private let relativeTimeFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.timeStyle = .short
+    return formatter
+}()
+
+private func relativeDayAndTimeString(for date: Date) -> String {
+    let time = relativeTimeFormatter.string(from: date)
+    let calendar = Calendar.current
+    if calendar.isDateInToday(date) {
+        return "Today, \(time)"
+    }
+    if calendar.isDateInYesterday(date) {
+        return "Yesterday, \(time)"
+    }
+    return "\(relativeDayFormatter.string(from: date)), \(time)"
 }
 
 #if DEBUG
