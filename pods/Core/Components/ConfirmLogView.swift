@@ -3931,8 +3931,11 @@ struct TextLogSheet: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
                 TextField("Describe what you ate", text: $descriptionText, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
                     .lineLimit(5, reservesSpace: true)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(28)
 
                 if isSubmitting {
                     ProgressView("Analyzing…")
@@ -3943,7 +3946,12 @@ struct TextLogSheet: View {
             }
             .padding()
             .navigationTitle("Text Log")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Text Log")
+                        .font(.headline)
+                }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { isPresented = false }) {
                         Image(systemName: "xmark")
