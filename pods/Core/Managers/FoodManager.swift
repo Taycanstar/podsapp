@@ -279,7 +279,7 @@ final class NutritionixService {
             brandOwner: brand,
             brandName: brand,
             servingSize: servingQty,
-            numberOfServings: 1,
+            numberOfServings: servingQty,
             servingSizeUnit: servingUnit,
             householdServingFullText: servingText,
             foodNutrients: nutrients,

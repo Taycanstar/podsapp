@@ -13,6 +13,7 @@ struct ConfirmLogView: View {
     @EnvironmentObject private var foodManager: FoodManager
     @EnvironmentObject private var viewModel: OnboardingViewModel
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
+    @Environment(\.colorScheme) private var colorScheme
     
     @Binding var path: NavigationPath
     private let existingPlateViewModel: PlateViewModel?
@@ -115,6 +116,7 @@ struct ConfirmLogView: View {
     @State private var navigateToPlate = false
 
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
+    @Environment(\.colorScheme) private var plateColorScheme
     
     // NEW: Add a flag to distinguish between creation and logging modes
     @State private var isCreationMode: Bool = false  // Always false for this view
@@ -146,6 +148,15 @@ struct ConfirmLogView: View {
               baselineMeasureGramWeight > 0,
               measure.gramWeight > 0 else { return 1 }
         return measure.gramWeight / baselineMeasureGramWeight
+    }
+    private var backgroundColor: Color {
+        colorScheme == .dark ? Color("bg") : Color(UIColor.systemGroupedBackground)
+    }
+    private var cardColor: Color {
+        colorScheme == .dark ? Color(UIColor.systemGroupedBackground) : Color("bg")
+    }
+    private var chipColor: Color {
+        colorScheme == .dark ? Color(.tertiarySystemFill) : Color(.secondarySystemFill)
     }
 
     private func scaledValue(_ value: Double) -> Double {
@@ -498,7 +509,7 @@ struct ConfirmLogView: View {
 
             footerBar
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .background(backgroundColor.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(title.isEmpty ? (originalFood?.displayName ?? "Log Food") : title)
         .navigationBarBackButtonHidden(true)
@@ -688,7 +699,7 @@ struct ConfirmLogView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(Color("bg"))
+                .fill(cardColor)
         )
     }
 
@@ -710,7 +721,7 @@ struct ConfirmLogView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("bg"))
+                .fill(cardColor)
         )
         .padding(.horizontal)
     }
@@ -992,9 +1003,10 @@ private struct MealItemServingControls: View {
                         .focused($isServingsFocused)
                         .padding(.vertical, 4)
                         .padding(.horizontal, 12)
+                        .frame(height: 36)
                         .background(
                             Capsule()
-                                .fill(Color(.secondarySystemFill))
+                                .fill(chipColor)
                         )
                         .frame(width: 70)
                         .onChange(of: servingsInput) { newValue in
@@ -1023,9 +1035,10 @@ private struct MealItemServingControls: View {
                             }
                             .padding(.vertical, 4)
                             .padding(.horizontal, 12)
+                            .frame(height: 36)
                             .background(
                                 Capsule()
-                                    .fill(Color(.secondarySystemFill))
+                                    .fill(chipColor)
                             )
                         }
                         .menuStyle(.borderlessButton)
@@ -1035,9 +1048,10 @@ private struct MealItemServingControls: View {
                             .foregroundColor(.secondary)
                             .padding(.vertical, 4)
                             .padding(.horizontal, 12)
+                            .frame(height: 36)
                             .background(
                                 Capsule()
-                                    .fill(Color(.secondarySystemFill))
+                                    .fill(chipColor)
                             )
                     }
                 }
@@ -1096,7 +1110,7 @@ private struct MealItemServingControls: View {
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("bg"))
+                .fill(cardColor)
         )
         .padding(.horizontal)
     }
@@ -1133,7 +1147,7 @@ private struct MealItemServingControls: View {
             .foregroundColor(.primary)
             .padding(.vertical, 6)
             .padding(.horizontal, 12)
-            .background(Color(.secondarySystemFill))
+            .background(chipColor)
             .cornerRadius(12)
     }
     
@@ -1220,7 +1234,7 @@ private struct MealItemServingControls: View {
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color("bg"))
+                    .fill(cardColor)
             )
         }
         .padding(.horizontal)
@@ -1262,7 +1276,7 @@ private struct MealItemServingControls: View {
         .padding(24)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("bg"))
+                .fill(cardColor)
         )
         .padding(.horizontal)
     }
@@ -1298,7 +1312,7 @@ private struct MealItemServingControls: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("bg"))
+                .fill(cardColor)
         )
         .padding(.horizontal)
     }
@@ -1317,7 +1331,7 @@ private struct MealItemServingControls: View {
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color("bg"))
+                    .fill(cardColor)
             )
         }
         .padding(.horizontal)
@@ -1519,7 +1533,7 @@ private struct MealItemServingControls: View {
         VStack(alignment: .leading, spacing: 12) {
             ZStack(alignment: .top) {
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color("bg"))
+                    .fill(cardColor)
                 
                 VStack(spacing: 0) {
                     if let health = healthAnalysis {
@@ -2884,6 +2898,7 @@ struct PlateView: View {
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     @EnvironmentObject private var onboardingViewModel: OnboardingViewModel
     @EnvironmentObject private var proFeatureGate: ProFeatureGate
+    @Environment(\.colorScheme) private var plateColorScheme
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
 
     @ObservedObject var viewModel: PlateViewModel
@@ -2902,6 +2917,15 @@ struct PlateView: View {
     @State private var nutrientTargets: [String: NutrientTargetDetails] = NutritionGoalsStore.shared.currentTargets
     private var totalMacros: MacroTotals { viewModel.totalMacros }
     private var plateNutrients: [String: RawNutrientValue] { viewModel.totalNutrients }
+    private var plateBackground: Color {
+        plateColorScheme == .dark ? Color("bg") : Color(UIColor.systemGroupedBackground)
+    }
+    private var plateCardColor: Color {
+        plateColorScheme == .dark ? Color(UIColor.systemGroupedBackground) : Color("bg")
+    }
+    private var plateChipColor: Color {
+        plateColorScheme == .dark ? Color(.tertiarySystemFill) : Color(.secondarySystemFill)
+    }
 
     init(viewModel: PlateViewModel,
          selectedMealPeriod: MealPeriod,
@@ -2941,7 +2965,7 @@ struct PlateView: View {
 
             footerBar
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .background(plateBackground.ignoresSafeArea())
         .navigationTitle("My Plate")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -3037,7 +3061,9 @@ struct PlateView: View {
                             },
                             onMeasureChange: { measureId in
                                 viewModel.updateMeasure(for: entry.id, measureId: measureId)
-                            }
+                            },
+                            plateCardColor: plateCardColor,
+                            chipColor: plateChipColor
                         )
                     }
                 }
@@ -3083,7 +3109,7 @@ struct PlateView: View {
                         .padding(.horizontal, 12)
                         .background(
                             Capsule()
-                                .fill(Color(.secondarySystemFill))
+                                .fill(plateChipColor)
                         )
                 }
                 .buttonStyle(.plain)
@@ -3104,7 +3130,7 @@ struct PlateView: View {
         .padding(.horizontal)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("bg"))
+                .fill(plateCardColor)
         )
         .padding(.horizontal)
     }
@@ -3127,7 +3153,7 @@ struct PlateView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("bg"))
+                .fill(plateCardColor)
         )
         .padding(.horizontal)
     }
@@ -3214,7 +3240,7 @@ struct PlateView: View {
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color("bg"))
+                    .fill(plateCardColor)
             )
         }
         .padding(.horizontal)
@@ -3256,7 +3282,7 @@ struct PlateView: View {
         .padding(24)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("bg"))
+                .fill(plateCardColor)
         )
         .padding(.horizontal)
     }
@@ -3292,7 +3318,7 @@ struct PlateView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("bg"))
+                .fill(plateCardColor)
         )
         .padding(.horizontal)
     }
@@ -3311,7 +3337,7 @@ struct PlateView: View {
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color("bg"))
+                    .fill(plateCardColor)
             )
         }
         .padding(.horizontal)
@@ -3641,7 +3667,7 @@ struct PlateView: View {
             .padding(.horizontal, 14)
             .background(
                 Capsule()
-                    .fill(Color(.secondarySystemFill))
+                    .fill(plateChipColor)
             )
     }
 }
@@ -3650,15 +3676,21 @@ private struct PlateEntryRow: View {
     let entry: PlateEntry
     let onServingsChange: (Double) -> Void
     let onMeasureChange: (Int?) -> Void
+    let plateCardColor: Color
+    let chipColor: Color
 
     @State private var servingsInput: String
 
     init(entry: PlateEntry,
          onServingsChange: @escaping (Double) -> Void,
-         onMeasureChange: @escaping (Int?) -> Void) {
+         onMeasureChange: @escaping (Int?) -> Void,
+         plateCardColor: Color,
+         chipColor: Color) {
         self.entry = entry
         self.onServingsChange = onServingsChange
         self.onMeasureChange = onMeasureChange
+        self.plateCardColor = plateCardColor
+        self.chipColor = chipColor
         _servingsInput = State(initialValue: ConfirmLogView.formattedServings(entry.servings))
     }
 
@@ -3695,7 +3727,7 @@ private struct PlateEntryRow: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(Color("bg"))
+                .fill(plateCardColor)
         )
         .onChange(of: entry.servings) { newValue in
             let formatted = ConfirmLogView.formattedServings(newValue)
@@ -3712,9 +3744,10 @@ private struct PlateEntryRow: View {
                 .submitLabel(.done)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 5)
+                .padding(.vertical, 4)
+                .frame(height: 36)
                 .background(
-                    Capsule().fill(Color(.secondarySystemFill))
+                    Capsule().fill(chipColor)
                 )
                 .frame(width: 70)
                 .onChange(of: servingsInput) { newValue in
@@ -3739,6 +3772,7 @@ private struct PlateEntryRow: View {
                 } label: {
                     HStack(spacing: 6) {
                         Text(shortMeasureLabel(for: entry.selectedMeasure ?? entry.availableMeasures.first))
+                            .font(.body)
                             .foregroundColor(.primary)
                             .lineLimit(1)
                         Image(systemName: "chevron.up.chevron.down")
@@ -3746,19 +3780,22 @@ private struct PlateEntryRow: View {
                             .foregroundColor(.secondary)
                     }
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, 4)
+                    .frame(height: 36)
                     .background(
-                        Capsule().fill(Color(.secondarySystemFill))
+                        Capsule().fill(chipColor)
                     )
                 }
                 .menuStyle(.borderlessButton)
             } else {
                 Text(shortMeasureLabel(for: entry.selectedMeasure ?? entry.availableMeasures.first))
+                    .font(.body)
                     .foregroundColor(.primary)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, 4)
+                    .frame(height: 36)
                     .background(
-                        Capsule().fill(Color(.secondarySystemFill))
+                        Capsule().fill(chipColor)
                     )
             }
         }
