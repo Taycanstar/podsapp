@@ -3541,7 +3541,7 @@ struct PlateView: View {
                     }
                 } label: {
                     HStack(spacing: 6) {
-                        Text("Add Another Food")
+                        Text("Add More")
                             .font(.headline)
                             .fontWeight(.semibold)
                         Image(systemName: "chevron.up.chevron.down")
