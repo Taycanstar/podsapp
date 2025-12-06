@@ -4024,7 +4024,7 @@ struct QuickAddView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Details")) {
+                Section {
                     TextField("Name", text: $title)
                         .autocapitalization(.words)
 
@@ -4038,7 +4038,7 @@ struct QuickAddView: View {
                         .keyboardType(.decimalPad)
                 }
 
-                Section(header: Text("When")) {
+                Section {
                     Picker("Meal", selection: $mealPeriod) {
                         ForEach(MealPeriod.allCases) { period in
                             Text(period.title).tag(period)
@@ -4047,25 +4047,23 @@ struct QuickAddView: View {
 
                     DatePicker("Time", selection: $mealTime)
                 }
-
-                Section {
-                    Button(action: logFood) {
-                        Text(isSaving ? "Logging…" : "Log Food")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .disabled(isSaving || !canSave)
-
-                    Button(action: addToPlate) {
-                        Text("Add to Plate")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .disabled(!canSave)
-                }
             }
             .navigationTitle("Quick Add")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { isPresented = false }
+                ToolbarItem(placement: .principal) {
+                    Text("Quick Add").font(.headline)
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { isPresented = false }) {
+                        Image(systemName: "xmark")
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: addToPlate) {
+                        Image(systemName: "checkmark")
+                    }
+                    .disabled(!canSave)
                 }
             }
             .alert(isPresented: Binding<Bool>(
@@ -4086,53 +4084,6 @@ struct QuickAddView: View {
         guard let food = makeFood() else { return }
         onFoodReady(food)
         isPresented = false
-    }
-
-    private func logFood() {
-        guard let food = makeFood() else { return }
-        guard !isSaving else { return }
-        isSaving = true
-
-        let email = onboarding.email.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : onboarding.email
-
-        foodManager.logFood(
-            email: email,
-            food: food,
-            meal: mealPeriod.title,
-            servings: 1,
-            date: mealTime,
-            notes: nil
-        ) { result in
-            DispatchQueue.main.async {
-                self.isSaving = false
-                switch result {
-                case .success(let logged):
-                    let combined = CombinedLog(
-                        type: .food,
-                        status: logged.status,
-                        calories: Double(logged.food.calories),
-                        message: "\(logged.food.displayName) - \(logged.mealType)",
-                        foodLogId: logged.foodLogId,
-                        food: logged.food,
-                        mealType: logged.mealType,
-                        mealLogId: nil,
-                        meal: nil,
-                        mealTime: nil,
-                        scheduledAt: mealTime,
-                        recipeLogId: nil,
-                        recipe: nil,
-                        servingsConsumed: nil,
-                        isOptimistic: true
-                    )
-                    dayLogsVM.addPending(combined)
-                    foodManager.combinedLogs.removeAll { $0.foodLogId == combined.foodLogId }
-                    foodManager.combinedLogs.insert(combined, at: 0)
-                    isPresented = false
-                case .failure(let error):
-                    errorMessage = error.localizedDescription
-                }
-            }
-        }
     }
 
     private func makeFood() -> Food? {
