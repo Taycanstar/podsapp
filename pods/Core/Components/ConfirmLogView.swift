@@ -3746,7 +3746,7 @@ private struct PlateEntryRow: View {
             }
 
             HStack(spacing: 10) {
-                Label("\(Int(entry.macroTotals.calories.rounded()))cal", systemImage: "flame")
+                Label("\(Int(entry.macroTotals.calories.rounded()))cal", systemImage: "flame.fill")
                     .font(.caption)
                     .foregroundColor(.primary)
                 Text(macroLine)
@@ -3755,7 +3755,8 @@ private struct PlateEntryRow: View {
                 Spacer()
             }
         }
-        .padding(16)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 18)
                 .fill(plateCardColor)
