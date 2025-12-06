@@ -208,10 +208,10 @@ struct ConfirmLogView: View {
         if !food.foodMeasures.isEmpty {
             for (index, measure) in food.foodMeasures.enumerated() {
                 print("  Measure \(index + 1):")
-                print("    - Text: \(measure.disseminationText ?? "N/A")")
+                print("    - Text: \(measure.disseminationText)")
                 print("    - Modifier: \(measure.modifier ?? "N/A")")
-                print("    - Unit: \(measure.measureUnitName ?? "N/A")")
-                print("    - Gram Weight: \(measure.gramWeight ?? 0)")
+                print("    - Unit: \(measure.measureUnitName)")
+                print("    - Gram Weight: \(measure.gramWeight)")
             }
         } else {
             print("  No measures available")
@@ -498,7 +498,7 @@ struct ConfirmLogView: View {
 
             footerBar
         }
-        .background(Color("iosbg").ignoresSafeArea())
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(title.isEmpty ? (originalFood?.displayName ?? "Log Food") : title)
         .navigationBarBackButtonHidden(true)
@@ -583,7 +583,7 @@ struct ConfirmLogView: View {
         .padding(.horizontal)
         .padding(.bottom, 12)
         .background(
-            Color("iosbg")
+            Color(UIColor.systemGroupedBackground)
                 .ignoresSafeArea(edges: .bottom)
         )
     }
@@ -688,7 +688,7 @@ struct ConfirmLogView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(Color("iosnp"))
+                .fill(Color("bg"))
         )
     }
 
@@ -710,11 +710,7 @@ struct ConfirmLogView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(
-                    LinearGradient(colors: [Color("iosnp"), Color("iosnp").opacity(0.8)],
-                                   startPoint: .topLeading,
-                                   endPoint: .bottomTrailing)
-                )
+                .fill(Color("bg"))
         )
         .padding(.horizontal)
     }
@@ -955,7 +951,7 @@ private struct MealItemServingControls: View {
 
     private func handleMeasureSelection(_ measure: FoodMeasure) {
         selectedMeasureId = measure.id
-        servingSize = measure.disseminationText ?? measure.measureUnitName
+        servingSize = measure.disseminationText
         servingUnit = measure.measureUnitName
         updateNutritionValues()
     }
@@ -989,62 +985,69 @@ private struct MealItemServingControls: View {
     private var portionDetailsCard: some View {
         VStack(spacing: 0) {
             labeledRow("Serving Size") {
-                if hasMeasureOptions {
-                    Menu {
-                        ForEach(availableMeasures, id: \.id) { measure in
-                            Button(measure.disseminationText ?? measure.measureUnitName) {
-                                handleMeasureSelection(measure)
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text(selectedMeasureLabel)
-                                .font(.body)
-                                .foregroundColor(.primary)
-                            Image(systemName: "chevron.down")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 8)
+                HStack(spacing: 8) {
+                    TextField("1", text: $servingsInput)
+                        .keyboardType(.numbersAndPunctuation)
+                        .multilineTextAlignment(.center)
+                        .focused($isServingsFocused)
+                        .padding(.vertical, 4)
                         .padding(.horizontal, 12)
                         .background(
                             Capsule()
-                                .fill(Color("iosnp"))
+                                .fill(Color(.secondarySystemFill))
                         )
+                        .frame(width: 70)
+                        .onChange(of: servingsInput) { newValue in
+                            guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
+                            if abs(parsed - numberOfServings) > 0.0001 {
+                                numberOfServings = parsed
+                                updateNutritionValues()
+                            }
+                        }
+
+                    if hasMeasureOptions {
+                        Menu {
+                            ForEach(availableMeasures, id: \.id) { measure in
+                                Button(sanitizedMeasureLabel(measure)) {
+                                    handleMeasureSelection(measure)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(sanitizedMeasureLabel(selectedMeasure ?? availableMeasures.first))
+                                    .font(.body)
+                                    .foregroundColor(.primary)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 12)
+                            .background(
+                                Capsule()
+                                    .fill(Color(.secondarySystemFill))
+                            )
+                        }
+                        .menuStyle(.borderlessButton)
+                    } else {
+                        Text(sanitizedMeasureLabel(selectedMeasure ?? availableMeasures.first))
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 12)
+                            .background(
+                                Capsule()
+                                    .fill(Color(.secondarySystemFill))
+                            )
                     }
-                } else {
-                    Text(selectedMeasureLabel)
-                        .font(.body)
-                        .foregroundColor(.secondary)
                 }
             }
             
             Divider().padding(.leading, 16)
             
-            labeledRow("Servings") {
-                TextField("Enter servings", text: $servingsInput)
-                    .keyboardType(.numbersAndPunctuation)
-                    .multilineTextAlignment(.trailing)
-                    .focused($isServingsFocused)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(
-                        Capsule()
-                            .fill(Color("iosnp"))
-                    )
-                    .onChange(of: servingsInput) { newValue in
-                        guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
-                        if abs(parsed - numberOfServings) > 0.0001 {
-                            numberOfServings = parsed
-                            updateNutritionValues()
-                        }
-                    }
-            }
-            
-            Divider().padding(.leading, 16)
-            
             labeledRow("Time", verticalPadding: 10) {
-                HStack(spacing: 8) {
+                HStack(spacing: 16) {
+                    Spacer()
                     Menu {
                         ForEach(MealPeriod.allCases) { period in
                             Button(period.title) {
@@ -1055,8 +1058,8 @@ private struct MealItemServingControls: View {
                         capsulePill {
                             HStack(spacing: 4) {
                                 Text(selectedMealPeriod.title)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
                         }
@@ -1070,13 +1073,8 @@ private struct MealItemServingControls: View {
                         }
                     } label: {
                         capsulePill {
-                            HStack(spacing: 6) {
-                                Text(relativeDayAndTimeString(for: mealTime))
-                                    .foregroundColor(.primary)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
+                            Text(relativeDayAndTimeString(for: mealTime))
+                                .foregroundColor(.primary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -1098,9 +1096,21 @@ private struct MealItemServingControls: View {
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("iosnp"))
+                .fill(Color("bg"))
         )
         .padding(.horizontal)
+    }
+
+    private func sanitizedMeasureLabel(_ measure: FoodMeasure?) -> String {
+        guard let measure else { return "serving" }
+        var label = measure.disseminationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let range = label.range(of: "(") {
+            label = String(label[..<range.lowerBound])
+        }
+        let numberPrefixPattern = "^[0-9]+(\\.[0-9]+)?([/][0-9]+)?\\s*(x|×)?\\s*"
+        label = label.replacingOccurrences(of: numberPrefixPattern, with: "", options: .regularExpression)
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? measure.measureUnitName : trimmed
     }
     
     private func labeledRow<Content: View>(
@@ -1123,7 +1133,7 @@ private struct MealItemServingControls: View {
             .foregroundColor(.primary)
             .padding(.vertical, 6)
             .padding(.horizontal, 12)
-            .background(Color("iosnp"))
+            .background(Color(.secondarySystemFill))
             .cornerRadius(12)
     }
     
@@ -1157,7 +1167,7 @@ private struct MealItemServingControls: View {
             }
         }
         if let text = food.householdServingFullText?.lowercased() {
-            if let match = measures.first(where: { ($0.disseminationText ?? "").lowercased() == text }) {
+            if let match = measures.first(where: { $0.disseminationText.lowercased() == text }) {
                 return match
             }
         }
@@ -1210,7 +1220,7 @@ private struct MealItemServingControls: View {
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color("iosnp"))
+                    .fill(Color("bg"))
             )
         }
         .padding(.horizontal)
@@ -1252,7 +1262,7 @@ private struct MealItemServingControls: View {
         .padding(24)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("iosnp"))
+                .fill(Color("bg"))
         )
         .padding(.horizontal)
     }
@@ -1288,7 +1298,7 @@ private struct MealItemServingControls: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("iosnp"))
+                .fill(Color("bg"))
         )
         .padding(.horizontal)
     }
@@ -1307,7 +1317,7 @@ private struct MealItemServingControls: View {
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color("iosnp"))
+                    .fill(Color("bg"))
             )
         }
         .padding(.horizontal)
@@ -1509,7 +1519,7 @@ private struct MealItemServingControls: View {
         VStack(alignment: .leading, spacing: 12) {
             ZStack(alignment: .top) {
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color("iosnp"))
+                    .fill(Color("bg"))
                 
                 VStack(spacing: 0) {
                     if let health = healthAnalysis {
@@ -2931,9 +2941,10 @@ struct PlateView: View {
 
             footerBar
         }
-        .background(Color("iosbg").ignoresSafeArea())
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("My Plate")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: { dismiss() }) {
@@ -3021,7 +3032,6 @@ struct PlateView: View {
                     ForEach(viewModel.entries) { entry in
                         PlateEntryRow(
                             entry: entry,
-                            onDelete: { viewModel.remove(entry) },
                             onServingsChange: { servings in
                                 viewModel.updateServings(for: entry.id, servings: servings)
                             },
@@ -3049,8 +3059,9 @@ struct PlateView: View {
                     capsulePill {
                         HStack(spacing: 4) {
                             Text(selectedMealPeriod.title)
-                            Image(systemName: "chevron.down")
-                                .font(.caption)
+                                .foregroundColor(.primary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -3066,19 +3077,14 @@ struct PlateView: View {
                         showMealTimePicker.toggle()
                     }
                 } label: {
-                    HStack(spacing: 6) {
-                        Text(relativeDayAndTimeString(for: mealTime))
-                            .foregroundColor(.primary)
-                        Image(systemName: "chevron.down")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(
-                        Capsule()
-                            .fill(Color("iosnp"))
-                    )
+                    Text(relativeDayAndTimeString(for: mealTime))
+                        .foregroundColor(.primary)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(
+                            Capsule()
+                                .fill(Color(.secondarySystemFill))
+                        )
                 }
                 .buttonStyle(.plain)
             }
@@ -3098,7 +3104,7 @@ struct PlateView: View {
         .padding(.horizontal)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("iosnp"))
+                .fill(Color("bg"))
         )
         .padding(.horizontal)
     }
@@ -3121,11 +3127,7 @@ struct PlateView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(
-                    LinearGradient(colors: [Color("iosnp"), Color("iosnp").opacity(0.8)],
-                                   startPoint: .topLeading,
-                                   endPoint: .bottomTrailing)
-                )
+                .fill(Color("bg"))
         )
         .padding(.horizontal)
     }
@@ -3212,7 +3214,7 @@ struct PlateView: View {
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color("iosnp"))
+                    .fill(Color("bg"))
             )
         }
         .padding(.horizontal)
@@ -3254,7 +3256,7 @@ struct PlateView: View {
         .padding(24)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("iosnp"))
+                .fill(Color("bg"))
         )
         .padding(.horizontal)
     }
@@ -3290,7 +3292,7 @@ struct PlateView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color("iosnp"))
+                .fill(Color("bg"))
         )
         .padding(.horizontal)
     }
@@ -3309,7 +3311,7 @@ struct PlateView: View {
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color("iosnp"))
+                    .fill(Color("bg"))
             )
         }
         .padding(.horizontal)
@@ -3524,7 +3526,7 @@ struct PlateView: View {
                     Button {
                         showTextLog = true
                     } label: {
-                        Label("Text", systemImage: "textformat.abc")
+                        Label("Text", systemImage: "text.alignleft")
                     }
 
                     Button {
@@ -3556,7 +3558,7 @@ struct PlateView: View {
         .padding(.horizontal)
         .padding(.bottom, 24)
         .background(
-            Color("iosbg")
+            Color(UIColor.systemGroupedBackground)
                 .ignoresSafeArea(edges: .bottom)
         )
     }
@@ -3626,7 +3628,7 @@ struct PlateView: View {
         HStack {
             Text(title)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(.primary)
             Spacer()
             content()
         }
@@ -3639,25 +3641,22 @@ struct PlateView: View {
             .padding(.horizontal, 14)
             .background(
                 Capsule()
-                    .fill(Color("iosnp"))
+                    .fill(Color(.secondarySystemFill))
             )
     }
 }
 
 private struct PlateEntryRow: View {
     let entry: PlateEntry
-    let onDelete: () -> Void
     let onServingsChange: (Double) -> Void
     let onMeasureChange: (Int?) -> Void
 
     @State private var servingsInput: String
 
     init(entry: PlateEntry,
-         onDelete: @escaping () -> Void,
          onServingsChange: @escaping (Double) -> Void,
          onMeasureChange: @escaping (Int?) -> Void) {
         self.entry = entry
-        self.onDelete = onDelete
         self.onServingsChange = onServingsChange
         self.onMeasureChange = onMeasureChange
         _servingsInput = State(initialValue: ConfirmLogView.formattedServings(entry.servings))
@@ -3667,47 +3666,24 @@ private struct PlateEntryRow: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
+                    Text(entry.title)
+                        .font(.body)
+                        .fontWeight(.regular)
+                        .foregroundColor(.primary)
                     if !entry.brand.isEmpty {
                         Text(entry.brand)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    Text(entry.title)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    Text(entry.currentMeasureLabel)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
                 }
 
                 Spacer(minLength: 12)
 
-                Menu {
-                    Button(role: .destructive, action: onDelete) {
-                        Text("Delete Food")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .padding(6)
-                }
-            }
-
-            HStack(spacing: 8) {
-                servingsField
-                measureControl
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red)
-                        .padding(10)
-                        .background(Color.primary.opacity(0.06))
-                        .clipShape(Circle())
-                }
+                servingControl
             }
 
             HStack(spacing: 10) {
-                Label("\(Int(entry.macroTotals.calories.rounded())) cal", systemImage: "flame")
+                Label("\(Int(entry.macroTotals.calories.rounded()))cal", systemImage: "flame")
                     .font(.caption)
                     .foregroundColor(.primary)
                 Text(macroLine)
@@ -3719,7 +3695,7 @@ private struct PlateEntryRow: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(Color("iosnp"))
+                .fill(Color("bg"))
         )
         .onChange(of: entry.servings) { newValue in
             let formatted = ConfirmLogView.formattedServings(newValue)
@@ -3729,80 +3705,129 @@ private struct PlateEntryRow: View {
         }
     }
 
-    private var servingsField: some View {
-        TextField("1", text: $servingsInput)
-            .keyboardType(.numbersAndPunctuation)
-            .submitLabel(.done)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color.primary.opacity(0.06))
-            .cornerRadius(12)
-            .frame(width: 64)
-            .onChange(of: servingsInput) { newValue in
-                guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
-                onServingsChange(parsed)
-            }
-    }
+    private var servingControl: some View {
+        HStack(spacing: 8) {
+            TextField("1", text: $servingsInput)
+                .keyboardType(.numbersAndPunctuation)
+                .submitLabel(.done)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule().fill(Color(.secondarySystemFill))
+                )
+                .frame(width: 70)
+                .onChange(of: servingsInput) { newValue in
+                    if let parsed = ConfirmLogView.parseServingsInput(newValue) {
+                        onServingsChange(parsed)
+                    }
+                }
 
-    @ViewBuilder
-    private var measureControl: some View {
-        if entry.availableMeasures.count > 1 {
-            Menu {
-                ForEach(entry.availableMeasures, id: \.id) { measure in
-                    Button(action: { onMeasureChange(measure.id) }) {
-                        HStack {
-                            Text(measureLabel(for: measure))
-                                .lineLimit(1)
-                            Spacer()
-                            if measure.id == entry.selectedMeasureId {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.accentColor)
+            if entry.availableMeasures.count > 1 {
+                Menu {
+                    ForEach(entry.availableMeasures, id: \.id) { measure in
+                        Button(action: { onMeasureChange(measure.id) }) {
+                            HStack {
+                                Text(shortMeasureLabel(for: measure))
+                                Spacer()
+                                if measure.id == entry.selectedMeasureId {
+                                    Image(systemName: "checkmark")
+                                }
                             }
                         }
                     }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(shortMeasureLabel(for: entry.selectedMeasure ?? entry.availableMeasures.first))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule().fill(Color(.secondarySystemFill))
+                    )
                 }
-            } label: {
-                HStack(spacing: 6) {
-                    Text(measureLabel(for: entry.selectedMeasure))
-                        .lineLimit(1)
-                        .foregroundColor(.primary)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(Color.primary.opacity(0.06))
-                .cornerRadius(12)
-                .frame(minWidth: 130, alignment: .leading)
+                .menuStyle(.borderlessButton)
+            } else {
+                Text(shortMeasureLabel(for: entry.selectedMeasure ?? entry.availableMeasures.first))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule().fill(Color(.secondarySystemFill))
+                    )
             }
-            .menuStyle(.borderlessButton)
-        } else {
-            Text(measureLabel(for: entry.selectedMeasure))
-                .font(.subheadline)
-                .foregroundColor(.primary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(Color.primary.opacity(0.06))
-                .cornerRadius(12)
-                .frame(minWidth: 130, alignment: .leading)
         }
     }
 
     private var macroLine: String {
         let totals = entry.macroTotals
-        let weight = String(format: "%.1f", entry.totalGramWeight)
-        return "P \\(totals.protein.cleanZeroDecimal)g C \\(totals.carbs.cleanZeroDecimal)g F \\(totals.fat.cleanZeroDecimal)g • \\(weight)g"
+        return "P \(totals.protein.cleanZeroDecimal)g C \(totals.carbs.cleanZeroDecimal)g F \(totals.fat.cleanZeroDecimal)g • \(weightLabel(for: entry))"
     }
 
     private func measureLabel(for measure: FoodMeasure?) -> String {
-        guard let measure else { return "Select" }
+        guard let measure else { return "serving" }
         let trimmed = measure.disseminationText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            return trimmed
-        }
+        if !trimmed.isEmpty { return trimmed }
         return measure.measureUnitName
+    }
+
+    private func shortMeasureLabel(for measure: FoodMeasure?) -> String {
+        guard let measure else { return "serving" }
+        var label = measureLabel(for: measure)
+        if let range = label.range(of: "(") {
+            label = String(label[..<range.lowerBound])
+        }
+        let numberPrefixPattern = "^[0-9]+(\\.[0-9]+)?([/][0-9]+)?\\s*(x|×)?\\s*"
+        label = label.replacingOccurrences(of: numberPrefixPattern, with: "", options: .regularExpression)
+        return label.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func weightLabel(for entry: PlateEntry) -> String {
+        guard let measure = entry.selectedMeasure ?? entry.availableMeasures.first else {
+            return "\(entry.totalGramWeight.cleanZeroDecimal)g"
+        }
+        if let parsed = parsedWeight(from: measure.disseminationText, servings: entry.servings) {
+            return parsed
+        }
+        let unitHint = measure.measureUnitName.lowercased()
+        let weight = entry.selectedMeasureWeight * entry.servings
+        if unitHint.contains("ml") || measure.disseminationText.lowercased().contains("ml") {
+            return "\(weight.cleanZeroDecimal)mL"
+        }
+        if unitHint.contains("fl") {
+            return "\(weight.cleanZeroDecimal)fl oz"
+        }
+        return "\(weight.cleanZeroDecimal)g"
+    }
+
+    private func parsedWeight(from text: String, servings: Double) -> String? {
+        let pattern = #"([0-9]*\.?[0-9]+)\s*(ml|mL|fl oz|oz|g)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
+        let range = NSRange(location: 0, length: text.utf16.count)
+        guard let match = regex.firstMatch(in: text, options: [], range: range),
+              match.numberOfRanges >= 3,
+              let valueRange = Range(match.range(at: 1), in: text),
+              let unitRange = Range(match.range(at: 2), in: text),
+              let baseValue = Double(text[valueRange]) else { return nil }
+        let unitRaw = String(text[unitRange]).lowercased()
+        let total = baseValue * servings
+        let unitLabel: String
+        switch unitRaw {
+        case "ml":
+            unitLabel = "mL"
+        case "fl oz":
+            unitLabel = "fl oz"
+        case "oz":
+            unitLabel = "oz"
+        default:
+            unitLabel = "g"
+        }
+        return "\(total.cleanZeroDecimal)\(unitLabel)"
     }
 }
 
@@ -4426,7 +4451,7 @@ private struct MealItemServingControlsPreview: View {
     var body: some View {
         MealItemServingControls(item: $item)
             .padding()
-            .background(Color("iosnp"))
+            .background(Color("bg"))
             .previewLayout(.sizeThatFits)
     }
 }
@@ -4434,7 +4459,7 @@ private struct MealItemServingControlsPreview: View {
 #Preview("Meal Item Measure Picker") {
     MealItemServingControlsPreview()
         .padding()
-        .background(Color("iosbg"))
+        .background(Color(UIColor.systemGroupedBackground))
         .preferredColorScheme(.dark)
 }
 #endif

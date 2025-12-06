@@ -95,6 +95,15 @@ final class NutritionixService {
             }
 
             do {
+// #if DEBUG
+                if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []),
+                   let pretty = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted]),
+                   let jsonString = String(data: pretty, encoding: .utf8) {
+                    print("📦 [Nutritionix] Raw response for barcode \(barcode):\n\(jsonString)")
+                } else if let rawString = String(data: data, encoding: .utf8) {
+                    print("📦 [Nutritionix] Raw response (fallback) for barcode \(barcode):\n\(rawString)")
+                }
+// #endif
                 let decoder = JSONDecoder()
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
                 let itemResponse = try decoder.decode(NutritionixItemResponse.self, from: data)
@@ -112,6 +121,56 @@ final class NutritionixService {
         guard let item = response.foods?.first ?? response.branded?.first else {
             return nil
         }
+
+        func formattedQuantity(_ value: Double) -> String {
+            if value.truncatingRemainder(dividingBy: 1) == 0 {
+                return String(Int(value))
+            }
+            var string = String(format: "%.2f", value)
+            while string.last == "0" {
+                string.removeLast()
+            }
+            if string.last == "." {
+                string.removeLast()
+            }
+            return string
+        }
+
+        func gramWeight(from qty: Double?, unitRaw: String?) -> Double? {
+            guard let qty, qty > 0 else { return nil }
+            guard let raw = unitRaw?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+                return qty
+            }
+            if raw.contains("ml") { return qty }
+            if raw.contains("gram") || raw == "g" { return qty }
+            if raw.contains("fl oz") || raw.contains("floz") { return qty * 29.5735 }
+            if raw.contains("oz") { return qty * 28.3495 }
+            return nil
+        }
+
+#if DEBUG
+        print("🍽 [Nutritionix] Raw item for barcode \(barcode):")
+        print("  foodName: \(item.foodName ?? "<nil>")")
+        print("  brandName: \(item.brandName ?? "<nil>")")
+        print("  servingQty: \(item.servingQty.map(String.init) ?? "<nil>")")
+        print("  servingUnit: \(item.servingUnit ?? "<nil>")")
+        print("  servingWeightGrams: \(item.servingWeightGrams.map(String.init) ?? "<nil>")")
+        if let measures = item.altMeasures, !measures.isEmpty {
+            print("  altMeasures (\(measures.count)):")
+            for (idx, alt) in measures.enumerated() {
+                let qtyText = alt.qty.map(String.init) ?? "<nil>"
+                let weightText = alt.servingWeight.map(String.init) ?? "<nil>"
+                print("    [\(idx)] measure: \(alt.measure ?? "<nil>"), qty: \(qtyText), grams: \(weightText)")
+            }
+        } else {
+            print("  altMeasures: <none>")
+        }
+        if let nutrients = item.fullNutrients, !nutrients.isEmpty {
+            print("  fullNutrients count: \(nutrients.count)")
+        } else {
+            print("  fullNutrients: <none>")
+        }
+#endif
 
         let name = item.brandNameItemName ?? item.foodName ?? "Food"
         let brand = item.brandName ?? item.brandOwner
@@ -152,12 +211,33 @@ final class NutritionixService {
             }
         }
 
-        let measures = item.altMeasures?.compactMap { alt -> MealItemMeasure? in
+        var measures: [MealItemMeasure] = item.altMeasures?.compactMap { alt -> MealItemMeasure? in
             guard let weight = alt.servingWeight, weight > 0 else { return nil }
-            _ = alt.qty ?? 1
             let description = alt.measure?.isEmpty == false ? alt.measure! : "serving"
             return MealItemMeasure(unit: description, description: description, gramWeight: weight)
         } ?? []
+
+        let metricQty = item.nfMetricQty
+        let metricUnit = item.nfMetricUom?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let metricGramWeight = gramWeight(from: metricQty, unitRaw: metricUnit)
+        let baseWeight = servingWeight ?? metricGramWeight ?? measures.first?.gramWeight ?? 0
+        let baseLabel: String = {
+            if let metricQty, metricQty > 0, !metricUnit.isEmpty {
+                return "\(servingUnit) (\(formattedQuantity(metricQty)) \(metricUnit))"
+            }
+            let fallback = formattedServingText(qty: servingQty, unit: servingUnit, grams: servingWeight)
+            return fallback.isEmpty ? "\(formattedQuantity(servingQty)) \(servingUnit)" : fallback
+        }()
+        // Ensure we always have a baseline measure that matches the serving unit
+        if !measures.contains(where: { $0.unit.lowercased() == servingUnit.lowercased() }) {
+            let grams = baseWeight > 0 ? baseWeight : 1
+            measures.insert(MealItemMeasure(unit: servingUnit, description: baseLabel, gramWeight: grams), at: 0)
+        }
+
+        if measures.isEmpty {
+            let grams = baseWeight > 0 ? baseWeight : 1
+            measures.append(MealItemMeasure(unit: servingUnit, description: baseLabel, gramWeight: grams))
+        }
 
         let foodMeasures: [FoodMeasure] = measures.enumerated().map { index, measure in
             FoodMeasure(
@@ -279,6 +359,8 @@ private struct NutritionixFood: Decodable {
     let nfDietaryFiber: Double?
     let nfSodium: Double?
     let nfIngredientStatement: String?
+    let nfMetricQty: Double?
+    let nfMetricUom: String?
     let altMeasures: [NutritionixAltMeasure]?
     let fullNutrients: [NutritionixFullNutrient]?
 }

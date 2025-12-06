@@ -33,6 +33,10 @@ struct PlateEntry: Identifiable, Equatable {
         return servingDescription
     }
 
+    var selectedMeasureWeight: Double {
+        selectedMeasure?.gramWeight ?? baselineGramWeight
+    }
+
     private var measureScalingFactor: Double {
         guard let measure = selectedMeasure,
               baselineGramWeight > 0,

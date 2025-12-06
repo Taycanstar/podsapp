@@ -259,8 +259,6 @@
 		36CB032C2D5AAD5C006A74E9 /* LogFood.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB032B2D5AAD5C006A74E9 /* LogFood.swift */; };
 		36CB032E2D5AAFA0006A74E9 /* FoodContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB032D2D5AAFA0006A74E9 /* FoodContainerView.swift */; };
 		36CB03302D5B04DD006A74E9 /* FoodSearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB032F2D5B04DD006A74E9 /* FoodSearchModel.swift */; };
-		492A0CD08D31DADDF32E3CFF /* NutritionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F13F3ECC08E9A4061384C6 /* NutritionModels.swift */; };
-		769EDF00E677512728718F0D /* PlateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B846A68C19E7A724CEDBCEC /* PlateViewModel.swift */; };
 		36CB03332D5BA200006A74E9 /* FoodDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB03322D5BA200006A74E9 /* FoodDetailView.swift */; };
 		36CB03352D5BA5AC006A74E9 /* UserGoals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36CB03342D5BA5AC006A74E9 /* UserGoals.swift */; };
 		36CB03372D5C6D68006A74E9 /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = 36CB03362D5C6D68006A74E9 /* Mixpanel */; };
@@ -333,7 +331,6 @@
 		36ED35B62DD7F28900D174FB /* EditHeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B52DD7F28900D174FB /* EditHeightView.swift */; };
 		36ED35B82DD92FF000D174FB /* UserDataModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B72DD92FF000D174FB /* UserDataModel.swift */; };
 		36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35B92DD938B900D174FB /* WeightDataView.swift */; };
-		C5815F6130304BA3D7590704 /* BodyFatLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */; };
 		36ED35BC2DD938C800D174FB /* HeightDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35BB2DD938C800D174FB /* HeightDataView.swift */; };
 		36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */; };
 		36ED35C02DDBB0C100D174FB /* GoalProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ED35BF2DDBB0C100D174FB /* GoalProgress.swift */; };
@@ -387,9 +384,12 @@
 		36FFF1112FBEBE6000A1C0DE /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1102FBEBE6000A1C0DE /* AgentService.swift */; };
 		36FFF1212FBEBE6000A1C0DE /* AgentChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1202FBEBE6000A1C0DE /* AgentChatViewModel.swift */; };
 		36FFF1312FBEBE6000A1C0DE /* AgentChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1302FBEBE6000A1C0DE /* AgentChatView.swift */; };
+		492A0CD08D31DADDF32E3CFF /* NutritionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F13F3ECC08E9A4061384C6 /* NutritionModels.swift */; };
 		50FB9842CD464A8F9D9E63AB /* ProFoodSearchLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */; };
 		6DF1182C44BE49149F12E422 /* ProFoodSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678276B9D0A646E8AD3315C6 /* ProFoodSearchView.swift */; };
+		769EDF00E677512728718F0D /* PlateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B846A68C19E7A724CEDBCEC /* PlateViewModel.swift */; };
 		993D36B04429BBA2F60D3C78 /* Pods_podsTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */; };
+		C5815F6130304BA3D7590704 /* BodyFatLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */; };
 		E36B16EAF8FAA9F61C9B6EE4 /* Pods_Podstack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */; };
 		FE89CA7C7A7ACE9377E9B6E4 /* Pods_Podstack_podsUITests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A0C6B5CEE1B4DF7C2A254720 /* Pods_Podstack_podsUITests.framework */; };
 /* End PBXBuildFile section */
@@ -413,6 +413,7 @@
 
 /* Begin PBXFileReference section */
 		08B2A48D67EC66DBC9127401 /* Pods-Podstack.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack.debug.xcconfig"; path = "Target Support Files/Pods-Podstack/Pods-Podstack.debug.xcconfig"; sourceTree = "<group>"; };
+		0B846A68C19E7A724CEDBCEC /* PlateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlateViewModel.swift; path = Pods/viewModels/PlateViewModel.swift; sourceTree = SOURCE_ROOT; };
 		0F703D10ADA524ACB9298442 /* Pods-pods-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pods-podsUITests.release.xcconfig"; path = "Target Support Files/Pods-pods-podsUITests/Pods-pods-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
 		2330B374B8A4F2AA057F33F8 /* Pods_podsTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_podsTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		298E12AED7C54F17AB5D6B77 /* ScheduleMealSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScheduleMealSheet.swift; path = Pods/Core/Views/food/ScheduleMealSheet.swift; sourceTree = SOURCE_ROOT; };
@@ -665,7 +666,6 @@
 		36CB032B2D5AAD5C006A74E9 /* LogFood.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogFood.swift; sourceTree = "<group>"; };
 		36CB032D2D5AAFA0006A74E9 /* FoodContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodContainerView.swift; sourceTree = "<group>"; };
 		36CB032F2D5B04DD006A74E9 /* FoodSearchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodSearchModel.swift; path = Pods/viewModels/FoodSearchModel.swift; sourceTree = SOURCE_ROOT; };
-		0B846A68C19E7A724CEDBCEC /* PlateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlateViewModel.swift; path = Pods/viewModels/PlateViewModel.swift; sourceTree = SOURCE_ROOT; };
 		36CB03322D5BA200006A74E9 /* FoodDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodDetailView.swift; sourceTree = "<group>"; };
 		36CB03342D5BA5AC006A74E9 /* UserGoals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserGoals.swift; sourceTree = "<group>"; };
 		36CB03382D5E4B2A006A74E9 /* FoodManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodManager.swift; sourceTree = "<group>"; };
@@ -736,7 +736,6 @@
 		36ED35B52DD7F28900D174FB /* EditHeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditHeightView.swift; sourceTree = "<group>"; };
 		36ED35B72DD92FF000D174FB /* UserDataModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDataModel.swift; sourceTree = "<group>"; };
 		36ED35B92DD938B900D174FB /* WeightDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightDataView.swift; sourceTree = "<group>"; };
-		89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyFatLogView.swift; sourceTree = "<group>"; };
 		36ED35BB2DD938C800D174FB /* HeightDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightDataView.swift; sourceTree = "<group>"; };
 		36ED35BD2DDB9A8000D174FB /* FoodLogDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodLogDetails.swift; sourceTree = "<group>"; };
 		36ED35BF2DDBB0C100D174FB /* GoalProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalProgress.swift; sourceTree = "<group>"; };
@@ -800,10 +799,11 @@
 		7B4F087B81EB202BAECDD410 /* Pods_Podstack.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Podstack.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		828AD9036235BA1CC3FDB722 /* Pods-Podstack-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Podstack-podsUITests.release.xcconfig"; path = "Target Support Files/Pods-Podstack-podsUITests/Pods-Podstack-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
 		83EDB7BB4B1CA39393C90454 /* Pods-podsTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-podsTests.debug.xcconfig"; path = "Target Support Files/Pods-podsTests/Pods-podsTests.debug.xcconfig"; sourceTree = "<group>"; };
+		89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyFatLogView.swift; sourceTree = "<group>"; };
 		9D174B3487294C0999CCBCD6 /* ProFeatureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProFeatureModels.swift; path = Pods/Core/Models/ProFeatureModels.swift; sourceTree = SOURCE_ROOT; };
-		B6F13F3ECC08E9A4061384C6 /* NutritionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionModels.swift; path = Pods/Core/Models/NutritionModels.swift; sourceTree = SOURCE_ROOT; };
 		A0C6B5CEE1B4DF7C2A254720 /* Pods_Podstack_podsUITests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Podstack_podsUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A8FF55E88400FA719CC858C9 /* Pods-pods.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pods.debug.xcconfig"; path = "Target Support Files/Pods-pods/Pods-pods.debug.xcconfig"; sourceTree = "<group>"; };
+		B6F13F3ECC08E9A4061384C6 /* NutritionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionModels.swift; path = Pods/Core/Models/NutritionModels.swift; sourceTree = SOURCE_ROOT; };
 		D92FAAFEE961B65BFA364123 /* Pods-podsTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-podsTests.release.xcconfig"; path = "Target Support Files/Pods-podsTests/Pods-podsTests.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -2325,7 +2325,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				GOOGLE_CLIENT_ID = "499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com";
 				INFOPLIST_FILE = pods/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Humuli;
+				INFOPLIST_KEY_CFBundleDisplayName = Metryc;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to cutom workouts.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "We use your health data to track your nutrition, activity, and progress towards your goals.";
@@ -2395,7 +2395,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				GOOGLE_CLIENT_ID = "499226633317-ushdhusm5di8eee2b1qm1ah335pqrq0h.apps.googleusercontent.com";
 				INFOPLIST_FILE = pods/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Humuli;
+				INFOPLIST_KEY_CFBundleDisplayName = Metryc;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Access to the camera is required to capture videos to attach to cutom workouts.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "We use your health data to track your nutrition, activity, and progress towards your goals.";
