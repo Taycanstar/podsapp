@@ -23,6 +23,8 @@ struct ConfirmLogView: View {
     @State private var servingSize: String = ""
     @State private var numberOfServings: Double = 1
     @State private var servingsInput: String = "1"
+    @State private var servingAmount: Double = 1
+    @State private var servingAmountInput: String = "1"
     @State private var calories: String = ""
     
     // Basic nutrition facts
@@ -149,6 +151,7 @@ struct ConfirmLogView: View {
               measure.gramWeight > 0 else { return 1 }
         return measure.gramWeight / baselineMeasureGramWeight
     }
+    private var effectiveServings: Double { servingAmount * numberOfServings }
     private var backgroundColor: Color {
         colorScheme == .dark ? Color("bg") : Color(UIColor.systemGroupedBackground)
     }
@@ -160,7 +163,7 @@ struct ConfirmLogView: View {
     }
 
     private func scaledValue(_ value: Double) -> Double {
-        value * measureScalingFactor
+        value * measureScalingFactor * servingAmount
     }
 
     private var selectedMeasureLabel: String {
@@ -261,9 +264,11 @@ struct ConfirmLogView: View {
         }
         
         // Set number of servings (default to 1 if nil)
-        let initialServings = food.numberOfServings ?? 1
-        self._numberOfServings = State(initialValue: initialServings)
-        self._servingsInput = State(initialValue: ConfirmLogView.formattedServings(initialServings))
+        let initialAmount = food.numberOfServings ?? 1
+        self._servingAmount = State(initialValue: initialAmount)
+        self._servingAmountInput = State(initialValue: ConfirmLogView.formattedServings(initialAmount))
+        self._numberOfServings = State(initialValue: 1)
+        self._servingsInput = State(initialValue: "1")
 
         // Calculate nutrition value variables without modifying state directly
         var tmpCalories: Double = 0
@@ -411,23 +416,23 @@ struct ConfirmLogView: View {
     private let carbColor = Color("carbs")
 
     private var adjustedProtein: Double {
-        calculateAdjustedValue(scaledValue(baseProtein), servings: numberOfServings)
+        calculateAdjustedValue(scaledValue(baseProtein), servings: effectiveServings)
     }
 
     private var adjustedCarbs: Double {
-        calculateAdjustedValue(scaledValue(baseCarbs), servings: numberOfServings)
+        calculateAdjustedValue(scaledValue(baseCarbs), servings: effectiveServings)
     }
 
     private var adjustedFat: Double {
-        calculateAdjustedValue(scaledValue(baseFat), servings: numberOfServings)
+        calculateAdjustedValue(scaledValue(baseFat), servings: effectiveServings)
     }
 
     private var adjustedFiber: Double {
-        calculateAdjustedValue(scaledValue(baseFiber), servings: numberOfServings)
+        calculateAdjustedValue(scaledValue(baseFiber), servings: effectiveServings)
     }
 
     private var adjustedCalories: Double {
-        calculateAdjustedValue(scaledValue(baseCalories), servings: numberOfServings)
+        calculateAdjustedValue(scaledValue(baseCalories), servings: effectiveServings)
     }
 
     private var macroSegments: [MacroSegment] {
@@ -997,7 +1002,7 @@ private struct MealItemServingControls: View {
         VStack(spacing: 0) {
             labeledRow("Serving Size") {
                 HStack(spacing: 8) {
-                    TextField("1", text: $servingsInput)
+                    TextField("1", text: $servingAmountInput)
                         .keyboardType(.numbersAndPunctuation)
                         .multilineTextAlignment(.center)
                         .focused($isServingsFocused)
@@ -1009,10 +1014,10 @@ private struct MealItemServingControls: View {
                                 .fill(chipColor)
                         )
                         .frame(width: 70)
-                        .onChange(of: servingsInput) { newValue in
+                        .onChange(of: servingAmountInput) { newValue in
                             guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
-                            if abs(parsed - numberOfServings) > 0.0001 {
-                                numberOfServings = parsed
+                            if abs(parsed - servingAmount) > 0.0001 {
+                                servingAmount = parsed
                                 updateNutritionValues()
                             }
                         }
@@ -1056,12 +1061,35 @@ private struct MealItemServingControls: View {
                     }
                 }
             }
+
+            Divider().padding(.leading, 16)
+
+            labeledRow("Servings") {
+                TextField("1", text: $servingsInput)
+                    .keyboardType(.numbersAndPunctuation)
+                    .multilineTextAlignment(.center)
+                    .focused($isServingsFocused)
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 12)
+                    .frame(height: 36)
+                    .background(
+                        Capsule()
+                            .fill(chipColor)
+                    )
+                    .frame(width: 70)
+                    .onChange(of: servingsInput) { newValue in
+                        guard let parsed = ConfirmLogView.parseServingsInput(newValue) else { return }
+                        if abs(parsed - numberOfServings) > 0.0001 {
+                            numberOfServings = parsed
+                            updateNutritionValues()
+                        }
+                    }
+            }
             
             Divider().padding(.leading, 16)
             
             labeledRow("Time", verticalPadding: 10) {
                 HStack(spacing: 16) {
-                    Spacer()
                     Menu {
                         ForEach(MealPeriod.allCases) { period in
                             Button(period.title) {
@@ -1406,7 +1434,7 @@ private struct MealItemServingControls: View {
             let sourceUnit = matches.first?.unit
             let targetUnit = nutrientUnit(for: descriptor)
             let converted = convert(perServing * measureScalingFactor, from: sourceUnit, to: targetUnit)
-            return calculateAdjustedValue(converted, servings: numberOfServings)
+            return calculateAdjustedValue(converted, servings: effectiveServings)
         case .computed(let computation):
             switch computation {
             case .netCarbs:
@@ -1798,7 +1826,7 @@ private func valueForFacet(_ facet: HealthFacet) -> String {
     let vals = showPerServing ? health.perServingValues : health.per100Values
 
     func fmt(_ v: Double, _ unit: String) -> String {
-        let adj = showPerServing ? (v * numberOfServings) : v
+        let adj = showPerServing ? (v * effectiveServings) : v
         return "\(Int(round(adj)))\(unit)"
     }
 
@@ -2069,7 +2097,7 @@ private func currentValue(for key: NutrientKey) -> Double {
         }
     }()
 
-    return showPerServing ? raw * numberOfServings : raw
+    return showPerServing ? raw * effectiveServings : raw
 }
 
 private func activeThresholds(for key: NutrientKey) -> [Double] {
@@ -2262,7 +2290,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         var updatedFood = food
         updatedFood.description = title
         updatedFood.householdServingFullText = selectedMeasureLabel
-        updatedFood.numberOfServings = numberOfServings
+        updatedFood.numberOfServings = effectiveServings
         if shouldShowMealItemsEditor {
             updatedFood.mealItems = mealItems
         }
@@ -2281,7 +2309,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
             email:    viewModel.email,
             food:     updatedFood,
             meal:     mealLabel,
-            servings: numberOfServings,
+            servings: effectiveServings,
             date:     mealTime,
             notes:    nil
         ) { result in
@@ -2331,7 +2359,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
             displayName: food.description,
             calories: perServingValue(adjustedCalories),
             servingSizeText: selectedMeasureLabel,
-            numberOfServings: numberOfServings,
+            numberOfServings: effectiveServings,
             brandText: brand.isEmpty ? food.brandText : brand,
             protein: perServingValue(adjustedProtein),
             carbs: perServingValue(adjustedCarbs),
@@ -2370,7 +2398,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
     }
 
     private func perServingValue(_ total: Double) -> Double {
-        let servings = max(numberOfServings, 0.0001)
+        let servings = max(effectiveServings, 0.0001)
         return total / servings
     }
 
@@ -2410,16 +2438,16 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         var updatedFood = food
         updatedFood.description = title.isEmpty ? food.description : title
         updatedFood.householdServingFullText = selectedMeasureLabel
-        updatedFood.numberOfServings = numberOfServings
+        updatedFood.numberOfServings = effectiveServings
         updatedFood.mealItems = mealItems
         let scaledNutrients = baseNutrientValues.reduce(into: [String: RawNutrientValue]()) { partialResult, item in
-            let scaled = item.value.value * measureScalingFactor * numberOfServings
+            let scaled = item.value.value * measureScalingFactor * servingAmount * numberOfServings
             partialResult[item.key] = RawNutrientValue(value: scaled, unit: item.value.unit)
         }
-        let description = "\(servingsInput) x \(selectedMeasureLabel)"
+        let description = "\(servingAmountInput) x \(selectedMeasureLabel) x \(servingsInput)"
         return PlateEntry(
             food: updatedFood,
-            servings: numberOfServings,
+            servings: effectiveServings,
             selectedMeasureId: selectedMeasureId,
             availableMeasures: availableMeasures,
             baselineGramWeight: baselineMeasureGramWeight,
@@ -2499,7 +2527,7 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
             name: displayName,
             brand: displayBrand,
             servingText: servingDescription,
-            servings: numberOfServings,
+            servings: effectiveServings,
             mealItems: mealItemsPayload,
             nutrients: nutrientsPayload
         )
@@ -2769,29 +2797,34 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
     // Update all nutrition values when number of servings changes
     private func updateNutritionValues() {
         // Update with formatted strings
-        calories = String(format: "%.1f", scaledValue(baseCalories) * numberOfServings)
-        protein = String(format: "%.1f", scaledValue(baseProtein) * numberOfServings)
-        carbs = String(format: "%.1f", scaledValue(baseCarbs) * numberOfServings)
-        fat = String(format: "%.1f", scaledValue(baseFat) * numberOfServings)
+        calories = String(format: "%.1f", scaledValue(baseCalories) * effectiveServings)
+        protein = String(format: "%.1f", scaledValue(baseProtein) * effectiveServings)
+        carbs = String(format: "%.1f", scaledValue(baseCarbs) * effectiveServings)
+        fat = String(format: "%.1f", scaledValue(baseFat) * effectiveServings)
         
         // Update additional nutrients too with formatted strings
-        saturatedFat = String(format: "%.1f", scaledValue(baseSaturatedFat) * numberOfServings)
-        polyunsaturatedFat = String(format: "%.1f", scaledValue(basePolyunsaturatedFat) * numberOfServings)
-        monounsaturatedFat = String(format: "%.1f", scaledValue(baseMonounsaturatedFat) * numberOfServings)
-        transFat = String(format: "%.1f", scaledValue(baseTransFat) * numberOfServings)
-        cholesterol = String(format: "%.1f", scaledValue(baseCholesterol) * numberOfServings)
-        sodium = String(format: "%.1f", scaledValue(baseSodium) * numberOfServings)
-        potassium = String(format: "%.1f", scaledValue(basePotassium) * numberOfServings)
-        sugar = String(format: "%.1f", scaledValue(baseSugar) * numberOfServings)
-        fiber = String(format: "%.1f", scaledValue(baseFiber) * numberOfServings)
-        vitaminA = String(format: "%.1f", scaledValue(baseVitaminA) * numberOfServings)
-        vitaminC = String(format: "%.1f", scaledValue(baseVitaminC) * numberOfServings)
-        calcium = String(format: "%.1f", scaledValue(baseCalcium) * numberOfServings)
-        iron = String(format: "%.1f", scaledValue(baseIron) * numberOfServings)
+        saturatedFat = String(format: "%.1f", scaledValue(baseSaturatedFat) * effectiveServings)
+        polyunsaturatedFat = String(format: "%.1f", scaledValue(basePolyunsaturatedFat) * effectiveServings)
+        monounsaturatedFat = String(format: "%.1f", scaledValue(baseMonounsaturatedFat) * effectiveServings)
+        transFat = String(format: "%.1f", scaledValue(baseTransFat) * effectiveServings)
+        cholesterol = String(format: "%.1f", scaledValue(baseCholesterol) * effectiveServings)
+        sodium = String(format: "%.1f", scaledValue(baseSodium) * effectiveServings)
+        potassium = String(format: "%.1f", scaledValue(basePotassium) * effectiveServings)
+        sugar = String(format: "%.1f", scaledValue(baseSugar) * effectiveServings)
+        fiber = String(format: "%.1f", scaledValue(baseFiber) * effectiveServings)
+        vitaminA = String(format: "%.1f", scaledValue(baseVitaminA) * effectiveServings)
+        vitaminC = String(format: "%.1f", scaledValue(baseVitaminC) * effectiveServings)
+        calcium = String(format: "%.1f", scaledValue(baseCalcium) * effectiveServings)
+        iron = String(format: "%.1f", scaledValue(baseIron) * effectiveServings)
 
-        let formatted = ConfirmLogView.formattedServings(numberOfServings)
-        if formatted != servingsInput {
-            servingsInput = formatted
+        let amountFormatted = ConfirmLogView.formattedServings(servingAmount)
+        if amountFormatted != servingAmountInput {
+            servingAmountInput = amountFormatted
+        }
+
+        let servingsFormatted = ConfirmLogView.formattedServings(numberOfServings)
+        if servingsFormatted != servingsInput {
+            servingsInput = servingsFormatted
         }
     }
 }
@@ -3074,7 +3107,8 @@ struct PlateView: View {
 
     private var mealTimeSelector: some View {
         VStack(spacing: 0) {
-            labeledRow("Meal") {
+            labeledRow("Time", verticalPadding: 10) {
+                HStack(spacing: 16) {
                 Menu {
                     ForEach(MealPeriod.allCases) { period in
                         Button(period.title) {
@@ -3085,34 +3119,31 @@ struct PlateView: View {
                     capsulePill {
                         HStack(spacing: 4) {
                             Text(selectedMealPeriod.title)
-                                .foregroundColor(.primary)
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.primary)
                         }
+                        .foregroundColor(.primary)
                     }
                 }
                 .menuIndicator(.hidden)
-            }
 
-            Divider().padding(.leading, 16)
-
-            labeledRow("Time", verticalPadding: 10) {
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                        showMealTimePicker.toggle()
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                            showMealTimePicker.toggle()
+                        }
+                    } label: {
+                        Text(relativeDayAndTimeString(for: mealTime))
+                            .foregroundColor(.primary)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(
+                                Capsule()
+                                    .fill(plateChipColor)
+                            )
                     }
-                } label: {
-                    Text(relativeDayAndTimeString(for: mealTime))
-                        .foregroundColor(.primary)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(
-                            Capsule()
-                                .fill(plateChipColor)
-                        )
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
 
             if showMealTimePicker {
@@ -3774,7 +3805,7 @@ private struct PlateEntryRow: View {
                         Text(shortMeasureLabel(for: entry.selectedMeasure ?? entry.availableMeasures.first))
                             .font(.body)
                             .foregroundColor(.primary)
-                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.caption2)
                             .foregroundColor(.secondary)
@@ -3797,6 +3828,7 @@ private struct PlateEntryRow: View {
                     .background(
                         Capsule().fill(chipColor)
                     )
+                    .fixedSize(horizontal: true, vertical: false)
             }
         }
     }
