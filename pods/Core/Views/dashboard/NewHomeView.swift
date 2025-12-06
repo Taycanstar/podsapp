@@ -87,11 +87,8 @@ struct NewHomeView: View {
     @State private var recentQuickActivities: [String] = []
     @State private var showQuickActivityToast = false
     @State private var quickActivityErrorMessage: String?
-    @State private var timelineAnimationEnabled = false
-    @State private var previousTimelineLogIDs: Set<String> = []
-    @State private var hasInitializedTimelineAnimation = false
-    @State private var timelineAnimationResetWorkItem: DispatchWorkItem?
-    
+    @State private var hasRunInitialAppear = false
+
     private enum ScheduleAlert: Identifiable {
         case success(String)
         case failure(String)
@@ -177,7 +174,7 @@ struct NewHomeView: View {
         return stored > 0 ? stored : 80
     }
     private var timelinePreviewEvents: [TimelineEvent] {
-        Array(timelineEvents.prefix(8))
+        timelineEvents
     }
 
     private var timelineEvents: [TimelineEvent] {
@@ -239,10 +236,24 @@ private var remainingCal: Double { vm.remainingCalories }
             TimelineSectionView(
                 events: timelinePreviewEvents,
                 selectedDate: vm.selectedDate,
-                animateEvents: timelineAnimationEnabled,
                 onShowAll: timelineEvents.count > timelinePreviewEvents.count ? { showTimelineSheet = true } : nil,
                 onAddActivity: { showAddActivitySheet = true },
-                onScanMeal: onBarcodeTapped
+                onScanMeal: onBarcodeTapped,
+                onDeleteLog: { deleteLogItem(log: $0) },
+                onSaveLog: { saveMealAction(log: $0) },
+                onUnsaveLog: { unsaveMealAction(log: $0) },
+                isLogSaved: { log in
+                    switch log.type {
+                    case .food:
+                        guard let id = log.foodLogId else { return false }
+                        return foodMgr.isLogSaved(foodLogId: id)
+                    case .meal:
+                        guard let id = log.mealLogId else { return false }
+                        return foodMgr.isLogSaved(mealLogId: id)
+                    default:
+                        return false
+                    }
+                }
             )
             .padding(.horizontal)
             .padding(.top, 16)
@@ -582,6 +593,9 @@ private var remainingCal: Double { vm.remainingCalories }
             Text(quickActivityErrorMessage ?? "")
         }
         .onAppear {
+            guard !hasRunInitialAppear else { return }
+            hasRunInitialAppear = true
+
             configureOnAppear()
             loadRecentActivities()
 
@@ -643,12 +657,9 @@ private var remainingCal: Double { vm.remainingCalories }
                 } else {
                     handleHealthMetricsLoadingChange(vm.isLoadingHealthMetrics)
                 }
-
-                resetTimelineAnimationTracking()
             }
             .onChange(of: vm.logs) { newLogs in
                 vm.refreshWeeklyNutritionSummaries(endingAt: vm.selectedDate)
-                handleTimelineAnimation(for: newLogs)
             }
             .onChange(of: vm.isLoadingHealthMetrics) { isLoading in
                 handleHealthMetricsLoadingChange(isLoading)
@@ -2766,42 +2777,6 @@ private struct RecoveryRingView: View {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%0.*f", decimals, value)
     }
 
-    private func handleTimelineAnimation(for logs: [CombinedLog]) {
-        let currentIDs = Set(logs.map(\.id))
-        defer { previousTimelineLogIDs = currentIDs }
-
-        guard hasInitializedTimelineAnimation else {
-            hasInitializedTimelineAnimation = true
-            return
-        }
-
-        guard !currentIDs.subtracting(previousTimelineLogIDs).isEmpty else {
-            return
-        }
-
-        triggerTimelineAnimation()
-    }
-
-    private func triggerTimelineAnimation() {
-        timelineAnimationResetWorkItem?.cancel()
-        timelineAnimationEnabled = true
-
-        let workItem = DispatchWorkItem {
-            timelineAnimationEnabled = false
-            timelineAnimationResetWorkItem = nil
-        }
-        timelineAnimationResetWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: workItem)
-    }
-
-    private func resetTimelineAnimationTracking() {
-        hasInitializedTimelineAnimation = false
-        previousTimelineLogIDs = Set(vm.logs.map(\.id))
-        timelineAnimationResetWorkItem?.cancel()
-        timelineAnimationResetWorkItem = nil
-        timelineAnimationEnabled = false
-    }
-
     // MARK: - Timeline helpers
 
     private func wakeTimelineEvent(for date: Date) -> TimelineEvent? {
@@ -2919,7 +2894,7 @@ private struct RecoveryRingView: View {
             sleepQuality: sleepQuality,
             readinessScore: readinessScore
         )
-        return TimelineEvent(date: date, type: .wake, title: "Woke up", details: details)
+        return TimelineEvent(date: date, type: .wake, title: "Woke up", details: details, log: nil)
     }
 
     private func timelineEventsFromLogs(for date: Date) -> [TimelineEvent] {
@@ -3012,7 +2987,7 @@ private struct RecoveryRingView: View {
                 carbs: macros.carbs,
                 fat: macros.fat
             )
-            return TimelineEvent(date: date, type: .food, title: timelineTitle(for: log), details: details)
+            return TimelineEvent(date: date, type: .food, title: timelineTitle(for: log), details: details, log: log)
         case .activity:
             guard let activity = log.activity else { return nil }
             let durationMinutes = Int((activity.duration / 60).rounded())
@@ -3024,7 +2999,7 @@ private struct RecoveryRingView: View {
                 distanceMiles: distanceMiles
             )
             let eventType: TimelineEvent.EventType = activity.isDistanceActivity ? .cardio : .workout
-            return TimelineEvent(date: date, type: eventType, title: activity.displayName, details: details)
+            return TimelineEvent(date: date, type: eventType, title: activity.displayName, details: details, log: log)
         case .workout:
             guard let workout = log.workout else { return nil }
             let duration = workout.durationMinutes
@@ -3034,7 +3009,7 @@ private struct RecoveryRingView: View {
                 durationMinutes: duration,
                 exercises: workout.exercisesCount
             )
-            return TimelineEvent(date: date, type: .workout, title: workout.title, details: details)
+            return TimelineEvent(date: date, type: .workout, title: workout.title, details: details, log: log)
         }
     }
 
@@ -4326,6 +4301,7 @@ private struct TimelineEvent: Identifiable {
     let type: EventType
     let title: String
     let details: Details
+    let log: CombinedLog?
 
     var iconName: String {
         switch type {
@@ -4346,14 +4322,16 @@ private typealias TimelineEventDetails = TimelineEvent.Details
 private struct TimelineSectionView: View {
     let events: [TimelineEvent]
     let selectedDate: Date
-    var animateEvents: Bool = false
     var onShowAll: (() -> Void)? = nil
     var onAddActivity: (() -> Void)? = nil
     var onScanMeal: (() -> Void)? = nil
+    var onDeleteLog: ((CombinedLog) -> Void)? = nil
+    var onSaveLog: ((CombinedLog) -> Void)? = nil
+    var onUnsaveLog: ((CombinedLog) -> Void)? = nil
+    var isLogSaved: ((CombinedLog) -> Bool)? = nil
 
     var body: some View {
         let rowSpacing: CGFloat = 20
-        let eventIDs = events.map(\.id)
 
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -4389,17 +4367,43 @@ private struct TimelineSectionView: View {
                         ForEach(events) { event in
                             TimelineEventRow(
                                 event: event,
-                                selectedDate: selectedDate
+                                selectedDate: selectedDate,
+                                canDelete: event.log.map { canDelete(log: $0) } ?? false,
+                                canToggleSave: event.log.map { canSave(log: $0) } ?? false,
+                                onDelete: onDeleteLog,
+                                onSave: onSaveLog,
+                                onUnsave: onUnsaveLog,
+                                isLogSaved: isLogSaved
                             )
-                            .transition(.move(edge: .top).combined(with: .opacity))
                         }
-                        .animation(
-                            animateEvents ? .spring(response: 0.5, dampingFraction: 0.85) : nil,
-                            value: eventIDs
-                        )
                     }
                 }
             }
+        }
+    }
+}
+
+private extension TimelineSectionView {
+    func canDelete(log: CombinedLog) -> Bool {
+        switch log.type {
+        case .workout:
+            return false
+        case .activity:
+            if let activityId = log.activityId, activityId.count > 10 && activityId.contains("-") {
+                return false
+            }
+            return true
+        default:
+            return true
+        }
+    }
+
+    func canSave(log: CombinedLog) -> Bool {
+        switch log.type {
+        case .food, .meal:
+            return true
+        default:
+            return false
         }
     }
 }
@@ -4490,6 +4494,12 @@ private struct TimelineSpineOverlay: View {
 private struct TimelineEventRow: View {
     let event: TimelineEvent
     let selectedDate: Date
+    var canDelete: Bool = false
+    var canToggleSave: Bool = false
+    var onDelete: ((CombinedLog) -> Void)? = nil
+    var onSave: ((CombinedLog) -> Void)? = nil
+    var onUnsave: ((CombinedLog) -> Void)? = nil
+    var isLogSaved: ((CombinedLog) -> Bool)? = nil
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -4519,7 +4529,7 @@ private struct TimelineEventRow: View {
             HStack(alignment: .top, spacing: 12) {
                 TimelineConnectorSpacer()
 
-                TimelineEventCard(event: event)
+                swipeableCard
             }
         }
     }
@@ -4530,6 +4540,44 @@ private struct TimelineEventRow: View {
             return Self.timeFormatter.string(from: event.date)
         }
         return Self.dateFormatter.string(from: event.date)
+    }
+
+    @ViewBuilder
+    private var swipeableCard: some View {
+        if let log = event.log, (canDelete || canToggleSave) {
+            TimelineEventCard(event: event)
+                .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    if canDelete, let onDelete {
+                        Button(role: .destructive) {
+                            onDelete(log)
+                        } label: {
+                            Label("Delete", systemImage: "trash.fill")
+                        }
+                    }
+                }
+                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                    if canToggleSave,
+                       let onSave,
+                       let onUnsave,
+                       let isLogSaved {
+                        let saved = isLogSaved(log)
+                        Button {
+                            if saved {
+                                onUnsave(log)
+                            } else {
+                                onSave(log)
+                            }
+                        } label: {
+                            Label(saved ? "Unsave" : "Save",
+                                  systemImage: saved ? "bookmark.slash" : "bookmark")
+                        }
+                        .tint(saved ? .gray : .accentColor)
+                    }
+                }
+        } else {
+            TimelineEventCard(event: event)
+        }
     }
 }
 

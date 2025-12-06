@@ -16,6 +16,8 @@ import Foundation
 extension Notification.Name {
     static let capturePhoto = Notification.Name("capturePhoto")
     static let toggleFlash = Notification.Name("toggleFlash")
+    static let stopCameraSession = Notification.Name("stopCameraSession")
+    static let cameraSessionStopped = Notification.Name("cameraSessionStopped")
 }
 
 // Removed BarcodeFood struct - using onFoodScanned callback instead
@@ -662,16 +664,56 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
                                                 message: String?,
                                                 barcode: String) {
         DispatchQueue.main.async {
+            self.foodManager.isAnalyzingFood = false
+            self.foodManager.loadingMessage = ""
+            self.foodManager.uploadProgress = 0
+
             self.isAnalyzing = false
             self.isProcessingBarcode = false
 
             if success {
                 print("✅ Barcode lookup success for: \(barcode)")
-                self.isPresented = false
+                // Stop camera session BEFORE dismissing to prevent race condition
+                self.stopCameraSession {
+                    self.isPresented = false
+                }
             } else {
                 print("❌ Barcode lookup failed: \(message ?? "Unknown error")")
                 self.lastProcessedBarcode = nil
             }
+        }
+    }
+
+    private func stopCameraSession(completion: @escaping () -> Void) {
+        // Track if completion has been called to prevent double-calling
+        var completionCalled = false
+
+        // Listen for when camera actually stops
+        var observer: NSObjectProtocol?
+        observer = NotificationCenter.default.addObserver(
+            forName: .cameraSessionStopped,
+            object: nil,
+            queue: .main
+        ) { _ in
+            guard !completionCalled else { return }
+            completionCalled = true
+            if let obs = observer {
+                NotificationCenter.default.removeObserver(obs)
+            }
+            completion()
+        }
+
+        // Request camera to stop
+        NotificationCenter.default.post(name: .stopCameraSession, object: nil)
+
+        // Fallback timeout in case notification never fires
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            guard !completionCalled else { return }
+            completionCalled = true
+            if let obs = observer {
+                NotificationCenter.default.removeObserver(obs)
+            }
+            completion()
         }
     }
 
@@ -805,25 +847,26 @@ struct ScanOptionButton: View {
 }
 
 struct CameraPreviewView: UIViewRepresentable {
-    let captureSession = AVCaptureSession()
+    // captureSession moved to Coordinator to persist across struct recreations
     @Binding var selectedMode: FoodScannerView.ScanMode
     @Binding var flashEnabled: Bool
     var onCapture: (UIImage?) -> Void
     var onBarcodeDetected: (String) -> Void
-    
+
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: UIScreen.main.bounds)
-        
-        let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+
+        // Use coordinator's session (persists across view updates)
+        let previewLayer = AVCaptureVideoPreviewLayer(session: context.coordinator.captureSession)
         previewLayer.frame = view.bounds
         previewLayer.videoGravity = .resizeAspectFill
         view.layer.addSublayer(previewLayer)
-        
+
         // Configure camera
         checkCameraAuthorization {
             setupCaptureSession(with: context.coordinator)
         }
-        
+
         return view
     }
     
@@ -850,15 +893,20 @@ struct CameraPreviewView: UIViewRepresentable {
             break
         }
     }
-    
+
     private func setupCaptureSession(with coordinator: Coordinator) {
-        captureSession.beginConfiguration()
-        
+        // Track configuration state to prevent deadlock if stopRunning is called during config
+        coordinator.isConfiguring = true
+
+        coordinator.captureSession.beginConfiguration()
+
         // For back camera with flash
         guard let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let videoInput = try? AVCaptureDeviceInput(device: backCamera),
-              captureSession.canAddInput(videoInput) else {
+              coordinator.captureSession.canAddInput(videoInput) else {
             print("Failed to set up back camera")
+            coordinator.captureSession.commitConfiguration()
+            coordinator.isConfiguring = false
             return
         }
         
@@ -896,11 +944,11 @@ struct CameraPreviewView: UIViewRepresentable {
             print("Error configuring camera: \(error)")
         }
         
-        captureSession.addInput(videoInput)
-        
+        coordinator.captureSession.addInput(videoInput)
+
         // Add photo output with high resolution
-        if captureSession.canAddOutput(coordinator.photoOutput) {
-            captureSession.addOutput(coordinator.photoOutput)
+        if coordinator.captureSession.canAddOutput(coordinator.photoOutput) {
+            coordinator.captureSession.addOutput(coordinator.photoOutput)
             
             // Configure for high resolution (using proper API)
             coordinator.photoOutput.isHighResolutionCaptureEnabled = true
@@ -911,8 +959,8 @@ struct CameraPreviewView: UIViewRepresentable {
         
         // Add metadata output for barcode scanning
         let metadataOutput = AVCaptureMetadataOutput()
-        if captureSession.canAddOutput(metadataOutput) {
-            captureSession.addOutput(metadataOutput)
+        if coordinator.captureSession.canAddOutput(metadataOutput) {
+            coordinator.captureSession.addOutput(metadataOutput)
             metadataOutput.setMetadataObjectsDelegate(coordinator, queue: DispatchQueue.main)
             
             // Set the rect of interest to the center of the screen for better barcode detection
@@ -940,13 +988,21 @@ struct CameraPreviewView: UIViewRepresentable {
             print("Cannot add metadata output for barcode scanning")
         }
         
-        captureSession.commitConfiguration()
-        
+        coordinator.captureSession.commitConfiguration()
+
+        // Clear configuration flag before starting
+        coordinator.isConfiguring = false
+
         // Start the camera session
         DispatchQueue.global(qos: .userInitiated).async {
-            self.captureSession.startRunning()
+            coordinator.captureSession.startRunning()
             print("Camera session started successfully")
         }
+    }
+
+    func dismantleUIView(_ uiView: UIView, context: Context) {
+        // Use coordinator's safe stop method which checks configuration state
+        context.coordinator.safeStopSession()
     }
     
     // Create a coordinator to handle capture
@@ -959,11 +1015,13 @@ struct CameraPreviewView: UIViewRepresentable {
         var photoOutput = AVCapturePhotoOutput()
         var metadataOutput: AVCaptureMetadataOutput?
         var device: AVCaptureDevice?
-        
+        let captureSession = AVCaptureSession()  // Owned by coordinator, persists across view updates
+        var isConfiguring = false  // Track if beginConfiguration/commitConfiguration is in progress
+
         init(_ parent: CameraPreviewView) {
             self.parent = parent
             super.init()
-            
+
             // Listen for capture requests
             NotificationCenter.default.addObserver(
                 self,
@@ -971,10 +1029,52 @@ struct CameraPreviewView: UIViewRepresentable {
                 name: .capturePhoto,
                 object: nil
             )
+
+            // Listen for stop camera session requests
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(stopSession),
+                name: .stopCameraSession,
+                object: nil
+            )
         }
-        
+
         deinit {
             NotificationCenter.default.removeObserver(self)
+        }
+
+        /// Safely stop the capture session, avoiding deadlock if configuration is in progress
+        func safeStopSession() {
+            // Don't try to stop while configuring - it will deadlock waiting for the lock
+            guard !isConfiguring else {
+                print("⚠️ Cannot stop session - configuration in progress, will retry")
+                // Retry after a short delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                    self?.safeStopSession()
+                }
+                return
+            }
+
+            guard captureSession.isRunning else {
+                // Already stopped, post completion notification immediately
+                NotificationCenter.default.post(name: .cameraSessionStopped, object: nil)
+                return
+            }
+
+            // Stop on background thread to avoid blocking UI
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                self?.captureSession.stopRunning()
+                print("🛑 Camera session stopped safely")
+
+                // Notify that stop is complete
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .cameraSessionStopped, object: nil)
+                }
+            }
+        }
+
+        @objc func stopSession() {
+            safeStopSession()
         }
         
         // Toggle barcode scanning based on mode

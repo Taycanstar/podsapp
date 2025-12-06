@@ -4845,6 +4845,8 @@ func analyzeNutritionLabel(
             completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: "Saved meal not found")))
             return
         }
+
+        unsaveMeal(savedMealId: savedMeal.id, completion: completion)
     }
     
     // MARK: - Nutrition Label Name Input

@@ -48,6 +48,7 @@ struct ConfirmLogView: View {
     // Meal + time selections
     @State private var selectedMealPeriod: MealPeriod = .lunch
     @State private var mealTime: Date = Date()
+    @State private var hasAlignedMealTimeWithSelectedDate = false
     
     // Brand information
     @State private var brand: String = ""
@@ -491,6 +492,7 @@ struct ConfirmLogView: View {
             }
         }
         .onAppear {
+            alignMealTimeWithSelectedDateIfNeeded()
             setupHealthAnalysis()
             if shouldShowMealItemsEditor {
                 recalculateMealItemNutrition()
@@ -1839,6 +1841,24 @@ private func valueForFacet(_ facet: HealthFacet) -> String {
     }
 }
 
+private func alignMealTimeWithSelectedDateIfNeeded() {
+    guard !hasAlignedMealTimeWithSelectedDate else { return }
+    hasAlignedMealTimeWithSelectedDate = true
+
+    let calendar = Calendar.current
+    var dateComponents = calendar.dateComponents([.year, .month, .day], from: dayLogsVM.selectedDate)
+    let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: mealTime)
+    dateComponents.hour = timeComponents.hour
+    dateComponents.minute = timeComponents.minute
+    dateComponents.second = timeComponents.second
+
+    if let alignedDate = calendar.date(from: dateComponents) {
+        mealTime = alignedDate
+    } else {
+        mealTime = dayLogsVM.selectedDate
+    }
+}
+
 
 
 private func iconForNegative(_ facet: HealthFacet) -> String {
@@ -2309,7 +2329,6 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                         foodManager.showLogSuccess = false
                     }
                     self.barcodeFoodLogId = logged.foodLogId
-                    self.dayLogsVM.refreshLogsQuietly(for: self.dayLogsVM.selectedDate, force: true)
                 case .failure:
                     self.dayLogsVM.removeOptimisticLog(identifier: placeholderIdentifier)
                     self.removeCombinedLog(identifier: placeholderIdentifier)

@@ -42,9 +42,9 @@ class NetworkManagerTwo {
     // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
     // ### STAGING ###
-    // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+    let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
     // ### LOCAL ###
-    let baseUrl = "http://172.20.10.4:8000"
+    // let baseUrl = "http://172.20.10.4:8000"
 
     // Network errors - scoped to NetworkManagerTwo
     enum NetworkError: LocalizedError {

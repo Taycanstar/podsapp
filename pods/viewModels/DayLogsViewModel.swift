@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import Combine
 
+
 struct DailyNutritionSummary: Identifiable, Equatable {
   let date: Date
   let calories: Double
@@ -735,7 +736,7 @@ func replaceOptimisticLog(identifier: String, with resolvedLog: CombinedLog) {
     return
   }
 
-  triggerProfileDataRefresh(localOnly: false)
+  triggerProfileDataRefresh(localOnly: true)
 }
 
 func removeOptimisticLog(identifier: String) {
@@ -799,7 +800,7 @@ func removeLog(_ log: CombinedLog) async {
     do {
         try await deleteOnServer(log)
         print("[DayLogsVM] ✅ Server deletion succeeded for log \(log.id)")
-        triggerProfileDataRefresh(localOnly: false)
+        triggerProfileDataRefresh(localOnly: true)
     } catch {
         // 3) Rollback on failure and surface error to UI
         print("[DayLogsVM] ❌ Server deletion failed for log \(log.id): \(error.localizedDescription). Rolling back…")
@@ -937,16 +938,6 @@ func loadLogs(for date: Date, force: Bool = false) {
     }
   }
 }
-
-  func refreshLogsQuietly(for date: Date, force: Bool = true) {
-    Task { @MainActor [weak self] in
-      guard let self else { return }
-      await self.repository.refresh(date: date, force: force)
-      if let snapshot = self.repository.snapshot(for: date) {
-        self.applySnapshot(snapshot)
-      }
-    }
-  }
 
 private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   let key = Calendar.current.startOfDay(for: snapshot.date)
@@ -1363,7 +1354,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                     }
                     
                     // Trigger profile data refresh since logs changed
-                    self.triggerProfileDataRefresh(localOnly: false)
+                    self.triggerProfileDataRefresh(localOnly: true)
                     completion(.success(()))
                 case .failure(let error):
                     completion(.failure(error))
@@ -1528,7 +1519,7 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                     }
                     
                     // Trigger profile data refresh since logs changed
-                    self.triggerProfileDataRefresh(localOnly: false)
+                    self.triggerProfileDataRefresh(localOnly: true)
                     completion(.success(()))
                 case .failure(let error):
                     completion(.failure(error))
@@ -1842,7 +1833,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
     }
   }
   triggerProfileDataRefresh(localOnly: true)
-  triggerProfileDataRefresh(localOnly: false)
 }
 
   private func reconcilePlaceholders(with serverLogs: [CombinedLog]) {
