@@ -3040,7 +3040,7 @@ struct PlateView: View {
             .edgesIgnoringSafeArea(.all)
         }
         .sheet(isPresented: $showTextLog) {
-            TextLogSheet(isPresented: $showTextLog) { food in
+            FoodLogAgentView(isPresented: $showTextLog) { food in
                 pendingFood = food
                 showConfirmFood = true
             }

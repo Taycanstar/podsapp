@@ -33,7 +33,7 @@ struct AgentChatView: View {
                 }
                 inputBar
             }
-            .navigationTitle("Humuli")
+            .navigationTitle("Metryc")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
