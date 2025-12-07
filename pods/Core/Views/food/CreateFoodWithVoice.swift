@@ -382,54 +382,61 @@ struct CreateFoodWithVoice: View {
         foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText, skipConfirmation: true) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let food):
-                    print("✅ Successfully analyzed food from voice for creation: \(food.displayName)")
-                    
-                    // UNIFIED: createManualFood now detects active scanning flow and won't interfere
-                    
-                    // Create food directly without confirmation (like barcode with preview disabled)
-                    self.foodManager.createManualFood(food: food, showPreview: false) { result in
-                        DispatchQueue.main.async {
-                            switch result {
-                            case .success(let savedFood):
-                                print("✅ Successfully created food from voice: \(savedFood.displayName)")
-                                
-                                // Track as recently added
-                                self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
-                                
-                                // UNIFIED: Show completion with proper animation and auto-reset
-                                let completionLog = CombinedLog(
-                                    type: .food,
-                                    status: "success",
-                                    calories: savedFood.calories ?? 0,
-                                    message: "Created \(savedFood.displayName)",
-                                    foodLogId: nil
-                                )
-                                self.foodManager.updateFoodScanningState(.completed(result: completionLog))
-                                
-                                // Show success toast
-                                self.foodManager.lastLoggedItem = (name: savedFood.displayName, calories: savedFood.calories ?? 0)
-                                self.foodManager.showLogSuccess = true
-                                
-                                // Auto-hide success message after 2 seconds
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                    self.foodManager.showLogSuccess = false
-                                }
-                                
-                            case .failure(let error):
-                                print("❌ Failed to create food from voice: \(error)")
-                                
-                                // UNIFIED: Show error state then reset
-                                self.foodManager.updateFoodScanningState(.failed(error: .networkError(error.localizedDescription)))
-                                
-                                // Reset after showing error for a moment
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                                    self.foodManager.resetFoodScanningState()
+                case .success(let response):
+                    switch response.resolvedFoodResult {
+                    case .success(let food):
+                        print("✅ Successfully analyzed food from voice for creation: \(food.displayName)")
+
+                        // UNIFIED: createManualFood now detects active scanning flow and won't interfere
+                        // Create food directly without confirmation (like barcode with preview disabled)
+                        self.foodManager.createManualFood(food: food, showPreview: false) { result in
+                            DispatchQueue.main.async {
+                                switch result {
+                                case .success(let savedFood):
+                                    print("✅ Successfully created food from voice: \(savedFood.displayName)")
+
+                                    // Track as recently added
+                                    self.foodManager.trackRecentlyAdded(foodId: savedFood.fdcId)
+
+                                    // UNIFIED: Show completion with proper animation and auto-reset
+                                    let completionLog = CombinedLog(
+                                        type: .food,
+                                        status: "success",
+                                        calories: savedFood.calories ?? 0,
+                                        message: "Created \(savedFood.displayName)",
+                                        foodLogId: nil
+                                    )
+                                    self.foodManager.updateFoodScanningState(.completed(result: completionLog))
+
+                                    // Show success toast
+                                    self.foodManager.lastLoggedItem = (name: savedFood.displayName, calories: savedFood.calories ?? 0)
+                                    self.foodManager.showLogSuccess = true
+
+                                    // Auto-hide success message after 2 seconds
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                        self.foodManager.showLogSuccess = false
+                                    }
+
+                                case .failure(let error):
+                                    print("❌ Failed to create food from voice: \(error)")
+
+                                    self.foodManager.updateFoodScanningState(.failed(error: .networkError(error.localizedDescription)))
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                        self.foodManager.resetFoodScanningState()
+                                    }
                                 }
                             }
                         }
+
+                    case .failure(let genError):
+                        let message = genError.localizedDescription
+                        print("❌ AI clarification/error from voice input: \(message)")
+                        self.foodManager.updateFoodScanningState(.failed(error: .networkError(message)))
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            self.foodManager.resetFoodScanningState()
+                        }
                     }
-                    
+
                 case .failure(let error):
                     print("❌ Failed to analyze food from voice: \(error)")
                     

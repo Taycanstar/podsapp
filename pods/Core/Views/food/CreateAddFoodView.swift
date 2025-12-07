@@ -434,19 +434,22 @@ struct CreateAddFoodView: View {
                 isCreating = false
                 
                 switch result {
-                case .success(let food):
-                    print("✅ Successfully generated food with AI for recipe: \(food.displayName)")
-                    
-                    // Clear lastGeneratedFood to prevent triggering other sheets
-                    foodManager.lastGeneratedFood = nil
-                    
-                    // Clear the AI search text
-                    aiSearchText = ""
-                    
-                    // Pass the food to parent and dismiss
-                    onFoodAdded(food)
-                    dismiss()
-                    
+                case .success(let response):
+                    switch response.resolvedFoodResult {
+                    case .success(let food):
+                        print("✅ Successfully generated food with AI for recipe: \(food.displayName)")
+
+                        foodManager.lastGeneratedFood = nil
+                        aiSearchText = ""
+                        onFoodAdded(food)
+                        dismiss()
+
+                    case .failure(let genError):
+                        foodManager.lastGeneratedFood = nil
+                        errorMessage = genError.localizedDescription
+                        showErrorAlert = true
+                    }
+
                 case .failure(let error):
                     // Clear lastGeneratedFood on error too
                     foodManager.lastGeneratedFood = nil

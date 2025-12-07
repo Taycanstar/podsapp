@@ -224,35 +224,39 @@ struct AddFoodWithVoice: View {
         foodManager.generateFoodWithAI(foodDescription: audioRecorder.transcribedText, skipConfirmation: true) { result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let generatedFood):
-                    print("✅ Food generated successfully from voice: \(generatedFood.displayName)")
-                    
-                    // Now create the food in the database
-                    self.foodManager.createManualFood(food: generatedFood, showPreview: false) { createResult in
-                        DispatchQueue.main.async {
-                            switch createResult {
-                            case .success(let createdFood):
-                                print("✅ Food created in database from voice: \(createdFood.displayName)")
-                                
-                                // Track as recently added
-                                self.foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
-                                
-                                // Pass the created food to parent (view already dismissed)
-                                // Parent will add it to generatedFoods and selectedFoodIds
-                                onFoodVoiceAdded(createdFood)
-                                
-                                // Clear scanning states
-                                self.foodManager.isScanningFood = false
-                                self.foodManager.isGeneratingFood = false
-                                
-                            case .failure(let error):
-                                print("❌ Failed to create food in database: \(error)")
-                                
-                                // Clear scanning states
-                                self.foodManager.isScanningFood = false
-                                self.foodManager.isGeneratingFood = false
+                case .success(let response):
+                    switch response.resolvedFoodResult {
+                    case .success(let generatedFood):
+                        print("✅ Food generated successfully from voice: \(generatedFood.displayName)")
+
+                        // Now create the food in the database
+                        self.foodManager.createManualFood(food: generatedFood, showPreview: false) { createResult in
+                            DispatchQueue.main.async {
+                                switch createResult {
+                                case .success(let createdFood):
+                                    print("✅ Food created in database from voice: \(createdFood.displayName)")
+
+                                    // Track as recently added
+                                    self.foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+
+                                    // Pass the created food to parent (view already dismissed)
+                                    onFoodVoiceAdded(createdFood)
+
+                                    self.foodManager.isScanningFood = false
+                                    self.foodManager.isGeneratingFood = false
+
+                                case .failure(let error):
+                                    print("❌ Failed to create food in database: \(error)")
+                                    self.foodManager.isScanningFood = false
+                                    self.foodManager.isGeneratingFood = false
+                                }
                             }
                         }
+
+                    case .failure(let genError):
+                        print("❌ Voice input needs clarification: \(genError.localizedDescription)")
+                        self.foodManager.isScanningFood = false
+                        self.foodManager.isGeneratingFood = false
                     }
                     
                 case .failure(let error):

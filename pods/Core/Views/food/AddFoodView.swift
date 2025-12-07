@@ -407,32 +407,39 @@ struct AddFoodView: View {
                             
                             // Generate food with AI - skip confirmation for text search
                             foodManager.generateFoodWithAI(foodDescription: searchText, skipConfirmation: true) { result in
-                                
+
                                 switch result {
-                                case .success(let generatedFood):
-                                    // Create the food in the database
-                                    foodManager.createManualFood(food: generatedFood, showPreview: false) { createResult in
-                                        DispatchQueue.main.async {
-                                            switch createResult {
-                                            case .success(let createdFood):
-                                                // Store the created food
-                                                generatedFoods.append(createdFood)
-                                                
-                                                // Mark as selected in the UI (but don't add to meal yet)
-                                                selectedFoodIds.insert(createdFood.fdcId)
-                                                
-                                                // Track as recently added
-                                                foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
-                                                
-                                                // Clear the search text after successful generation
-                                                searchText = ""
-                                                
-                                                print("✅ Food created from text search for recipe: \(createdFood.displayName)")
-                                                
-                                            case .failure(let error):
-                                                print("❌ Failed to create food in database: \(error)")
+                                case .success(let response):
+                                    switch response.resolvedFoodResult {
+                                    case .success(let generatedFood):
+                                        // Create the food in the database
+                                        foodManager.createManualFood(food: generatedFood, showPreview: false) { createResult in
+                                            DispatchQueue.main.async {
+                                                switch createResult {
+                                                case .success(let createdFood):
+                                                    // Store the created food
+                                                    generatedFoods.append(createdFood)
+
+                                                    // Mark as selected in the UI (but don't add to meal yet)
+                                                    selectedFoodIds.insert(createdFood.fdcId)
+
+                                                    // Track as recently added
+                                                    foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+
+                                                    // Clear the search text after successful generation
+                                                    searchText = ""
+
+                                                    print("✅ Food created from text search for recipe: \(createdFood.displayName)")
+
+                                                case .failure(let error):
+                                                    print("❌ Failed to create food in database: \(error)")
+                                                }
                                             }
                                         }
+
+                                    case .failure(let genError):
+                                        errorMessage = genError.localizedDescription
+                                        showErrorAlert = true
                                     }
                                     
                                 case .failure(let error):

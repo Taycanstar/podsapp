@@ -19,6 +19,7 @@ struct FoodLogAgentView: View {
     @State private var messages: [FoodLogMessage] = []
     @State private var inputText: String = ""
     @State private var isLoading = false
+    @State private var conversationHistory: [[String: String]] = []
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -125,21 +126,37 @@ struct FoodLogAgentView: View {
         let prompt = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty else { return }
         messages.append(FoodLogMessage(sender: .user, text: prompt))
+        conversationHistory.append(["role": "user", "content": prompt])
         inputText = ""
         isLoading = true
         messages.append(FoodLogMessage(sender: .status, text: "Analyzing…"))
 
-        foodManager.generateFoodWithAI(foodDescription: prompt, skipConfirmation: true) { result in
+        foodManager.generateFoodWithAI(
+            foodDescription: prompt,
+            history: conversationHistory,
+            skipConfirmation: true
+        ) { result in
             DispatchQueue.main.async {
                 isLoading = false
                 messages.removeAll { $0.sender == .status }
                 switch result {
-                case .success(let food):
-                    messages.append(FoodLogMessage(sender: .system, text: "Food ready! Opening summary…"))
-                    onFoodReady(food)
-                    isPresented = false
+                case .success(let response):
+                    switch response.resolvedFoodResult {
+                    case .success(let food):
+                        messages.append(FoodLogMessage(sender: .system, text: "Got it!"))
+                        onFoodReady(food)
+                        isPresented = false
+                    case .failure(let genError):
+                        switch genError {
+                        case .needsClarification(let question):
+                            messages.append(FoodLogMessage(sender: .system, text: question))
+                            conversationHistory.append(["role": "assistant", "content": question])
+                        case .unavailable(let message):
+                            messages.append(FoodLogMessage(sender: .system, text: message))
+                        }
+                    }
                 case .failure(let error):
-                    messages.append(FoodLogMessage(sender: .system, text: "Error: \\(error.localizedDescription)"))
+                    messages.append(FoodLogMessage(sender: .system, text: "Error: \(error.localizedDescription)"))
                 }
             }
         }

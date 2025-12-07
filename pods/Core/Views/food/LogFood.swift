@@ -806,49 +806,48 @@ private struct FoodListView: View {
                         // Need to create a CombinedLog for the completion state
                         
                         switch result {
-                        case .success(let generated):
-                            // UNIFIED: Show completion before proceeding
-                            let completionLog = CombinedLog(
-                                type: .food,
-                                status: "success",
-                                calories: generated.calories ?? 0,
-                                message: "Generated \(generated.displayName)",
-                                foodLogId: nil
-                            )
-                            foodManager.updateFoodScanningState(.completed(result: completionLog))
-                            
-                            // Create the food in the database
-                            foodManager.createManualFood(food: generated, showPreview: false) { createResult in
-                                DispatchQueue.main.async {
-                                    switch createResult {
-                                    case .success(let createdFood):
-                                        // Store the created food
-                                        self.generatedFood = createdFood
-                                        
-                                        // Track as recently added
-                                        foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
-                                        
-                                        // IMPORTANT: Add the food to userFoods so it appears in MyFoods tab immediately
+                        case .success(let response):
+                            switch response.resolvedFoodResult {
+                            case .success(let generated):
+                                let completionLog = CombinedLog(
+                                    type: .food,
+                                    status: "success",
+                                    calories: generated.calories ?? 0,
+                                    message: "Generated \(generated.displayName)",
+                                    foodLogId: nil
+                                )
+                                foodManager.updateFoodScanningState(.completed(result: completionLog))
 
-                                        if !foodManager.userFoods.contains(where: { $0.fdcId == createdFood.fdcId }) {
-                                            foodManager.userFoods.insert(createdFood, at: 0) // Add to beginning of list
+                                foodManager.createManualFood(food: generated, showPreview: false) { createResult in
+                                    DispatchQueue.main.async {
+                                        switch createResult {
+                                        case .success(let createdFood):
+                                            self.generatedFood = createdFood
+                                            foodManager.trackRecentlyAdded(foodId: createdFood.fdcId)
+                                            if !foodManager.userFoods.contains(where: { $0.fdcId == createdFood.fdcId }) {
+                                                foodManager.userFoods.insert(createdFood, at: 0)
+                                            }
+                                            showFoodCreatedToast = true
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                                showFoodCreatedToast = false
+                                            }
+                                            print("✅ Food created from text search: \(createdFood.displayName)")
+
+                                        case .failure(let error):
+                                            print("❌ Failed to create food in database: \(error)")
                                         }
-                                        // Show success toast
-                                        showFoodCreatedToast = true
-                                        
-                                        // Hide the toast after a delay
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                            showFoodCreatedToast = false
-                                        }
-                                        
-                                        print("✅ Food created from text search: \(createdFood.displayName)")
-                                        
-                                    case .failure(let error):
-                                        print("❌ Failed to create food in database: \(error)")
                                     }
                                 }
+
+                            case .failure(let genError):
+                                foodManager.updateFoodScanningState(.failed(error: .networkError(genError.localizedDescription)))
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                    foodManager.resetFoodScanningState()
+                                }
+                                aiErrorMessage = genError.localizedDescription
+                                showAIErrorAlert = true
                             }
-                            
+
                         case .failure(let error):
                             // UNIFIED: Show error state then reset
                             foodManager.updateFoodScanningState(.failed(error: .networkError(error.localizedDescription)))

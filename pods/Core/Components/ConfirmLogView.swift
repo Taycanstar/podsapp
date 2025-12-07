@@ -3839,7 +3839,10 @@ private struct PlateEntryRow: View {
 
     private var macroLine: String {
         let totals = entry.macroTotals
-        return "P \(totals.protein.cleanZeroDecimal)g C \(totals.carbs.cleanZeroDecimal)g F \(totals.fat.cleanZeroDecimal)g • \(weightLabel(for: entry))"
+        let protein = Int(totals.protein.rounded())
+        let carbs = Int(totals.carbs.rounded())
+        let fat = Int(totals.fat.rounded())
+        return "P \(protein)g C \(carbs)g F \(fat)g • \(weightLabel(for: entry))"
     }
 
     private func measureLabel(for measure: FoodMeasure?) -> String {
@@ -3984,9 +3987,14 @@ struct TextLogSheet: View {
             DispatchQueue.main.async {
                 isSubmitting = false
                 switch result {
-                case .success(let food):
-                    onFoodReady(food)
-                    isPresented = false
+                case .success(let response):
+                    switch response.resolvedFoodResult {
+                    case .success(let food):
+                        onFoodReady(food)
+                        isPresented = false
+                    case .failure(let genError):
+                        errorMessage = genError.localizedDescription
+                    }
                 case .failure(let error):
                     errorMessage = error.localizedDescription
                 }
@@ -4278,9 +4286,14 @@ struct AddToPlateWithVoice: View {
             DispatchQueue.main.async {
                 isGeneratingFood = false
                 switch result {
-                case .success(let food):
-                    onFoodReady(food)
-                    isPresented = false
+                case .success(let response):
+                    switch response.resolvedFoodResult {
+                    case .success(let food):
+                        onFoodReady(food)
+                        isPresented = false
+                    case .failure(let genError):
+                        errorMessage = genError.localizedDescription
+                    }
                 case .failure(let error):
                     errorMessage = error.localizedDescription
                 }

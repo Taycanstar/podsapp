@@ -21,9 +21,9 @@ enum NetworkError: Error {
     case invalidData
 } 
 
- struct GracieResponse: Codable {
-        let response: String
-    }
+struct GracieResponse: Codable {
+       let response: String
+   }
     
     // Add this new response type
     struct PaginatedActivityLogResponse: Codable {
@@ -32,6 +32,49 @@ enum NetworkError: Error {
         let totalPages: Int
         let currentPage: Int
     }
+
+struct GenerateFoodResponse: Decodable {
+    let status: String
+    let question: String?
+    let parsedContext: [String: String]?
+    let food: Food?
+    let mealItems: [MealItem]?
+    let dataSource: String?
+    let error: String?
+
+    var needsClarification: Bool { status == "needs_clarification" }
+}
+
+enum FoodGenerationResponseError: LocalizedError {
+    case needsClarification(question: String)
+    case unavailable(message: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .needsClarification(let question):
+            return question
+        case .unavailable(let message):
+            return message
+        }
+    }
+}
+
+extension GenerateFoodResponse {
+    var resolvedFoodResult: Result<Food, FoodGenerationResponseError> {
+        if needsClarification {
+            return .failure(
+                .needsClarification(
+                    question: question ?? "Can you provide more details?"
+                )
+            )
+        }
+        if let food {
+            return .success(food)
+        }
+        let fallbackMessage = error ?? question ?? "Unable to generate nutrition data."
+        return .failure(.unavailable(message: fallbackMessage))
+    }
+}
 
 struct AppVersionResponse: Codable {
     let minimumVersion: String
@@ -7683,11 +7726,13 @@ func updateRecipeWithFoods(
 
     func generateFoodWithAI(
         foodDescription: String,
-        completion: @escaping (Result<Food, Error>) -> Void
+        history: [[String: String]] = [],
+        completion: @escaping (Result<GenerateFoodResponse, Error>) -> Void
     ) {
         let parameters: [String: Any] = [
             "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
-            "food_description": foodDescription
+            "food_description": foodDescription,
+            "history": history
         ]
         
         let urlString = "\(baseUrl)/generate-ai-food/"
@@ -7753,10 +7798,10 @@ func updateRecipeWithFoods(
             do {
                 let decoder = JSONDecoder()
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
-                let food = try decoder.decode(Food.self, from: data)
-                
+                let responseObject = try decoder.decode(GenerateFoodResponse.self, from: data)
+
                 DispatchQueue.main.async {
-                    completion(.success(food))
+                    completion(.success(responseObject))
                 }
             } catch {
                 print("Decoding Error: \(error)")

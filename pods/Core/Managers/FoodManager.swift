@@ -2795,8 +2795,9 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
 }
 func generateFoodWithAI(
     foodDescription: String,
+    history: [[String: String]] = [],
     skipConfirmation: Bool = false,
-    completion: @escaping (Result<Food, Error>) -> Void
+    completion: @escaping (Result<GenerateFoodResponse, Error>) -> Void
 ) {
     // UNIFIED: Set modern state for food generation (keeping legacy for backward compatibility)
     foodScanningState = .generatingFood
@@ -2819,7 +2820,10 @@ func generateFoodWithAI(
     }
     
     // Make the API request
-    networkManager.generateFoodWithAI(foodDescription: foodDescription) { [weak self] result in
+    networkManager.generateFoodWithAI(
+        foodDescription: foodDescription,
+        history: history
+    ) { [weak self] result in
         guard let self = self else {
             timer.invalidate()
             return
@@ -2834,24 +2838,19 @@ func generateFoodWithAI(
             self.isGeneratingFood = false
             
             switch result {
-            case .success(let food):
-                // Only set lastGeneratedFood if we want to show confirmation
-                if !skipConfirmation {
-                    // Store the generated food to trigger confirmation sheet
-                    self.lastGeneratedFood = food
+            case .success(let response):
+                if let food = response.food {
+                    if !skipConfirmation {
+                        self.lastGeneratedFood = food
+                    }
+                    self.showFoodGenerationSuccess = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self.showFoodGenerationSuccess = false
+                    }
                 }
-                
-                // Show success toast
-                self.showFoodGenerationSuccess = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    self.showFoodGenerationSuccess = false
-                }
-                
-                // Call the completion handler
-                completion(.success(food))
-                
+                completion(.success(response))
+
             case .failure(let error):
-                // Forward the error
                 completion(.failure(error))
             }
         }
