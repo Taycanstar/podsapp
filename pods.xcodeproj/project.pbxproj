@@ -117,6 +117,7 @@
 		3642C2212B99FB0100D059B9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2202B99FB0100D059B9 /* NetworkManager.swift */; };
 		3642C2242B9BD8AC00D059B9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2232B9BD8AC00D059B9 /* LoginView.swift */; };
 		3642C2272B9D3C1800D059B9 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642C2262B9D3C1800D059B9 /* HomeViewModel.swift */; };
+		36498B132EE51A1F00F62C97 /* FoodLogAgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36498B122EE51A1F00F62C97 /* FoodLogAgentView.swift */; };
 		364A83AC2D81F3F7009D2620 /* EditMealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83AB2D81F3F7009D2620 /* EditMealView.swift */; };
 		364A83AE2D87D210009D2620 /* CreateRecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83AD2D87D210009D2620 /* CreateRecipeView.swift */; };
 		364A83B02D87D21E009D2620 /* EditRecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83AF2D87D21E009D2620 /* EditRecipeView.swift */; };
@@ -525,6 +526,7 @@
 		3642C2202B99FB0100D059B9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NetworkManager.swift; path = pods/Core/Managers/NetworkManager.swift; sourceTree = SOURCE_ROOT; };
 		3642C2232B9BD8AC00D059B9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		3642C2262B9D3C1800D059B9 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
+		36498B122EE51A1F00F62C97 /* FoodLogAgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodLogAgentView.swift; sourceTree = "<group>"; };
 		364A83AB2D81F3F7009D2620 /* EditMealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMealView.swift; sourceTree = "<group>"; };
 		364A83AD2D87D210009D2620 /* CreateRecipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateRecipeView.swift; sourceTree = "<group>"; };
 		364A83AF2D87D21E009D2620 /* EditRecipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRecipeView.swift; sourceTree = "<group>"; };
@@ -1011,6 +1013,14 @@
 			path = viewModels;
 			sourceTree = "<group>";
 		};
+		36498B112EE51A0E00F62C97 /* agents */ = {
+			isa = PBXGroup;
+			children = (
+				36498B122EE51A1F00F62C97 /* FoodLogAgentView.swift */,
+			);
+			path = agents;
+			sourceTree = "<group>";
+		};
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
@@ -1136,6 +1146,7 @@
 		3688DBF62BDEAE54001E244C /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				36498B112EE51A0E00F62C97 /* agents */,
 				3615D1162EB0FDC60063EB8B /* home */,
 				3619191C2EA7DE6E007CAA0D /* subscriptions */,
 				3619191A2EA5C540007CAA0D /* LogProUpgradeSheet.swift */,
@@ -2125,6 +2136,7 @@
 				36A85CE52DB2F35000DD4266 /* GoalTimeView.swift in Sources */,
 				363AFA1D2D4759E000C91A14 /* FoldersView.swift in Sources */,
 				3619191B2EA5C547007CAA0D /* LogProUpgradeSheet.swift in Sources */,
+				36498B132EE51A1F00F62C97 /* FoodLogAgentView.swift in Sources */,
 				362532A72E6CD98B003C3B8D /* RestTimerSheet.swift in Sources */,
 				36ED35BC2DD938C800D174FB /* HeightDataView.swift in Sources */,
 				369474562CB9C0B600CD197F /* MetricCard.swift in Sources */,

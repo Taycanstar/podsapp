@@ -1,5 +1,14 @@
+//
+//  FoodLogAgentView.swift
+//  pods
+//
+//  Created by Dimi Nunez on 12/6/25.
+//
+
+
 import SwiftUI
 
+// Chat-style food logger reused for Text -> Add More flow
 struct FoodLogAgentView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var foodManager: FoodManager
@@ -18,7 +27,7 @@ struct FoodLogAgentView: View {
                 chatScroll
                 inputBar
             }
-            .navigationTitle("Food Log Agent")
+            .navigationTitle("Metryc")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -130,7 +139,7 @@ struct FoodLogAgentView: View {
                     onFoodReady(food)
                     isPresented = false
                 case .failure(let error):
-                    messages.append(FoodLogMessage(sender: .system, text: "Error: \(error.localizedDescription)"))
+                    messages.append(FoodLogMessage(sender: .system, text: "Error: \\(error.localizedDescription)"))
                 }
             }
         }
