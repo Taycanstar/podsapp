@@ -171,8 +171,8 @@ struct AgentTabBar: View {
                         HapticFeedback.generate()
                         onMuteToggle?()
                     },
-                    backgroundColor: Color("chaticon"),
-                    foregroundColor: .primary
+                    backgroundColor: realtimeState == .muted ? .red : Color("chaticon"),
+                    foregroundColor: realtimeState == .muted ? .white : .primary
                 )
 
                 // End button with animated waveform

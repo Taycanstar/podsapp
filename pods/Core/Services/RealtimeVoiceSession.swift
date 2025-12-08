@@ -37,10 +37,21 @@ enum RealtimeSessionState: Equatable {
     }
 }
 
+struct RealtimeMessage: Identifiable, Equatable {
+    let id = UUID()
+    let isUser: Bool
+    let text: String
+}
+
 @MainActor
 class RealtimeVoiceSession: NSObject, ObservableObject {
     @Published var state: RealtimeSessionState = .idle
     @Published var transcribedText: String = ""
+    @Published var messages: [RealtimeMessage] = []
+
+    // Streaming text for live display
+    @Published var currentUserText: String = ""
+    @Published var currentAssistantText: String = ""
 
     private var peerConnection: RTCPeerConnection?
     private var dataChannel: RTCDataChannel?
