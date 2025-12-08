@@ -68,6 +68,9 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
     func connect() async throws {
         state = .connecting
         transcribedText = ""
+        messages = []
+        currentUserText = ""
+        currentAssistantText = ""
 
         // 1. Get ephemeral key from backend
         ephemeralKey = try await fetchEphemeralKey()
@@ -283,29 +286,63 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
 
         print("📨 Received event: \(type)")
 
-        // Handle transcription events
-        if type == "response.output_audio_transcript.delta",
+        // Handle user input transcription streaming
+        if type == "conversation.item.input_audio_transcription.delta",
            let delta = json["delta"] as? String {
             Task { @MainActor in
-                self.transcribedText += delta
+                self.currentUserText += delta
             }
         }
 
-        // Handle completed transcription
-        if type == "response.output_audio_transcript.done",
-           let transcript = json["transcript"] as? String {
-            Task { @MainActor in
-                self.transcribedText = transcript
-            }
-        }
-
-        // Handle input audio transcription (what user said)
+        // Handle user input transcription completed
         if type == "conversation.item.input_audio_transcription.completed",
            let transcript = json["transcript"] as? String {
             Task { @MainActor in
-                if self.transcribedText.isEmpty {
-                    self.transcribedText = transcript
+                let finalText = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !finalText.isEmpty {
+                    self.messages.append(RealtimeMessage(isUser: true, text: finalText))
+                    self.transcribedText = finalText
                 }
+                self.currentUserText = ""
+            }
+        }
+
+        // Handle assistant response streaming
+        if type == "response.audio_transcript.delta",
+           let delta = json["delta"] as? String {
+            Task { @MainActor in
+                self.currentAssistantText += delta
+            }
+        }
+
+        // Handle assistant response completed
+        if type == "response.audio_transcript.done",
+           let transcript = json["transcript"] as? String {
+            Task { @MainActor in
+                let finalText = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !finalText.isEmpty {
+                    self.messages.append(RealtimeMessage(isUser: false, text: finalText))
+                }
+                self.currentAssistantText = ""
+            }
+        }
+
+        // Fallback for output audio transcript events
+        if type == "response.output_audio_transcript.delta",
+           let delta = json["delta"] as? String {
+            Task { @MainActor in
+                self.currentAssistantText += delta
+            }
+        }
+
+        if type == "response.output_audio_transcript.done",
+           let transcript = json["transcript"] as? String {
+            Task { @MainActor in
+                let finalText = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !finalText.isEmpty {
+                    self.messages.append(RealtimeMessage(isUser: false, text: finalText))
+                }
+                self.currentAssistantText = ""
             }
         }
     }

@@ -36,7 +36,7 @@ struct FoodLogAgentView: View {
                 }
 
                 // "Start talking" overlay when connected and chat is empty
-                if realtimeSession.state == .connected && messages.isEmpty {
+                if realtimeSession.state == .connected && messages.isEmpty && realtimeSession.messages.isEmpty {
                     VStack {
                         Spacer()
                         Text("Start talking")
@@ -77,6 +77,7 @@ struct FoodLogAgentView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
+                    // Regular text-based messages
                     ForEach(messages) { message in
                         switch message.sender {
                         case .user:
@@ -97,15 +98,75 @@ struct FoodLogAgentView: View {
                             thinkingIndicator
                         }
                     }
+
+                    // Realtime voice messages
+                    ForEach(realtimeSession.messages) { message in
+                        if message.isUser {
+                            HStack {
+                                Spacer()
+                                Text(message.text)
+                                    .padding(12)
+                                    .background(Color.accentColor)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(16)
+                            }
+                        } else {
+                            Text(message.text)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 4)
+                                .foregroundColor(.primary)
+                        }
+                    }
+
+                    // Streaming user text (what user is currently saying)
+                    if !realtimeSession.currentUserText.isEmpty {
+                        HStack {
+                            Spacer()
+                            Text(realtimeSession.currentUserText)
+                                .padding(12)
+                                .background(Color.accentColor.opacity(0.6))
+                                .foregroundColor(.white)
+                                .cornerRadius(16)
+                        }
+                        .id("streamingUser")
+                    }
+
+                    // Streaming assistant text (what AI is currently saying)
+                    if !realtimeSession.currentAssistantText.isEmpty {
+                        Text(realtimeSession.currentAssistantText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 4)
+                            .foregroundColor(.secondary)
+                            .id("streamingAssistant")
+                    }
                 }
                 .padding()
             }
-            .onChange(of: messages.count) { _ in
-                if let last = messages.last?.id {
-                    withAnimation {
-                        proxy.scrollTo(last, anchor: .bottom)
-                    }
-                }
+            .onChange(of: messages.count) { _, _ in
+                scrollToBottom(proxy: proxy)
+            }
+            .onChange(of: realtimeSession.messages.count) { _, _ in
+                scrollToBottom(proxy: proxy)
+            }
+            .onChange(of: realtimeSession.currentUserText) { _, _ in
+                scrollToBottom(proxy: proxy)
+            }
+            .onChange(of: realtimeSession.currentAssistantText) { _, _ in
+                scrollToBottom(proxy: proxy)
+            }
+        }
+    }
+
+    private func scrollToBottom(proxy: ScrollViewProxy) {
+        withAnimation {
+            if !realtimeSession.currentAssistantText.isEmpty {
+                proxy.scrollTo("streamingAssistant", anchor: .bottom)
+            } else if !realtimeSession.currentUserText.isEmpty {
+                proxy.scrollTo("streamingUser", anchor: .bottom)
+            } else if let last = realtimeSession.messages.last?.id {
+                proxy.scrollTo(last, anchor: .bottom)
+            } else if let last = messages.last?.id {
+                proxy.scrollTo(last, anchor: .bottom)
             }
         }
     }
