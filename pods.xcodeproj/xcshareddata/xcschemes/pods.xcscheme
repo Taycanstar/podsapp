@@ -15,8 +15,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "36C458B52B7421100060355F"
-               BuildableName = "Pods.app"
-               BlueprintName = "Pods"
+               BuildableName = "Metryc.app"
+               BlueprintName = "Metryc"
                ReferencedContainer = "container:pods.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -68,8 +68,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "36C458B52B7421100060355F"
-            BuildableName = "Pods.app"
-            BlueprintName = "Pods"
+            BuildableName = "Metryc.app"
+            BlueprintName = "Metryc"
             ReferencedContainer = "container:pods.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -212,8 +212,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "36C458B52B7421100060355F"
-            BuildableName = "Pods.app"
-            BlueprintName = "Pods"
+            BuildableName = "Metryc.app"
+            BlueprintName = "Metryc"
             ReferencedContainer = "container:pods.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

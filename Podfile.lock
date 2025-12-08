@@ -24,6 +24,7 @@ PODS:
   - GoogleUtilities/UserDefaults (8.0.2):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
+  - GoogleWebRTC (1.1.32000)
   - GTMAppAuth (4.1.1):
     - AppAuth/Core (~> 1.7)
     - GTMSessionFetcher/Core (< 4.0, >= 3.3)
@@ -34,6 +35,7 @@ PODS:
 DEPENDENCIES:
   - ffmpeg-kit-ios-full-gpl
   - GoogleSignIn
+  - GoogleWebRTC
   - MicrosoftCognitiveServicesSpeech-iOS (~> 1.35.0)
 
 SPEC REPOS:
@@ -43,6 +45,7 @@ SPEC REPOS:
     - ffmpeg-kit-ios-full-gpl
     - GoogleSignIn
     - GoogleUtilities
+    - GoogleWebRTC
     - GTMAppAuth
     - GTMSessionFetcher
     - MicrosoftCognitiveServicesSpeech-iOS
@@ -54,11 +57,12 @@ SPEC CHECKSUMS:
   ffmpeg-kit-ios-full-gpl: 80adc341962e55ef709e36baa8ed9a70cf4ea62b
   GoogleSignIn: ce8c89bb9b37fb624b92e7514cc67335d1e277e4
   GoogleUtilities: 26a3abef001b6533cf678d3eb38fd3f614b7872d
+  GoogleWebRTC: 4d261187b30512efdb711d21fa961a6adf138717
   GTMAppAuth: f69bd07d68cd3b766125f7e072c45d7340dea0de
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   MicrosoftCognitiveServicesSpeech-iOS: b25ac5b5925c7136e962473660434d9a1e757ba3
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
 
-PODFILE CHECKSUM: be0faebec2bbca2e866e2a238de3a19b949d9896
+PODFILE CHECKSUM: 6bc1fb02e6784f31145b81d6387717172e7cbde3
 
 COCOAPODS: 1.15.2

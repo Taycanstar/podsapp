@@ -16,6 +16,13 @@ struct AgentTabBar: View {
     var onMicrophoneTapped: () -> Void = {}
     var onWaveformTapped: () -> Void = {}
     var onSubmit: () -> Void = {}
+
+    // Realtime voice session properties
+    var realtimeState: RealtimeSessionState = .idle
+    var onRealtimeStart: (() -> Void)?
+    var onRealtimeEnd: (() -> Void)?
+    var onMuteToggle: (() -> Void)?
+
     @State private var isListening = false
     @State private var pulseScale: CGFloat = 1.0
     @StateObject private var speechRecognizer = SpeechRecognizer()
@@ -86,52 +93,8 @@ struct AgentTabBar: View {
                 }
                 
                 Spacer()
-                
-                if isListening {
-                    Button {
-                        HapticFeedback.generate()
-                        toggleSpeechRecognition()
-                    } label: {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 30, height: 30)
-                            .background(Color.accentColor)
-                            .clipShape(Circle())
-                            .scaleEffect(pulseScale)
-                            .animation(
-                                Animation.easeInOut(duration: 1.0)
-                                    .repeatForever(autoreverses: true),
-                                value: pulseScale
-                            )
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    HStack(spacing: 10) {
-                        ActionCircleButton(
-                            systemName: "mic",
-                            action: {
-                                HapticFeedback.generate()
-                                toggleSpeechRecognition()
-                            },
-                            backgroundColor: Color("chaticon"),
-                            foregroundColor: .primary
-                        )
 
-                        ActionCircleButton(
-                            systemName: hasUserInput ? "arrow.up" : "waveform",
-                            action: {
-                                if hasUserInput {
-                                    submitAgentPrompt()
-                                } else {
-                                    onMicrophoneTapped()
-                                }
-                            },
-                            backgroundColor: hasUserInput ? Color.accentColor : Color("chaticon"),
-                            foregroundColor: hasUserInput ? .white : .primary
-                        )
-                    }
-                }
+                rightButtons(hasUserInput: hasUserInput)
             }
         }
         .padding(.horizontal, 16)
@@ -174,7 +137,7 @@ struct AgentTabBar: View {
     private func toggleSpeechRecognition() {
         isListening.toggle()
     }
-    
+
     private func submitAgentPrompt() {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -182,6 +145,104 @@ struct AgentTabBar: View {
         onWaveformTapped()
         text = ""
         isPromptFocused.wrappedValue = false
+    }
+
+    @ViewBuilder
+    private func rightButtons(hasUserInput: Bool) -> some View {
+        switch realtimeState {
+        case .connecting:
+            HStack(spacing: 8) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .primary))
+                Button("Cancel") {
+                    HapticFeedback.generate()
+                    onRealtimeEnd?()
+                }
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.secondary)
+            }
+
+        case .connected, .muted:
+            HStack(spacing: 10) {
+                // Mic toggle button
+                ActionCircleButton(
+                    systemName: realtimeState == .muted ? "mic.slash.fill" : "mic.fill",
+                    action: {
+                        HapticFeedback.generate()
+                        onMuteToggle?()
+                    },
+                    backgroundColor: Color("chaticon"),
+                    foregroundColor: .primary
+                )
+
+                // End button with animated waveform
+                Button(action: {
+                    HapticFeedback.generate()
+                    onRealtimeEnd?()
+                }) {
+                    HStack(spacing: 6) {
+                        AnimatedWaveform()
+                            .frame(width: 20, height: 16)
+                        Text("End")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
+        default: // .idle, .error
+            if isListening {
+                Button {
+                    HapticFeedback.generate()
+                    toggleSpeechRecognition()
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 30, height: 30)
+                        .background(Color.accentColor)
+                        .clipShape(Circle())
+                        .scaleEffect(pulseScale)
+                        .animation(
+                            Animation.easeInOut(duration: 1.0)
+                                .repeatForever(autoreverses: true),
+                            value: pulseScale
+                        )
+                }
+                .buttonStyle(.plain)
+            } else {
+                HStack(spacing: 10) {
+                    ActionCircleButton(
+                        systemName: "mic",
+                        action: {
+                            HapticFeedback.generate()
+                            toggleSpeechRecognition()
+                        },
+                        backgroundColor: Color("chaticon"),
+                        foregroundColor: .primary
+                    )
+
+                    ActionCircleButton(
+                        systemName: hasUserInput ? "arrow.up" : "waveform",
+                        action: {
+                            if hasUserInput {
+                                submitAgentPrompt()
+                            } else {
+                                HapticFeedback.generate()
+                                onRealtimeStart?()
+                            }
+                        },
+                        backgroundColor: hasUserInput ? Color.accentColor : Color("chaticon"),
+                        foregroundColor: hasUserInput ? .white : .primary
+                    )
+                }
+            }
+        }
     }
 
     private var borderColor: Color {
@@ -251,5 +312,35 @@ private struct AgentTabBarPreview: View {
 
     var body: some View {
         AgentTabBar(text: $prompt, isPromptFocused: $isFocused)
+    }
+}
+
+struct AnimatedWaveform: View {
+    @State private var heights: [CGFloat] = Array(repeating: 4, count: 5)
+    @State private var timer: Timer?
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<5, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.white)
+                    .frame(width: 3, height: heights[index])
+            }
+        }
+        .onAppear { startAnimation() }
+        .onDisappear { stopAnimation() }
+    }
+
+    private func startAnimation() {
+        timer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { _ in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                heights = (0..<5).map { _ in CGFloat.random(in: 4...16) }
+            }
+        }
+    }
+
+    private func stopAnimation() {
+        timer?.invalidate()
+        timer = nil
     }
 }

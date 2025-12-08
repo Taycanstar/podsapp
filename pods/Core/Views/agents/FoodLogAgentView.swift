@@ -24,11 +24,27 @@ struct FoodLogAgentView: View {
     @State private var statusPhraseIndex = 0
     @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
 
+    // Realtime voice session
+    @StateObject private var realtimeSession = RealtimeVoiceSession()
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                chatScroll
-                inputBar
+            ZStack {
+                VStack(spacing: 0) {
+                    chatScroll
+                    inputBar
+                }
+
+                // "Start talking" overlay when connected and chat is empty
+                if realtimeSession.state == .connected && messages.isEmpty {
+                    VStack {
+                        Spacer()
+                        Text("Start talking")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
             }
             .navigationTitle("Metryc")
             .navigationBarTitleDisplayMode(.inline)
@@ -48,6 +64,12 @@ struct FoodLogAgentView: View {
         }
         .onChange(of: isLoading) { _, loading in
             if !loading { statusPhraseIndex = 0 }
+        }
+        .onDisappear {
+            // Clean up realtime session when view disappears
+            if realtimeSession.state != .idle {
+                realtimeSession.disconnect()
+            }
         }
     }
 
@@ -89,40 +111,26 @@ struct FoodLogAgentView: View {
     }
 
     private var inputBar: some View {
-        VStack {
-            HStack(alignment: .bottom, spacing: 12) {
-                TextField("Describe what you ate…", text: $inputText, axis: .vertical)
-                    .textInputAutocapitalization(.sentences)
-                    .lineLimit(1...4)
-                    .padding(.vertical, 8)
-                    .focused($isInputFocused)
-
-                Button {
-                    sendPrompt()
-                } label: {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
-                        .background(Circle().fill(Color.accentColor))
-                }
-                .buttonStyle(.plain)
-                .disabled(isLoading || inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color("chat"))
-                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-            )
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
+        AgentTabBar(
+            text: $inputText,
+            isPromptFocused: $isInputFocused,
+            onPlusTapped: { HapticFeedback.generateLigth() },
+            onBarcodeTapped: { HapticFeedback.generateLigth() },
+            onMicrophoneTapped: { HapticFeedback.generateLigth() },
+            onWaveformTapped: {
+                guard !isLoading else { return }
+                sendPrompt()
+            },
+            onSubmit: {
+                guard !isLoading else { return }
+                sendPrompt()
+            },
+            realtimeState: realtimeSession.state,
+            onRealtimeStart: { startRealtimeSession() },
+            onRealtimeEnd: { endRealtimeSession() },
+            onMuteToggle: { realtimeSession.toggleMute() }
+        )
+        .padding(.bottom, 8)
     }
 
     private func sendPrompt() {
@@ -162,6 +170,30 @@ struct FoodLogAgentView: View {
                     messages.append(FoodLogMessage(sender: .system, text: "Error: \(error.localizedDescription)"))
                 }
             }
+        }
+    }
+
+    // MARK: - Realtime Voice Session
+
+    private func startRealtimeSession() {
+        Task {
+            do {
+                try await realtimeSession.connect()
+            } catch {
+                print("❌ Realtime connection failed: \(error)")
+                messages.append(FoodLogMessage(sender: .system, text: "Voice connection failed. Please try again."))
+            }
+        }
+    }
+
+    private func endRealtimeSession() {
+        let transcript = realtimeSession.transcribedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        realtimeSession.disconnect()
+
+        // If we have transcribed text, send it through the existing food logging flow
+        if !transcript.isEmpty {
+            inputText = transcript
+            sendPrompt()
         }
     }
 }

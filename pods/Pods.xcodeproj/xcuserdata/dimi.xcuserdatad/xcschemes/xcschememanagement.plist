@@ -59,17 +59,22 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
+		<key>GoogleWebRTC.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<false/>
+		</dict>
 		<key>MicrosoftCognitiveServicesSpeech-iOS.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>Pods-Podstack-podsUITests.xcscheme</key>
+		<key>Pods-Metryc-podsUITests.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>Pods-Podstack.xcscheme</key>
+		<key>Pods-Metryc.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>

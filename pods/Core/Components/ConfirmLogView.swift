@@ -584,7 +584,10 @@ struct ConfirmLogView: View {
                 .disabled(isCreating)
                 .opacity(isCreating ? 0.7 : 1)
 
-                Button(action: handleAddToPlate) {
+                Button(action: {
+                    HapticFeedback.generateLigth()
+                    handleAddToPlate()
+                }) {
                     Text("Add to Plate")
                         .font(.headline)
                         .fontWeight(.semibold)
@@ -2944,9 +2947,8 @@ struct PlateView: View {
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
     @State private var showScanner = false
-    @State private var showTextLog = false
+    @State private var showDescribeLog = false
     @State private var showQuickAdd = false
-    @State private var showVoiceLog = false
     @State private var pendingFood: Food?
     @State private var showConfirmFood = false
     @State private var showMealTimePicker = false
@@ -3042,8 +3044,8 @@ struct PlateView: View {
                             })
             .edgesIgnoringSafeArea(.all)
         }
-        .sheet(isPresented: $showTextLog) {
-            FoodLogAgentView(isPresented: $showTextLog) { food in
+        .sheet(isPresented: $showDescribeLog) {
+            FoodLogAgentView(isPresented: $showDescribeLog) { food in
                 pendingFood = food
                 showConfirmFood = true
             }
@@ -3061,14 +3063,6 @@ struct PlateView: View {
             .environmentObject(onboardingViewModel)
             .environmentObject(foodManager)
             .environmentObject(dayLogsVM)
-        }
-        .sheet(isPresented: $showVoiceLog) {
-            AddToPlateWithVoice(isPresented: $showVoiceLog,
-                                selectedMeal: selectedMealPeriod.title) { food in
-                pendingFood = food
-                showConfirmFood = true
-            }
-            .environmentObject(foodManager)
         }
         .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
             reloadStoredNutrientTargets()
@@ -3590,21 +3584,15 @@ struct PlateView: View {
                     }
 
                     Button {
-                        showTextLog = true
+                        showDescribeLog = true
                     } label: {
-                        Label("Text", systemImage: "text.alignleft")
+                        Label("Describe", systemImage: "waveform")
                     }
 
                     Button {
                         showQuickAdd = true
                     } label: {
                         Label("Quick Add", systemImage: "plus.circle")
-                    }
-
-                    Button {
-                        showVoiceLog = true
-                    } label: {
-                        Label("With Voice", systemImage: "mic")
                     }
                 } label: {
                     Text("Add More")
@@ -3619,9 +3607,6 @@ struct PlateView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(Color("text"))
-                .simultaneousGesture(TapGesture().onEnded {
-                    HapticFeedback.generateLigth()
-                })
                 .simultaneousGesture(TapGesture().onEnded {
                     HapticFeedback.generateLigth()
                 })
