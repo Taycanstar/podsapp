@@ -1077,6 +1077,30 @@ class FoodManager: ObservableObject {
     init() {
         self.networkManager = NetworkManager()
     }
+
+    // MARK: Streaming helper pass-through
+    @discardableResult
+    func streamAIResponse(
+        messages: [[String: Any]],
+        model: String = "gpt-5.1",
+        temperature: Double = 0.3,
+        onDelta: @escaping (String) -> Void,
+        onComplete: @escaping () -> Void,
+        onError: @escaping (Error) -> Void
+    ) -> UUID? {
+        networkManager.streamAIResponse(
+            messages: messages,
+            model: model,
+            temperature: temperature,
+            onDelta: onDelta,
+            onComplete: onComplete,
+            onError: onError
+        )
+    }
+
+    func cancelStream(token: UUID) {
+        networkManager.cancelStream(token: token)
+    }
     
     
     func initialize(userEmail: String) {

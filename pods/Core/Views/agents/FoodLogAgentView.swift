@@ -20,6 +20,8 @@ struct FoodLogAgentView: View {
     @State private var inputText: String = ""
     @State private var isLoading = false
     @State private var conversationHistory: [[String: String]] = []
+    @State private var streamingText: String = ""
+    @State private var streamingToken: UUID?
     @FocusState private var isInputFocused: Bool
     @State private var statusPhraseIndex = 0
     @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
@@ -139,6 +141,15 @@ struct FoodLogAgentView: View {
                             .foregroundColor(.secondary)
                             .id("streamingAssistant")
                     }
+
+                    // Text streaming from backend typewriter
+                    if !streamingText.isEmpty {
+                        Text(streamingText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 4)
+                            .foregroundColor(.secondary)
+                            .id("streamingAssistantText")
+                    }
                 }
                 .padding()
             }
@@ -202,6 +213,7 @@ struct FoodLogAgentView: View {
         inputText = ""
         isLoading = true
         messages.append(FoodLogMessage(sender: .status, text: "Analyzing…"))
+        startStreamingStatus(for: prompt)
 
         foodManager.generateFoodWithAI(
             foodDescription: prompt,
@@ -211,6 +223,7 @@ struct FoodLogAgentView: View {
             DispatchQueue.main.async {
                 isLoading = false
                 messages.removeAll { $0.sender == .status }
+                stopStreamingStatus()
                 switch result {
                 case .success(let response):
                     switch response.resolvedFoodResult {
@@ -256,6 +269,39 @@ struct FoodLogAgentView: View {
             inputText = transcript
             sendPrompt()
         }
+    }
+
+    // MARK: - Streaming typewriter status
+
+    private func startStreamingStatus(for prompt: String) {
+        streamingText = ""
+        let systemMessage = [
+            "role": "system",
+            "content": "You are acknowledging the user's food log while we fetch nutrition. Reply with a short reassuring sentence. Do not include numbers or nutrition values."
+        ]
+        let userMessage = ["role": "user", "content": prompt]
+        let payload = [systemMessage, userMessage]
+
+        streamingToken = foodManager.streamAIResponse(
+            messages: payload,
+            model: "gpt-5.1",
+            temperature: 0.4,
+            onDelta: { delta in
+                streamingText.append(delta)
+            },
+            onComplete: {},
+            onError: { error in
+                print("Streaming error: \(error.localizedDescription)")
+            }
+        )
+    }
+
+    private func stopStreamingStatus() {
+        if let token = streamingToken {
+            foodManager.cancelStream(token: token)
+        }
+        streamingToken = nil
+        streamingText = ""
     }
 }
 
