@@ -21,6 +21,8 @@ struct FoodLogAgentView: View {
     @State private var isLoading = false
     @State private var conversationHistory: [[String: String]] = []
     @FocusState private var isInputFocused: Bool
+    @State private var statusPhraseIndex = 0
+    @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
         NavigationStack {
@@ -39,6 +41,13 @@ struct FoodLogAgentView: View {
                     }
                 }
             }
+        }
+        .onReceive(thinkingTimer) { _ in
+            guard isLoading else { return }
+            statusPhraseIndex = (statusPhraseIndex + 1) % statusPhrases.count
+        }
+        .onChange(of: isLoading) { _, loading in
+            if !loading { statusPhraseIndex = 0 }
         }
     }
 
@@ -63,13 +72,7 @@ struct FoodLogAgentView: View {
                                 .padding(.vertical, 4)
                                 .foregroundColor(.primary)
                         case .status:
-                            HStack(spacing: 10) {
-                                ProgressView()
-                                    .progressViewStyle(.circular)
-                                Text(message.text)
-                                    .font(.footnote)
-                                    .foregroundColor(.secondary)
-                            }
+                            thinkingIndicator
                         }
                     }
                 }
@@ -170,4 +173,44 @@ private struct FoodLogMessage: Identifiable {
     let id = UUID()
     let sender: Sender
     let text: String
+}
+
+// MARK: - Thinking Indicator Helpers
+
+extension FoodLogAgentView {
+    private var thinkingIndicator: some View {
+        HStack(spacing: 10) {
+            thinkingPulseCircle
+            Text(currentStatusText)
+                .font(.footnote)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var currentStatusText: String {
+        statusPhrases[min(statusPhraseIndex, statusPhrases.count - 1)]
+    }
+
+    private var thinkingPulseCircle: some View {
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let normalized = (sin(t * 2 * .pi / 1.5) + 1) / 2
+            Circle()
+                .fill(Color.primary)
+                .frame(width: 10, height: 10)
+                .scaleEffect(0.85 + 0.25 * normalized)
+                .opacity(0.6 + 0.4 * normalized)
+        }
+    }
+
+    private var statusPhrases: [String] {
+        [
+            "Analyzing your meal…",
+            "Looking up nutrition…",
+            "Balancing macros…",
+            "Checking ingredients…"
+        ]
+    }
+
 }

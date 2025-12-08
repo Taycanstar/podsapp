@@ -565,7 +565,10 @@ struct ConfirmLogView: View {
                 .padding(.horizontal, -16)
 
             HStack(spacing: 12) {
-                Button(action: logBarcodeFood) {
+                Button(action: {
+                    HapticFeedback.generateLigth()
+                    logBarcodeFood()
+                }) {
                     Text(isCreating ? "Logging..." : "Log Food")
                         .font(.headline)
                         .fontWeight(.semibold)
@@ -3560,7 +3563,10 @@ struct PlateView: View {
                 .padding(.horizontal, -16)
 
             HStack(spacing: 12) {
-                Button(action: logPlate) {
+                Button(action: {
+                    HapticFeedback.generateLigth()
+                    logPlate()
+                }) {
                     Text(isLoggingPlate ? "Logging..." : "Log Plate")
                         .font(.headline)
                         .fontWeight(.semibold)
@@ -3613,6 +3619,12 @@ struct PlateView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(Color("text"))
+                .simultaneousGesture(TapGesture().onEnded {
+                    HapticFeedback.generateLigth()
+                })
+                .simultaneousGesture(TapGesture().onEnded {
+                    HapticFeedback.generateLigth()
+                })
             }
         }
         .padding(.horizontal)
