@@ -99,7 +99,9 @@ struct FoodLogAgentView: View {
                                 .padding(.vertical, 4)
                                 .foregroundColor(.primary)
                         case .status:
-                            thinkingIndicator
+                            if streamingMessageId == nil {
+                                thinkingIndicator
+                            }
                         }
                     }
 
@@ -135,22 +137,14 @@ struct FoodLogAgentView: View {
                         .id("streamingUser")
                     }
 
-                    // Streaming assistant text (what AI is currently saying)
+                   // Streaming assistant text (what AI is currently saying)
+                    // Streaming assistant text (voice realtime)
                     if !realtimeSession.currentAssistantText.isEmpty {
                         Text(realtimeSession.currentAssistantText)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, 4)
                             .foregroundColor(.secondary)
                             .id("streamingAssistant")
-                    }
-
-                    // Text streaming from backend typewriter
-                    if !streamingText.isEmpty {
-                        Text(streamingText)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 4)
-                            .foregroundColor(.secondary)
-                            .id("streamingAssistantText")
                     }
                 }
                 .padding()
@@ -283,12 +277,26 @@ struct FoodLogAgentView: View {
     private func startStreamingStatus(for prompt: String) {
         streamingText = ""
         print("[STREAM UI] start streaming status for prompt: \(prompt)")
+
+        // Clean up any previous streaming placeholders to avoid double-rendered ghost text.
+        if let existingId = streamingMessageId {
+            messages.removeAll { $0.id == existingId }
+            streamingMessageId = nil
+        }
+        if let token = streamingToken {
+            foodManager.cancelStream(token: token)
+            streamingToken = nil
+        }
+
         let systemMessage = [
             "role": "system",
             "content": "You are acknowledging the user's food log while we fetch nutrition. Reply with a short neutral sentence. Do not say you have logged anything. Do not include numbers or nutrition values."
         ]
         let userMessage = ["role": "user", "content": prompt]
         let payload = [systemMessage, userMessage]
+
+        // Remove existing status rows while we stream the live text to avoid duplicate ghost lines.
+        messages.removeAll { $0.sender == .status }
 
         // Insert a placeholder system message that will grow as tokens arrive.
         let placeholderId = UUID()
