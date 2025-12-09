@@ -1,18 +1,17 @@
 //
-//  AgentTabBar.swift
+//  AgentTabBarMinimal.swift
 //  pods
 //
-//  Created by Dimi Nunez on 10/27/25.
+//  Created by Dimi Nunez on 12/8/25.
 //
+
 
 import SwiftUI
 import UIKit
 
-struct AgentTabBar: View {
+struct AgentTabBarMinimal: View {
     @Binding var text: String
     var isPromptFocused: FocusState<Bool>.Binding
-    var onPlusTapped: () -> Void = {}
-    var onBarcodeTapped: () -> Void = {}
     var onMicrophoneTapped: () -> Void = {}
     var onWaveformTapped: () -> Void = {}
     var onSubmit: () -> Void = {}
@@ -29,7 +28,7 @@ struct AgentTabBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TransparentBlurView(removeAllFilters: true)
+            TransparentBlurViewMinimal(removeAllFilters: true)
                 .blur(radius: 14)
                 .frame(height:10)
                 .frame(maxWidth: .infinity)
@@ -38,7 +37,7 @@ struct AgentTabBar: View {
             contentCard
         }
         .background(
-            TransparentBlurView(removeAllFilters: true)
+            TransparentBlurViewMinimal(removeAllFilters: true)
                 .blur(radius: 14)
                 .ignoresSafeArea(edges: [.horizontal, .bottom])
         )
@@ -49,7 +48,6 @@ struct AgentTabBar: View {
 
         return VStack(alignment: .leading, spacing: 12) {
             ZStack(alignment: .topLeading) {
-                // Placeholder text
                 if text.isEmpty {
                     Text("Log or ask anything...")
                         .font(.system(size: 15))
@@ -62,7 +60,7 @@ struct AgentTabBar: View {
                 TextEditor(text: $text)
                     .textInputAutocapitalization(.sentences)
                     .autocorrectionDisabled(false)
-                    .tint(Color.accentColor) // ensure visible caret color
+                    .tint(Color.accentColor)
                     .font(.system(size: 15))
                     .foregroundColor(.primary)
                     .scrollContentBackground(.hidden)
@@ -77,24 +75,9 @@ struct AgentTabBar: View {
             }
             .padding(.horizontal, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            
+
             HStack {
-                HStack(spacing: 10) {
-                    ActionCircleButton(
-                        systemName: "plus",
-                        action: onPlusTapped,
-                        backgroundColor: Color.accentColor,
-                        foregroundColor: .white
-                    )
-
-                    ActionCircleButton(
-                        systemName: "barcode.viewfinder",
-                        action: onBarcodeTapped
-                    )
-                }
-
                 Spacer()
-
                 rightButtons(hasUserInput: hasUserInput)
             }
         }
@@ -132,7 +115,6 @@ struct AgentTabBar: View {
                 speechRecognizer.stopRecording()
             }
         }
-        // .padding(.bottom, 12)
     }
 
     private func toggleSpeechRecognition() {
@@ -165,18 +147,16 @@ struct AgentTabBar: View {
 
         case .connected, .muted:
             HStack(spacing: 10) {
-                // Mic toggle button
-                ActionCircleButton(
-                    systemName: realtimeState == .muted ? "mic.slash.fill" : "mic.fill",
-                    action: {
-                        HapticFeedback.generate()
-                        onMuteToggle?()
-                    },
+                    ActionCircleButtonMinimal(
+                        systemName: realtimeState == .muted ? "mic.slash.fill" : "mic.fill",
+                        action: {
+                            HapticFeedback.generate()
+                            onMuteToggle?()
+                        },
                     backgroundColor: realtimeState == .muted ? .red : Color("chaticon"),
                     foregroundColor: realtimeState == .muted ? .white : .primary
                 )
 
-                // End button with animated waveform
                 Button(action: {
                     HapticFeedback.generate()
                     onRealtimeEnd?()
@@ -196,7 +176,7 @@ struct AgentTabBar: View {
                 .buttonStyle(.plain)
             }
 
-        default: // .idle, .error
+        default:
             if isListening {
                 Button {
                     HapticFeedback.generate()
@@ -218,7 +198,7 @@ struct AgentTabBar: View {
                 .buttonStyle(.plain)
             } else {
                 HStack(spacing: 10) {
-                    ActionCircleButton(
+                    ActionCircleButtonMinimal(
                         systemName: "mic",
                         action: {
                             HapticFeedback.generate()
@@ -228,7 +208,7 @@ struct AgentTabBar: View {
                         foregroundColor: .primary
                     )
 
-                    ActionCircleButton(
+                    ActionCircleButtonMinimal(
                         systemName: hasUserInput ? "arrow.up" : "waveform",
                         action: {
                             if hasUserInput {
@@ -255,12 +235,13 @@ struct AgentTabBar: View {
     }
 }
 
-private struct ActionCircleButton: View {
+// Minimal local helpers to avoid depending on AgentTabBar’s private types.
+private struct ActionCircleButtonMinimal: View {
     var systemName: String
     var action: () -> Void
     var backgroundColor: Color = Color("chaticon")
     var foregroundColor: Color = .primary
-    
+
     var body: some View {
         Button(action: action) {
             ZStack {
@@ -276,16 +257,7 @@ private struct ActionCircleButton: View {
     }
 }
 
-struct AgentTabBar_Previews: PreviewProvider {
-    static var previews: some View {
-        AgentTabBarPreview()
-            .padding()
-            .background(Color(.systemGroupedBackground))
-            .previewLayout(.sizeThatFits)
-    }
-}
-
-private struct TransparentBlurView: UIViewRepresentable {
+private struct TransparentBlurViewMinimal: UIViewRepresentable {
     var removeAllFilters: Bool = false
 
     func makeUIView(context: Context) -> UIVisualEffectView {
@@ -304,44 +276,5 @@ private struct TransparentBlurView: UIViewRepresentable {
                 }
             }
         }
-    }
-}
-
-private struct AgentTabBarPreview: View {
-    @State private var prompt: String = ""
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        AgentTabBar(text: $prompt, isPromptFocused: $isFocused)
-    }
-}
-
-struct AnimatedWaveform: View {
-    @State private var heights: [CGFloat] = Array(repeating: 4, count: 5)
-    @State private var timer: Timer?
-
-    var body: some View {
-        HStack(spacing: 2) {
-            ForEach(0..<5, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(Color.white)
-                    .frame(width: 3, height: heights[index])
-            }
-        }
-        .onAppear { startAnimation() }
-        .onDisappear { stopAnimation() }
-    }
-
-    private func startAnimation() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { _ in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                heights = (0..<5).map { _ in CGFloat.random(in: 4...16) }
-            }
-        }
-    }
-
-    private func stopAnimation() {
-        timer?.invalidate()
-        timer = nil
     }
 }

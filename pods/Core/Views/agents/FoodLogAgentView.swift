@@ -75,6 +75,10 @@ struct FoodLogAgentView: View {
                 realtimeSession.disconnect()
             }
         }
+        .onAppear {
+            // Auto-focus input when the view appears.
+            isInputFocused = true
+        }
     }
 
     private var chatScroll: some View {
@@ -179,11 +183,9 @@ struct FoodLogAgentView: View {
     }
 
     private var inputBar: some View {
-        AgentTabBar(
+        AgentTabBarMinimal(
             text: $inputText,
             isPromptFocused: $isInputFocused,
-            onPlusTapped: { HapticFeedback.generateLigth() },
-            onBarcodeTapped: { HapticFeedback.generateLigth() },
             onMicrophoneTapped: { HapticFeedback.generateLigth() },
             onWaveformTapped: {
                 guard !isLoading else { return }

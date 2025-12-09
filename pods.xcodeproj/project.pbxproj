@@ -132,6 +132,7 @@
 		364A83CE2DAEC017009D2620 /* VoiceLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364A83CD2DAEC017009D2620 /* VoiceLogView.swift */; };
 		364BC1F72BB27E0B0027133F /* SharedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364BC1F62BB27E0B0027133F /* SharedViewModel.swift */; };
 		3650A1662EE699800068ACE6 /* RealtimeVoiceSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3650A1652EE699800068ACE6 /* RealtimeVoiceSession.swift */; };
+		3650A1682EE7DB760068ACE6 /* AgentTabBarMinimal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3650A1672EE7DB760068ACE6 /* AgentTabBarMinimal.swift */; };
 		365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */; };
 		3662A5492DFB98A700847487 /* CreateFoodWithVoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */; };
 		3662A54B2DFB98BE00847487 /* CreateFoodWithScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */; };
@@ -543,6 +544,7 @@
 		364A83CD2DAEC017009D2620 /* VoiceLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceLogView.swift; sourceTree = "<group>"; };
 		364BC1F62BB27E0B0027133F /* SharedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedViewModel.swift; sourceTree = "<group>"; };
 		3650A1652EE699800068ACE6 /* RealtimeVoiceSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeVoiceSession.swift; sourceTree = "<group>"; };
+		3650A1672EE7DB760068ACE6 /* AgentTabBarMinimal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentTabBarMinimal.swift; sourceTree = "<group>"; };
 		365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemTrendsView.swift; sourceTree = "<group>"; };
 		3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithVoice.swift; sourceTree = "<group>"; };
 		3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithScan.swift; sourceTree = "<group>"; };
@@ -1023,6 +1025,7 @@
 		36498B112EE51A0E00F62C97 /* agents */ = {
 			isa = PBXGroup;
 			children = (
+				3650A1672EE7DB760068ACE6 /* AgentTabBarMinimal.swift */,
 				36498B122EE51A1F00F62C97 /* FoodLogAgentView.swift */,
 			);
 			path = agents;
@@ -1901,6 +1904,7 @@
 				36A85CDD2DB2BF2000DD4266 /* DobView.swift in Sources */,
 				369474522CB9B8CB00CD197F /* BoundsView.swift in Sources */,
 				3662A5552DFE3B8500847487 /* WorkoutContainerView.swift in Sources */,
+				3650A1682EE7DB760068ACE6 /* AgentTabBarMinimal.swift in Sources */,
 				365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */,
 				368A27372B977F5A0001BBCA /* LandingView.swift in Sources */,
 				3698E4F62C24872F0040AF60 /* ConfigurationManager.swift in Sources */,
