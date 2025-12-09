@@ -43,7 +43,29 @@ struct GenerateFoodResponse: Decodable {
     let error: String?
 
     var needsClarification: Bool { status == "needs_clarification" }
+    
+    private enum CodingKeys: String, CodingKey {
+        case status, question, parsedContext, food, mealItems, dataSource, error
     }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        status = try container.decode(String.self, forKey: .status)
+        question = try container.decodeIfPresent(String.self, forKey: .question)
+        parsedContext = try container.decodeIfPresent([String: String].self, forKey: .parsedContext)
+        food = try container.decodeIfPresent(Food.self, forKey: .food)
+        mealItems = try container.decodeIfPresent([MealItem].self, forKey: .mealItems)
+        // dataSource can come back as a string or a number; normalize to string for the app.
+        if let dsString = try? container.decodeIfPresent(String.self, forKey: .dataSource) {
+            dataSource = dsString
+        } else if let dsInt = try? container.decodeIfPresent(Int.self, forKey: .dataSource) {
+            dataSource = String(dsInt)
+        } else {
+            dataSource = nil
+        }
+        error = try container.decodeIfPresent(String.self, forKey: .error)
+    }
+}
 
 enum FoodGenerationResponseError: LocalizedError {
     case needsClarification(question: String)
@@ -98,8 +120,8 @@ extension Date {
 class NetworkManager {
     
     //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-      let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.4:8000"
+    //   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.4:8000"
     
     private let iso8601FractionalFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()

@@ -7,6 +7,7 @@
 
 
 import SwiftUI
+import AVFoundation
 
 // Chat-style food logger reused for Text -> Add More flow
 struct FoodLogAgentView: View {
@@ -268,6 +269,11 @@ struct FoodLogAgentView: View {
     private func startRealtimeSession() {
         Task {
             do {
+                // Configure audio session for voice chat + TTS
+                let audioSession = AVAudioSession.sharedInstance()
+                try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+                try audioSession.setActive(true)
+
                 try await realtimeSession.connect()
             } catch {
                 print("❌ Realtime connection failed: \(error)")
@@ -287,6 +293,8 @@ struct FoodLogAgentView: View {
         let prompt = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty else { return }
 
+        print("🍽️ [FOOD PIPELINE] Processing voice input: '\(prompt)'")
+
         // Add to conversation history for context
         conversationHistory.append(["role": "user", "content": prompt])
 
@@ -303,26 +311,48 @@ struct FoodLogAgentView: View {
                 case .success(let response):
                     switch response.resolvedFoodResult {
                     case .success(let food):
-                        // Food was successfully parsed - add confirmation and complete
-                        realtimeSession.addSystemMessage("Got it!")
+                        // Food was successfully parsed - speak confirmation via OpenAI and complete
+                        print("✅ [FOOD PIPELINE] Food resolved: \(food.displayName) - \(food.calories) kcal")
+                        let confirmationText = "Got it! I've logged that for you."
+                        realtimeSession.speakText(confirmationText)
                         onFoodReady(food)
-                        realtimeSession.disconnect()
-                        isPresented = false
+                        // Delay disconnect to let OpenAI finish speaking
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            realtimeSession.disconnect()
+                            isPresented = false
+                        }
                     case .failure(let genError):
                         switch genError {
                         case .needsClarification(let question):
-                            // Add the clarification question to the realtime messages
-                            realtimeSession.addSystemMessage(question)
+                            // Speak the clarification question via OpenAI's voice
+                            print("❓ [FOOD PIPELINE] Needs clarification: \(question.prefix(100))...")
                             conversationHistory.append(["role": "assistant", "content": question])
+                            realtimeSession.speakText(simplifyQuestionForSpeech(question))
                         case .unavailable(let message):
-                            realtimeSession.addSystemMessage(message)
+                            print("⚠️ [FOOD PIPELINE] Unavailable: \(message)")
+                            realtimeSession.speakText(message)
                         }
                     }
                 case .failure(let error):
-                    realtimeSession.addSystemMessage("Error: \(error.localizedDescription)")
+                    print("❌ [FOOD PIPELINE] Error: \(error.localizedDescription)")
+                    let errorMessage = "Sorry, there was an error. Please try again."
+                    realtimeSession.speakText(errorMessage)
                 }
             }
         }
+    }
+
+    /// Simplify option lists for speech - makes it easier to listen to
+    private func simplifyQuestionForSpeech(_ question: String) -> String {
+        // If it contains bullet points with options, simplify for speech
+        if question.contains("• ") {
+            let lines = question.components(separatedBy: "\n")
+            if let firstLine = lines.first {
+                let optionCount = lines.filter { $0.contains("• ") }.count
+                return "\(firstLine) I found \(optionCount) options. Please say A, B, or C, or describe which one you want."
+            }
+        }
+        return question
     }
 
     // MARK: - Streaming typewriter status

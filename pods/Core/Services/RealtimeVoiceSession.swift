@@ -48,6 +48,10 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
     @Published var state: RealtimeSessionState = .idle
     @Published var transcribedText: String = ""
     @Published var messages: [RealtimeMessage] = []
+    // Track which conversation items we've already rendered so we don't double-add
+    private var processedItemIds: Set<String> = []
+    // Items we originated locally (via speakText) so we can skip duplicating them when echoed back
+    private var localAssistantItemIds: Set<String> = []
 
     // Streaming text for live display
     @Published var currentUserText: String = ""
@@ -71,9 +75,11 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
         messages = []
         currentUserText = ""
         currentAssistantText = ""
+        localAssistantItemIds.removeAll()
 
         // 1. Get ephemeral key from backend
         ephemeralKey = try await fetchEphemeralKey()
+        processedItemIds.removeAll()
 
         // 2. Setup peer connection with audio
         try setupPeerConnection()
@@ -93,6 +99,8 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
         dataChannel = nil
         audioTrack = nil
         state = .idle
+        processedItemIds.removeAll()
+        localAssistantItemIds.removeAll()
     }
 
     func toggleMute() {
@@ -113,6 +121,63 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
         messages.append(RealtimeMessage(isUser: false, text: trimmed))
     }
 
+    /// Send text to OpenAI Realtime to be spoken aloud
+    /// This injects a message into the conversation and triggers the assistant to speak it
+    func speakText(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        // Add to our local messages for display
+        messages.append(RealtimeMessage(isUser: false, text: trimmed))
+
+        // Send to OpenAI via data channel to be spoken
+        guard let dataChannel = dataChannel, dataChannel.readyState == .open else {
+            print("⚠️ Data channel not ready for sending text")
+            return
+        }
+
+        // Create a conversation item with the text we want spoken
+        let itemId = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(32))
+        localAssistantItemIds.insert(itemId)
+        let createItemEvent: [String: Any] = [
+            "type": "conversation.item.create",
+            "item": [
+                "id": itemId,
+                "type": "message",
+                "role": "assistant",
+                "content": [
+                    [
+                        "type": "text",
+                        "text": trimmed
+                    ]
+                ]
+            ]
+        ]
+
+        // Send the item creation event
+        if let jsonData = try? JSONSerialization.data(withJSONObject: createItemEvent),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            print("📤 Sending conversation.item.create: \(trimmed)")
+            let buffer = RTCDataBuffer(data: jsonData, isBinary: false)
+            dataChannel.sendData(buffer)
+        }
+
+        // Trigger response generation to speak the text
+        let responseEvent: [String: Any] = [
+            "type": "response.create",
+            "response": [
+                "output_modalities": ["audio"],
+                "instructions": "Read the last message aloud exactly as written. Do not add any additional commentary."
+            ]
+        ]
+
+        if let jsonData = try? JSONSerialization.data(withJSONObject: responseEvent) {
+            print("📤 Sending response.create to trigger speech")
+            let buffer = RTCDataBuffer(data: jsonData, isBinary: false)
+            dataChannel.sendData(buffer)
+        }
+    }
+
     private func fetchEphemeralKey() async throws -> String {
         guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
             throw RealtimeError.noUserEmail
@@ -128,18 +193,40 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["user_email": email])
 
+        print("📡 [REALTIME] Fetching ephemeral key from \(url)")
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            print("❌ [REALTIME] Server returned status \(statusCode)")
+            if let responseStr = String(data: data, encoding: .utf8) {
+                print("❌ [REALTIME] Response body: \(responseStr.prefix(500))")
+            }
             throw RealtimeError.serverError
         }
 
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let value = json["value"] as? String else {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw RealtimeError.invalidResponse
         }
-        return value
+
+        print("📡 [REALTIME] Response keys: \(json.keys)")
+
+        // GA API returns client_secret object with value field
+        if let clientSecret = json["client_secret"] as? [String: Any],
+           let value = clientSecret["value"] as? String {
+            print("✅ [REALTIME] Got ephemeral key from client_secret.value")
+            return value
+        }
+
+        // Fallback: direct value field (beta API format)
+        if let value = json["value"] as? String {
+            print("✅ [REALTIME] Got ephemeral key from value (beta format)")
+            return value
+        }
+
+        print("❌ [REALTIME] Could not find ephemeral key in response: \(json)")
+        throw RealtimeError.invalidResponse
     }
 
     private func setupPeerConnection() throws {
@@ -244,7 +331,7 @@ extension RealtimeVoiceSession: RTCPeerConnectionDelegate {
     }
 
     nonisolated func peerConnection(_ peerConnection: RTCPeerConnection, didAdd stream: RTCMediaStream) {
-        print("📥 Stream added")
+        print("📥 Stream added with \(stream.audioTracks.count) audio tracks")
     }
 
     nonisolated func peerConnection(_ peerConnection: RTCPeerConnection, didRemove stream: RTCMediaStream) {
@@ -285,15 +372,68 @@ extension RealtimeVoiceSession: RTCPeerConnectionDelegate {
 extension RealtimeVoiceSession: RTCDataChannelDelegate {
     nonisolated func dataChannelDidChangeState(_ dataChannel: RTCDataChannel) {
         print("📡 Data channel state: \(dataChannel.readyState.rawValue)")
+        if dataChannel.readyState == .open {
+            // Request input audio transcription so we receive text events for user speech
+            Task { @MainActor in
+                self.sendSessionUpdate()
+            }
+        }
     }
 
     nonisolated func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
         guard let json = try? JSONSerialization.jsonObject(with: buffer.data) as? [String: Any],
-              let type = json["type"] as? String else { return }
+              let type = json["type"] as? String else {
+            print("📨 Received non-JSON or malformed event")
+            return
+        }
 
-        print("📨 Received event: \(type)")
+        // Log all events for debugging
+        if type.contains("error") {
+            print("❌ [REALTIME EVENT] \(type): \(json)")
+        } else if type.contains("transcript") || type.contains("audio") {
+            print("📨 [REALTIME EVENT] \(type)")
+        } else {
+            print("📨 [REALTIME EVENT] \(type): \(json.keys)")
+        }
 
-        // Handle user input transcription streaming
+        // Handle full conversation items (covers newer event types)
+        if (type == "conversation.item.added" || type == "conversation.item.done"),
+           let item = json["item"] as? [String: Any],
+           let itemId = item["id"] as? String,
+           let role = item["role"] as? String,
+           let content = item["content"] as? [[String: Any]] {
+            print("🗒️ [REALTIME ITEM] role=\(role) id=\(itemId) keys=\(item.keys.sorted()) contentKeys=\(content.map { $0.keys.joined(separator: ",") })")
+            Task { @MainActor in
+                guard !self.processedItemIds.contains(itemId) else { return }
+                self.processedItemIds.insert(itemId)
+                // If this is an echo of text we already inserted locally, skip to avoid duplicates.
+                if self.localAssistantItemIds.contains(itemId) {
+                    return
+                }
+                var extracted = Self.extractText(from: content)
+                // Fallback: some event shapes include transcripts under input_audio_transcription
+                if extracted.isEmpty,
+                   let transcription = item["input_audio_transcription"] as? [String: Any],
+                   let transcript = transcription["transcript"] as? String {
+                    extracted = transcript
+                }
+                if !extracted.isEmpty {
+                    print("📝 [REALTIME TEXT] role=\(role) text='\(extracted)'")
+                }
+                if !extracted.isEmpty {
+                    let isUser = role == "user"
+                    self.messages.append(RealtimeMessage(isUser: isUser, text: extracted))
+                    if isUser {
+                        self.transcribedText = extracted
+                        self.currentUserText = ""
+                    } else {
+                        self.currentAssistantText = ""
+                    }
+                }
+            }
+        }
+
+        // Handle user input transcription streaming (legacy event names)
         if type == "conversation.item.input_audio_transcription.delta",
            let delta = json["delta"] as? String {
             Task { @MainActor in
@@ -306,6 +446,7 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
            let transcript = json["transcript"] as? String {
             Task { @MainActor in
                 let finalText = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                print("🎤 [USER TRANSCRIPT] '\(finalText)'")
                 if !finalText.isEmpty {
                     self.messages.append(RealtimeMessage(isUser: true, text: finalText))
                     self.transcribedText = finalText
@@ -387,5 +528,67 @@ enum RealtimeError: LocalizedError {
         case .noEphemeralKey:
             return "No ephemeral key available"
         }
+    }
+}
+
+private extension RealtimeVoiceSession {
+    /// Ask OpenAI to include input audio transcriptions so we can route speech into the food pipeline.
+    /// Called when the data channel opens.
+    func sendSessionUpdate() {
+        guard let dataChannel = dataChannel, dataChannel.readyState == .open else { return }
+        // GA-shaped session update: request audio+text output and enable input transcription.
+        let update: [String: Any] = [
+            "type": "session.update",
+            "session": [
+                "type": "realtime",
+                "model": "gpt-realtime",
+                // GA allows either ["audio"] or ["text"]; keep audio for speech output
+                "output_modalities": ["audio"],
+                "audio": [
+                    "input": [
+                        "format": [
+                            "type": "audio/pcm",
+                            "rate": 24000
+                        ],
+                        "turn_detection": [
+                            "type": "semantic_vad"
+                        ],
+                        "transcription": [
+                            // GA-supported values per API: whisper-1, gpt-4o-transcribe, gpt-4o-mini-transcribe
+                            "model": "gpt-4o-transcribe"
+                        ]
+                    ],
+                    "output": [
+                        "voice": "marin"
+                    ]
+                ]
+            ]
+        ]
+        if let jsonData = try? JSONSerialization.data(withJSONObject: update) {
+            let buffer = RTCDataBuffer(data: jsonData, isBinary: false)
+            dataChannel.sendData(buffer)
+            print("📤 [REALTIME] Sent session.update with transcription+audio config")
+        } else {
+            print("❌ [REALTIME] Failed to encode session.update payload")
+        }
+    }
+
+    /// Extract any textual content from a realtime content array.
+    /// Supports both `text` and `transcript` fields as returned by the API.
+    static func extractText(from content: [[String: Any]]) -> String {
+        var parts: [String] = []
+        for piece in content {
+            if let text = piece["text"] as? String {
+                parts.append(text)
+            } else if let transcript = piece["transcript"] as? String {
+                parts.append(transcript)
+            } else if let outputText = piece["output_text"] as? String {
+                parts.append(outputText)
+            } else if let audio = piece["audio"] as? [String: Any],
+                      let transcript = audio["transcript"] as? String {
+                parts.append(transcript)
+            }
+        }
+        return parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
