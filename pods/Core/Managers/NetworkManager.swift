@@ -98,8 +98,8 @@ extension Date {
 class NetworkManager {
     
     //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-    //   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.4:8000"
+      let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.4:8000"
     
     private let iso8601FractionalFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -8566,6 +8566,7 @@ class NetworkManager {
             return nil
         }
         request.httpBody = body
+        print("[STREAM] starting ai-stream to \(url.absoluteString) model=\(model) temp=\(temperature) bodyBytes=\(body.count)")
 
         let token = UUID()
         let delegate = StreamingDelegate(
@@ -8597,6 +8598,7 @@ class NetworkManager {
 // MARK: - Streaming URLSession Delegate
 private final class StreamingDelegate: NSObject, URLSessionDataDelegate {
     private var buffer = ""
+    private var fullText = ""
     private let onDelta: (String) -> Void
     private let onComplete: () -> Void
     private let onError: (Error) -> Void
@@ -8611,21 +8613,42 @@ private final class StreamingDelegate: NSObject, URLSessionDataDelegate {
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         guard let chunk = String(data: data, encoding: .utf8) else { return }
+        print("[STREAM] raw chunk (\(data.count) bytes):", chunk.replacingOccurrences(of: "\n", with: "\\n"))
         buffer.append(chunk)
 
         let parts = buffer.split(separator: "\n", omittingEmptySubsequences: false)
         buffer = parts.last.map(String.init) ?? ""
 
         for part in parts.dropLast() {
-            let trimmed = part.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty,
-                  let jsonData = trimmed.data(using: .utf8),
+            var trimmed = part.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+
+            // Support SSE-style "data: {...}" lines as well as plain JSON lines.
+            if trimmed.hasPrefix("data:") {
+                trimmed = trimmed.dropFirst(5).trimmingCharacters(in: .whitespaces)
+            }
+
+            guard let jsonData = trimmed.data(using: .utf8),
                   let obj = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
-            else { continue }
+            else {
+                print("[STREAM] failed to decode json for part:", trimmed)
+                continue
+            }
+
+            if let done = obj["done"] as? Bool, done {
+                print("[STREAM] done received")
+                print("[STREAM] full text: \(fullText)")
+                DispatchQueue.main.async { self.onComplete() }
+                continue
+            }
 
             if let delta = obj["delta"] as? String {
+                print("[STREAM] delta:", delta)
+                fullText.append(delta)
                 DispatchQueue.main.async { self.onDelta(delta) }
             } else if let text = obj["text"] as? String {
+                print("[STREAM] text:", text)
+                fullText.append(text)
                 DispatchQueue.main.async { self.onDelta(text) }
             }
         }
@@ -8633,8 +8656,11 @@ private final class StreamingDelegate: NSObject, URLSessionDataDelegate {
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
+            print("[STREAM] completed with error:", error.localizedDescription)
             DispatchQueue.main.async { self.onError(error) }
         } else {
+            print("[STREAM] completed successfully")
+            print("[STREAM] final full text:", fullText)
             DispatchQueue.main.async { self.onComplete() }
         }
     }

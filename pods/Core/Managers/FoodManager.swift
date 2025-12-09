@@ -1088,7 +1088,7 @@ class FoodManager: ObservableObject {
         onComplete: @escaping () -> Void,
         onError: @escaping (Error) -> Void
     ) -> UUID? {
-        networkManager.streamAIResponse(
+        return networkManager.streamAIResponse(
             messages: messages,
             model: model,
             temperature: temperature,

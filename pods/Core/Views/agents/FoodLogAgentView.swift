@@ -21,7 +21,9 @@ struct FoodLogAgentView: View {
     @State private var isLoading = false
     @State private var conversationHistory: [[String: String]] = []
     @State private var streamingText: String = ""
+    @State private var streamingMessageId: UUID?
     @State private var streamingToken: UUID?
+    @State private var shimmerActive = false
     @FocusState private var isInputFocused: Bool
     @State private var statusPhraseIndex = 0
     @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
@@ -208,11 +210,11 @@ struct FoodLogAgentView: View {
     private func sendPrompt() {
         let prompt = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty else { return }
-        messages.append(FoodLogMessage(sender: .user, text: prompt))
+        messages.append(FoodLogMessage(id: UUID(), sender: .user, text: prompt))
         conversationHistory.append(["role": "user", "content": prompt])
         inputText = ""
         isLoading = true
-        messages.append(FoodLogMessage(sender: .status, text: "Analyzing…"))
+        messages.append(FoodLogMessage(id: UUID(), sender: .status, text: "Thinking..."))
         startStreamingStatus(for: prompt)
 
         foodManager.generateFoodWithAI(
@@ -224,24 +226,29 @@ struct FoodLogAgentView: View {
                 isLoading = false
                 messages.removeAll { $0.sender == .status }
                 stopStreamingStatus()
+                if let placeholderId = streamingMessageId {
+                    messages.removeAll { $0.id == placeholderId }
+                    streamingMessageId = nil
+                    streamingText = ""
+                }
                 switch result {
                 case .success(let response):
                     switch response.resolvedFoodResult {
                     case .success(let food):
-                        messages.append(FoodLogMessage(sender: .system, text: "Got it!"))
+                        messages.append(FoodLogMessage(id: UUID(), sender: .system, text: "Got it!"))
                         onFoodReady(food)
                         isPresented = false
                     case .failure(let genError):
                         switch genError {
                         case .needsClarification(let question):
-                            messages.append(FoodLogMessage(sender: .system, text: question))
+                            messages.append(FoodLogMessage(id: UUID(), sender: .system, text: question))
                             conversationHistory.append(["role": "assistant", "content": question])
                         case .unavailable(let message):
-                            messages.append(FoodLogMessage(sender: .system, text: message))
+                            messages.append(FoodLogMessage(id: UUID(), sender: .system, text: message))
                         }
                     }
                 case .failure(let error):
-                    messages.append(FoodLogMessage(sender: .system, text: "Error: \(error.localizedDescription)"))
+                    messages.append(FoodLogMessage(id: UUID(), sender: .system, text: "Error: \(error.localizedDescription)"))
                 }
             }
         }
@@ -275,25 +282,50 @@ struct FoodLogAgentView: View {
 
     private func startStreamingStatus(for prompt: String) {
         streamingText = ""
+        print("[STREAM UI] start streaming status for prompt: \(prompt)")
         let systemMessage = [
             "role": "system",
-            "content": "You are acknowledging the user's food log while we fetch nutrition. Reply with a short reassuring sentence. Do not include numbers or nutrition values."
+            "content": "You are acknowledging the user's food log while we fetch nutrition. Reply with a short neutral sentence. Do not say you have logged anything. Do not include numbers or nutrition values."
         ]
         let userMessage = ["role": "user", "content": prompt]
         let payload = [systemMessage, userMessage]
+
+        // Insert a placeholder system message that will grow as tokens arrive.
+        let placeholderId = UUID()
+        streamingMessageId = placeholderId
+        messages.append(FoodLogMessage(id: placeholderId, sender: .system, text: ""))
 
         streamingToken = foodManager.streamAIResponse(
             messages: payload,
             model: "gpt-5.1",
             temperature: 0.4,
             onDelta: { delta in
+                print("[STREAM UI] delta:", delta)
                 streamingText.append(delta)
+                if let id = streamingMessageId,
+                   let idx = messages.firstIndex(where: { $0.id == id }) {
+                    messages[idx].text = streamingText
+                }
             },
-            onComplete: {},
+            onComplete: {
+                print("[STREAM UI] complete")
+                // Keep the streamed text visible; just clear the token.
+                streamingToken = nil
+                streamingMessageId = nil
+                streamingText = ""
+            },
             onError: { error in
-                print("Streaming error: \(error.localizedDescription)")
+                print("[STREAM UI] error:", error.localizedDescription)
+                streamingText = ""
+                streamingToken = nil
+                streamingMessageId = nil
             }
         )
+        if let token = streamingToken {
+            print("[STREAM UI] streaming token:", token.uuidString)
+        } else {
+            print("[STREAM UI] streaming token is nil (stream could not start)")
+        }
     }
 
     private func stopStreamingStatus() {
@@ -301,6 +333,10 @@ struct FoodLogAgentView: View {
             foodManager.cancelStream(token: token)
         }
         streamingToken = nil
+        if let placeholderId = streamingMessageId {
+            messages.removeAll { $0.id == placeholderId }
+        }
+        streamingMessageId = nil
         streamingText = ""
     }
 }
@@ -309,9 +345,15 @@ private struct FoodLogMessage: Identifiable {
     enum Sender {
         case user, system, status
     }
-    let id = UUID()
+    let id: UUID
     let sender: Sender
-    let text: String
+    var text: String
+
+    init(id: UUID = UUID(), sender: Sender, text: String) {
+        self.id = id
+        self.sender = sender
+        self.text = text
+    }
 }
 
 // MARK: - Thinking Indicator Helpers
@@ -320,11 +362,31 @@ extension FoodLogAgentView {
     private var thinkingIndicator: some View {
         HStack(spacing: 10) {
             thinkingPulseCircle
-            Text(currentStatusText)
-                .font(.footnote)
-                .foregroundColor(.secondary)
+            ZStack {
+                Text(currentStatusText)
+                    .font(.footnote)
+                    .foregroundColor(.secondary.opacity(0.35))
+                Text(currentStatusText)
+                    .font(.footnote)
+                    .foregroundColor(.clear)
+                    .overlay(
+                        GeometryReader { geo in
+                            let width = geo.size.width
+                            LinearGradient(
+                                gradient: Gradient(colors: [.clear, Color.secondary.opacity(0.7), .clear]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                            .frame(width: width, height: geo.size.height)
+                            .offset(x: shimmerActive ? width : -width)
+                            .animation(.linear(duration: 1.1).repeatForever(autoreverses: false), value: shimmerActive)
+                        }
+                        .mask(Text(currentStatusText).font(.footnote))
+                    )
+            }
         }
         .padding(.vertical, 4)
+        .onAppear { shimmerActive = true }
     }
 
     private var currentStatusText: String {
