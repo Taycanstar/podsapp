@@ -79,6 +79,15 @@ struct FoodLogAgentView: View {
             // Auto-focus input when the view appears.
             isInputFocused = true
         }
+        .onChange(of: realtimeSession.messages.count) { oldCount, newCount in
+            // When a new user message is completed in the realtime session,
+            // send it through the food logging pipeline
+            if newCount > oldCount,
+               let lastMessage = realtimeSession.messages.last,
+               lastMessage.isUser {
+                processRealtimeUserMessage(lastMessage.text)
+            }
+        }
     }
 
     private var chatScroll: some View {
@@ -152,6 +161,10 @@ struct FoodLogAgentView: View {
                     }
                 }
                 .padding()
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isInputFocused = false
             }
             .onChange(of: messages.count) { _, _ in
                 scrollToBottom(proxy: proxy)
@@ -264,13 +277,51 @@ struct FoodLogAgentView: View {
     }
 
     private func endRealtimeSession() {
-        let transcript = realtimeSession.transcribedText.trimmingCharacters(in: .whitespacesAndNewlines)
         realtimeSession.disconnect()
+        // Messages are already processed via onChange observer
+    }
 
-        // If we have transcribed text, send it through the existing food logging flow
-        if !transcript.isEmpty {
-            inputText = transcript
-            sendPrompt()
+    /// Process a completed user utterance from the realtime voice session
+    /// through the food logging pipeline (Nutritionix lookup, follow-ups, etc.)
+    private func processRealtimeUserMessage(_ text: String) {
+        let prompt = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prompt.isEmpty else { return }
+
+        // Add to conversation history for context
+        conversationHistory.append(["role": "user", "content": prompt])
+
+        isLoading = true
+
+        foodManager.generateFoodWithAI(
+            foodDescription: prompt,
+            history: conversationHistory,
+            skipConfirmation: true
+        ) { result in
+            DispatchQueue.main.async {
+                isLoading = false
+                switch result {
+                case .success(let response):
+                    switch response.resolvedFoodResult {
+                    case .success(let food):
+                        // Food was successfully parsed - add confirmation and complete
+                        realtimeSession.addSystemMessage("Got it!")
+                        onFoodReady(food)
+                        realtimeSession.disconnect()
+                        isPresented = false
+                    case .failure(let genError):
+                        switch genError {
+                        case .needsClarification(let question):
+                            // Add the clarification question to the realtime messages
+                            realtimeSession.addSystemMessage(question)
+                            conversationHistory.append(["role": "assistant", "content": question])
+                        case .unavailable(let message):
+                            realtimeSession.addSystemMessage(message)
+                        }
+                    }
+                case .failure(let error):
+                    realtimeSession.addSystemMessage("Error: \(error.localizedDescription)")
+                }
+            }
         }
     }
 

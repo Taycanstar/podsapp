@@ -106,6 +106,13 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
         }
     }
 
+    /// Add a system/assistant message to the conversation (used for food pipeline responses)
+    func addSystemMessage(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        messages.append(RealtimeMessage(isUser: false, text: trimmed))
+    }
+
     private func fetchEphemeralKey() async throws -> String {
         guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
             throw RealtimeError.noUserEmail
