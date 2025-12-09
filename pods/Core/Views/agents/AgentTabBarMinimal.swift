@@ -27,20 +27,7 @@ struct AgentTabBarMinimal: View {
     @StateObject private var speechRecognizer = SpeechRecognizer()
 
     var body: some View {
-        VStack(spacing: 0) {
-            TransparentBlurViewMinimal(removeAllFilters: true)
-                .blur(radius: 14)
-                .frame(height:10)
-                .frame(maxWidth: .infinity)
-                .allowsHitTesting(false)
-
-            contentCard
-        }
-        .background(
-            TransparentBlurViewMinimal(removeAllFilters: true)
-                .blur(radius: 14)
-                .ignoresSafeArea(edges: [.horizontal, .bottom])
-        )
+        contentCard
     }
 
     private var contentCard: some View {
@@ -94,7 +81,7 @@ struct AgentTabBarMinimal: View {
         )
         .padding(.horizontal, 16)
         .padding(.top, -12)
-        .padding(.bottom, isPromptFocused.wrappedValue ? 10 : 0)
+        .padding(.bottom, 0)
         .onChange(of: speechRecognizer.transcript) { newTranscript in
             if !newTranscript.isEmpty {
                 text = newTranscript
