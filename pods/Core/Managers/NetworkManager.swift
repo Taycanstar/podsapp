@@ -40,12 +40,13 @@ struct GenerateFoodResponse: Decodable {
     let food: Food?
     let mealItems: [MealItem]?
     let dataSource: String?
+    let options: [ClarificationOption]?
     let error: String?
 
     var needsClarification: Bool { status == "needs_clarification" }
     
     private enum CodingKeys: String, CodingKey {
-        case status, question, parsedContext, food, mealItems, dataSource, error
+        case status, question, parsedContext, food, mealItems, dataSource, options, error
     }
     
     init(from decoder: Decoder) throws {
@@ -55,6 +56,7 @@ struct GenerateFoodResponse: Decodable {
         parsedContext = try container.decodeIfPresent([String: String].self, forKey: .parsedContext)
         food = try container.decodeIfPresent(Food.self, forKey: .food)
         mealItems = try container.decodeIfPresent([MealItem].self, forKey: .mealItems)
+        options = try container.decodeIfPresent([ClarificationOption].self, forKey: .options)
         // dataSource can come back as a string or a number; normalize to string for the app.
         if let dsString = try? container.decodeIfPresent(String.self, forKey: .dataSource) {
             dataSource = dsString
@@ -98,6 +100,21 @@ extension GenerateFoodResponse {
     }
 }
 
+struct ClarificationOption: Codable, Hashable {
+    let label: String?
+    let name: String?
+    let brand: String?
+    let serving: String?
+    let previewCalories: Double?
+    let nixItemId: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case label, name, brand, serving
+        case previewCalories = "preview_calories"
+        case nixItemId = "nix_item_id"
+    }
+}
+
 struct AppVersionResponse: Codable {
     let minimumVersion: String
     let needsUpdate: Bool
@@ -120,8 +137,8 @@ extension Date {
 class NetworkManager {
     
     //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-    //   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.4:8000"
+      let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.4:8000"
     
     private let iso8601FractionalFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()

@@ -48,6 +48,7 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
     @Published var state: RealtimeSessionState = .idle
     @Published var transcribedText: String = ""
     @Published var messages: [RealtimeMessage] = []
+    var delegate: RealtimeVoiceSessionDelegate?
     // Track which conversation items we've already rendered so we don't double-add
     private var processedItemIds: Set<String> = []
     // Items we originated locally (via speakText) so we can skip duplicating them when echoed back
@@ -396,6 +397,16 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
             print("📨 [REALTIME EVENT] \(type): \(json.keys)")
         }
 
+        // Handle tool/function call arguments
+        if type == "response.function_call_arguments.done",
+           let callId = json["call_id"] as? String,
+           let name = json["name"] as? String,
+           let arguments = json["arguments"] as? String {
+            Task { @MainActor in
+                await self.handleToolCall(callId: callId, name: name, arguments: arguments)
+            }
+        }
+
         // Handle full conversation items (covers newer event types)
         if (type == "conversation.item.added" || type == "conversation.item.done"),
            let item = json["item"] as? [String: Any],
@@ -426,6 +437,7 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
                     if isUser {
                         self.transcribedText = extracted
                         self.currentUserText = ""
+                        // Model auto-responds via create_response: true in turn_detection
                     } else {
                         self.currentAssistantText = ""
                     }
@@ -532,18 +544,123 @@ enum RealtimeError: LocalizedError {
 }
 
 private extension RealtimeVoiceSession {
-    /// Ask OpenAI to include input audio transcriptions so we can route speech into the food pipeline.
+    func handleToolCall(callId: String, name: String, arguments: String) async {
+        guard name == "log_food" else { return }
+        guard let data = arguments.data(using: .utf8),
+              let args = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let query = args["query"] as? String else {
+            sendToolResult(callId: callId, resultJSON: ["status": "error", "error": "Invalid arguments"])
+            return
+        }
+        let nixItemId = args["nix_item_id"] as? String
+        let selectionLabel = args["selection_label"] as? String
+
+        // Always return a tool result to avoid hanging the model
+        guard let delegate = delegate else {
+            sendToolResult(callId: callId, resultJSON: ["status": "error", "error": "No delegate available"])
+            return
+        }
+
+        delegate.realtimeSession(
+            self,
+            didRequestFoodLookup: query,
+            nixItemId: nixItemId,
+            selectionLabel: selectionLabel
+        ) { [weak self] result in
+            guard let self else {
+                return
+            }
+            sendToolResult(callId: callId, resultJSON: result.toJSON())
+            if result.status == .success, let food = result.food {
+                delegate.realtimeSession(self, didResolveFood: food)
+            }
+        }
+    }
+
+    func sendToolResult(callId: String, resultJSON: [String: Any]) {
+        guard let dataChannel = dataChannel, dataChannel.readyState == .open else { return }
+        guard let outputData = try? JSONSerialization.data(withJSONObject: resultJSON),
+              let outputString = String(data: outputData, encoding: .utf8) else {
+            return
+        }
+
+        let itemEvent: [String: Any] = [
+            "type": "conversation.item.create",
+            "item": [
+                "type": "function_call_output",
+                "call_id": callId,
+                "output": outputString
+            ]
+        ]
+        if let jsonData = try? JSONSerialization.data(withJSONObject: itemEvent) {
+            let buffer = RTCDataBuffer(data: jsonData, isBinary: false)
+            dataChannel.sendData(buffer)
+            print("📤 [REALTIME] Sent function_call_output for \(callId)")
+        }
+
+        // Ask the model to respond using the tool result
+        sendResponseCreate()
+    }
+
+    func sendResponseCreate() {
+        guard let dataChannel = dataChannel, dataChannel.readyState == .open else { return }
+        let responseEvent: [String: Any] = [
+            "type": "response.create"
+        ]
+        if let jsonData = try? JSONSerialization.data(withJSONObject: responseEvent) {
+            let buffer = RTCDataBuffer(data: jsonData, isBinary: false)
+            dataChannel.sendData(buffer)
+        }
+    }
+
+    /// Configure the realtime session for food logging with tool calling.
     /// Called when the data channel opens.
     func sendSessionUpdate() {
         guard let dataChannel = dataChannel, dataChannel.readyState == .open else { return }
-        // GA-shaped session update: request audio+text output and enable input transcription.
+
+        let instructions = """
+            You are a voice assistant for a food logging app called Metryc.
+            When the user mentions food they ate, call the log_food tool with their description.
+            If the tool returns options (status='needsClarification'), read them clearly: 'Option A is NAME by BRAND, about CALORIES calories. Option B is...' then ask which one they want.
+            When the user says a letter like 'A' or 'the first one', call log_food again with selection_label set to their choice.
+            When the tool returns success, confirm naturally: 'Got it, logged NAME at CALORIES calories.'
+            If the tool returns an error, apologize briefly and ask them to try again.
+            Keep responses brief and conversational.
+            """
+
         let update: [String: Any] = [
             "type": "session.update",
             "session": [
                 "type": "realtime",
                 "model": "gpt-realtime",
-                // GA allows either ["audio"] or ["text"]; keep audio for speech output
                 "output_modalities": ["audio"],
+                "instructions": instructions,
+                "tool_choice": "auto",
+                "tools": [
+                    [
+                        "type": "function",
+                        "name": "log_food",
+                        "description": "Look up and log nutrition info for food the user mentions eating. Call this whenever user mentions food they ate or want to log.",
+                        "parameters": [
+                            "type": "object",
+                            "properties": [
+                                "query": [
+                                    "type": "string",
+                                    "description": "Natural language food description from the user"
+                                ],
+                                "nix_item_id": [
+                                    "type": "string",
+                                    "description": "Nutritionix item ID to select a specific option"
+                                ],
+                                "selection_label": [
+                                    "type": "string",
+                                    "description": "Option label (A/B/C) when user picks from choices"
+                                ]
+                            ],
+                            "required": ["query"]
+                        ]
+                    ]
+                ],
                 "audio": [
                     "input": [
                         "format": [
@@ -551,23 +668,28 @@ private extension RealtimeVoiceSession {
                             "rate": 24000
                         ],
                         "turn_detection": [
-                            "type": "semantic_vad"
+                            "type": "semantic_vad",
+                            "create_response": true,
+                            "interrupt_response": true
                         ],
                         "transcription": [
-                            // GA-supported values per API: whisper-1, gpt-4o-transcribe, gpt-4o-mini-transcribe
                             "model": "gpt-4o-transcribe"
                         ]
                     ],
                     "output": [
+                        "format": [
+                            "type": "audio/pcm"
+                        ],
                         "voice": "marin"
                     ]
                 ]
             ]
         ]
+
         if let jsonData = try? JSONSerialization.data(withJSONObject: update) {
             let buffer = RTCDataBuffer(data: jsonData, isBinary: false)
             dataChannel.sendData(buffer)
-            print("📤 [REALTIME] Sent session.update with transcription+audio config")
+            print("📤 [REALTIME] Sent session.update with tools and auto-response enabled")
         } else {
             print("❌ [REALTIME] Failed to encode session.update payload")
         }
@@ -590,5 +712,60 @@ private extension RealtimeVoiceSession {
             }
         }
         return parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+protocol RealtimeVoiceSessionDelegate {
+    func realtimeSession(_ session: RealtimeVoiceSession,
+                         didRequestFoodLookup query: String,
+                         nixItemId: String?,
+                         selectionLabel: String?,
+                         completion: @escaping (ToolResult) -> Void)
+    func realtimeSession(_ session: RealtimeVoiceSession, didResolveFood: Food)
+}
+
+struct ToolResult {
+    enum Status: String {
+        case success
+        case needsClarification
+        case error
+    }
+    let status: Status
+    let food: Food?
+    let question: String?
+    let options: [ClarificationOption]?
+    let error: String?
+
+    func toJSON() -> [String: Any] {
+        var dict: [String: Any] = ["status": status.rawValue]
+        if let food = food {
+            dict["food"] = [
+                "name": food.displayName,
+                "calories": food.calories ?? 0,
+                "protein": food.protein ?? 0,
+                "carbs": food.carbs ?? 0,
+                "fat": food.fat ?? 0,
+                "serving": food.servingSizeText
+            ]
+        }
+        if let question = question {
+            dict["question"] = question
+        }
+        if let options = options {
+            dict["options"] = options.map { opt in
+                [
+                    "label": opt.label ?? "",
+                    "name": opt.name ?? "",
+                    "brand": opt.brand ?? "",
+                    "serving": opt.serving ?? "",
+                    "preview_calories": opt.previewCalories ?? 0,
+                    "nix_item_id": opt.nixItemId ?? ""
+                ]
+            }
+        }
+        if let error = error {
+            dict["error"] = error
+        }
+        return dict
     }
 }

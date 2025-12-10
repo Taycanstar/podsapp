@@ -17,10 +17,13 @@ struct FoodLogAgentView: View {
     @Binding var isPresented: Bool
     var onFoodReady: (Food) -> Void
 
-    @State private var messages: [FoodLogMessage] = []
-    @State private var inputText: String = ""
-    @State private var isLoading = false
-    @State private var conversationHistory: [[String: String]] = []
+@State private var messages: [FoodLogMessage] = []
+@State private var inputText: String = ""
+@State private var isLoading = false
+@State private var conversationHistory: [[String: String]] = []
+@State private var pendingClarificationQuestion: String? = nil
+@State private var pendingOptions: [ClarificationOption]? = nil
+@State private var isToolCallInFlight = false
     @State private var streamingText: String = ""
     @State private var streamingMessageId: UUID?
     @State private var streamingToken: UUID?
@@ -79,15 +82,7 @@ struct FoodLogAgentView: View {
         .onAppear {
             // Auto-focus input when the view appears.
             isInputFocused = true
-        }
-        .onChange(of: realtimeSession.messages.count) { oldCount, newCount in
-            // When a new user message is completed in the realtime session,
-            // send it through the food logging pipeline
-            if newCount > oldCount,
-               let lastMessage = realtimeSession.messages.last,
-               lastMessage.isUser {
-                processRealtimeUserMessage(lastMessage.text)
-            }
+            realtimeSession.delegate = self
         }
     }
 
@@ -220,6 +215,17 @@ struct FoodLogAgentView: View {
     private func sendPrompt() {
         let prompt = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty else { return }
+
+        // If user asks to repeat pending options, just repeat without re-calling Nutritionix
+        if let pending = pendingClarificationQuestion,
+           prompt.lowercased().contains("option") {
+            messages.append(FoodLogMessage(id: UUID(), sender: .system, text: pending))
+            realtimeSession.speakText(simplifyQuestionForSpeech(pending))
+            conversationHistory.append(["role": "assistant", "content": pending])
+            inputText = ""
+            return
+        }
+
         messages.append(FoodLogMessage(id: UUID(), sender: .user, text: prompt))
         conversationHistory.append(["role": "user", "content": prompt])
         inputText = ""
@@ -243,21 +249,9 @@ struct FoodLogAgentView: View {
                 }
                 switch result {
                 case .success(let response):
-                    switch response.resolvedFoodResult {
-                    case .success(let food):
-                        messages.append(FoodLogMessage(id: UUID(), sender: .system, text: "Got it!"))
-                        onFoodReady(food)
-                        isPresented = false
-                    case .failure(let genError):
-                        switch genError {
-                        case .needsClarification(let question):
-                            messages.append(FoodLogMessage(id: UUID(), sender: .system, text: question))
-                            conversationHistory.append(["role": "assistant", "content": question])
-                        case .unavailable(let message):
-                            messages.append(FoodLogMessage(id: UUID(), sender: .system, text: message))
-                        }
-                    }
+                    handleFoodResponse(response, isVoice: false)
                 case .failure(let error):
+                    pendingClarificationQuestion = nil
                     messages.append(FoodLogMessage(id: UUID(), sender: .system, text: "Error: \(error.localizedDescription)"))
                 }
             }
@@ -290,56 +284,7 @@ struct FoodLogAgentView: View {
     /// Process a completed user utterance from the realtime voice session
     /// through the food logging pipeline (Nutritionix lookup, follow-ups, etc.)
     private func processRealtimeUserMessage(_ text: String) {
-        let prompt = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !prompt.isEmpty else { return }
-
-        print("🍽️ [FOOD PIPELINE] Processing voice input: '\(prompt)'")
-
-        // Add to conversation history for context
-        conversationHistory.append(["role": "user", "content": prompt])
-
-        isLoading = true
-
-        foodManager.generateFoodWithAI(
-            foodDescription: prompt,
-            history: conversationHistory,
-            skipConfirmation: true
-        ) { result in
-            DispatchQueue.main.async {
-                isLoading = false
-                switch result {
-                case .success(let response):
-                    switch response.resolvedFoodResult {
-                    case .success(let food):
-                        // Food was successfully parsed - speak confirmation via OpenAI and complete
-                        print("✅ [FOOD PIPELINE] Food resolved: \(food.displayName) - \(food.calories) kcal")
-                        let confirmationText = "Got it! I've logged that for you."
-                        realtimeSession.speakText(confirmationText)
-                        onFoodReady(food)
-                        // Delay disconnect to let OpenAI finish speaking
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                            realtimeSession.disconnect()
-                            isPresented = false
-                        }
-                    case .failure(let genError):
-                        switch genError {
-                        case .needsClarification(let question):
-                            // Speak the clarification question via OpenAI's voice
-                            print("❓ [FOOD PIPELINE] Needs clarification: \(question.prefix(100))...")
-                            conversationHistory.append(["role": "assistant", "content": question])
-                            realtimeSession.speakText(simplifyQuestionForSpeech(question))
-                        case .unavailable(let message):
-                            print("⚠️ [FOOD PIPELINE] Unavailable: \(message)")
-                            realtimeSession.speakText(message)
-                        }
-                    }
-                case .failure(let error):
-                    print("❌ [FOOD PIPELINE] Error: \(error.localizedDescription)")
-                    let errorMessage = "Sorry, there was an error. Please try again."
-                    realtimeSession.speakText(errorMessage)
-                }
-            }
-        }
+        // No-op: transcripts are handled by GPT via tool calls
     }
 
     /// Simplify option lists for speech - makes it easier to listen to
@@ -505,4 +450,158 @@ extension FoodLogAgentView {
         ]
     }
 
+    private func formattedClarification(question: String, options: [ClarificationOption]?) -> String {
+        guard let options, !options.isEmpty else { return question }
+        let lines: [String] = options.enumerated().map { idx, opt in
+            let label = opt.label ?? String(UnicodeScalar(65 + idx) ?? "A")
+            let name = opt.name ?? "Option \(label)"
+            let brand = opt.brand ?? ""
+            let serving = opt.serving ?? ""
+            let kcal = opt.previewCalories.map { Int($0) }
+            var parts: [String] = [name]
+            if !brand.isEmpty { parts.append("(\(brand))") }
+            if !serving.isEmpty { parts.append(serving) }
+            if let kcal { parts.append("\(kcal) kcal") }
+            return "• \(label): " + parts.joined(separator: " ")
+        }
+        return ([question] + lines).joined(separator: "\n")
+    }
+
+    private func handleFoodResponse(_ response: GenerateFoodResponse, isVoice: Bool) {
+        if response.needsClarification {
+            let text = formattedClarification(
+                question: response.question ?? "Can you provide more details?",
+                options: response.options
+            )
+            pendingClarificationQuestion = text
+            messages.append(FoodLogMessage(id: UUID(), sender: .system, text: text))
+            conversationHistory.append(["role": "assistant", "content": text])
+            if isVoice {
+                realtimeSession.speakText(simplifyQuestionForSpeech(text))
+            }
+            return
+        }
+
+        if let food = response.food {
+            pendingClarificationQuestion = nil
+            if isVoice {
+                print("✅ [FOOD PIPELINE] Food resolved: \(food.displayName) - \(food.calories) kcal")
+                let confirmationText = "Got it! I've logged that for you."
+                realtimeSession.speakText(confirmationText)
+                onFoodReady(food)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    realtimeSession.disconnect()
+                    isPresented = false
+                }
+            } else {
+                messages.append(FoodLogMessage(id: UUID(), sender: .system, text: "Got it!"))
+                onFoodReady(food)
+                isPresented = false
+            }
+            return
+        }
+
+        pendingClarificationQuestion = nil
+        let message = response.error ?? response.question ?? "Unable to generate nutrition data."
+        messages.append(FoodLogMessage(id: UUID(), sender: .system, text: message))
+        if isVoice {
+            realtimeSession.speakText(message)
+        }
+    }
+
+}
+
+// MARK: - RealtimeVoiceSessionDelegate
+extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
+    func realtimeSession(_ session: RealtimeVoiceSession,
+                         didRequestFoodLookup query: String,
+                         nixItemId: String?,
+                         selectionLabel: String?,
+                         completion: @escaping (ToolResult) -> Void) {
+        guard !isToolCallInFlight else {
+            completion(
+                ToolResult(
+                    status: .error,
+                    food: nil,
+                    question: nil,
+                    options: nil,
+                    error: "Another request is in progress. Please wait a moment."
+                )
+            )
+            return
+        }
+        isToolCallInFlight = true
+
+        var effectiveDescription = query
+        if let selectionLabel = selectionLabel,
+           let option = pendingOptions?.first(where: { ($0.label ?? "").lowercased() == selectionLabel.lowercased() }),
+           let name = option.name {
+            // Prefer an explicit option name so backend can resolve the selection
+            effectiveDescription = name
+        }
+
+        foodManager.generateFoodWithAI(
+            foodDescription: effectiveDescription,
+            history: conversationHistory,
+            skipConfirmation: true
+        ) { result in
+            DispatchQueue.main.async {
+                self.isToolCallInFlight = false
+            switch result {
+            case .success(let response):
+                if response.needsClarification {
+                    self.pendingOptions = response.options
+                    completion(
+                        ToolResult(
+                                status: .needsClarification,
+                                food: nil,
+                                question: response.question,
+                                options: response.options,
+                                error: nil
+                            )
+                        )
+                    } else if let food = response.food {
+                        self.pendingOptions = nil
+                        completion(
+                            ToolResult(
+                                status: .success,
+                                food: food,
+                                question: nil,
+                                options: nil,
+                                error: nil
+                            )
+                        )
+                    } else {
+                        completion(
+                            ToolResult(
+                                status: .error,
+                                food: nil,
+                                question: nil,
+                                options: nil,
+                                error: response.error ?? "Unable to generate nutrition data."
+                            )
+                        )
+                    }
+                case .failure(let error):
+                    completion(
+                        ToolResult(
+                            status: .error,
+                            food: nil,
+                            question: nil,
+                            options: nil,
+                            error: error.localizedDescription
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    func realtimeSession(_ session: RealtimeVoiceSession, didResolveFood: Food) {
+        onFoodReady(didResolveFood)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            session.disconnect()
+            isPresented = false
+        }
+    }
 }
