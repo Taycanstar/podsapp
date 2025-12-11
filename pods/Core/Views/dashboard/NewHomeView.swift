@@ -1676,10 +1676,6 @@ private extension NewHomeView {
         func body(content: Content) -> some View {
             content
                 .background(Color("sheetcard"), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Color.primary.opacity(0.05))
-                )
         }
     }
 
@@ -2713,10 +2709,6 @@ private struct RecoveryRingView: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .background(Color("sheetcard"), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.primary.opacity(0.05))
-        )
     }
 
     @ViewBuilder
@@ -5457,10 +5449,6 @@ private struct HealthMetricTileView: View {
         }
         .padding(12)
         .background(Color("sheetcard"), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.primary.opacity(0.05))
-        )
     }
 }
 
@@ -6662,10 +6650,6 @@ private struct ScheduledLogPreviewCard: View {
             RoundedRectangle(cornerRadius: 24)
                 .fill(Color("containerbg"))
                 .shadow(color: Color(.black).opacity(0.04), radius: 4, x: 0, y: 2)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
         )
     }
 
