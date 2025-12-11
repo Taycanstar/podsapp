@@ -143,6 +143,7 @@ struct AgentTabBar: View {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         text = trimmed
+        HapticFeedback.generate()
         onWaveformTapped()
         text = ""
         isPromptFocused.wrappedValue = false

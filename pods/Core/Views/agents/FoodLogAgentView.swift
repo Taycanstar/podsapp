@@ -8,6 +8,7 @@
 
 import SwiftUI
 import AVFoundation
+import UIKit
 
 // Chat-style food logger reused for Text -> Add More flow
 struct FoodLogAgentView: View {
@@ -27,12 +28,18 @@ struct FoodLogAgentView: View {
     @State private var streamingText: String = ""
     @State private var streamingMessageId: UUID?
     @State private var streamingToken: UUID?
-    @State private var shimmerActive = false
-    @FocusState private var isInputFocused: Bool
-    @State private var statusPhraseIndex = 0
-    @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
-    @State private var isAtBottom = true
-    @State private var scrollProxy: ScrollViewProxy?
+@State private var shimmerActive = false
+@FocusState private var isInputFocused: Bool
+@State private var statusPhraseIndex = 0
+@State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
+@State private var isAtBottom = true
+@State private var scrollProxy: ScrollViewProxy?
+    @State private var likedMessageIDs: Set<UUID> = []
+    @State private var dislikedMessageIDs: Set<UUID> = []
+    @State private var shareText: String?
+    @State private var showShareSheet = false
+    @State private var speechSynth = AVSpeechSynthesizer()
+    @State private var showCopyToast = false
 
     // Realtime voice session
     @StateObject private var realtimeSession = RealtimeVoiceSession()
@@ -86,6 +93,24 @@ struct FoodLogAgentView: View {
             isInputFocused = true
             realtimeSession.delegate = self
         }
+        .sheet(isPresented: $showShareSheet) {
+            if let shareText {
+                ShareSheetView(activityItems: [shareText])
+            }
+        }
+        .overlay(alignment: .top) {
+            if showCopyToast {
+                Text("Message copied")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.8))
+                    .clipShape(Capsule())
+                    .padding(.top, 16)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
     }
 
     private var chatScroll: some View {
@@ -107,11 +132,17 @@ struct FoodLogAgentView: View {
                                 }
                                 .id(message.id)
                             case .system:
-                                Text(message.text)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.vertical, 4)
-                                    .foregroundColor(.primary)
-                                    .id(message.id)
+                                AssistantMessageWithActions(
+                                    text: message.text,
+                                    isLiked: likedMessageIDs.contains(message.id),
+                                    isDisliked: dislikedMessageIDs.contains(message.id),
+                                    onCopy: { handleCopy(text: message.text) },
+                                    onLike: { toggleLike(for: message.id) },
+                                    onDislike: { toggleDislike(for: message.id) },
+                                    onSpeak: { speak(message.text) },
+                                    onShare: { share(text: message.text) }
+                                )
+                                .id(message.id)
                             case .status:
                                 if streamingMessageId == nil {
                                     thinkingIndicator
@@ -133,8 +164,17 @@ struct FoodLogAgentView: View {
                                 }
                                 .id(message.id)
                             } else {
-                                FormattedAssistantMessage(text: message.text)
-                                    .id(message.id)
+                                AssistantMessageWithActions(
+                                    text: message.text,
+                                    isLiked: likedMessageIDs.contains(message.id),
+                                    isDisliked: dislikedMessageIDs.contains(message.id),
+                                    onCopy: { handleCopy(text: message.text) },
+                                    onLike: { toggleLike(for: message.id) },
+                                    onDislike: { toggleDislike(for: message.id) },
+                                    onSpeak: { speak(message.text) },
+                                    onShare: { share(text: message.text) }
+                                )
+                                .id(message.id)
                             }
                         }
 
@@ -204,7 +244,7 @@ struct FoodLogAgentView: View {
                                     .stroke(Color(.separator), lineWidth: 0.5)
                             )
                     }
-                    .padding(.bottom, 80)
+                    .padding(.bottom, 15)
                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
             }
@@ -259,7 +299,8 @@ struct FoodLogAgentView: View {
         conversationHistory.append(["role": "user", "content": prompt])
         inputText = ""
         isLoading = true
-        messages.append(FoodLogMessage(id: UUID(), sender: .status, text: "Thinking..."))
+        HapticFeedback.generateBurstThenSingle(count: 4)
+        messages.append(FoodLogMessage(id: UUID(), sender: .status, text: statusPhrases.first ?? "Thinking..."))
         startStreamingStatus(for: prompt)
 
         foodManager.generateFoodWithAI(
@@ -314,6 +355,54 @@ struct FoodLogAgentView: View {
     /// through the food logging pipeline (Nutritionix lookup, follow-ups, etc.)
     private func processRealtimeUserMessage(_ text: String) {
         // No-op: transcripts are handled by GPT via tool calls
+    }
+
+    private func handleCopy(text: String) {
+        UIPasteboard.general.string = text
+        HapticFeedback.generate()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            showCopyToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showCopyToast = false
+            }
+        }
+    }
+
+    private func toggleLike(for id: UUID) {
+        dislikedMessageIDs.remove(id)
+        if likedMessageIDs.contains(id) {
+            likedMessageIDs.remove(id)
+        } else {
+            likedMessageIDs.insert(id)
+        }
+        HapticFeedback.generate()
+    }
+
+    private func toggleDislike(for id: UUID) {
+        likedMessageIDs.remove(id)
+        if dislikedMessageIDs.contains(id) {
+            dislikedMessageIDs.remove(id)
+        } else {
+            dislikedMessageIDs.insert(id)
+        }
+        HapticFeedback.generate()
+    }
+
+    private func speak(_ text: String) {
+        speechSynth.stopSpeaking(at: .immediate)
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: AVSpeechSynthesisVoice.currentLanguageCode())
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        speechSynth.speak(utterance)
+        HapticFeedback.generateLigth()
+    }
+
+    private func share(text: String) {
+        shareText = text
+        showShareSheet = true
+        HapticFeedback.generate()
     }
 
     /// Simplify option lists for speech - makes it easier to listen to
@@ -472,10 +561,10 @@ extension FoodLogAgentView {
 
     private var statusPhrases: [String] {
         [
-            "Analyzing your meal…",
-            "Looking up nutrition…",
-            "Balancing macros…",
-            "Checking ingredients…"
+            "Thinking...",
+            "Shimmering...",
+            "Analyzing...",
+            "Tinkering..."
         ]
     }
 
@@ -637,6 +726,45 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
 
 // MARK: - Formatted Assistant Message
 
+private struct AssistantMessageWithActions: View {
+    let text: String
+    let isLiked: Bool
+    let isDisliked: Bool
+    let onCopy: () -> Void
+    let onLike: () -> Void
+    let onDislike: () -> Void
+    let onSpeak: () -> Void
+    let onShare: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            FormattedAssistantMessage(text: text)
+            actionRow
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var actionRow: some View {
+        HStack(spacing: 22) {
+            actionButton(systemName: "doc.on.doc", action: onCopy)
+            actionButton(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup", action: onLike, isActive: isLiked)
+            actionButton(systemName: isDisliked ? "hand.thumbsdown.fill" : "hand.thumbsdown", action: onDislike, isActive: isDisliked)
+            actionButton(systemName: "waveform", action: onSpeak)
+            actionButton(systemName: "square.and.arrow.up", action: onShare)
+        }
+        .padding(.top, 0)
+    }
+
+    private func actionButton(systemName: String, action: @escaping () -> Void, isActive: Bool = false) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(isActive ? .accentColor : .secondary)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 private struct FormattedAssistantMessage: View {
     let text: String
 
@@ -724,4 +852,15 @@ private struct FormattedAssistantMessage: View {
 private struct FormattedLine {
     let text: String
     let isBullet: Bool
+}
+
+struct ShareSheetView: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    let applicationActivities: [UIActivity]? = nil
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) { }
 }

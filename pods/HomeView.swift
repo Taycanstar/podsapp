@@ -547,6 +547,20 @@ struct HapticFeedback {
         let generator = UIImpactFeedbackGenerator(style: .rigid)
         generator.impactOccurred()
     }
+
+    static func generateBurstThenSingle(count: Int = 3, interval: TimeInterval = 0.08) {
+        let generator = UIImpactFeedbackGenerator(style: .rigid)
+        generator.prepare()
+        for index in 0..<max(1, count) {
+            let delay = Double(index) * interval
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                generator.impactOccurred(intensity: 1.0)
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Double(max(1, count)) * interval + 0.02) {
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        }
+    }
 }
 
 struct PodCard: View {
