@@ -38,7 +38,8 @@ struct ReadinessView: View {
                 vitalsSection
                 driversSection
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.bottom, 16)
         }
         .background(Color("primarybg"))
         .navigationTitle("Readiness")

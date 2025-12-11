@@ -57,6 +57,7 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
     // Streaming text for live display
     @Published var currentUserText: String = ""
     @Published var currentAssistantText: String = ""
+    @Published var isProcessing: Bool = false
 
     private var peerConnection: RTCPeerConnection?
     private var dataChannel: RTCDataChannel?
@@ -410,6 +411,7 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
            let name = json["name"] as? String,
            let arguments = json["arguments"] as? String {
             Task { @MainActor in
+                self.isProcessing = true
                 await self.handleToolCall(callId: callId, name: name, arguments: arguments)
             }
         }
@@ -479,6 +481,7 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
         if type == "response.audio_transcript.delta",
            let delta = json["delta"] as? String {
             Task { @MainActor in
+                self.isProcessing = false
                 self.currentAssistantText += delta
             }
         }
@@ -499,6 +502,7 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
         if type == "response.output_audio_transcript.delta",
            let delta = json["delta"] as? String {
             Task { @MainActor in
+                self.isProcessing = false
                 self.currentAssistantText += delta
             }
         }
@@ -629,8 +633,10 @@ private extension RealtimeVoiceSession {
         let instructions = """
             You are a voice assistant for a food logging app called Metryc.
             When the user mentions food they ate, call the log_food tool with their description.
-            If the tool returns options (status='needsClarification'), read them clearly: 'Option A is NAME by BRAND, about CALORIES calories. Option B is...' then ask which one they want.
-            When the user says a letter like 'A' or 'the first one', call log_food again with selection_label set to their choice.
+            If the tool returns options (status='needsClarification'), list them naturally without saying 'Option A/B/C'. Instead say something like:
+            'I found a few options: NAME by BRAND, about CALORIES calories. Or NAME by BRAND, about CALORIES calories. Which one?'
+            Keep the list clean and conversational, like you would naturally speak.
+            When the user indicates their choice (saying 'the first one', 'the second', 'A', 'B', etc.), call log_food again with selection_label set to their choice (A for first, B for second, C for third).
             When the tool returns success, confirm naturally: 'Got it, logged NAME at CALORIES calories.'
             If the tool returns an error, apologize briefly and ask them to try again.
             Keep responses brief and conversational.
@@ -709,25 +715,18 @@ private extension RealtimeVoiceSession {
     static func extractText(from content: [[String: Any]]) -> String {
         var parts: [String] = []
         for piece in content {
-            print("🔍 [EXTRACT] piece keys: \(piece.keys.sorted()), values: \(piece)")
             if let text = piece["text"] as? String {
                 parts.append(text)
-                print("🔍 [EXTRACT] Found text: '\(text)'")
             } else if let transcript = piece["transcript"] as? String {
                 parts.append(transcript)
-                print("🔍 [EXTRACT] Found transcript: '\(transcript)'")
             } else if let outputText = piece["output_text"] as? String {
                 parts.append(outputText)
-                print("🔍 [EXTRACT] Found output_text: '\(outputText)'")
             } else if let audio = piece["audio"] as? [String: Any],
                       let transcript = audio["transcript"] as? String {
                 parts.append(transcript)
-                print("🔍 [EXTRACT] Found audio.transcript: '\(transcript)'")
             }
         }
-        let result = parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
-        print("🔍 [EXTRACT] Final result: '\(result)' from \(parts.count) parts")
-        return result
+        return parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

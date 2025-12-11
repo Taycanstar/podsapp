@@ -1970,10 +1970,6 @@ private struct RecoveryRingView: View {
             VStack(spacing: 4) {
                 ZStack {
                     Circle()
-                        .stroke(Color.gray.opacity(0.15), lineWidth: 3)
-                        .frame(width: 34, height: 34)
-
-                    Circle()
                         .trim(from: 0, to: CGFloat(min(max(value / 100.0, 0), 1)))
                         .stroke(style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .foregroundColor(ringColor)
@@ -2071,10 +2067,6 @@ private struct RecoveryRingView: View {
                     let progress = min(max(Double(values[index]) / Double(denominator), 0), 1)
 
                     Circle()
-                        .stroke(Color.gray.opacity(0.15), lineWidth: ringWidth)
-                        .frame(width: radius * 2, height: radius * 2)
-
-                    Circle()
                         .trim(from: 0, to: CGFloat(progress))
                         .stroke(style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
                         .foregroundColor(ringColors[index])
@@ -2103,10 +2095,6 @@ private struct RecoveryRingView: View {
 
         var body: some View {
             ZStack {
-                Circle()
-                    .stroke(lineWidth: lineWidth)
-                    .foregroundColor(Color.primary.opacity(0.15))
-
                 Circle()
                     .trim(from: 0, to: progress)
                     .stroke(style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
@@ -5477,10 +5465,6 @@ private struct HealthMetricProgressBar: View {
                     .fill(Color.white)
                     .frame(width: circleSize, height: circleSize)
                     .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.black.opacity(0.05))
-                    )
                     .position(x: geo.size.width / 2, y: max(circleSize / 2, min(geo.size.height - circleSize / 2, yPosition)))
             }
         }

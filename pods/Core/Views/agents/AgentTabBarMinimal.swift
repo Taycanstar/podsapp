@@ -124,12 +124,25 @@ struct AgentTabBarMinimal: View {
             HStack(spacing: 8) {
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle(tint: .primary))
-                Button("Cancel") {
+                Button {
                     HapticFeedback.generate()
                     onRealtimeEnd?()
+                } label: {
+                    Text("Cancel")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(Color(UIColor { traitCollection in
+                            traitCollection.userInterfaceStyle == .dark ? .black : .white
+                        }))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color(UIColor { traitCollection in
+                                    traitCollection.userInterfaceStyle == .dark ? .white : .black
+                                }))
+                        )
                 }
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.secondary)
+                .buttonStyle(.plain)
             }
 
         case .connected, .muted:

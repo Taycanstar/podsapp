@@ -100,7 +100,7 @@ struct FoodLogAgentView: View {
                                 HStack {
                                     Spacer()
                                     Text(message.text)
-                                        .padding(12)
+                                        .padding(10)
                                         .background(Color.accentColor)
                                         .foregroundColor(.white)
                                         .cornerRadius(16)
@@ -126,17 +126,14 @@ struct FoodLogAgentView: View {
                                 HStack {
                                     Spacer()
                                     Text(message.text)
-                                        .padding(12)
+                                        .padding(10)
                                         .background(Color.accentColor)
                                         .foregroundColor(.white)
                                         .cornerRadius(16)
                                 }
                                 .id(message.id)
                             } else {
-                                Text(message.text)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.vertical, 4)
-                                    .foregroundColor(.primary)
+                                FormattedAssistantMessage(text: message.text)
                                     .id(message.id)
                             }
                         }
@@ -146,7 +143,7 @@ struct FoodLogAgentView: View {
                             HStack {
                                 Spacer()
                                 Text(realtimeSession.currentUserText)
-                                    .padding(12)
+                                    .padding(10)
                                     .background(Color.accentColor.opacity(0.6))
                                     .foregroundColor(.white)
                                     .cornerRadius(16)
@@ -163,6 +160,12 @@ struct FoodLogAgentView: View {
                                 .id("streamingAssistant")
                         }
 
+                        // Thinking indicator when realtime agent is processing
+                        if realtimeSession.isProcessing {
+                            thinkingIndicator
+                                .id("realtimeThinking")
+                        }
+
                         // Bottom anchor for scroll detection
                         Color.clear
                             .frame(height: 1)
@@ -175,18 +178,6 @@ struct FoodLogAgentView: View {
                 .contentShape(Rectangle())
                 .onTapGesture {
                     isInputFocused = false
-                }
-                .onChange(of: messages.count) { _, _ in
-                    if isAtBottom { scrollToBottom(proxy: proxy) }
-                }
-                .onChange(of: realtimeSession.messages.count) { _, _ in
-                    if isAtBottom { scrollToBottom(proxy: proxy) }
-                }
-                .onChange(of: realtimeSession.currentUserText) { _, _ in
-                    if isAtBottom { scrollToBottom(proxy: proxy) }
-                }
-                .onChange(of: realtimeSession.currentAssistantText) { _, _ in
-                    if isAtBottom { scrollToBottom(proxy: proxy) }
                 }
                 .onAppear {
                     scrollProxy = proxy
@@ -213,7 +204,7 @@ struct FoodLogAgentView: View {
                                     .stroke(Color(.separator), lineWidth: 0.5)
                             )
                     }
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 80)
                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
             }
@@ -240,7 +231,10 @@ struct FoodLogAgentView: View {
                 sendPrompt()
             },
             realtimeState: realtimeSession.state,
-            onRealtimeStart: { startRealtimeSession() },
+            onRealtimeStart: {
+                isInputFocused = false
+                startRealtimeSession()
+            },
             onRealtimeEnd: { endRealtimeSession() },
             onMuteToggle: { realtimeSession.toggleMute() }
         )
@@ -639,4 +633,95 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
             isPresented = false
         }
     }
+}
+
+// MARK: - Formatted Assistant Message
+
+private struct FormattedAssistantMessage: View {
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(formattedLines.enumerated()), id: \.offset) { _, line in
+                if line.isBullet {
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("•")
+                            .foregroundColor(.secondary)
+                        Text(line.text)
+                            .foregroundColor(.primary)
+                    }
+                } else {
+                    Text(line.text)
+                        .foregroundColor(.primary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
+    }
+
+    private var formattedLines: [FormattedLine] {
+        // Parse the text to detect list items
+        // Look for patterns like "1.", "2.", numbered items, or "Or" followed by items
+        let lines = text.components(separatedBy: ". ")
+
+        // If text contains "options:" or multiple items separated by ". Or", format as bullets
+        if text.lowercased().contains("option") || text.contains(". Or ") || text.contains(", or ") {
+            return parseOptionsText(text)
+        }
+
+        // Default: just show as single text
+        return [FormattedLine(text: text, isBullet: false)]
+    }
+
+    private func parseOptionsText(_ text: String) -> [FormattedLine] {
+        var result: [FormattedLine] = []
+
+        // Try to split by common option separators
+        // Pattern: "I found a few options: ITEM1. Or ITEM2. Or ITEM3. Which one?"
+        let parts = text.components(separatedBy: ". Or ")
+
+        if parts.count > 1 {
+            // First part might have intro text before the first option
+            let firstPart = parts[0]
+            if let colonIndex = firstPart.lastIndex(of: ":") {
+                let intro = String(firstPart[...colonIndex])
+                let firstOption = String(firstPart[firstPart.index(after: colonIndex)...]).trimmingCharacters(in: .whitespaces)
+                result.append(FormattedLine(text: intro, isBullet: false))
+                if !firstOption.isEmpty {
+                    result.append(FormattedLine(text: firstOption, isBullet: true))
+                }
+            } else {
+                result.append(FormattedLine(text: firstPart, isBullet: true))
+            }
+
+            // Middle parts are options
+            for i in 1..<parts.count - 1 {
+                result.append(FormattedLine(text: parts[i].trimmingCharacters(in: .whitespaces), isBullet: true))
+            }
+
+            // Last part might have trailing question
+            let lastPart = parts[parts.count - 1]
+            if let questionIndex = lastPart.lastIndex(of: "?") {
+                let optionText = String(lastPart[..<questionIndex]).trimmingCharacters(in: .whitespaces)
+                let questionText = String(lastPart[questionIndex...])
+                if !optionText.isEmpty && !optionText.starts(with: "Which") {
+                    result.append(FormattedLine(text: optionText, isBullet: true))
+                }
+                result.append(FormattedLine(text: questionText, isBullet: false))
+            } else {
+                result.append(FormattedLine(text: lastPart.trimmingCharacters(in: .whitespaces), isBullet: true))
+            }
+
+            return result
+        }
+
+        // Fallback: just show as plain text
+        return [FormattedLine(text: text, isBullet: false)]
+    }
+}
+
+private struct FormattedLine {
+    let text: String
+    let isBullet: Bool
 }
