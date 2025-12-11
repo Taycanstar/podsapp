@@ -1100,6 +1100,67 @@ class NetworkManagerTwo {
         }.resume()
     }
 
+    // MARK: - Readiness Summary
+
+    struct ReadinessSummaryResponse: Codable {
+        let summary: String
+        let date: String
+    }
+
+    func fetchReadinessSummary(
+        userEmail: String,
+        targetDate: Date,
+        completion: @escaping (Result<ReadinessSummaryResponse, Error>) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/agent/readiness-summary/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let dateString = Self.isoDayFormatter.string(from: targetDate)
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "target_date": dateString
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 30
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let http = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            guard (200...299).contains(http.statusCode), let data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: "Server error: \(http.statusCode)"))) }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let response = try decoder.decode(ReadinessSummaryResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(response)) }
+            } catch {
+                DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
+            }
+        }.resume()
+    }
+
     private static let isoDayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)

@@ -88,6 +88,10 @@ struct NewHomeView: View {
     @State private var showQuickActivityToast = false
     @State private var quickActivityErrorMessage: String?
     @State private var hasRunInitialAppear = false
+    @State private var showReadinessDetail = false
+    @State private var readinessNavigationSnapshot: NetworkManagerTwo.HealthMetricsSnapshot?
+    @State private var readinessNavigationDate = Date()
+    @State private var readinessNavigationEmail: String?
 
     private enum ScheduleAlert: Identifiable {
         case success(String)
@@ -397,62 +401,63 @@ private var remainingCal: Double { vm.remainingCalories }
     var body: some View {
         NavigationStack {
             dashboardContent
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    HapticFeedback.generateRigid()
-                    onShowChats()
-                } label: {
-                    ProfileInitialCircle(initial: userInitial, showsBorder: shouldShowProfileBorder)
-                }
-                .buttonStyle(.plain)
-            }
-
-            ToolbarItem(placement: .principal) {
-                if isHealthMetricsUpdating {
-                    Text(headerTitle)
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
-                } else {
-                    HStack(spacing: 12) {
+                .background(readinessNavigationLink)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
                         Button {
-                            vm.selectedDate.addDays(-1)
+                            HapticFeedback.generateRigid()
+                            onShowChats()
                         } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.primary)
+                            ProfileInitialCircle(initial: userInitial, showsBorder: shouldShowProfileBorder)
                         }
+                        .buttonStyle(.plain)
+                    }
 
-                        Button {
-                            showDatePicker = true
-                        } label: {
+                    ToolbarItem(placement: .principal) {
+                        if isHealthMetricsUpdating {
                             Text(headerTitle)
                                 .font(.system(size: 18, weight: .medium))
                                 .foregroundColor(.primary)
-                        }
+                        } else {
+                            HStack(spacing: 12) {
+                                Button {
+                                    vm.selectedDate.addDays(-1)
+                                } label: {
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundColor(.primary)
+                                }
 
+                                Button {
+                                    showDatePicker = true
+                                } label: {
+                                    Text(headerTitle)
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundColor(.primary)
+                                }
+
+                                Button {
+                                    vm.selectedDate.addDays(+1)
+                                } label: {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundColor(.primary)
+                                }
+                            }
+                        }
+                    }
+
+                    ToolbarItem(placement: .navigationBarTrailing) {
                         Button {
-                            vm.selectedDate.addDays(+1)
+                            showDatePicker = true
                         } label: {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 18, weight: .medium))
+                            Image(systemName: "newspaper")
+                                .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.primary)
                         }
                     }
                 }
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showDatePicker = true
-                } label: {
-                    Image(systemName: "newspaper")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                }
-            }
         }
         .task {
             refreshWeightTrendEntries()
@@ -2564,6 +2569,30 @@ private struct RecoveryRingView: View {
     }
 
 
+    @ViewBuilder
+    private var readinessNavigationLink: some View {
+        NavigationLink(
+            destination: readinessDestinationView,
+            isActive: $showReadinessDetail,
+            label: { EmptyView() }
+        )
+        .hidden()
+    }
+
+    @ViewBuilder
+    private var readinessDestinationView: some View {
+        if let snapshot = readinessNavigationSnapshot,
+           let email = readinessNavigationEmail {
+            ReadinessView(
+                initialSnapshot: snapshot,
+                initialDate: readinessNavigationDate,
+                userEmail: email
+            )
+        } else {
+            EmptyView()
+        }
+    }
+
     private var healthMetricItems: [(title: String, icon: String, value: Double?)] {
         let snapshot = vm.healthMetricsSnapshot
         return [
@@ -2656,31 +2685,22 @@ private struct RecoveryRingView: View {
             let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(Array(healthMetricItems.enumerated()), id: \.offset) { item in
-                    VStack(spacing: 8) {
-                        VStack(spacing: 6) {
-                            Image(systemName: item.element.icon)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.primary)
-                            Text(metricValueText(item.element.value))
-                                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                                .foregroundColor(.primary)
-                                .frame(maxWidth: .infinity)
+                    if item.element.title == "Readiness" {
+                        Button {
+                            guard let snapshot = vm.healthMetricsSnapshot,
+                                  let email = currentUserEmail else { return }
+                            readinessNavigationSnapshot = snapshot
+                            readinessNavigationDate = vm.selectedDate
+                            readinessNavigationEmail = email
+                            showReadinessDetail = true
+                        } label: {
+                            healthMetricCircle(item: item.element)
                         }
-                        .frame(width: 70, height: 70)
-                        .background(
-                            Circle()
-                                .fill(
-                                    colorScheme == .dark
-                                        ? Color.white.opacity(0.075)
-                                        : Color(red: 0.98039216, green: 0.98039216, blue: 0.98039216)
-                                )
-                        )
-
-                        Text(item.element.title)
-                            .font(.caption2)
-                            .foregroundColor(.primary)
+                        .buttonStyle(.plain)
+                        .disabled(vm.healthMetricsSnapshot == nil || currentUserEmail == nil)
+                    } else {
+                        healthMetricCircle(item: item.element)
                     }
-                    .frame(maxWidth: .infinity)
                 }
             }
 
@@ -2697,6 +2717,35 @@ private struct RecoveryRingView: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(Color.primary.opacity(0.05))
         )
+    }
+
+    @ViewBuilder
+    private func healthMetricCircle(item: (title: String, icon: String, value: Double?)) -> some View {
+        VStack(spacing: 8) {
+            VStack(spacing: 6) {
+                Image(systemName: item.icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                Text(metricValueText(item.value))
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity)
+            }
+            .frame(width: 70, height: 70)
+            .background(
+                Circle()
+                    .fill(
+                        colorScheme == .dark
+                            ? Color.white.opacity(0.075)
+                            : Color(red: 0.98039216, green: 0.98039216, blue: 0.98039216)
+                    )
+            )
+
+            Text(item.title)
+                .font(.caption2)
+                .foregroundColor(.primary)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // Body composition helpers ------------------------------------------------
