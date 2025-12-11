@@ -2576,6 +2576,7 @@ private struct RecoveryRingView: View {
                 initialDate: readinessNavigationDate,
                 userEmail: email
             )
+            .environmentObject(healthViewModel)
         } else {
             EmptyView()
         }

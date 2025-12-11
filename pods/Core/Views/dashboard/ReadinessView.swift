@@ -19,6 +19,7 @@ struct ReadinessView: View {
     @State private var isLoadingSnapshot = false
     @State private var showDatePicker = false
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var healthViewModel: HealthKitViewModel
     private let ringScale: CGFloat = 0.75
 
     init(initialSnapshot: NetworkManagerTwo.HealthMetricsSnapshot, initialDate: Date, userEmail: String) {
@@ -27,12 +28,17 @@ struct ReadinessView: View {
         self.userEmail = userEmail
         _selectedDate = State(initialValue: initialDate)
         _snapshot = State(initialValue: initialSnapshot)
+        print("[ReadinessView] Initialized with snapshot from NewHomeView healthMetricsSnapshot for user \(userEmail) on \(initialDate)")
+        logSnapshotData(initialSnapshot)
     }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 headerSection
+                if !hasRequiredReadinessSignals {
+                    missingSignalsBanner
+                }
                 readinessCircleSection
                 aiSummaryCard
                 vitalsSection
@@ -58,7 +64,15 @@ struct ReadinessView: View {
                 .buttonStyle(.plain)
             }
         }
-        .onAppear { loadAISummary() }
+        .onAppear {
+            logLocalMetricSources()
+            if hasRequiredReadinessSignals {
+                loadAISummary()
+            } else {
+                isLoadingSummary = false
+                aiSummary = nil
+            }
+        }
         .onChange(of: selectedDate) { _, newDate in
             loadDataForDate(newDate)
         }
@@ -88,19 +102,19 @@ struct ReadinessView: View {
                 .foregroundColor(readinessColor)
 
             Circle()
-                .trim(from: 0, to: CGFloat((currentSnapshot?.readiness ?? 0) / 100))
+                .trim(from: 0, to: CGFloat(readinessArcProgress))
                 .stroke(style: StrokeStyle(lineWidth: 12, lineCap: .round))
                 .foregroundColor(readinessColor)
                 .rotationEffect(.degrees(-90))
-                .animation(.easeInOut(duration: 0.5), value: currentSnapshot?.readiness)
+                .animation(.easeInOut(duration: 0.5), value: readinessDisplayScore)
 
             VStack(spacing: 8) {
                 if isLoadingSnapshot {
                     ProgressView()
                 } else {
-                    Text("\(Int(currentSnapshot?.readiness ?? 0))")
+                    Text(readinessScoreText)
                         .font(.system(size: 48, weight: .bold, design: .rounded))
-                    Text(readinessLabel)
+                    Text(readinessStatusText)
                         .font(.headline)
                         .foregroundColor(readinessColor)
                 }
@@ -125,6 +139,10 @@ struct ReadinessView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
+            } else if !hasRequiredReadinessSignals {
+                Text("Connect a wearable so we can give you personalized readiness guidance.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             } else {
                 Text(aiSummary ?? "Unable to generate summary")
                     .font(.body)
@@ -150,22 +168,22 @@ struct ReadinessView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 VitalCard(
                     title: "Resting Heart Rate",
-                    value: formatRHR(currentSnapshot?.rawMetrics?.restingHeartRate),
+                    value: formatRHR(restingHeartRateSource),
                     trend: calculateRHRTrend()
                 )
                 VitalCard(
-                    title: "Heart Rate Variability",
-                    value: formatHRV(currentSnapshot?.rawMetrics?.hrv),
+                    title: "HRV",
+                    value: formatHRV(heartRateVariabilitySource),
                     trend: calculateHRVTrend()
                 )
                 VitalCard(
                     title: "Body Temperature",
-                    value: formatTemperatureDeviation(currentSnapshot?.rawMetrics?.skinTemperatureC),
+                    value: formatTemperatureDeviation(temperatureSourceCelsius),
                     trend: calculateTempTrend()
                 )
                 VitalCard(
                     title: "Respiratory Rate",
-                    value: formatRespiratoryRate(currentSnapshot?.rawMetrics?.respiratoryRate),
+                    value: formatRespiratoryRate(respiratoryRateSource),
                     trend: calculateRRTrend()
                 )
             }
@@ -175,7 +193,9 @@ struct ReadinessView: View {
     // MARK: - Drivers Section
 
     private var driversSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let drivers = readinessDrivers
+
+        return VStack(alignment: .leading, spacing: 12) {
             Text("Drivers")
                 .font(.title)
                 .fontWeight(.semibold)
@@ -183,9 +203,9 @@ struct ReadinessView: View {
                 .padding(.leading, 4)
 
             VStack(spacing: 0) {
-                ForEach(readinessDrivers) { driver in
+                ForEach(Array(drivers.enumerated()), id: \.element.id) { index, driver in
                     DriverRow(driver: driver)
-                    if driver.id != readinessDrivers.last?.id {
+                    if index < drivers.count - 1 {
                         Divider()
                             .padding(.horizontal)
                     }
@@ -196,14 +216,92 @@ struct ReadinessView: View {
         }
     }
 
+    private var missingSignalsBanner: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text("We're missing wearable data")
+                    .font(.headline)
+            }
+
+            Text("To generate accurate readiness, sleep, activity, and stress scores we need sleep duration/quality plus overnight HRV, resting heart rate, wrist temperature, and respiratory rate from your wearable.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            if !missingReadinessSignals.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Missing signals")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+
+                    ForEach(missingReadinessSignals, id: \.self) { signal in
+                        Text("• \(signal)")
+                            .font(.footnote)
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
+
+            if !healthViewModel.isAuthorized {
+                Text("Tip: enable Apple Health permissions so we can sync these metrics automatically.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+        .background(Color("sheetcard"))
+        .cornerRadius(16)
+    }
+
     // MARK: - Computed Properties
 
     private var currentSnapshot: NetworkManagerTwo.HealthMetricsSnapshot? {
         snapshot
     }
 
-    private var readinessColor: Color {
-        .mint
+    private var restingHeartRateSource: Double? {
+        currentSnapshot?.rawMetrics?.restingHeartRate ?? (healthViewModel.isAuthorized ? healthViewModel.restingHeartRate : nil)
+    }
+
+    private var heartRateVariabilitySource: Double? {
+        currentSnapshot?.rawMetrics?.hrv ?? (healthViewModel.isAuthorized ? healthViewModel.heartRateVariability : nil)
+    }
+
+    private var temperatureSourceCelsius: Double? {
+        currentSnapshot?.rawMetrics?.skinTemperatureC ?? (healthViewModel.isAuthorized ? healthViewModel.bodyTemperature : nil)
+    }
+
+    private var respiratoryRateSource: Double? {
+        currentSnapshot?.rawMetrics?.respiratoryRate ?? (healthViewModel.isAuthorized ? healthViewModel.respiratoryRate : nil)
+    }
+
+    private var readinessColor: Color { .mint }
+
+    private var readinessDisplayScore: Double? {
+        hasRequiredReadinessSignals ? currentSnapshot?.readiness : nil
+    }
+
+    private var readinessArcProgress: Double {
+        guard let score = readinessDisplayScore else { return 0 }
+        return min(max(score / 100.0, 0), 1)
+    }
+
+    private var readinessScoreText: String {
+        readinessDisplayScore.map { "\(Int($0))" } ?? "--"
+    }
+
+    private var readinessStatusText: String {
+        readinessDisplayScore != nil ? readinessLabel : "No Data"
+    }
+
+    private var hasRequiredReadinessSignals: Bool {
+        missingReadinessSignals.isEmpty
+    }
+
+    private var missingReadinessSignals: [String] {
+        missingSignals(for: currentSnapshot)
     }
 
     private var readinessLabel: String {
@@ -225,21 +323,40 @@ struct ReadinessView: View {
             ("rhr", "Resting heart rate"),
             ("hrv_balance", "HRV balance"),
             ("temperature", "Body temperature"),
+            ("respiratory_rate", "Respiratory rate"),
             ("sleep_duration", "Recovery index"),
             ("sleep_quality", "Sleep"),
             ("activity", "Sleep balance"),
-            ("respiratory_rate", "Sleep regularity"),
             ("hrv", "Previous day activity"),
         ]
+
+        if !hasRequiredReadinessSignals {
+            return driverMappings.map { mapping in
+                DriverItem(
+                    name: mapping.name,
+                    score: 0,
+                    displayValue: "--",
+                    color: .mint
+                )
+            }
+        }
 
         var drivers: [DriverItem] = []
         for mapping in driverMappings {
             if let score = components[mapping.key] {
+                let labelInfo = qualitativeLabel(for: score)
+                let displayText: String
+                if mapping.key == "rhr" {
+                    displayText = formatRHR(restingHeartRateSource)
+                } else {
+                    displayText = labelInfo.text
+                }
+
                 drivers.append(DriverItem(
                     name: mapping.name,
                     score: score,
-                    displayValue: qualitativeLabel(for: score).text,
-                    color: .mint
+                    displayValue: displayText,
+                    color: labelInfo.color
                 ))
             }
         }
@@ -251,7 +368,7 @@ struct ReadinessView: View {
                 name: "Activity balance",
                 score: activityBalance,
                 displayValue: qualitativeLabel(for: activityBalance).text,
-                color: .mint
+                color: qualitativeLabel(for: activityBalance).color
             ))
         }
 
@@ -357,7 +474,13 @@ struct ReadinessView: View {
             switch result {
             case .success(let newSnapshot):
                 snapshot = newSnapshot
-                loadAISummary()
+                logSnapshotData(newSnapshot)
+                if hasRequiredReadinessSignals {
+                    loadAISummary()
+                } else {
+                    aiSummary = nil
+                    isLoadingSummary = false
+                }
             case .failure:
                 snapshot = nil
                 aiSummary = "Unable to load health data for this date."
@@ -377,6 +500,7 @@ struct ReadinessView: View {
             switch result {
             case .success(let response):
                 aiSummary = response.summary
+                print("[ReadinessView] AI summary from API: \(response.summary)")
             case .failure:
                 // Fallback based on score
                 if let score = currentSnapshot?.readiness {
@@ -390,8 +514,87 @@ struct ReadinessView: View {
                 } else {
                     aiSummary = "Unable to generate summary. Please ensure your wearable is synced."
                 }
+                print("[ReadinessView] AI summary fallback: \(aiSummary ?? "n/a")")
             }
         }
+    }
+
+    private func logSnapshotData(_ snapshot: NetworkManagerTwo.HealthMetricsSnapshot) {
+        let readinessText = describeScore(snapshot.readiness)
+        let sleepText = describeScore(snapshot.sleep)
+        let activityText = describeScore(snapshot.activity)
+        let stressText = describeScore(snapshot.stress)
+        print("[ReadinessView] Snapshot date \(snapshot.date) — readiness: \(readinessText), sleep: \(sleepText), activity: \(activityText), stress: \(stressText)")
+        print("[ReadinessView] Data sources — readiness circle + header use snapshot.readiness from NetworkManagerTwo.fetchHealthMetrics; Drivers rely on snapshot.components?.readiness & .activity; Vitals pull snapshot.rawMetrics values; AI summary comes from NetworkManagerTwo.fetchReadinessSummary")
+
+        if let raw = snapshot.rawMetrics {
+            let rhr = raw.restingHeartRate.map { "\(Int($0)) bpm" } ?? "n/a"
+            let hrv = raw.hrv.map { "\(Int($0)) ms" } ?? "n/a"
+            let temp = raw.skinTemperatureC.map { String(format: "%+.2f°C", $0) } ?? "n/a"
+            let resp = raw.respiratoryRate.map { String(format: "%.1f/min", $0) } ?? "n/a"
+            print("[ReadinessView] Raw metrics — RHR: \(rhr), HRV: \(hrv), Temp Delta: \(temp), Resp Rate: \(resp)")
+        } else {
+            print("[ReadinessView] Raw metrics unavailable")
+        }
+
+        if let readinessComponents = snapshot.components?.readiness {
+            print("[ReadinessView] Readiness driver components:")
+            readinessComponents.forEach { key, value in
+                print("    • \(key): \(String(format: "%.1f", value))")
+            }
+        } else {
+            print("[ReadinessView] No readiness driver components available")
+        }
+
+        if let activityComponents = snapshot.components?.activity {
+            print("[ReadinessView] Activity components:")
+            activityComponents.forEach { key, value in
+                print("    • \(key): \(String(format: "%.1f", value))")
+            }
+        }
+
+        let missingSignals = missingSignals(for: snapshot)
+        if !missingSignals.isEmpty {
+            print("[ReadinessView] Missing wearable signals for readiness: \(missingSignals.joined(separator: ", "))")
+        }
+    }
+
+    private func describeScore(_ value: Double?) -> String {
+        guard let value else { return "n/a" }
+        return String(format: "%.1f", value)
+    }
+
+    private func logLocalMetricSources() {
+        let rhr = healthViewModel.restingHeartRate.map { "\(Int($0)) bpm" } ?? "n/a"
+        let hrv = healthViewModel.heartRateVariability.map { "\(Int($0)) ms" } ?? "n/a"
+        let temp = healthViewModel.bodyTemperature.map { String(format: "%.2f°C", $0) } ?? "n/a"
+        let resp = healthViewModel.respiratoryRate.map { String(format: "%.1f/min", $0) } ?? "n/a"
+        print("[ReadinessView] Local HealthKitViewModel values — authorized: \(healthViewModel.isAuthorized), RHR: \(rhr), HRV: \(hrv), Temp: \(temp), Resp Rate: \(resp)")
+    }
+
+    private func missingSignals(for snapshot: NetworkManagerTwo.HealthMetricsSnapshot?) -> [String] {
+        guard let raw = snapshot?.rawMetrics else {
+            return ["Sleep", "HRV", "Resting heart rate", "Wrist temperature", "Respiratory rate"]
+        }
+
+        var missing: [String] = []
+        if !hasSleepSignal(raw) { missing.append("Sleep") }
+        if raw.hrv == nil { missing.append("HRV") }
+        if raw.restingHeartRate == nil { missing.append("Resting heart rate") }
+        if raw.skinTemperatureC == nil { missing.append("Wrist temperature") }
+        if raw.respiratoryRate == nil { missing.append("Respiratory rate") }
+        return missing
+    }
+
+    private func hasSleepSignal(_ raw: NetworkManagerTwo.HealthMetricRawMetrics) -> Bool {
+        if let totalMinutes = raw.totalSleepMinutes, totalMinutes > 0 { return true }
+        if let hours = raw.sleepHours, hours > 0 { return true }
+        if let inBed = raw.inBedMinutes, inBed > 0 { return true }
+        if let stages = raw.sleepStageMinutes {
+            let stageTotals = [stages.deep, stages.rem, stages.core, stages.awake].compactMap { $0 }
+            if stageTotals.first(where: { $0 > 0 }) != nil { return true }
+        }
+        return false
     }
 }
 
@@ -485,6 +688,7 @@ struct TrendBadge: View {
         case .stable: return .gray
         }
     }
+
 }
 
 struct DriverRow: View {
@@ -494,7 +698,7 @@ struct DriverRow: View {
         Button {
             // Tappable but no navigation yet
         } label: {
-            VStack(spacing: 0) {
+            VStack(spacing: 4) {
                 HStack {
                     Text(driver.name)
                         .font(.body)
@@ -508,7 +712,8 @@ struct DriverRow: View {
                         .foregroundColor(.secondary)
                         .padding(.leading, 4)
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
 
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
@@ -522,9 +727,10 @@ struct DriverRow: View {
                     }
                 }
                 .frame(height: 6)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+                .padding(.horizontal, 16)
             }
+            .padding(.bottom, 14)
+            .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -586,4 +792,5 @@ struct ReadinessDatePickerSheet: View {
             userEmail: "test@example.com"
         )
     }
+    .environmentObject(HealthKitViewModel())
 }
