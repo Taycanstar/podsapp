@@ -31,6 +31,8 @@ struct FoodLogAgentView: View {
     @FocusState private var isInputFocused: Bool
     @State private var statusPhraseIndex = 0
     @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
+    @State private var isAtBottom = true
+    @State private var scrollProxy: ScrollViewProxy?
 
     // Realtime voice session
     @StateObject private var realtimeSession = RealtimeVoiceSession()
@@ -88,106 +90,139 @@ struct FoodLogAgentView: View {
 
     private var chatScroll: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 12) {
-                    // Regular text-based messages
-                    ForEach(messages) { message in
-                        switch message.sender {
-                        case .user:
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        // Regular text-based messages
+                        ForEach(messages) { message in
+                            switch message.sender {
+                            case .user:
+                                HStack {
+                                    Spacer()
+                                    Text(message.text)
+                                        .padding(12)
+                                        .background(Color.accentColor)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(16)
+                                }
+                                .id(message.id)
+                            case .system:
+                                Text(message.text)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, 4)
+                                    .foregroundColor(.primary)
+                                    .id(message.id)
+                            case .status:
+                                if streamingMessageId == nil {
+                                    thinkingIndicator
+                                        .id(message.id)
+                                }
+                            }
+                        }
+
+                        // Realtime voice messages
+                        ForEach(realtimeSession.messages) { message in
+                            if message.isUser {
+                                HStack {
+                                    Spacer()
+                                    Text(message.text)
+                                        .padding(12)
+                                        .background(Color.accentColor)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(16)
+                                }
+                                .id(message.id)
+                            } else {
+                                Text(message.text)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, 4)
+                                    .foregroundColor(.primary)
+                                    .id(message.id)
+                            }
+                        }
+
+                        // Streaming user text (what user is currently saying)
+                        if !realtimeSession.currentUserText.isEmpty {
                             HStack {
                                 Spacer()
-                                Text(message.text)
+                                Text(realtimeSession.currentUserText)
                                     .padding(12)
-                                    .background(Color.accentColor)
+                                    .background(Color.accentColor.opacity(0.6))
                                     .foregroundColor(.white)
                                     .cornerRadius(16)
                             }
-                        case .system:
-                            Text(message.text)
+                            .id("streamingUser")
+                        }
+
+                        // Streaming assistant text (voice realtime)
+                        if !realtimeSession.currentAssistantText.isEmpty {
+                            Text(realtimeSession.currentAssistantText)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.vertical, 4)
-                                .foregroundColor(.primary)
-                        case .status:
-                            if streamingMessageId == nil {
-                                thinkingIndicator
-                            }
+                                .foregroundColor(.secondary)
+                                .id("streamingAssistant")
                         }
-                    }
 
-                    // Realtime voice messages
-                    ForEach(realtimeSession.messages) { message in
-                        if message.isUser {
-                            HStack {
-                                Spacer()
-                                Text(message.text)
-                                    .padding(12)
-                                    .background(Color.accentColor)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(16)
-                            }
-                        } else {
-                            Text(message.text)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 4)
-                                .foregroundColor(.primary)
-                        }
+                        // Bottom anchor for scroll detection
+                        Color.clear
+                            .frame(height: 1)
+                            .id("bottomAnchor")
+                            .onAppear { isAtBottom = true }
+                            .onDisappear { isAtBottom = false }
                     }
-
-                    // Streaming user text (what user is currently saying)
-                    if !realtimeSession.currentUserText.isEmpty {
-                        HStack {
-                            Spacer()
-                            Text(realtimeSession.currentUserText)
-                                .padding(12)
-                                .background(Color.accentColor.opacity(0.6))
-                                .foregroundColor(.white)
-                                .cornerRadius(16)
-                        }
-                        .id("streamingUser")
-                    }
-
-                   // Streaming assistant text (what AI is currently saying)
-                    // Streaming assistant text (voice realtime)
-                    if !realtimeSession.currentAssistantText.isEmpty {
-                        Text(realtimeSession.currentAssistantText)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 4)
-                            .foregroundColor(.secondary)
-                            .id("streamingAssistant")
-                    }
+                    .padding()
                 }
-                .padding()
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                isInputFocused = false
-            }
-            .onChange(of: messages.count) { _, _ in
-                scrollToBottom(proxy: proxy)
-            }
-            .onChange(of: realtimeSession.messages.count) { _, _ in
-                scrollToBottom(proxy: proxy)
-            }
-            .onChange(of: realtimeSession.currentUserText) { _, _ in
-                scrollToBottom(proxy: proxy)
-            }
-            .onChange(of: realtimeSession.currentAssistantText) { _, _ in
-                scrollToBottom(proxy: proxy)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isInputFocused = false
+                }
+                .onChange(of: messages.count) { _, _ in
+                    if isAtBottom { scrollToBottom(proxy: proxy) }
+                }
+                .onChange(of: realtimeSession.messages.count) { _, _ in
+                    if isAtBottom { scrollToBottom(proxy: proxy) }
+                }
+                .onChange(of: realtimeSession.currentUserText) { _, _ in
+                    if isAtBottom { scrollToBottom(proxy: proxy) }
+                }
+                .onChange(of: realtimeSession.currentAssistantText) { _, _ in
+                    if isAtBottom { scrollToBottom(proxy: proxy) }
+                }
+                .onAppear {
+                    scrollProxy = proxy
+                }
+
+                // Floating scroll-to-bottom button
+                if !isAtBottom {
+                    Button {
+                        withAnimation {
+                            proxy.scrollTo("bottomAnchor", anchor: .bottom)
+                        }
+                    } label: {
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .frame(width: 32, height: 32)
+                            .background(
+                                Circle()
+                                    .fill(Color(.systemBackground))
+                                    .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                            )
+                            .overlay(
+                                Circle()
+                                    .stroke(Color(.separator), lineWidth: 0.5)
+                            )
+                    }
+                    .padding(.bottom, 8)
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                }
             }
         }
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy) {
         withAnimation {
-            if !realtimeSession.currentAssistantText.isEmpty {
-                proxy.scrollTo("streamingAssistant", anchor: .bottom)
-            } else if !realtimeSession.currentUserText.isEmpty {
-                proxy.scrollTo("streamingUser", anchor: .bottom)
-            } else if let last = realtimeSession.messages.last?.id {
-                proxy.scrollTo(last, anchor: .bottom)
-            } else if let last = messages.last?.id {
-                proxy.scrollTo(last, anchor: .bottom)
-            }
+            proxy.scrollTo("bottomAnchor", anchor: .bottom)
         }
     }
 

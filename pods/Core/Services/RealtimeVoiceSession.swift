@@ -388,10 +388,17 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
             return
         }
 
-        // Log all events for debugging
+        // Log ALL events with full content for debugging
         if type.contains("error") {
             print("❌ [REALTIME EVENT] \(type): \(json)")
-        } else if type.contains("transcript") || type.contains("audio") {
+        } else if type.contains("transcript") {
+            // Log transcript events with full content to debug message display
+            if let rawString = String(data: buffer.data, encoding: .utf8) {
+                print("📨 [REALTIME TRANSCRIPT] \(type): \(rawString.prefix(500))")
+            } else {
+                print("📨 [REALTIME TRANSCRIPT] \(type): \(json)")
+            }
+        } else if type.contains("audio") {
             print("📨 [REALTIME EVENT] \(type)")
         } else {
             print("📨 [REALTIME EVENT] \(type): \(json.keys)")
@@ -461,6 +468,7 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
                 print("🎤 [USER TRANSCRIPT] '\(finalText)'")
                 if !finalText.isEmpty {
                     self.messages.append(RealtimeMessage(isUser: true, text: finalText))
+                    print("✅ [MESSAGES] Added user message, count now: \(self.messages.count)")
                     self.transcribedText = finalText
                 }
                 self.currentUserText = ""
@@ -678,7 +686,8 @@ private extension RealtimeVoiceSession {
                     ],
                     "output": [
                         "format": [
-                            "type": "audio/pcm"
+                            "type": "audio/pcm",
+                            "rate": 24000
                         ],
                         "voice": "marin"
                     ]
@@ -700,18 +709,25 @@ private extension RealtimeVoiceSession {
     static func extractText(from content: [[String: Any]]) -> String {
         var parts: [String] = []
         for piece in content {
+            print("🔍 [EXTRACT] piece keys: \(piece.keys.sorted()), values: \(piece)")
             if let text = piece["text"] as? String {
                 parts.append(text)
+                print("🔍 [EXTRACT] Found text: '\(text)'")
             } else if let transcript = piece["transcript"] as? String {
                 parts.append(transcript)
+                print("🔍 [EXTRACT] Found transcript: '\(transcript)'")
             } else if let outputText = piece["output_text"] as? String {
                 parts.append(outputText)
+                print("🔍 [EXTRACT] Found output_text: '\(outputText)'")
             } else if let audio = piece["audio"] as? [String: Any],
                       let transcript = audio["transcript"] as? String {
                 parts.append(transcript)
+                print("🔍 [EXTRACT] Found audio.transcript: '\(transcript)'")
             }
         }
-        return parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        let result = parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        print("🔍 [EXTRACT] Final result: '\(result)' from \(parts.count) parts")
+        return result
     }
 }
 

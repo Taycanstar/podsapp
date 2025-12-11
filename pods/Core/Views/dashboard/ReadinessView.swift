@@ -19,6 +19,7 @@ struct ReadinessView: View {
     @State private var isLoadingSnapshot = false
     @State private var showDatePicker = false
     @Environment(\.colorScheme) private var colorScheme
+    private let ringScale: CGFloat = 0.75
 
     init(initialSnapshot: NetworkManagerTwo.HealthMetricsSnapshot, initialDate: Date, userEmail: String) {
         self.initialSnapshot = initialSnapshot
@@ -40,7 +41,19 @@ struct ReadinessView: View {
             .padding()
         }
         .background(Color("primarybg"))
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("Readiness")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showDatePicker = true
+                } label: {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 18, weight: .medium))
+                }
+                .buttonStyle(.plain)
+            }
+        }
         .onAppear { loadAISummary() }
         .onChange(of: selectedDate) { _, newDate in
             loadDataForDate(newDate)
@@ -53,29 +66,12 @@ struct ReadinessView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Readiness")
-                    .font(.largeTitle).bold()
-                Text(selectedDate, format: .dateTime.weekday(.wide).month().day())
-                    .foregroundColor(.secondary)
-            }
-            Spacer()
-
-            Button {
-                showDatePicker = true
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "calendar")
-                    Text("Today")
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color("containerbg"))
-                .cornerRadius(20)
-            }
-            .buttonStyle(PlainButtonStyle())
+        VStack(alignment: .leading, spacing: 6) {
+            Text(selectedDate, format: .dateTime.weekday(.wide).month().day())
+                .foregroundColor(.secondary)
+                .font(.subheadline)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Readiness Circle
@@ -83,13 +79,13 @@ struct ReadinessView: View {
     private var readinessCircleSection: some View {
         ZStack {
             Circle()
-                .stroke(lineWidth: 16)
+                .stroke(lineWidth: 12)
                 .opacity(0.15)
                 .foregroundColor(readinessColor)
 
             Circle()
                 .trim(from: 0, to: CGFloat((currentSnapshot?.readiness ?? 0) / 100))
-                .stroke(style: StrokeStyle(lineWidth: 16, lineCap: .round))
+                .stroke(style: StrokeStyle(lineWidth: 12, lineCap: .round))
                 .foregroundColor(readinessColor)
                 .rotationEffect(.degrees(-90))
                 .animation(.easeInOut(duration: 0.5), value: currentSnapshot?.readiness)
@@ -99,14 +95,14 @@ struct ReadinessView: View {
                     ProgressView()
                 } else {
                     Text("\(Int(currentSnapshot?.readiness ?? 0))")
-                        .font(.system(size: 64, weight: .bold, design: .rounded))
+                        .font(.system(size: 48, weight: .bold, design: .rounded))
                     Text(readinessLabel)
                         .font(.headline)
                         .foregroundColor(readinessColor)
                 }
             }
         }
-        .frame(width: 200, height: 200)
+        .frame(width: 200 * ringScale, height: 200 * ringScale)
         .padding(.vertical, 20)
     }
 
@@ -141,9 +137,10 @@ struct ReadinessView: View {
 
     private var vitalsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("VITALS")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            Text("Vitals")
+                .font(.title)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
                 .padding(.leading, 4)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
@@ -175,9 +172,10 @@ struct ReadinessView: View {
 
     private var driversSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("DRIVERS")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            Text("Drivers")
+                .font(.title)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
                 .padding(.leading, 4)
 
             VStack(spacing: 0) {
@@ -201,12 +199,7 @@ struct ReadinessView: View {
     }
 
     private var readinessColor: Color {
-        guard let score = currentSnapshot?.readiness else { return .gray }
-        switch score {
-        case 75...: return Color(red: 0.3, green: 0.8, blue: 0.5)  // Green
-        case 50..<75: return .yellow
-        default: return .red
-        }
+        .mint
     }
 
     private var readinessLabel: String {
@@ -242,7 +235,7 @@ struct ReadinessView: View {
                     name: mapping.name,
                     score: score,
                     displayValue: qualitativeLabel(for: score).text,
-                    color: qualitativeLabel(for: score).color
+                    color: .mint
                 ))
             }
         }
@@ -254,7 +247,7 @@ struct ReadinessView: View {
                 name: "Activity balance",
                 score: activityBalance,
                 displayValue: qualitativeLabel(for: activityBalance).text,
-                color: qualitativeLabel(for: activityBalance).color
+                color: .mint
             ))
         }
 
@@ -265,10 +258,10 @@ struct ReadinessView: View {
 
     private func qualitativeLabel(for score: Double) -> (text: String, color: Color) {
         switch score {
-        case 80...: return ("Optimal", Color(red: 0.3, green: 0.8, blue: 0.5))
-        case 60..<80: return ("Good", Color(red: 0.3, green: 0.8, blue: 0.5))
-        case 40..<60: return ("Fair", .yellow)
-        default: return ("Pay attention", .orange)
+        case 80...: return ("Optimal", .mint)
+        case 60..<80: return ("Good", .mint)
+        case 40..<60: return ("Fair", .mint)
+        default: return ("Pay attention", .mint)
         }
     }
 
@@ -515,16 +508,16 @@ struct DriverRow: View {
 
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
-                        Rectangle()
+                        Capsule()
                             .fill(driver.color.opacity(0.2))
-                            .frame(height: 4)
+                            .frame(height: 6)
 
-                        Rectangle()
+                        Capsule()
                             .fill(driver.color)
-                            .frame(width: geo.size.width * (driver.score / 100), height: 4)
+                            .frame(width: geo.size.width * (driver.score / 100), height: 6)
                     }
                 }
-                .frame(height: 4)
+                .frame(height: 6)
                 .padding(.horizontal)
                 .padding(.bottom, 8)
             }
@@ -550,6 +543,12 @@ struct ReadinessDatePickerSheet: View {
             .navigationTitle("Select Date")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Today") {
+                        selectedDate = Date()
+                        showSheet = false
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         showSheet = false
