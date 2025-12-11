@@ -696,6 +696,7 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
                 ToolResult(
                     status: .error,
                     food: nil,
+                    mealItems: nil,
                     question: nil,
                     options: nil,
                     error: "Another request is in progress. Please wait a moment."
@@ -728,6 +729,7 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
                         ToolResult(
                                 status: .needsClarification,
                                 food: nil,
+                                mealItems: nil,
                                 question: response.question,
                                 options: response.options,
                                 error: nil
@@ -735,10 +737,16 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
                         )
                     } else if let food = response.food {
                         self.pendingOptions = nil
+                        // Check for multi-food response via meal_items
+                        let mealItems = response.mealItems ?? food.mealItems
+                        print("🍽 [VOICE DEBUG] response.mealItems count: \(response.mealItems?.count ?? -1)")
+                        print("🍽 [VOICE DEBUG] food.mealItems count: \(food.mealItems?.count ?? -1)")
+                        print("🍽 [VOICE DEBUG] Final mealItems count: \(mealItems?.count ?? -1)")
                         completion(
                             ToolResult(
                                 status: .success,
                                 food: food,
+                                mealItems: mealItems,
                                 question: nil,
                                 options: nil,
                                 error: nil
@@ -749,6 +757,7 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
                             ToolResult(
                                 status: .error,
                                 food: nil,
+                                mealItems: nil,
                                 question: nil,
                                 options: nil,
                                 error: response.error ?? "Unable to generate nutrition data."
@@ -760,6 +769,7 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
                         ToolResult(
                             status: .error,
                             food: nil,
+                            mealItems: nil,
                             question: nil,
                             options: nil,
                             error: error.localizedDescription
@@ -770,11 +780,23 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
         }
     }
 
-    func realtimeSession(_ session: RealtimeVoiceSession, didResolveFood: Food) {
-        onFoodReady(didResolveFood)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            session.disconnect()
-            isPresented = false
+    func realtimeSession(_ session: RealtimeVoiceSession, didResolveFood food: Food, mealItems: [MealItem]?) {
+        // Check if this is a multi-food response
+        if let items = mealItems, items.count > 1 {
+            // Multi-food: Show MealPlateSummaryView
+            print("✅ [FOOD PIPELINE] Multi-food resolved: \(items.count) items")
+            presentMealSummary(foods: [food], items: items)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                session.disconnect()
+            }
+        } else {
+            // Single food: Use existing flow
+            print("✅ [FOOD PIPELINE] Single food resolved: \(food.displayName)")
+            onFoodReady(food)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                session.disconnect()
+                isPresented = false
+            }
         }
     }
 }

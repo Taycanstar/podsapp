@@ -47,7 +47,8 @@ struct GenerateFoodResponse: Decodable {
     var needsClarification: Bool { status == "needs_clarification" }
     
     private enum CodingKeys: String, CodingKey {
-        case status, question, parsedContext, food, foods, mealItems, dataSource, options, error
+        case status, question, parsedContext, food, foods, dataSource, options, error
+        case mealItems = "meal_items"
     }
     
     init(from decoder: Decoder) throws {

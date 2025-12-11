@@ -584,7 +584,7 @@ private extension RealtimeVoiceSession {
             }
             sendToolResult(callId: callId, resultJSON: result.toJSON())
             if result.status == .success, let food = result.food {
-                delegate.realtimeSession(self, didResolveFood: food)
+                delegate.realtimeSession(self, didResolveFood: food, mealItems: result.mealItems)
             }
         }
     }
@@ -632,12 +632,14 @@ private extension RealtimeVoiceSession {
 
         let instructions = """
             You are a voice assistant for a food logging app called Metryc.
-            When the user mentions food they ate, call the log_food tool with their description.
+            When the user mentions food they ate, call the log_food tool with their COMPLETE description.
+            IMPORTANT: If the user mentions multiple foods (e.g., "pizza, hotdog, and a coke"), call log_food ONCE with ALL foods in a single query like "pizza, hotdog, and a coke". Do NOT make separate calls for each food.
             If the tool returns options (status='needsClarification'), list them naturally without saying 'Option A/B/C'. Instead say something like:
             'I found a few options: NAME by BRAND, about CALORIES calories. Or NAME by BRAND, about CALORIES calories. Which one?'
             Keep the list clean and conversational, like you would naturally speak.
             When the user indicates their choice (saying 'the first one', 'the second', 'A', 'B', etc.), call log_food again with selection_label set to their choice (A for first, B for second, C for third).
-            When the tool returns success, confirm naturally: 'Got it, logged NAME at CALORIES calories.'
+            When the tool returns success with multiple items, confirm naturally: 'Got it, I logged pizza, hotdog, and coke.'
+            When the tool returns success with a single item, confirm naturally: 'Got it, logged NAME at CALORIES calories.'
             If the tool returns an error, apologize briefly and ask them to try again.
             Keep responses brief and conversational.
             """
@@ -736,7 +738,7 @@ protocol RealtimeVoiceSessionDelegate {
                          nixItemId: String?,
                          selectionLabel: String?,
                          completion: @escaping (ToolResult) -> Void)
-    func realtimeSession(_ session: RealtimeVoiceSession, didResolveFood: Food)
+    func realtimeSession(_ session: RealtimeVoiceSession, didResolveFood food: Food, mealItems: [MealItem]?)
 }
 
 struct ToolResult {
@@ -747,6 +749,7 @@ struct ToolResult {
     }
     let status: Status
     let food: Food?
+    let mealItems: [MealItem]?
     let question: String?
     let options: [ClarificationOption]?
     let error: String?
@@ -762,6 +765,15 @@ struct ToolResult {
                 "fat": food.fat ?? 0,
                 "serving": food.servingSizeText
             ]
+        }
+        if let items = mealItems, !items.isEmpty {
+            dict["meal_items"] = items.map { item in
+                [
+                    "name": item.name,
+                    "calories": item.calories ?? 0
+                ]
+            }
+            dict["item_count"] = items.count
         }
         if let question = question {
             dict["question"] = question

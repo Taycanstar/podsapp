@@ -92,6 +92,10 @@ struct NewHomeView: View {
     @State private var readinessNavigationSnapshot: NetworkManagerTwo.HealthMetricsSnapshot?
     @State private var readinessNavigationDate = Date()
     @State private var readinessNavigationEmail: String?
+    @State private var sleepNavigationSnapshot: NetworkManagerTwo.HealthMetricsSnapshot?
+    @State private var sleepNavigationDate = Date()
+    @State private var sleepNavigationEmail: String?
+    @State private var showSleepDetail = false
 
     private enum ScheduleAlert: Identifiable {
         case success(String)
@@ -402,6 +406,7 @@ private var remainingCal: Double { vm.remainingCalories }
         NavigationStack {
             dashboardContent
                 .background(readinessNavigationLink)
+                .background(sleepNavigationLink)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
@@ -2582,6 +2587,31 @@ private struct RecoveryRingView: View {
         }
     }
 
+    @ViewBuilder
+    private var sleepNavigationLink: some View {
+        NavigationLink(
+            destination: sleepDestinationView,
+            isActive: $showSleepDetail,
+            label: { EmptyView() }
+        )
+        .hidden()
+    }
+
+    @ViewBuilder
+    private var sleepDestinationView: some View {
+        if let snapshot = sleepNavigationSnapshot,
+           let email = sleepNavigationEmail {
+            SleepView(
+                initialSnapshot: snapshot,
+                initialDate: sleepNavigationDate,
+                userEmail: email
+            )
+            .environmentObject(healthViewModel)
+        } else {
+            EmptyView()
+        }
+    }
+
     private var readinessDataSnapshot: NetworkManagerTwo.HealthMetricsSnapshot? {
         vm.healthMetricsSnapshot
     }
@@ -2699,6 +2729,19 @@ private struct RecoveryRingView: View {
                             readinessNavigationDate = vm.selectedDate
                             readinessNavigationEmail = email
                             showReadinessDetail = true
+                        } label: {
+                            healthMetricCircle(item: item.element)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(vm.healthMetricsSnapshot == nil || currentUserEmail == nil)
+                    } else if item.element.title == "Sleep" {
+                        Button {
+                            guard let snapshot = vm.healthMetricsSnapshot,
+                                  let email = currentUserEmail else { return }
+                            sleepNavigationSnapshot = snapshot
+                            sleepNavigationDate = vm.selectedDate
+                            sleepNavigationEmail = email
+                            showSleepDetail = true
                         } label: {
                             healthMetricCircle(item: item.element)
                         }
