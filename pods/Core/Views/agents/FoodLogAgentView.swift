@@ -17,6 +17,8 @@ struct FoodLogAgentView: View {
 
     @Binding var isPresented: Bool
     var onFoodReady: (Food) -> Void
+    var onMealLogged: (([Food]) -> Void)? = nil
+    var onMealAddedToPlate: (([Food]) -> Void)? = nil
 
 @State private var messages: [FoodLogMessage] = []
 @State private var inputText: String = ""
@@ -34,12 +36,15 @@ struct FoodLogAgentView: View {
 @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
 @State private var isAtBottom = true
 @State private var scrollProxy: ScrollViewProxy?
-    @State private var likedMessageIDs: Set<UUID> = []
-    @State private var dislikedMessageIDs: Set<UUID> = []
-    @State private var shareText: String?
-    @State private var showShareSheet = false
-    @State private var speechSynth = AVSpeechSynthesizer()
-    @State private var showCopyToast = false
+@State private var likedMessageIDs: Set<UUID> = []
+@State private var dislikedMessageIDs: Set<UUID> = []
+@State private var shareText: String?
+@State private var showShareSheet = false
+@State private var speechSynth = AVSpeechSynthesizer()
+@State private var showCopyToast = false
+    @State private var mealSummaryFoods: [Food] = []
+    @State private var mealSummaryItems: [MealItem] = []
+    @State private var showMealSummary = false
 
     // Realtime voice session
     @StateObject private var realtimeSession = RealtimeVoiceSession()
@@ -96,6 +101,16 @@ struct FoodLogAgentView: View {
         .sheet(isPresented: $showShareSheet) {
             if let shareText {
                 ShareSheetView(activityItems: [shareText])
+            }
+        }
+        .sheet(isPresented: $showMealSummary) {
+            MealPlateSummaryView(
+                foods: mealSummaryFoods,
+                mealItems: mealSummaryItems
+            ) { foods in
+                logMealFoods(foods)
+            } onAddToPlate: { foods in
+                addMealFoodsToPlate(foods)
             }
         }
         .overlay(alignment: .top) {
@@ -405,6 +420,30 @@ struct FoodLogAgentView: View {
         HapticFeedback.generate()
     }
 
+    private func presentMealSummary(foods: [Food], items: [MealItem]) {
+        mealSummaryFoods = foods
+        mealSummaryItems = items
+        showMealSummary = true
+    }
+
+    private func logMealFoods(_ foods: [Food]) {
+        if let handler = onMealLogged {
+            handler(foods)
+        } else {
+            foods.forEach { onFoodReady($0) }
+        }
+        isPresented = false
+    }
+
+    private func addMealFoodsToPlate(_ foods: [Food]) {
+        if let handler = onMealAddedToPlate {
+            handler(foods)
+        } else {
+            foods.forEach { onFoodReady($0) }
+        }
+        isPresented = false
+    }
+
     /// Simplify option lists for speech - makes it easier to listen to
     private func simplifyQuestionForSpeech(_ question: String) -> String {
         // If it contains bullet points with options, simplify for speech
@@ -597,6 +636,22 @@ extension FoodLogAgentView {
             if isVoice {
                 realtimeSession.speakText(simplifyQuestionForSpeech(text))
             }
+            return
+        }
+
+        // If multiple foods are returned, present meal summary view
+        if let foods = response.foods, foods.count > 1 {
+            let items = response.mealItems ?? response.food?.mealItems ?? []
+            presentMealSummary(foods: foods, items: items)
+            return
+        }
+        if let items = response.mealItems, items.count > 1 {
+            let foods = response.food.map { [$0] } ?? []
+            presentMealSummary(foods: foods, items: items)
+            return
+        }
+        if let food = response.food, let items = food.mealItems, items.count > 1 {
+            presentMealSummary(foods: [food], items: items)
             return
         }
 

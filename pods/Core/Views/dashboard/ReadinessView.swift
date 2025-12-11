@@ -41,7 +41,10 @@ struct ReadinessView: View {
             .padding(.horizontal)
             .padding(.bottom, 16)
         }
-        .background(Color("primarybg"))
+        .background(
+            Color(UIColor.systemGroupedBackground)
+                .ignoresSafeArea()
+        )
         .navigationTitle("Readiness")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
@@ -130,7 +133,7 @@ struct ReadinessView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(Color("containerbg"))
+        .background(Color("sheetcard"))
         .cornerRadius(16)
     }
 
@@ -188,7 +191,7 @@ struct ReadinessView: View {
                     }
                 }
             }
-            .background(Color("containerbg"))
+            .background(Color("sheetcard"))
             .cornerRadius(16)
         }
     }
@@ -445,7 +448,7 @@ struct VitalCard: View {
                 }
             }
             .padding()
-            .background(Color("containerbg"))
+            .background(Color("sheetcard"))
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())

@@ -38,6 +38,7 @@ struct GenerateFoodResponse: Decodable {
     let question: String?
     let parsedContext: [String: String]?
     let food: Food?
+    let foods: [Food]?
     let mealItems: [MealItem]?
     let dataSource: String?
     let options: [ClarificationOption]?
@@ -46,7 +47,7 @@ struct GenerateFoodResponse: Decodable {
     var needsClarification: Bool { status == "needs_clarification" }
     
     private enum CodingKeys: String, CodingKey {
-        case status, question, parsedContext, food, mealItems, dataSource, options, error
+        case status, question, parsedContext, food, foods, mealItems, dataSource, options, error
     }
     
     init(from decoder: Decoder) throws {
@@ -55,6 +56,7 @@ struct GenerateFoodResponse: Decodable {
         question = try container.decodeIfPresent(String.self, forKey: .question)
         parsedContext = try container.decodeIfPresent([String: String].self, forKey: .parsedContext)
         food = try container.decodeIfPresent(Food.self, forKey: .food)
+        foods = try container.decodeIfPresent([Food].self, forKey: .foods)
         mealItems = try container.decodeIfPresent([MealItem].self, forKey: .mealItems)
         options = try container.decodeIfPresent([ClarificationOption].self, forKey: .options)
         // dataSource can come back as a string or a number; normalize to string for the app.

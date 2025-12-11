@@ -2096,6 +2096,10 @@ private struct RecoveryRingView: View {
         var body: some View {
             ZStack {
                 Circle()
+                    .stroke(style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                    .foregroundColor(color.opacity(0.15))
+
+                Circle()
                     .trim(from: 0, to: progress)
                     .stroke(style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                     .foregroundColor(color)
