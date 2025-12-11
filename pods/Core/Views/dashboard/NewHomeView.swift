@@ -2582,10 +2582,27 @@ private struct RecoveryRingView: View {
         }
     }
 
+    private var readinessDataSnapshot: NetworkManagerTwo.HealthMetricsSnapshot? {
+        vm.healthMetricsSnapshot
+    }
+
+    private var readinessSignalsAvailable: Bool {
+        guard let snapshot = readinessDataSnapshot else { return false }
+        return readinessSignalsSatisfied(in: snapshot)
+    }
+
+    private var readinessMetricValue: Double? {
+        readinessSignalsAvailable ? readinessDataSnapshot?.readiness : nil
+    }
+
+    private var readinessTimelineScore: Int? {
+        readinessMetricValue.map { Int($0.rounded()) }
+    }
+
     private var healthMetricItems: [(title: String, icon: String, value: Double?)] {
         let snapshot = vm.healthMetricsSnapshot
         return [
-            ("Readiness", "leaf", snapshot?.readiness),
+            ("Readiness", "leaf", readinessMetricValue),
             ("Sleep", "moon", snapshot?.sleep),
             ("Activity", "flame", snapshot?.activity),
             ("Stress", "water.waves", snapshot?.stress),
@@ -2811,6 +2828,26 @@ private struct RecoveryRingView: View {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%0.*f", decimals, value)
     }
 
+    private func readinessSignalsSatisfied(in snapshot: NetworkManagerTwo.HealthMetricsSnapshot) -> Bool {
+        guard let raw = snapshot.rawMetrics else { return false }
+        return hasSleepSignal(raw)
+            && raw.hrv != nil
+            && raw.restingHeartRate != nil
+            && raw.skinTemperatureC != nil
+            && raw.respiratoryRate != nil
+    }
+
+    private func hasSleepSignal(_ raw: NetworkManagerTwo.HealthMetricRawMetrics) -> Bool {
+        if let total = raw.totalSleepMinutes, total > 0 { return true }
+        if let hours = raw.sleepHours, hours > 0 { return true }
+        if let inBed = raw.inBedMinutes, inBed > 0 { return true }
+        if let stages = raw.sleepStageMinutes {
+            let totals = [stages.deep, stages.rem, stages.core, stages.awake].compactMap { $0 }
+            if totals.contains(where: { $0 > 0 }) { return true }
+        }
+        return false
+    }
+
     // MARK: - Timeline helpers
 
     private func wakeTimelineEvent(for date: Date) -> TimelineEvent? {
@@ -2821,7 +2858,7 @@ private struct RecoveryRingView: View {
         if let summary,
            let wakeDate = wakeDate(from: summary),
            calendar.isDate(wakeDate, inSameDayAs: date) {
-            let readiness = vm.healthMetricsSnapshot?.readiness.map { Int($0.rounded()) }
+            let readiness = readinessTimelineScore
             let sleepQuality = vm.healthMetricsSnapshot?.sleep.map { Int($0.rounded()) }
             return makeWakeEvent(
                 date: wakeDate,
@@ -2836,7 +2873,7 @@ private struct RecoveryRingView: View {
             return nil
         }
 
-        let readiness = snapshot.readiness.map { Int($0.rounded()) }
+        let readiness = readinessSignalsSatisfied(in: snapshot) ? readinessTimelineScore : nil
         let sleepQuality = snapshot.sleep.map { Int($0.rounded()) } ?? raw.sleepScore.map { Int($0.rounded()) }
         let durationMinutes = timelineSleepDuration(from: raw)
 
