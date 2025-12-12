@@ -706,7 +706,7 @@ struct DriverRow: View {
                     Spacer()
                     Text(driver.displayValue)
                         .font(.body)
-                        .foregroundColor(driver.color)
+                        .foregroundColor(.primary)
                     Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundColor(.secondary)

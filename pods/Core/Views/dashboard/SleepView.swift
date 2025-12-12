@@ -258,33 +258,32 @@ struct SleepView: View {
         }
     }
 
-    // MARK: - Time Asleep
+    // MARK: - Sleep Stages
 
     private var timeAsleepSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Time Asleep")
+            Text("Sleep Stages")
                 .font(.title)
                 .fontWeight(.semibold)
                 .foregroundColor(.primary)
                 .padding(.leading, 4)
 
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(formatDuration(totalSleepMinutes))
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        Text(sleepWindowText)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
+                // Time asleep header
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Time asleep")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                    Text("Total duration \(formatDuration(timeInBedMinutes))")
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
 
-                if let segments = stageSegments, !segments.isEmpty {
+                // 4-row hypnogram visualization
+                if let hypnogramData = hypnogramEntries, !hypnogramData.isEmpty {
+                    hypnogramView(entries: hypnogramData)
+                } else if let segments = stageSegments, !segments.isEmpty {
+                    // Fallback to simple bar if no hypnogram data
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 12)
@@ -332,6 +331,74 @@ struct SleepView: View {
             .padding()
             .background(Color("sheetcard"))
             .cornerRadius(16)
+        }
+    }
+
+    // MARK: - Hypnogram View
+
+    @ViewBuilder
+    private func hypnogramView(entries: [HypnogramEntry]) -> some View {
+        VStack(spacing: 0) {
+            // 4-row hypnogram using Canvas for efficiency (avoids creating hundreds of views)
+            let rowHeight: CGFloat = 16
+            let rowSpacing: CGFloat = 4
+            let totalHeight = rowHeight * 4 + rowSpacing * 3
+
+            Canvas { context, size in
+                let entryCount = entries.count
+                guard entryCount > 0 else { return }
+                let unitWidth = size.width / CGFloat(entryCount)
+
+                // Row configs: (stage, yOffset, color)
+                let rows: [(Int, CGFloat, Color)] = [
+                    (4, 0, Color.gray.opacity(0.5)),                    // Awake
+                    (3, rowHeight + rowSpacing, Color("sleep").opacity(0.5)),  // REM
+                    (2, (rowHeight + rowSpacing) * 2, Color("sleep").opacity(0.75)), // Light
+                    (1, (rowHeight + rowSpacing) * 3, Color("sleep"))  // Deep
+                ]
+
+                for (stage, yOffset, color) in rows {
+                    // Find consecutive runs of this stage and draw single rectangles
+                    var runStart: Int? = nil
+                    for i in 0..<entryCount {
+                        let isThisStage = entries[i].stage == stage
+                        if isThisStage && runStart == nil {
+                            runStart = i
+                        } else if !isThisStage && runStart != nil {
+                            // End of run - draw rectangle
+                            let x = CGFloat(runStart!) * unitWidth
+                            let width = CGFloat(i - runStart!) * unitWidth
+                            let rect = CGRect(x: x, y: yOffset, width: width, height: rowHeight)
+                            let path = RoundedRectangle(cornerRadius: 4).path(in: rect)
+                            context.fill(path, with: .color(color))
+                            runStart = nil
+                        }
+                    }
+                    // Handle run that extends to the end
+                    if let start = runStart {
+                        let x = CGFloat(start) * unitWidth
+                        let width = CGFloat(entryCount - start) * unitWidth
+                        let rect = CGRect(x: x, y: yOffset, width: width, height: rowHeight)
+                        let path = RoundedRectangle(cornerRadius: 4).path(in: rect)
+                        context.fill(path, with: .color(color))
+                    }
+                }
+            }
+            .frame(height: totalHeight)
+
+            // X-axis with 4 time labels
+            HStack {
+                Text(sleepStartTimeLabel)
+                Spacer()
+                Text(sleepQuarter1TimeLabel)
+                Spacer()
+                Text(sleepQuarter2TimeLabel)
+                Spacer()
+                Text(sleepEndTimeLabel)
+            }
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .padding(.top, 8)
         }
     }
 
@@ -402,6 +469,11 @@ struct SleepView: View {
     }
 
     private var sleepDebtMinutes: Double? {
+        // Use cumulative sleep debt from backend if available (14-day weighted calculation)
+        if let cumulativeDebt = rawMetrics?.cumulativeSleepDebtMinutes, cumulativeDebt > 0 {
+            return cumulativeDebt
+        }
+        // Fallback to single-day calculation
         guard let need = sleepNeedHours else { return nil }
         let actualHours = totalSleepMinutes.map { $0 / 60 } ?? rawMetrics?.sleepHours
         guard let actualHours else { return nil }
@@ -610,6 +682,51 @@ struct SleepView: View {
         return timelineDate(for: selectedDate, minutesFromStart: endMinutes)
     }
 
+    private var sleepStartTimeLabel: String {
+        guard let start = sleepStartDate else { return "" }
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: start)
+    }
+
+    private var sleepEndTimeLabel: String {
+        guard let end = sleepEndDate else { return "" }
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: end)
+    }
+
+    private var sleepQuarter1TimeLabel: String {
+        guard let start = sleepStartDate, let end = sleepEndDate else { return "" }
+        let duration = end.timeIntervalSince(start)
+        let quarter1 = start.addingTimeInterval(duration / 3)
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: quarter1)
+    }
+
+    private var sleepQuarter2TimeLabel: String {
+        guard let start = sleepStartDate, let end = sleepEndDate else { return "" }
+        let duration = end.timeIntervalSince(start)
+        let quarter2 = start.addingTimeInterval(duration * 2 / 3)
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: quarter2)
+    }
+
+    /// Parse hypnogram string from Oura: each char = 5 min, 1=deep, 2=light, 3=REM, 4=awake
+    private var hypnogramEntries: [HypnogramEntry]? {
+        print("[SleepView] hypnogramEntries - rawMetrics: \(rawMetrics != nil), hypnogram: \(rawMetrics?.hypnogram ?? "nil")")
+        guard let hypnogram = rawMetrics?.hypnogram, !hypnogram.isEmpty else { return nil }
+
+        var entries: [HypnogramEntry] = []
+        for (index, char) in hypnogram.enumerated() {
+            guard let stage = Int(String(char)), stage >= 1 && stage <= 4 else { continue }
+            entries.append(HypnogramEntry(index: index, stage: stage))
+        }
+        return entries.isEmpty ? nil : entries
+    }
+
     // MARK: - Helpers
 
     private func qualitativeLabel(for score: Double) -> (text: String, color: Color) {
@@ -735,7 +852,8 @@ struct SleepView: View {
             let total = raw.totalSleepMinutes.map { formatDuration($0) } ?? "n/a"
             let inBed = raw.inBedMinutes.map { formatDuration($0) } ?? "n/a"
             let efficiency = raw.sleepEfficiency.map { String(format: "%.2f", $0) } ?? "n/a"
-            print("[SleepView] Raw sleep — Total: \(total), In bed: \(inBed), Efficiency: \(efficiency)")
+            let hypno = raw.hypnogram ?? "nil"
+            print("[SleepView] Raw sleep — Total: \(total), In bed: \(inBed), Efficiency: \(efficiency), Hypnogram: \(hypno)")
         } else {
             print("[SleepView] Raw metrics unavailable")
         }
@@ -756,6 +874,13 @@ private struct SleepStageSegment: Identifiable {
     let id: UUID
     let percentage: Double
     let color: Color
+}
+
+private struct HypnogramEntry: Identifiable {
+    let index: Int
+    let stage: Int // 1=deep, 2=light, 3=REM, 4=awake
+
+    var id: Int { index }
 }
 
 private struct StageRow: Identifiable {
@@ -783,7 +908,7 @@ private struct SleepDriverRow: View {
                     Spacer()
                     Text(driver.displayValue)
                         .font(.body)
-                        .foregroundColor(driver.color)
+                        .foregroundColor(.primary)
                     Image(systemName: "chevron.right")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -902,7 +1027,9 @@ private struct SleepDatePickerSheet: View {
         inBedMinutes: 504,
         sleepEfficiency: 0.94,
         sleepSource: "oura",
-        fallbackSleepDate: nil
+        fallbackSleepDate: nil,
+        hypnogram: "42222111112342221111112223332221111122422322233334222222212122333224444",
+        cumulativeSleepDebtMinutes: 420  // 7 hours cumulative debt
     )
 
     let mockSnapshot = NetworkManagerTwo.HealthMetricsSnapshot(
@@ -920,7 +1047,7 @@ private struct SleepDatePickerSheet: View {
         rawMetrics: mockRaw
     )
 
-    return NavigationStack {
+    NavigationStack {
         SleepView(
             initialSnapshot: mockSnapshot,
             initialDate: Date(),

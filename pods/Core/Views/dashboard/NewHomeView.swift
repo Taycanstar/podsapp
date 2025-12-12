@@ -96,6 +96,10 @@ struct NewHomeView: View {
     @State private var sleepNavigationDate = Date()
     @State private var sleepNavigationEmail: String?
     @State private var showSleepDetail = false
+    @State private var activityNavigationSnapshot: NetworkManagerTwo.HealthMetricsSnapshot?
+    @State private var activityNavigationDate = Date()
+    @State private var activityNavigationEmail: String?
+    @State private var showActivityDetail = false
 
     private enum ScheduleAlert: Identifiable {
         case success(String)
@@ -210,29 +214,26 @@ private var remainingCal: Double { vm.remainingCalories }
     @ViewBuilder
     private var scheduledPreviewsSection: some View {
         if !scheduledPreviewsForSelectedDate.isEmpty {
-            Section {
-                                ForEach(scheduledPreviewsForSelectedDate) { preview in
-                                    let _ = print("[Dashboard] scheduled card", preview.id, preview.summary.title, preview.normalizedTargetDate, vm.selectedDate)
+            VStack(spacing: 12) {
+                ForEach(scheduledPreviewsForSelectedDate) { preview in
+                    let _ = print("[Dashboard] scheduled card", preview.id, preview.summary.title, preview.normalizedTargetDate, vm.selectedDate)
 #if DEBUG
-                                    let _ = print("[Dashboard] Rendering scheduled preview id:\(preview.id) normalized:\(preview.normalizedTargetDate) selected:\(vm.selectedDate)")
+                    let _ = print("[Dashboard] Rendering scheduled preview id:\(preview.id) normalized:\(preview.normalizedTargetDate) selected:\(vm.selectedDate)")
 #endif
-                                    ScheduledLogPreviewCard(
-                                        preview: preview,
-                                        onAccept: { handleScheduled(preview: preview, action: .log) },
-                                        onSkip: { handleScheduled(preview: preview, action: .skip) }
-                                    )
-                                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
-                                    .listRowBackground(Color.clear)
-                                    .listRowSeparator(.hidden)
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        Button(role: .destructive) {
-                                            handleCancelScheduled(preview: preview)
-                                        } label: {
-                                            Label("Delete", systemImage: "trash.fill")
-                                        }
-                                    }
-                                }
-                            }
+                    ScheduledLogPreviewCard(
+                        preview: preview,
+                        onAccept: { handleScheduled(preview: preview, action: .log) },
+                        onSkip: { handleScheduled(preview: preview, action: .skip) }
+                    )
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            handleCancelScheduled(preview: preview)
+                        } label: {
+                            Label("Delete", systemImage: "trash.fill")
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -240,7 +241,7 @@ private var remainingCal: Double { vm.remainingCalories }
 
     @ViewBuilder
     private var timelineSection: some View {
-        Section {
+        VStack {
             TimelineSectionView(
                 events: timelinePreviewEvents,
                 selectedDate: vm.selectedDate,
@@ -263,12 +264,8 @@ private var remainingCal: Double { vm.remainingCalories }
                     }
                 }
             )
-            .padding(.horizontal)
-            .padding(.top, 16)
         }
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
+        .padding(.top, 16)
     }
 
     private var navTitle: String {
@@ -404,65 +401,70 @@ private var remainingCal: Double { vm.remainingCalories }
 
     var body: some View {
         NavigationStack {
-            dashboardContent
-                .background(readinessNavigationLink)
-                .background(sleepNavigationLink)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button {
-                            HapticFeedback.generateRigid()
-                            onShowChats()
-                        } label: {
-                            ProfileInitialCircle(initial: userInitial, showsBorder: shouldShowProfileBorder)
-                        }
-                        .buttonStyle(.plain)
+            ZStack {
+                dashboardContent
+
+                // Hidden navigation links to avoid SwiftUI background-crash edge cases
+                readinessNavigationLink
+                sleepNavigationLink
+                activityNavigationLink
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        HapticFeedback.generateRigid()
+                        onShowChats()
+                    } label: {
+                        ProfileInitialCircle(initial: userInitial, showsBorder: shouldShowProfileBorder)
                     }
+                    .buttonStyle(.plain)
+                }
 
-                    ToolbarItem(placement: .principal) {
-                        if isHealthMetricsUpdating {
-                            Text(headerTitle)
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.primary)
-                        } else {
-                            HStack(spacing: 12) {
-                                Button {
-                                    vm.selectedDate.addDays(-1)
-                                } label: {
-                                    Image(systemName: "chevron.left")
-                                        .font(.system(size: 18, weight: .medium))
-                                        .foregroundColor(.primary)
-                                }
+                ToolbarItem(placement: .principal) {
+                    if isHealthMetricsUpdating {
+                        Text(headerTitle)
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.primary)
+                    } else {
+                        HStack(spacing: 12) {
+                            Button {
+                                vm.selectedDate.addDays(-1)
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(.primary)
+                            }
 
-                                Button {
-                                    showDatePicker = true
-                                } label: {
-                                    Text(headerTitle)
-                                        .font(.system(size: 18, weight: .medium))
-                                        .foregroundColor(.primary)
-                                }
+                            Button {
+                                showDatePicker = true
+                            } label: {
+                                Text(headerTitle)
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(.primary)
+                            }
 
-                                Button {
-                                    vm.selectedDate.addDays(+1)
-                                } label: {
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 18, weight: .medium))
-                                        .foregroundColor(.primary)
-                                }
+                            Button {
+                                vm.selectedDate.addDays(+1)
+                            } label: {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(.primary)
                             }
                         }
                     }
+                }
 
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button {
-                            showDatePicker = true
-                        } label: {
-                            Image(systemName: "newspaper")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.primary)
-                        }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showDatePicker = true
+                    } label: {
+                        Image(systemName: "newspaper")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
                     }
                 }
+            }
         }
         .task {
             refreshWeightTrendEntries()
@@ -1071,57 +1073,34 @@ private extension NewHomeView {
 
 
     private var dashboardList: some View {
-        List {
-            Section {
-                healthMetricsCard
-                    .padding(.top, 10)
-                    .padding(.horizontal)
-                    .padding(.bottom, 8)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowSpacing(0)
-                nutritionSummaryCard
-                    .padding(.top, 0)
-                    .padding(.horizontal, -16)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowSpacing(0)
+        ScrollView {
+            VStack(spacing: 16) {
+                VStack(spacing: 16) {
+                    healthMetricsCard
+                        .padding(.top, 10)
 
-                if foodMgr.foodScanningState.isActive {
-                    ModernFoodLoadingCard(state: foodMgr.foodScanningState)
-                        .padding(.horizontal)
-                        .padding(.top, 16)
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                    nutritionSummaryCard
+
+                    if foodMgr.foodScanningState.isActive {
+                        ModernFoodLoadingCard(state: foodMgr.foodScanningState)
+                            .padding(.top, 4)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    }
                 }
-            }
+                .padding(.horizontal, 16)
 
-            if vm.isLoading {
-                Section {
+                if vm.isLoading {
                     loadingState
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-            } else if let err = vm.error {
-                Section {
+                } else if let err = vm.error {
                     errorState(err)
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                } else {
+                    scheduledPreviewsSection
+                    timelineSection
                 }
-            } else {
-                scheduledPreviewsSection
-                timelineSection
+
+                Spacer(minLength: 110) // Leave room for tab bar
             }
         }
-        .listStyle(PlainListStyle())
-        .contentMargins(.bottom, 110, for: .scrollContent)
-        .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .contentShape(Rectangle())
         .onTapGesture {
@@ -1726,7 +1705,7 @@ private extension NewHomeView {
                     Spacer()
 
                     VStack(spacing: 4) {
-                        ActivityRingView(
+                        MiniActivityRingView(
                             value: calories,
                             goal: calorieGoal,
                             color: IntakeColors.calories,
@@ -1751,7 +1730,7 @@ private extension NewHomeView {
                 HStack(spacing: 8) {
                     ForEach(macros) { macro in
                         VStack(spacing: 3) {
-                            ActivityRingView(
+                            MiniActivityRingView(
                                 value: macro.value,
                                 goal: macro.goal,
                                 color: macro.color,
@@ -2083,7 +2062,7 @@ private struct RecoveryRingView: View {
         }
     }
 
-    private struct ActivityRingView: View {
+    private struct MiniActivityRingView: View {
         let value: Double
         let goal: Double
         let color: Color
@@ -2118,22 +2097,22 @@ private struct RecoveryRingView: View {
                             .foregroundColor(.primary)
 
                         if showGoal {
-                            Text("of \(formatNumber(goal))")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(.secondary)
-                    } else if let label {
-                        Text(label)
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        Text("of \(formatNumber(goal))")
+                            .font(.system(size: 10, weight: .medium))
                             .foregroundColor(.secondary)
+                        } else if let label {
+                            Text(label)
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
-            }
             }
             .frame(width: size, height: size)
         }
 
         private func formatNumber(_ value: Double) -> String {
-            ActivityRingView.numberFormatter.string(from: NSNumber(value: value.rounded())) ?? "0"
+            MiniActivityRingView.numberFormatter.string(from: NSNumber(value: value.rounded())) ?? "0"
         }
 
         private static let numberFormatter: NumberFormatter = {
@@ -2612,6 +2591,31 @@ private struct RecoveryRingView: View {
         }
     }
 
+    @ViewBuilder
+    private var activityNavigationLink: some View {
+        NavigationLink(
+            destination: activityDestinationView,
+            isActive: $showActivityDetail,
+            label: { EmptyView() }
+        )
+        .hidden()
+    }
+
+    @ViewBuilder
+    private var activityDestinationView: some View {
+        if let snapshot = activityNavigationSnapshot,
+           let email = activityNavigationEmail {
+            ActivityRingView(
+                initialSnapshot: snapshot,
+                initialDate: activityNavigationDate,
+                userEmail: email
+            )
+            .environmentObject(healthViewModel)
+        } else {
+            EmptyView()
+        }
+    }
+
     private var readinessDataSnapshot: NetworkManagerTwo.HealthMetricsSnapshot? {
         vm.healthMetricsSnapshot
     }
@@ -2742,6 +2746,19 @@ private struct RecoveryRingView: View {
                             sleepNavigationDate = vm.selectedDate
                             sleepNavigationEmail = email
                             showSleepDetail = true
+                        } label: {
+                            healthMetricCircle(item: item.element)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(vm.healthMetricsSnapshot == nil || currentUserEmail == nil)
+                    } else if item.element.title == "Activity" {
+                        Button {
+                            guard let snapshot = vm.healthMetricsSnapshot,
+                                  let email = currentUserEmail else { return }
+                            activityNavigationSnapshot = snapshot
+                            activityNavigationDate = vm.selectedDate
+                            activityNavigationEmail = email
+                            showActivityDetail = true
                         } label: {
                             healthMetricCircle(item: item.element)
                         }

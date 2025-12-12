@@ -90,6 +90,7 @@ final class AgentService {
 
         isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withFullDate]
+        isoFormatter.timeZone = TimeZone.current  // Use device's local timezone, not UTC
     }
 
     private var baseURL: String { NetworkManagerTwo.shared.baseUrl }

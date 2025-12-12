@@ -44,8 +44,8 @@ class NetworkManagerTwo {
     // ### STAGING ###
     //let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
     // ### LOCAL ###
-    // let baseUrl = "http://192.168.1.92:8000"  
-     let baseUrl = "http://172.20.10.4:8000"
+    let baseUrl = "http://192.168.1.92:8000"  
+    //  let baseUrl = "http://172.20.10.4:8000"
 
     // Network errors - scoped to NetworkManagerTwo
     enum NetworkError: LocalizedError {
@@ -293,6 +293,10 @@ class NetworkManagerTwo {
         let sleepEfficiency: Double?
         let sleepSource: String?
         let fallbackSleepDate: String?
+        // Hypnogram: each char = 5 min, 1=deep, 2=light, 3=REM, 4=awake
+        let hypnogram: String?
+        // Cumulative sleep debt over past 14 days (in minutes)
+        let cumulativeSleepDebtMinutes: Double?
     }
 
     struct HealthMetricsSnapshot: Codable, Equatable {
@@ -1112,6 +1116,11 @@ class NetworkManagerTwo {
         let date: String
     }
 
+    struct ActivitySummaryResponse: Codable {
+        let summary: String
+        let date: String
+    }
+
     func fetchReadinessSummary(
         userEmail: String,
         targetDate: Date,
@@ -1220,11 +1229,65 @@ class NetworkManagerTwo {
         }.resume()
     }
 
+    func fetchActivitySummary(
+        userEmail: String,
+        targetDate: Date,
+        completion: @escaping (Result<ActivitySummaryResponse, Error>) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/agent/activity-summary/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let dateString = Self.isoDayFormatter.string(from: targetDate)
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "target_date": dateString
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 30
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let http = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            guard (200...299).contains(http.statusCode), let data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: "Server error: \(http.statusCode)"))) }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let response = try decoder.decode(ActivitySummaryResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(response)) }
+            } catch {
+                DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
+            }
+        }.resume()
+    }
+
     private static let isoDayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.timeZone = TimeZone.current  // Use device's local timezone, not UTC
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
