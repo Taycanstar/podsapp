@@ -1223,7 +1223,6 @@ private extension NewHomeView {
                                 DailyIntakeCardView.Macro(label: "Carbs", value: vm.totalCarbs, goal: carbsGoal, color: IntakeColors.carbs)
                             ]
                         )
-                        .padding(.horizontal, 16)
                         .padding(.top, 4)
                         .background(IntakeCardHeightReader())
                         .frame(maxWidth: .infinity)
@@ -1239,7 +1238,6 @@ private extension NewHomeView {
                             calorieGoal: calorieGoal,
                             macroGoals: MacroGoalTargets(protein: proteinGoal, carbs: carbsGoal, fat: fatGoal)
                         )
-                        .padding(.horizontal, 16)
                         .padding(.top, 4)
                         .background(IntakeCardHeightReader())
                         .frame(maxWidth: .infinity)
@@ -1255,7 +1253,6 @@ private extension NewHomeView {
                             monthData: vm.energyBalanceMonth
                         )
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        .padding(.horizontal, 16)
                         .padding(.top, 4)
                         .background(IntakeCardHeightReader())
                         .frame(height: nutritionCardHeight, alignment: .top)
@@ -1334,7 +1331,6 @@ private extension NewHomeView {
                             iconName: workoutManager.todayWorkout.map { workoutIconName(for: $0) } ?? "figure.strengthtraining.traditional",
                             height: workoutHighlightsCardHeight
                         )
-                        .padding(.horizontal, 16)
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.plain)
@@ -1348,7 +1344,6 @@ private extension NewHomeView {
                         recoveryData: Array(muscleRecoverySnapshot.prefix(10)),
                         height: workoutHighlightsCardHeight
                     )
-                    .padding(.horizontal, 16)
                     .frame(maxWidth: .infinity)
 
                     Spacer(minLength: pagerDotPadding)
@@ -1360,7 +1355,6 @@ private extension NewHomeView {
                         metrics: strengthBalanceSnapshot,
                         height: workoutHighlightsCardHeight
                     )
-                    .padding(.horizontal, 16)
                     .frame(maxWidth: .infinity)
 
                     Spacer(minLength: pagerDotPadding)

@@ -399,6 +399,7 @@ struct SleepView: View {
             .font(.caption)
             .foregroundColor(.secondary)
             .padding(.top, 8)
+
         }
     }
 
@@ -712,8 +713,9 @@ struct SleepView: View {
         guard let start = sleepStartDate, let end = sleepEndDate else { return "" }
         let duration = end.timeIntervalSince(start)
         let quarter1 = start.addingTimeInterval(duration / 3)
+        // Show only hour for intermediate times (e.g., "2 AM" instead of "2:15 AM")
         let formatter = DateFormatter()
-        formatter.timeStyle = .short
+        formatter.dateFormat = "h a"
         return formatter.string(from: quarter1)
     }
 
@@ -721,8 +723,9 @@ struct SleepView: View {
         guard let start = sleepStartDate, let end = sleepEndDate else { return "" }
         let duration = end.timeIntervalSince(start)
         let quarter2 = start.addingTimeInterval(duration * 2 / 3)
+        // Show only hour for intermediate times (e.g., "4 AM" instead of "4:30 AM")
         let formatter = DateFormatter()
-        formatter.timeStyle = .short
+        formatter.dateFormat = "h a"
         return formatter.string(from: quarter2)
     }
 
