@@ -400,6 +400,32 @@ struct SleepView: View {
             .foregroundColor(.secondary)
             .padding(.top, 8)
 
+            // Divider before sleep stages breakdown
+            Divider()
+                .padding(.top, 16)
+                .padding(.bottom, 12)
+
+            // Sleep stages breakdown
+            VStack(spacing: 8) {
+                ForEach(stageRows) { row in
+                    HStack {
+                        HStack(spacing: 8) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(row.color)
+                                .frame(width: 28, height: 8)
+                            Text(row.label)
+                                .foregroundColor(.primary)
+                        }
+                        Spacer()
+                        Text(row.durationText)
+                            .foregroundColor(.primary)
+                        Text(row.percentText)
+                            .foregroundColor(.secondary)
+                            .frame(width: 44, alignment: .trailing)
+                    }
+                    .font(.subheadline)
+                }
+            }
         }
     }
 
