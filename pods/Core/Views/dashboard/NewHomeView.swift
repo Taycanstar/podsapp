@@ -1308,7 +1308,6 @@ private extension NewHomeView {
                 .padding(.top, 20)
             }
         }
-        .padding(.horizontal)
     }
 
     var workoutHighlightsCarousel: some View {
@@ -3791,7 +3790,6 @@ private struct BodyCompositionSection: View {
                 }
             }
         }
-        .padding(.horizontal)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -3835,7 +3833,6 @@ private struct ConsistencySection: View {
                 )
             }
         }
-        .padding(.horizontal)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -4126,7 +4123,6 @@ private struct DailyWaterMetric {
                 }
             }
         }
-        .padding(.horizontal)
     }
 }
 
@@ -5481,7 +5477,6 @@ private struct HealthMetricsSection: View {
                 }
             }
         }
-        .padding(.horizontal)
     }
 }
 

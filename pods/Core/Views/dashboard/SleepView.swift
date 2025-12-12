@@ -669,6 +669,12 @@ struct SleepView: View {
     }
 
     private var sleepStartDate: Date? {
+        // First try to use actual sleep onset time from Oura
+        if let onsetString = rawMetrics?.sleepOnset,
+           let onset = ISO8601DateFormatter().date(from: onsetString) {
+            return onset
+        }
+        // Fallback to calculating from midpoint
         guard let midpoint = rawMetrics?.sleepMidpointMinutes,
               let duration = totalSleepMinutes else { return nil }
         let startMinutes = midpoint - (duration / 2.0)
@@ -676,6 +682,12 @@ struct SleepView: View {
     }
 
     private var sleepEndDate: Date? {
+        // First try to use actual sleep offset time from Oura
+        if let offsetString = rawMetrics?.sleepOffset,
+           let offset = ISO8601DateFormatter().date(from: offsetString) {
+            return offset
+        }
+        // Fallback to calculating from midpoint
         guard let midpoint = rawMetrics?.sleepMidpointMinutes,
               let duration = totalSleepMinutes else { return nil }
         let endMinutes = midpoint + (duration / 2.0)
@@ -1029,7 +1041,9 @@ private struct SleepDatePickerSheet: View {
         sleepSource: "oura",
         fallbackSleepDate: nil,
         hypnogram: "42222111112342221111112223332221111122422322233334222222212122333224444",
-        cumulativeSleepDebtMinutes: 420  // 7 hours cumulative debt
+        cumulativeSleepDebtMinutes: 420,  // 7 hours cumulative debt
+        sleepOnset: "2025-12-09T23:15:00+00:00",
+        sleepOffset: "2025-12-10T07:09:00+00:00"
     )
 
     let mockSnapshot = NetworkManagerTwo.HealthMetricsSnapshot(

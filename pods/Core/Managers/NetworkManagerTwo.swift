@@ -297,6 +297,9 @@ class NetworkManagerTwo {
         let hypnogram: String?
         // Cumulative sleep debt over past 14 days (in minutes)
         let cumulativeSleepDebtMinutes: Double?
+        // Sleep onset/offset times (ISO8601 datetime strings)
+        let sleepOnset: String?
+        let sleepOffset: String?
     }
 
     struct HealthMetricsSnapshot: Codable, Equatable {

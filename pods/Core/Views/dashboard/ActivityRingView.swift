@@ -753,7 +753,9 @@ private struct ActivityDatePickerSheet: View {
         sleepSource: nil,
         fallbackSleepDate: nil,
         hypnogram: nil,
-        cumulativeSleepDebtMinutes: nil
+        cumulativeSleepDebtMinutes: nil,
+        sleepOnset: nil,
+        sleepOffset: nil
     )
 
     let mockSnapshot = NetworkManagerTwo.HealthMetricsSnapshot(
