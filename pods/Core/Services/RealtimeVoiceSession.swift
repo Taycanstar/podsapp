@@ -785,9 +785,9 @@ struct ToolResult {
                     "name": opt.name ?? "",
                     "brand": opt.brand ?? "",
                     "serving": opt.serving ?? "",
-                    "preview_calories": opt.previewCalories ?? 0,
+                    "preview_calories": opt.previewCalories ?? Double(0),
                     "nix_item_id": opt.nixItemId ?? ""
-                ]
+                ] as [String: Any]
             }
         }
         if let error = error {

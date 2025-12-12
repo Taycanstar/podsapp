@@ -300,6 +300,38 @@ class NetworkManagerTwo {
         // Sleep onset/offset times (ISO8601 datetime strings)
         let sleepOnset: String?
         let sleepOffset: String?
+        // Activity zone minutes (from Oura daily_activity)
+        let highActivityMinutes: Double?
+        let mediumActivityMinutes: Double?
+        let lowActivityMinutes: Double?
+        let sedentaryMinutes: Double?
+        // Total daily calories (active + BMR)
+        let totalCalories: Double?
+        // Activity contributors (Oura scores 0-100)
+        let activityContributors: ActivityContributors?
+        // MET zone minutes (from Oura class_5_min - zones 0-5)
+        let metZoneMinutes: MetZoneMinutes?
+    }
+
+    struct ActivityContributors: Codable, Equatable {
+        let stayActive: Double?
+        let moveEveryHour: Double?
+        let meetDailyTargets: Double?
+        let trainingFrequency: Double?
+        let trainingVolume: Double?
+        let recoveryTime: Double?
+    }
+
+    struct MetZoneMinutes: Codable, Equatable {
+        // Note: Backend sends zone_0, zone_1, etc.
+        // With keyDecodingStrategy = .convertFromSnakeCase, these become zone0, zone1, etc.
+        // DO NOT add custom CodingKeys - it conflicts with the automatic conversion
+        let zone0: Int?
+        let zone1: Int?
+        let zone2: Int?
+        let zone3: Int?
+        let zone4: Int?
+        let zone5: Int?
     }
 
     struct HealthMetricsSnapshot: Codable, Equatable {
@@ -1280,6 +1312,76 @@ class NetworkManagerTwo {
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
                 let response = try decoder.decode(ActivitySummaryResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(response)) }
+            } catch {
+                DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
+            }
+        }.resume()
+    }
+
+    // MARK: - Weekly Activity
+
+    struct WeeklyActivityDay: Codable, Equatable {
+        let date: String
+        let dayOfWeek: String
+        let activityScore: Double?
+        let steps: Double?
+        let totalCalories: Double?
+        let caloriesBurned: Double?
+        let metZoneMinutes: MetZoneMinutes?
+        let totalActiveMinutes: Int?
+    }
+
+    struct WeeklyActivityResponse: Codable {
+        let days: [WeeklyActivityDay]
+    }
+
+    func fetchWeeklyActivity(
+        userEmail: String,
+        timezoneOffsetMinutes: Int? = nil,
+        targetDate: Date? = nil,
+        completion: @escaping (Result<[WeeklyActivityDay], Error>) -> Void
+    ) {
+        guard var components = URLComponents(string: "\(baseUrl)/weekly-activity/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        var items = [URLQueryItem(name: "user_email", value: userEmail)]
+        if let offset = timezoneOffsetMinutes {
+            items.append(URLQueryItem(name: "timezone_offset", value: "\(offset)"))
+        }
+        if let targetDate {
+            items.append(URLQueryItem(name: "target_date", value: Self.isoDayFormatter.string(from: targetDate)))
+        }
+        components.queryItems = items
+        guard let url = components.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let http = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            guard (200...299).contains(http.statusCode), let data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.serverError(message: "Server error: \(http.statusCode)"))) }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let response = try decoder.decode(WeeklyActivityResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(response.days)) }
             } catch {
                 DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
             }

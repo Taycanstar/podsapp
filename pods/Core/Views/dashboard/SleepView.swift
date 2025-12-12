@@ -1046,7 +1046,14 @@ private struct SleepDatePickerSheet: View {
         hypnogram: "42222111112342221111112223332221111122422322233334222222212122333224444",
         cumulativeSleepDebtMinutes: 420,  // 7 hours cumulative debt
         sleepOnset: "2025-12-09T23:15:00+00:00",
-        sleepOffset: "2025-12-10T07:09:00+00:00"
+        sleepOffset: "2025-12-10T07:09:00+00:00",
+        highActivityMinutes: nil,
+        mediumActivityMinutes: nil,
+        lowActivityMinutes: nil,
+        sedentaryMinutes: nil,
+        totalCalories: nil,
+        activityContributors: nil,
+        metZoneMinutes: nil
     )
 
     let mockSnapshot = NetworkManagerTwo.HealthMetricsSnapshot(

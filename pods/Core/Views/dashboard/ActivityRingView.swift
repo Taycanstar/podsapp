@@ -18,6 +18,8 @@ struct ActivityRingView: View {
     @State private var isLoadingSummary = true
     @State private var isLoadingSnapshot = false
     @State private var showDatePicker = false
+    @State private var weeklyActivityData: [NetworkManagerTwo.WeeklyActivityDay] = []
+    @State private var isLoadingWeeklyData = true
     @EnvironmentObject private var healthViewModel: HealthKitViewModel
     private let ringScale: CGFloat = 0.75
 
@@ -38,6 +40,7 @@ struct ActivityRingView: View {
                 activityCircleSection
                 aiSummaryCard
                 goalProgressCard
+                weeklyActivityChartSection
                 vitalsSection
                 driversSection
                 weeklyZoneMinutesSection
@@ -68,9 +71,11 @@ struct ActivityRingView: View {
             } else {
                 isLoadingSummary = false
             }
+            loadWeeklyActivityData()
         }
         .onChange(of: selectedDate) { _, newDate in
             loadDataForDate(newDate)
+            loadWeeklyActivityData()
         }
         .sheet(isPresented: $showDatePicker) {
             ActivityDatePickerSheet(selectedDate: $selectedDate, showSheet: $showDatePicker)
@@ -200,11 +205,11 @@ struct ActivityRingView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 ActivityVitalCard(
                     title: "Total Burn",
-                    value: formatCalories(caloriesBurned)
+                    value: formatCalories(totalCalories ?? caloriesBurned)
                 )
                 ActivityVitalCard(
                     title: "Activity Time",
-                    value: formatDuration(activityMinutes)
+                    value: formatActivityTime(activityMinutes)
                 )
                 ActivityVitalCard(
                     title: "Steps",
@@ -244,22 +249,63 @@ struct ActivityRingView: View {
         }
     }
 
-    // MARK: - Weekly Zone Minutes
+    // MARK: - Weekly Activity Chart
 
-    private var weeklyZoneMinutesSection: some View {
+    private var weeklyActivityChartSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Heart Rate Training")
+            Text("Weekly Activity")
                 .font(.title)
                 .fontWeight(.semibold)
                 .foregroundColor(.primary)
                 .padding(.leading, 4)
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("Weekly Zone Minutes")
+                Text("Active Minutes")
                     .font(.headline)
 
-                if zoneMinutes.isEmpty {
-                    Text("Zone minute data not available for this week.")
+                if isLoadingWeeklyData {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Loading...")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .frame(height: 160)
+                } else if weeklyActivityData.isEmpty {
+                    Text("No weekly data available.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .frame(height: 160)
+                } else {
+                    WeeklyActivityBarChart(days: weeklyActivityData, accentColor: activityColor)
+                        .frame(height: 160)
+                }
+            }
+            .padding()
+            .background(Color("sheetcard"))
+            .cornerRadius(16)
+        }
+    }
+
+    // MARK: - Weekly Zone Minutes
+
+    private var weeklyZoneMinutesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Heart Rate Zones")
+                .font(.title)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+                .padding(.leading, 4)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Zone Minutes")
+                    .font(.headline)
+
+                if !hasZoneData {
+                    Text("Zone minute data not available.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 } else {
@@ -352,6 +398,11 @@ struct ActivityRingView: View {
         }
     }
 
+    private var totalCalories: Double? {
+        // Total daily calories (active + BMR) from Oura
+        rawMetrics?.totalCalories
+    }
+
     private var caloriesBurned: Double? {
         rawMetrics?.caloriesBurned
     }
@@ -361,8 +412,27 @@ struct ActivityRingView: View {
     }
 
     private var activityMinutes: Double? {
-        // Not currently exposed in raw metrics; keep placeholder until available
-        nil
+        // Sum of MET zone minutes (zones 1-5, excluding zone 0 which is rest/non-wear)
+        guard let raw = rawMetrics else { return nil }
+
+        // Prefer MET zone minutes if available
+        if let zones = raw.metZoneMinutes {
+            let zone1 = Double(zones.zone1 ?? 0)
+            let zone2 = Double(zones.zone2 ?? 0)
+            let zone3 = Double(zones.zone3 ?? 0)
+            let zone4 = Double(zones.zone4 ?? 0)
+            let zone5 = Double(zones.zone5 ?? 0)
+            return zone1 + zone2 + zone3 + zone4 + zone5
+        }
+
+        // Fallback to high/medium/low if MET zones not available
+        let high = raw.highActivityMinutes ?? 0
+        let medium = raw.mediumActivityMinutes ?? 0
+        let low = raw.lowActivityMinutes ?? 0
+        if raw.highActivityMinutes == nil && raw.mediumActivityMinutes == nil && raw.lowActivityMinutes == nil {
+            return nil
+        }
+        return high + medium + low
     }
 
     private var avgHeartRate: Double? {
@@ -400,88 +470,100 @@ struct ActivityRingView: View {
     }
 
     private var activityDrivers: [ActivityDriver] {
-        let components = currentSnapshot?.components?.activity ?? [:]
-        let volume = components["volume"]
-        let balance = components["balance"]
-        let caloriesComponent = components["calories"]
-
+        // Use Oura's 6 activity contributors from rawMetrics
+        let contributors = rawMetrics?.activityContributors
         var drivers: [ActivityDriver] = []
 
+        // 1. Stay Active (Still Time)
+        let stayActive = contributors?.stayActive
+        drivers.append(ActivityDriver(
+            name: "Stay Active",
+            displayValue: stayActive.map { qualitativeLabel(for: $0).text } ?? "--",
+            progress: (stayActive ?? 0) / 100,
+            color: activityColor
+        ))
+
+        // 2. Move Every Hour (Stillness Alerts)
+        let moveEveryHour = contributors?.moveEveryHour
+        drivers.append(ActivityDriver(
+            name: "Move Every Hour",
+            displayValue: moveEveryHour.map { qualitativeLabel(for: $0).text } ?? "--",
+            progress: (moveEveryHour ?? 0) / 100,
+            color: activityColor
+        ))
+
+        // 3. Meet Daily Targets
+        let meetDailyTargets = contributors?.meetDailyTargets
+        drivers.append(ActivityDriver(
+            name: "Meet Daily Targets",
+            displayValue: meetDailyTargets.map { qualitativeLabel(for: $0).text } ?? "--",
+            progress: (meetDailyTargets ?? 0) / 100,
+            color: activityColor
+        ))
+
+        // 4. Training Frequency
+        let trainingFrequency = contributors?.trainingFrequency
         drivers.append(ActivityDriver(
             name: "Training Frequency",
-            displayValue: "--",
-            progress: 0,
+            displayValue: trainingFrequency.map { qualitativeLabel(for: $0).text } ?? "--",
+            progress: (trainingFrequency ?? 0) / 100,
             color: activityColor
         ))
 
-        if let volume {
-            let label = qualitativeLabel(for: volume).text
-            drivers.append(ActivityDriver(
-                name: "Training Volume",
-                displayValue: label,
-                progress: volume / 100,
-                color: activityColor
-            ))
-        } else {
-            drivers.append(ActivityDriver(
-                name: "Training Volume",
-                displayValue: "--",
-                progress: 0,
-                color: activityColor
-            ))
-        }
-
-        if let balance {
-            let label = qualitativeLabel(for: balance).text
-            drivers.append(ActivityDriver(
-                name: "Recovery Time",
-                displayValue: label,
-                progress: balance / 100,
-                color: activityColor
-            ))
-        } else {
-            drivers.append(ActivityDriver(
-                name: "Recovery Time",
-                displayValue: "--",
-                progress: 0,
-                color: activityColor
-            ))
-        }
-
+        // 5. Training Volume
+        let trainingVolume = contributors?.trainingVolume
         drivers.append(ActivityDriver(
-            name: "Active Calories",
-            displayValue: formatCalories(caloriesBurned),
-            progress: min(max((caloriesBurned ?? 0) / max(progressGoal, 1), 0), 1),
+            name: "Training Volume",
+            displayValue: trainingVolume.map { qualitativeLabel(for: $0).text } ?? "--",
+            progress: (trainingVolume ?? 0) / 100,
             color: activityColor
         ))
 
+        // 6. Recovery Time
+        let recoveryTime = contributors?.recoveryTime
         drivers.append(ActivityDriver(
-            name: "Steps",
-            displayValue: formatSteps(steps),
-            progress: min(max((steps ?? 0) / 10000.0, 0), 1),
-            color: activityColor
-        ))
-
-        drivers.append(ActivityDriver(
-            name: "Movement",
-            displayValue: qualitativeLabel(for: activityDisplayScore ?? 0).text,
-            progress: min(max((activityDisplayScore ?? 0) / 100, 0), 1),
-            color: activityColor
-        ))
-
-        drivers.append(ActivityDriver(
-            name: "Consistency",
-            displayValue: balance.map { qualitativeLabel(for: $0).text } ?? "--",
-            progress: balance.map { min(max($0 / 100, 0), 1) } ?? 0,
+            name: "Recovery Time",
+            displayValue: recoveryTime.map { qualitativeLabel(for: $0).text } ?? "--",
+            progress: (recoveryTime ?? 0) / 100,
             color: activityColor
         ))
 
         return drivers
     }
 
+    private var hasZoneData: Bool {
+        guard let raw = rawMetrics else { return false }
+        // We have zone data if MET zone minutes exists
+        return raw.metZoneMinutes != nil
+    }
+
     private var zoneMinutes: [ZoneRow] {
-        // Placeholder until zone-minute data is available in raw metrics/components
-        []
+        guard let zones = rawMetrics?.metZoneMinutes else {
+            return []
+        }
+
+        let zone0 = Double(zones.zone0 ?? 0)
+        let zone1 = Double(zones.zone1 ?? 0)
+        let zone2 = Double(zones.zone2 ?? 0)
+        let zone3 = Double(zones.zone3 ?? 0)
+        let zone4 = Double(zones.zone4 ?? 0)
+        let zone5 = Double(zones.zone5 ?? 0)
+
+        // Find max for relative bar sizing across all zones for consistent scaling
+        let maxMinutes = max(zone0, zone1, zone2, zone3, zone4, zone5, 1)
+
+        // Custom colors for zones (iOS 17 compatible)
+        let orangeRed = Color(red: 1.0, green: 0.35, blue: 0.0)
+        let redPurple = Color(red: 0.75, green: 0.0, blue: 0.5)
+
+        return [
+            ZoneRow(label: "Zone 0", minutes: zone0, color: Color.blue.opacity(0.5), fillFraction: CGFloat(zone0 / maxMinutes)),
+            ZoneRow(label: "Zone 1", minutes: zone1, color: .yellow, fillFraction: CGFloat(zone1 / maxMinutes)),
+            ZoneRow(label: "Zone 2", minutes: zone2, color: .orange, fillFraction: CGFloat(zone2 / maxMinutes)),
+            ZoneRow(label: "Zone 3", minutes: zone3, color: orangeRed, fillFraction: CGFloat(zone3 / maxMinutes)),
+            ZoneRow(label: "Zone 4", minutes: zone4, color: .red, fillFraction: CGFloat(zone4 / maxMinutes)),
+            ZoneRow(label: "Zone 5", minutes: zone5, color: redPurple, fillFraction: CGFloat(zone5 / maxMinutes)),
+        ]
     }
 
     // MARK: - Helpers
@@ -512,8 +594,21 @@ struct ActivityRingView: View {
 
     private func formatDuration(_ minutes: Double?) -> String {
         guard let minutes else { return "--" }
-        let hrs = Int(minutes) / 60
-        let mins = Int(minutes) % 60
+        let totalMinutes = Int(minutes)
+        let hrs = totalMinutes / 60
+        let mins = totalMinutes % 60
+        if hrs == 0 {
+            return "\(mins)m"
+        }
+        return "\(hrs)h \(mins)m"
+    }
+
+    private func formatActivityTime(_ minutes: Double?) -> String {
+        // Show "0m" instead of "--" when activity data exists but is 0
+        let value = minutes ?? 0
+        let totalMinutes = Int(value)
+        let hrs = totalMinutes / 60
+        let mins = totalMinutes % 60
         if hrs == 0 {
             return "\(mins)m"
         }
@@ -589,6 +684,26 @@ struct ActivityRingView: View {
             print("[ActivityRingView] Raw activity — calories: \(cals), steps: \(steps)")
         } else {
             print("[ActivityRingView] Raw metrics unavailable")
+        }
+    }
+
+    private func loadWeeklyActivityData() {
+        isLoadingWeeklyData = true
+
+        NetworkManagerTwo.shared.fetchWeeklyActivity(
+            userEmail: userEmail,
+            timezoneOffsetMinutes: TimeZone.current.secondsFromGMT() / 60,
+            targetDate: selectedDate
+        ) { result in
+            isLoadingWeeklyData = false
+            switch result {
+            case .success(let days):
+                weeklyActivityData = days
+                print("[ActivityRingView] Loaded \(days.count) days of weekly activity data")
+            case .failure(let error):
+                weeklyActivityData = []
+                print("[ActivityRingView] Failed to load weekly activity: \(error.localizedDescription)")
+            }
         }
     }
 }
@@ -728,6 +843,63 @@ private struct ActivityDatePickerSheet: View {
     }
 }
 
+private struct WeeklyActivityBarChart: View {
+    let days: [NetworkManagerTwo.WeeklyActivityDay]
+    let accentColor: Color
+
+    private var maxMinutes: Int {
+        let maxVal = days.compactMap { $0.totalActiveMinutes }.max() ?? 0
+        return max(maxVal, 1) // Avoid division by zero
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            // Bar chart
+            HStack(alignment: .bottom, spacing: 8) {
+                ForEach(days, id: \.date) { day in
+                    VStack(spacing: 4) {
+                        // Bar
+                        let minutes = day.totalActiveMinutes ?? 0
+                        let barHeight = CGFloat(minutes) / CGFloat(maxMinutes) * 100
+
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(accentColor)
+                            .frame(width: 28, height: max(barHeight, 2))
+
+                        // Day label
+                        Text(String(day.dayOfWeek.prefix(1)))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 120, alignment: .bottom)
+
+            // Summary row
+            HStack {
+                Text("7-day total")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                Spacer()
+                let totalMinutes = days.compactMap { $0.totalActiveMinutes }.reduce(0, +)
+                Text(formatWeeklyTotal(totalMinutes))
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+            }
+        }
+    }
+
+    private func formatWeeklyTotal(_ minutes: Int) -> String {
+        let hrs = minutes / 60
+        let mins = minutes % 60
+        if hrs == 0 {
+            return "\(mins)m"
+        }
+        return "\(hrs)h \(mins)m"
+    }
+}
+
 #Preview {
     let mockRaw = NetworkManagerTwo.HealthMetricRawMetrics(
         hrv: nil,
@@ -737,7 +909,7 @@ private struct ActivityDatePickerSheet: View {
         sleepHours: nil,
         sleepScore: nil,
         steps: 8342,
-        caloriesBurned: 2151,
+        caloriesBurned: 425,
         respiratoryRate: nil,
         respiratoryRatePrevious: nil,
         skinTemperatureC: nil,
@@ -755,7 +927,28 @@ private struct ActivityDatePickerSheet: View {
         hypnogram: nil,
         cumulativeSleepDebtMinutes: nil,
         sleepOnset: nil,
-        sleepOffset: nil
+        sleepOffset: nil,
+        highActivityMinutes: 15,
+        mediumActivityMinutes: 45,
+        lowActivityMinutes: 120,
+        sedentaryMinutes: 480,
+        totalCalories: 2081,
+        activityContributors: .init(
+            stayActive: 85,
+            moveEveryHour: 72,
+            meetDailyTargets: 90,
+            trainingFrequency: 78,
+            trainingVolume: 65,
+            recoveryTime: 88
+        ),
+        metZoneMinutes: .init(
+            zone0: 0,
+            zone1: 45,
+            zone2: 134,
+            zone3: 78,
+            zone4: 22,
+            zone5: 0
+        )
     )
 
     let mockSnapshot = NetworkManagerTwo.HealthMetricsSnapshot(

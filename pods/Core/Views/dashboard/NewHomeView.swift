@@ -1075,29 +1075,8 @@ private extension NewHomeView {
     private var dashboardList: some View {
         ScrollView {
             VStack(spacing: 16) {
-                VStack(spacing: 16) {
-                    healthMetricsCard
-                        .padding(.top, 10)
-
-                    nutritionSummaryCard
-
-                    if foodMgr.foodScanningState.isActive {
-                        ModernFoodLoadingCard(state: foodMgr.foodScanningState)
-                            .padding(.top, 4)
-                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                    }
-                }
-                .padding(.horizontal, 16)
-
-                if vm.isLoading {
-                    loadingState
-                } else if let err = vm.error {
-                    errorState(err)
-                } else {
-                    scheduledPreviewsSection
-                    timelineSection
-                }
-
+                dashboardHeaderCards
+                dashboardMainContent
                 Spacer(minLength: 110) // Leave room for tab bar
             }
         }
@@ -1118,62 +1097,116 @@ private extension NewHomeView {
     }
 
     @ViewBuilder
+    private var dashboardHeaderCards: some View {
+        VStack(spacing: 16) {
+            healthMetricsCard
+                .padding(.top, 10)
+
+            nutritionSummaryCard
+
+            if foodMgr.foodScanningState.isActive {
+                ModernFoodLoadingCard(state: foodMgr.foodScanningState)
+                    .padding(.top, 4)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
+        .padding(.horizontal, 16)
+    }
+
+    @ViewBuilder
+    private var dashboardMainContent: some View {
+        if vm.isLoading {
+            AnyView(loadingState)
+        } else if let err = vm.error {
+            AnyView(errorState(err))
+        } else {
+            AnyView(
+                VStack(spacing: 0) {
+                    scheduledPreviewsSection
+                    timelineSection
+                        .padding(.horizontal, 16)
+                }
+            )
+        }
+    }
+
+    @ViewBuilder
     private var toastOverlay: some View {
-        if foodMgr.showAIGenerationSuccess, let _ = foodMgr.aiGeneratedFood {
-            VStack {
-                Spacer()
-                BottomPopup(message: "Food logged")
-                    .padding(.bottom, 90)
-            }
-            .zIndex(3)
-            .transition(.opacity)
-            .animation(.spring(), value: foodMgr.showAIGenerationSuccess)
+        // Using AnyView to reduce SwiftUI type complexity and prevent stack overflow
+        // from deeply nested conditional view types
+        resolvedToastOverlay
+    }
+
+    private var resolvedToastOverlay: AnyView {
+        if foodMgr.showAIGenerationSuccess, foodMgr.aiGeneratedFood != nil {
+            return AnyView(
+                VStack {
+                    Spacer()
+                    BottomPopup(message: "Food logged")
+                        .padding(.bottom, 90)
+                }
+                .zIndex(3)
+                .transition(.opacity)
+                .animation(.spring(), value: foodMgr.showAIGenerationSuccess)
+            )
         } else if showQuickActivityToast {
-            VStack {
-                Spacer()
-                BottomPopup(message: "Activity logged")
-                    .padding(.bottom, 90)
-            }
-            .zIndex(3)
-            .transition(.opacity)
-            .animation(.spring(), value: showQuickActivityToast)
+            return AnyView(
+                VStack {
+                    Spacer()
+                    BottomPopup(message: "Activity logged")
+                        .padding(.bottom, 90)
+                }
+                .zIndex(3)
+                .transition(.opacity)
+                .animation(.spring(), value: showQuickActivityToast)
+            )
         } else if foodMgr.showLogSuccess, let item = foodMgr.lastLoggedItem {
-            VStack {
-                Spacer()
-                BottomPopup(message: "\(item.name) logged")
-                    .padding(.bottom, 90)
-            }
-            .zIndex(3)
-            .transition(.opacity)
-            .animation(.spring(), value: foodMgr.showLogSuccess)
+            return AnyView(
+                VStack {
+                    Spacer()
+                    BottomPopup(message: "\(item.name) logged")
+                        .padding(.bottom, 90)
+                }
+                .zIndex(3)
+                .transition(.opacity)
+                .animation(.spring(), value: foodMgr.showLogSuccess)
+            )
         } else if foodMgr.showSavedMealToast {
-            VStack {
-                Spacer()
-                BottomPopup(message: "Saved Meal")
-                    .padding(.bottom, 90)
-            }
-            .zIndex(3)
-            .transition(.opacity)
-            .animation(.spring(), value: foodMgr.showSavedMealToast)
+            return AnyView(
+                VStack {
+                    Spacer()
+                    BottomPopup(message: "Saved Meal")
+                        .padding(.bottom, 90)
+                }
+                .zIndex(3)
+                .transition(.opacity)
+                .animation(.spring(), value: foodMgr.showSavedMealToast)
+            )
         } else if foodMgr.showUnsavedMealToast {
-            VStack {
-                Spacer()
-                BottomPopup(message: "Unsaved Meal")
-                    .padding(.bottom, 90)
-            }
-            .zIndex(3)
-            .transition(.opacity)
-            .animation(.spring(), value: foodMgr.showUnsavedMealToast)
+            return AnyView(
+                VStack {
+                    Spacer()
+                    BottomPopup(message: "Unsaved Meal")
+                        .padding(.bottom, 90)
+                }
+                .zIndex(3)
+                .transition(.opacity)
+                .animation(.spring(), value: foodMgr.showUnsavedMealToast)
+            )
         } else if workoutManager.showWorkoutLogCard, let workout = workoutManager.lastCompletedWorkout {
-            VStack {
-                Spacer()
-                WorkoutLogCard(summary: workout)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 90)
-            }
-            .zIndex(3)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
-            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: workoutManager.showWorkoutLogCard)
+            return AnyView(
+                VStack {
+                    Spacer()
+                    WorkoutLogCard(summary: workout)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 90)
+                }
+                .zIndex(3)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: workoutManager.showWorkoutLogCard)
+            )
+        } else {
+            return AnyView(EmptyView())
         }
     }
     private var dashboardContent: some View {
@@ -3951,7 +3984,7 @@ private struct AnalyticsInsightsSection: View {
                 }
             }
         }
-        .padding(.horizontal)
+        // .padding(.horizontal)
     }
 }
 
