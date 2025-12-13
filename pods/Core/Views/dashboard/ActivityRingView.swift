@@ -290,7 +290,7 @@ struct ActivityRingView: View {
         }
     }
 
-    // MARK: - Weekly Zone Minutes
+    // MARK: - Activity Intensity Zones (Weekly)
 
     private var weeklyZoneMinutesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -301,16 +301,26 @@ struct ActivityRingView: View {
                 .padding(.leading, 4)
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("Zone Minutes")
+                Text("Weekly Zone Breakdown")
                     .font(.headline)
 
-                if !hasZoneData {
-                    Text("Zone minute data not available.")
+                if isLoadingWeeklyData {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Loading...")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+                } else if !hasWeeklyZoneData {
+                    Text("No activity HR data this week")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 } else {
                     VStack(spacing: 10) {
-                        ForEach(zoneMinutes) { zone in
+                        ForEach(weeklyZoneMinutes) { zone in
                             HStack(spacing: 12) {
                                 HStack(spacing: 8) {
                                     Circle()
@@ -336,17 +346,17 @@ struct ActivityRingView: View {
 
                                 Text(zone.minutesText)
                                     .foregroundColor(.secondary)
-                                    .frame(width: 60, alignment: .trailing)
+                                    .frame(width: 70, alignment: .trailing)
                             }
                         }
                     }
 
                     HStack {
-                        Text("Total active time")
+                        Text("7-day total active time")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text(formatDuration(activityMinutes))
+                        Text(formatWeeklyZoneTotal())
                             .font(.subheadline)
                             .foregroundColor(.primary)
                     }
@@ -552,18 +562,122 @@ struct ActivityRingView: View {
         // Find max for relative bar sizing across all zones for consistent scaling
         let maxMinutes = max(zone0, zone1, zone2, zone3, zone4, zone5, 1)
 
-        // Custom colors for zones (iOS 17 compatible)
-        let orangeRed = Color(red: 1.0, green: 0.35, blue: 0.0)
-        let redPurple = Color(red: 0.75, green: 0.0, blue: 0.5)
+        // Oura-matching zone colors for MET activity classification
+        // Zone 0: Rest/Non-wear - systemGray5
+        // Zone 1: Sedentary - light blue
+        // Zone 2: Low activity - blue
+        // Zone 3: Medium activity - mint
+        // Zone 4: High activity - yellow
+        // Zone 5: Very high activity - orange
+        let lightBlue = Color(red: 0.6, green: 0.8, blue: 1.0)
 
         return [
-            ZoneRow(label: "Zone 0", minutes: zone0, color: Color.blue.opacity(0.5), fillFraction: CGFloat(zone0 / maxMinutes)),
-            ZoneRow(label: "Zone 1", minutes: zone1, color: .yellow, fillFraction: CGFloat(zone1 / maxMinutes)),
-            ZoneRow(label: "Zone 2", minutes: zone2, color: .orange, fillFraction: CGFloat(zone2 / maxMinutes)),
-            ZoneRow(label: "Zone 3", minutes: zone3, color: orangeRed, fillFraction: CGFloat(zone3 / maxMinutes)),
-            ZoneRow(label: "Zone 4", minutes: zone4, color: .red, fillFraction: CGFloat(zone4 / maxMinutes)),
-            ZoneRow(label: "Zone 5", minutes: zone5, color: redPurple, fillFraction: CGFloat(zone5 / maxMinutes)),
+            ZoneRow(label: "Zone 0", minutes: zone0, color: Color(UIColor.systemGray5), fillFraction: CGFloat(zone0 / maxMinutes)),
+            ZoneRow(label: "Zone 1", minutes: zone1, color: lightBlue, fillFraction: CGFloat(zone1 / maxMinutes)),
+            ZoneRow(label: "Zone 2", minutes: zone2, color: .blue, fillFraction: CGFloat(zone2 / maxMinutes)),
+            ZoneRow(label: "Zone 3", minutes: zone3, color: .mint, fillFraction: CGFloat(zone3 / maxMinutes)),
+            ZoneRow(label: "Zone 4", minutes: zone4, color: .yellow, fillFraction: CGFloat(zone4 / maxMinutes)),
+            ZoneRow(label: "Zone 5", minutes: zone5, color: .orange, fillFraction: CGFloat(zone5 / maxMinutes)),
         ]
+    }
+
+    // MARK: - Weekly Zone Data
+
+    private var hasWeeklyZoneData: Bool {
+        // Check for activity HR zone data (from "awake" HR samples - any activity time)
+        // NOT MET zones which are activity intensity classification, not heart rate zones
+        for day in weeklyActivityData {
+            if let zones = day.hrZoneMinutes {
+                // Check if there are any non-zero active zones (zones 1-5)
+                let z1: Int = zones.zone1 ?? 0
+                let z2: Int = zones.zone2 ?? 0
+                let z3: Int = zones.zone3 ?? 0
+                let z4: Int = zones.zone4 ?? 0
+                let z5: Int = zones.zone5 ?? 0
+                if z1 + z2 + z3 + z4 + z5 > 0 {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private var weeklyZoneMinutes: [ZoneRow] {
+        // Aggregate HR zone minutes from activity time across all 7 days
+        // Uses hrZoneMinutes (calculated from "awake" HR samples - any activity time)
+        // NOT metZoneMinutes which is activity intensity classification, not heart rate
+        var zone0Total = 0
+        var zone1Total = 0
+        var zone2Total = 0
+        var zone3Total = 0
+        var zone4Total = 0
+        var zone5Total = 0
+
+        for day in weeklyActivityData {
+            // Use activity HR zones (calculated from "awake" HR samples)
+            if let zones = day.hrZoneMinutes {
+                zone0Total += zones.zone0 ?? 0
+                zone1Total += zones.zone1 ?? 0
+                zone2Total += zones.zone2 ?? 0
+                zone3Total += zones.zone3 ?? 0
+                zone4Total += zones.zone4 ?? 0
+                zone5Total += zones.zone5 ?? 0
+            }
+            // NOTE: Do NOT fall back to metZoneMinutes - those are all-day activity
+            // classifications (MET values), not workout heart rate zones
+        }
+
+        let zone0 = Double(zone0Total)
+        let zone1 = Double(zone1Total)
+        let zone2 = Double(zone2Total)
+        let zone3 = Double(zone3Total)
+        let zone4 = Double(zone4Total)
+        let zone5 = Double(zone5Total)
+
+        // Find max for relative bar sizing across all zones
+        let maxMinutes = max(zone0, zone1, zone2, zone3, zone4, zone5, 1)
+
+        // Zone colors (matching Oura's zone display)
+        // Zone 0: Non-wear/rest - gray
+        // Zone 1: Light - light blue
+        // Zone 2: Moderate - blue
+        // Zone 3: Hard - mint/green
+        // Zone 4: Very Hard - yellow
+        // Zone 5: Max effort - orange/red
+        let lightBlue = Color(red: 0.6, green: 0.8, blue: 1.0)
+
+        return [
+            ZoneRow(label: "Zone 0", minutes: zone0, color: Color(UIColor.systemGray5), fillFraction: CGFloat(zone0 / maxMinutes)),
+            ZoneRow(label: "Zone 1", minutes: zone1, color: lightBlue, fillFraction: CGFloat(zone1 / maxMinutes)),
+            ZoneRow(label: "Zone 2", minutes: zone2, color: .blue, fillFraction: CGFloat(zone2 / maxMinutes)),
+            ZoneRow(label: "Zone 3", minutes: zone3, color: .mint, fillFraction: CGFloat(zone3 / maxMinutes)),
+            ZoneRow(label: "Zone 4", minutes: zone4, color: .yellow, fillFraction: CGFloat(zone4 / maxMinutes)),
+            ZoneRow(label: "Zone 5", minutes: zone5, color: .orange, fillFraction: CGFloat(zone5 / maxMinutes)),
+        ]
+    }
+
+    private func formatWeeklyZoneTotal() -> String {
+        // Sum all active zones (1-5, excluding zone 0 rest/non-wear)
+        // From activity HR zones (awake time), not MET zones (intensity classification)
+        var totalMinutes = 0
+        for day in weeklyActivityData {
+            // Use activity HR zones from awake time
+            if let zones = day.hrZoneMinutes {
+                totalMinutes += zones.zone1 ?? 0
+                totalMinutes += zones.zone2 ?? 0
+                totalMinutes += zones.zone3 ?? 0
+                totalMinutes += zones.zone4 ?? 0
+                totalMinutes += zones.zone5 ?? 0
+            }
+            // NOTE: Do NOT use metZoneMinutes - those are intensity classification, not HR zones
+        }
+
+        let hrs = totalMinutes / 60
+        let mins = totalMinutes % 60
+        if hrs == 0 {
+            return "\(mins)m"
+        }
+        return "\(hrs)h \(mins)m"
     }
 
     // MARK: - Helpers
@@ -947,6 +1061,14 @@ private struct WeeklyActivityBarChart: View {
             zone2: 134,
             zone3: 78,
             zone4: 22,
+            zone5: 0
+        ),
+        hrZoneMinutes: .init(
+            zone0: 960,
+            zone1: 180,
+            zone2: 120,
+            zone3: 45,
+            zone4: 15,
             zone5: 0
         )
     )

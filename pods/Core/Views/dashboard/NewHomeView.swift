@@ -1242,57 +1242,81 @@ private extension NewHomeView {
     private var workoutHighlightsCardHeight: CGFloat { 200 }
     private var pagerDotPadding: CGFloat { 8 }
 
+    // MARK: - Type Complexity Boundaries (AnyView wrappers to prevent stack overflow)
+    // These computed properties use AnyView to break the SwiftUI type chain and prevent
+    // EXC_BAD_ACCESS crashes from deeply nested generic view compositions.
+
+    private var dailyIntakePage: AnyView {
+        AnyView(
+            VStack(spacing: 0) {
+                DailyIntakeCardView(
+                    calories: vm.totalCalories,
+                    calorieGoal: calorieGoal,
+                    macros: [
+                        DailyIntakeCardView.Macro(label: "Protein", value: vm.totalProtein, goal: proteinGoal, color: IntakeColors.protein),
+                        DailyIntakeCardView.Macro(label: "Fat", value: vm.totalFat, goal: fatGoal, color: IntakeColors.fat),
+                        DailyIntakeCardView.Macro(label: "Carbs", value: vm.totalCarbs, goal: carbsGoal, color: IntakeColors.carbs)
+                    ]
+                )
+                .padding(.top, 4)
+                .background(IntakeCardHeightReader())
+                .frame(maxWidth: .infinity)
+                .frame(height: nutritionCardHeight, alignment: .top)
+
+                Spacer(minLength: pagerDotPadding)
+            }
+        )
+    }
+
+    private var weeklyIntakePage: AnyView {
+        AnyView(
+            VStack(spacing: 0) {
+                WeeklyIntakeCardView(
+                    summaries: vm.weeklyNutritionSummaries,
+                    calorieGoal: calorieGoal,
+                    macroGoals: MacroGoalTargets(protein: proteinGoal, carbs: carbsGoal, fat: fatGoal)
+                )
+                .padding(.top, 4)
+                .background(IntakeCardHeightReader())
+                .frame(maxWidth: .infinity)
+                .frame(height: nutritionCardHeight, alignment: .top)
+
+                Spacer(minLength: pagerDotPadding)
+            }
+        )
+    }
+
+    private var energyBalancePage: AnyView {
+        AnyView(
+            VStack(spacing: 0) {
+                EnergyBalanceCardView(
+                    weekData: vm.energyBalanceWeek,
+                    monthData: vm.energyBalanceMonth
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, 4)
+                .background(IntakeCardHeightReader())
+                .frame(height: nutritionCardHeight, alignment: .top)
+
+                Spacer(minLength: pagerDotPadding)
+            }
+        )
+    }
+
     var nutritionSummaryCard: some View {
         VStack(spacing: 8) {
             VStack(spacing: 4) {
                 TabView(selection: $nutritionCarouselSelection) {
-                    VStack(spacing: 0) {
-                        DailyIntakeCardView(
-                            calories: vm.totalCalories,
-                            calorieGoal: calorieGoal,
-                            macros: [
-                                DailyIntakeCardView.Macro(label: "Protein", value: vm.totalProtein, goal: proteinGoal, color: IntakeColors.protein),
-                                DailyIntakeCardView.Macro(label: "Fat", value: vm.totalFat, goal: fatGoal, color: IntakeColors.fat),
-                                DailyIntakeCardView.Macro(label: "Carbs", value: vm.totalCarbs, goal: carbsGoal, color: IntakeColors.carbs)
-                            ]
-                        )
-                        .padding(.top, 4)
-                        .background(IntakeCardHeightReader())
-                        .frame(maxWidth: .infinity)
-                        .frame(height: nutritionCardHeight, alignment: .top)
+                    // Using AnyView to reduce SwiftUI type complexity and prevent stack overflow
+                    // from deeply nested generic view types (TabView + VStack + CardViews)
+                    dailyIntakePage
+                        .tag(0)
 
-                        Spacer(minLength: pagerDotPadding)
-                    }
-                    .tag(0)
+                    weeklyIntakePage
+                        .tag(1)
 
-                    VStack(spacing: 0) {
-                        WeeklyIntakeCardView(
-                            summaries: vm.weeklyNutritionSummaries,
-                            calorieGoal: calorieGoal,
-                            macroGoals: MacroGoalTargets(protein: proteinGoal, carbs: carbsGoal, fat: fatGoal)
-                        )
-                        .padding(.top, 4)
-                        .background(IntakeCardHeightReader())
-                        .frame(maxWidth: .infinity)
-                        .frame(height: nutritionCardHeight, alignment: .top)
-
-                        Spacer(minLength: pagerDotPadding)
-                    }
-                    .tag(1)
-
-                    VStack(spacing: 0) {
-                        EnergyBalanceCardView(
-                            weekData: vm.energyBalanceWeek,
-                            monthData: vm.energyBalanceMonth
-                        )
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        .padding(.top, 4)
-                        .background(IntakeCardHeightReader())
-                        .frame(height: nutritionCardHeight, alignment: .top)
-
-                        Spacer(minLength: pagerDotPadding)
-                    }
-                    .tag(2)
+                    energyBalancePage
+                        .tag(2)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
                 .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
@@ -2210,9 +2234,31 @@ private struct RecoveryRingView: View {
             return orderedSummaries[selectedDayIndex]
         }
 
-        private func dayValues(for keyPath: KeyPath<DailyNutritionSummary, Double>, goal: Double) -> [DayValue] {
+        // MARK: - Direct Property Access (avoiding KeyPath generics to reduce type complexity)
+        // Using direct property access instead of KeyPath<DailyNutritionSummary, Double> to prevent
+        // EXC_BAD_ACCESS crashes from SwiftUI type system overflow in deeply nested views.
+
+        private var calorieValues: [DayValue] {
             orderedSummaries.enumerated().map { index, summary in
-                DayValue(label: dayLabels[index % dayLabels.count], value: summary[keyPath: keyPath], goal: goal)
+                DayValue(label: dayLabels[index % dayLabels.count], value: summary.calories, goal: calorieGoal)
+            }
+        }
+
+        private var proteinValues: [DayValue] {
+            orderedSummaries.enumerated().map { index, summary in
+                DayValue(label: dayLabels[index % dayLabels.count], value: summary.protein, goal: macroGoals.protein)
+            }
+        }
+
+        private var fatValues: [DayValue] {
+            orderedSummaries.enumerated().map { index, summary in
+                DayValue(label: dayLabels[index % dayLabels.count], value: summary.fat, goal: macroGoals.fat)
+            }
+        }
+
+        private var carbsValues: [DayValue] {
+            orderedSummaries.enumerated().map { index, summary in
+                DayValue(label: dayLabels[index % dayLabels.count], value: summary.carbs, goal: macroGoals.carbs)
             }
         }
 
@@ -2236,7 +2282,7 @@ private struct RecoveryRingView: View {
                             color: IntakeColors.calories,
                             unit: "cal",
                             selectedIndex: $selectedDayIndex,
-                            entries: dayValues(for: \.calories, goal: calorieGoal)
+                            entries: calorieValues
                         )
 
                         WeeklyMetricRow(
@@ -2244,7 +2290,7 @@ private struct RecoveryRingView: View {
                             color: IntakeColors.protein,
                             unit: "g",
                             selectedIndex: $selectedDayIndex,
-                            entries: dayValues(for: \.protein, goal: macroGoals.protein)
+                            entries: proteinValues
                         )
 
                         WeeklyMetricRow(
@@ -2252,7 +2298,7 @@ private struct RecoveryRingView: View {
                             color: IntakeColors.fat,
                             unit: "g",
                             selectedIndex: $selectedDayIndex,
-                            entries: dayValues(for: \.fat, goal: macroGoals.fat)
+                            entries: fatValues
                         )
 
                         WeeklyMetricRow(
@@ -2260,7 +2306,7 @@ private struct RecoveryRingView: View {
                             color: IntakeColors.carbs,
                             unit: "g",
                             selectedIndex: $selectedDayIndex,
-                            entries: dayValues(for: \.carbs, goal: macroGoals.carbs)
+                            entries: carbsValues
                         )
                     }
 

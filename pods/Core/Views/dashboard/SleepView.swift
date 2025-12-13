@@ -1053,7 +1053,8 @@ private struct SleepDatePickerSheet: View {
         sedentaryMinutes: nil,
         totalCalories: nil,
         activityContributors: nil,
-        metZoneMinutes: nil
+        metZoneMinutes: nil,
+        hrZoneMinutes: nil
     )
 
     let mockSnapshot = NetworkManagerTwo.HealthMetricsSnapshot(

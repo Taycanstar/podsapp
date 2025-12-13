@@ -44,8 +44,8 @@ class NetworkManagerTwo {
     // ### STAGING ###
     //let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
     // ### LOCAL ###
-    // let baseUrl = "http://192.168.1.92:8000"  
-     let baseUrl = "http://172.20.10.4:8000"
+    let baseUrl = "http://192.168.1.92:8000"  
+    //  let baseUrl = "http://172.20.10.4:8000"
 
     // Network errors - scoped to NetworkManagerTwo
     enum NetworkError: LocalizedError {
@@ -311,6 +311,8 @@ class NetworkManagerTwo {
         let activityContributors: ActivityContributors?
         // MET zone minutes (from Oura class_5_min - zones 0-5)
         let metZoneMinutes: MetZoneMinutes?
+        // HR zone minutes (calculated from raw HR samples using Oura's methodology)
+        let hrZoneMinutes: HRZoneMinutes?
     }
 
     struct ActivityContributors: Codable, Equatable {
@@ -326,6 +328,18 @@ class NetworkManagerTwo {
         // Note: Backend sends zone_0, zone_1, etc.
         // With keyDecodingStrategy = .convertFromSnakeCase, these become zone0, zone1, etc.
         // DO NOT add custom CodingKeys - it conflicts with the automatic conversion
+        let zone0: Int?
+        let zone1: Int?
+        let zone2: Int?
+        let zone3: Int?
+        let zone4: Int?
+        let zone5: Int?
+    }
+
+    // HR zone minutes (calculated from raw HR samples using Oura's methodology)
+    // Zone thresholds based on % of max HR (220-age):
+    // Zone 0: ≤49%, Zone 1: 50-59%, Zone 2: 60-69%, Zone 3: 70-79%, Zone 4: 80-89%, Zone 5: 90-100%
+    struct HRZoneMinutes: Codable, Equatable {
         let zone0: Int?
         let zone1: Int?
         let zone2: Int?
@@ -1328,6 +1342,7 @@ class NetworkManagerTwo {
         let totalCalories: Double?
         let caloriesBurned: Double?
         let metZoneMinutes: MetZoneMinutes?
+        let hrZoneMinutes: HRZoneMinutes?
         let totalActiveMinutes: Int?
     }
 
