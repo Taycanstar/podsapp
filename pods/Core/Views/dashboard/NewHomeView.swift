@@ -1773,7 +1773,7 @@ private extension NewHomeView {
         var body: some View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Daily Intake")
-                    .font(.title3.weight(.semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.primary)
 
                 HStack(alignment: .center) {
@@ -1891,7 +1891,7 @@ private extension NewHomeView {
         var body: some View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Today's Workout")
-                    .font(.title3.weight(.semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.primary)
 
                 if workout != nil {
@@ -1982,7 +1982,7 @@ private extension NewHomeView {
         var body: some View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Muscle Recovery")
-                    .font(.title3.weight(.semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.primary)
 
                 if recoveryData.isEmpty {
@@ -2062,7 +2062,7 @@ private struct RecoveryRingView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("Strength Balance")
-                        .font(.title3.weight(.semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.primary)
                     Spacer()
                     Text("This Week")
@@ -2130,6 +2130,13 @@ private struct RecoveryRingView: View {
                     let denominator = max(metrics.goalSets, 1)
                     let progress = min(max(Double(values[index]) / Double(denominator), 0), 1)
 
+                    // Background ring (always visible with opacity)
+                    Circle()
+                        .stroke(style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
+                        .foregroundColor(ringColors[index].opacity(0.15))
+                        .frame(width: radius * 2, height: radius * 2)
+
+                    // Progress ring
                     Circle()
                         .trim(from: 0, to: CGFloat(progress))
                         .stroke(style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
@@ -2295,7 +2302,7 @@ private struct RecoveryRingView: View {
         var body: some View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Weekly Intake")
-                    .font(.title3.weight(.semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.primary)
                     .padding(.bottom, 2)
 
@@ -2492,7 +2499,7 @@ private struct RecoveryRingView: View {
         private var header: some View {
             HStack {
                 Text("Energy Balance")
-                    .font(.title3.weight(.semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .padding(.bottom, 2)
                 Spacer()
                 SegmentedPicker(selection: $period)
@@ -4407,78 +4414,67 @@ private struct DailyWeightCard: View {
     let onLogWeight: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Header with title, last entry description, and chevron
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("Weight")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
+        VStack(alignment: .leading, spacing: 0) {
+            cardHeader(title: "Weight")
 
-                Spacer()
+            // Trend text or "Latest" as subtitle
+            Text(metric?.trendText ?? "Latest")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+                .padding(.bottom, 12)
 
-                HStack(spacing: 4) {
-                    if let lastEntry = metric?.lastEntryDescription {
-                        Text(lastEntry)
-                            .font(.system(size: 12, weight: .regular))
-                            .foregroundColor(.secondary)
-                    }
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Color(.systemGray3))
-                }
-            }
-            .padding(.bottom, 14)
-
-            // Subtitle placeholder (hidden to maintain layout consistency)
-            Text("placeholder")
-                .font(.system(size: 13))
-                .foregroundColor(.clear)
-                .hidden()
-
-            // Sparkline
-            BodyCompositionSparkline(values: metric?.values ?? [], lineColor: .indigo)
-                .frame(height: 20)
-
-            // Value and trend/add button
-            HStack(alignment: .lastTextBaseline) {
+            // Value and add button row
+            HStack(alignment: .center, spacing: 12) {
                 if let metric {
-                    HStack(alignment: .lastTextBaseline, spacing: 0) {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text(metric.formattedValue)
-                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                            .font(.system(size: 28, weight: .semibold, design: .rounded))
                             .foregroundColor(.primary)
 
                         Text(metric.unit)
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                            .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.secondary)
                     }
                 } else {
                     Text("--")
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
                         .foregroundColor(.secondary)
                 }
 
                 Spacer()
 
-                if metric?.entries.isEmpty ?? true {
-                    Button(action: onLogWeight) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundColor(.indigo)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Add weight log")
-                } else {
-                    Text(metric?.trendText ?? "No data")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
+                Button(action: onLogWeight) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.indigo)
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.top, 2)
+            .padding(.bottom, 12)
+
+            // Sparkline (compact)
+            BodyCompositionSparkline(values: metric?.values ?? [], lineColor: .indigo)
+                .frame(height: 6)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color("sheetcard"), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color("sheetcard"))
+        )
+    }
+
+    private func cardHeader(title: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundColor(.primary)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.secondary)
+        }
     }
 }
 

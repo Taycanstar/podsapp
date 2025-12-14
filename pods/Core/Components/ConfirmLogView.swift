@@ -3068,20 +3068,20 @@ struct PlateView: View {
                     MealPlateSummaryView(
                         foods: [food],
                         mealItems: pendingMealItems,
-                        onLogMeal: { foods in
-                            // Log all foods to the plate
-                            for f in foods {
-                                let entry = buildPlateEntry(from: f)
+                        onLogMeal: { _, items in
+                            // Log all meal items to the plate
+                            for item in items {
+                                let entry = buildPlateEntry(from: item)
                                 viewModel.add(entry)
                             }
                             showMealPlateSummary = false
                             pendingMealFood = nil
                             pendingMealItems = []
                         },
-                        onAddToPlate: { foods in
-                            // Add all foods to the plate without logging
-                            for f in foods {
-                                let entry = buildPlateEntry(from: f)
+                        onAddToPlate: { _, items in
+                            // Add all meal items to the plate
+                            for item in items {
+                                let entry = buildPlateEntry(from: item)
                                 viewModel.add(entry)
                             }
                             showMealPlateSummary = false
@@ -3762,6 +3762,64 @@ struct PlateView: View {
             baseMacroTotals: baseMacros,
             servingDescription: food.servingSizeText,
             mealItems: food.mealItems ?? [],
+            mealPeriod: selectedMealPeriod,
+            mealTime: mealTime
+        )
+    }
+
+    private func buildPlateEntry(from item: MealItem) -> PlateEntry {
+        // Create nutrients array from MealItem macros
+        let nutrients: [Nutrient] = [
+            Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+            Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+            Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+            Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+        ]
+
+        // Convert MealItemMeasures to FoodMeasures
+        let foodMeasures: [FoodMeasure] = item.measures.enumerated().map { index, measure in
+            FoodMeasure(
+                disseminationText: measure.description,
+                gramWeight: measure.gramWeight,
+                id: index,
+                modifier: measure.description,
+                measureUnitName: measure.unit,
+                rank: index
+            )
+        }
+
+        // Create a Food object from MealItem data
+        let food = Food(
+            fdcId: item.id.hashValue,
+            description: item.name,
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: item.serving,
+            numberOfServings: 1,
+            servingSizeUnit: item.servingUnit,
+            householdServingFullText: "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
+            foodNutrients: nutrients,
+            foodMeasures: foodMeasures
+        )
+
+        let baseGramWeight = item.serving
+        let baseMacros = MacroTotals(
+            calories: item.calories,
+            protein: item.protein,
+            carbs: item.carbs,
+            fat: item.fat
+        )
+
+        return PlateEntry(
+            food: food,
+            servings: 1.0,
+            selectedMeasureId: nil,
+            availableMeasures: foodMeasures,
+            baselineGramWeight: baseGramWeight,
+            baseNutrientValues: [:],
+            baseMacroTotals: baseMacros,
+            servingDescription: "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
+            mealItems: [],
             mealPeriod: selectedMealPeriod,
             mealTime: mealTime
         )

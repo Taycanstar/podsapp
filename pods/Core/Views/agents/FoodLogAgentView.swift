@@ -107,12 +107,14 @@ struct FoodLogAgentView: View {
         .sheet(isPresented: $showMealSummary) {
             MealPlateSummaryView(
                 foods: mealSummaryFoods,
-                mealItems: mealSummaryItems
-            ) { foods in
-                logMealFoods(foods)
-            } onAddToPlate: { foods in
-                addMealFoodsToPlate(foods)
-            }
+                mealItems: mealSummaryItems,
+                onLogMeal: { foods, _ in
+                    logMealFoods(foods)
+                },
+                onAddToPlate: { foods, _ in
+                    addMealFoodsToPlate(foods)
+                }
+            )
         }
         .overlay(alignment: .top) {
             if showCopyToast {
@@ -846,7 +848,7 @@ private struct AssistantMessageWithActions: View {
     }
 
     private var actionRow: some View {
-        HStack(spacing: 22) {
+        HStack(spacing: 16) {
             actionButton(systemName: "doc.on.doc", action: onCopy)
             actionButton(systemName: "speaker.wave.2", action: onSpeak)
         }
