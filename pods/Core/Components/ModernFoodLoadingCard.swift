@@ -38,7 +38,7 @@ struct ModernFoodLoadingCard: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 24, height: 24)
                 
-                Text("Humuli Analysis")
+                Text("Metryc Analysis")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.primary)
                 

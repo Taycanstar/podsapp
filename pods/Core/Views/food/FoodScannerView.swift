@@ -528,6 +528,27 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
     Task { @MainActor in
         defer { self.isAnalyzing = false }
         do {
+            // Try agent + Nutritionix path first
+            if let agentResult = try? await foodManager.analyzeFoodImageWithAgent(
+                image: image,
+                userEmail: userEmail,
+                mealType: selectedMeal
+            ), let firstFood = agentResult.foods.first {
+                var food = firstFood
+                if !agentResult.mealItems.isEmpty {
+                    food.mealItems = agentResult.mealItems
+                }
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShowFoodConfirmation"),
+                    object: nil,
+                    userInfo: [
+                        "food": food,
+                        "foodLogId": NSNull()
+                    ]
+                )
+                return
+            }
+
             let combinedLog = try await foodManager.analyzeFoodImageModern(
                 image: image,
                 userEmail: userEmail,
@@ -567,6 +588,28 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
     Task { @MainActor in
         defer { self.isAnalyzing = false }
         do {
+            // Prefer agent + Nutritionix path; fallback to legacy auto-log
+            if let agentResult = try? await foodManager.analyzeFoodImageWithAgent(
+                image: image,
+                userEmail: userEmail,
+                mealType: selectedMeal
+            ), let firstFood = agentResult.foods.first {
+                var food = firstFood
+                if !agentResult.mealItems.isEmpty {
+                    food.mealItems = agentResult.mealItems
+                }
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShowFoodConfirmation"),
+                    object: nil,
+                    userInfo: [
+                        "food": food,
+                        "foodLogId": NSNull()
+                    ]
+                )
+                return
+            }
+
+            // Fallback: legacy auto-log flow
             let combinedLog = try await foodManager.analyzeFoodImageModern(
                 image: image,
                 userEmail: userEmail,

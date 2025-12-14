@@ -154,6 +154,21 @@ struct FoodChatResponse: Codable {
     }
 }
 
+// Agent-powered image scan response
+struct AgentFoodImageResponse: Codable {
+    let status: String?
+    let type: String?
+    let message: String?
+    let foods: [Food]?
+    let mealItems: [MealItem]?
+    let error: String?
+
+    enum CodingKeys: String, CodingKey {
+        case status, type, message, foods, error
+        case mealItems = "meal_items"
+    }
+}
+
 /// Simplified food object from the orchestrator (subset of full Food model)
 struct FoodChatFood: Codable {
     let id: Int?
@@ -8458,6 +8473,75 @@ class NetworkManager {
         }
         
         // Start the request
+        task.resume()
+    }
+
+    // Agent-powered food image analysis (vision -> agent tool -> Nutritionix)
+    func analyzeFoodImageViaAgent(
+        image: UIImage,
+        userEmail: String,
+        mealType: String = "Lunch",
+        logDate: String? = nil,
+        completion: @escaping (Bool, AgentFoodImageResponse?, String?) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/agent_food_image/") else {
+            completion(false, nil, "Invalid URL")
+            return
+        }
+
+        guard let imageData = image.jpegData(compressionQuality: 0.7) else {
+            completion(false, nil, "Failed to compress image")
+            return
+        }
+
+        let base64Image = imageData.base64EncodedString()
+        let tzOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
+        var parameters: [String: Any] = [
+            "user_email": userEmail,
+            "image_data": base64Image,
+            "meal_type": mealType,
+            "timezone_offset_minutes": tzOffsetMinutes
+        ]
+        if let logDate = logDate { parameters["date"] = logDate }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(false, nil, "Failed to serialize request: \(error.localizedDescription)")
+            return
+        }
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(false, nil, "Network error: \(error.localizedDescription)")
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(false, nil, "Invalid response")
+                return
+            }
+
+            guard (200..<300).contains(httpResponse.statusCode), let data = data else {
+                let msg = "Server error: HTTP \(httpResponse.statusCode)"
+                completion(false, nil, msg)
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let parsed = try decoder.decode(AgentFoodImageResponse.self, from: data)
+                completion(true, parsed, parsed.error)
+            } catch {
+                completion(false, nil, "Failed to parse response: \(error.localizedDescription)")
+            }
+        }
+
         task.resume()
     }
     

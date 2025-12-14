@@ -638,6 +638,12 @@ class FoodManager: ObservableObject {
         showAIGenerationSuccess = false
         aiGeneratedFood = nil
     }
+
+    struct AgentFoodImageResult {
+        let foods: [Food]
+        let mealItems: [MealItem]
+        let message: String?
+    }
     @Published var lastLoggedItem: (name: String, calories: Double)?
     
     // Add these properties for meal generation with AI
@@ -820,6 +826,33 @@ class FoodManager: ObservableObject {
         // Auto-reset to inactive after a delay for better UX
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             self.resetFoodScanningState()
+        }
+    }
+
+    /// Agent-powered image analysis (vision -> agent tool -> Nutritionix). Preview-only helper.
+    @MainActor
+    func analyzeFoodImageWithAgent(
+        image: UIImage,
+        userEmail: String,
+        mealType: String = "Lunch",
+        logDate: String? = nil
+    ) async throws -> AgentFoodImageResult {
+        try await withCheckedThrowingContinuation { continuation in
+            networkManager.analyzeFoodImageViaAgent(
+                image: image,
+                userEmail: userEmail,
+                mealType: mealType,
+                logDate: logDate
+            ) { success, response, errorMessage in
+                if success, let response = response {
+                    let foods = response.foods ?? []
+                    let items = response.mealItems ?? []
+                    continuation.resume(returning: AgentFoodImageResult(foods: foods, mealItems: items, message: response.message))
+                } else {
+                    let err = NetworkError.serverError(errorMessage ?? "Unknown error")
+                    continuation.resume(throwing: err)
+                }
+            }
         }
     }
     
