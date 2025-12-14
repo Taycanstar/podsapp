@@ -938,7 +938,7 @@ private struct MealItemRow: View {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.name.isEmpty ? "Meal Item" : item.name)
-                        .font(.body)
+                        .font(.system(size: 15))
                         .fontWeight(.regular)
                         .foregroundColor(.primary)
                     if let brand = item.brand, !brand.isEmpty {
@@ -952,14 +952,14 @@ private struct MealItemRow: View {
 
                 if let serving = item.servingText, !serving.isEmpty {
                     Text(serving)
-                        .font(.body)
+                        .font(.system(size: 15))
                         .foregroundColor(.primary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .frame(height: 36)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
                         .background(
                             Capsule().fill(chipColor)
                         )
+                        .fixedSize()
                 }
             }
 
