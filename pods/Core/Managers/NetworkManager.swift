@@ -8943,6 +8943,7 @@ private final class StreamingDelegate: NSObject, URLSessionDataDelegate {
 private final class FoodChatStreamingDelegate: NSObject, URLSessionDataDelegate {
     private var buffer = ""
     private var fullText = ""
+    private var hasCompleted = false  // Track if we've already called onComplete
     private let onDelta: (String) -> Void
     private let onComplete: (Result<FoodChatResponse, Error>) -> Void
 
@@ -8979,6 +8980,7 @@ private final class FoodChatStreamingDelegate: NSObject, URLSessionDataDelegate 
             // Check if this is the final message with "done: true"
             if let done = obj["done"] as? Bool, done {
                 print("[FOOD_STREAM] done received with response data")
+                hasCompleted = true  // Mark as completed to prevent double callback
                 // Parse the full FoodChatResponse from this final message
                 if let responseData = trimmed.data(using: .utf8) {
                     do {
@@ -9015,11 +9017,15 @@ private final class FoodChatStreamingDelegate: NSObject, URLSessionDataDelegate 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
             print("[FOOD_STREAM] completed with error:", error.localizedDescription)
-            DispatchQueue.main.async { self.onComplete(.failure(error)) }
+            if !hasCompleted {
+                hasCompleted = true
+                DispatchQueue.main.async { self.onComplete(.failure(error)) }
+            }
         } else {
             print("[FOOD_STREAM] completed successfully")
-            // If we didn't get a done message, create a text response
-            if fullText.isEmpty == false {
+            // Only create fallback response if we didn't already complete via "done" message
+            if !hasCompleted && !fullText.isEmpty {
+                hasCompleted = true
                 let fallbackResponse = FoodChatResponse(
                     type: .text,
                     message: fullText,

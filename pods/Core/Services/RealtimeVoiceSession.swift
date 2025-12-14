@@ -656,8 +656,6 @@ private extension RealtimeVoiceSession {
                - Keep it simple: "grilled chicken breast 6oz", "banana"
                - is_branded=false or omit
 
-            If user gives partial name of branded product, ASK for full name before calling tool.
-
             Tool Usage:
             - Multiple foods → call log_food ONCE with all foods: "pizza, hotdog, and a coke"
             - If tool returns options (status='needsClarification'), list each with bullets (•):
@@ -666,6 +664,7 @@ private extension RealtimeVoiceSession {
               • NAME by BRAND, about CALORIES calories
               Which one?'
             - User picks → call log_food with selection_label='A'/'B'/'C'
+            - IMPORTANT: If user specifies a DIFFERENT flavor than options shown (e.g., "blue raspberry" when you showed "redberry"), do a NEW search with brand + their flavor. Don't ask for more details.
             - On success → confirm: 'Got it, logged NAME at CALORIES calories.'
             - On error → apologize briefly, ask to try again.
 

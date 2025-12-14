@@ -357,18 +357,23 @@ struct FoodLogAgentView: View {
                 isLoading = false
                 // Remove status message if still present
                 messages.removeAll { $0.id == statusMessageId }
-                // Remove streaming message - we'll add the final one via handleOrchestratorResponse
-                if let currentId = streamingMessageId {
-                    messages.removeAll { $0.id == currentId }
-                }
+
+                // Keep the streaming message ID for reference, then clear tracking
+                let completedMessageId = streamingMessageId
                 streamingMessageId = nil
                 streamingText = ""
 
                 switch result {
                 case .success(let response):
-                    handleOrchestratorResponse(response)
+                    // Don't remove/re-add the message - just update tracking and handle response
+                    // The streaming message already has the text, just needs action icons (handled by clearing streamingMessageId)
+                    handleOrchestratorResponse(response, existingMessageId: completedMessageId)
                 case .failure(let error):
                     pendingClarificationQuestion = nil
+                    // Remove streaming message on error and show error
+                    if let msgId = completedMessageId {
+                        messages.removeAll { $0.id == msgId }
+                    }
                     messages.append(FoodLogMessage(id: UUID(), sender: .system, text: "Error: \(error.localizedDescription)"))
                 }
             }
@@ -377,9 +382,13 @@ struct FoodLogAgentView: View {
 
     /// Handle response from the food chat orchestrator endpoint
     /// The AI decides whether to call the log_food tool or just chat
-    private func handleOrchestratorResponse(_ response: FoodChatResponse) {
-        // Add AI message to chat
-        messages.append(FoodLogMessage(id: UUID(), sender: .system, text: response.message))
+    /// - Parameter existingMessageId: If provided, the message was already streamed and we shouldn't add it again
+    private func handleOrchestratorResponse(_ response: FoodChatResponse, existingMessageId: UUID? = nil) {
+        // Only add message if it wasn't already streamed
+        if existingMessageId == nil {
+            messages.append(FoodLogMessage(id: UUID(), sender: .system, text: response.message))
+        }
+        // Always add to conversation history
         conversationHistory.append(["role": "assistant", "content": response.message])
 
         switch response.type {
