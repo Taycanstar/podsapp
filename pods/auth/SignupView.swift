@@ -38,6 +38,9 @@ struct SignupView: View {
         }
         .navigationBarBackButtonHidden(true)
         .background(Color.white)
+        .onAppear {
+            AnalyticsManager.shared.trackSignupUIOpened()
+        }
     }
 
     private var topBar: some View {
@@ -126,7 +129,7 @@ struct SignupView: View {
         // Directly validate email and password to reflect the most current input
         let currentEmail = self.email.trimmingCharacters(in: .whitespacesAndNewlines)
         let currentPassword = self.password.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         if currentEmail.isEmpty || !currentEmail.contains("@") {
             self.errorMessage = "Please enter a valid email address."
             isLoading = false
@@ -137,6 +140,10 @@ struct SignupView: View {
             return
         } else {
             self.errorMessage = nil
+            // Track signup attempt and generate request ID for backend correlation
+            AnalyticsManager.shared.generateRequestId()
+            AnalyticsManager.shared.trackSignupSubmitTapped(method: "email")
+
             let networkManager = NetworkManager()
             viewModel.email = currentEmail
             let onboardingPayload = viewModel.signupOnboardingPayload()

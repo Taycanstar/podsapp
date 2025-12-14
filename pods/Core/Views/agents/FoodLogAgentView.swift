@@ -303,7 +303,7 @@ struct FoodLogAgentView: View {
         let prompt = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty else { return }
 
-        // If user asks to repeat pending options, just repeat without re-calling Nutritionix
+        // If user asks to repeat pending options, just repeat without re-calling API
         if let pending = pendingClarificationQuestion,
            prompt.lowercased().contains("option") {
             messages.append(FoodLogMessage(id: UUID(), sender: .system, text: pending))
@@ -321,10 +321,10 @@ struct FoodLogAgentView: View {
         messages.append(FoodLogMessage(id: UUID(), sender: .status, text: statusPhrases.first ?? "Thinking..."))
         startStreamingStatus(for: prompt)
 
-        foodManager.generateFoodWithAI(
-            foodDescription: prompt,
-            history: conversationHistory,
-            skipConfirmation: true
+        // Use the orchestrator endpoint - AI decides when to call log_food tool
+        foodManager.foodChatWithOrchestrator(
+            message: prompt,
+            history: conversationHistory
         ) { result in
             DispatchQueue.main.async {
                 isLoading = false
@@ -337,13 +337,107 @@ struct FoodLogAgentView: View {
                 }
                 switch result {
                 case .success(let response):
-                    handleFoodResponse(response, isVoice: false)
+                    handleOrchestratorResponse(response)
                 case .failure(let error):
                     pendingClarificationQuestion = nil
                     messages.append(FoodLogMessage(id: UUID(), sender: .system, text: "Error: \(error.localizedDescription)"))
                 }
             }
         }
+    }
+
+    /// Handle response from the food chat orchestrator endpoint
+    /// The AI decides whether to call the log_food tool or just chat
+    private func handleOrchestratorResponse(_ response: FoodChatResponse) {
+        // Add AI message to chat
+        messages.append(FoodLogMessage(id: UUID(), sender: .system, text: response.message))
+        conversationHistory.append(["role": "assistant", "content": response.message])
+
+        switch response.type {
+        case .text:
+            // AI decided this was just a chat message, not food logging
+            pendingClarificationQuestion = nil
+
+        case .foodLogged:
+            pendingClarificationQuestion = nil
+            // Check for multi-food meal
+            if let mealItems = response.mealItems, mealItems.count > 1, let food = response.food {
+                // Convert FoodChatFood to Food and present meal summary
+                let convertedFood = convertChatFoodToFood(food)
+                let convertedItems = mealItems.map { convertChatMealItemToMealItem($0) }
+                presentMealSummary(foods: [convertedFood], items: convertedItems)
+            } else if let food = response.food {
+                // Single food logged
+                let convertedFood = convertChatFoodToFood(food)
+                onFoodReady(convertedFood)
+                isPresented = false
+            }
+
+        case .needsClarification:
+            // Store options for user selection
+            if let options = response.options {
+                pendingOptions = options
+                pendingClarificationQuestion = response.message
+            }
+
+        case .error:
+            pendingClarificationQuestion = nil
+            // Error message is already displayed via response.message
+        }
+    }
+
+    /// Convert simplified FoodChatFood to full Food model
+    private func convertChatFoodToFood(_ chatFood: FoodChatFood) -> Food {
+        // Build nutrient array from the simplified food data
+        var nutrients: [Nutrient] = []
+        if let calories = chatFood.calories {
+            nutrients.append(Nutrient(nutrientName: "Energy", value: calories, unitName: "kcal"))
+        }
+        if let protein = chatFood.protein {
+            nutrients.append(Nutrient(nutrientName: "Protein", value: protein, unitName: "g"))
+        }
+        if let carbs = chatFood.carbs {
+            nutrients.append(Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "g"))
+        }
+        if let fat = chatFood.fat {
+            nutrients.append(Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "g"))
+        }
+
+        // Create a default food measure
+        let measure = FoodMeasure(
+            disseminationText: chatFood.servingSizeText ?? "1 serving",
+            gramWeight: 100.0,
+            id: 1,
+            modifier: chatFood.servingSizeText ?? "serving",
+            measureUnitName: "serving",
+            rank: 1
+        )
+
+        return Food(
+            fdcId: chatFood.id ?? Int.random(in: 1000000..<9999999),
+            description: chatFood.name ?? "Unknown",
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: 1.0,
+            numberOfServings: 1.0,
+            servingSizeUnit: "serving",
+            householdServingFullText: chatFood.servingSizeText,
+            foodNutrients: nutrients,
+            foodMeasures: [measure]
+        )
+    }
+
+    /// Convert simplified FoodChatMealItem to MealItem
+    private func convertChatMealItemToMealItem(_ chatItem: FoodChatMealItem) -> MealItem {
+        return MealItem(
+            name: chatItem.name ?? "Unknown",
+            serving: 1.0,
+            servingUnit: "serving",
+            calories: chatItem.calories ?? 0,
+            protein: chatItem.protein ?? 0,
+            carbs: chatItem.carbs ?? 0,
+            fat: chatItem.fat ?? 0
+        )
     }
 
     // MARK: - Realtime Voice Session

@@ -2817,7 +2817,8 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
         }
     }
 }
-func generateFoodWithAI(
+
+    func generateFoodWithAI(
     foodDescription: String,
     history: [[String: String]] = [],
     skipConfirmation: Bool = false,
@@ -2880,6 +2881,21 @@ func generateFoodWithAI(
         }
     }
 }
+
+    /// Food chat with orchestrator - uses AI function calling to decide when to log food
+    /// This provides behavioral parity with voice mode where the AI decides to call log_food tool
+    func foodChatWithOrchestrator(
+        message: String,
+        history: [[String: String]] = [],
+        completion: @escaping (Result<FoodChatResponse, Error>) -> Void
+    ) {
+        networkManager.foodChatWithOrchestrator(
+            message: message,
+            history: history,
+            completion: completion
+        )
+    }
+
 // Add the createManualFood function after the generateFoodWithAI function
 // This is around line 1879 after the last function in the file
 func createManualFood(food: Food, showPreview: Bool = true, completion: @escaping (Result<Food, Error>) -> Void) {

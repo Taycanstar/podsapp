@@ -139,6 +139,7 @@
 		3650A1722EEA8C9E0068ACE6 /* MealPlateSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3650A1712EEA8C9E0068ACE6 /* MealPlateSummaryView.swift */; };
 		3650A1742EEB4B050068ACE6 /* ActivityRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3650A1732EEB4B000068ACE6 /* ActivityRingView.swift */; };
 		3650A1782EED12B30068ACE6 /* VitalMetricType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3650A1772EED12B30068ACE6 /* VitalMetricType.swift */; };
+		3650A17A2EEE86960068ACE6 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3650A1792EEE86960068ACE6 /* AnalyticsManager.swift */; };
 		365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */; };
 		3662A5492DFB98A700847487 /* CreateFoodWithVoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */; };
 		3662A54B2DFB98BE00847487 /* CreateFoodWithScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */; };
@@ -557,6 +558,7 @@
 		3650A1712EEA8C9E0068ACE6 /* MealPlateSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlateSummaryView.swift; sourceTree = "<group>"; };
 		3650A1732EEB4B000068ACE6 /* ActivityRingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityRingView.swift; sourceTree = "<group>"; };
 		3650A1772EED12B30068ACE6 /* VitalMetricType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitalMetricType.swift; sourceTree = "<group>"; };
+		3650A1792EEE86960068ACE6 /* AnalyticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManager.swift; sourceTree = "<group>"; };
 		365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemTrendsView.swift; sourceTree = "<group>"; };
 		3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithVoice.swift; sourceTree = "<group>"; };
 		3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithScan.swift; sourceTree = "<group>"; };
@@ -889,6 +891,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				3650A1792EEE86960068ACE6 /* AnalyticsManager.swift */,
 				3650A1652EE699800068ACE6 /* RealtimeVoiceSession.swift */,
 				36DB82E52EBF9EFA004BA082 /* FeatureFlags.swift */,
 				36DB82E12EBE7364004BA082 /* SetScheme.swift */,
@@ -2039,6 +2042,7 @@
 				363068D32E0CEBF000F2D4EC /* UpdateEditHeightView.swift in Sources */,
 				36D3A52A2E986BF500AD6B94 /* ProOnboardingView.swift in Sources */,
 				363AF9FF2D21CCF600C91A14 /* ActivityManager.swift in Sources */,
+				3650A17A2EEE86960068ACE6 /* AnalyticsManager.swift in Sources */,
 				363AFA072D2CE75D00C91A14 /* FullSummaryView.swift in Sources */,
 				36A851A72E5E270D004E5CED /* DynamicParameterService.swift in Sources */,
 				36ED35F52DDE538300D174FB /* TapCreateFoodView.swift in Sources */,

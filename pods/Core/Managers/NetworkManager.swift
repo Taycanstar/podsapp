@@ -111,12 +111,62 @@ struct ClarificationOption: Codable, Hashable {
     let serving: String?
     let previewCalories: Double?
     let nixItemId: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case label, name, brand, serving
         case previewCalories = "preview_calories"
         case nixItemId = "nix_item_id"
     }
+}
+
+// MARK: - Food Chat Orchestrator Response
+/// Response from the food chat orchestrator endpoint (/agent/food-chat/)
+/// This endpoint uses AI function calling to decide when to log food vs. just chat.
+struct FoodChatResponse: Codable {
+    enum ResponseType: String, Codable {
+        case text
+        case foodLogged = "food_logged"
+        case needsClarification = "needs_clarification"
+        case error
+    }
+
+    let type: ResponseType
+    let message: String
+    let food: FoodChatFood?
+    let mealItems: [FoodChatMealItem]?
+    let options: [ClarificationOption]?
+    let question: String?
+    let error: String?
+
+    enum CodingKeys: String, CodingKey {
+        case type, message, food, options, question, error
+        case mealItems = "meal_items"
+    }
+}
+
+/// Simplified food object from the orchestrator (subset of full Food model)
+struct FoodChatFood: Codable {
+    let id: Int?
+    let name: String?
+    let calories: Double?
+    let protein: Double?
+    let carbs: Double?
+    let fat: Double?
+    let servingSizeText: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, calories, protein, carbs, fat
+        case servingSizeText = "serving_size_text"
+    }
+}
+
+/// Simplified meal item from the orchestrator
+struct FoodChatMealItem: Codable {
+    let name: String?
+    let calories: Double?
+    let protein: Double?
+    let carbs: Double?
+    let fat: Double?
 }
 
 struct AppVersionResponse: Codable {
@@ -161,8 +211,18 @@ class NetworkManager {
     
     // Track active streaming sessions for cancellation.
     private var streamingSessions: [UUID: URLSession] = [:]
-    
-    
+
+    // MARK: - Analytics Headers
+
+    /// Adds tracking headers to a URLRequest for analytics correlation.
+    /// Call this after creating a URLRequest but before making the request.
+    private func addTrackingHeaders(to request: inout URLRequest) {
+        let headers = AnalyticsManager.shared.requestHeaders
+        for (key, value) in headers {
+            request.addValue(value, forHTTPHeaderField: key)
+        }
+    }
+
     // ### STAGING ###
     // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
         
@@ -245,7 +305,8 @@ class NetworkManager {
             request.httpMethod = "POST"
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = finalBody
-            
+            addTrackingHeaders(to: &request)
+
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
                     DispatchQueue.main.async {
@@ -253,14 +314,14 @@ class NetworkManager {
                     }
                     return
                 }
-                
+
                 guard let httpResponse = response as? HTTPURLResponse else {
                     DispatchQueue.main.async {
                         completion(false, "No response from server")
                     }
                     return
                 }
-                
+
                 if httpResponse.statusCode == 201 {
                     DispatchQueue.main.async {
                         completion(true, "User created successfully. Verification email sent.")
@@ -278,7 +339,7 @@ class NetworkManager {
                 }
             }.resume()
         }
-        
+
         func completeEmailSignup(
             email: String,
             password: String,
@@ -314,7 +375,8 @@ class NetworkManager {
             request.httpMethod = "POST"
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = finalBody
-            
+            addTrackingHeaders(to: &request)
+
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
                     DispatchQueue.main.async {
@@ -322,7 +384,7 @@ class NetworkManager {
                     }
                     return
                 }
-                
+
                 guard let data = data else {
                     DispatchQueue.main.async {
                         completion(false, "No data from server", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, false)
@@ -7765,10 +7827,95 @@ class NetworkManager {
             }
         }.resume()
     }
-    
+
+    /// Food chat with orchestrator - uses AI function calling to decide when to log food
+    /// This provides behavioral parity with voice mode where the AI decides to call log_food tool
+    func foodChatWithOrchestrator(
+        message: String,
+        history: [[String: String]] = [],
+        completion: @escaping (Result<FoodChatResponse, Error>) -> Void
+    ) {
+        let parameters: [String: Any] = [
+            "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
+            "message": message,
+            "history": history
+        ]
+
+        let urlString = "\(baseUrl)/agent/food-chat/"
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+
+            if let jsonString = String(data: request.httpBody!, encoding: .utf8) {
+                print("📤 FOOD CHAT ORCHESTRATOR REQUEST: \(jsonString)")
+            }
+        } catch {
+            print("JSON Serialization Error: \(error)")
+            completion(.failure(NetworkError.encodingError))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 400 {
+                if let data = data, let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = errorJson["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(errorMessage)))
+                    }
+                    return
+                }
+
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError("Server returned error \(httpResponse.statusCode)")))
+                }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("⬇️ FOOD CHAT ORCHESTRATOR RESPONSE: \(responseString)")
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let responseObject = try decoder.decode(FoodChatResponse.self, from: data)
+
+                DispatchQueue.main.async {
+                    completion(.success(responseObject))
+                }
+            } catch {
+                print("❌ Food chat decoding error: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+
     // Add the createManualFood function to the NetworkManager class
     // This should be added with the other food-related API functions
-    
+
     func createManualFood(userEmail: String, food: Food, completion: @escaping (Result<Food, Error>) -> Void) {
         let urlString = "\(baseUrl)/create-food/"
         

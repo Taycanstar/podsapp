@@ -1312,29 +1312,24 @@ private extension NewHomeView {
     var nutritionSummaryCard: some View {
         VStack(spacing: 8) {
             VStack(spacing: 4) {
-                GeometryReader { proxy in
-                    TabView(selection: $nutritionCarouselSelection) {
-                        // Using AnyView to reduce SwiftUI type complexity and prevent stack overflow
-                        // from deeply nested generic view types (TabView + VStack + CardViews)
-                        dailyIntakePage
-                            .frame(width: proxy.size.width - horizontalPageSpacing)
-                            .tag(0)
+                TabView(selection: $nutritionCarouselSelection) {
+                    // Using AnyView to reduce SwiftUI type complexity and prevent stack overflow
+                    // from deeply nested generic view types (TabView + VStack + CardViews)
+                    dailyIntakePage
+                        .tag(0)
 
-                        weeklyIntakePage
-                            .frame(width: proxy.size.width - horizontalPageSpacing)
-                            .tag(1)
+                    weeklyIntakePage
+                        .tag(1)
 
-                        energyBalancePage
-                            .frame(width: proxy.size.width - horizontalPageSpacing)
-                            .tag(2)
-                    }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
-                    .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
-                    .padding(.horizontal, horizontalPageSpacing / 2)
-                    .onPreferenceChange(IntakeCardHeightPreferenceKey.self) { height in
-                        guard height > 0 else { return }
-                        intakeCardHeight = height
-                    }
+                    energyBalancePage
+                        .tag(2)
+                }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+                .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
+                .padding(.horizontal, horizontalPageSpacing / 2)
+                .onPreferenceChange(IntakeCardHeightPreferenceKey.self) { height in
+                    guard height > 0 else { return }
+                    intakeCardHeight = height
                 }
             }
             .frame(height: nutritionCardHeight + pagerDotPadding)
@@ -3941,8 +3936,8 @@ private struct BodyCompositionSection: View {
     let onShowAll: () -> Void
 
     private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
     ]
 
     var body: some View {
@@ -3976,8 +3971,8 @@ private struct ConsistencySection: View {
 
     private let placeholderLevels = Array(repeating: 0, count: 30)
     private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
     ]
 
     var body: some View {
@@ -4066,7 +4061,7 @@ private struct HabitConsistencyCard: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, dailyEssentialVerticalPadding)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color("sheetcard"))
@@ -4108,8 +4103,8 @@ private struct AnalyticsInsightsSection: View {
     var onShowAll: () -> Void
 
     private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
     ]
 
     var body: some View {
@@ -4316,14 +4311,14 @@ private struct DailySleepMetric {
         var onLogWater: () -> Void
 
     private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
     ]
 
     var body: some View {
         // 2x2 grid: Row 1 = Weight, Sleep | Row 2 = Steps, Water
         // No section header
-        LazyVGrid(columns: columns, spacing: 12) {
+        LazyVGrid(columns: columns, spacing: 10) {
             // Row 1
             DailyWeightCard(metric: weight, onLogWeight: onLogWeight)
             DailySleepCard(metric: sleep)
@@ -4345,6 +4340,7 @@ private struct DailySleepMetric {
 }
 
 private let dailyEssentialCardHeight: CGFloat = 170
+private let dailyEssentialVerticalPadding: CGFloat = 12
 
 private struct DailyStepsCard: View {
     let metric: DailyStepsMetric
@@ -4357,7 +4353,7 @@ private struct DailyStepsCard: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.top, 4)
-                .padding(.bottom, 12)
+                .padding(.bottom, 10)
 
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text(metric.formattedCurrent)
@@ -4368,7 +4364,7 @@ private struct DailyStepsCard: View {
                     .font(.system(size: 13, weight: .regular))
                     .foregroundColor(.secondary)
             }
-            .padding(.bottom, 12)
+            .padding(.bottom, 10)
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
@@ -4384,12 +4380,13 @@ private struct DailyStepsCard: View {
             .frame(height: 6)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, dailyEssentialVerticalPadding)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color("sheetcard"))
         )
-        .frame(maxWidth: .infinity, minHeight: dailyEssentialCardHeight, maxHeight: dailyEssentialCardHeight)
+        .frame(maxWidth: .infinity)
+        .frame(height: dailyEssentialCardHeight)
     }
 
     private func cardHeader(title: String) -> some View {
@@ -4413,11 +4410,11 @@ private struct DailyWaterCard: View {
             VStack(alignment: .leading, spacing: 0) {
                 cardHeader(title: "Water")
 
-                Text("Today")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.top, 4)
-                    .padding(.bottom, 12)
+            Text("Today")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+                .padding(.bottom, 10)
 
         HStack(alignment: .center, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
@@ -4439,7 +4436,7 @@ private struct DailyWaterCard: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.bottom, 12)
+        .padding(.bottom, 10)
 
                 GeometryReader { proxy in
                     ZStack(alignment: .leading) {
@@ -4457,13 +4454,14 @@ private struct DailyWaterCard: View {
                 .frame(height: 6)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.vertical, dailyEssentialVerticalPadding)
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(Color("sheetcard"))
             )
-            .frame(maxWidth: .infinity, minHeight: dailyEssentialCardHeight, maxHeight: dailyEssentialCardHeight)
-        }
+        .frame(maxWidth: .infinity)
+        .frame(height: dailyEssentialCardHeight)
+    }
 
         private func cardHeader(title: String) -> some View {
             HStack {
@@ -4491,11 +4489,11 @@ private struct DailyWeightCard: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.top, 4)
-                .padding(.bottom, 12)
+                .padding(.bottom, 10)
 
             BodyCompositionSparkline(values: metric?.values ?? [], lineColor: .indigo)
-                .frame(height: 10)
-                .padding(.bottom, 12)
+                .frame(height: 6)
+                .padding(.bottom, 10)
 
             // Value and add button row
             HStack(alignment: .center, spacing: 12) {
@@ -4524,15 +4522,16 @@ private struct DailyWeightCard: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.bottom, 12)
+            .padding(.bottom, 10)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, dailyEssentialVerticalPadding)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color("sheetcard"))
         )
-        .frame(maxWidth: .infinity, minHeight: dailyEssentialCardHeight, maxHeight: dailyEssentialCardHeight)
+        .frame(maxWidth: .infinity)
+        .frame(height: dailyEssentialCardHeight)
     }
 
     private func cardHeader(title: String) -> some View {
@@ -4559,7 +4558,7 @@ private struct DailySleepCard: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.top, 4)
-                .padding(.bottom, 12)
+                .padding(.bottom, 10)
 
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 if let metric {
@@ -4574,14 +4573,21 @@ private struct DailySleepCard: View {
 
                 Spacer()
             }
+
+            // Placeholder bar to align with other cards
+            Rectangle()
+                .fill(Color.primary.opacity(0.08))
+                .frame(height: 6)
+                .padding(.top, 10)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, dailyEssentialVerticalPadding)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color("sheetcard"))
         )
-        .frame(maxWidth: .infinity, minHeight: dailyEssentialCardHeight, maxHeight: dailyEssentialCardHeight)
+        .frame(maxWidth: .infinity)
+        .frame(height: dailyEssentialCardHeight)
     }
 
     private func cardHeader(title: String) -> some View {
