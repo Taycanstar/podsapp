@@ -452,7 +452,11 @@ struct ConfirmLogView: View {
         if let builder = plateBuilderViewModel {
             PlateView(viewModel: builder,
                       selectedMealPeriod: selectedMealPeriod,
-                      mealTime: mealTime)
+                      mealTime: mealTime,
+                      onFinished: {
+                          navigateToPlate = false
+                          dismiss()
+                      })
         } else {
             EmptyView()
         }
@@ -2943,6 +2947,7 @@ struct PlateView: View {
     @ObservedObject var viewModel: PlateViewModel
     @State private var selectedMealPeriod: MealPeriod
     @State private var mealTime: Date
+    private let onFinished: (() -> Void)?
     @State private var isLoggingPlate = false
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
@@ -2970,10 +2975,12 @@ struct PlateView: View {
 
     init(viewModel: PlateViewModel,
          selectedMealPeriod: MealPeriod,
-         mealTime: Date) {
+         mealTime: Date,
+         onFinished: (() -> Void)? = nil) {
         self.viewModel = viewModel
         _selectedMealPeriod = State(initialValue: selectedMealPeriod)
         _mealTime = State(initialValue: mealTime)
+        self.onFinished = onFinished
     }
 
     var body: some View {
@@ -3672,7 +3679,11 @@ struct PlateView: View {
         if index >= viewModel.entries.count {
             isLoggingPlate = false
             viewModel.clear()
-            dismiss()
+            if let onFinished = onFinished {
+                onFinished()
+            } else {
+                dismiss()
+            }
             return
         }
 
