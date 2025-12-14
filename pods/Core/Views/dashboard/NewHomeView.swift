@@ -1243,6 +1243,7 @@ private extension NewHomeView {
     private var nutritionCardHeight: CGFloat { resolvedIntakeCardHeight }
     private var workoutHighlightsCardHeight: CGFloat { 200 }
     private var pagerDotPadding: CGFloat { 8 }
+    private var horizontalPageSpacing: CGFloat { 10 }
 
     // MARK: - Type Complexity Boundaries (AnyView wrappers to prevent stack overflow)
     // These computed properties use AnyView to break the SwiftUI type chain and prevent
@@ -1267,6 +1268,7 @@ private extension NewHomeView {
 
                 Spacer(minLength: pagerDotPadding)
             }
+            .padding(.horizontal, horizontalPageSpacing / 2)
         )
     }
 
@@ -1285,6 +1287,7 @@ private extension NewHomeView {
 
                 Spacer(minLength: pagerDotPadding)
             }
+            .padding(.horizontal, horizontalPageSpacing / 2)
         )
     }
 
@@ -1302,29 +1305,36 @@ private extension NewHomeView {
 
                 Spacer(minLength: pagerDotPadding)
             }
+            .padding(.horizontal, horizontalPageSpacing / 2)
         )
     }
 
     var nutritionSummaryCard: some View {
         VStack(spacing: 8) {
             VStack(spacing: 4) {
-                TabView(selection: $nutritionCarouselSelection) {
-                    // Using AnyView to reduce SwiftUI type complexity and prevent stack overflow
-                    // from deeply nested generic view types (TabView + VStack + CardViews)
-                    dailyIntakePage
-                        .tag(0)
+                GeometryReader { proxy in
+                    TabView(selection: $nutritionCarouselSelection) {
+                        // Using AnyView to reduce SwiftUI type complexity and prevent stack overflow
+                        // from deeply nested generic view types (TabView + VStack + CardViews)
+                        dailyIntakePage
+                            .frame(width: proxy.size.width - horizontalPageSpacing)
+                            .tag(0)
 
-                    weeklyIntakePage
-                        .tag(1)
+                        weeklyIntakePage
+                            .frame(width: proxy.size.width - horizontalPageSpacing)
+                            .tag(1)
 
-                    energyBalancePage
-                        .tag(2)
-                }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
-                .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
-                .onPreferenceChange(IntakeCardHeightPreferenceKey.self) { height in
-                    guard height > 0 else { return }
-                    intakeCardHeight = height
+                        energyBalancePage
+                            .frame(width: proxy.size.width - horizontalPageSpacing)
+                            .tag(2)
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+                    .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
+                    .padding(.horizontal, horizontalPageSpacing / 2)
+                    .onPreferenceChange(IntakeCardHeightPreferenceKey.self) { height in
+                        guard height > 0 else { return }
+                        intakeCardHeight = height
+                    }
                 }
             }
             .frame(height: nutritionCardHeight + pagerDotPadding)
@@ -1401,6 +1411,7 @@ private extension NewHomeView {
 
                     Spacer(minLength: pagerDotPadding)
                 }
+                .padding(.horizontal, horizontalPageSpacing / 2)
                 .tag(0)
 
                 VStack(spacing: 0) {
@@ -1412,6 +1423,7 @@ private extension NewHomeView {
 
                     Spacer(minLength: pagerDotPadding)
                 }
+                .padding(.horizontal, horizontalPageSpacing / 2)
                 .tag(1)
 
                 VStack(spacing: 0) {
@@ -1423,10 +1435,12 @@ private extension NewHomeView {
 
                     Spacer(minLength: pagerDotPadding)
                 }
+                .padding(.horizontal, horizontalPageSpacing / 2)
                 .tag(2)
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
             .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
+            .padding(.horizontal, -horizontalPageSpacing / 2)
         }
         .frame(height: workoutHighlightsCardHeight + pagerDotPadding)
     }
@@ -3139,13 +3153,64 @@ private struct RecoveryRingView: View {
 
     private func timelineEventsFromLogs(for date: Date) -> [TimelineEvent] {
         let calendar = Calendar.current
-        return vm.logs.compactMap { log in
+
+        // Separate food logs from other logs
+        var foodLogsByTime: [Date: [CombinedLog]] = [:]
+        var otherEvents: [TimelineEvent] = []
+
+        for log in vm.logs {
             guard let eventDate = timelineDate(for: log),
                   calendar.isDate(eventDate, inSameDayAs: date) else {
-                return nil
+                continue
             }
-            return timelineEvent(from: log, at: eventDate)
+
+            switch log.type {
+            case .food, .meal, .recipe:
+                // Group food logs by minute (ignore seconds for grouping)
+                let roundedDate = calendar.date(
+                    from: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: eventDate)
+                ) ?? eventDate
+                foodLogsByTime[roundedDate, default: []].append(log)
+            case .activity, .workout:
+                if let event = timelineEvent(from: log, at: eventDate) {
+                    otherEvents.append(event)
+                }
+            }
         }
+
+        // Convert grouped food logs to timeline events
+        var foodEvents: [TimelineEvent] = []
+        for (eventDate, logs) in foodLogsByTime {
+            if logs.count == 1, let log = logs.first {
+                // Single food log - use original behavior
+                if let event = timelineEvent(from: log, at: eventDate) {
+                    foodEvents.append(event)
+                }
+            } else {
+                // Multiple food logs at same time - create grouped event
+                let totalCalories = logs.reduce(0) { $0 + Int($1.displayCalories.rounded()) }
+                let totalProtein = logs.reduce(0) { sum, log in
+                    sum + (macroDetails(for: log).protein ?? 0)
+                }
+                let totalCarbs = logs.reduce(0) { sum, log in
+                    sum + (macroDetails(for: log).carbs ?? 0)
+                }
+                let totalFat = logs.reduce(0) { sum, log in
+                    sum + (macroDetails(for: log).fat ?? 0)
+                }
+
+                let title = logs.count == 1 ? timelineTitle(for: logs[0]) : "\(logs.count) items"
+                let details = TimelineEventDetails(
+                    calories: totalCalories,
+                    protein: totalProtein,
+                    carbs: totalCarbs,
+                    fat: totalFat
+                )
+                foodEvents.append(TimelineEvent(date: eventDate, type: .food, title: title, details: details, logs: logs))
+            }
+        }
+
+        return (foodEvents + otherEvents).sorted { $0.date < $1.date }
     }
 
     private func logQuickActivity(_ input: QuickActivityInput, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -4279,6 +4344,8 @@ private struct DailySleepMetric {
     }
 }
 
+private let dailyEssentialCardHeight: CGFloat = 170
+
 private struct DailyStepsCard: View {
     let metric: DailyStepsMetric
 
@@ -4294,11 +4361,11 @@ private struct DailyStepsCard: View {
 
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text(metric.formattedCurrent)
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
 
                 Text("/\(metric.formattedGoal)")
-                    .font(.system(size: 15, weight: .regular))
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundColor(.secondary)
             }
             .padding(.bottom, 12)
@@ -4322,6 +4389,7 @@ private struct DailyStepsCard: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color("sheetcard"))
         )
+        .frame(maxWidth: .infinity, minHeight: dailyEssentialCardHeight, maxHeight: dailyEssentialCardHeight)
     }
 
     private func cardHeader(title: String) -> some View {
@@ -4354,11 +4422,11 @@ private struct DailyWaterCard: View {
         HStack(alignment: .center, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text(metric.formattedCurrent)
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
 
                 Text("/\(metric.formattedGoal) \(metric.unit)")
-                    .font(.system(size: 15, weight: .regular))
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundColor(.secondary)
             }
 
@@ -4394,6 +4462,7 @@ private struct DailyWaterCard: View {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(Color("sheetcard"))
             )
+            .frame(maxWidth: .infinity, minHeight: dailyEssentialCardHeight, maxHeight: dailyEssentialCardHeight)
         }
 
         private func cardHeader(title: String) -> some View {
@@ -4424,21 +4493,25 @@ private struct DailyWeightCard: View {
                 .padding(.top, 4)
                 .padding(.bottom, 12)
 
+            BodyCompositionSparkline(values: metric?.values ?? [], lineColor: .indigo)
+                .frame(height: 10)
+                .padding(.bottom, 12)
+
             // Value and add button row
             HStack(alignment: .center, spacing: 12) {
                 if let metric {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text(metric.formattedValue)
-                            .font(.system(size: 28, weight: .semibold, design: .rounded))
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
                             .foregroundColor(.primary)
 
                         Text(metric.unit)
-                            .font(.system(size: 15, weight: .regular))
+                            .font(.system(size: 13, weight: .regular))
                             .foregroundColor(.secondary)
                     }
                 } else {
                     Text("--")
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .foregroundColor(.secondary)
                 }
 
@@ -4452,10 +4525,6 @@ private struct DailyWeightCard: View {
                 .buttonStyle(.plain)
             }
             .padding(.bottom, 12)
-
-            // Sparkline (compact)
-            BodyCompositionSparkline(values: metric?.values ?? [], lineColor: .indigo)
-                .frame(height: 6)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -4463,6 +4532,7 @@ private struct DailyWeightCard: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color("sheetcard"))
         )
+        .frame(maxWidth: .infinity, minHeight: dailyEssentialCardHeight, maxHeight: dailyEssentialCardHeight)
     }
 
     private func cardHeader(title: String) -> some View {
@@ -4494,11 +4564,11 @@ private struct DailySleepCard: View {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 if let metric {
                     Text(metric.formattedValue)
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .foregroundColor(.primary)
                 } else {
                     Text("--")
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .foregroundColor(.secondary)
                 }
 
@@ -4511,6 +4581,7 @@ private struct DailySleepCard: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color("sheetcard"))
         )
+        .frame(maxWidth: .infinity, minHeight: dailyEssentialCardHeight, maxHeight: dailyEssentialCardHeight)
     }
 
     private func cardHeader(title: String) -> some View {
@@ -4699,6 +4770,25 @@ private struct TimelineEvent: Identifiable {
     let title: String
     let details: Details
     let log: CombinedLog?
+    let logs: [CombinedLog]  // For grouped food events
+
+    init(date: Date, type: EventType, title: String, details: Details, log: CombinedLog?) {
+        self.date = date
+        self.type = type
+        self.title = title
+        self.details = details
+        self.log = log
+        self.logs = log.map { [$0] } ?? []
+    }
+
+    init(date: Date, type: EventType, title: String, details: Details, logs: [CombinedLog]) {
+        self.date = date
+        self.type = type
+        self.title = title
+        self.details = details
+        self.log = logs.first
+        self.logs = logs
+    }
 
     var iconName: String {
         switch type {
@@ -4711,6 +4801,10 @@ private struct TimelineEvent: Identifiable {
         case .water:
             return "drop.fill"
         }
+    }
+
+    var isGroupedFood: Bool {
+        type == .food && logs.count > 1
     }
 }
 
@@ -4923,10 +5017,21 @@ private struct TimelineEventRow: View {
                     .foregroundColor(.secondary)
             }
 
-            HStack(alignment: .top, spacing: 12) {
-                TimelineConnectorSpacer()
-
-                swipeableCard
+            if event.isGroupedFood {
+                // Grouped food event - show full cards for each item (no summary card)
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(event.logs, id: \.id) { log in
+                        HStack(alignment: .top, spacing: 12) {
+                            TimelineConnectorSpacer()
+                            fullFoodCard(for: log)
+                        }
+                    }
+                }
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    TimelineConnectorSpacer()
+                    swipeableCard
+                }
             }
         }
     }
@@ -4937,6 +5042,66 @@ private struct TimelineEventRow: View {
             return Self.timeFormatter.string(from: event.date)
         }
         return Self.dateFormatter.string(from: event.date)
+    }
+
+    @ViewBuilder
+    private func fullFoodCard(for log: CombinedLog) -> some View {
+        // Create a proper TimelineEvent for this individual log to use the full card
+        let individualEvent = makeTimelineEvent(from: log)
+        let cardView = TimelineEventCard(event: individualEvent)
+        if canDelete || canToggleSave {
+            cardView
+                .modifier(SwipeableCardModifier(
+                    canDelete: canDelete,
+                    canSave: canToggleSave,
+                    isSaved: isLogSaved?(log) ?? false,
+                    onDelete: { onDelete?(log) },
+                    onSave: { onSave?(log) },
+                    onUnsave: { onUnsave?(log) }
+                ))
+        } else {
+            cardView
+        }
+    }
+
+    private func makeTimelineEvent(from log: CombinedLog) -> TimelineEvent {
+        let title: String
+        let calories: Int
+        var protein: Int?
+        var carbs: Int?
+        var fat: Int?
+
+        // Use CombinedLog's displayCalories which handles all types consistently
+        calories = Int(log.displayCalories.rounded())
+
+        switch log.type {
+        case .food:
+            title = log.food?.displayName ?? log.message
+            protein = log.food?.protein.map { Int($0.rounded()) }
+            carbs = log.food?.carbs.map { Int($0.rounded()) }
+            fat = log.food?.fat.map { Int($0.rounded()) }
+        case .meal:
+            title = log.meal?.title ?? log.message
+            protein = log.meal?.protein.map { Int($0.rounded()) }
+            carbs = log.meal?.carbs.map { Int($0.rounded()) }
+            fat = log.meal?.fat.map { Int($0.rounded()) }
+        case .recipe:
+            title = log.recipe?.title ?? log.message
+            protein = log.recipe?.protein.map { Int($0.rounded()) }
+            carbs = log.recipe?.carbs.map { Int($0.rounded()) }
+            fat = log.recipe?.fat.map { Int($0.rounded()) }
+        default:
+            title = log.message
+        }
+
+        let details = TimelineEvent.Details(
+            calories: calories,
+            protein: protein,
+            carbs: carbs,
+            fat: fat
+        )
+
+        return TimelineEvent(date: event.date, type: .food, title: title, details: details, log: log)
     }
 
     @ViewBuilder
