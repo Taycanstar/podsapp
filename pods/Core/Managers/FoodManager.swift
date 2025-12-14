@@ -2822,6 +2822,8 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
     foodDescription: String,
     history: [[String: String]] = [],
     skipConfirmation: Bool = false,
+    isBrandedHint: Bool = false,
+    brandNameHint: String? = nil,
     completion: @escaping (Result<GenerateFoodResponse, Error>) -> Void
 ) {
     // UNIFIED: Set modern state for food generation (keeping legacy for backward compatibility)
@@ -2829,25 +2831,27 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
     isGeneratingFood = true
     foodGenerationStage = 0
     showFoodGenerationSuccess = false
-    
+
     // Create a timer to cycle through stages for UI feedback
     let timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] timer in
-        guard let self = self else { 
+        guard let self = self else {
             timer.invalidate()
-            return 
+            return
         }
-        
+
         // CRITICAL FIX: Ensure all @Published updates happen on main thread
         DispatchQueue.main.async {
             // Cycle through stages 0-3
             self.foodGenerationStage = (self.foodGenerationStage + 1) % 4
         }
     }
-    
+
     // Make the API request
     networkManager.generateFoodWithAI(
         foodDescription: foodDescription,
-        history: history
+        history: history,
+        isBrandedHint: isBrandedHint,
+        brandNameHint: brandNameHint
     ) { [weak self] result in
         guard let self = self else {
             timer.invalidate()
@@ -2893,6 +2897,21 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
             message: message,
             history: history,
             completion: completion
+        )
+    }
+
+    /// Streaming food chat with orchestrator - streams AI response token by token
+    func foodChatWithOrchestratorStream(
+        message: String,
+        history: [[String: String]] = [],
+        onDelta: @escaping (String) -> Void,
+        onComplete: @escaping (Result<FoodChatResponse, Error>) -> Void
+    ) {
+        networkManager.foodChatWithOrchestratorStream(
+            message: message,
+            history: history,
+            onDelta: onDelta,
+            onComplete: onComplete
         )
     }
 

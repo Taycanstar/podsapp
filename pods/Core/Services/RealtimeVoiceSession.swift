@@ -565,7 +565,9 @@ private extension RealtimeVoiceSession {
             sendToolResult(callId: callId, resultJSON: ["status": "error", "error": "Invalid arguments"])
             return
         }
-        print("🎤 [TOOL CALL] Received query from voice AI: '\(query)'")
+        let isBranded = args["is_branded"] as? Bool ?? false
+        let brandName = args["brand_name"] as? String
+        print("🎤 [TOOL CALL] Received query from voice AI: '\(query)' is_branded=\(isBranded) brand='\(brandName ?? "")'")
         let nixItemId = args["nix_item_id"] as? String
         let selectionLabel = args["selection_label"] as? String
 
@@ -578,6 +580,8 @@ private extension RealtimeVoiceSession {
         delegate.realtimeSession(
             self,
             didRequestFoodLookup: query,
+            isBranded: isBranded,
+            brandName: brandName,
             nixItemId: nixItemId,
             selectionLabel: selectionLabel
         ) { [weak self] result in
@@ -634,19 +638,37 @@ private extension RealtimeVoiceSession {
 
         let instructions = """
             You are a voice assistant for a food logging app called Metryc.
-            When the user mentions food they ate, call the log_food tool with their COMPLETE description.
-            IMPORTANT: If the user mentions multiple foods (e.g., "pizza, hotdog, and a coke"), call log_food ONCE with ALL foods in a single query like "pizza, hotdog, and a coke". Do NOT make separate calls for each food.
-            If the tool returns options (status='needsClarification'), list each option on its own line using bullet points (•), then ask the question on a separate new line. For example:
-            'I found a few options:
-            • NAME by BRAND, about CALORIES calories
-            • NAME by BRAND, about CALORIES calories
-            • NAME by BRAND, about CALORIES calories
-            Which one would you like?'
-            Use the bullet character • (not dashes or hyphens). Do NOT put the question on the same line as the last option.
-            When the user indicates their choice (saying 'the first one', 'the second', 'A', 'B', etc.), call log_food again with selection_label set to their choice (A for first, B for second, C for third).
-            When the tool returns success with multiple items, confirm naturally: 'Got it, I logged pizza, hotdog, and coke.'
-            When the tool returns success with a single item, confirm naturally: 'Got it, logged NAME at CALORIES calories.'
-            If the tool returns an error, apologize briefly and ask them to try again.
+
+            CRITICAL - Constructing Search Queries:
+            Your query construction is THE most important factor for accurate results.
+
+            1. BRANDED PRODUCTS (energy drinks, protein bars, supplements, packaged snacks):
+               - Set is_branded=true and include brand_name
+               - Include the COMPLETE product name with brand, flavor, variant
+               - "Ghost Energy Sour Patch Kids Blue Raspberry" → query="Ghost Energy Sour Patch Kids Blue Raspberry", is_branded=true, brand_name="Ghost"
+               - "Celsius" → ask for flavor first, then query="Celsius Sparkling [flavor]", is_branded=true, brand_name="Celsius"
+
+            2. RESTAURANT FOODS:
+               - ALWAYS include restaurant name, set is_branded=true
+               - "Chipotle bowl" → query="Chipotle Chicken Burrito Bowl", is_branded=true, brand_name="Chipotle"
+
+            3. GENERIC/HOMEMADE FOODS:
+               - Keep it simple: "grilled chicken breast 6oz", "banana"
+               - is_branded=false or omit
+
+            If user gives partial name of branded product, ASK for full name before calling tool.
+
+            Tool Usage:
+            - Multiple foods → call log_food ONCE with all foods: "pizza, hotdog, and a coke"
+            - If tool returns options (status='needsClarification'), list each with bullets (•):
+              'I found a few options:
+              • NAME by BRAND, about CALORIES calories
+              • NAME by BRAND, about CALORIES calories
+              Which one?'
+            - User picks → call log_food with selection_label='A'/'B'/'C'
+            - On success → confirm: 'Got it, logged NAME at CALORIES calories.'
+            - On error → apologize briefly, ask to try again.
+
             Keep responses brief and conversational.
             """
 
@@ -662,13 +684,21 @@ private extension RealtimeVoiceSession {
                     [
                         "type": "function",
                         "name": "log_food",
-                        "description": "Look up and log nutrition info for food the user mentions eating. Call this whenever user mentions food they ate or want to log.",
+                        "description": "Look up and log nutrition info for food the user mentions eating. IMPORTANT - Query Construction: 1. BRANDED products: Set is_branded=true, include FULL brand+product+flavor in query. 2. RESTAURANT foods: Include restaurant name, set is_branded=true. 3. GENERIC foods: Keep simple like 'grilled chicken breast', is_branded=false. The more specific the query, the more accurate the lookup.",
                         "parameters": [
                             "type": "object",
                             "properties": [
                                 "query": [
                                     "type": "string",
-                                    "description": "Natural language food description from the user"
+                                    "description": "Optimized search query. For branded items, include FULL brand + product + flavor."
+                                ],
+                                "is_branded": [
+                                    "type": "boolean",
+                                    "description": "True if branded/packaged product or restaurant item. False for generic/homemade."
+                                ],
+                                "brand_name": [
+                                    "type": "string",
+                                    "description": "Brand or restaurant name (e.g., 'Ghost', 'Celsius', 'Chipotle')."
                                 ],
                                 "nix_item_id": [
                                     "type": "string",
@@ -741,6 +771,8 @@ private extension RealtimeVoiceSession {
 protocol RealtimeVoiceSessionDelegate {
     func realtimeSession(_ session: RealtimeVoiceSession,
                          didRequestFoodLookup query: String,
+                         isBranded: Bool,
+                         brandName: String?,
                          nixItemId: String?,
                          selectionLabel: String?,
                          completion: @escaping (ToolResult) -> Void)

@@ -142,6 +142,16 @@ struct FoodChatResponse: Codable {
         case type, message, food, options, question, error
         case mealItems = "meal_items"
     }
+
+    init(type: ResponseType, message: String, food: FoodChatFood? = nil, mealItems: [FoodChatMealItem]? = nil, options: [ClarificationOption]? = nil, question: String? = nil, error: String? = nil) {
+        self.type = type
+        self.message = message
+        self.food = food
+        self.mealItems = mealItems
+        self.options = options
+        self.question = question
+        self.error = error
+    }
 }
 
 /// Simplified food object from the orchestrator (subset of full Food model)
@@ -7723,13 +7733,22 @@ class NetworkManager {
     func generateFoodWithAI(
         foodDescription: String,
         history: [[String: String]] = [],
+        isBrandedHint: Bool = false,
+        brandNameHint: String? = nil,
         completion: @escaping (Result<GenerateFoodResponse, Error>) -> Void
     ) {
-        let parameters: [String: Any] = [
+        var parameters: [String: Any] = [
             "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
             "food_description": foodDescription,
             "history": history
         ]
+        // Pass orchestrator hints to help backend prioritize branded vs generic search
+        if isBrandedHint {
+            parameters["is_branded_hint"] = true
+        }
+        if let brandName = brandNameHint, !brandName.isEmpty {
+            parameters["brand_name_hint"] = brandName
+        }
         
         let urlString = "\(baseUrl)/generate-ai-food/"
         guard let url = URL(string: urlString) else {
@@ -7911,6 +7930,50 @@ class NetworkManager {
                 }
             }
         }.resume()
+    }
+
+    /// Streaming food chat with orchestrator - streams AI response token by token
+    /// Uses Server-Sent Events (SSE) to stream the response
+    func foodChatWithOrchestratorStream(
+        message: String,
+        history: [[String: String]] = [],
+        onDelta: @escaping (String) -> Void,
+        onComplete: @escaping (Result<FoodChatResponse, Error>) -> Void
+    ) {
+        let parameters: [String: Any] = [
+            "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
+            "message": message,
+            "history": history
+        ]
+
+        let urlString = "\(baseUrl)/agent/food-chat/stream/"
+        guard let url = URL(string: urlString) else {
+            onComplete(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+
+            if let jsonString = String(data: request.httpBody!, encoding: .utf8) {
+                print("📤 FOOD CHAT STREAM REQUEST: \(jsonString)")
+            }
+        } catch {
+            print("JSON Serialization Error: \(error)")
+            onComplete(.failure(NetworkError.encodingError))
+            return
+        }
+
+        // Use URLSession with delegate for streaming
+        let delegate = FoodChatStreamingDelegate(onDelta: onDelta, onComplete: onComplete)
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+        let task = session.dataTask(with: request)
+        task.resume()
     }
 
     // Add the createManualFood function to the NetworkManager class
@@ -8872,6 +8935,102 @@ private final class StreamingDelegate: NSObject, URLSessionDataDelegate {
             print("[STREAM] completed successfully")
             print("[STREAM] final full text:", fullText)
             DispatchQueue.main.async { self.onComplete() }
+        }
+    }
+}
+
+// MARK: - Food Chat Streaming Delegate
+private final class FoodChatStreamingDelegate: NSObject, URLSessionDataDelegate {
+    private var buffer = ""
+    private var fullText = ""
+    private let onDelta: (String) -> Void
+    private let onComplete: (Result<FoodChatResponse, Error>) -> Void
+
+    init(onDelta: @escaping (String) -> Void,
+         onComplete: @escaping (Result<FoodChatResponse, Error>) -> Void) {
+        self.onDelta = onDelta
+        self.onComplete = onComplete
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        guard let chunk = String(data: data, encoding: .utf8) else { return }
+        print("[FOOD_STREAM] raw chunk (\(data.count) bytes):", chunk.replacingOccurrences(of: "\n", with: "\\n"))
+        buffer.append(chunk)
+
+        let parts = buffer.split(separator: "\n", omittingEmptySubsequences: false)
+        buffer = parts.last.map(String.init) ?? ""
+
+        for part in parts.dropLast() {
+            var trimmed = part.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+
+            // Support SSE-style "data: {...}" lines
+            if trimmed.hasPrefix("data:") {
+                trimmed = String(trimmed.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+            }
+
+            guard let jsonData = trimmed.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
+            else {
+                print("[FOOD_STREAM] failed to decode json for part:", trimmed)
+                continue
+            }
+
+            // Check if this is the final message with "done: true"
+            if let done = obj["done"] as? Bool, done {
+                print("[FOOD_STREAM] done received with response data")
+                // Parse the full FoodChatResponse from this final message
+                if let responseData = trimmed.data(using: .utf8) {
+                    do {
+                        let decoder = JSONDecoder()
+                        let response = try decoder.decode(FoodChatResponse.self, from: responseData)
+                        DispatchQueue.main.async { self.onComplete(.success(response)) }
+                    } catch {
+                        print("[FOOD_STREAM] failed to decode FoodChatResponse:", error)
+                        // Create a minimal response with the accumulated text
+                        let fallbackResponse = FoodChatResponse(
+                            type: .text,
+                            message: self.fullText,
+                            food: nil,
+                            mealItems: nil,
+                            options: nil,
+                            question: nil,
+                            error: nil
+                        )
+                        DispatchQueue.main.async { self.onComplete(.success(fallbackResponse)) }
+                    }
+                }
+                continue
+            }
+
+            // Handle streaming deltas
+            if let delta = obj["delta"] as? String {
+                print("[FOOD_STREAM] delta:", delta)
+                fullText.append(delta)
+                DispatchQueue.main.async { self.onDelta(delta) }
+            }
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error {
+            print("[FOOD_STREAM] completed with error:", error.localizedDescription)
+            DispatchQueue.main.async { self.onComplete(.failure(error)) }
+        } else {
+            print("[FOOD_STREAM] completed successfully")
+            // If we didn't get a done message, create a text response
+            if fullText.isEmpty == false {
+                let fallbackResponse = FoodChatResponse(
+                    type: .text,
+                    message: fullText,
+                    food: nil,
+                    mealItems: nil,
+                    options: nil,
+                    question: nil,
+                    error: nil
+                )
+                DispatchQueue.main.async { self.onComplete(.success(fallbackResponse)) }
+            }
         }
     }
 }

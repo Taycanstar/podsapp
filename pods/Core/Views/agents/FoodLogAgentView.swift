@@ -150,17 +150,25 @@ struct FoodLogAgentView: View {
                                 }
                                 .id(message.id)
                             case .system:
-                                AssistantMessageWithActions(
-                                    text: message.text,
-                                    isLiked: likedMessageIDs.contains(message.id),
-                                    isDisliked: dislikedMessageIDs.contains(message.id),
-                                    onCopy: { handleCopy(text: message.text) },
-                                    onLike: { toggleLike(for: message.id) },
-                                    onDislike: { toggleDislike(for: message.id) },
-                                    onSpeak: { speak(message.text) },
-                                    onShare: { share(text: message.text) }
-                                )
-                                .id(message.id)
+                                // Hide action icons for streaming message
+                                if message.id == streamingMessageId {
+                                    // Streaming message - show text without action icons
+                                    FormattedAssistantMessage(text: message.text)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .id(message.id)
+                                } else {
+                                    AssistantMessageWithActions(
+                                        text: message.text,
+                                        isLiked: likedMessageIDs.contains(message.id),
+                                        isDisliked: dislikedMessageIDs.contains(message.id),
+                                        onCopy: { handleCopy(text: message.text) },
+                                        onLike: { toggleLike(for: message.id) },
+                                        onDislike: { toggleDislike(for: message.id) },
+                                        onSpeak: { speak(message.text) },
+                                        onShare: { share(text: message.text) }
+                                    )
+                                    .id(message.id)
+                                }
                             case .status:
                                 if streamingMessageId == nil {
                                     thinkingIndicator
@@ -318,17 +326,44 @@ struct FoodLogAgentView: View {
         inputText = ""
         isLoading = true
         HapticFeedback.generateBurstThenSingle(count: 4)
-        messages.append(FoodLogMessage(id: UUID(), sender: .status, text: statusPhrases.first ?? "Thinking..."))
 
-        // Use the orchestrator endpoint - AI decides when to call log_food tool
-        // No streaming status needed - orchestrator returns a single coherent response
-        foodManager.foodChatWithOrchestrator(
+        // Add a status message for the thinking indicator
+        let statusMessageId = UUID()
+        messages.append(FoodLogMessage(id: statusMessageId, sender: .status, text: ""))
+
+        // Track streaming message separately (nil until first delta arrives)
+        streamingMessageId = nil
+        streamingText = ""
+
+        // Use the streaming orchestrator endpoint - AI decides when to call log_food tool
+        // Text streams in token by token like voice mode
+        foodManager.foodChatWithOrchestratorStream(
             message: prompt,
-            history: conversationHistory
-        ) { result in
-            DispatchQueue.main.async {
+            history: conversationHistory,
+            onDelta: { delta in
+                // On first delta, create the streaming message and hide status
+                if streamingMessageId == nil {
+                    let newId = UUID()
+                    streamingMessageId = newId
+                    messages.removeAll { $0.id == statusMessageId }
+                    messages.append(FoodLogMessage(id: newId, sender: .system, text: delta))
+                } else if let currentId = streamingMessageId,
+                          let index = messages.firstIndex(where: { $0.id == currentId }) {
+                    messages[index].text += delta
+                }
+                streamingText += delta
+            },
+            onComplete: { result in
                 isLoading = false
-                messages.removeAll { $0.sender == .status }
+                // Remove status message if still present
+                messages.removeAll { $0.id == statusMessageId }
+                // Remove streaming message - we'll add the final one via handleOrchestratorResponse
+                if let currentId = streamingMessageId {
+                    messages.removeAll { $0.id == currentId }
+                }
+                streamingMessageId = nil
+                streamingText = ""
+
                 switch result {
                 case .success(let response):
                     handleOrchestratorResponse(response)
@@ -337,7 +372,7 @@ struct FoodLogAgentView: View {
                     messages.append(FoodLogMessage(id: UUID(), sender: .system, text: "Error: \(error.localizedDescription)"))
                 }
             }
-        }
+        )
     }
 
     /// Handle response from the food chat orchestrator endpoint
@@ -786,6 +821,8 @@ extension FoodLogAgentView {
 extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
     func realtimeSession(_ session: RealtimeVoiceSession,
                          didRequestFoodLookup query: String,
+                         isBranded: Bool,
+                         brandName: String?,
                          nixItemId: String?,
                          selectionLabel: String?,
                          completion: @escaping (ToolResult) -> Void) {
@@ -815,7 +852,9 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
         foodManager.generateFoodWithAI(
             foodDescription: effectiveDescription,
             history: conversationHistory,
-            skipConfirmation: true
+            skipConfirmation: true,
+            isBrandedHint: isBranded,
+            brandNameHint: brandName
         ) { result in
             DispatchQueue.main.async {
                 self.isToolCallInFlight = false
