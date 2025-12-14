@@ -1326,7 +1326,7 @@ private extension NewHomeView {
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
                 .indexViewStyle(PageIndexViewStyle(backgroundDisplayMode: .always))
-                .padding(.horizontal, horizontalPageSpacing / 2)
+                .padding(.horizontal, -horizontalPageSpacing / 2)
                 .onPreferenceChange(IntakeCardHeightPreferenceKey.self) { height in
                     guard height > 0 else { return }
                     intakeCardHeight = height

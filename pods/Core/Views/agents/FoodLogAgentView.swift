@@ -319,9 +319,9 @@ struct FoodLogAgentView: View {
         isLoading = true
         HapticFeedback.generateBurstThenSingle(count: 4)
         messages.append(FoodLogMessage(id: UUID(), sender: .status, text: statusPhrases.first ?? "Thinking..."))
-        startStreamingStatus(for: prompt)
 
         // Use the orchestrator endpoint - AI decides when to call log_food tool
+        // No streaming status needed - orchestrator returns a single coherent response
         foodManager.foodChatWithOrchestrator(
             message: prompt,
             history: conversationHistory
@@ -329,12 +329,6 @@ struct FoodLogAgentView: View {
             DispatchQueue.main.async {
                 isLoading = false
                 messages.removeAll { $0.sender == .status }
-                stopStreamingStatus()
-                if let placeholderId = streamingMessageId {
-                    messages.removeAll { $0.id == placeholderId }
-                    streamingMessageId = nil
-                    streamingText = ""
-                }
                 switch result {
                 case .success(let response):
                     handleOrchestratorResponse(response)
