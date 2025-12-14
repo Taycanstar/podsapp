@@ -314,11 +314,8 @@ struct ActivityRingView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
-                } else if !hasWeeklyZoneData {
-                    Text("No activity HR data this week")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
                 } else {
+                    // Always show zone bars - they'll display 0m when no activity data
                     VStack(spacing: 10) {
                         ForEach(weeklyZoneMinutes) { zone in
                             HStack(spacing: 12) {

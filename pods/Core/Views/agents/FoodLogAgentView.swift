@@ -19,6 +19,7 @@ struct FoodLogAgentView: View {
     var onFoodReady: (Food) -> Void
     var onMealLogged: (([Food]) -> Void)? = nil
     var onMealAddedToPlate: (([Food]) -> Void)? = nil
+    var onMealItemsReady: ((Food, [MealItem]) -> Void)? = nil
 
 @State private var messages: [FoodLogMessage] = []
 @State private var inputText: String = ""
@@ -421,6 +422,13 @@ struct FoodLogAgentView: View {
     }
 
     private func presentMealSummary(foods: [Food], items: [MealItem]) {
+        // If callback is provided, dismiss this view and let parent handle presentation
+        if let onMealItemsReady, let food = foods.first {
+            onMealItemsReady(food, items)
+            isPresented = false
+            return
+        }
+        // Fallback: show sheet on top of this view
         mealSummaryFoods = foods
         mealSummaryItems = items
         showMealSummary = true
@@ -723,6 +731,9 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
                 self.isToolCallInFlight = false
             switch result {
             case .success(let response):
+                // Debug: Log response details immediately
+                print("🔵 [VOICE RESPONSE] status=\(response.status) needsClarification=\(response.needsClarification)")
+                print("🔵 [VOICE RESPONSE] food=\(response.food?.displayName ?? "nil") mealItems=\(response.mealItems?.count ?? -1)")
                 if response.needsClarification {
                     self.pendingOptions = response.options
                     completion(
@@ -781,13 +792,26 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
     }
 
     func realtimeSession(_ session: RealtimeVoiceSession, didResolveFood food: Food, mealItems: [MealItem]?) {
+        // Debug log
+        print("🟢 [didResolveFood] Called with food=\(food.displayName) mealItems=\(mealItems?.count ?? -1)")
+        if let items = mealItems {
+            for (i, item) in items.enumerated() {
+                print("🟢 [didResolveFood] Item \(i): \(item.name)")
+            }
+        }
+
         // Check if this is a multi-food response
         if let items = mealItems, items.count > 1 {
-            // Multi-food: Show MealPlateSummaryView
+            // Multi-food: Use callback if provided, otherwise fallback to sheet
             print("✅ [FOOD PIPELINE] Multi-food resolved: \(items.count) items")
-            presentMealSummary(foods: [food], items: items)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                session.disconnect()
+            session.disconnect()
+            if let onMealItemsReady {
+                // Parent will handle presentation - dismiss this view
+                onMealItemsReady(food, items)
+                isPresented = false
+            } else {
+                // Fallback: show sheet on top of this view
+                presentMealSummary(foods: [food], items: items)
             }
         } else {
             // Single food: Use existing flow
@@ -824,10 +848,7 @@ private struct AssistantMessageWithActions: View {
     private var actionRow: some View {
         HStack(spacing: 22) {
             actionButton(systemName: "doc.on.doc", action: onCopy)
-            actionButton(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup", action: onLike, isActive: isLiked)
-            actionButton(systemName: isDisliked ? "hand.thumbsdown.fill" : "hand.thumbsdown", action: onDislike, isActive: isDisliked)
-            actionButton(systemName: "waveform", action: onSpeak)
-            actionButton(systemName: "square.and.arrow.up", action: onShare)
+            actionButton(systemName: "speaker.wave.2", action: onSpeak)
         }
         .padding(.top, 0)
     }

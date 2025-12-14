@@ -18,6 +18,9 @@ struct ReadinessView: View {
     @State private var isLoadingSummary = true
     @State private var isLoadingSnapshot = false
     @State private var showDatePicker = false
+    @State private var selectedMetric: VitalMetricType?
+    @State private var selectedMetricValue: Double?
+    @State private var showKeyMetricView = false
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var healthViewModel: HealthKitViewModel
     private let ringScale: CGFloat = 0.75
@@ -170,23 +173,51 @@ struct ReadinessView: View {
                     title: "Resting Heart Rate",
                     value: formatRHR(restingHeartRateSource),
                     trend: calculateRHRTrend()
-                )
+                ) {
+                    selectedMetric = .restingHeartRate
+                    selectedMetricValue = restingHeartRateSource
+                    showKeyMetricView = true
+                }
                 VitalCard(
                     title: "HRV",
                     value: formatHRV(heartRateVariabilitySource),
                     trend: calculateHRVTrend()
-                )
+                ) {
+                    selectedMetric = .hrv
+                    selectedMetricValue = heartRateVariabilitySource
+                    showKeyMetricView = true
+                }
                 VitalCard(
                     title: "Body Temperature",
                     value: formatTemperatureDeviation(temperatureSourceCelsius),
                     trend: calculateTempTrend()
-                )
+                ) {
+                    selectedMetric = .bodyTemperature
+                    selectedMetricValue = temperatureSourceCelsius
+                    showKeyMetricView = true
+                }
                 VitalCard(
                     title: "Respiratory Rate",
                     value: formatRespiratoryRate(respiratoryRateSource),
                     trend: calculateRRTrend()
-                )
+                ) {
+                    selectedMetric = .respiratoryRate
+                    selectedMetricValue = respiratoryRateSource
+                    showKeyMetricView = true
+                }
             }
+
+            // Hidden NavigationLink for KeyMetricView
+            NavigationLink(
+                destination: KeyMetricView(
+                    metricType: selectedMetric ?? .hrv,
+                    currentValue: selectedMetricValue,
+                    userEmail: userEmail
+                ),
+                isActive: $showKeyMetricView,
+                label: { EmptyView() }
+            )
+            .hidden()
         }
     }
 
@@ -622,10 +653,11 @@ struct VitalCard: View {
     let title: String
     let value: String
     let trend: TrendInfo?
+    let onTap: () -> Void
 
     var body: some View {
         Button {
-            // Tappable but no navigation yet
+            onTap()
         } label: {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {

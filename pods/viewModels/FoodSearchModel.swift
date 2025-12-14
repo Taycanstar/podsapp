@@ -32,8 +32,9 @@ struct BarcodeLookupResponse: Codable {
         self.foodLogId = foodLogId
     }
     
+    // With .convertFromSnakeCase decoder, do NOT use explicit snake_case mappings
     private enum CodingKeys: String, CodingKey {
-        case foodLogId = "food_log_id"
+        case foodLogId  // .convertFromSnakeCase: "food_log_id" -> "foodLogId"
         case food
     }
 }
@@ -57,13 +58,15 @@ struct Food: Codable, Identifiable, Hashable{
     
     var id: Int { fdcId }
     
+    // With .convertFromSnakeCase decoder, do NOT use explicit snake_case mappings
+    // The decoder auto-converts snake_case to camelCase
     enum CodingKeys: String, CodingKey {
         case fdcId, description, brandOwner, brandName, servingSize, numberOfServings
         case servingSizeUnit, householdServingFullText, foodNutrients, foodMeasures
-        case healthAnalysis = "health_analysis"
-        case aiInsight = "ai_insight"
-        case nutritionScore = "nutrition_score"
-        case mealItems = "meal_items"
+        case healthAnalysis  // .convertFromSnakeCase: "health_analysis" -> "healthAnalysis"
+        case aiInsight       // .convertFromSnakeCase: "ai_insight" -> "aiInsight"
+        case nutritionScore  // .convertFromSnakeCase: "nutrition_score" -> "nutritionScore"
+        case mealItems       // .convertFromSnakeCase: "meal_items" -> "mealItems"
         case barcode
     }
     
@@ -142,10 +145,12 @@ struct MealItemMeasure: Codable, Hashable, Identifiable {
     var description: String
     var gramWeight: Double
 
+    // With .convertFromSnakeCase decoder, do NOT use explicit snake_case mappings
+    // The decoder auto-converts "gram_weight" -> "gramWeight"
     enum CodingKeys: String, CodingKey {
         case unit
         case description
-        case gramWeight = "gram_weight"
+        case gramWeight  // .convertFromSnakeCase handles "gram_weight" -> "gramWeight"
     }
 
     init(unit: String, description: String, gramWeight: Double) {
@@ -157,8 +162,11 @@ struct MealItemMeasure: Codable, Hashable, Identifiable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+
         let decodedUnit = try container.decodeIfPresent(String.self, forKey: .unit)?.trimmingCharacters(in: .whitespacesAndNewlines)
         let decodedDescription = try container.decodeIfPresent(String.self, forKey: .description)?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // gramWeight can come as Double or String
         if let doubleValue = try? container.decode(Double.self, forKey: .gramWeight) {
             self.gramWeight = doubleValue
         } else if let stringValue = try? container.decode(String.self, forKey: .gramWeight),
@@ -167,6 +175,7 @@ struct MealItemMeasure: Codable, Hashable, Identifiable {
         } else {
             self.gramWeight = 0
         }
+
         self.unit = (decodedUnit?.isEmpty == false ? decodedUnit! : "serving")
         self.description = (decodedDescription?.isEmpty == false ? decodedDescription! : self.unit)
         self.id = UUID()
@@ -249,14 +258,14 @@ struct MealItem: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case name
         case serving
-        case servingUnit = "serving_unit"
+        case servingUnit  // With .convertFromSnakeCase, decoder auto-converts "serving_unit" -> "servingUnit"
         case calories
         case protein
         case carbs
         case fat
         case subitems
         case measures
-        case originalServing = "original_serving"
+        case originalServing  // With .convertFromSnakeCase, decoder auto-converts "original_serving" -> "originalServing"
     }
 
     init(name: String,
@@ -667,13 +676,14 @@ struct LoggedFoodItem: Codable {
     let nutritionScore: Double?
     var mealItems: [MealItem]?
     
+    // With .convertFromSnakeCase decoder, do NOT use explicit snake_case mappings
     enum CodingKeys: String, CodingKey {
         case foodLogId, fdcId, displayName, calories, servingSizeText, numberOfServings, brandText, protein, carbs, fat
-        case healthAnalysis = "health_analysis"
+        case healthAnalysis  // .convertFromSnakeCase: "health_analysis" -> "healthAnalysis"
         case foodNutrients
-        case aiInsight = "ai_insight"
-        case nutritionScore = "nutrition_score"
-        case mealItems = "meal_items"
+        case aiInsight       // .convertFromSnakeCase: "ai_insight" -> "aiInsight"
+        case nutritionScore  // .convertFromSnakeCase: "nutrition_score" -> "nutritionScore"
+        case mealItems       // .convertFromSnakeCase: "meal_items" -> "mealItems"
     }
 
     init(

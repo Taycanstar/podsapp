@@ -2953,6 +2953,9 @@ struct PlateView: View {
     @State private var showConfirmFood = false
     @State private var showMealTimePicker = false
     @State private var nutrientTargets: [String: NutrientTargetDetails] = NutritionGoalsStore.shared.currentTargets
+    @State private var pendingMealFood: Food?
+    @State private var pendingMealItems: [MealItem] = []
+    @State private var showMealPlateSummary = false
     private var totalMacros: MacroTotals { viewModel.totalMacros }
     private var plateNutrients: [String: RawNutrientValue] { viewModel.totalNutrients }
     private var plateBackground: Color {
@@ -3045,11 +3048,50 @@ struct PlateView: View {
             .edgesIgnoringSafeArea(.all)
         }
         .sheet(isPresented: $showDescribeLog) {
-            FoodLogAgentView(isPresented: $showDescribeLog) { food in
-                pendingFood = food
-                showConfirmFood = true
-            }
+            FoodLogAgentView(
+                isPresented: $showDescribeLog,
+                onFoodReady: { food in
+                    pendingFood = food
+                    showConfirmFood = true
+                },
+                onMealItemsReady: { food, items in
+                    pendingMealFood = food
+                    pendingMealItems = items
+                    showMealPlateSummary = true
+                }
+            )
             .environmentObject(foodManager)
+        }
+        .sheet(isPresented: $showMealPlateSummary) {
+            if let food = pendingMealFood {
+                NavigationStack {
+                    MealPlateSummaryView(
+                        foods: [food],
+                        mealItems: pendingMealItems,
+                        onLogMeal: { foods in
+                            // Log all foods to the plate
+                            for f in foods {
+                                let entry = buildPlateEntry(from: f)
+                                viewModel.add(entry)
+                            }
+                            showMealPlateSummary = false
+                            pendingMealFood = nil
+                            pendingMealItems = []
+                        },
+                        onAddToPlate: { foods in
+                            // Add all foods to the plate without logging
+                            for f in foods {
+                                let entry = buildPlateEntry(from: f)
+                                viewModel.add(entry)
+                            }
+                            showMealPlateSummary = false
+                            pendingMealFood = nil
+                            pendingMealItems = []
+                        }
+                    )
+                    .environmentObject(dayLogsVM)
+                }
+            }
         }
         .sheet(isPresented: $showQuickAdd) {
             QuickAddView(
@@ -3700,6 +3742,29 @@ struct PlateView: View {
                 Capsule()
                     .fill(plateChipColor)
             )
+    }
+
+    private func buildPlateEntry(from food: Food) -> PlateEntry {
+        let baseGramWeight = food.servingSize ?? 100
+        let baseMacros = MacroTotals(
+            calories: food.calories ?? 0,
+            protein: food.protein ?? 0,
+            carbs: food.carbs ?? 0,
+            fat: food.fat ?? 0
+        )
+        return PlateEntry(
+            food: food,
+            servings: 1.0,
+            selectedMeasureId: nil,
+            availableMeasures: food.foodMeasures,
+            baselineGramWeight: baseGramWeight,
+            baseNutrientValues: [:],
+            baseMacroTotals: baseMacros,
+            servingDescription: food.servingSizeText,
+            mealItems: food.mealItems ?? [],
+            mealPeriod: selectedMealPeriod,
+            mealTime: mealTime
+        )
     }
 }
 

@@ -375,6 +375,34 @@ class NetworkManagerTwo {
         }()
     }
 
+    // MARK: - Vital Metric History
+
+    struct VitalHistoryDataPoint: Codable {
+        let date: String
+        let value: Double?
+
+        var dateValue: Date? {
+            VitalHistoryDataPoint.dateFormatter.date(from: date)
+        }
+
+        private static let dateFormatter: DateFormatter = {
+            let formatter = DateFormatter()
+            formatter.calendar = Calendar(identifier: .iso8601)
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            formatter.dateFormat = "yyyy-MM-dd"
+            return formatter
+        }()
+    }
+
+    struct VitalHistoryResponse: Codable {
+        let metric: String
+        let days: [VitalHistoryDataPoint]
+        let count: Int
+        let average: Double?
+        let min: Double?
+        let max: Double?
+    }
+
     struct ExpenditureState: Codable {
         let tdeeEstimate: Double?
         let stateVariance: Double?
@@ -1148,6 +1176,63 @@ class NetworkManagerTwo {
                 let snapshot = try decoder.decode(HealthMetricsSnapshot.self, from: data)
                 DispatchQueue.main.async { completion(.success(snapshot)) }
             } catch {
+                DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
+            }
+        }.resume()
+    }
+
+    // MARK: - Vital Metric History
+
+    func fetchVitalMetricHistory(
+        userEmail: String,
+        metric: String,
+        days: Int,
+        completion: @escaping (Result<VitalHistoryResponse, Error>) -> Void
+    ) {
+        guard var components = URLComponents(string: "\(baseUrl)/health-metrics/history/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+        components.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "metric", value: metric),
+            URLQueryItem(name: "days", value: "\(days)")
+        ]
+        guard let url = components.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            guard let http = response as? HTTPURLResponse else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+            guard (200 ... 299).contains(http.statusCode) else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.requestFailed(statusCode: http.statusCode))) }
+                return
+            }
+            guard let data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let history = try decoder.decode(VitalHistoryResponse.self, from: data)
+                DispatchQueue.main.async { completion(.success(history)) }
+            } catch {
+                print("[NetworkManagerTwo] Vital history decode error: \(error)")
                 DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
             }
         }.resume()

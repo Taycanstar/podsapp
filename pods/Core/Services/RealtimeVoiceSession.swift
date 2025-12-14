@@ -557,6 +557,7 @@ enum RealtimeError: LocalizedError {
 
 private extension RealtimeVoiceSession {
     func handleToolCall(callId: String, name: String, arguments: String) async {
+        print("🎤 [TOOL CALL] name=\(name) arguments=\(arguments)")
         guard name == "log_food" else { return }
         guard let data = arguments.data(using: .utf8),
               let args = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -564,6 +565,7 @@ private extension RealtimeVoiceSession {
             sendToolResult(callId: callId, resultJSON: ["status": "error", "error": "Invalid arguments"])
             return
         }
+        print("🎤 [TOOL CALL] Received query from voice AI: '\(query)'")
         let nixItemId = args["nix_item_id"] as? String
         let selectionLabel = args["selection_label"] as? String
 

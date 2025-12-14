@@ -1099,10 +1099,12 @@ private extension NewHomeView {
     @ViewBuilder
     private var dashboardHeaderCards: some View {
         VStack(spacing: 16) {
-            healthMetricsCard
-                .padding(.top, 10)
+            // HIDDEN FOR MVP: Oura scores card (readiness, sleep, activity, stress)
+            // healthMetricsCard
+            //     .padding(.top, 10)
 
             nutritionSummaryCard
+                .padding(.top, 10)
 
             if foodMgr.foodScanningState.isActive {
                 ModernFoodLoadingCard(state: foodMgr.foodScanningState)
@@ -1329,34 +1331,39 @@ private extension NewHomeView {
 
             workoutHighlightsCarousel
 
-            bodyCompositionSection
-                .padding(.top, 15)
+            // HIDDEN FOR MVP: Body composition section
+            // bodyCompositionSection
+            //     .padding(.top, 15)
 
             if shouldShowHealthMetricsSection {
                 healthMetricsSection
                     .padding(.top, 15)
             }
 
-            ConsistencySection(
-                weightData: vm.weightConsistency,
-                foodData: vm.foodConsistency,
-                onShowAll: {}
-            )
-            .padding(.top, 20)
+            // HIDDEN FOR MVP: Consistency section
+            // ConsistencySection(
+            //     weightData: vm.weightConsistency,
+            //     foodData: vm.foodConsistency,
+            //     onShowAll: {}
+            // )
+            // .padding(.top, 20)
 
-            if !analyticsCardModels.isEmpty {
-                AnalyticsInsightsSection(
-                    cards: analyticsCardModels,
-                    onShowAll: {}
-                )
-                .padding(.top, 20)
-            }
+            // HIDDEN FOR MVP: Analytics & Insights section
+            // if !analyticsCardModels.isEmpty {
+            //     AnalyticsInsightsSection(
+            //         cards: analyticsCardModels,
+            //         onShowAll: {}
+            //     )
+            //     .padding(.top, 20)
+            // }
 
             if hasDailyEssentials {
                 DailyEssentialsSection(
+                    weight: weightMetric,
+                    sleep: sleepMetric,
                     steps: stepsMetric,
                     water: waterMetric,
-                    onSeeAll: {},
+                    onLogWeight: { showingWeightLogSheet = true },
                     onLogWater: { showWaterLogSheet = true }
                 )
                 .padding(.top, 20)
@@ -1447,7 +1454,27 @@ private extension NewHomeView {
     }
 
     private var hasDailyEssentials: Bool {
-        stepsMetric != nil || waterMetric != nil
+        // Always show the grid - it now contains weight, sleep, steps, water
+        true
+    }
+
+    private var weightMetric: DailyWeightMetric? {
+        let entries = weightTrendEntries
+        let fallbackValue = vm.weight > 0 ? convertWeightToDisplayUnit(vm.weight) : nil
+        let currentValue = entries.last?.value ?? fallbackValue
+        guard let weight = currentValue else { return nil }
+        let lastEntryText = formattedLastEntryText(from: entries)
+        return DailyWeightMetric(value: weight, unit: weightUnit, entries: entries, lastEntryDescription: lastEntryText)
+    }
+
+    private var sleepMetric: DailySleepMetric? {
+        guard let raw = vm.healthMetricsSnapshot?.rawMetrics else { return nil }
+        if let totalMinutes = raw.totalSleepMinutes, totalMinutes > 0 {
+            let hours = Int(totalMinutes) / 60
+            let mins = Int(totalMinutes) % 60
+            return DailySleepMetric(hours: hours, minutes: mins)
+        }
+        return nil
     }
 
     private var stepsMetric: DailyStepsMetric? {
@@ -1746,7 +1773,7 @@ private extension NewHomeView {
         var body: some View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Daily Intake")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.title3.weight(.semibold))
                     .foregroundColor(.primary)
 
                 HStack(alignment: .center) {
@@ -1864,7 +1891,7 @@ private extension NewHomeView {
         var body: some View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Today's Workout")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.title3.weight(.semibold))
                     .foregroundColor(.primary)
 
                 if workout != nil {
@@ -1955,7 +1982,7 @@ private extension NewHomeView {
         var body: some View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Muscle Recovery")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.title3.weight(.semibold))
                     .foregroundColor(.primary)
 
                 if recoveryData.isEmpty {
@@ -2035,7 +2062,7 @@ private struct RecoveryRingView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("Strength Balance")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.title3.weight(.semibold))
                         .foregroundColor(.primary)
                     Spacer()
                     Text("This Week")
@@ -2043,7 +2070,10 @@ private struct RecoveryRingView: View {
                         .foregroundColor(.secondary)
                 }
 
-                if let metrics {
+                // Always show rings, even with no data (shows empty rings)
+                let displayMetrics = metrics ?? MuscleRecoveryService.StrengthBalanceMetrics(pushSets: 0, pullSets: 0, legsSets: 0, goalSets: 10)
+                if true {
+                    let metrics = displayMetrics
                     HStack(alignment: .top, spacing: 0) {
                         StrengthBalanceRingsView(metrics: metrics)
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -2265,7 +2295,7 @@ private struct RecoveryRingView: View {
         var body: some View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Weekly Intake")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.title3.weight(.semibold))
                     .foregroundColor(.primary)
                     .padding(.bottom, 2)
 
@@ -2462,7 +2492,7 @@ private struct RecoveryRingView: View {
         private var header: some View {
             HStack {
                 Text("Energy Balance")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.title3.weight(.semibold))
                     .padding(.bottom, 2)
                 Spacer()
                 SegmentedPicker(selection: $period)
@@ -4161,10 +4191,56 @@ private struct DailyWaterMetric {
     }()
 }
 
+private struct DailyWeightMetric {
+    let value: Double
+    let unit: String
+    let entries: [BodyCompositionEntry]
+    let lastEntryDescription: String?
+
+    var formattedValue: String {
+        String(format: "%.1f", value)
+    }
+
+    var values: [Double] {
+        entries.map(\.value)
+    }
+
+    var delta: Double? {
+        guard entries.count >= 2 else { return nil }
+        return entries.last!.value - entries.first!.value
+    }
+
+    var trendText: String {
+        guard let delta else { return entries.isEmpty ? "No data" : "Stable" }
+        let threshold = 0.05
+        if abs(delta) < threshold { return "Stable" }
+        let symbol = delta > 0 ? "↑" : "↓"
+        let formatted = String(format: "%.1f", abs(delta))
+        return "\(symbol) \(formatted) \(unit)"
+    }
+}
+
+private struct DailySleepMetric {
+    let hours: Int
+    let minutes: Int
+
+    var formattedValue: String {
+        if hours > 0 && minutes > 0 {
+            return "\(hours)h \(minutes)m"
+        } else if hours > 0 {
+            return "\(hours)h"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+}
+
     private struct DailyEssentialsSection: View {
+        let weight: DailyWeightMetric?
+        let sleep: DailySleepMetric?
         let steps: DailyStepsMetric?
         let water: DailyWaterMetric?
-        var onSeeAll: () -> Void
+        var onLogWeight: () -> Void
         var onLogWater: () -> Void
 
     private let columns = [
@@ -4173,27 +4249,24 @@ private struct DailyWaterMetric {
     ]
 
     var body: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Text("Daily Essentials")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.primary)
-                Spacer()
-                Button(action: onSeeAll) {
-                    Text("See All")
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(.accentColor)
-                }
+        // 2x2 grid: Row 1 = Weight, Sleep | Row 2 = Steps, Water
+        // No section header
+        LazyVGrid(columns: columns, spacing: 12) {
+            // Row 1
+            DailyWeightCard(metric: weight, onLogWeight: onLogWeight)
+            DailySleepCard(metric: sleep)
+
+            // Row 2
+            if let steps {
+                DailyStepsCard(metric: steps)
+            } else {
+                DailyStepsCard(metric: DailyStepsMetric(current: 0, goal: 10000))
             }
 
-            LazyVGrid(columns: columns, spacing: 16) {
-                if let steps {
-                    DailyStepsCard(metric: steps)
-                }
-
-                if let water {
-                    DailyWaterCard(metric: water, onLogWater: onLogWater)
-                }
+            if let water {
+                DailyWaterCard(metric: water, onLogWater: onLogWater)
+            } else {
+                DailyWaterCard(metric: DailyWaterMetric(current: 0, goal: 64, unit: "oz"), onLogWater: onLogWater)
             }
         }
     }
@@ -4328,6 +4401,134 @@ private struct DailyWaterCard: View {
             }
         }
     }
+
+private struct DailyWeightCard: View {
+    let metric: DailyWeightMetric?
+    let onLogWeight: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Header with title, last entry description, and chevron
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("Weight")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    if let lastEntry = metric?.lastEntryDescription {
+                        Text(lastEntry)
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Color(.systemGray3))
+                }
+            }
+            .padding(.bottom, 14)
+
+            // Subtitle placeholder (hidden to maintain layout consistency)
+            Text("placeholder")
+                .font(.system(size: 13))
+                .foregroundColor(.clear)
+                .hidden()
+
+            // Sparkline
+            BodyCompositionSparkline(values: metric?.values ?? [], lineColor: .indigo)
+                .frame(height: 20)
+
+            // Value and trend/add button
+            HStack(alignment: .lastTextBaseline) {
+                if let metric {
+                    HStack(alignment: .lastTextBaseline, spacing: 0) {
+                        Text(metric.formattedValue)
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+
+                        Text(metric.unit)
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    Text("--")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                if metric?.entries.isEmpty ?? true {
+                    Button(action: onLogWeight) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(.indigo)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Add weight log")
+                } else {
+                    Text(metric?.trendText ?? "No data")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.top, 2)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color("sheetcard"), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+    }
+}
+
+private struct DailySleepCard: View {
+    let metric: DailySleepMetric?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cardHeader(title: "Sleep")
+
+            Text("Last Night")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+                .padding(.bottom, 12)
+
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                if let metric {
+                    Text(metric.formattedValue)
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .foregroundColor(.primary)
+                } else {
+                    Text("--")
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color("sheetcard"))
+        )
+    }
+
+    private func cardHeader(title: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundColor(.primary)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.secondary)
+        }
+    }
+}
 
 private struct BodyCompositionTrendCard: View {
     let model: BodyCompositionCardModel

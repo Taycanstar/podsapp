@@ -47,8 +47,9 @@ struct GenerateFoodResponse: Decodable {
     var needsClarification: Bool { status == "needs_clarification" }
     
     private enum CodingKeys: String, CodingKey {
-        case status, question, parsedContext, food, foods, dataSource, options, error
-        case mealItems = "meal_items"
+        case status, question, parsedContext, food, foods, mealItems, dataSource, options, error
+        // Note: With .convertFromSnakeCase decoder, do NOT use explicit snake_case mappings
+        // The decoder auto-converts "meal_items" -> "mealItems", so just use `case mealItems`
     }
     
     init(from decoder: Decoder) throws {
@@ -7732,12 +7733,32 @@ class NetworkManager {
                 let decoder = JSONDecoder()
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
                 let responseObject = try decoder.decode(GenerateFoodResponse.self, from: data)
-                
+
+                // Debug: Log mealItems decoding result
+                print("🔴 [DECODE DEBUG] response.mealItems: \(responseObject.mealItems?.count ?? -1)")
+                print("🔴 [DECODE DEBUG] response.food: \(responseObject.food?.displayName ?? "nil")")
+                print("🔴 [DECODE DEBUG] response.food.mealItems: \(responseObject.food?.mealItems?.count ?? -1)")
+
                 DispatchQueue.main.async {
                     completion(.success(responseObject))
                 }
             } catch {
-                print("Decoding Error: \(error)")
+                print("❌ Decoding Error: \(error)")
+                // Print more details about the decoding failure
+                if let decodingError = error as? DecodingError {
+                    switch decodingError {
+                    case .typeMismatch(let type, let context):
+                        print("❌ Type mismatch: expected \(type), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                    case .valueNotFound(let type, let context):
+                        print("❌ Value not found: \(type), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                    case .keyNotFound(let key, let context):
+                        print("❌ Key not found: \(key.stringValue), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                    case .dataCorrupted(let context):
+                        print("❌ Data corrupted: \(context.debugDescription)")
+                    @unknown default:
+                        print("❌ Unknown decoding error")
+                    }
+                }
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
