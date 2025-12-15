@@ -4375,19 +4375,17 @@ private struct DailyStepsCard: View {
             }
             .padding(.bottom, 10)
 
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.primary.opacity(0.08))
-                        .frame(height: 6)
-
-                    Capsule()
-                        .fill(LinearGradient(colors: [Color.green, Color.green.opacity(0.85)], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: max(0, min(metric.progress, 1)) * proxy.size.width, height: 6)
+            // Progress bar without GeometryReader
+            Capsule()
+                .fill(Color.primary.opacity(0.08))
+                .frame(height: 6)
+                .overlay(alignment: .leading) {
+                    GeometryReader { proxy in
+                        Capsule()
+                            .fill(LinearGradient(colors: [Color.green, Color.green.opacity(0.85)], startPoint: .leading, endPoint: .trailing))
+                            .frame(width: max(0, min(metric.progress, 1)) * proxy.size.width)
+                    }
                 }
-            }
-            .frame(height: 6)
-            Spacer()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, dailyEssentialVerticalPadding)
@@ -4396,7 +4394,6 @@ private struct DailyStepsCard: View {
                 .fill(Color("sheetcard"))
         )
         .frame(maxWidth: .infinity)
-        .frame(height: dailyEssentialCardHeight)
     }
 
     private func cardHeader(title: String) -> some View {
@@ -4448,21 +4445,17 @@ private struct DailyWaterCard: View {
         }
         .padding(.bottom, 10)
 
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.primary.opacity(0.08))
-                            .frame(height: 6)
-
-                        Capsule()
-                            .fill(
-                                LinearGradient(colors: [Color.cyan, Color.cyan.opacity(0.7)], startPoint: .leading, endPoint: .trailing)
-                            )
-                            .frame(width: max(0, min(metric.progress, 1)) * proxy.size.width, height: 6)
+                // Progress bar without GeometryReader
+                Capsule()
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(height: 6)
+                    .overlay(alignment: .leading) {
+                        GeometryReader { proxy in
+                            Capsule()
+                                .fill(LinearGradient(colors: [Color.cyan, Color.cyan.opacity(0.7)], startPoint: .leading, endPoint: .trailing))
+                                .frame(width: max(0, min(metric.progress, 1)) * proxy.size.width)
+                        }
                     }
-                }
-                .frame(height: 6)
-                Spacer()
             }
             .padding(.horizontal, 16)
             .padding(.vertical, dailyEssentialVerticalPadding)
@@ -4471,7 +4464,6 @@ private struct DailyWaterCard: View {
                     .fill(Color("sheetcard"))
             )
         .frame(maxWidth: .infinity)
-        .frame(height: dailyEssentialCardHeight)
     }
 
         private func cardHeader(title: String) -> some View {
@@ -4502,10 +4494,6 @@ private struct DailyWeightCard: View {
                 .padding(.top, 4)
                 .padding(.bottom, 10)
 
-            BodyCompositionSparkline(values: metric?.values ?? [], lineColor: .indigo)
-                .frame(height: 6)
-                .padding(.bottom, 10)
-
             // Value and add button row
             HStack(alignment: .center, spacing: 12) {
                 if let metric {
@@ -4533,7 +4521,11 @@ private struct DailyWeightCard: View {
                 }
                 .buttonStyle(.plain)
             }
-            Spacer()
+            .padding(.bottom, 10)
+
+            // Sparkline at bottom to match other cards' progress bar position
+            BodyCompositionSparkline(values: metric?.values ?? [], lineColor: .indigo)
+                .frame(height: 6)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, dailyEssentialVerticalPadding)
@@ -4542,7 +4534,6 @@ private struct DailyWeightCard: View {
                 .fill(Color("sheetcard"))
         )
         .frame(maxWidth: .infinity)
-        .frame(height: dailyEssentialCardHeight)
     }
 
     private func cardHeader(title: String) -> some View {
@@ -4590,7 +4581,6 @@ private struct DailySleepCard: View {
             Rectangle()
                 .fill(Color.primary.opacity(0.08))
                 .frame(height: 6)
-            Spacer()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, dailyEssentialVerticalPadding)
@@ -4599,7 +4589,6 @@ private struct DailySleepCard: View {
                 .fill(Color("sheetcard"))
         )
         .frame(maxWidth: .infinity)
-        .frame(height: dailyEssentialCardHeight)
     }
 
     private func cardHeader(title: String) -> some View {

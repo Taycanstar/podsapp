@@ -12,6 +12,7 @@ struct MultiFoodLogView: View {
     let mealItems: [MealItem]
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var foodManager: FoodManager
     @EnvironmentObject private var onboardingViewModel: OnboardingViewModel
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
@@ -19,6 +20,16 @@ struct MultiFoodLogView: View {
     @State private var selectedMeal: MealPeriod = .lunch
     @State private var mealTime: Date = Date()
     @State private var isLogging = false
+
+    private var plateBackground: Color {
+        colorScheme == .dark ? Color("bg") : Color(UIColor.systemGroupedBackground)
+    }
+    private var cardColor: Color {
+        colorScheme == .dark ? Color(UIColor.systemGroupedBackground) : Color("bg")
+    }
+    private var chipColor: Color {
+        colorScheme == .dark ? Color(.tertiarySystemFill) : Color(.secondarySystemFill)
+    }
 
     private var displayFoods: [Food] {
         if foods.count > 1 {
@@ -75,59 +86,63 @@ struct MultiFoodLogView: View {
         }
     }
 
+    private var displayItems: [MultiMealItemDisplay] {
+        displayFoods.map { food in
+            MultiMealItemDisplay(
+                id: "\(food.fdcId ?? food.hashValue)",
+                name: food.displayName,
+                brand: food.brandText,
+                servingText: food.householdServingFullText ?? food.servingSizeText ?? food.servingSizeUnit,
+                calories: food.calories ?? 0,
+                protein: food.protein ?? 0,
+                carbs: food.carbs ?? 0,
+                fat: food.fat ?? 0
+            )
+        }
+    }
+
+    private var totalMacros: (calories: Double, protein: Double, carbs: Double, fat: Double) {
+        displayItems.reduce((0, 0, 0, 0)) { acc, item in
+            (acc.0 + item.calories, acc.1 + item.protein, acc.2 + item.carbs, acc.3 + item.fat)
+        }
+    }
+
+    private var macroArcs: [MacroArc] {
+        let proteinCalories = totalMacros.protein * 4
+        let carbCalories = totalMacros.carbs * 4
+        let fatCalories = totalMacros.fat * 9
+        let total = max(proteinCalories + carbCalories + fatCalories, 1)
+        let segments = [
+            (Color("protein"), proteinCalories / total),
+            (Color("fat"), fatCalories / total),
+            (Color("carbs"), carbCalories / total)
+        ]
+        var start: Double = 0
+        return segments.map { seg in
+            let arc = MacroArc(start: start, end: start + seg.1, color: seg.0)
+            start += seg.1
+            return arc
+        }
+    }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                mealHeader
-                List(displayFoods) { food in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(food.displayName)
-                            .font(.headline)
-                        if let brand = food.brandText, !brand.isEmpty {
-                            Text(brand)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        HStack(spacing: 12) {
-                            if let calories = food.calories {
-                                Label("\(Int(calories)) cal", systemImage: "flame.fill")
-                                    .font(.caption)
-                            }
-                            if let protein = food.protein {
-                                Text("\(Int(protein))g protein")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            if let carbs = food.carbs {
-                                Text("\(Int(carbs))g carbs")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            if let fat = food.fat {
-                                Text("\(Int(fat))g fat")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+            VStack(spacing: 0) {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 20) {
+                        mealItemsSection
+                        macroSummaryCard
+                        mealTimeSelector
+                        macroChipsSection
                     }
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 24)
                 }
-                .listStyle(.plain)
 
-                Button(action: logAllFoods) {
-                    Text(isLogging ? "Logging..." : "Log Meal")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(RoundedRectangle(cornerRadius: 14).fill(Color.accentColor))
-                        .foregroundColor(.white)
-                }
-                .disabled(isLogging || displayFoods.isEmpty)
-                .opacity(isLogging || displayFoods.isEmpty ? 0.6 : 1)
-                .padding(.horizontal)
-                .padding(.bottom, 12)
+                footerBar
             }
+            .background(plateBackground.ignoresSafeArea())
             .navigationTitle("Review Meal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -141,27 +156,152 @@ struct MultiFoodLogView: View {
         }
     }
 
-    private var mealHeader: some View {
-        HStack(spacing: 12) {
-            Menu {
-                ForEach(MealPeriod.allCases) { period in
-                    Button(period.title) { selectedMeal = period }
+    private var mealItemsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Meal Items")
+                .font(.title3)
+                .fontWeight(.semibold)
+            VStack(spacing: 12) {
+                ForEach(displayItems) { item in
+                    MultiMealItemRow(item: item, cardColor: cardColor, chipColor: chipColor)
                 }
-            } label: {
-                HStack {
-                    Text(selectedMeal.title)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption2)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Capsule().fill(Color(.secondarySystemFill)))
             }
-
-            DatePicker("", selection: $mealTime, displayedComponents: [.date, .hourAndMinute])
-                .labelsHidden()
         }
-        .padding(.horizontal)
+    }
+
+    private var macroSummaryCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Summary")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            HStack(alignment: .center, spacing: 16) {
+                MacroRingView(calories: totalMacros.calories, arcs: macroArcs)
+                    .frame(width: 120, height: 120)
+                VStack(alignment: .leading, spacing: 8) {
+                    macroLine(label: "Calories", value: totalMacros.calories, unit: "kcal")
+                    macroLine(label: "Protein", value: totalMacros.protein, unit: "g", color: Color("protein"))
+                    macroLine(label: "Carbs", value: totalMacros.carbs, unit: "g", color: Color("carbs"))
+                    macroLine(label: "Fat", value: totalMacros.fat, unit: "g", color: Color("fat"))
+                }
+                Spacer()
+            }
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 18).fill(cardColor))
+        }
+    }
+
+    private func macroLine(label: String, value: Double, unit: String, color: Color = .primary) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text("\(Int(value.rounded())) \(unit)")
+                .font(.subheadline)
+                .foregroundColor(color)
+        }
+    }
+
+    private var macroChipsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Macros")
+                .font(.title3)
+                .fontWeight(.semibold)
+            HStack(spacing: 12) {
+                macroChip(title: "Protein", value: totalMacros.protein, unit: "g", color: Color("protein"))
+                macroChip(title: "Carbs", value: totalMacros.carbs, unit: "g", color: Color("carbs"))
+                macroChip(title: "Fat", value: totalMacros.fat, unit: "g", color: Color("fat"))
+            }
+        }
+    }
+
+    private func macroChip(title: String, value: Double, unit: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            HStack(spacing: 4) {
+                Text("\(Int(value.rounded()))")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Text(unit)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .background(RoundedRectangle(cornerRadius: 16).fill(cardColor))
+    }
+
+    private var mealTimeSelector: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Meal & Time")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            HStack(spacing: 12) {
+                Menu {
+                    ForEach(MealPeriod.allCases) { period in
+                        Button(period.title) { selectedMeal = period }
+                    }
+                } label: {
+                    HStack {
+                        Text(selectedMeal.title)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(chipColor))
+                }
+
+                DatePicker("", selection: $mealTime, displayedComponents: [.date, .hourAndMinute])
+                    .labelsHidden()
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .background(RoundedRectangle(cornerRadius: 18).fill(cardColor))
+        }
+    }
+
+    private var footerBar: some View {
+        VStack(spacing: 12) {
+            Divider().padding(.horizontal, -16)
+            HStack(spacing: 12) {
+                Button(action: logAllFoods) {
+                    Text(isLogging ? "Logging..." : "Log Meal")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(RoundedRectangle(cornerRadius: 14).fill(Color.accentColor))
+                        .foregroundColor(.white)
+                }
+                .disabled(isLogging || displayFoods.isEmpty)
+                .opacity(isLogging || displayFoods.isEmpty ? 0.6 : 1)
+
+                Button(action: { dismiss() }) {
+                    Text("Add to Plate")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.accentColor, lineWidth: 1.5)
+                        )
+                        .foregroundColor(Color.accentColor)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 18)
+        .background(plateBackground.ignoresSafeArea(edges: .bottom))
     }
 
     private func logAllFoods() {
@@ -215,4 +355,112 @@ struct MultiFoodLogView: View {
             }
         }
     }
+}
+
+// MARK: - Supporting UI
+
+private struct MultiMealItemDisplay: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let brand: String?
+    let servingText: String?
+    let calories: Double
+    let protein: Double
+    let carbs: Double
+    let fat: Double
+}
+
+private struct MultiMealItemRow: View {
+    let item: MultiMealItemDisplay
+    let cardColor: Color
+    let chipColor: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.name.isEmpty ? "Meal Item" : item.name)
+                        .font(.system(size: 15))
+                        .fontWeight(.regular)
+                        .foregroundColor(.primary)
+                    if let brand = item.brand, !brand.isEmpty {
+                        Text(brand)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer(minLength: 12)
+
+                if let serving = item.servingText, !serving.isEmpty {
+                    Text(serving)
+                        .font(.system(size: 15))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule().fill(chipColor)
+                        )
+                        .fixedSize()
+                }
+            }
+
+            HStack(spacing: 10) {
+                Label("\(Int(item.calories.rounded()))cal", systemImage: "flame.fill")
+                    .font(.caption)
+                    .foregroundColor(.primary)
+                Text(macroLine)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(cardColor)
+        )
+    }
+
+    private var macroLine: String {
+        let protein = Int(item.protein.rounded())
+        let carbs = Int(item.carbs.rounded())
+        let fat = Int(item.fat.rounded())
+        return "P \(protein)g C \(carbs)g F \(fat)g"
+    }
+}
+
+private struct MacroRingView: View {
+    let calories: Double
+    let arcs: [MacroArc]
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.08), lineWidth: 8)
+
+            ForEach(arcs.indices, id: \.self) { idx in
+                let arc = arcs[idx]
+                Circle()
+                    .trim(from: CGFloat(arc.start), to: CGFloat(arc.end))
+                    .stroke(arc.color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+
+            VStack(spacing: -4) {
+                Text(String(format: "%.0f", calories))
+                    .font(.system(size: 20, weight: .medium))
+                Text("cals")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
+private struct MacroArc {
+    let start: Double
+    let end: Double
+    let color: Color
 }

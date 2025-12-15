@@ -317,7 +317,7 @@ struct FoodScannerView: View {
             }
             .sheet(isPresented: $showPhotosPicker) {
                 PhotosPickerView(selectedImages: $selectedImages,
-                                 selectionLimit: proFeatureGate.hasActiveSubscription() ? 0 : 1)
+                                 selectionLimit: 0)
                     .ignoresSafeArea()
             }
             .sheet(isPresented: Binding(
@@ -551,7 +551,7 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
                 foodManager.updateFoodScanningState(.processing)
                 let embeddedItems = agentResult.foods.first?.mealItems ?? []
                 let resolvedMealItems = !agentResult.mealItems.isEmpty ? agentResult.mealItems : embeddedItems
-                if !resolvedMealItems.isEmpty || agentResult.foods.count > 1 {
+                if resolvedMealItems.count > 1 || agentResult.foods.count > 1 {
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowMultiFoodLog"),
                         object: nil,
@@ -635,7 +635,7 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
                 foodManager.updateFoodScanningState(.processing)
                 let embeddedItems = agentResult.foods.first?.mealItems ?? []
                 let resolvedMealItems = !agentResult.mealItems.isEmpty ? agentResult.mealItems : embeddedItems
-                if !resolvedMealItems.isEmpty || agentResult.foods.count > 1 {
+                if resolvedMealItems.count > 1 || agentResult.foods.count > 1 {
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowMultiFoodLog"),
                         object: nil,
@@ -824,13 +824,7 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
     }
 
     private func processSelectedImages(_ images: [UIImage]) {
-        guard let email = currentUserEmail else { return }
-        let isPro = proFeatureGate.hasActiveSubscription()
-        if images.count > 1 && !isPro {
-            proFeatureGate.requirePro(for: .bulkLogging, userEmail: email) {}
-            selectedImages.removeAll()
-            return
-        }
+        guard currentUserEmail != nil else { return }
 
         selectedImages.removeAll()
         selectedMode = .food
