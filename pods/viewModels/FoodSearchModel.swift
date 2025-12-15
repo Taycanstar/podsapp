@@ -1061,13 +1061,31 @@ struct CoachMessage: Codable, Equatable {
     let acknowledgement: String
     let uncertainty: String
     let nextAction: String
+    // Additional context for edit-to-chat seeding
+    let scanMode: String?
+    let todayTotals: CoachTodayTotals?
+    let calorieTarget: Int?
 
     enum CodingKeys: String, CodingKey {
         case foodLogId = "food_log_id"
         case acknowledgement
         case uncertainty
         case nextAction = "next_action"
+        case scanMode = "scan_mode"
+        case todayTotals = "today_totals"
+        case calorieTarget = "calorie_target"
     }
+
+    /// Composed full text of the coach message
+    var fullText: String {
+        "\(acknowledgement) \(nextAction)"
+    }
+}
+
+/// Today's totals context from coach message
+struct CoachTodayTotals: Codable, Equatable {
+    let calories: Double
+    let protein: Double
 }
 
 // MARK: - Activity Data Structures

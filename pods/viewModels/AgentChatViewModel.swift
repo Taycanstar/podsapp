@@ -194,4 +194,24 @@ final class AgentChatViewModel: ObservableObject {
             .map { "\($0.sender == .user ? "You" : "Humuli"): \($0.text)" }
             .joined(separator: "\n")
     }
+
+    /// Seeds a new conversation with a coach message (for edit-to-chat flow)
+    /// - Parameters:
+    ///   - coachMessage: The coach message to seed as the first assistant message
+    ///   - hiddenContext: Optional hidden context to include in the system prompt
+    func seedFromCoachMessage(_ coachMessage: CoachMessage) {
+        resetConversation()
+        hasBootstrapped = true  // Skip bootstrap since we're seeding
+
+        // Add the coach message as the first agent message
+        let agentMessage = AgentChatMessage(
+            sender: .agent,
+            text: coachMessage.fullText,
+            timestamp: Date()
+        )
+        messages.append(agentMessage)
+
+        // Refresh context for subsequent messages
+        refreshContext()
+    }
 }

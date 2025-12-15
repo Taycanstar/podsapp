@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 struct AppTimelineView: View {
     @Environment(\.dismiss) private var dismiss
@@ -16,6 +17,11 @@ struct AppTimelineView: View {
     @State private var selectedDate: Date = Date()
     @State private var showDatePicker = false
     @State private var scrollToBottom = false
+    @State private var showAgentChat = false
+    @State private var pendingCoachMessage: CoachMessage?
+    @StateObject private var agentChatViewModel = AgentChatViewModel(
+        userEmail: UserDefaults.standard.string(forKey: "userEmail") ?? ""
+    )
 
     private let dateFormatter: DateFormatter = {
         let df = DateFormatter()
@@ -66,7 +72,10 @@ struct AppTimelineView: View {
                                                 log: log,
                                                 selectedDate: selectedDate,
                                                 coachMessage: coachMessageForLog(log, at: index),
-                                                isThinking: isThinkingForLog(log, at: index)
+                                                isThinking: isThinkingForLog(log, at: index),
+                                                onCoachEditTap: { coachMessage in
+                                                    openAgentChatWithCoachMessage(coachMessage)
+                                                }
                                             )
                                         }
                                     }
@@ -155,6 +164,16 @@ struct AppTimelineView: View {
         .onChange(of: selectedDate) { _, newValue in
             dayLogsVM.loadLogs(for: newValue, force: true)
         }
+        .fullScreenCover(isPresented: $showAgentChat) {
+            AgentChatView(viewModel: agentChatViewModel)
+                .environmentObject(dayLogsVM)
+        }
+    }
+
+    /// Opens AgentChatView with the coach message seeded as the first assistant message
+    private func openAgentChatWithCoachMessage(_ coachMessage: CoachMessage) {
+        agentChatViewModel.seedFromCoachMessage(coachMessage)
+        showAgentChat = true
     }
 
     private var filteredLogs: [CombinedLog] {
@@ -326,6 +345,7 @@ private struct TimelineLogRow: View {
     let selectedDate: Date
     var coachMessage: CoachMessage? = nil
     var isThinking: Bool = false  // Show thinking indicator while coach message is generating
+    var onCoachEditTap: ((CoachMessage) -> Void)?
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -372,7 +392,7 @@ private struct TimelineLogRow: View {
                     if isThinking {
                         CoachThinkingIndicator()
                     } else if let coach = coachMessage {
-                        CoachMessageText(message: coach)
+                        CoachMessageText(message: coach, onEditTap: onCoachEditTap)
                     }
                 }
             }
@@ -642,32 +662,87 @@ private struct TLActivityLogDetails: View {
 
 private struct CoachMessageText: View {
     let message: CoachMessage
+    var onEditTap: ((CoachMessage) -> Void)?
 
     @State private var displayedText: String = ""
     @State private var isAnimating: Bool = false
+    @State private var streamingComplete: Bool = false
+    @State private var isSpeaking: Bool = false
+    @State private var speechSynth = AVSpeechSynthesizer()
 
     private var fullText: String {
-        "\(message.acknowledgement) \(message.nextAction)"
+        message.fullText
     }
 
     var body: some View {
-        Text(displayedText)
-            .font(.system(size: 15))
-            .foregroundColor(.primary)
-            .fixedSize(horizontal: false, vertical: true)
-            .onAppear {
-                startStreamingAnimation()
+        VStack(alignment: .leading, spacing: 8) {
+            Text(displayedText)
+                .font(.system(size: 15))
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // Action icons - show after streaming completes
+            if streamingComplete {
+                HStack(spacing: 16) {
+                    // Copy button
+                    Button {
+                        UIPasteboard.general.string = fullText
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
+
+                    // Speaker button
+                    Button {
+                        if isSpeaking {
+                            speechSynth.stopSpeaking(at: .immediate)
+                            isSpeaking = false
+                        } else {
+                            let utterance = AVSpeechUtterance(string: fullText)
+                            utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+                            utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+                            speechSynth.speak(utterance)
+                            isSpeaking = true
+                        }
+                    } label: {
+                        Image(systemName: isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
+
+                    // Edit/Chat button
+                    Button {
+                        onEditTap?(message)
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer()
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            .onChange(of: message.foodLogId) { _, _ in
-                // Reset and restart animation if message changes
-                displayedText = ""
-                startStreamingAnimation()
-            }
+        }
+        .onAppear {
+            startStreamingAnimation()
+        }
+        .onChange(of: message.foodLogId) { _, _ in
+            // Reset and restart animation if message changes
+            displayedText = ""
+            streamingComplete = false
+            startStreamingAnimation()
+        }
     }
 
     private func startStreamingAnimation() {
         guard !isAnimating else { return }
         isAnimating = true
+        streamingComplete = false
         displayedText = ""
 
         let characters = Array(fullText)
@@ -681,6 +756,9 @@ private struct CoachMessageText: View {
             } else {
                 timer.invalidate()
                 isAnimating = false
+                withAnimation(.easeIn(duration: 0.3)) {
+                    streamingComplete = true
+                }
             }
         }
     }
