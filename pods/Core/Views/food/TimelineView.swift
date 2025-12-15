@@ -64,19 +64,10 @@ struct AppTimelineView: View {
                                         ForEach(Array(filteredLogs.enumerated()), id: \.element.id) { index, log in
                                             TimelineLogRow(
                                                 log: log,
-                                                selectedDate: selectedDate
+                                                selectedDate: selectedDate,
+                                                coachMessage: coachMessageForLog(log, at: index),
+                                                isThinking: isThinkingForLog(log, at: index)
                                             )
-
-                                            // Show coach strip after the first (most recent) food log if it matches
-                                            if index == 0,
-                                               log.type == .food,
-                                               let coachMessage = foodManager.lastCoachMessage,
-                                               coachMessage.foodLogId == log.foodLogId {
-                                                HStack(alignment: .top, spacing: 12) {
-                                                    TimelineConnectorSpacer()
-                                                    CoachMessageStrip(message: coachMessage)
-                                                }
-                                            }
                                         }
                                     }
 
@@ -170,7 +161,7 @@ struct AppTimelineView: View {
         let calendar = Calendar.current
         return dayLogsVM.logs
             .filter { calendar.isDate(logDate(for: $0), inSameDayAs: selectedDate) }
-            .sorted { logDate(for: $0) > logDate(for: $1) }
+            .sorted { logDate(for: $0) < logDate(for: $1) }  // Oldest first, newest at bottom
     }
 
     private func logDate(for log: CombinedLog) -> Date {
@@ -181,6 +172,32 @@ struct AppTimelineView: View {
             return parsed
         }
         return selectedDate
+    }
+
+    /// Returns the coach message if this is the last (newest) food log and it matches
+    private func coachMessageForLog(_ log: CombinedLog, at index: Int) -> CoachMessage? {
+        // Only show for the last food log in the list (newest, since sorted oldest-first)
+        let isLastLog = index == filteredLogs.count - 1
+        guard isLastLog,
+              log.type == .food,
+              let coachMessage = foodManager.lastCoachMessage,
+              coachMessage.foodLogId == log.foodLogId else {
+            return nil
+        }
+        return coachMessage
+    }
+
+    /// Returns true if the thinking indicator should show for this log
+    /// Shows when: it's the last food log, coach message is being generated, and no coach message yet
+    private func isThinkingForLog(_ log: CombinedLog, at index: Int) -> Bool {
+        let isLastLog = index == filteredLogs.count - 1
+        guard isLastLog, log.type == .food else { return false }
+
+        // Show thinking if scanning is active and we don't have a coach message for this log yet
+        let isScanningActive = foodManager.foodScanningState.isActive
+        let hasCoachMessage = coachMessageForLog(log, at: index) != nil
+
+        return isScanningActive && !hasCoachMessage
     }
 }
 
@@ -309,6 +326,8 @@ private struct TimelineEmptyQuickActionsRow: View {
 private struct TimelineLogRow: View {
     let log: CombinedLog
     let selectedDate: Date
+    var coachMessage: CoachMessage? = nil
+    var isThinking: Bool = false  // Show thinking indicator while coach message is generating
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -348,7 +367,16 @@ private struct TimelineLogRow: View {
             // Bottom: Spacer + Card
             HStack(alignment: .top, spacing: 12) {
                 TimelineConnectorSpacer()
-                TimelineLogCard(log: log)
+                VStack(alignment: .leading, spacing: 8) {
+                    TimelineLogCard(log: log)
+
+                    // Show thinking indicator while coach is generating, otherwise show coach message
+                    if isThinking {
+                        CoachThinkingIndicator()
+                    } else if let coach = coachMessage {
+                        CoachMessageText(message: coach)
+                    }
+                }
             }
         }
     }
@@ -612,46 +640,89 @@ private struct TLActivityLogDetails: View {
     }
 }
 
-// MARK: - Coach Message Strip (AI coaching after food log)
+// MARK: - Coach Message Text (simple text display for AI coaching)
 
-private struct CoachMessageStrip: View {
+private struct CoachMessageText: View {
     let message: CoachMessage
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Line 1: Acknowledgement + Uncertainty
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 14))
-                    .foregroundColor(.green)
-                Text(message.acknowledgement)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.primary)
-                Text("(\(message.uncertainty))")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-            }
-            .lineLimit(1)
+        Text("\(message.acknowledgement) \(message.nextAction)")
+            .font(.system(size: 13))
+            .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
 
-            // Line 2: Next Action
-            HStack(spacing: 6) {
-                Text("Next:")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.accentColor)
-                Text(message.nextAction)
-                    .font(.system(size: 13))
-                    .foregroundColor(.primary)
-            }
-            .lineLimit(2)
+// MARK: - Coach Thinking Indicator (shimmer + rotating text while generating)
+
+private struct CoachThinkingIndicator: View {
+    @State private var phraseIndex: Int = 0
+    @State private var shimmerOffset: CGFloat = -100
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let phrases = ["Analyzing...", "Thinking...", "Finishing up..."]
+    private let timer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        HStack(spacing: 8) {
+            pulsingCircle
+            shimmerText(phrases[phraseIndex])
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color("containerbg"))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.accentColor.opacity(0.3), lineWidth: 1)
-        )
+        .onReceive(timer) { _ in
+            withAnimation(.easeInOut(duration: 0.3)) {
+                phraseIndex = (phraseIndex + 1) % phrases.count
+            }
+        }
+        .onAppear {
+            startShimmerAnimation()
+        }
+    }
+
+    private var pulsingCircle: some View {
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let normalized = (sin(t * 2 * .pi / 1.5) + 1) / 2
+            Circle()
+                .fill(Color.secondary)
+                .frame(width: 6, height: 6)
+                .scaleEffect(0.85 + 0.25 * normalized)
+                .opacity(0.6 + 0.4 * normalized)
+        }
+    }
+
+    private func shimmerText(_ text: String) -> some View {
+        let shimmerColor = colorScheme == .dark ? Color.white.opacity(0.3) : Color.white.opacity(0.6)
+
+        return Text(text)
+            .font(.system(size: 13))
+            .foregroundColor(.secondary)
+            .overlay(
+                LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: shimmerColor, location: 0.5),
+                        .init(color: .clear, location: 1)
+                    ]),
+                    startPoint: .init(x: -0.3 + shimmerOffset / 100, y: 0),
+                    endPoint: .init(x: 0.3 + shimmerOffset / 100, y: 0)
+                )
+                .blendMode(.overlay)
+            )
+            .mask(
+                Text(text)
+                    .font(.system(size: 13))
+            )
+    }
+
+    private func startShimmerAnimation() {
+        guard !reduceMotion else { return }
+        shimmerOffset = -100
+        withAnimation(
+            .linear(duration: 1.5)
+            .repeatForever(autoreverses: false)
+        ) {
+            shimmerOffset = 100
+        }
     }
 }
