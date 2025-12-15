@@ -549,7 +549,8 @@ class FoodManager: ObservableObject {
     @Published var recentlyAddedFoodIds: Set<Int> = []
     @Published var lastLoggedMealId: Int? = nil
     @Published var lastLoggedRecipeId: Int? = nil
-    
+    @Published var lastCoachMessage: CoachMessage? = nil  // AI coach message for most recent food log
+
     // Add properties for user-created foods
     @Published var userFoods: [Food] = []
     @Published var isLoadingUserFoods = false
@@ -864,9 +865,10 @@ class FoodManager: ObservableObject {
         image: UIImage,
         userEmail: String,
         mealType: String = "Lunch",
-        shouldLog: Bool = true
+        shouldLog: Bool = true,
+        scanMode: String? = nil
     ) async throws -> CombinedLog {
-        print("🆕 Starting MODERN food image analysis with proper session flow")
+        print("🆕 Starting MODERN food image analysis with proper session flow, scanMode=\(scanMode ?? "nil")")
         
         // Set image scanning flag and store image
         isImageScanning = true
@@ -898,7 +900,8 @@ class FoodManager: ObservableObject {
                 userEmail: userEmail,
                 mealType: mealType,
                 shouldLog: shouldLog,
-                logDate: dateString
+                logDate: dateString,
+                scanMode: scanMode
             ) { [weak self] success, payload, errMsg in
                 guard let self = self else {
                     continuation.resume(throwing: FoodScanError.userCancelled)
@@ -952,11 +955,29 @@ class FoodManager: ObservableObject {
     ) throws -> CombinedLog {
         let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
         let decoder = JSONDecoder()
-        
+
+        // Parse coach message if present (only for shouldLog=true responses)
+        if shouldLog, let coachDict = payload["coach"] as? [String: Any] {
+            do {
+                let coachData = try JSONSerialization.data(withJSONObject: coachDict)
+                let coachMessage = try decoder.decode(CoachMessage.self, from: coachData)
+                self.lastCoachMessage = coachMessage
+                print("🎯 [COACH] Parsed coach message: \(coachMessage.acknowledgement)")
+            } catch {
+                print("⚠️ [COACH] Failed to parse coach message: \(error)")
+                self.lastCoachMessage = nil
+            }
+        } else {
+            // Clear coach message for preview/non-log responses
+            if shouldLog {
+                self.lastCoachMessage = nil
+            }
+        }
+
         if shouldLog {
             // When shouldLog=true, backend returns LoggedFood with foodLogId
             let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
-            
+
             return CombinedLog(
                 type: .food,
                 status: loggedFood.status,
@@ -1657,6 +1678,12 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
             switch result {
             case .success(let loggedFood):
                 print("✅ Successfully logged food with foodLogId: \(loggedFood.foodLogId)")
+
+                // Store coach message if present
+                if let coachMessage = loggedFood.coach {
+                    self.lastCoachMessage = coachMessage
+                    print("🎯 [COACH] Received coach message: \(coachMessage.acknowledgement)")
+                }
 
                 // Mixpanel tracking removed - now handled by backend
 

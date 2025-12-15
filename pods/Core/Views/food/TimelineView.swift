@@ -11,6 +11,7 @@ struct AppTimelineView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
+    @EnvironmentObject var foodManager: FoodManager
 
     @State private var selectedDate: Date = Date()
     @State private var showDatePicker = false
@@ -60,11 +61,22 @@ struct AppTimelineView: View {
                                             .foregroundColor(.secondary)
                                             .padding(.top, 20)
                                     } else {
-                                        ForEach(filteredLogs) { log in
+                                        ForEach(Array(filteredLogs.enumerated()), id: \.element.id) { index, log in
                                             TimelineLogRow(
                                                 log: log,
                                                 selectedDate: selectedDate
                                             )
+
+                                            // Show coach strip after the first (most recent) food log if it matches
+                                            if index == 0,
+                                               log.type == .food,
+                                               let coachMessage = foodManager.lastCoachMessage,
+                                               coachMessage.foodLogId == log.foodLogId {
+                                                HStack(alignment: .top, spacing: 12) {
+                                                    TimelineConnectorSpacer()
+                                                    CoachMessageStrip(message: coachMessage)
+                                                }
+                                            }
                                         }
                                     }
 
@@ -597,5 +609,49 @@ private struct TLActivityLogDetails: View {
                 .foregroundColor(.secondary)
             Text(text)
         }
+    }
+}
+
+// MARK: - Coach Message Strip (AI coaching after food log)
+
+private struct CoachMessageStrip: View {
+    let message: CoachMessage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Line 1: Acknowledgement + Uncertainty
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.green)
+                Text(message.acknowledgement)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
+                Text("(\(message.uncertainty))")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            .lineLimit(1)
+
+            // Line 2: Next Action
+            HStack(spacing: 6) {
+                Text("Next:")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.accentColor)
+                Text(message.nextAction)
+                    .font(.system(size: 13))
+                    .foregroundColor(.primary)
+            }
+            .lineLimit(2)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color("containerbg"))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.accentColor.opacity(0.3), lineWidth: 1)
+        )
     }
 }

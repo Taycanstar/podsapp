@@ -8387,22 +8387,22 @@ class NetworkManager {
     }
     
     // Function to analyze food image
-    func analyzeFoodImage(image: UIImage, userEmail: String, mealType: String = "Lunch", shouldLog: Bool = true, logDate: String? = nil, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
+    func analyzeFoodImage(image: UIImage, userEmail: String, mealType: String = "Lunch", shouldLog: Bool = true, logDate: String? = nil, scanMode: String? = nil, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
         // Configure the URL
         guard let url = URL(string: "\(baseUrl)/analyze_food_image/") else {
             completion(false, nil, "Invalid URL")
             return
         }
-        
+
         // Compress the image to reduce upload size (quality: 0.7 is a good balance)
         guard let imageData = image.jpegData(compressionQuality: 0.7) else {
             completion(false, nil, "Failed to compress image")
             return
         }
-        
+
         // Convert image data to Base64 string
         let base64Image = imageData.base64EncodedString()
-        
+
         // Create request body
         let tzOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
         var parameters: [String: Any] = [
@@ -8413,8 +8413,9 @@ class NetworkManager {
             "timezone_offset_minutes": tzOffsetMinutes
         ]
         if let logDate = logDate { parameters["date"] = logDate }
-        
-        print("🔍 DEBUG NetworkManager.analyzeFoodImage: Sending should_log = \(shouldLog)")
+        if let scanMode = scanMode { parameters["scan_mode"] = scanMode }
+
+        print("🔍 DEBUG NetworkManager.analyzeFoodImage: Sending should_log = \(shouldLog), scan_mode = \(scanMode ?? "nil")")
         
         // Configure the request
         var request = URLRequest(url: url)

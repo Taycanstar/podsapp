@@ -51,9 +51,39 @@ struct FoodScannerView: View {
     @State private var galleryImportPreviewEnabled: Bool = false
     @State private var multiFoods: [Food] = []
     @State private var multiMealItems: [MealItem] = []
-    
+    @State private var selectedFoodMode: FoodScanMode = .auto
+
     enum ScanMode {
         case food, nutritionLabel, barcode, gallery
+    }
+
+    /// Mode for photo/gallery food scanning - affects AI coach message tone
+    enum FoodScanMode: String, CaseIterable {
+        case auto = "auto"
+        case restaurant = "restaurant"
+        case homeCooked = "home_cooked"
+        case alcohol = "alcohol"
+        case travel = "travel"
+
+        var displayName: String {
+            switch self {
+            case .auto: return "Auto"
+            case .restaurant: return "Restaurant"
+            case .homeCooked: return "Home-cooked"
+            case .alcohol: return "Alcohol"
+            case .travel: return "Travel"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .auto: return "wand.and.stars"
+            case .restaurant: return "fork.knife"
+            case .homeCooked: return "house"
+            case .alcohol: return "wineglass"
+            case .travel: return "airplane"
+            }
+        }
     }
     
     var body: some View {
@@ -174,34 +204,64 @@ struct FoodScannerView: View {
                 // UI Overlay
                 VStack {
                     // Top controls
-                    HStack {
-                        // Close button
-                        Button(action: {
-                            isPresented = false
-                        }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(12)
-                                .background(Color.black.opacity(0.6))
-                                .clipShape(Circle())
+                    HStack(alignment: .top) {
+                        // Left cluster: Close button + Flashlight (stacked vertically)
+                        VStack(spacing: 12) {
+                            // Close button
+                            Button(action: {
+                                isPresented = false
+                            }) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(12)
+                                    .background(Color.black.opacity(0.6))
+                                    .clipShape(Circle())
+                            }
+
+                            // Flash toggle button (moved under X)
+                            Button(action: {
+                                toggleFlash()
+                            }) {
+                                Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(12)
+                                    .background(Color.black.opacity(0.6))
+                                    .clipShape(Circle())
+                            }
                         }
                         .padding(.leading)
 
                         Spacer()
 
-                        // Flash toggle button
-                        Button(action: {
-                            toggleFlash()
-                        }) {
-                            Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
-                                .font(.system(size: 20, weight: .semibold))
+                        // Right: Mode selector dropdown (only for .food and .gallery modes)
+                        if selectedMode == .food || selectedMode == .gallery {
+                            Menu {
+                                ForEach(FoodScanMode.allCases, id: \.self) { mode in
+                                    Button {
+                                        selectedFoodMode = mode
+                                    } label: {
+                                        Label(mode.displayName, systemImage: mode.icon)
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: selectedFoodMode.icon)
+                                        .font(.system(size: 14, weight: .medium))
+                                    Text(selectedFoodMode.displayName)
+                                        .font(.system(size: 14, weight: .medium))
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 10, weight: .semibold))
+                                }
                                 .foregroundColor(.white)
-                                .padding(12)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
                                 .background(Color.black.opacity(0.6))
-                                .clipShape(Circle())
+                                .clipShape(Capsule())
+                            }
+                            .padding(.trailing)
                         }
-                        .padding(.trailing)
                     }
                     .padding(.top, 50)
                     
@@ -579,7 +639,8 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
                 image: image,
                 userEmail: userEmail,
                 mealType: selectedMeal,
-                shouldLog: false
+                shouldLog: false,
+                scanMode: selectedFoodMode.rawValue
             )
             if let food = combinedLog.food?.asFood {
                 NotificationCenter.default.post(
@@ -664,7 +725,8 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
                 image: image,
                 userEmail: userEmail,
                 mealType: selectedMeal,
-                shouldLog: true
+                shouldLog: true,
+                scanMode: selectedFoodMode.rawValue
             )
             dayLogsVM.addPending(combinedLog)
             if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {

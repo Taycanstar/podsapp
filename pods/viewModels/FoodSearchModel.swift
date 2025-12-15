@@ -728,6 +728,7 @@ struct LoggedFood: Codable, Identifiable {
     let message: String
     let food: LoggedFoodItem  // Changed from Food to LoggedFoodItem
     let mealType: String      // Changed from 'meal' to 'mealType'
+    var coach: CoachMessage?  // AI coach message (optional)
 
     var id: Int { foodLogId }
 
@@ -740,6 +741,7 @@ struct LoggedFood: Codable, Identifiable {
         case food
         case mealType
         case meal_type
+        case coach
     }
 
     init(from decoder: Decoder) throws {
@@ -766,16 +768,20 @@ struct LoggedFood: Codable, Identifiable {
         } else {
             throw DecodingError.keyNotFound(CodingKeys.mealType, .init(codingPath: decoder.codingPath, debugDescription: "mealType/meal_type not found"))
         }
+
+        // Parse coach message (optional)
+        coach = try container.decodeIfPresent(CoachMessage.self, forKey: .coach)
     }
 
     // Explicit memberwise initializer to support manual construction in fallbacks
-    init(status: String, foodLogId: Int, calories: Double, message: String, food: LoggedFoodItem, mealType: String) {
+    init(status: String, foodLogId: Int, calories: Double, message: String, food: LoggedFoodItem, mealType: String, coach: CoachMessage? = nil) {
         self.status = status
         self.foodLogId = foodLogId
         self.calories = calories
         self.message = message
         self.food = food
         self.mealType = mealType
+        self.coach = coach
     }
 
     // Custom encoder so caching works (encode as camelCase)
@@ -787,6 +793,7 @@ struct LoggedFood: Codable, Identifiable {
         try container.encode(message, forKey: .message)
         try container.encode(food, forKey: .food)
         try container.encode(mealType, forKey: .mealType)
+        try container.encodeIfPresent(coach, forKey: .coach)
     }
 }
 
@@ -1046,6 +1053,21 @@ enum LogType: String, Codable {
     case recipe
     case activity
     case workout
+}
+
+// MARK: - Coach Message (AI-generated coaching after food log)
+struct CoachMessage: Codable, Equatable {
+    let foodLogId: Int
+    let acknowledgement: String
+    let uncertainty: String
+    let nextAction: String
+
+    enum CodingKeys: String, CodingKey {
+        case foodLogId = "food_log_id"
+        case acknowledgement
+        case uncertainty
+        case nextAction = "next_action"
+    }
 }
 
 // MARK: - Activity Data Structures

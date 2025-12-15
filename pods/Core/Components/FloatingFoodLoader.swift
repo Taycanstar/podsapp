@@ -16,6 +16,7 @@
 //  Displays above AgentTabBar with shimmer effects on logo, text, and progress bar
 
 import SwiftUI
+import UIKit
 
 struct FloatingFoodLoader: View {
     let state: FoodScanningState
@@ -99,10 +100,10 @@ struct FloatingFoodLoader: View {
     }
 
     private var liquidGlassBackground: some View {
-        RoundedRectangle(cornerRadius: 20, style: .continuous)
+        Capsule()
             .fill(.ultraThinMaterial)
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                Capsule()
                     .fill(
                         LinearGradient(
                             colors: [
@@ -115,7 +116,7 @@ struct FloatingFoodLoader: View {
                     )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                Capsule()
                     .stroke(
                         LinearGradient(
                             colors: [
