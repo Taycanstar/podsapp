@@ -1184,29 +1184,9 @@ struct LogWorkoutView: View {
     }
 
     private func guardWorkoutQuota(onAllowed: @escaping () -> Void) {
-        if proFeatureGate.hasActiveSubscription() {
-            WorkoutDataManager.shared.clearRateLimitCooldown(trigger: "pro_user_start")
-            onAllowed()
-            return
-        }
-        if proFeatureGate.isCheckingAccess {
-            return
-        }
-        guard let email = resolvedUserEmail(), !email.isEmpty else {
-            onAllowed()
-            return
-        }
-        ensureUserDefaultsEmail(email)
-        proFeatureGate.blockedFeature = .workouts
-        proFeatureGate.checkAccess(for: .workouts,
-                                   userEmail: email,
-                                   increment: false,
-                                   onAllowed: {
-                                       onAllowed()
-                                   },
-                                   onBlocked: {
-                                       HapticFeedback.generate()
-                                   })
+        // Paywall active - all users have full access
+        WorkoutDataManager.shared.clearRateLimitCooldown(trigger: "paywall_active")
+        onAllowed()
     }
 
     private func handleStartTodayWorkout(_ workout: TodayWorkout, onSuccess: (() -> Void)? = nil) {

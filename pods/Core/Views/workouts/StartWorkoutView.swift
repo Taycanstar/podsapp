@@ -279,19 +279,9 @@ struct StartWorkoutView: View {
     
     private func startWorkout() {
         guard !isWorkoutStarted else { return }
-        guard let email = currentUserEmail else {
-            beginWorkoutSession()
-            return
-        }
-        ensureUserDefaultsEmail(email)
-        proFeatureGate.checkAccess(for: .workouts,
-                                   userEmail: email,
-                                   onAllowed: {
-                                       WorkoutDataManager.shared.clearRateLimitCooldown(trigger: "pro_user_start")
-                                       Task { await proFeatureGate.refreshUsageSummary(for: email) }
-                                       beginWorkoutSession()
-                                   },
-                                   onBlocked: nil)
+        // Paywall active - all users have full access
+        WorkoutDataManager.shared.clearRateLimitCooldown(trigger: "paywall_active")
+        beginWorkoutSession()
     }
 
     private func ensureUserDefaultsEmail(_ email: String) {

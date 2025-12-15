@@ -457,7 +457,7 @@ private var remainingCal: Double { vm.remainingCalories }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        showDatePicker = true
+                        showTimelineSheet = true
                     } label: {
                         Image(systemName: "newspaper")
                             .font(.system(size: 16, weight: .medium))
@@ -587,7 +587,8 @@ private var remainingCal: Double { vm.remainingCalories }
         }
         .background(
             NavigationLink(
-                destination: TimelineFullSheetView(events: timelineEvents, selectedDate: vm.selectedDate),
+                destination: AppTimelineView()
+                    .environmentObject(vm),
                 isActive: $showTimelineSheet
             ) {
                 EmptyView()

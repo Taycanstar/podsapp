@@ -44,28 +44,8 @@ final class ProFeatureGate: ObservableObject {
                      increment: Bool = true,
                      onAllowed: @escaping () -> Void,
                      onBlocked: (() -> Void)? = nil) {
-        isCheckingAccess = true
-        networkManager.checkFeatureAccess(featureKey: feature.apiKey,
-                                          increment: increment,
-                                          userEmail: userEmail) { [weak self] result in
-            guard let self else { return }
-            Task { @MainActor in
-                self.isCheckingAccess = false
-                switch result {
-                case .success(let response):
-                    if response.allowed {
-                        onAllowed()
-                    } else {
-                        self.blockedFeature = feature
-                        self.showUpgradeSheet = true
-                        onBlocked?()
-                        await self.refreshUsageSummary(for: userEmail)
-                    }
-                case .failure:
-                    break
-                }
-            }
-        }
+        // Paywall active - all users have full access
+        onAllowed()
     }
     
     func requirePro(for feature: ProFeature,

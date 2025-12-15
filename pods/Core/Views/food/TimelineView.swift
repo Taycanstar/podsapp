@@ -38,11 +38,14 @@ struct AppTimelineView: View {
 
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 0) {
                 if dayLogsVM.isLoading && filteredLogs.isEmpty {
+                    Spacer()
                     ProgressView("Loading timeline...")
                         .padding()
+                    Spacer()
                 } else if filteredLogs.isEmpty {
+                    Spacer()
                     VStack(spacing: 12) {
                         Image(systemName: "clock.arrow.circlepath")
                             .font(.system(size: 40, weight: .medium))
@@ -55,19 +58,34 @@ struct AppTimelineView: View {
                             .multilineTextAlignment(.center)
                     }
                     .padding()
+                    Spacer()
                 } else {
-                    List {
-                        Section {
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            // Quick action buttons
+                            HStack(spacing: 12) {
+                                quickActionChip(title: "Add Activity", systemImage: "flame.fill")
+                                quickActionChip(title: "Scan Meal", systemImage: "fork.knife")
+                            }
+                            .padding(.top, 12)
+
                             ForEach(filteredLogs) { log in
                                 TimelineLogRow(
                                     log: log,
                                     time: timeString(for: log),
                                     accentColor: accentColor(for: log.type)
                                 )
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                        .fill(Color("containerbg"))
+                                )
                             }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 20)
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle(dateFormatter.string(from: selectedDate))
@@ -82,8 +100,8 @@ struct AppTimelineView: View {
                 }
             }
             .sheet(isPresented: $showDatePicker) {
-                NavigationStack {
-                    VStack {
+                NavigationView {
+                    VStack(spacing: 0) {
                         DatePicker(
                             "Select Date",
                             selection: $selectedDate,
@@ -92,14 +110,31 @@ struct AppTimelineView: View {
                         .datePickerStyle(.graphical)
                         .labelsHidden()
                         .padding()
+
                         Spacer()
-                    }
-                    .navigationTitle("Jump to date")
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Done") { showDatePicker = false }
+
+                        // Today button at bottom
+                        VStack(spacing: 0) {
+                            Divider()
+                            HStack {
+                                Spacer()
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        selectedDate = Date()
+                                    }
+                                } label: {
+                                    Text("Today")
+                                        .font(.system(size: 18, weight: .regular))
+                                        .foregroundColor(.accentColor)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(Color("containerbg"))
                         }
                     }
+                    .navigationTitle("Jump to date")
                 }
                 .presentationDetents([.medium])
             }
@@ -142,6 +177,25 @@ struct AppTimelineView: View {
         case .activity: return .green
         case .workout: return .pink
         }
+    }
+
+    private func quickActionChip(title: String, systemImage: String) -> some View {
+        Button {
+            // TODO: Wire up actions
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 13, weight: .regular))
+                Text(title)
+                    .font(.system(size: 13, weight: .regular))
+            }
+            .foregroundColor(.primary)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color("background"))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -192,7 +246,6 @@ private struct TimelineLogRow: View {
                 }
             }
         }
-        .padding(.vertical, 6)
     }
 
     private func iconName(for type: LogType) -> String {
