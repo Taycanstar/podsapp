@@ -14,6 +14,7 @@ struct AppTimelineView: View {
 
     @State private var selectedDate: Date = Date()
     @State private var showDatePicker = false
+    @State private var scrollToBottom = false
 
     private let dateFormatter: DateFormatter = {
         let df = DateFormatter()
@@ -32,7 +33,9 @@ struct AppTimelineView: View {
     }()
 
     var body: some View {
-        NavigationStack {
+        ZStack {
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+
             VStack(spacing: 0) {
                 if dayLogsVM.isLoading && filteredLogs.isEmpty {
                     Spacer()
@@ -40,46 +43,62 @@ struct AppTimelineView: View {
                         .padding()
                     Spacer()
                 } else {
-                    ScrollView {
-                        ZStack(alignment: .leading) {
-                            TimelineSpineOverlay()
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            ZStack(alignment: .leading) {
+                                TimelineSpineOverlay()
 
-                            VStack(spacing: 20) {
-                                TimelineEmptyQuickActionsRow(
-                                    onAddActivity: { /* TODO: Wire up */ },
-                                    onScanMeal: { /* TODO: Wire up */ }
-                                )
+                                VStack(spacing: 20) {
+                                    TimelineEmptyQuickActionsRow(
+                                        onAddActivity: { /* TODO: Wire up */ },
+                                        onScanMeal: { /* TODO: Wire up */ }
+                                    )
 
-                                if filteredLogs.isEmpty {
-                                    Text("No entries yet")
-                                        .font(.system(size: 15))
-                                        .foregroundColor(.secondary)
-                                        .padding(.top, 20)
-                                } else {
-                                    ForEach(filteredLogs) { log in
-                                        TimelineLogRow(
-                                            log: log,
-                                            selectedDate: selectedDate
-                                        )
+                                    if filteredLogs.isEmpty {
+                                        Text("No entries yet")
+                                            .font(.system(size: 15))
+                                            .foregroundColor(.secondary)
+                                            .padding(.top, 20)
+                                    } else {
+                                        ForEach(filteredLogs) { log in
+                                            TimelineLogRow(
+                                                log: log,
+                                                selectedDate: selectedDate
+                                            )
+                                        }
                                     }
+
+                                    // Anchor for scrolling to bottom
+                                    Color.clear
+                                        .frame(height: 1)
+                                        .id("bottomAnchor")
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 16)
+                        }
+                        .onAppear {
+                            // Scroll to bottom to show most recent log
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                withAnimation {
+                                    proxy.scrollTo("bottomAnchor", anchor: .bottom)
                                 }
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 16)
                     }
                 }
             }
-            .navigationTitle("Timeline")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showDatePicker.toggle() }) {
-                        Image(systemName: "calendar")
-                    }
+        }
+        .navigationTitle("Timeline")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showDatePicker.toggle() }) {
+                    Image(systemName: "calendar")
                 }
             }
-            .sheet(isPresented: $showDatePicker) {
+        }
+        .sheet(isPresented: $showDatePicker) {
                 NavigationView {
                     VStack(spacing: 0) {
                         DatePicker(
@@ -117,14 +136,13 @@ struct AppTimelineView: View {
                     .navigationTitle("Jump to date")
                 }
                 .presentationDetents([.medium])
-            }
-            .onAppear {
-                selectedDate = dayLogsVM.selectedDate
-                dayLogsVM.loadLogs(for: selectedDate, force: true)
-            }
-            .onChange(of: selectedDate) { _, newValue in
-                dayLogsVM.loadLogs(for: newValue, force: true)
-            }
+        }
+        .onAppear {
+            selectedDate = dayLogsVM.selectedDate
+            dayLogsVM.loadLogs(for: selectedDate, force: true)
+        }
+        .onChange(of: selectedDate) { _, newValue in
+            dayLogsVM.loadLogs(for: newValue, force: true)
         }
     }
 
