@@ -546,9 +546,6 @@ private var remainingCal: Double { vm.remainingCalories }
                     vm.requestLogsReloadFromNotification()
                 }
         }
-        .sheet(isPresented: $showTimelineSheet) {
-            TimelineFullSheetView(events: timelineEvents, selectedDate: vm.selectedDate)
-        }
         .sheet(isPresented: $showAddActivitySheet) {
             AddActivityView(
                 recentActivities: recentQuickActivities,
@@ -587,6 +584,18 @@ private var remainingCal: Double { vm.remainingCalories }
             Button("OK", role: .cancel) { }
         } message: {
             Text(foodMgr.scanFailureMessage)
+        }
+        .background(
+            NavigationLink(
+                destination: TimelineFullSheetView(events: timelineEvents, selectedDate: vm.selectedDate),
+                isActive: $showTimelineSheet
+            ) {
+                EmptyView()
+            }
+            .hidden()
+        )
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToTimeline")).receive(on: RunLoop.main)) { _ in
+            showTimelineSheet = true
         }
         .alert(item: $scheduleAlert) { alert in
             switch alert {
@@ -4378,6 +4387,7 @@ private struct DailyStepsCard: View {
                 }
             }
             .frame(height: 6)
+            Spacer()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, dailyEssentialVerticalPadding)
@@ -4452,6 +4462,7 @@ private struct DailyWaterCard: View {
                     }
                 }
                 .frame(height: 6)
+                Spacer()
             }
             .padding(.horizontal, 16)
             .padding(.vertical, dailyEssentialVerticalPadding)
@@ -4522,7 +4533,7 @@ private struct DailyWeightCard: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.bottom, 10)
+            Spacer()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, dailyEssentialVerticalPadding)
@@ -4573,12 +4584,13 @@ private struct DailySleepCard: View {
 
                 Spacer()
             }
+            .padding(.bottom, 10)
 
             // Placeholder bar to align with other cards
             Rectangle()
                 .fill(Color.primary.opacity(0.08))
                 .frame(height: 6)
-                .padding(.top, 10)
+            Spacer()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, dailyEssentialVerticalPadding)

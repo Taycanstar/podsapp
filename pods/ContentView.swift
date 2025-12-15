@@ -65,7 +65,6 @@ struct ContentView: View {
     @State private var showMultiFoodView = false
     @State private var multiFoods: [Food] = []
     @State private var multiMealItems: [MealItem] = []
-    @State private var showTimelineView = false
     
     @State private var shouldNavigateToNewPod = false
     @State private var newPodId: Int?
@@ -258,10 +257,6 @@ struct ContentView: View {
                         .environmentObject(viewModel)
                         .environmentObject(dayLogsVM)
                 }
-                .sheet(isPresented: $showTimelineView) {
-                    AppTimelineView()
-                        .environmentObject(dayLogsVM)
-                }
                 
                 .environment(\.isTabBarVisible, $isTabBarVisible)
             } else {
@@ -405,13 +400,6 @@ struct ContentView: View {
                 }
                 showMultiFoodView = true
             }
-        }
-        .onReceive(
-            NotificationCenter.default
-                .publisher(for: NSNotification.Name("NavigateToTimeline"))
-                .receive(on: RunLoop.main)
-        ) { _ in
-            showTimelineView = true
         }
         .onReceive(
             NotificationCenter.default

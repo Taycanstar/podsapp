@@ -63,7 +63,6 @@ struct MainContentView: View {
     @State private var showMultiFoodView = false
     @State private var multiFoods: [Food] = []
     @State private var multiMealItems: [MealItem] = []
-    @State private var showTimelineView = false
     
     @State private var shouldNavigateToNewPod = false
     @State private var newPodId: Int?
@@ -230,13 +229,6 @@ struct MainContentView: View {
                 }
                 showMultiFoodView = true
             }
-        }
-        .onReceive(
-            NotificationCenter.default
-                .publisher(for: NSNotification.Name("NavigateToTimeline"))
-                .receive(on: RunLoop.main)
-        ) { _ in
-            showTimelineView = true
         }
         .onReceive(
             NotificationCenter.default
@@ -430,10 +422,6 @@ struct MainContentView: View {
             MultiFoodLogView(foods: multiFoods, mealItems: multiMealItems)
                 .environmentObject(foodManager)
                 .environmentObject(viewModel)
-                .environmentObject(dayLogsVM)
-        }
-        .sheet(isPresented: $showTimelineView) {
-            AppTimelineView()
                 .environmentObject(dayLogsVM)
         }
     }

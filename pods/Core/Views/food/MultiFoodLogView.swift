@@ -21,8 +21,33 @@ struct MultiFoodLogView: View {
     @State private var isLogging = false
 
     private var displayFoods: [Food] {
-        if !foods.isEmpty {
+        if foods.count > 1 {
             return foods
+        }
+        if let first = foods.first, let items = first.mealItems, !items.isEmpty {
+            return items.map { item in
+                Food(
+                    fdcId: item.id.hashValue,
+                    description: item.name,
+                    brandOwner: nil,
+                    brandName: nil,
+                    servingSize: item.serving,
+                    numberOfServings: 1,
+                    servingSizeUnit: item.servingUnit,
+                    householdServingFullText: item.originalServing?.resolvedText ?? "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
+                    foodNutrients: [
+                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                    ],
+                    foodMeasures: [],
+                    healthAnalysis: nil,
+                    aiInsight: nil,
+                    nutritionScore: nil,
+                    mealItems: item.subitems
+                )
+            }
         }
         // Convert meal items to lightweight Food objects for display/logging
         return mealItems.map { item in

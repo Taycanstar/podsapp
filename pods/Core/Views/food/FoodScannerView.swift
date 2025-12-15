@@ -549,27 +549,24 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
                 mealType: selectedMeal
             ) {
                 foodManager.updateFoodScanningState(.processing)
-                if agentResult.foods.count > 1 || (!agentResult.mealItems.isEmpty && agentResult.foods.isEmpty) {
+                let embeddedItems = agentResult.foods.first?.mealItems ?? []
+                let resolvedMealItems = !agentResult.mealItems.isEmpty ? agentResult.mealItems : embeddedItems
+                if !resolvedMealItems.isEmpty || agentResult.foods.count > 1 {
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowMultiFoodLog"),
                         object: nil,
                         userInfo: [
                             "foods": agentResult.foods,
-                            "mealItems": agentResult.mealItems
+                            "mealItems": resolvedMealItems
                         ]
                     )
                     return
                 } else if let firstFood = agentResult.foods.first {
-                    var food = firstFood
-                    if !agentResult.mealItems.isEmpty {
-                        food.mealItems = agentResult.mealItems
-                    }
-                    foodManager.updateFoodScanningState(.processing)
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowFoodConfirmation"),
                         object: nil,
                         userInfo: [
-                            "food": food,
+                            "food": firstFood,
                             "foodLogId": NSNull()
                         ]
                     )
@@ -636,27 +633,24 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
                 mealType: selectedMeal
             ) {
                 foodManager.updateFoodScanningState(.processing)
-                if agentResult.foods.count > 1 || (!agentResult.mealItems.isEmpty && agentResult.foods.isEmpty) {
+                let embeddedItems = agentResult.foods.first?.mealItems ?? []
+                let resolvedMealItems = !agentResult.mealItems.isEmpty ? agentResult.mealItems : embeddedItems
+                if !resolvedMealItems.isEmpty || agentResult.foods.count > 1 {
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowMultiFoodLog"),
                         object: nil,
                         userInfo: [
                             "foods": agentResult.foods,
-                            "mealItems": agentResult.mealItems
+                            "mealItems": resolvedMealItems
                         ]
                     )
                     return
                 } else if let firstFood = agentResult.foods.first {
-                    var food = firstFood
-                    if !agentResult.mealItems.isEmpty {
-                        food.mealItems = agentResult.mealItems
-                    }
-                    foodManager.updateFoodScanningState(.processing)
                     NotificationCenter.default.post(
                         name: NSNotification.Name("ShowFoodConfirmation"),
                         object: nil,
                         userInfo: [
-                            "food": food,
+                            "food": firstFood,
                             "foodLogId": NSNull()
                         ]
                     )
