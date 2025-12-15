@@ -1115,12 +1115,6 @@ private extension NewHomeView {
 
             nutritionSummaryCard
                 .padding(.top, 10)
-
-            if foodMgr.foodScanningState.isActive {
-                ModernFoodLoadingCard(state: foodMgr.foodScanningState)
-                    .padding(.top, 4)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
         }
         .padding(.horizontal, 16)
     }
@@ -1234,17 +1228,26 @@ private extension NewHomeView {
 
             toastOverlay
 
-            if isTabBarVisible.wrappedValue {
-                AgentTabBar(
-                    text: $agentText,
-                    isPromptFocused: $isAgentInputFocused,
-                    onPlusTapped: onPlusTapped,
-                    onBarcodeTapped: onBarcodeTapped,
-                    onMicrophoneTapped: onMicrophoneTapped,
-                    onWaveformTapped: onWaveformTapped,
-                    onSubmit: onSubmit
-                )
-                .ignoresSafeArea(edges: [.horizontal])
+            VStack(spacing: 8) {
+                // Floating food loader above AgentTabBar
+                if foodMgr.foodScanningState.isActive {
+                    FloatingFoodLoader(state: foodMgr.foodScanningState)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: foodMgr.foodScanningState.isActive)
+                }
+
+                if isTabBarVisible.wrappedValue {
+                    AgentTabBar(
+                        text: $agentText,
+                        isPromptFocused: $isAgentInputFocused,
+                        onPlusTapped: onPlusTapped,
+                        onBarcodeTapped: onBarcodeTapped,
+                        onMicrophoneTapped: onMicrophoneTapped,
+                        onWaveformTapped: onWaveformTapped,
+                        onSubmit: onSubmit
+                    )
+                    .ignoresSafeArea(edges: [.horizontal])
+                }
             }
         }
     }

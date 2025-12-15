@@ -99,43 +99,51 @@ struct AppTimelineView: View {
             }
         }
         .sheet(isPresented: $showDatePicker) {
-                NavigationView {
+            NavigationView {
+                VStack(spacing: 0) {
+                    // Calendar picker
+                    DatePicker(
+                        "Select a date",
+                        selection: $selectedDate,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.graphical)
+                    .padding()
+
+                    Spacer()
+
+                    // Bottom bar with Today button
                     VStack(spacing: 0) {
-                        DatePicker(
-                            "Select Date",
-                            selection: $selectedDate,
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .labelsHidden()
-                        .padding()
+                        Divider()
 
-                        Spacer()
-
-                        // Today button at bottom
-                        VStack(spacing: 0) {
-                            Divider()
-                            HStack {
-                                Spacer()
-                                Button {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        selectedDate = Date()
-                                    }
-                                } label: {
-                                    Text("Today")
-                                        .font(.system(size: 18, weight: .regular))
-                                        .foregroundColor(.accentColor)
+                        HStack {
+                            Spacer()
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    selectedDate = Date()
                                 }
-                                Spacer()
+                            } label: {
+                                Text("Today")
+                                    .font(.system(size: 18, weight: .regular))
+                                    .foregroundColor(.accentColor)
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(Color("containerbg"))
+                            Spacer()
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Color("containerbg"))
                     }
-                    .navigationTitle("Jump to date")
                 }
-                .presentationDetents([.medium])
+                .navigationTitle("Choose Date")
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showDatePicker = false }
+                    }
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { showDatePicker = false }
+                    }
+                }
+            }
         }
         .onAppear {
             selectedDate = dayLogsVM.selectedDate
@@ -442,8 +450,8 @@ private struct TLFoodLogDetails: View {
     }
 
     private var caloriesValue: Int? {
-        let calories = log.food?.calories ?? log.meal?.calories ?? log.recipe?.calories
-        guard let cal = calories, cal > 0 else { return nil }
+        let cal = log.displayCalories
+        guard cal > 0 else { return nil }
         return Int(cal.rounded())
     }
 

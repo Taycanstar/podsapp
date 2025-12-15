@@ -2313,6 +2313,9 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
         dayLogsVM.addPending(optimisticLog)
         upsertCombinedLog(optimisticLog)
 
+        // Navigate to timeline immediately with optimistic log
+        NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
+
         dismiss()
 
         foodManager.logFood(
@@ -2354,7 +2357,6 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                         foodManager.showLogSuccess = false
                     }
                     self.dayLogsVM.loadLogs(for: self.mealTime, force: true)
-                    NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
                     self.barcodeFoodLogId = logged.foodLogId
                 case .failure:
                     self.dayLogsVM.removeOptimisticLog(identifier: placeholderIdentifier)
@@ -3674,6 +3676,10 @@ struct PlateView: View {
     private func logPlate() {
         guard !viewModel.entries.isEmpty else { return }
         isLoggingPlate = true
+
+        // Navigate to timeline immediately
+        NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
+
         logEntry(at: 0)
     }
 
@@ -3682,7 +3688,6 @@ struct PlateView: View {
             isLoggingPlate = false
             viewModel.clear()
             dayLogsVM.loadLogs(for: mealTime, force: true)
-            NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
             if let onFinished = onFinished {
                 onFinished()
             } else {

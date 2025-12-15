@@ -848,6 +848,10 @@ struct MultiFoodLogView: View {
 
     private func logAllFoods() {
         guard !displayFoods.isEmpty else { return }
+
+        // Navigate to timeline immediately
+        NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
+
         logFood(at: 0)
     }
 
@@ -855,7 +859,6 @@ struct MultiFoodLogView: View {
         if index >= displayFoods.count {
             isLogging = false
             dayLogsVM.loadLogs(for: mealTime, force: true)
-            NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
             dismiss()
             return
         }
