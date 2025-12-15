@@ -193,11 +193,9 @@ struct AppTimelineView: View {
         let isLastLog = index == filteredLogs.count - 1
         guard isLastLog, log.type == .food else { return false }
 
-        // Show thinking if scanning is active and we don't have a coach message for this log yet
-        let isScanningActive = foodManager.foodScanningState.isActive
+        // Show thinking if we're awaiting coach message and don't have one yet
         let hasCoachMessage = coachMessageForLog(log, at: index) != nil
-
-        return isScanningActive && !hasCoachMessage
+        return foodManager.isAwaitingCoachMessage && !hasCoachMessage
     }
 }
 
@@ -640,16 +638,51 @@ private struct TLActivityLogDetails: View {
     }
 }
 
-// MARK: - Coach Message Text (simple text display for AI coaching)
+// MARK: - Coach Message Text (streaming text effect for AI coaching)
 
 private struct CoachMessageText: View {
     let message: CoachMessage
 
+    @State private var displayedText: String = ""
+    @State private var isAnimating: Bool = false
+
+    private var fullText: String {
+        "\(message.acknowledgement) \(message.nextAction)"
+    }
+
     var body: some View {
-        Text("\(message.acknowledgement) \(message.nextAction)")
-            .font(.system(size: 13))
-            .foregroundColor(.secondary)
+        Text(displayedText)
+            .font(.system(size: 15))
+            .foregroundColor(.primary)
             .fixedSize(horizontal: false, vertical: true)
+            .onAppear {
+                startStreamingAnimation()
+            }
+            .onChange(of: message.foodLogId) { _, _ in
+                // Reset and restart animation if message changes
+                displayedText = ""
+                startStreamingAnimation()
+            }
+    }
+
+    private func startStreamingAnimation() {
+        guard !isAnimating else { return }
+        isAnimating = true
+        displayedText = ""
+
+        let characters = Array(fullText)
+        var currentIndex = 0
+
+        // Stream characters at ~30ms intervals for smooth typing effect
+        Timer.scheduledTimer(withTimeInterval: 0.025, repeats: true) { timer in
+            if currentIndex < characters.count {
+                displayedText.append(characters[currentIndex])
+                currentIndex += 1
+            } else {
+                timer.invalidate()
+                isAnimating = false
+            }
+        }
     }
 }
 
@@ -684,7 +717,7 @@ private struct CoachThinkingIndicator: View {
             let t = context.date.timeIntervalSinceReferenceDate
             let normalized = (sin(t * 2 * .pi / 1.5) + 1) / 2
             Circle()
-                .fill(Color.secondary)
+                .fill(Color.primary)
                 .frame(width: 6, height: 6)
                 .scaleEffect(0.85 + 0.25 * normalized)
                 .opacity(0.6 + 0.4 * normalized)
@@ -695,8 +728,8 @@ private struct CoachThinkingIndicator: View {
         let shimmerColor = colorScheme == .dark ? Color.white.opacity(0.3) : Color.white.opacity(0.6)
 
         return Text(text)
-            .font(.system(size: 13))
-            .foregroundColor(.secondary)
+            .font(.system(size: 15))
+            .foregroundColor(.primary)
             .overlay(
                 LinearGradient(
                     gradient: Gradient(stops: [
@@ -711,7 +744,7 @@ private struct CoachThinkingIndicator: View {
             )
             .mask(
                 Text(text)
-                    .font(.system(size: 13))
+                    .font(.system(size: 15))
             )
     }
 

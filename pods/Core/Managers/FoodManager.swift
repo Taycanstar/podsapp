@@ -550,6 +550,8 @@ class FoodManager: ObservableObject {
     @Published var lastLoggedMealId: Int? = nil
     @Published var lastLoggedRecipeId: Int? = nil
     @Published var lastCoachMessage: CoachMessage? = nil  // AI coach message for most recent food log
+    @Published var isAwaitingCoachMessage: Bool = false  // True while waiting for coach response after food log
+    @Published var awaitingCoachForFoodLogId: Int? = nil  // The food log ID we're generating coach message for
 
     // Add properties for user-created foods
     @Published var userFoods: [Food] = []
@@ -1657,12 +1659,16 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
 ) {
     print("⏳ Starting logFood operation...")
     isLoadingFood = true
-    
+
     // First, mark this as the last logged food ID to update UI appearance
     self.lastLoggedFoodId = food.fdcId
-    
+
+    // Start awaiting coach message (will be set with actual foodLogId after response)
+    self.isAwaitingCoachMessage = true
+    self.lastCoachMessage = nil  // Clear previous coach message
+
     // REMOVED: Check for existing logs - no longer needed as we'll wait for server response
-    
+
             networkManager.logFood(
         userEmail: email,
         food: food,
@@ -1679,7 +1685,9 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
             case .success(let loggedFood):
                 print("✅ Successfully logged food with foodLogId: \(loggedFood.foodLogId)")
 
-                // Store coach message if present
+                // Store coach message if present and stop awaiting
+                self.isAwaitingCoachMessage = false
+                self.awaitingCoachForFoodLogId = loggedFood.foodLogId
                 if let coachMessage = loggedFood.coach {
                     self.lastCoachMessage = coachMessage
                     print("🎯 [COACH] Received coach message: \(coachMessage.acknowledgement)")
@@ -1749,7 +1757,8 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
             case .failure(let error):
                 print("❌ Failed to log food: \(error)")
                 self.error = error
-                
+                self.isAwaitingCoachMessage = false  // Stop awaiting on error
+
                 // Clear the lastLoggedFoodId immediately on error
                 withAnimation {
                     // Only clear if it still matches the food we tried to log
@@ -1757,7 +1766,7 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
                         self.lastLoggedFoodId = nil
                     }
                 }
-                
+
                 completion(.failure(error))
             }
         }

@@ -3680,6 +3680,9 @@ struct PlateView: View {
         // Navigate to timeline immediately
         NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
 
+        // Dismiss optimistically - don't wait for API calls
+        dismiss()
+
         logEntry(at: 0)
     }
 
@@ -3688,11 +3691,9 @@ struct PlateView: View {
             isLoggingPlate = false
             viewModel.clear()
             dayLogsVM.loadLogs(for: mealTime, force: true)
-            if let onFinished = onFinished {
-                onFinished()
-            } else {
-                dismiss()
-            }
+            // View already dismissed optimistically in logPlate()
+            // Only call onFinished callback if provided (for cleanup)
+            onFinished?()
             return
         }
 
