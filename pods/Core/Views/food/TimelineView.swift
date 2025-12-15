@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AppTimelineView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
 
     @State private var selectedDate: Date = Date()
@@ -18,12 +19,6 @@ struct AppTimelineView: View {
         let df = DateFormatter()
         df.dateStyle = .medium
         df.timeStyle = .none
-        return df
-    }()
-
-    private let timeFormatter: DateFormatter = {
-        let df = DateFormatter()
-        df.dateFormat = "h:mm a"
         return df
     }()
 
@@ -44,55 +39,40 @@ struct AppTimelineView: View {
                     ProgressView("Loading timeline...")
                         .padding()
                     Spacer()
-                } else if filteredLogs.isEmpty {
-                    Spacer()
-                    VStack(spacing: 12) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 40, weight: .medium))
-                            .foregroundColor(.secondary)
-                        Text("No events for this date")
-                            .font(.headline)
-                        Text("Log a meal, workout, or activity to see it appear here.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding()
-                    Spacer()
                 } else {
                     ScrollView {
-                        VStack(spacing: 12) {
-                            // Quick action buttons
-                            HStack(spacing: 12) {
-                                quickActionChip(title: "Add Activity", systemImage: "flame.fill")
-                                quickActionChip(title: "Scan Meal", systemImage: "fork.knife")
-                            }
-                            .padding(.top, 12)
+                        ZStack(alignment: .leading) {
+                            TimelineSpineOverlay()
 
-                            ForEach(filteredLogs) { log in
-                                TimelineLogRow(
-                                    log: log,
-                                    time: timeString(for: log),
-                                    accentColor: accentColor(for: log.type)
+                            VStack(spacing: 20) {
+                                TimelineEmptyQuickActionsRow(
+                                    onAddActivity: { /* TODO: Wire up */ },
+                                    onScanMeal: { /* TODO: Wire up */ }
                                 )
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                        .fill(Color("containerbg"))
-                                )
+
+                                if filteredLogs.isEmpty {
+                                    Text("No entries yet")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(.secondary)
+                                        .padding(.top, 20)
+                                } else {
+                                    ForEach(filteredLogs) { log in
+                                        TimelineLogRow(
+                                            log: log,
+                                            selectedDate: selectedDate
+                                        )
+                                    }
+                                }
                             }
                         }
                         .padding(.horizontal, 16)
-                        .padding(.bottom, 20)
+                        .padding(.vertical, 16)
                     }
                 }
             }
-            .navigationTitle(dateFormatter.string(from: selectedDate))
+            .navigationTitle("Timeline")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") { dismiss() }
-                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showDatePicker.toggle() }) {
                         Image(systemName: "calendar")
@@ -164,24 +144,102 @@ struct AppTimelineView: View {
         }
         return selectedDate
     }
+}
 
-    private func timeString(for log: CombinedLog) -> String {
-        timeFormatter.string(from: logDate(for: log))
-    }
+// MARK: - Timeline Spine Overlay (copied from NewHomeView)
 
-    private func accentColor(for type: LogType) -> Color {
-        switch type {
-        case .food: return .orange
-        case .meal: return .blue
-        case .recipe: return .purple
-        case .activity: return .green
-        case .workout: return .pink
+private struct TimelineSpineOverlay: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        GeometryReader { geometry in
+            let color = colorScheme == .dark ? Color(.systemGray3) : Color(.systemGray4)
+            ZStack(alignment: .center) {
+                Rectangle()
+                    .fill(color)
+                    .frame(width: 2, height: geometry.size.height)
+                    .position(x: TimelineConnector.iconSize / 2, y: geometry.size.height / 2)
+
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
+                    .position(x: TimelineConnector.iconSize / 2, y: geometry.size.height - 4)
+            }
         }
+        .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Timeline Connector (copied from NewHomeView)
+
+private struct TimelineConnector: View {
+    @Environment(\.colorScheme) private var colorScheme
+    let iconName: String
+    var overrideColor: Color? = nil
+
+    static let iconSize: CGFloat = 34
+
+    var body: some View {
+        let circleColor = overrideColor ?? (colorScheme == .dark ? Color(.systemGray2) : Color.black.opacity(0.9))
+
+        return ZStack {
+            Circle()
+                .fill(circleColor)
+                .frame(width: Self.iconSize, height: Self.iconSize)
+            Image(systemName: iconName)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white)
+        }
+        .frame(width: Self.iconSize, height: Self.iconSize)
+    }
+}
+
+// MARK: - Timeline Connector Spacer (copied from NewHomeView)
+
+private struct TimelineConnectorSpacer: View {
+    var body: some View {
+        Color.clear
+            .frame(width: TimelineConnector.iconSize)
+    }
+}
+
+// MARK: - Quick Actions Row (copied from NewHomeView)
+
+private struct TimelineEmptyQuickActionsRow: View {
+    var onAddActivity: (() -> Void)?
+    var onScanMeal: (() -> Void)?
+
+    private let foregroundColor = Color("text")
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            TimelineConnector(
+                iconName: "plus",
+                overrideColor: plusColor
+            )
+
+            HStack(spacing: 12) {
+                quickActionChip(
+                    title: "Add Activity",
+                    systemImage: "flame.fill",
+                    action: onAddActivity
+                )
+
+                quickActionChip(
+                    title: "Scan Meal",
+                    systemImage: "fork.knife",
+                    action: onScanMeal
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func quickActionChip(title: String, systemImage: String) -> some View {
+    private func quickActionChip(title: String, systemImage: String, action: (() -> Void)?) -> some View {
         Button {
-            // TODO: Wire up actions
+            action?()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: systemImage)
@@ -189,63 +247,91 @@ struct AppTimelineView: View {
                 Text(title)
                     .font(.system(size: 13, weight: .regular))
             }
-            .foregroundColor(.primary)
+            .foregroundColor(foregroundColor)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(Color("background"))
             .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .disabled(action == nil)
+        .opacity(action == nil ? 0.5 : 1)
+    }
+
+    private var plusColor: Color {
+        if colorScheme == .dark {
+            return Color(.systemGray2)
+        }
+        return Color.black.opacity(0.9)
     }
 }
 
+// MARK: - Timeline Log Row (matching TimelineEventRow structure)
+
 private struct TimelineLogRow: View {
     let log: CombinedLog
-    let time: String
-    let accentColor: Color
+    let selectedDate: Date
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }()
+
+    private static let isoFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.calendar = Calendar(identifier: .iso8601)
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = .autoupdatingCurrent
+        df.dateFormat = "yyyy-MM-dd"
+        return df
+    }()
+
+    private let labelSpacing: CGFloat = 6
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(accentColor.opacity(0.15))
-                    .frame(width: 34, height: 34)
-                Image(systemName: iconName(for: log.type))
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(accentColor)
+        VStack(alignment: .leading, spacing: labelSpacing) {
+            // Top: Connector + time label
+            HStack(alignment: .center, spacing: 12) {
+                TimelineConnector(iconName: iconName(for: log.type))
+                    .frame(height: TimelineConnector.iconSize)
+
+                Text(labelText)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(title(for: log))
-                        .font(.headline)
-                        .lineLimit(1)
-                    Spacer()
-                    Text(time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                if let subtitle = subtitle(for: log) {
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                HStack(spacing: 10) {
-                    if let calories = caloriesText(for: log) {
-                        chip(text: calories, systemImage: "flame.fill", color: .orange)
-                    }
-                    if let protein = macroText(for: log.food?.protein ?? log.meal?.protein, label: "P") {
-                        chip(text: protein, systemImage: "bolt.fill", color: .blue)
-                    }
-                    if let carbs = macroText(for: log.food?.carbs ?? log.meal?.carbs, label: "C") {
-                        chip(text: carbs, systemImage: "leaf", color: .green)
-                    }
-                    if let fat = macroText(for: log.food?.fat ?? log.meal?.fat, label: "F") {
-                        chip(text: fat, systemImage: "drop", color: .pink)
-                    }
-                }
+            // Bottom: Spacer + Card
+            HStack(alignment: .top, spacing: 12) {
+                TimelineConnectorSpacer()
+                TimelineLogCard(log: log)
             }
         }
+    }
+
+    private var labelText: String {
+        let calendar = Calendar.current
+        let logDateValue = logDate(for: log)
+        if calendar.isDate(logDateValue, inSameDayAs: selectedDate) {
+            return Self.timeFormatter.string(from: logDateValue)
+        }
+        return Self.dateFormatter.string(from: logDateValue)
+    }
+
+    private func logDate(for log: CombinedLog) -> Date {
+        if let scheduledAt = log.scheduledAt {
+            return scheduledAt
+        }
+        if let raw = log.logDate, let parsed = Self.isoFormatter.date(from: raw) {
+            return parsed
+        }
+        return selectedDate
     }
 
     private func iconName(for type: LogType) -> String {
@@ -253,12 +339,39 @@ private struct TimelineLogRow: View {
         case .food: return "fork.knife"
         case .meal: return "takeoutbag.and.cup.and.straw"
         case .recipe: return "book.closed"
-        case .activity: return "figure.walk"
+        case .activity: return "figure.run"
         case .workout: return "dumbbell"
         }
     }
+}
 
-    private func title(for log: CombinedLog) -> String {
+// MARK: - Timeline Log Card (matching TimelineEventCard)
+
+private struct TimelineLogCard: View {
+    let log: CombinedLog
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+
+            detailView
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color("sheetcard"))
+        )
+    }
+
+    private var title: String {
         switch log.type {
         case .food:
             return log.food?.displayName ?? log.message
@@ -273,61 +386,176 @@ private struct TimelineLogRow: View {
         }
     }
 
-    private func subtitle(for log: CombinedLog) -> String? {
+    @ViewBuilder
+    private var detailView: some View {
         switch log.type {
-        case .food:
-            return log.mealType
-        case .meal:
-            return log.mealType
-        case .recipe:
-            return log.mealType
-        case .activity:
-            var parts: [String] = []
-            if let duration = log.activity?.formattedDuration, !duration.isEmpty {
-                parts.append(duration)
-            }
-            if let distance = log.activity?.formattedDistance {
-                parts.append(distance)
-            }
-            if let calories = log.activity?.totalEnergyBurned, calories > 0 {
-                parts.append("\(Int(calories)) kcal")
-            }
-            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        case .food, .meal, .recipe:
+            TLFoodLogDetails(log: log)
         case .workout:
-            var parts: [String] = []
-            if let minutes = log.workout?.durationMinutes {
-                parts.append("\(minutes) min")
-            } else if let seconds = log.workout?.durationSeconds, seconds > 0 {
-                parts.append("\(seconds)s")
+            TLWorkoutLogDetails(log: log)
+        case .activity:
+            TLActivityLogDetails(log: log)
+        }
+    }
+}
+
+// MARK: - Food Log Details (matching FoodTimelineDetails)
+
+private struct TLFoodLogDetails: View {
+    let log: CombinedLog
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let calories = caloriesValue {
+                label(icon: "flame.fill", text: "\(calories) cal", color: Color("brightOrange"))
             }
-            if let exercises = log.workout?.exercisesCount, exercises > 0 {
-                parts.append("\(exercises) exercises")
+            if let protein = proteinValue {
+                macroLabel(prefix: "P", value: protein)
             }
-            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+            if let fat = fatValue {
+                macroLabel(prefix: "F", value: fat)
+            }
+            if let carbs = carbsValue {
+                macroLabel(prefix: "C", value: carbs)
+            }
+        }
+        .font(.system(size: 13))
+        .foregroundColor(.secondary)
+    }
+
+    private var caloriesValue: Int? {
+        let calories = log.food?.calories ?? log.meal?.calories ?? log.recipe?.calories
+        guard let cal = calories, cal > 0 else { return nil }
+        return Int(cal.rounded())
+    }
+
+    private var proteinValue: Int? {
+        let protein = log.food?.protein ?? log.meal?.protein ?? log.recipe?.protein
+        guard let p = protein, p > 0 else { return nil }
+        return Int(p.rounded())
+    }
+
+    private var fatValue: Int? {
+        let fat = log.food?.fat ?? log.meal?.fat ?? log.recipe?.fat
+        guard let f = fat, f > 0 else { return nil }
+        return Int(f.rounded())
+    }
+
+    private var carbsValue: Int? {
+        let carbs = log.food?.carbs ?? log.meal?.carbs ?? log.recipe?.carbs
+        guard let c = carbs, c > 0 else { return nil }
+        return Int(c.rounded())
+    }
+
+    private func label(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(color)
+            Text(text)
         }
     }
 
-    private func caloriesText(for log: CombinedLog) -> String? {
-        let calories = log.food?.calories ??
-        log.meal?.calories ??
-        log.recipe?.calories ??
-        (log.type == .activity ? log.activity?.totalEnergyBurned : log.calories)
-        guard let calories else { return nil }
-        return "\(Int(calories)) kcal"
+    private func macroLabel(prefix: String, value: Int) -> some View {
+        HStack(spacing: 2) {
+            Text(prefix)
+                .foregroundColor(.secondary)
+            Text("\(value)g")
+        }
+    }
+}
+
+// MARK: - Workout Log Details (matching WorkoutTimelineDetails)
+
+private struct TLWorkoutLogDetails: View {
+    let log: CombinedLog
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let calories = caloriesValue {
+                detail(icon: "flame.fill", text: "\(calories) cal")
+            }
+            if let duration = durationValue {
+                detail(icon: "clock", text: "\(duration) min")
+            }
+            if let exercises = exercisesCount {
+                detail(icon: "list.bullet", text: "\(exercises) exercises")
+            }
+        }
+        .font(.system(size: 13))
+        .foregroundColor(.secondary)
     }
 
-    private func macroText(for value: Double?, label: String) -> String? {
-        guard let value, value > 0 else { return nil }
-        return "\(label) \(Int(value))g"
+    private var caloriesValue: Int? {
+        guard log.calories > 0 else { return nil }
+        return Int(log.calories.rounded())
     }
 
-    @ViewBuilder
-    private func chip(text: String, systemImage: String, color: Color) -> some View {
-        Label(text, systemImage: systemImage)
-            .font(.caption)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 10).fill(color.opacity(0.12)))
-            .foregroundColor(color)
+    private var durationValue: Int? {
+        if let minutes = log.workout?.durationMinutes, minutes > 0 {
+            return minutes
+        }
+        if let seconds = log.workout?.durationSeconds, seconds > 0 {
+            return seconds / 60
+        }
+        return nil
+    }
+
+    private var exercisesCount: Int? {
+        guard let count = log.workout?.exercisesCount, count > 0 else { return nil }
+        return count
+    }
+
+    private func detail(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+            Text(text)
+        }
+    }
+}
+
+// MARK: - Activity Log Details (matching CardioTimelineDetails)
+
+private struct TLActivityLogDetails: View {
+    let log: CombinedLog
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let calories = caloriesValue {
+                detail(icon: "flame.fill", text: "\(calories) cal")
+            }
+            if let duration = durationText {
+                detail(icon: "clock", text: duration)
+            }
+            if let distance = distanceText {
+                detail(icon: "mappin.and.ellipse", text: distance)
+            }
+        }
+        .font(.system(size: 13))
+        .foregroundColor(.secondary)
+    }
+
+    private var caloriesValue: Int? {
+        guard let cal = log.activity?.totalEnergyBurned, cal > 0 else { return nil }
+        return Int(cal.rounded())
+    }
+
+    private var durationText: String? {
+        log.activity?.formattedDuration
+    }
+
+    private var distanceText: String? {
+        log.activity?.formattedDistance
+    }
+
+    private func detail(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+            Text(text)
+        }
     }
 }
