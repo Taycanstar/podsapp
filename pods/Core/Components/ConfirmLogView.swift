@@ -2353,6 +2353,8 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                         foodManager.showLogSuccess = false
                     }
+                    self.dayLogsVM.loadLogs(for: self.mealTime, force: true)
+                    NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
                     self.barcodeFoodLogId = logged.foodLogId
                 case .failure:
                     self.dayLogsVM.removeOptimisticLog(identifier: placeholderIdentifier)
@@ -3679,6 +3681,8 @@ struct PlateView: View {
         if index >= viewModel.entries.count {
             isLoggingPlate = false
             viewModel.clear()
+            dayLogsVM.loadLogs(for: mealTime, force: true)
+            NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
             if let onFinished = onFinished {
                 onFinished()
             } else {

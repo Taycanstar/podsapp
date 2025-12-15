@@ -62,6 +62,10 @@ struct ContentView: View {
     @State private var showConfirmFoodView = false
     @State private var scannedFood: Food?
     @State private var scannedFoodLogId: Int?
+    @State private var showMultiFoodView = false
+    @State private var multiFoods: [Food] = []
+    @State private var multiMealItems: [MealItem] = []
+    @State private var showTimelineView = false
     
     @State private var shouldNavigateToNewPod = false
     @State private var newPodId: Int?
@@ -248,6 +252,16 @@ struct ContentView: View {
                         }
                     }
                 }
+                .sheet(isPresented: $showMultiFoodView) {
+                    MultiFoodLogView(foods: multiFoods, mealItems: multiMealItems)
+                        .environmentObject(foodManager)
+                        .environmentObject(viewModel)
+                        .environmentObject(dayLogsVM)
+                }
+                .sheet(isPresented: $showTimelineView) {
+                    AppTimelineView()
+                        .environmentObject(dayLogsVM)
+                }
                 
                 .environment(\.isTabBarVisible, $isTabBarVisible)
             } else {
@@ -372,6 +386,32 @@ struct ContentView: View {
             } else {
                 print("❌ DEBUG NotificationCenter: Failed to extract food from notification userInfo")
             }
+        }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: NSNotification.Name("ShowMultiFoodLog"))
+                .receive(on: RunLoop.main)
+        ) { notification in
+            if let userInfo = notification.userInfo {
+                if let foods = userInfo["foods"] as? [Food] {
+                    multiFoods = foods
+                } else {
+                    multiFoods = []
+                }
+                if let items = userInfo["mealItems"] as? [MealItem] {
+                    multiMealItems = items
+                } else {
+                    multiMealItems = []
+                }
+                showMultiFoodView = true
+            }
+        }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: NSNotification.Name("NavigateToTimeline"))
+                .receive(on: RunLoop.main)
+        ) { _ in
+            showTimelineView = true
         }
         .onReceive(
             NotificationCenter.default

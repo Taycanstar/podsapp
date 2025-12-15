@@ -49,6 +49,8 @@ struct FoodScannerView: View {
     @State private var foodLabelPreviewEnabled: Bool = true
     @State private var barcodePreviewEnabled: Bool = true
     @State private var galleryImportPreviewEnabled: Bool = false
+    @State private var multiFoods: [Food] = []
+    @State private var multiMealItems: [MealItem] = []
     
     enum ScanMode {
         case food, nutritionLabel, barcode, gallery
@@ -395,8 +397,8 @@ private func analyzeImage(_ image: UIImage) {
                                userEmail: userEmail,
                                increment: true,
                                onAllowed: {
-        self.isPresented = false
         Task { @MainActor in
+            defer { self.isPresented = false }
             do {
                 let combinedLog = try await foodManager.analyzeFoodImageModern(
                     image: image,
@@ -524,31 +526,58 @@ private func analyzeImageForPreview(_ image: UIImage) {
 
 private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) {
     isAnalyzing = true
-    isPresented = false
     Task { @MainActor in
-        defer { self.isAnalyzing = false }
+        self.isPresented = false
+        foodManager.startFoodScanning()
+        foodManager.updateFoodScanningState(.preparing(image: image))
+        foodManager.updateFoodScanningState(.uploading(progress: 0.4))
+        foodManager.updateFoodScanningState(.analyzing)
+        var handledByModernFlow = false
+        defer {
+            self.isAnalyzing = false
+            if !handledByModernFlow {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    self.foodManager.resetFoodScanningState()
+                }
+            }
+        }
         do {
             // Try agent + Nutritionix path first
             if let agentResult = try? await foodManager.analyzeFoodImageWithAgent(
                 image: image,
                 userEmail: userEmail,
                 mealType: selectedMeal
-            ), let firstFood = agentResult.foods.first {
-                var food = firstFood
-                if !agentResult.mealItems.isEmpty {
-                    food.mealItems = agentResult.mealItems
+            ) {
+                foodManager.updateFoodScanningState(.processing)
+                if agentResult.foods.count > 1 || (!agentResult.mealItems.isEmpty && agentResult.foods.isEmpty) {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("ShowMultiFoodLog"),
+                        object: nil,
+                        userInfo: [
+                            "foods": agentResult.foods,
+                            "mealItems": agentResult.mealItems
+                        ]
+                    )
+                    return
+                } else if let firstFood = agentResult.foods.first {
+                    var food = firstFood
+                    if !agentResult.mealItems.isEmpty {
+                        food.mealItems = agentResult.mealItems
+                    }
+                    foodManager.updateFoodScanningState(.processing)
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("ShowFoodConfirmation"),
+                        object: nil,
+                        userInfo: [
+                            "food": food,
+                            "foodLogId": NSNull()
+                        ]
+                    )
+                    return
                 }
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("ShowFoodConfirmation"),
-                    object: nil,
-                    userInfo: [
-                        "food": food,
-                        "foodLogId": NSNull()
-                    ]
-                )
-                return
             }
 
+            handledByModernFlow = true
             let combinedLog = try await foodManager.analyzeFoodImageModern(
                 image: image,
                 userEmail: userEmail,
@@ -584,32 +613,59 @@ private func analyzeImageDirectly(_ image: UIImage) {
 
 private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
     isAnalyzing = true
-    isPresented = false
     Task { @MainActor in
-        defer { self.isAnalyzing = false }
+        self.isPresented = false
+        foodManager.startFoodScanning()
+        foodManager.updateFoodScanningState(.preparing(image: image))
+        foodManager.updateFoodScanningState(.uploading(progress: 0.4))
+        foodManager.updateFoodScanningState(.analyzing)
+        var handledByModernFlow = false
+        defer {
+            self.isAnalyzing = false
+            if !handledByModernFlow {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    self.foodManager.resetFoodScanningState()
+                }
+            }
+        }
         do {
             // Prefer agent + Nutritionix path; fallback to legacy auto-log
             if let agentResult = try? await foodManager.analyzeFoodImageWithAgent(
                 image: image,
                 userEmail: userEmail,
                 mealType: selectedMeal
-            ), let firstFood = agentResult.foods.first {
-                var food = firstFood
-                if !agentResult.mealItems.isEmpty {
-                    food.mealItems = agentResult.mealItems
+            ) {
+                foodManager.updateFoodScanningState(.processing)
+                if agentResult.foods.count > 1 || (!agentResult.mealItems.isEmpty && agentResult.foods.isEmpty) {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("ShowMultiFoodLog"),
+                        object: nil,
+                        userInfo: [
+                            "foods": agentResult.foods,
+                            "mealItems": agentResult.mealItems
+                        ]
+                    )
+                    return
+                } else if let firstFood = agentResult.foods.first {
+                    var food = firstFood
+                    if !agentResult.mealItems.isEmpty {
+                        food.mealItems = agentResult.mealItems
+                    }
+                    foodManager.updateFoodScanningState(.processing)
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("ShowFoodConfirmation"),
+                        object: nil,
+                        userInfo: [
+                            "food": food,
+                            "foodLogId": NSNull()
+                        ]
+                    )
+                    return
                 }
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("ShowFoodConfirmation"),
-                    object: nil,
-                    userInfo: [
-                        "food": food,
-                        "foodLogId": NSNull()
-                    ]
-                )
-                return
             }
 
             // Fallback: legacy auto-log flow
+            handledByModernFlow = true
             let combinedLog = try await foodManager.analyzeFoodImageModern(
                 image: image,
                 userEmail: userEmail,

@@ -140,6 +140,8 @@
 		3650A1742EEB4B050068ACE6 /* ActivityRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3650A1732EEB4B000068ACE6 /* ActivityRingView.swift */; };
 		3650A1782EED12B30068ACE6 /* VitalMetricType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3650A1772EED12B30068ACE6 /* VitalMetricType.swift */; };
 		3650A17A2EEE86960068ACE6 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3650A1792EEE86960068ACE6 /* AnalyticsManager.swift */; };
+		3650A17C2EEF840E0068ACE6 /* MultiFoodLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3650A17B2EEF83FA0068ACE6 /* MultiFoodLogView.swift */; };
+		3650A17E2EEF84180068ACE6 /* TimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3650A17D2EEF84130068ACE6 /* TimelineView.swift */; };
 		365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */; };
 		3662A5492DFB98A700847487 /* CreateFoodWithVoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */; };
 		3662A54B2DFB98BE00847487 /* CreateFoodWithScan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */; };
@@ -559,6 +561,8 @@
 		3650A1732EEB4B000068ACE6 /* ActivityRingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityRingView.swift; sourceTree = "<group>"; };
 		3650A1772EED12B30068ACE6 /* VitalMetricType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitalMetricType.swift; sourceTree = "<group>"; };
 		3650A1792EEE86960068ACE6 /* AnalyticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManager.swift; sourceTree = "<group>"; };
+		3650A17B2EEF83FA0068ACE6 /* MultiFoodLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiFoodLogView.swift; sourceTree = "<group>"; };
+		3650A17D2EEF84130068ACE6 /* TimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineView.swift; sourceTree = "<group>"; };
 		365B7DC32CA2703D00CC43CC /* ItemTrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemTrendsView.swift; sourceTree = "<group>"; };
 		3662A5482DFB98A700847487 /* CreateFoodWithVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithVoice.swift; sourceTree = "<group>"; };
 		3662A54A2DFB98BE00847487 /* CreateFoodWithScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFoodWithScan.swift; sourceTree = "<group>"; };
@@ -1392,6 +1396,8 @@
 		36CB032A2D5AAD4A006A74E9 /* food */ = {
 			isa = PBXGroup;
 			children = (
+				3650A17D2EEF84130068ACE6 /* TimelineView.swift */,
+				3650A17B2EEF83FA0068ACE6 /* MultiFoodLogView.swift */,
 				3650A1712EEA8C9E0068ACE6 /* MealPlateSummaryView.swift */,
 				36368E7E2ECF8AA000A8F390 /* CreateCustomFoodView.swift */,
 				36A91DBA2E3BE29B00414543 /* ScanLogView.swift */,
@@ -1903,8 +1909,10 @@
 				361FF3412E288D9D00B7F68E /* MuscleRecoveryService.swift in Sources */,
 				361FF3392E23090000B7F68E /* StartWorkoutView.swift in Sources */,
 				36D3A5142E8EDC6F00AD6B94 /* AllowHealthView.swift in Sources */,
+				3650A17E2EEF84180068ACE6 /* TimelineView.swift in Sources */,
 				3615D1152EB005EC0063EB8B /* MainContentView.swift in Sources */,
 				36D3A5222E942B7300AD6B94 /* RegisterView.swift in Sources */,
+				3650A17C2EEF840E0068ACE6 /* MultiFoodLogView.swift in Sources */,
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,
