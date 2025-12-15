@@ -432,9 +432,10 @@ private struct TLFoodLogDetails: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            if let calories = caloriesValue {
-                label(icon: "flame.fill", text: "\(calories) cal", color: Color("brightOrange"))
-            }
+            // Calories with flame icon
+            label(icon: "flame.fill", text: "\(caloriesValue) cal", color: Color("brightOrange"))
+
+            // Macros: P F C
             if let protein = proteinValue {
                 macroLabel(prefix: "P", value: protein)
             }
@@ -449,28 +450,53 @@ private struct TLFoodLogDetails: View {
         .foregroundColor(.secondary)
     }
 
-    private var caloriesValue: Int? {
-        let cal = log.displayCalories
-        guard cal > 0 else { return nil }
-        return Int(cal.rounded())
+    private var caloriesValue: Int {
+        Int(log.displayCalories.rounded())
     }
 
     private var proteinValue: Int? {
-        let protein = log.food?.protein ?? log.meal?.protein ?? log.recipe?.protein
-        guard let p = protein, p > 0 else { return nil }
-        return Int(p.rounded())
+        // For food logs, multiply per-serving value by numberOfServings
+        if let food = log.food, let protein = food.protein {
+            let servings = food.numberOfServings > 0 ? food.numberOfServings : 1
+            let total = Int((protein * servings).rounded())
+            return total > 0 ? total : nil
+        }
+        // For meal/recipe logs, use value directly
+        if let protein = log.meal?.protein ?? log.recipe?.protein {
+            let total = Int(protein.rounded())
+            return total > 0 ? total : nil
+        }
+        return nil
     }
 
     private var fatValue: Int? {
-        let fat = log.food?.fat ?? log.meal?.fat ?? log.recipe?.fat
-        guard let f = fat, f > 0 else { return nil }
-        return Int(f.rounded())
+        // For food logs, multiply per-serving value by numberOfServings
+        if let food = log.food, let fat = food.fat {
+            let servings = food.numberOfServings > 0 ? food.numberOfServings : 1
+            let total = Int((fat * servings).rounded())
+            return total > 0 ? total : nil
+        }
+        // For meal/recipe logs, use value directly
+        if let fat = log.meal?.fat ?? log.recipe?.fat {
+            let total = Int(fat.rounded())
+            return total > 0 ? total : nil
+        }
+        return nil
     }
 
     private var carbsValue: Int? {
-        let carbs = log.food?.carbs ?? log.meal?.carbs ?? log.recipe?.carbs
-        guard let c = carbs, c > 0 else { return nil }
-        return Int(c.rounded())
+        // For food logs, multiply per-serving value by numberOfServings
+        if let food = log.food, let carbs = food.carbs {
+            let servings = food.numberOfServings > 0 ? food.numberOfServings : 1
+            let total = Int((carbs * servings).rounded())
+            return total > 0 ? total : nil
+        }
+        // For meal/recipe logs, use value directly
+        if let carbs = log.meal?.carbs ?? log.recipe?.carbs {
+            let total = Int(carbs.rounded())
+            return total > 0 ? total : nil
+        }
+        return nil
     }
 
     private func label(icon: String, text: String, color: Color) -> some View {

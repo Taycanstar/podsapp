@@ -20,30 +20,34 @@ import SwiftUI
 struct FloatingFoodLoader: View {
     let state: FoodScanningState
 
-    @State private var shimmerOffset: CGFloat = -1.0
+    @State private var shimmerOffset: CGFloat = -200
     @State private var rotatingTextIndex: Int = 0
+    @State private var textRotationTimer: Timer?
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var foodManager: FoodManager
 
     private let rotatingTexts = ["Analyzing...", "Thinking...", "Finishing up..."]
-    private let textRotationInterval: TimeInterval = 2.0
+    private let textRotationInterval: TimeInterval = 3.0
 
     var body: some View {
         HStack(spacing: 12) {
             // Metryc logo with shimmer
-            Image("logx")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 24, height: 24)
-                .modifier(ShimmerModifier(offset: shimmerOffset))
+            shimmerContent {
+                Image("logx")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 24, height: 24)
+            }
 
             VStack(alignment: .leading, spacing: 6) {
-                // Display message with shimmer
-                Text(state.displayMessage.isEmpty ? rotatingTexts[rotatingTextIndex] : state.displayMessage)
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundColor(.primary)
-                    .modifier(ShimmerModifier(offset: shimmerOffset))
+                // Rotating status text with shimmer (hardcoded rotation)
+                shimmerContent {
+                    Text(rotatingTexts[rotatingTextIndex])
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.primary)
+                }
+                .animation(.easeInOut(duration: 0.3), value: rotatingTextIndex)
 
                 // Progress bar with shimmer
                 GeometryReader { geometry in
@@ -54,11 +58,12 @@ struct FloatingFoodLoader: View {
                             .frame(height: 3)
 
                         // Progress fill with shimmer
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.blue)
-                            .frame(width: geometry.size.width * foodManager.animatedProgress, height: 3)
-                            .modifier(ShimmerModifier(offset: shimmerOffset))
-                            .animation(.easeInOut(duration: 0.8), value: foodManager.animatedProgress)
+                        shimmerContent {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.blue)
+                                .frame(width: max(geometry.size.width * foodManager.animatedProgress, 20), height: 3)
+                        }
+                        .animation(.easeInOut(duration: 0.8), value: foodManager.animatedProgress)
                     }
                 }
                 .frame(height: 3)
@@ -130,23 +135,17 @@ struct FloatingFoodLoader: View {
         guard !reduceMotion else { return }
 
         // Start shimmer animation
+        shimmerOffset = -200
         withAnimation(
             .linear(duration: 1.5)
             .repeatForever(autoreverses: false)
         ) {
-            shimmerOffset = 1.0
+            shimmerOffset = 200
         }
 
-        // Start text rotation
-        startTextRotation()
-    }
-
-    private func startTextRotation() {
-        Timer.scheduledTimer(withTimeInterval: textRotationInterval, repeats: true) { timer in
-            guard foodManager.foodScanningState.isActive else {
-                timer.invalidate()
-                return
-            }
+        // Start text rotation timer
+        textRotationTimer?.invalidate()
+        textRotationTimer = Timer.scheduledTimer(withTimeInterval: textRotationInterval, repeats: true) { _ in
             withAnimation(.easeInOut(duration: 0.3)) {
                 rotatingTextIndex = (rotatingTextIndex + 1) % rotatingTexts.count
             }
@@ -154,7 +153,9 @@ struct FloatingFoodLoader: View {
     }
 
     private func stopAnimations() {
-        shimmerOffset = -1.0
+        textRotationTimer?.invalidate()
+        textRotationTimer = nil
+        shimmerOffset = -200
         rotatingTextIndex = 0
     }
 
@@ -162,37 +163,27 @@ struct FloatingFoodLoader: View {
         guard foodManager.isImageScanning else { return nil }
         return foodManager.currentScanningImage
     }
-}
 
-// MARK: - Shimmer Modifier
+    // MARK: - Shimmer Content Builder
 
-private struct ShimmerModifier: ViewModifier {
-    let offset: CGFloat
-    @Environment(\.colorScheme) private var colorScheme
+    @ViewBuilder
+    private func shimmerContent<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        let shimmerColor = colorScheme == .dark ? Color.white.opacity(0.15) : Color.white.opacity(0.4)
 
-    func body(content: Content) -> some View {
-        content
+        content()
             .overlay(
-                GeometryReader { geometry in
-                    let shimmerColor = colorScheme == .dark
-                        ? Color.white.opacity(0.3)
-                        : Color.white.opacity(0.6)
-
-                    LinearGradient(
-                        gradient: Gradient(stops: [
-                            .init(color: .clear, location: 0),
-                            .init(color: shimmerColor, location: 0.5),
-                            .init(color: .clear, location: 1)
-                        ]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: geometry.size.width * 0.5)
-                    .offset(x: geometry.size.width * offset)
-                    .blendMode(.overlay)
-                }
+                LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: shimmerColor, location: 0.5),
+                        .init(color: .clear, location: 1)
+                    ]),
+                    startPoint: .init(x: -0.3 + shimmerOffset / 200, y: 0),
+                    endPoint: .init(x: 0.3 + shimmerOffset / 200, y: 0)
+                )
+                .blendMode(.overlay)
             )
-            .mask(content)
+            .mask(content())
     }
 }
 
