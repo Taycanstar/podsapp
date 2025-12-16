@@ -21,6 +21,9 @@ struct AgentChatView: View {
     @State private var pulseScale: CGFloat = 1.0
     @StateObject private var speechRecognizer = SpeechRecognizer()
 
+    // Scroll state for floating button
+    @State private var isAtBottom = true
+
     // Callbacks for actions (can be customized by parent)
     var onPlusTapped: () -> Void = {}
     var onBarcodeTapped: () -> Void = {}
@@ -36,12 +39,7 @@ struct AgentChatView: View {
             VStack(spacing: 0) {
                 pendingActionsSection
                 Divider()
-                ZStack(alignment: .bottomTrailing) {
-                    chatScrollView
-                    scrollToBottomButton
-                        .padding(.trailing, 16)
-                        .padding(.bottom, 16)
-                }
+                chatScrollView
                 inputBar
             }
             .navigationTitle("Metryc")
@@ -103,31 +101,65 @@ struct AgentChatView: View {
 
     private var chatScrollView: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 12) {
-                    ForEach(viewModel.messages) { message in
-                        if let preview = message.pendingLog, message.sender == .pendingLog {
-                            pendingLogBubble(messageID: message.id, preview: preview)
-                                .id(message.id)
-                        } else {
-                            messageRow(message)
-                                .id(message.id)
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        ForEach(viewModel.messages) { message in
+                            if let preview = message.pendingLog, message.sender == .pendingLog {
+                                pendingLogBubble(messageID: message.id, preview: preview)
+                                    .id(message.id)
+                            } else {
+                                messageRow(message)
+                                    .id(message.id)
+                            }
+                        }
+                        if viewModel.isLoading {
+                            thinkingIndicator
+                        }
+
+                        // Bottom anchor for scroll detection
+                        Color.clear
+                            .frame(height: 1)
+                            .id("bottomAnchor")
+                            .onAppear { isAtBottom = true }
+                            .onDisappear { isAtBottom = false }
+                    }
+                    .padding()
+                }
+                .onAppear {
+                    scrollProxy = proxy
+                }
+                .onChange(of: viewModel.messages.count) { _, _ in
+                    if let lastId = viewModel.messages.last?.id {
+                        withAnimation {
+                            proxy.scrollTo(lastId, anchor: .bottom)
                         }
                     }
-                    if viewModel.isLoading {
-                        thinkingIndicator
-                    }
                 }
-                .padding()
-            }
-            .onAppear {
-                scrollProxy = proxy
-            }
-            .onChange(of: viewModel.messages.count) { _ in
-                if let lastId = viewModel.messages.last?.id {
-                    withAnimation {
-                        proxy.scrollTo(lastId, anchor: .bottom)
+
+                // Floating scroll-to-bottom button
+                if !isAtBottom {
+                    Button {
+                        withAnimation {
+                            proxy.scrollTo("bottomAnchor", anchor: .bottom)
+                        }
+                    } label: {
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .frame(width: 32, height: 32)
+                            .background(
+                                Circle()
+                                    .fill(Color(.systemBackground))
+                                    .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                            )
+                            .overlay(
+                                Circle()
+                                    .stroke(Color(.separator), lineWidth: 0.5)
+                            )
                     }
+                    .padding(.bottom, 15)
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
             }
         }
@@ -971,29 +1003,6 @@ struct AgentChatView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             withAnimation {
                 showToast = false
-            }
-        }
-    }
-
-    private var scrollToBottomButton: some View {
-        Group {
-            if !viewModel.messages.isEmpty {
-                Button {
-                    if let lastId = viewModel.messages.last?.id {
-                        withAnimation {
-                            scrollProxy?.scrollTo(lastId, anchor: .bottom)
-                        }
-                    }
-                } label: {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(.accentColor)
-                        .background(
-                            Circle()
-                                .fill(.thinMaterial)
-                                .frame(width: 44, height: 44)
-                        )
-                }
             }
         }
     }
