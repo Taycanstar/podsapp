@@ -1058,9 +1058,7 @@ enum LogType: String, Codable {
 // MARK: - Coach Message (AI-generated coaching after food log)
 struct CoachMessage: Codable, Equatable {
     let foodLogId: Int
-    let acknowledgement: String
-    let uncertainty: String
-    let nextAction: String
+    let message: String
     // Additional context for edit-to-chat seeding
     let scanMode: String?
     let todayTotals: CoachTodayTotals?
@@ -1068,18 +1066,14 @@ struct CoachMessage: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case foodLogId = "food_log_id"
-        case acknowledgement
-        case uncertainty
-        case nextAction = "next_action"
+        case message
         case scanMode = "scan_mode"
         case todayTotals = "today_totals"
         case calorieTarget = "calorie_target"
     }
 
-    /// Composed full text of the coach message
-    var fullText: String {
-        "\(acknowledgement) \(nextAction)"
-    }
+    /// Full text of the coach message (for UI compatibility)
+    var fullText: String { message }
 }
 
 /// Today's totals context from coach message

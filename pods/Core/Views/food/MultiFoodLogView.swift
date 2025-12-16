@@ -25,6 +25,9 @@ struct MultiFoodLogView: View {
     @State private var nutrientTargets: [String: NutrientTargetDetails] = NutritionGoalsStore.shared.currentTargets
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
 
+    /// Editable serving state for each food item (keyed by food index)
+    @State private var editableItems: [Int: EditableFoodItem] = [:]
+
     private var plateBackground: Color {
         colorScheme == .dark ? Color("bg") : Color(UIColor.systemGroupedBackground)
     }
@@ -96,20 +99,16 @@ struct MultiFoodLogView: View {
         var protein: Double = 0
         var carbs: Double = 0
         var fat: Double = 0
-        for item in mealItems {
-            cals += item.calories ?? 0
-            protein += item.protein ?? 0
-            carbs += item.carbs ?? 0
-            fat += item.fat ?? 0
+
+        // Use editable items for scaling if available
+        for (index, food) in displayFoods.enumerated() {
+            let scalingFactor = editableItems[index]?.scalingFactor ?? 1.0
+            cals += (food.calories ?? 0) * scalingFactor
+            protein += (food.protein ?? 0) * scalingFactor
+            carbs += (food.carbs ?? 0) * scalingFactor
+            fat += (food.fat ?? 0) * scalingFactor
         }
-        if mealItems.isEmpty {
-            for food in displayFoods {
-                cals += food.calories ?? 0
-                protein += food.protein ?? 0
-                carbs += food.carbs ?? 0
-                fat += food.fat ?? 0
-            }
-        }
+
         return (cals, protein, carbs, fat)
     }
 
@@ -148,10 +147,11 @@ struct MultiFoodLogView: View {
 
     private var aggregatedNutrients: [String: MultiFoodRawNutrientValue] {
         var result: [String: MultiFoodRawNutrientValue] = [:]
-        for food in displayFoods {
+        for (index, food) in displayFoods.enumerated() {
+            let scalingFactor = editableItems[index]?.scalingFactor ?? 1.0
             for nutrient in food.foodNutrients {
                 let key = normalizedNutrientKey(nutrient.nutrientName)
-                let value = nutrient.value ?? 0
+                let value = (nutrient.value ?? 0) * scalingFactor
                 if let existing = result[key] {
                     result[key] = MultiFoodRawNutrientValue(value: existing.value + value, unit: existing.unit)
                 } else {
@@ -231,6 +231,7 @@ struct MultiFoodLogView: View {
             .onAppear {
                 selectedMealPeriod = suggestedMealPeriod(for: Date())
                 reloadStoredNutrientTargets()
+                initializeEditableItems()
             }
             .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
                 reloadStoredNutrientTargets()
@@ -243,6 +244,22 @@ struct MultiFoodLogView: View {
 
     private func reloadStoredNutrientTargets() {
         nutrientTargets = NutritionGoalsStore.shared.currentTargets
+    }
+
+    private func initializeEditableItems() {
+        guard editableItems.isEmpty else { return }
+
+        // Initialize editable state for each food item
+        for (index, food) in displayFoods.enumerated() {
+            // Check if this food came from a MealItem with measures
+            if let mealItem = mealItems.first(where: { $0.name == food.displayName }) {
+                editableItems[index] = EditableFoodItem(from: mealItem)
+            } else if let mealItem = food.mealItems?.first {
+                editableItems[index] = EditableFoodItem(from: mealItem)
+            } else {
+                editableItems[index] = EditableFoodItem(from: food, index: index)
+            }
+        }
     }
 
     // MARK: - Meal Items Section
@@ -260,20 +277,33 @@ struct MultiFoodLogView: View {
                     .padding(.horizontal)
             } else {
                 VStack(spacing: 12) {
-                    ForEach(mealItemsFromFoodsOrFallback, id: \.id) { item in
-                        Button {
-                            if let food = foodForMealItem(item) {
+                    ForEach(Array(displayFoods.enumerated()), id: \.element.id) { index, food in
+                        MultiFoodEditableItemRow(
+                            food: food,
+                            editableItem: editableItemBinding(for: index),
+                            cardColor: cardColor,
+                            chipColor: chipColor,
+                            onTap: {
                                 selectedFood = food
                             }
-                        } label: {
-                            MultiFoodItemRow(item: item, cardColor: cardColor, chipColor: chipColor)
-                        }
-                        .buttonStyle(.plain)
+                        )
                     }
                 }
                 .padding(.horizontal)
             }
         }
+    }
+
+    /// Create a binding for an editable item at a given index
+    private func editableItemBinding(for index: Int) -> Binding<EditableFoodItem> {
+        Binding(
+            get: {
+                editableItems[index] ?? EditableFoodItem(from: displayFoods[index], index: index)
+            },
+            set: { newValue in
+                editableItems[index] = newValue
+            }
+        )
     }
 
     // MARK: - Macro Summary Card
@@ -857,8 +887,16 @@ struct MultiFoodLogView: View {
 
     /// Build batch context for multi-food coach message
     private func buildBatchContext() -> [String: Any] {
-        let totalCalories = displayFoods.reduce(0.0) { $0 + (($1.calories ?? 0) * ($1.numberOfServings ?? 1)) }
-        let totalProtein = displayFoods.reduce(0.0) { $0 + (($1.protein ?? 0) * ($1.numberOfServings ?? 1)) }
+        // Use scaled values from editable items
+        var totalCalories: Double = 0
+        var totalProtein: Double = 0
+
+        for (index, food) in displayFoods.enumerated() {
+            let scalingFactor = editableItems[index]?.scalingFactor ?? 1.0
+            totalCalories += (food.calories ?? 0) * scalingFactor
+            totalProtein += (food.protein ?? 0) * scalingFactor
+        }
+
         let foodNames = displayFoods.map { $0.displayName }
 
         return [
@@ -880,6 +918,10 @@ struct MultiFoodLogView: View {
         let food = displayFoods[index]
         let isLastFood = index == displayFoods.count - 1
 
+        // Get the edited serving amount from editable state
+        let editableItem = editableItems[index]
+        let servings = editableItem?.scalingFactor ?? (food.numberOfServings ?? 1)
+
         // Skip coach generation for all but the last food
         // For the last food, include batch context so coach message covers the entire meal
         let skipCoach = !isLastFood
@@ -889,7 +931,7 @@ struct MultiFoodLogView: View {
             email: onboardingViewModel.email,
             food: food,
             meal: selectedMealPeriod.title,
-            servings: food.numberOfServings ?? 1,
+            servings: servings,
             date: mealTime,
             notes: nil,
             skipCoach: skipCoach,
@@ -1015,6 +1057,214 @@ private struct MultiFoodItemRow: View {
         let carbs = Int(item.carbs.rounded())
         let fat = Int(item.fat.rounded())
         return "P \(protein)g C \(carbs)g F \(fat)g"
+    }
+}
+
+// MARK: - Editable Item Row with Serving Controls
+
+private struct MultiFoodEditableItemRow: View {
+    let food: Food
+    @Binding var editableItem: EditableFoodItem
+    let cardColor: Color
+    let chipColor: Color
+    var onTap: () -> Void = {}
+
+    /// Scaled calories based on serving adjustments
+    private var scaledCalories: Double {
+        (food.calories ?? 0) * editableItem.scalingFactor
+    }
+
+    /// Scaled protein based on serving adjustments
+    private var scaledProtein: Double {
+        (food.protein ?? 0) * editableItem.scalingFactor
+    }
+
+    /// Scaled carbs based on serving adjustments
+    private var scaledCarbs: Double {
+        (food.carbs ?? 0) * editableItem.scalingFactor
+    }
+
+    /// Scaled fat based on serving adjustments
+    private var scaledFat: Double {
+        (food.fat ?? 0) * editableItem.scalingFactor
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Name + serving controls on same row
+            HStack(alignment: .top, spacing: 12) {
+                // Food name and brand (tappable)
+                Button(action: onTap) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(food.displayName.isEmpty ? "Meal Item" : food.displayName)
+                            .font(.system(size: 15))
+                            .fontWeight(.regular)
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.leading)
+                        if let brand = food.brandText, !brand.isEmpty {
+                            Text(brand)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 8)
+
+                // Serving controls on the right
+                servingControls
+            }
+
+            // Macro summary row
+            HStack(spacing: 10) {
+                Label("\(Int(scaledCalories.rounded()))cal", systemImage: "flame.fill")
+                    .font(.caption)
+                    .foregroundColor(.primary)
+                Text(macroLine)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(cardColor)
+        )
+    }
+
+    private var servingControls: some View {
+        HStack(spacing: 6) {
+            // Amount input field
+            TextField("1", text: servingAmountBinding)
+                .keyboardType(.numbersAndPunctuation)
+                .multilineTextAlignment(.center)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 8)
+                .frame(width: 50)
+                .background(
+                    Capsule().fill(chipColor)
+                )
+                .font(.system(size: 15))
+
+            // Unit picker or static label
+            if editableItem.hasMeasureOptions {
+                measureMenu
+            } else {
+                // Show static unit label
+                Text(unitLabel(for: editableItem.selectedMeasure))
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(
+                        Capsule().fill(chipColor)
+                    )
+            }
+        }
+        .fixedSize()
+    }
+
+    private var measureMenu: some View {
+        Menu {
+            ForEach(editableItem.measures) { measure in
+                Button(action: { selectMeasure(measure) }) {
+                    HStack {
+                        Text(unitLabel(for: measure))
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(1)
+                        Spacer()
+                        if measure.id == editableItem.selectedMeasureId {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(unitLabel(for: editableItem.selectedMeasure))
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(
+                Capsule().fill(chipColor)
+            )
+        }
+        .menuStyle(.borderlessButton)
+    }
+
+    private var servingAmountBinding: Binding<String> {
+        Binding(
+            get: { editableItem.servingAmountInput },
+            set: { newValue in
+                editableItem.servingAmountInput = newValue
+                if let parsed = EditableFoodItem.parseServing(newValue),
+                   abs(parsed - editableItem.servingAmount) > 0.0001 {
+                    editableItem.servingAmount = parsed
+                }
+            }
+        )
+    }
+
+    private func selectMeasure(_ measure: MealItemMeasure) {
+        guard editableItem.selectedMeasureId != measure.id else { return }
+        editableItem.selectedMeasureId = measure.id
+    }
+
+    private func unitLabel(for measure: MealItemMeasure?) -> String {
+        guard let measure else { return "serving" }
+        let description = sanitizedDescription(measure.description)
+        if !description.isEmpty {
+            return description
+        }
+        return canonicalUnit(from: measure.unit)
+    }
+
+    private func sanitizedDescription(_ text: String) -> String {
+        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return "" }
+
+        // Remove leading numeric portion like "1 " or "1.0 "
+        let pattern = #"^\d+(?:\.\d+)?\s+"#
+        if let range = trimmed.range(of: pattern, options: .regularExpression) {
+            trimmed = String(trimmed[range.upperBound...])
+        }
+        return trimmed
+    }
+
+    private func canonicalUnit(from rawUnit: String) -> String {
+        let lower = rawUnit.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let mapping: [(String, [String])] = [
+            ("cup", ["cup", "cups"]),
+            ("serving", ["serving", "servings", "portion"]),
+            ("piece", ["piece", "pieces", "pcs"]),
+            ("oz", ["oz", "ounce", "ounces"]),
+            ("g", ["g", "gram", "grams"]),
+            ("tbsp", ["tbsp", "tablespoon", "tablespoons"]),
+            ("tsp", ["tsp", "teaspoon", "teaspoons"]),
+        ]
+        for (canonical, tokens) in mapping {
+            if tokens.contains(where: { lower.contains($0) }) {
+                return canonical
+            }
+        }
+        return rawUnit.isEmpty ? "serving" : rawUnit
+    }
+
+    private var macroLine: String {
+        let p = Int(scaledProtein.rounded())
+        let c = Int(scaledCarbs.rounded())
+        let f = Int(scaledFat.rounded())
+        return "P \(p)g C \(c)g F \(f)g"
     }
 }
 
@@ -1205,5 +1455,107 @@ private enum MultiFoodNutrientDescriptors {
             MultiFoodNutrientRowDescriptor(label: "Choline", slug: "choline", defaultUnit: "mg", source: .nutrient(names: ["choline, total"]), color: .purple),
             MultiFoodNutrientRowDescriptor(label: "Water", slug: "water", defaultUnit: "ml", source: .nutrient(names: ["water"]), color: .purple)
         ]
+    }
+}
+
+// MARK: - Editable Food Item State
+
+/// Tracks editable serving state for a food item in the multi-food view
+private struct EditableFoodItem {
+    var servingAmount: Double
+    var servingAmountInput: String
+    var selectedMeasureId: UUID?
+    let measures: [MealItemMeasure]
+    let baselineServing: Double
+    let baselineMeasureId: UUID?
+
+    /// The currently selected measure
+    var selectedMeasure: MealItemMeasure? {
+        if let id = selectedMeasureId,
+           let match = measures.first(where: { $0.id == id }) {
+            return match
+        }
+        if let baselineId = baselineMeasureId,
+           let match = measures.first(where: { $0.id == baselineId }) {
+            return match
+        }
+        return measures.first
+    }
+
+    /// Whether there are multiple measure options to choose from
+    var hasMeasureOptions: Bool {
+        measures.count > 1
+    }
+
+    /// Scaling factor based on serving amount and measure change
+    var scalingFactor: Double {
+        guard baselineServing > 0 else { return servingAmount }
+        if let baselineWeight = measures.first(where: { $0.id == baselineMeasureId })?.gramWeight,
+           baselineWeight > 0,
+           let selectedWeight = selectedMeasure?.gramWeight,
+           selectedWeight > 0 {
+            return (servingAmount * selectedWeight) / (baselineServing * baselineWeight)
+        }
+        return servingAmount / baselineServing
+    }
+
+    /// Initialize from a Food object
+    init(from food: Food, index: Int) {
+        // Convert FoodMeasures to MealItemMeasures for consistency
+        let convertedMeasures: [MealItemMeasure] = food.foodMeasures.map { fm in
+            MealItemMeasure(
+                unit: fm.measureUnitName,
+                description: fm.disseminationText,
+                gramWeight: fm.gramWeight
+            )
+        }
+
+        // Use existing numberOfServings or default to 1
+        let initialServing = food.numberOfServings ?? 1.0
+        self.servingAmount = initialServing
+        self.servingAmountInput = EditableFoodItem.formatServing(initialServing)
+        self.measures = convertedMeasures
+        self.baselineServing = initialServing
+        self.baselineMeasureId = convertedMeasures.first?.id
+        self.selectedMeasureId = convertedMeasures.first?.id
+    }
+
+    /// Initialize from a MealItem object
+    init(from mealItem: MealItem) {
+        self.servingAmount = mealItem.serving
+        self.servingAmountInput = EditableFoodItem.formatServing(mealItem.serving)
+        self.measures = mealItem.measures
+        self.baselineServing = mealItem.baselineServing
+        self.baselineMeasureId = mealItem.measures.first?.id
+        self.selectedMeasureId = mealItem.selectedMeasureId ?? mealItem.measures.first?.id
+    }
+
+    /// Format serving amount for display
+    static func formatServing(_ value: Double) -> String {
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(Int(value))
+        } else {
+            return String(format: "%.2f", value)
+                .replacingOccurrences(of: "\\.?0+$", with: "", options: .regularExpression)
+        }
+    }
+
+    /// Parse serving input string to Double
+    static func parseServing(_ input: String) -> Double? {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        // Handle fractions like "1/2"
+        if let slashIndex = trimmed.firstIndex(of: "/") {
+            let numeratorStr = String(trimmed[..<slashIndex])
+            let denominatorStr = String(trimmed[trimmed.index(after: slashIndex)...])
+            if let num = Double(numeratorStr.trimmingCharacters(in: .whitespaces)),
+               let denom = Double(denominatorStr.trimmingCharacters(in: .whitespaces)),
+               denom != 0 {
+                return num / denom
+            }
+        }
+
+        return Double(trimmed)
     }
 }

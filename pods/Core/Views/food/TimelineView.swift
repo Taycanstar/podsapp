@@ -69,51 +69,55 @@ struct AppTimelineView: View {
                     ScrollViewReader { proxy in
                         ZStack(alignment: .bottom) {
                             ScrollView {
-                                ZStack(alignment: .leading) {
-                                    TimelineSpineOverlay()
+                                VStack(spacing: 0) {
+                                    // Date subtitle above the timeline section
+                                    Text(dateSubtitle)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 16)
+                                        .padding(.top, 8)
+                                        .padding(.bottom, 16)
 
-                                    VStack(spacing: 20) {
-                                        // Date subtitle
-                                        Text(dateSubtitle)
-                                            .font(.system(size: 15))
-                                            .foregroundColor(.secondary)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .padding(.leading, TimelineConnector.iconSize + 12)
+                                    ZStack(alignment: .leading) {
+                                        TimelineSpineOverlay()
 
-                                        TimelineEmptyQuickActionsRow(
-                                            onAddActivity: { /* TODO: Wire up */ },
-                                            onScanMeal: { /* TODO: Wire up */ }
-                                        )
+                                        VStack(spacing: 20) {
+                                            TimelineEmptyQuickActionsRow(
+                                                onAddActivity: { /* TODO: Wire up */ },
+                                                onScanMeal: { /* TODO: Wire up */ }
+                                            )
 
-                                        if groupedLogs.isEmpty {
-                                            Text("No entries yet")
-                                                .font(.system(size: 15))
-                                                .foregroundColor(.secondary)
-                                                .padding(.top, 20)
-                                        } else {
-                                            ForEach(Array(groupedLogs.enumerated()), id: \.element.id) { groupIndex, group in
-                                                TimelineLogGroupRow(
-                                                    group: group,
-                                                    selectedDate: selectedDate,
-                                                    coachMessage: coachMessageForGroup(group, at: groupIndex),
-                                                    isThinking: isThinkingForGroup(group, at: groupIndex),
-                                                    onCoachEditTap: { coachMessage in
-                                                        openAgentChatWithCoachMessage(coachMessage)
-                                                    }
-                                                )
+                                            if groupedLogs.isEmpty {
+                                                Text("No entries yet")
+                                                    .font(.system(size: 15))
+                                                    .foregroundColor(.secondary)
+                                                    .padding(.top, 20)
+                                            } else {
+                                                ForEach(Array(groupedLogs.enumerated()), id: \.element.id) { groupIndex, group in
+                                                    TimelineLogGroupRow(
+                                                        group: group,
+                                                        selectedDate: selectedDate,
+                                                        coachMessage: coachMessageForGroup(group, at: groupIndex),
+                                                        isThinking: isThinkingForGroup(group, at: groupIndex),
+                                                        onCoachEditTap: { coachMessage in
+                                                            openAgentChatWithCoachMessage(coachMessage)
+                                                        }
+                                                    )
+                                                }
                                             }
-                                        }
 
-                                        // Anchor for scrolling to bottom
-                                        Color.clear
-                                            .frame(height: 1)
-                                            .id("bottomAnchor")
-                                            .onAppear { isAtBottom = true }
-                                            .onDisappear { isAtBottom = false }
+                                            // Anchor for scrolling to bottom
+                                            Color.clear
+                                                .frame(height: 1)
+                                                .id("bottomAnchor")
+                                                .onAppear { isAtBottom = true }
+                                                .onDisappear { isAtBottom = false }
+                                        }
                                     }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 16)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 16)
                             }
 
                             // Floating scroll-to-bottom button

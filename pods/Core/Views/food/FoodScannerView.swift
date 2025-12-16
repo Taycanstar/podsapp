@@ -493,22 +493,25 @@ private func performAnalyzeNutritionLabel(_ image: UIImage, userEmail: String) {
 
     // Use on-device OCR for instant nutrition label scanning (~300ms)
     Task { @MainActor in
+        // Dismiss scanner and show floating loader
+        self.isPresented = false
+        foodManager.startFoodScanning()
+        foodManager.updateFoodScanningState(.preparing(image: image))
+        foodManager.updateFoodScanningState(.analyzing)
+
         defer {
             self.isAnalyzing = false
-            self.foodManager.isScanningFood = false
-            self.foodManager.loadingMessage = ""
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self.foodManager.resetFoodScanningState()
+            }
         }
-
-        // Show brief loading state
-        self.isPresented = false
-        foodManager.scannedImage = image
-        foodManager.isScanningFood = true
-        foodManager.loadingMessage = "Reading nutrition label..."
 
         // Run on-device OCR (~300ms)
         let ocrData = await NutritionLabelOCRService.shared.extractNutrition(from: image)
 
         if ocrData.labelDetected {
+            foodManager.updateFoodScanningState(.processing)
+
             // Convert OCR data to Food object
             let food = Food.from(ocrData: ocrData)
 

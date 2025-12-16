@@ -70,6 +70,9 @@ struct ConfirmLogView: View {
     @State private var isBarcodeFood: Bool = false
     @State private var originalFood: Food? = nil
     @State private var barcodeFoodLogId: Int? = nil
+
+    // OCR scanned food (fdcId == -1 indicates locally scanned food)
+    private let isScannedFood: Bool
     @State private var customFoodDraft: CustomFoodDraft?
     @State private var isSavingMeal = false
     @State private var servingUnit: String = "serving"
@@ -187,6 +190,8 @@ struct ConfirmLogView: View {
         print("🔍 DEBUG ConfirmLogView: foodLogId: \(String(describing: foodLogId))")
         self._path = path
         self.existingPlateViewModel = plateViewModel
+        // fdcId == -1 indicates a locally scanned food from OCR
+        self.isScannedFood = food.fdcId == -1
         self._title = State(initialValue: food.description)
         self._brand = State(initialValue: food.brandText ?? "")
         let initialMealItems = food.mealItems ?? []
@@ -1010,6 +1015,17 @@ private struct MealItemServingControls: View {
     
     private var portionDetailsCard: some View {
         VStack(spacing: 0) {
+            // Show editable Name field for scanned foods (fdcId == -1)
+            if isScannedFood {
+                labeledRow("Name") {
+                    TextField("Enter food name", text: $title)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(.primary)
+                }
+
+                Divider().padding(.leading, 16)
+            }
+
             labeledRow("Serving Size") {
                 HStack(spacing: 8) {
                     TextField("1", text: $servingAmountInput)

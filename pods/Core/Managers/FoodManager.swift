@@ -1002,7 +1002,7 @@ class FoodManager: ObservableObject {
                 let coachData = try JSONSerialization.data(withJSONObject: coachDict)
                 let coachMessage = try decoder.decode(CoachMessage.self, from: coachData)
                 self.lastCoachMessage = coachMessage
-                print("🎯 [COACH] Parsed coach message: \(coachMessage.acknowledgement)")
+           
             } catch {
                 print("⚠️ [COACH] Failed to parse coach message: \(error)")
                 self.lastCoachMessage = nil
@@ -1734,7 +1734,7 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
                 self.awaitingCoachForFoodLogId = loggedFood.foodLogId
                 if let coachMessage = loggedFood.coach {
                     self.lastCoachMessage = coachMessage
-                    print("🎯 [COACH] Received coach message: \(coachMessage.acknowledgement)")
+                  
                 }
 
                 // Mixpanel tracking removed - now handled by backend

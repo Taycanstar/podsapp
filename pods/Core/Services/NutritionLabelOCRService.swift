@@ -30,48 +30,56 @@ final class NutritionLabelOCRService {
     // MARK: - Regex Patterns
 
     /// US FDA Nutrition Facts patterns
+    /// Note: Patterns are flexible to handle OCR variations (spaces, missing units, etc.)
     private enum USPatterns {
         static let nutritionFactsHeader = #"(?i)nutrition\s*facts"#
         static let supplementFactsHeader = #"(?i)supplement\s*facts"#
         static let servingSize = #"(?i)serving\s*size[:\s]*(.+?)(?=\n|servings|calories|amount)"#
         static let servingsPerContainer = #"(?i)(?:servings?\s*per\s*container|about)\s*:?\s*(\d+\.?\d*)"#
+        // Calories - may appear as "Calories 230" or "Calories: 230" or just number after Calories
         static let calories = #"(?i)calories[:\s]*(\d+)"#
-        static let totalFat = #"(?i)total\s*fat[:\s]*(\d+\.?\d*)\s*g"#
-        static let saturatedFat = #"(?i)saturated\s*fat[:\s]*(\d+\.?\d*)\s*g"#
-        static let transFat = #"(?i)trans\s*fat[:\s]*(\d+\.?\d*)\s*g"#
-        static let cholesterol = #"(?i)cholesterol[:\s]*(\d+\.?\d*)\s*mg"#
-        static let sodium = #"(?i)sodium[:\s]*(\d+\.?\d*)\s*mg"#
-        static let totalCarbs = #"(?i)total\s*carb(?:ohydrate)?s?[:\s]*(\d+\.?\d*)\s*g"#
-        static let dietaryFiber = #"(?i)(?:dietary\s*)?fiber[:\s]*(\d+\.?\d*)\s*g"#
-        static let totalSugars = #"(?i)(?:total\s*)?sugars?[:\s]*(\d+\.?\d*)\s*g"#
-        static let addedSugars = #"(?i)(?:includes?\s*)?added\s*sugars?[:\s]*(\d+\.?\d*)\s*g"#
-        static let protein = #"(?i)protein[:\s]*(\d+\.?\d*)\s*g"#
-        static let vitaminD = #"(?i)vitamin\s*d[:\s]*(\d+\.?\d*)\s*(?:mcg|µg)"#
-        static let calcium = #"(?i)calcium[:\s]*(\d+\.?\d*)\s*mg"#
-        static let iron = #"(?i)iron[:\s]*(\d+\.?\d*)\s*mg"#
-        static let potassium = #"(?i)potassium[:\s]*(\d+\.?\d*)\s*mg"#
+        // Fat patterns - unit (g) may have space or be adjacent, or on next line
+        static let totalFat = #"(?i)total\s*fat[:\s]*(\d+\.?\d*)\s*g?"#
+        static let saturatedFat = #"(?i)(?:saturated\s*fat|sat\.?\s*fat)[:\s]*(\d+\.?\d*)\s*g?"#
+        static let transFat = #"(?i)trans\s*fat[:\s]*(\d+\.?\d*)\s*g?"#
+        // Cholesterol and sodium - mg may have space or be adjacent
+        static let cholesterol = #"(?i)cholesterol[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        static let sodium = #"(?i)sodium[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        // Carb patterns
+        static let totalCarbs = #"(?i)(?:total\s*)?carb(?:ohydrate)?s?[:\s]*(\d+\.?\d*)\s*g?"#
+        static let dietaryFiber = #"(?i)(?:dietary\s*)?fibre?[:\s]*(\d+\.?\d*)\s*g?"#
+        static let totalSugars = #"(?i)(?:total\s*)?sugars?[:\s]*(\d+\.?\d*)\s*g?"#
+        static let addedSugars = #"(?i)(?:includes?\s*)?added\s*sugars?[:\s]*(\d+\.?\d*)\s*g?"#
+        // Protein
+        static let protein = #"(?i)protein[:\s]*(\d+\.?\d*)\s*g?"#
+        // Micronutrients - units may vary (mcg, µg, IU for vitamin D)
+        static let vitaminD = #"(?i)(?:vitamin\s*d|vit\.?\s*d)[:\s]*(\d+\.?\d*)\s*(?:mcg|µg|iu)?"#
+        static let calcium = #"(?i)calcium[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        static let iron = #"(?i)iron[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        static let potassium = #"(?i)potassium[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
     }
 
     /// EU/International patterns
+    /// Note: Patterns are flexible to handle OCR variations
     private enum EUPatterns {
         // Headers
         static let nutritionHeader = #"(?i)(valeur|valeurs?)\s*nutritive|nutrition(al)?\s*(information|declaration)|n[äa]hrwert"#
         static let informacionNutricional = #"(?i)informaci[óo]n\s*nutricional"#
 
         // Energy (EU uses kJ and kcal)
-        static let energyKcal = #"(?i)energ(?:y|ie|[íi]a)[:\s]*(\d+)\s*kcal"#
+        static let energyKcal = #"(?i)energ(?:y|ie|[íi]a)[:\s]*(\d+)\s*(?:kcal)?"#
         static let energyKj = #"(?i)energ(?:y|ie|[íi]a)[:\s]*(\d+)\s*kj"#
 
         // Salt (EU shows Salt instead of Sodium)
-        static let salt = #"(?i)(?:sel|salt|sale|salz)[:\s]*(\d+\.?\d*)\s*g"#
+        static let salt = #"(?i)(?:sel|salt|sale|salz)[:\s]*(\d+\.?\d*)\s*g?"#
 
-        // Multilingual nutrient names
-        static let fatEU = #"(?i)(?:lipides?|mati[èe]res?\s*grasses?|fett|fat|grasas?|grassi)[:\s]*(\d+\.?\d*)\s*g"#
-        static let saturatedFatEU = #"(?i)(?:acides?\s*gras\s*satur[ée]s?|ges[äa]ttigte|saturated|saturados?|saturi)[:\s]*(\d+\.?\d*)\s*g"#
-        static let carbsEU = #"(?i)(?:glucides?|hydrates?\s*de\s*carbone|kohlenhydrate?|carbohydrate?s?|carbohidratos?|carboidrati)[:\s]*(\d+\.?\d*)\s*g"#
-        static let sugarsEU = #"(?i)(?:sucres?|zucker|sugars?|az[úu]cares?|zuccheri|dont\s*sucres)[:\s]*(\d+\.?\d*)\s*g"#
-        static let fiberEU = #"(?i)(?:fibres?|ballaststoffe?|fiber|fibra)[:\s]*(\d+\.?\d*)\s*g"#
-        static let proteinEU = #"(?i)(?:prot[ée]ines?|protein|eiwei[ßs]|prote[íi]nas?)[:\s]*(\d+\.?\d*)\s*g"#
+        // Multilingual nutrient names - units optional for OCR flexibility
+        static let fatEU = #"(?i)(?:lipides?|mati[èe]res?\s*grasses?|fett|fat|grasas?|grassi)[:\s]*(\d+\.?\d*)\s*g?"#
+        static let saturatedFatEU = #"(?i)(?:acides?\s*gras\s*satur[ée]s?|ges[äa]ttigte|saturated|saturados?|saturi)[:\s]*(\d+\.?\d*)\s*g?"#
+        static let carbsEU = #"(?i)(?:glucides?|hydrates?\s*de\s*carbone|kohlenhydrate?|carbohydrate?s?|carbohidratos?|carboidrati)[:\s]*(\d+\.?\d*)\s*g?"#
+        static let sugarsEU = #"(?i)(?:sucres?|zucker|sugars?|az[úu]cares?|zuccheri|dont\s*sucres)[:\s]*(\d+\.?\d*)\s*g?"#
+        static let fiberEU = #"(?i)(?:fibres?|ballaststoffe?|fiber|fibra)[:\s]*(\d+\.?\d*)\s*g?"#
+        static let proteinEU = #"(?i)(?:prot[ée]ines?|protein|eiwei[ßs]|prote[íi]nas?)[:\s]*(\d+\.?\d*)\s*g?"#
 
         // Serving size (multilingual)
         static let servingSizeEU = #"(?i)(?:pour|per|par|pro|porci[óo]n)[:\s]*(.+?)(?=\n|teneur|energie|energy|valeur)"#
@@ -107,6 +115,14 @@ final class NutritionLabelOCRService {
             return NutritionLabelData()
         }
 
+        // Debug: Print first 500 chars of OCR text
+        let previewLength = min(text.count, 500)
+        let textPreview = String(text.prefix(previewLength))
+        print("🏷️ [OCR] Raw text preview:\n\(textPreview)")
+        if text.count > 500 {
+            print("🏷️ [OCR] ... (\(text.count - 500) more characters)")
+        }
+
         // 2. Detect label format
         let format = detectFormat(text)
         print("🏷️ [OCR] Detected format: \(format.rawValue)")
@@ -119,7 +135,24 @@ final class NutritionLabelOCRService {
 
         let totalTime = CFAbsoluteTimeGetCurrent()
         print("🏷️ [OCR] Total processing: \(Int((totalTime - startTime) * 1000))ms")
-        print("🏷️ [OCR] Detected: cal=\(data.calories ?? 0), protein=\(data.protein ?? 0), carbs=\(data.totalCarbs ?? 0), fat=\(data.totalFat ?? 0)")
+        print("🏷️ [OCR] === Detected Nutrients ===")
+        print("🏷️ [OCR] Calories: \(data.calories ?? 0)")
+        print("🏷️ [OCR] Protein: \(data.protein ?? 0)g")
+        print("🏷️ [OCR] Carbs: \(data.totalCarbs ?? 0)g")
+        print("🏷️ [OCR] Fat: \(data.totalFat ?? 0)g")
+        print("🏷️ [OCR] Saturated Fat: \(data.saturatedFat ?? 0)g")
+        print("🏷️ [OCR] Trans Fat: \(data.transFat ?? 0)g")
+        print("🏷️ [OCR] Cholesterol: \(data.cholesterol ?? 0)mg")
+        print("🏷️ [OCR] Sodium: \(data.sodium ?? 0)mg")
+        print("🏷️ [OCR] Fiber: \(data.dietaryFiber ?? 0)g")
+        print("🏷️ [OCR] Sugars: \(data.totalSugars ?? 0)g")
+        print("🏷️ [OCR] Added Sugars: \(data.addedSugars ?? 0)g")
+        print("🏷️ [OCR] Vitamin D: \(data.vitaminD ?? 0)mcg")
+        print("🏷️ [OCR] Calcium: \(data.calcium ?? 0)mg")
+        print("🏷️ [OCR] Iron: \(data.iron ?? 0)mg")
+        print("🏷️ [OCR] Potassium: \(data.potassium ?? 0)mg")
+        print("🏷️ [OCR] Serving Size: \(data.servingSize ?? "not detected")")
+        print("🏷️ [OCR] ========================")
 
         return data
     }
