@@ -19,6 +19,8 @@ struct AppTimelineView: View {
     @State private var showAgentChat = false
     @State private var isAtBottom = true
     @State private var pendingCoachMessage: CoachMessage?
+    @State private var showToast = false
+    @State private var toastMessage = ""
     @StateObject private var agentChatViewModel = AgentChatViewModel(
         userEmail: UserDefaults.standard.string(forKey: "userEmail") ?? ""
     )
@@ -102,6 +104,9 @@ struct AppTimelineView: View {
                                                         isThinking: isThinkingForGroup(group, at: groupIndex),
                                                         onCoachEditTap: { coachMessage in
                                                             openAgentChatWithCoachMessage(coachMessage)
+                                                        },
+                                                        onCopyTap: {
+                                                            showToast(message: "Message copied")
                                                         }
                                                     )
                                                 }
@@ -151,6 +156,17 @@ struct AppTimelineView: View {
         }
         .navigationTitle("Timeline")
         .navigationBarTitleDisplayMode(.large)
+        .overlay(alignment: .bottom) {
+            if showToast {
+                Text(toastMessage)
+                    .font(.footnote)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.bottom, 40)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showDatePicker.toggle() }) {
@@ -222,6 +238,18 @@ struct AppTimelineView: View {
     private func openAgentChatWithCoachMessage(_ coachMessage: CoachMessage) {
         agentChatViewModel.seedFromCoachMessage(coachMessage)
         showAgentChat = true
+    }
+
+    private func showToast(message: String) {
+        toastMessage = message
+        withAnimation {
+            showToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showToast = false
+            }
+        }
     }
 
     private var filteredLogs: [CombinedLog] {
@@ -443,6 +471,7 @@ private struct TimelineLogGroupRow: View {
     var coachMessage: CoachMessage? = nil
     var isThinking: Bool = false
     var onCoachEditTap: ((CoachMessage) -> Void)?
+    var onCopyTap: (() -> Void)?
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -489,7 +518,7 @@ private struct TimelineLogGroupRow: View {
                 } else if let coach = coachMessage {
                     HStack(alignment: .top, spacing: 12) {
                         TimelineConnectorSpacer()
-                        CoachMessageText(message: coach, onEditTap: onCoachEditTap)
+                        CoachMessageText(message: coach, onEditTap: onCoachEditTap, onCopyTap: onCopyTap)
                             .padding(.bottom, 16)
                     }
                 }
@@ -737,15 +766,50 @@ private struct TLActivityLogDetails: View {
 
 // MARK: - Coach Message Text (streaming text effect for AI coaching)
 
+private class SpeechCoordinator: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
+    @Published var isSpeaking = false
+    let synthesizer = AVSpeechSynthesizer()
+
+    override init() {
+        super.init()
+        synthesizer.delegate = self
+    }
+
+    func speak(_ text: String) {
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        synthesizer.speak(utterance)
+        isSpeaking = true
+    }
+
+    func stop() {
+        synthesizer.stopSpeaking(at: .immediate)
+        isSpeaking = false
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        DispatchQueue.main.async {
+            self.isSpeaking = false
+        }
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        DispatchQueue.main.async {
+            self.isSpeaking = false
+        }
+    }
+}
+
 private struct CoachMessageText: View {
     let message: CoachMessage
     var onEditTap: ((CoachMessage) -> Void)?
+    var onCopyTap: (() -> Void)?
 
     @State private var displayedText: String = ""
     @State private var isAnimating: Bool = false
     @State private var streamingComplete: Bool = false
-    @State private var isSpeaking: Bool = false
-    @State private var speechSynth = AVSpeechSynthesizer()
+    @StateObject private var speechCoordinator = SpeechCoordinator()
 
     private var fullText: String {
         message.fullText
@@ -764,6 +828,7 @@ private struct CoachMessageText: View {
                     // Copy button
                     Button {
                         UIPasteboard.general.string = fullText
+                        onCopyTap?()
                     } label: {
                         Image(systemName: "doc.on.doc")
                             .font(.system(size: 14, weight: .semibold))
@@ -773,18 +838,13 @@ private struct CoachMessageText: View {
 
                     // Speaker button
                     Button {
-                        if isSpeaking {
-                            speechSynth.stopSpeaking(at: .immediate)
-                            isSpeaking = false
+                        if speechCoordinator.isSpeaking {
+                            speechCoordinator.stop()
                         } else {
-                            let utterance = AVSpeechUtterance(string: fullText)
-                            utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-                            utterance.rate = AVSpeechUtteranceDefaultSpeechRate
-                            speechSynth.speak(utterance)
-                            isSpeaking = true
+                            speechCoordinator.speak(fullText)
                         }
                     } label: {
-                        Image(systemName: isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
+                        Image(systemName: speechCoordinator.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.primary)
                     }

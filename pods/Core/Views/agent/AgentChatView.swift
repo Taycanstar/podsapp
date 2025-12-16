@@ -16,8 +16,19 @@ struct AgentChatView: View {
     @State private var shimmerPhase: CGFloat = 0
     private let mealTypeOptions = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
-    init(viewModel: AgentChatViewModel) {
+    // Input bar state (matching AgentTabBar)
+    @State private var isListening = false
+    @State private var pulseScale: CGFloat = 1.0
+    @StateObject private var speechRecognizer = SpeechRecognizer()
+
+    // Callbacks for actions (can be customized by parent)
+    var onPlusTapped: () -> Void = {}
+    var onBarcodeTapped: () -> Void = {}
+
+    init(viewModel: AgentChatViewModel, onPlusTapped: @escaping () -> Void = {}, onBarcodeTapped: @escaping () -> Void = {}) {
         _viewModel = ObservedObject(wrappedValue: viewModel)
+        self.onPlusTapped = onPlusTapped
+        self.onBarcodeTapped = onBarcodeTapped
     }
 
     var body: some View {
@@ -779,47 +790,164 @@ struct AgentChatView: View {
     }
 
     private var inputBar: some View {
-        VStack {
-            HStack(alignment: .bottom, spacing: 12) {
-                TextField("Ask or log anything…", text: $inputText, axis: .vertical)
-                    .textInputAutocapitalization(.sentences)
-                    .lineLimit(1...4)
-                    .padding(.vertical, 8)
-                    .focused($isInputFocused)
+        let hasUserInput = !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
-                Button {
-                    sendPrompt()
-                } label: {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
-                        .background(Circle().fill(Color.accentColor))
+        return VStack(alignment: .leading, spacing: 12) {
+            ZStack(alignment: .topLeading) {
+                // Placeholder text
+                if inputText.isEmpty {
+                    Text("Log or ask anything...")
+                        .font(.system(size: 15))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 8)
+                        .allowsHitTesting(false)
                 }
-                .buttonStyle(.plain)
+
+                TextEditor(text: $inputText)
+                    .textInputAutocapitalization(.sentences)
+                    .autocorrectionDisabled(false)
+                    .tint(Color.accentColor)
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+                    .frame(maxHeight: 120)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .focused($isInputFocused)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color("chat"))
-                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-            )
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isInputFocused = true
+            }
+            .padding(.horizontal, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack {
+                HStack(spacing: 10) {
+                    ChatActionCircleButton(
+                        systemName: "plus",
+                        action: onPlusTapped,
+                        backgroundColor: Color.accentColor,
+                        foregroundColor: .white
+                    )
+
+                    ChatActionCircleButton(
+                        systemName: "barcode.viewfinder",
+                        action: onBarcodeTapped
+                    )
+                }
+
+                Spacer()
+
+                inputBarRightButtons(hasUserInput: hasUserInput)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color("chat"))
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(inputBarBorderColor, lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+        .padding(.bottom, isInputFocused ? 10 : 0)
+        .padding(.vertical, 12)
+        .onChange(of: speechRecognizer.transcript) { _, newTranscript in
+            if !newTranscript.isEmpty {
+                inputText = newTranscript
+            }
+        }
+        .onChange(of: isListening) { _, listening in
+            if listening {
+                speechRecognizer.startRecording()
+                pulseScale = 1.2
+            } else {
+                speechRecognizer.stopRecording()
+                pulseScale = 1.0
+            }
+        }
+        .onDisappear {
+            if isListening {
+                isListening = false
+                speechRecognizer.stopRecording()
+            }
         }
     }
 
-    private func sendPrompt() {
+    @ViewBuilder
+    private func inputBarRightButtons(hasUserInput: Bool) -> some View {
+        if isListening {
+            Button {
+                HapticFeedback.generate()
+                toggleSpeechRecognition()
+            } label: {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.accentColor)
+                    .clipShape(Circle())
+                    .scaleEffect(pulseScale)
+                    .animation(
+                        Animation.easeInOut(duration: 1.0)
+                            .repeatForever(autoreverses: true),
+                        value: pulseScale
+                    )
+            }
+            .buttonStyle(.plain)
+        } else {
+            HStack(spacing: 10) {
+                ChatActionCircleButton(
+                    systemName: "mic",
+                    action: {
+                        HapticFeedback.generate()
+                        toggleSpeechRecognition()
+                    },
+                    backgroundColor: Color("chaticon"),
+                    foregroundColor: .primary
+                )
+
+                ChatActionCircleButton(
+                    systemName: hasUserInput ? "arrow.up" : "waveform",
+                    action: {
+                        if hasUserInput {
+                            submitAgentPrompt()
+                        } else {
+                            // Waveform action - could start realtime voice in future
+                            HapticFeedback.generate()
+                        }
+                    },
+                    backgroundColor: hasUserInput ? Color.accentColor : Color("chaticon"),
+                    foregroundColor: hasUserInput ? .white : .primary
+                )
+            }
+        }
+    }
+
+    private func toggleSpeechRecognition() {
+        isListening.toggle()
+    }
+
+    private func submitAgentPrompt() {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        HapticFeedback.generate()
         viewModel.send(message: trimmed)
         inputText = ""
         isInputFocused = false
+    }
+
+    private var inputBarBorderColor: Color {
+        Color(uiColor: UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark
+            ? UIColor.white.withAlphaComponent(0.20)
+            : UIColor.black.withAlphaComponent(0.08)
+        })
     }
 
     private func startNewChat() {
@@ -917,4 +1045,27 @@ struct AgentChatView: View {
     }
 
     private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
+}
+
+// MARK: - Supporting Views
+
+private struct ChatActionCircleButton: View {
+    var systemName: String
+    var action: () -> Void
+    var backgroundColor: Color = Color("chaticon")
+    var foregroundColor: Color = .primary
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(backgroundColor)
+                Image(systemName: systemName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(foregroundColor)
+            }
+            .frame(width: 30, height: 30)
+        }
+        .buttonStyle(.plain)
+    }
 }
