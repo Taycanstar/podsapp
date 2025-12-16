@@ -391,8 +391,10 @@ private struct TimelineLogRow: View {
                     // Show thinking indicator while coach is generating, otherwise show coach message
                     if isThinking {
                         CoachThinkingIndicator()
+                            .padding(.bottom, 16)
                     } else if let coach = coachMessage {
                         CoachMessageText(message: coach, onEditTap: onCoachEditTap)
+                            .padding(.bottom, 16)
                     }
                 }
             }
