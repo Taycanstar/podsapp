@@ -8042,6 +8042,67 @@ class NetworkManager {
         task.resume()
     }
 
+    /// Streaming health coach chat - streams AI response token by token
+    /// Uses Server-Sent Events (SSE) to stream the response
+    func healthCoachStream(
+        message: String,
+        history: [[String: String]] = [],
+        context: HealthCoachContextPayload? = nil,
+        targetDate: Date = Date(),
+        onDelta: @escaping (String) -> Void,
+        onComplete: @escaping (Result<HealthCoachResponse, Error>) -> Void
+    ) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let targetDateString = dateFormatter.string(from: targetDate)
+
+        var parameters: [String: Any] = [
+            "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
+            "message": message,
+            "history": history,
+            "target_date": targetDateString
+        ]
+
+        // Add context if provided
+        if let context = context {
+            let encoder = JSONEncoder()
+            encoder.keyEncodingStrategy = .convertToSnakeCase
+            if let contextData = try? encoder.encode(context),
+               let contextDict = try? JSONSerialization.jsonObject(with: contextData) as? [String: Any] {
+                parameters["context"] = contextDict
+            }
+        }
+
+        let urlString = "\(baseUrl)/agent/health-coach/stream/"
+        guard let url = URL(string: urlString) else {
+            onComplete(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+
+            if let jsonString = String(data: request.httpBody!, encoding: .utf8) {
+                print("📤 HEALTH COACH STREAM REQUEST: \(jsonString)")
+            }
+        } catch {
+            print("JSON Serialization Error: \(error)")
+            onComplete(.failure(NetworkError.encodingError))
+            return
+        }
+
+        // Use URLSession with delegate for streaming
+        let delegate = HealthCoachStreamingDelegate(onDelta: onDelta, onComplete: onComplete)
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+        let task = session.dataTask(with: request)
+        task.resume()
+    }
+
     // Add the createManualFood function to the NetworkManager class
     // This should be added with the other food-related API functions
 
@@ -9246,6 +9307,99 @@ private final class FoodChatStreamingDelegate: NSObject, URLSessionDataDelegate 
                     options: nil,
                     question: nil,
                     error: nil
+                )
+                DispatchQueue.main.async { self.onComplete(.success(fallbackResponse)) }
+            }
+        }
+    }
+}
+
+// MARK: - Health Coach Streaming Delegate
+
+private final class HealthCoachStreamingDelegate: NSObject, URLSessionDataDelegate {
+    private var buffer = ""
+    private var fullText = ""
+    private var hasCompleted = false
+    private let onDelta: (String) -> Void
+    private let onComplete: (Result<HealthCoachResponse, Error>) -> Void
+
+    init(onDelta: @escaping (String) -> Void,
+         onComplete: @escaping (Result<HealthCoachResponse, Error>) -> Void) {
+        self.onDelta = onDelta
+        self.onComplete = onComplete
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        guard let chunk = String(data: data, encoding: .utf8) else { return }
+        print("[HEALTH_COACH_STREAM] raw chunk (\(data.count) bytes):", chunk.replacingOccurrences(of: "\n", with: "\\n"))
+        buffer.append(chunk)
+
+        let parts = buffer.split(separator: "\n", omittingEmptySubsequences: false)
+        buffer = parts.last.map(String.init) ?? ""
+
+        for part in parts.dropLast() {
+            var trimmed = part.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+
+            // Support SSE-style "data: {...}" lines
+            if trimmed.hasPrefix("data:") {
+                trimmed = String(trimmed.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+            }
+
+            guard let jsonData = trimmed.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
+            else {
+                print("[HEALTH_COACH_STREAM] failed to decode json for part:", trimmed)
+                continue
+            }
+
+            // Check if this is the final message with "done: true"
+            if let done = obj["done"] as? Bool, done {
+                print("[HEALTH_COACH_STREAM] done received with response data")
+                hasCompleted = true
+                // Parse the full HealthCoachResponse from this final message
+                if let responseData = trimmed.data(using: .utf8) {
+                    do {
+                        let decoder = JSONDecoder()
+                        let response = try decoder.decode(HealthCoachResponse.self, from: responseData)
+                        DispatchQueue.main.async { self.onComplete(.success(response)) }
+                    } catch {
+                        print("[HEALTH_COACH_STREAM] failed to decode HealthCoachResponse:", error)
+                        // Create a minimal response with the accumulated text
+                        let fallbackResponse = HealthCoachResponse(
+                            type: .text,
+                            message: self.fullText
+                        )
+                        DispatchQueue.main.async { self.onComplete(.success(fallbackResponse)) }
+                    }
+                }
+                continue
+            }
+
+            // Handle streaming deltas
+            if let delta = obj["delta"] as? String {
+                print("[HEALTH_COACH_STREAM] delta:", delta)
+                fullText.append(delta)
+                DispatchQueue.main.async { self.onDelta(delta) }
+            }
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error {
+            print("[HEALTH_COACH_STREAM] completed with error:", error.localizedDescription)
+            if !hasCompleted {
+                hasCompleted = true
+                DispatchQueue.main.async { self.onComplete(.failure(error)) }
+            }
+        } else {
+            print("[HEALTH_COACH_STREAM] completed successfully")
+            // Only create fallback response if we didn't already complete via "done" message
+            if !hasCompleted && !fullText.isEmpty {
+                hasCompleted = true
+                let fallbackResponse = HealthCoachResponse(
+                    type: .text,
+                    message: fullText
                 )
                 DispatchQueue.main.async { self.onComplete(.success(fallbackResponse)) }
             }

@@ -41,7 +41,7 @@ struct MainContentView: View {
     @State private var agentPendingRetryDescription: String?
     @State private var agentPendingRetryMealType: String?
     @State private var showAgentChat = false
-    @StateObject private var agentChatViewModel = AgentChatViewModel(userEmail: UserDefaults.standard.string(forKey: "userEmail") ?? "")
+    @State private var pendingAgentMessage: String?
     
     // State for selected meal - initialized with time-based default
     @State private var selectedMeal: String = {
@@ -82,14 +82,6 @@ struct MainContentView: View {
     var body: some View {
         content
         .environment(\.isTabBarVisible, $isTabBarVisible)
-        .onAppear {
-            ensureAgentChatEmailUpToDate()
-            agentChatViewModel.updateTargetDate(dayLogsVM.selectedDate)
-            agentChatViewModel.updateMealTypeHint(selectedMeal)
-        }
-        .onChange(of: viewModel.email) { _, _ in
-            ensureAgentChatEmailUpToDate()
-        }
 
         // REMOVED: Old onboarding system (OnboardingFlowContainer) - now using new onboarding in RegisterView
         // .fullScreenCover(isPresented: $viewModel.isShowingOnboarding) {
@@ -104,10 +96,6 @@ struct MainContentView: View {
         }
         .onChange(of: selectedMeal) { _, newValue in
             print("🍽️ MainContentView selectedMeal changed to: \(newValue)")
-            agentChatViewModel.updateMealTypeHint(newValue)
-        }
-        .onChange(of: dayLogsVM.selectedDate) { _, newValue in
-            agentChatViewModel.updateTargetDate(newValue)
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
@@ -389,8 +377,10 @@ struct MainContentView: View {
         .fullScreenCover(isPresented: $showVoiceLog) {
             VoiceLogView(isPresented: $showVoiceLog, selectedMeal: selectedMeal)
         }
-        .fullScreenCover(isPresented: $showAgentChat) {
-            AgentChatView(viewModel: agentChatViewModel)
+        .fullScreenCover(isPresented: $showAgentChat, onDismiss: {
+            pendingAgentMessage = nil  // Clear pending message after dismiss
+        }) {
+            AgentChatView(initialMessage: $pendingAgentMessage)
         }
         .fullScreenCover(isPresented: $showLogWorkoutView) {
             WorkoutContainerView(selectedTab: $selectedTab)
@@ -438,13 +428,15 @@ struct MainContentView: View {
         agentPendingRetryMealType = nil
         agentInputText = ""
 
-        let shouldPresentChat = !showAgentChat
-        if shouldPresentChat {
+        // Store the message to pass to AgentChatView
+        pendingAgentMessage = trimmedText
+        print("🤖 MainContentView.handleAgentSubmit: Set pendingAgentMessage = '\(trimmedText)'")
+
+        // Present the chat view - it will send the message via its internal HealthCoachChatViewModel
+        if !showAgentChat {
+            print("🤖 MainContentView.handleAgentSubmit: Setting showAgentChat = true")
             showAgentChat = true
         }
-
-        ensureAgentChatEmailUpToDate()
-        agentChatViewModel.send(message: trimmedText)
     }
 
     private func prepareAgentAnalysisStates() {
@@ -497,13 +489,6 @@ struct MainContentView: View {
                     self.handleAgentAnalysisFailure(error.localizedDescription)
                 }
             }
-        }
-    }
-
-    private func ensureAgentChatEmailUpToDate() {
-        let currentEmail = viewModel.email.isEmpty ? (UserDefaults.standard.string(forKey: "userEmail") ?? "") : viewModel.email
-        if !currentEmail.isEmpty {
-            agentChatViewModel.updateUserEmail(currentEmail)
         }
     }
 

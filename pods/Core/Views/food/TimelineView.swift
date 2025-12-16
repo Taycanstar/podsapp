@@ -21,9 +21,7 @@ struct AppTimelineView: View {
     @State private var pendingCoachMessage: CoachMessage?
     @State private var showToast = false
     @State private var toastMessage = ""
-    @StateObject private var agentChatViewModel = AgentChatViewModel(
-        userEmail: UserDefaults.standard.string(forKey: "userEmail") ?? ""
-    )
+    @State private var pendingAgentMessage: String?
 
     private let dateFormatter: DateFormatter = {
         let df = DateFormatter()
@@ -228,15 +226,18 @@ struct AppTimelineView: View {
         .onChange(of: selectedDate) { _, newValue in
             dayLogsVM.loadLogs(for: newValue, force: true)
         }
-        .fullScreenCover(isPresented: $showAgentChat) {
-            AgentChatView(viewModel: agentChatViewModel)
+        .fullScreenCover(isPresented: $showAgentChat, onDismiss: {
+            pendingAgentMessage = nil
+        }) {
+            AgentChatView(initialMessage: $pendingAgentMessage)
                 .environmentObject(dayLogsVM)
         }
     }
 
     /// Opens AgentChatView with the coach message seeded as the first assistant message
     private func openAgentChatWithCoachMessage(_ coachMessage: CoachMessage) {
-        agentChatViewModel.seedFromCoachMessage(coachMessage)
+        // Pass the coach message text as the initial message to continue the conversation
+        pendingAgentMessage = coachMessage.fullText
         showAgentChat = true
     }
 

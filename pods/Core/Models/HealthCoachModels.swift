@@ -1,0 +1,415 @@
+//
+//  HealthCoachResponseType.swift
+//  pods
+//
+//  Created by Dimi Nunez on 12/16/25.
+//
+
+
+//
+//  HealthCoachModels.swift
+//  pods
+//
+//  Created by Claude on 12/16/24.
+//
+
+import Foundation
+
+// MARK: - Response Types
+
+enum HealthCoachResponseType: String, Codable {
+    case text
+    case foodLogged = "food_logged"
+    case activityLogged = "activity_logged"
+    case dataResponse = "data_response"
+    case needsClarification = "needs_clarification"
+    case error
+}
+
+// MARK: - Main Response
+
+struct HealthCoachResponse: Codable {
+    let type: HealthCoachResponseType
+    let message: String
+    let food: HealthCoachFood?
+    let mealItems: [HealthCoachMealItem]?
+    let activity: HealthCoachActivity?
+    let data: HealthCoachDataPayload?
+    let options: [ClarificationOption]?
+    let question: String?
+    let error: String?
+
+    enum CodingKeys: String, CodingKey {
+        case type, message, food, activity, data, options, question, error
+        case mealItems = "meal_items"
+    }
+
+    init(
+        type: HealthCoachResponseType,
+        message: String,
+        food: HealthCoachFood? = nil,
+        mealItems: [HealthCoachMealItem]? = nil,
+        activity: HealthCoachActivity? = nil,
+        data: HealthCoachDataPayload? = nil,
+        options: [ClarificationOption]? = nil,
+        question: String? = nil,
+        error: String? = nil
+    ) {
+        self.type = type
+        self.message = message
+        self.food = food
+        self.mealItems = mealItems
+        self.activity = activity
+        self.data = data
+        self.options = options
+        self.question = question
+        self.error = error
+    }
+}
+
+// MARK: - Food Models (compatible with FoodChatFood)
+
+struct HealthCoachFood: Codable {
+    let id: Int?
+    let name: String?
+    let calories: Double?
+    let protein: Double?
+    let carbs: Double?
+    let fat: Double?
+    let servingSizeText: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, calories, protein, carbs, fat
+        case servingSizeText = "serving_size_text"
+    }
+}
+
+struct HealthCoachMealItem: Codable {
+    let name: String?
+    let calories: Double?
+    let protein: Double?
+    let carbs: Double?
+    let fat: Double?
+}
+
+// MARK: - Activity Models
+
+struct HealthCoachActivity: Codable {
+    let id: Int?
+    let activityName: String
+    let activityType: String?
+    let durationMinutes: Int
+    let caloriesBurned: Int?
+    let notes: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case activityName = "activity_name"
+        case activityType = "activity_type"
+        case durationMinutes = "duration_minutes"
+        case caloriesBurned = "calories_burned"
+        case notes
+    }
+}
+
+// MARK: - Data Query Response
+
+struct HealthCoachDataPayload: Codable {
+    let queryType: String
+    let summary: String?
+    let nutrition: NutritionDataPayload?
+    let workout: WorkoutDataPayload?
+    let healthMetrics: HealthMetricsDataPayload?
+    let goals: GoalsDataPayload?
+
+    enum CodingKeys: String, CodingKey {
+        case queryType = "query_type"
+        case summary, nutrition, workout, goals
+        case healthMetrics = "health_metrics"
+    }
+}
+
+struct NutritionDataPayload: Codable {
+    let caloriesConsumed: Double?
+    let caloriesRemaining: Double?
+    let caloriesGoal: Double?
+    let protein: Double?
+    let proteinGoal: Double?
+    let carbs: Double?
+    let carbsGoal: Double?
+    let fat: Double?
+    let fatGoal: Double?
+    let water: Double?
+    let waterGoal: Double?
+    let meals: [MealBreakdown]?
+
+    enum CodingKeys: String, CodingKey {
+        case caloriesConsumed = "calories_consumed"
+        case caloriesRemaining = "calories_remaining"
+        case caloriesGoal = "calories_goal"
+        case protein
+        case proteinGoal = "protein_goal"
+        case carbs
+        case carbsGoal = "carbs_goal"
+        case fat
+        case fatGoal = "fat_goal"
+        case water
+        case waterGoal = "water_goal"
+        case meals
+    }
+}
+
+struct MealBreakdown: Codable {
+    let mealType: String
+    let calories: Double?
+    let protein: Double?
+    let carbs: Double?
+    let fat: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case mealType = "meal_type"
+        case calories, protein, carbs, fat
+    }
+}
+
+struct WorkoutDataPayload: Codable {
+    let hasWorkoutToday: Bool?
+    let workoutName: String?
+    let status: String?
+    let exercises: [WorkoutExerciseInfo]?
+    let durationMinutes: Int?
+    let estimatedCalories: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case hasWorkoutToday = "has_workout_today"
+        case workoutName = "workout_name"
+        case status, exercises
+        case durationMinutes = "duration_minutes"
+        case estimatedCalories = "estimated_calories"
+    }
+}
+
+struct WorkoutExerciseInfo: Codable {
+    let name: String
+    let sets: Int?
+    let reps: String?
+    let muscleGroup: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, sets, reps
+        case muscleGroup = "muscle_group"
+    }
+}
+
+struct HealthMetricsDataPayload: Codable {
+    let steps: Int?
+    let stepsGoal: Int?
+    let sleepHours: Double?
+    let sleepScore: Int?
+    let restingHeartRate: Double?
+    let hrv: Double?
+    let weight: Double?
+    let waterOz: Double?
+    let caloriesBurned: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case steps
+        case stepsGoal = "steps_goal"
+        case sleepHours = "sleep_hours"
+        case sleepScore = "sleep_score"
+        case restingHeartRate = "resting_heart_rate"
+        case hrv, weight
+        case waterOz = "water_oz"
+        case caloriesBurned = "calories_burned"
+    }
+}
+
+/// Progress data for goals (different from GoalProgress View)
+struct GoalProgressData: Codable {
+    let caloriesConsumed: Double?
+    let proteinConsumed: Double?
+    let carbsConsumed: Double?
+    let fatConsumed: Double?
+    let stepsToday: Int?
+    let waterToday: Double?
+    let workoutsThisWeek: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case caloriesConsumed = "calories_consumed"
+        case proteinConsumed = "protein_consumed"
+        case carbsConsumed = "carbs_consumed"
+        case fatConsumed = "fat_consumed"
+        case stepsToday = "steps_today"
+        case waterToday = "water_today"
+        case workoutsThisWeek = "workouts_this_week"
+    }
+}
+
+struct GoalsDataPayload: Codable {
+    let fitnessGoal: String?
+    let caloriesGoal: Double?
+    let proteinGoal: Double?
+    let carbsGoal: Double?
+    let fatGoal: Double?
+    let stepsGoal: Int?
+    let waterGoal: Double?
+    let workoutFrequency: Int?
+    let currentProgress: GoalProgressData?
+
+    enum CodingKeys: String, CodingKey {
+        case fitnessGoal = "fitness_goal"
+        case caloriesGoal = "calories_goal"
+        case proteinGoal = "protein_goal"
+        case carbsGoal = "carbs_goal"
+        case fatGoal = "fat_goal"
+        case stepsGoal = "steps_goal"
+        case waterGoal = "water_goal"
+        case workoutFrequency = "workout_frequency"
+        case currentProgress = "current_progress"
+    }
+}
+
+
+
+// MARK: - Context Payload (sent with request)
+
+struct HealthCoachContextPayload: Encodable {
+    let todayMacros: TodayMacrosContext?
+    let todayWorkout: TodayWorkoutContext?
+    let healthMetrics: HealthMetricsContext?
+
+    enum CodingKeys: String, CodingKey {
+        case todayMacros = "today_macros"
+        case todayWorkout = "today_workout"
+        case healthMetrics = "health_metrics"
+    }
+}
+
+struct TodayMacrosContext: Encodable {
+    let caloriesConsumed: Double
+    let caloriesGoal: Double
+    let protein: Double
+    let proteinGoal: Double
+    let carbs: Double
+    let carbsGoal: Double
+    let fat: Double
+    let fatGoal: Double
+    let water: Double
+    let waterGoal: Double
+
+    enum CodingKeys: String, CodingKey {
+        case caloriesConsumed = "calories_consumed"
+        case caloriesGoal = "calories_goal"
+        case protein
+        case proteinGoal = "protein_goal"
+        case carbs
+        case carbsGoal = "carbs_goal"
+        case fat
+        case fatGoal = "fat_goal"
+        case water
+        case waterGoal = "water_goal"
+    }
+}
+
+struct TodayWorkoutContext: Encodable {
+    let hasWorkoutToday: Bool
+    let workoutName: String?
+    let exerciseCount: Int?
+    let status: String?
+
+    enum CodingKeys: String, CodingKey {
+        case hasWorkoutToday = "has_workout_today"
+        case workoutName = "workout_name"
+        case exerciseCount = "exercise_count"
+        case status
+    }
+}
+
+struct HealthMetricsContext: Encodable {
+    let steps: Int?
+    let sleepHours: Double?
+    let restingHeartRate: Double?
+    let hrv: Double?
+    let weight: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case steps
+        case sleepHours = "sleep_hours"
+        case restingHeartRate = "resting_heart_rate"
+        case hrv, weight
+    }
+}
+
+// MARK: - Message Model for Chat UI
+
+struct HealthCoachMessage: Identifiable, Equatable {
+    enum Sender: Equatable {
+        case user
+        case coach
+        case system
+        case status
+    }
+
+    let id: UUID
+    let sender: Sender
+    var text: String
+    let timestamp: Date
+    let responseType: HealthCoachResponseType?
+    let food: HealthCoachFood?
+    let mealItems: [HealthCoachMealItem]?
+    let activity: HealthCoachActivity?
+    let data: HealthCoachDataPayload?
+    let options: [ClarificationOption]?
+
+    init(
+        id: UUID = UUID(),
+        sender: Sender,
+        text: String,
+        timestamp: Date = Date(),
+        responseType: HealthCoachResponseType? = nil,
+        food: HealthCoachFood? = nil,
+        mealItems: [HealthCoachMealItem]? = nil,
+        activity: HealthCoachActivity? = nil,
+        data: HealthCoachDataPayload? = nil,
+        options: [ClarificationOption]? = nil
+    ) {
+        self.id = id
+        self.sender = sender
+        self.text = text
+        self.timestamp = timestamp
+        self.responseType = responseType
+        self.food = food
+        self.mealItems = mealItems
+        self.activity = activity
+        self.data = data
+        self.options = options
+    }
+
+    static func == (lhs: HealthCoachMessage, rhs: HealthCoachMessage) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+// MARK: - Status Hints
+
+enum HealthCoachStatusHint: String, CaseIterable {
+    case thinking
+    case analyzingData
+    case loggingFood
+    case loggingActivity
+    case queryingHealth
+    case queryingNutrition
+    case queryingWorkout
+
+    var displayText: String {
+        switch self {
+        case .thinking: return "Thinking..."
+        case .analyzingData: return "Analyzing your data..."
+        case .loggingFood: return "Logging food..."
+        case .loggingActivity: return "Logging activity..."
+        case .queryingHealth: return "Checking your health metrics..."
+        case .queryingNutrition: return "Looking at your nutrition..."
+        case .queryingWorkout: return "Checking your workout..."
+        }
+    }
+}

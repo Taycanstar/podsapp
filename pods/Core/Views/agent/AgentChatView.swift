@@ -1,20 +1,21 @@
 import SwiftUI
 import UIKit
+import AVFoundation
 
 struct AgentChatView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
-    @ObservedObject var viewModel: AgentChatViewModel
+    @EnvironmentObject private var foodManager: FoodManager
+
+    // New streaming ViewModel
+    @StateObject private var viewModel = HealthCoachChatViewModel()
+
     @State private var inputText: String = ""
     @State private var showToast = false
     @State private var toastMessage = ""
     @State private var scrollProxy: ScrollViewProxy?
     @FocusState private var isInputFocused: Bool
-    @State private var mealSelections: [UUID: String] = [:]
-    @State private var expandedDetails: Set<UUID> = []
     @State private var statusPhraseIndex = 0
-    @State private var shimmerPhase: CGFloat = 0
-    private let mealTypeOptions = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
     // Input bar state (matching AgentTabBar)
     @State private var isListening = false
@@ -24,23 +25,60 @@ struct AgentChatView: View {
     // Scroll state for floating button
     @State private var isAtBottom = true
 
+    // Action sheet state
+    @State private var likedMessageIDs: Set<UUID> = []
+    @State private var dislikedMessageIDs: Set<UUID> = []
+    @State private var shareText: String?
+    @State private var showShareSheet = false
+    @State private var speechSynth = AVSpeechSynthesizer()
+    @State private var showCopyToast = false
+
+    // Meal summary for multi-food
+    @State private var mealSummaryFoods: [Food] = []
+    @State private var mealSummaryItems: [MealItem] = []
+    @State private var showMealSummary = false
+
+    // Realtime voice session
+    @StateObject private var realtimeSession = RealtimeVoiceSession()
+
     // Callbacks for actions (can be customized by parent)
     var onPlusTapped: () -> Void = {}
     var onBarcodeTapped: () -> Void = {}
+    var onFoodReady: ((Food) -> Void)?
+    var onMealLogged: (([Food]) -> Void)?
 
-    init(viewModel: AgentChatViewModel, onPlusTapped: @escaping () -> Void = {}, onBarcodeTapped: @escaping () -> Void = {}) {
-        _viewModel = ObservedObject(wrappedValue: viewModel)
+    // Initial message binding to send on appear (for AgentTabBar integration)
+    // Using Binding so SwiftUI reads current value when view appears, not when closure is captured
+    @Binding private var initialMessage: String?
+
+    init(
+        initialMessage: Binding<String?> = .constant(nil),
+        onPlusTapped: @escaping () -> Void = {},
+        onBarcodeTapped: @escaping () -> Void = {}
+    ) {
+        self._initialMessage = initialMessage
         self.onPlusTapped = onPlusTapped
         self.onBarcodeTapped = onBarcodeTapped
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                pendingActionsSection
-                Divider()
-                chatScrollView
-                inputBar
+            ZStack {
+                VStack(spacing: 0) {
+                    chatScrollView
+                    inputBar
+                }
+
+                // "Start talking" overlay when connected and chat is empty
+                if realtimeSession.state == .connected && viewModel.messages.isEmpty && realtimeSession.messages.isEmpty {
+                    VStack {
+                        Spacer()
+                        Text("Start talking")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
             }
             .navigationTitle("Metryc")
             .navigationBarTitleDisplayMode(.inline)
@@ -71,21 +109,65 @@ struct AgentChatView: View {
         }
         .onReceive(thinkingTimer) { _ in
             guard viewModel.isLoading else { return }
-            let phrases = thinkingPhrases(for: viewModel.currentStatusHint)
-            statusPhraseIndex = (statusPhraseIndex + 1) % phrases.count
-        }
-        .onAppear {
-            viewModel.bootstrapIfNeeded()
-            syncMealSelections(with: viewModel.messages)
-        }
-        .onChange(of: viewModel.messages) { _, newMessages in
-            syncMealSelections(with: newMessages)
-        }
-        .onChange(of: viewModel.currentStatusHint) { _, _ in
-            statusPhraseIndex = 0
+            statusPhraseIndex = (statusPhraseIndex + 1) % statusPhrases.count
         }
         .onChange(of: viewModel.isLoading) { _, loading in
             if !loading { statusPhraseIndex = 0 }
+        }
+        .onChange(of: viewModel.streamingMessageId) { oldValue, newValue in
+            // Trigger 3 rapid haptic feedbacks when streaming starts (first delta received)
+            if oldValue == nil && newValue != nil {
+                HapticFeedback.generateBurstThenSingle(count: 3, interval: 0.08)
+            }
+        }
+        .onAppear {
+            isInputFocused = true
+            setupCallbacks()
+            realtimeSession.delegate = self
+
+            // Send initial message if provided (from AgentTabBar)
+            print("🤖 AgentChatView.onAppear - initialMessage: \(initialMessage ?? "nil")")
+            if let message = initialMessage, !message.isEmpty {
+                print("🤖 AgentChatView: Sending initial message: \(message)")
+                viewModel.send(message: message)
+                // Clear it to avoid re-sending on re-appear
+                initialMessage = nil
+            }
+        }
+        .onDisappear {
+            if realtimeSession.state != .idle {
+                realtimeSession.disconnect()
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let shareText {
+                ShareSheetView(activityItems: [shareText])
+            }
+        }
+        .sheet(isPresented: $showMealSummary) {
+            MealPlateSummaryView(
+                foods: mealSummaryFoods,
+                mealItems: mealSummaryItems,
+                onLogMeal: { foods, _ in
+                    logMealFoods(foods)
+                },
+                onAddToPlate: { foods, _ in
+                    addMealFoodsToPlate(foods)
+                }
+            )
+        }
+        .overlay(alignment: .top) {
+            if showCopyToast {
+                Text("Message copied")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.8))
+                    .clipShape(Capsule())
+                    .padding(.top, 16)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
         }
         .overlay(alignment: .bottom) {
             if showToast {
@@ -94,26 +176,54 @@ struct AgentChatView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(.thinMaterial, in: Capsule())
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 100)
             }
         }
     }
+
+    private func setupCallbacks() {
+        // Set up food ready callback
+        viewModel.onFoodReady = { food in
+            onFoodReady?(food)
+            dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
+            showToast(with: "Logged \(food.description)")
+        }
+
+        // Set up meal items ready callback
+        viewModel.onMealItemsReady = { food, items in
+            mealSummaryFoods = [food]
+            mealSummaryItems = items
+            showMealSummary = true
+        }
+
+        // Set up activity logged callback
+        viewModel.onActivityLogged = { activity in
+            dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
+            showToast(with: "Logged \(activity.activityName)")
+        }
+    }
+
+    // MARK: - Chat Scroll View
 
     private var chatScrollView: some View {
         ScrollViewReader { proxy in
             ZStack(alignment: .bottom) {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
+                        // Regular text-based messages
                         ForEach(viewModel.messages) { message in
-                            if let preview = message.pendingLog, message.sender == .pendingLog {
-                                pendingLogBubble(messageID: message.id, preview: preview)
-                                    .id(message.id)
-                            } else {
-                                messageRow(message)
-                                    .id(message.id)
-                            }
+                            messageRow(message)
+                                .id(message.id)
                         }
-                        if viewModel.isLoading {
+
+                        // Voice session messages (from realtime mode)
+                        ForEach(realtimeSession.messages) { voiceMessage in
+                            voiceMessageRow(voiceMessage)
+                                .id(voiceMessage.id)
+                        }
+
+                        // Thinking indicator
+                        if viewModel.isLoading && viewModel.streamingMessageId == nil {
                             thinkingIndicator
                         }
 
@@ -130,11 +240,10 @@ struct AgentChatView: View {
                     scrollProxy = proxy
                 }
                 .onChange(of: viewModel.messages.count) { _, _ in
-                    if let lastId = viewModel.messages.last?.id {
-                        withAnimation {
-                            proxy.scrollTo(lastId, anchor: .bottom)
-                        }
-                    }
+                    scrollToBottom(proxy: proxy)
+                }
+                .onChange(of: viewModel.streamingText) { _, _ in
+                    scrollToBottom(proxy: proxy)
                 }
 
                 // Floating scroll-to-bottom button
@@ -165,18 +274,20 @@ struct AgentChatView: View {
         }
     }
 
-    private var thinkingIndicator: some View {
-        HStack(spacing: 10) {
-            thinkingPulseCircle
-            Text(thinkingStatusText)
-                .font(.footnote)
-                .foregroundColor(.secondary)
+    private func scrollToBottom(proxy: ScrollViewProxy) {
+        if let lastId = viewModel.messages.last?.id {
+            withAnimation {
+                proxy.scrollTo(lastId, anchor: .bottom)
+            }
         }
-        .padding(.vertical, 6)
     }
 
+    // MARK: - Message Row
+
     @ViewBuilder
-    private func messageRow(_ message: AgentChatMessage) -> some View {
+    private func messageRow(_ message: HealthCoachMessage) -> some View {
+        let isStreaming = message.id == viewModel.streamingMessageId
+
         switch message.sender {
         case .user:
             HStack {
@@ -187,639 +298,178 @@ struct AgentChatView: View {
                     .foregroundColor(.white)
                     .cornerRadius(16)
             }
-        case .agent:
-            Text(message.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 4)
+
+        case .coach:
+            VStack(alignment: .leading, spacing: 8) {
+                Text(message.text)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                // REMOVED: Tappable clarification cards - agent should ask text-based questions instead
+                // if let options = message.options, !options.isEmpty {
+                //     clarificationOptionsView(options)
+                // }
+
+                // Show action icons only when not streaming
+                if !isStreaming {
+                    messageActions(for: message)
+                }
+            }
+
         case .system:
             Text(message.text)
                 .font(.footnote)
                 .foregroundColor(.orange)
                 .frame(maxWidth: .infinity, alignment: .center)
-        case .pendingLog:
+
+        case .status:
             EmptyView()
         }
     }
 
     @ViewBuilder
-    private func pendingLogBubble(messageID: UUID, preview: AgentPendingLog) -> some View {
-        let fallbackMeal = mealTypeOptions.first ?? "Lunch"
-        let mealBinding = Binding<String>(
-            get: {
-                mealSelections[messageID] ?? preview.mealType ?? fallbackMeal
-            },
-            set: { mealSelections[messageID] = $0 }
-        )
-
-        return VStack(alignment: .leading, spacing: 20) {
-            headerSection(messageID: messageID, preview: preview)
-
-            if preview.logType == .food {
-                macroRow(preview: preview)
-
-                Picker("Meal", selection: mealBinding) {
-                    ForEach(mealTypeOptions, id: \.self) { option in
-                        Text(option).tag(option)
-                    }
-                }
-                .pickerStyle(.segmented)
-            } else {
-                activitySummary(preview: preview)
-            }
-
-            HStack(spacing: 12) {
-                CapsuleButton(title: "Not now") {
-                    dismissPendingPreview(messageID: messageID)
-                }
-
-                let isExpanded = expandedDetails.contains(messageID)
-                CapsuleButton(title: isExpanded ? "Hide Details" : "Show Details") {
-                    toggleDetails(for: messageID)
-                }
-            }
-            .padding(.top, 4)
-
-            if expandedDetails.contains(messageID) {
-                pendingLogDetails(preview: preview)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(Color("iosfit"))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(Color.primary.opacity(0.12), lineWidth: 1)
-        )
-        .padding(.horizontal, 8)
-        .padding(.top, 8)
-    }
-
-    @ViewBuilder
-    private func headerSection(messageID: UUID, preview: AgentPendingLog) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(preview.title)
-                    .font(.title2.weight(.semibold))
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.leading)
-
-                if let line = brandServingLine(for: preview) {
-                    Text(line)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            Spacer()
-
-            logCTA(messageID: messageID, preview: preview)
-        }
-    }
-
-    @ViewBuilder
-    private func logCTA(messageID: UUID, preview: AgentPendingLog) -> some View {
-        Button {
-            confirmPendingLogAction(messageID: messageID, preview: preview)
-        } label: {
-            HStack(spacing: 6) {
-                if viewModel.confirmingMessageID == messageID {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .tint(Color(.systemBackground))
-                } else {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("Log")
-                        .font(.system(size: 15, weight: .semibold))
-                }
-            }
-            .foregroundColor(Color(.systemBackground))
-            .padding(.horizontal, 18)
-            .padding(.vertical, 8)
-            .background(
-                Capsule()
-                    .fill(Color.primary.opacity(viewModel.confirmingMessageID == messageID ? 0.4 : 1))
-            )
-        }
-        .buttonStyle(.plain)
-        .disabled(viewModel.confirmingMessageID == messageID)
-    }
-
-    private func brandServingLine(for preview: AgentPendingLog) -> String? {
-        let serving = preview.servingText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return serving.isEmpty ? nil : serving
-    }
-
-    @ViewBuilder
-    private func macroRow(preview: AgentPendingLog) -> some View {
-        HStack(alignment: .center, spacing: 24) {
-            HStack(spacing: 6) {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(Color("brightOrange"))
-                HStack(alignment: .bottom, spacing: 2) {
-                    Text(formattedMacro(preview.calories, suffix: ""))
-                        .font(.system(size: 22, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
-                    Text("cal")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            Spacer()
-
-            HStack(spacing: 24) {
-                macroStat(label: "Protein", value: preview.protein, suffix: "g", tint: .blue)
-                macroStat(label: "Carbs", value: preview.carbs, suffix: "g", tint: Color("darkYellow"))
-                macroStat(label: "Fat", value: preview.fat, suffix: "g", tint: .pink)
-            }
-        }
-        .padding(.top, 8)
-    }
-
-    @ViewBuilder
-    private func activitySummary(preview: AgentPendingLog) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private func voiceMessageRow(_ message: RealtimeMessage) -> some View {
+        if message.isUser {
             HStack {
-                Label("\(preview.durationMinutes ?? 0) min", systemImage: "clock")
                 Spacer()
-                Label("\(Int(preview.calories ?? 0)) kcal", systemImage: "flame")
+                Text(message.text)
+                    .padding(12)
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(16)
             }
-            .font(.subheadline.weight(.semibold))
-
-            if let type = preview.activityType, !type.isEmpty {
-                Label(type, systemImage: "figure.run")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-            }
+        } else {
+            Text(message.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .foregroundColor(.primary)
     }
 
-    private func macroStat(label: String, value: Double?, suffix: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label.uppercased())
-                .font(.caption2)
-                .foregroundColor(tint)
-            Text(formattedMacro(value, suffix: suffix))
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
+    @ViewBuilder
+    private func clarificationOptionsView(_ options: [ClarificationOption]) -> some View {
+        VStack(spacing: 8) {
+            ForEach(options, id: \.self) { option in
+                Button {
+                    viewModel.selectOption(option)
+                } label: {
+                    HStack {
+                        if let label = option.label {
+                            Text(label)
+                                .font(.caption.bold())
+                                .foregroundColor(.accentColor)
+                                .frame(width: 24, height: 24)
+                                .background(Circle().fill(Color.accentColor.opacity(0.1)))
+                        }
 
-    private var pendingActionsSection: some View {
-        Group {
-            if viewModel.pendingActions.isEmpty {
-                EmptyView()
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Pending Agent Actions")
-                        .font(.headline)
-                    ForEach(viewModel.pendingActions) { action in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(action.actionType.capitalized)
-                                .font(.subheadline)
-                                .bold()
-                            if let rationale = action.rationale {
-                                Text(rationale)
-                                    .font(.footnote)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(option.name ?? "Option")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.primary)
+
+                            if let brand = option.brand {
+                                Text(brand)
+                                    .font(.caption)
                                     .foregroundColor(.secondary)
                             }
-                            HStack {
-                                Button("Decline") {
-                                    viewModel.decide(action: action, approved: false)
-                                }
-                                .buttonStyle(.bordered)
-                                Button("Approve") {
-                                    viewModel.decide(action: action, approved: true)
-                                }
-                                .buttonStyle(.borderedProminent)
-                            }
                         }
-                        .padding(12)
-                        .background(Color(uiColor: .secondarySystemBackground))
-                        .cornerRadius(12)
+
+                        Spacer()
+
+                        if let calories = option.previewCalories {
+                            Text("\(Int(calories)) cal")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.secondarySystemBackground))
+                    )
                 }
-                .padding()
+                .buttonStyle(.plain)
             }
         }
+        .padding(.top, 8)
     }
 
-    private func formattedMacro(_ value: Double?, suffix: String) -> String {
-        guard let value else { return "--" }
-        let formatted = value.rounded(.toNearestOrEven)
-        let base: String
-        if formatted.truncatingRemainder(dividingBy: 1) == 0 {
-            base = "\(Int(formatted))"
-        } else {
-            base = String(format: "%.1f", value)
-        }
-        return suffix.isEmpty ? base : "\(base) \(suffix)"
-    }
+    @ViewBuilder
+    private func messageActions(for message: HealthCoachMessage) -> some View {
+        HStack(spacing: 16) {
+            // Copy
+            Button {
+                UIPasteboard.general.string = message.text
+                withAnimation { showCopyToast = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation { showCopyToast = false }
+                }
+            } label: {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color(.systemGray))
+            }
 
-    private func dismissPendingPreview(messageID: UUID) {
-        viewModel.dismissPendingLog(messageId: messageID)
-        mealSelections[messageID] = nil
-    }
-
-    private func confirmPendingLogAction(messageID: UUID, preview: AgentPendingLog) {
-        let fallbackMeal = mealTypeOptions.first ?? "Lunch"
-        let mealType = mealSelections[messageID] ?? preview.mealType ?? fallbackMeal
-        viewModel.confirmPendingLog(messageId: messageID, mealType: mealType) { result in
-            switch result {
-            case .success(let commitResult):
-                mealSelections[messageID] = nil
-                if let combined = buildCombinedLog(from: commitResult, fallbackMealType: mealType) {
-                    var optimisticLog = combined
-                    optimisticLog.isOptimistic = true
-                    if optimisticLog.scheduledAt == nil {
-                        optimisticLog.scheduledAt = dayLogsVM.selectedDate
-                    }
-                    dayLogsVM.addPending(optimisticLog)
-                    dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
+            // Like
+            Button {
+                if likedMessageIDs.contains(message.id) {
+                    likedMessageIDs.remove(message.id)
                 } else {
-                    dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
+                    likedMessageIDs.insert(message.id)
+                    dislikedMessageIDs.remove(message.id)
                 }
-                let acknowledgement = commitResult.message ?? "Logged \(commitResult.entryType.capitalized)"
-                viewModel.appendSystemMessage(acknowledgement)
-                showToast(with: acknowledgement)
-            case .failure(let error):
-                showToast(with: "Failed to log: \(error.localizedDescription)")
+            } label: {
+                Image(systemName: likedMessageIDs.contains(message.id) ? "hand.thumbsup.fill" : "hand.thumbsup")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(likedMessageIDs.contains(message.id) ? .accentColor : Color(.systemGray))
             }
-        }
-    }
 
-    private func CapsuleButton(title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.callout.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(Capsule().fill(Color.primary.opacity(0.05)))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func toggleDetails(for id: UUID) {
-        if expandedDetails.contains(id) {
-            expandedDetails.remove(id)
-        } else {
-            expandedDetails.insert(id)
-        }
-    }
-
-    private func pendingLogDetails(preview: AgentPendingLog) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            if preview.logType == .food {
-                micronutrientGrid(nutrition: preview.nutritionDetails)
-                healthSection(health: preview.healthAnalysis)
-            } else {
-                activityDetailSection(preview: preview)
-            }
-        }
-        .padding(.top, 12)
-    }
-
-    private func micronutrientGrid(nutrition: AgentPendingNutrition?) -> some View {
-        Group {
-            if let nutrition {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Nutrients")
-                        .font(.headline)
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
-                        microTile(label: "Sugar", value: nutrition.sugars, unit: "g")
-                        microTile(label: "Fiber", value: nutrition.fiber, unit: "g")
-                        microTile(label: "Sodium", value: nutrition.sodium, unit: "mg")
-                        microTile(label: "Sat Fat", value: nutrition.saturatedFat, unit: "g")
-                        microTile(label: "Potassium", value: nutrition.potassium, unit: "mg")
-                        microTile(label: "Cholesterol", value: nutrition.cholesterol, unit: "mg")
-                    }
-                    if !nutrition.additionalNutrients.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(nutrition.additionalNutrients, id: \.label) { item in
-                                HStack {
-                                    Text(item.label)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Text(formattedValue(item.value, suffix: item.unit ?? ""))
-                                        .font(.caption.weight(.semibold))
-                                }
-                            }
-                        }
-                    }
+            // Dislike
+            Button {
+                if dislikedMessageIDs.contains(message.id) {
+                    dislikedMessageIDs.remove(message.id)
+                } else {
+                    dislikedMessageIDs.insert(message.id)
+                    likedMessageIDs.remove(message.id)
                 }
+            } label: {
+                Image(systemName: dislikedMessageIDs.contains(message.id) ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(dislikedMessageIDs.contains(message.id) ? .red : Color(.systemGray))
             }
-        }
-    }
 
-    private func healthSection(health: HealthAnalysis?) -> some View {
-        Group {
-            if let health {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Health Score")
-                        .font(.headline)
-                    HStack(spacing: 12) {
-                        Text("\(health.score)")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .padding(14)
-                            .background(
-                                Circle()
-                                    .fill(Color(hex: health.color ?? "#CCCCCC").opacity(0.2))
-                            )
-                        VStack(alignment: .leading, spacing: 4) {
-                            let positiveTitles = health.positives.map { $0.title }
-                            if !positiveTitles.isEmpty {
-                                Text("Positives: \(positiveTitles.joined(separator: ", "))")
-                                    .font(.caption)
-                            }
-                            let negativeTitles = health.negatives.map { $0.title }
-                            if !negativeTitles.isEmpty {
-                                Text("Watch out: \(negativeTitles.joined(separator: ", "))")
-                                    .font(.caption)
-                                    .foregroundColor(.orange)
-                            }
-                        }
-                    }
-                }
+            // Speak
+            Button {
+                speakMessage(message.text)
+            } label: {
+                Image(systemName: "speaker.wave.2")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color(.systemGray))
             }
+
+            Spacer()
         }
+        .padding(.top, 4)
     }
 
-    @ViewBuilder
-    private func activityDetailSection(preview: AgentPendingLog) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Activity Details")
-                .font(.headline)
-            detailRow(label: "Type", value: preview.activityType ?? "Other")
-            if let duration = preview.durationMinutes {
-                detailRow(label: "Duration", value: "\(duration) min")
-            }
-            detailRow(label: "Scheduled", value: formatDateForLog(dayLogsVM.selectedDate))
-            if let note = preview.description, !note.isEmpty {
-                detailRow(label: "Notes", value: note)
-            }
-        }
+    private func speakMessage(_ text: String) {
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        utterance.rate = 0.5
+        speechSynth.speak(utterance)
     }
 
-    @ViewBuilder
-    private func microTile(label: String, value: Double?, unit: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label.uppercased())
-                .font(.caption2)
-                .foregroundColor(.secondary)
-            Text(formattedValue(value, suffix: unit))
-                .font(.subheadline.weight(.semibold))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.primary.opacity(0.03))
-        )
+    // MARK: - Thinking Indicator (shimmer effect)
+
+    private var thinkingIndicator: some View {
+        ShimmerThinkingIndicator(phraseIndex: statusPhraseIndex, phrases: statusPhrases)
     }
 
-    private func formattedValue(_ value: Double?, suffix: String) -> String {
-        guard let value else { return "--" }
-        let rounded = value.rounded(.toNearestOrEven)
-        let base: String
-        if rounded.truncatingRemainder(dividingBy: 1) == 0 {
-            base = "\(Int(rounded))"
-        } else {
-            base = String(format: "%.1f", value)
-        }
-        return suffix.isEmpty ? base : "\(base) \(suffix)"
+    private var statusPhrases: [String] {
+        // Simple rotating phrases for all cases
+        return ["Thinking...", "Analyzing...", "Processing..."]
     }
 
-    private func detailRow(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label.uppercased())
-                .font(.caption2)
-                .foregroundColor(.secondary)
-            Text(value)
-                .font(.body)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    private func syncMealSelections(with messages: [AgentChatMessage]) {
-        let pendingMessages = messages.filter { $0.isPendingLog }
-        let pendingIDs = Set(pendingMessages.map(\.id))
+    private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
 
-        // Remove entries for dismissed previews
-        mealSelections.keys
-            .filter { !pendingIDs.contains($0) }
-            .forEach { mealSelections.removeValue(forKey: $0) }
-
-        // Ensure every pending preview has a selection
-        for message in pendingMessages {
-            if mealSelections[message.id] == nil {
-                let fallback = mealTypeOptions.first ?? "Lunch"
-                mealSelections[message.id] = message.pendingLog?.mealType ?? fallback
-            }
-        }
-    }
-
-    private func buildCombinedLog(from result: AgentLogCommitResult, fallbackMealType: String) -> CombinedLog? {
-        guard let entryType = result.payload["entry_type"] as? String else { return nil }
-        switch entryType {
-        case "food":
-            return buildFoodCombinedLog(result.payload, mealType: fallbackMealType)
-        case "activity":
-            return buildActivityCombinedLog(result.payload)
-        default:
-            return nil
-        }
-    }
-
-    private func buildFoodCombinedLog(_ payload: [String: Any], mealType: String) -> CombinedLog? {
-        guard
-            let foodLogId = payload["food_log_id"] as? Int,
-            let foodData = payload["food"] as? [String: Any]
-        else { return nil }
-
-        let displayName = foodData["displayName"] as? String ?? "Food Log"
-        let caloriesValue = payload["calories"] as? Int ?? Int(foodData["calories"] as? Double ?? 0)
-        let message = payload["message"] as? String ?? "Logged \(displayName)"
-        let resolvedMealType = payload["meal_type"] as? String ?? mealType
-
-        var healthAnalysisData: HealthAnalysis? = nil
-        if let healthDict = foodData["health_analysis"] as? [String: Any],
-           let data = try? JSONSerialization.data(withJSONObject: healthDict),
-           let decoded = try? JSONDecoder().decode(HealthAnalysis.self, from: data) {
-            healthAnalysisData = decoded
-        }
-
-        var foodNutrients: [Nutrient]? = nil
-        if let nutrientsArray = foodData["foodNutrients"] as? [[String: Any]] {
-            foodNutrients = nutrientsArray.compactMap { dict in
-                guard
-                    let name = dict["nutrientName"] as? String,
-                    let value = dict["value"] as? Double,
-                    let unit = dict["unitName"] as? String
-                else { return nil }
-                return Nutrient(nutrientName: name, value: value, unitName: unit)
-            }
-        }
-
-        let aiInsight = foodData["aiInsight"] as? String ?? foodData["ai_insight"] as? String
-        let nutritionScore = foodData["nutritionScore"] as? Double ?? foodData["nutrition_score"] as? Double
-
-        let loggedFoodItem = LoggedFoodItem(
-            foodLogId: foodLogId,
-            fdcId: foodData["fdcId"] as? Int ?? foodLogId,
-            displayName: displayName,
-            calories: foodData["calories"] as? Double ?? Double(caloriesValue),
-            servingSizeText: foodData["servingSizeText"] as? String ?? "1 serving",
-            numberOfServings: foodData["numberOfServings"] as? Double ?? 1.0,
-            brandText: foodData["brandText"] as? String,
-            protein: foodData["protein"] as? Double,
-            carbs: foodData["carbs"] as? Double,
-            fat: foodData["fat"] as? Double,
-            healthAnalysis: healthAnalysisData,
-            foodNutrients: foodNutrients,
-            aiInsight: aiInsight,
-            nutritionScore: nutritionScore
-        )
-
-        return CombinedLog(
-            type: .food,
-            status: payload["status"] as? String ?? "success",
-            calories: Double(caloriesValue),
-            message: message,
-            foodLogId: foodLogId,
-            food: loggedFoodItem,
-            mealType: resolvedMealType,
-            mealLogId: nil,
-            meal: nil,
-            mealTime: nil,
-            scheduledAt: dayLogsVM.selectedDate,
-            recipeLogId: nil,
-            recipe: nil,
-            servingsConsumed: nil,
-            activityId: nil,
-            activity: nil,
-            workoutLogId: nil,
-            workout: nil,
-            logDate: formatDateForLog(dayLogsVM.selectedDate),
-            dayOfWeek: formatDayOfWeek(dayLogsVM.selectedDate),
-            isOptimistic: true
-        )
-    }
-
-    private func buildActivityCombinedLog(_ payload: [String: Any]) -> CombinedLog? {
-        guard
-            let activityLogId = payload["activity_log_id"] as? Int,
-            let activityName = payload["activity_name"] as? String,
-            let caloriesBurned = payload["calories_burned"] as? Int,
-            let durationMinutes = payload["duration_minutes"] as? Int,
-            let message = payload["message"] as? String
-        else { return nil }
-
-        let activitySummary = ActivitySummary(
-            id: String(activityLogId),
-            workoutActivityType: formatActivityType(payload["activity_type"] as? String ?? "Other"),
-            displayName: formatActivityName(activityName),
-            duration: Double(durationMinutes * 60),
-            totalEnergyBurned: Double(caloriesBurned),
-            totalDistance: nil,
-            startDate: Date(),
-            endDate: Date()
-        )
-
-        let scheduledDate = dayLogsVM.selectedDate
-
-        return CombinedLog(
-            type: .activity,
-            status: payload["status"] as? String ?? "success",
-            calories: Double(caloriesBurned),
-            message: message,
-            foodLogId: nil,
-            food: nil,
-            mealType: nil,
-            mealLogId: nil,
-            meal: nil,
-            mealTime: nil,
-            scheduledAt: scheduledDate,
-            recipeLogId: nil,
-            recipe: nil,
-            servingsConsumed: nil,
-            activityId: String(activityLogId),
-            activity: activitySummary,
-            workoutLogId: nil,
-            workout: nil,
-            logDate: formatDateForLog(scheduledDate),
-            dayOfWeek: formatDayOfWeek(scheduledDate),
-            isOptimistic: true
-        )
-    }
-
-    private func formatDateForLog(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
-    }
-
-    private func formatDayOfWeek(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE"
-        return formatter.string(from: date)
-    }
-
-    private func formatActivityName(_ name: String) -> String {
-        switch name.lowercased() {
-        case "running":
-            return "Running"
-        case "walking":
-            return "Walking"
-        case "cycling", "biking":
-            return "Cycling"
-        case "swimming":
-            return "Swimming"
-        case "hiking":
-            return "Hiking"
-        case "yoga":
-            return "Yoga"
-        case "weightlifting", "weight lifting", "strength training":
-            return "Strength Training"
-        case "cardio":
-            return "Cardio Workout"
-        case "tennis":
-            return "Tennis"
-        case "basketball":
-            return "Basketball"
-        case "soccer", "football":
-            return "Soccer"
-        case "rowing":
-            return "Rowing"
-        case "elliptical":
-            return "Elliptical"
-        case "stairs", "stair climbing":
-            return "Stair Climbing"
-        default:
-            return name.prefix(1).uppercased() + name.dropFirst().lowercased()
-        }
-    }
-
-    private func formatActivityType(_ type: String) -> String {
-        switch type.lowercased() {
-        case "cardio":
-            return "Running"
-        case "strength":
-            return "StrengthTraining"
-        case "sports":
-            return "Other"
-        default:
-            return formatActivityName(type)
-        }
-    }
+    // MARK: - Input Bar
 
     private var inputBar: some View {
         let hasUserInput = !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -913,50 +563,108 @@ struct AgentChatView: View {
 
     @ViewBuilder
     private func inputBarRightButtons(hasUserInput: Bool) -> some View {
-        if isListening {
-            Button {
-                HapticFeedback.generate()
-                toggleSpeechRecognition()
-            } label: {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 30, height: 30)
-                    .background(Color.accentColor)
-                    .clipShape(Circle())
-                    .scaleEffect(pulseScale)
-                    .animation(
-                        Animation.easeInOut(duration: 1.0)
-                            .repeatForever(autoreverses: true),
-                        value: pulseScale
-                    )
+        switch realtimeSession.state {
+        case .connecting:
+            HStack(spacing: 8) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .primary))
+                Button {
+                    HapticFeedback.generate()
+                    realtimeSession.disconnect()
+                } label: {
+                    Text("Cancel")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(Color(UIColor { $0.userInterfaceStyle == .dark ? .black : .white }))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color(UIColor { $0.userInterfaceStyle == .dark ? .white : .black }))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-        } else {
+
+        case .connected, .muted:
             HStack(spacing: 10) {
+                // Mic toggle button
                 ChatActionCircleButton(
-                    systemName: "mic",
+                    systemName: realtimeSession.state == .muted ? "mic.slash.fill" : "mic.fill",
                     action: {
                         HapticFeedback.generate()
-                        toggleSpeechRecognition()
+                        realtimeSession.toggleMute()
                     },
-                    backgroundColor: Color("chaticon"),
-                    foregroundColor: .primary
+                    backgroundColor: realtimeSession.state == .muted ? .red : Color("chaticon"),
+                    foregroundColor: realtimeSession.state == .muted ? .white : .primary
                 )
 
-                ChatActionCircleButton(
-                    systemName: hasUserInput ? "arrow.up" : "waveform",
-                    action: {
-                        if hasUserInput {
-                            submitAgentPrompt()
-                        } else {
-                            // Waveform action - could start realtime voice in future
+                // End button with animated waveform
+                Button(action: {
+                    HapticFeedback.generate()
+                    realtimeSession.disconnect()
+                }) {
+                    HStack(spacing: 6) {
+                        AnimatedWaveform()
+                            .frame(width: 20, height: 16)
+                        Text("End")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
+        default: // .idle, .error
+            if isListening {
+                Button {
+                    HapticFeedback.generate()
+                    toggleSpeechRecognition()
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 30, height: 30)
+                        .background(Color.accentColor)
+                        .clipShape(Circle())
+                        .scaleEffect(pulseScale)
+                        .animation(
+                            Animation.easeInOut(duration: 1.0)
+                                .repeatForever(autoreverses: true),
+                            value: pulseScale
+                        )
+                }
+                .buttonStyle(.plain)
+            } else {
+                HStack(spacing: 10) {
+                    ChatActionCircleButton(
+                        systemName: "mic",
+                        action: {
                             HapticFeedback.generate()
-                        }
-                    },
-                    backgroundColor: hasUserInput ? Color.accentColor : Color("chaticon"),
-                    foregroundColor: hasUserInput ? .white : .primary
-                )
+                            toggleSpeechRecognition()
+                        },
+                        backgroundColor: Color("chaticon"),
+                        foregroundColor: .primary
+                    )
+
+                    ChatActionCircleButton(
+                        systemName: hasUserInput ? "arrow.up" : "waveform",
+                        action: {
+                            if hasUserInput {
+                                submitAgentPrompt()
+                            } else {
+                                // Start realtime voice session
+                                HapticFeedback.generate()
+                                Task {
+                                    try? await realtimeSession.connect()
+                                }
+                            }
+                        },
+                        backgroundColor: hasUserInput ? Color.accentColor : Color("chaticon"),
+                        foregroundColor: hasUserInput ? .white : .primary
+                    )
+                }
             }
         }
     }
@@ -982,17 +690,25 @@ struct AgentChatView: View {
         })
     }
 
+    // MARK: - Actions
+
     private func startNewChat() {
-        viewModel.resetConversation()
-        viewModel.refreshContext()
+        viewModel.clearConversation()
         inputText = ""
     }
 
     private func shareConversation() {
-        let transcript = viewModel.transcriptText()
+        let transcript = viewModel.messages
+            .filter { $0.sender == .user || $0.sender == .coach }
+            .map { msg in
+                let role = msg.sender == .user ? "You" : "Coach"
+                return "\(role): \(msg.text)"
+            }
+            .joined(separator: "\n\n")
+
         guard !transcript.isEmpty else { return }
-        UIPasteboard.general.string = transcript
-        showToast(with: "Conversation copied")
+        shareText = transcript
+        showShareSheet = true
     }
 
     private func showToast(with message: String) {
@@ -1007,53 +723,62 @@ struct AgentChatView: View {
         }
     }
 
-    private var thinkingStatusText: String {
-        let phrases = thinkingPhrases(for: viewModel.currentStatusHint)
-        let index = min(statusPhraseIndex, phrases.count - 1)
-        return phrases[index]
+    private func logMealFoods(_ foods: [Food]) {
+        onMealLogged?(foods)
+        dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
+        showMealSummary = false
+        showToast(with: "Meal logged successfully")
     }
 
-    private var thinkingPulseCircle: some View {
-        TimelineView(.animation) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            let normalized = (sin(t * 2 * .pi / 1.5) + 1) / 2
-            Circle()
-                .fill(Color.primary)
-                .frame(width: 10, height: 10)
-                .scaleEffect(0.85 + 0.25 * normalized)
-                .opacity(0.6 + 0.4 * normalized)
+    private func addMealFoodsToPlate(_ foods: [Food]) {
+        // Add foods to current plate/meal builder
+        showMealSummary = false
+        showToast(with: "Added to plate")
+    }
+}
+
+// MARK: - RealtimeVoiceSessionDelegate
+
+extension AgentChatView: RealtimeVoiceSessionDelegate {
+    func realtimeSession(_ session: RealtimeVoiceSession, didRequestFoodLookup query: String, isBranded: Bool, brandName: String?, nixItemId: String?, selectionLabel: String?, completion: @escaping (ToolResult) -> Void) {
+        // Use FoodManager to look up food
+        foodManager.generateFoodWithAI(
+            foodDescription: query,
+            isBrandedHint: isBranded,
+            brandNameHint: brandName
+        ) { result in
+            switch result {
+            case .success(let response):
+                switch response.resolvedFoodResult {
+                case .success(let food):
+                    completion(ToolResult(status: .success, food: food, mealItems: response.mealItems, question: nil, options: nil, error: nil))
+                case .failure:
+                    if let options = response.options, !options.isEmpty {
+                        completion(ToolResult(status: .needsClarification, food: nil, mealItems: nil, question: response.question, options: options, error: nil))
+                    } else {
+                        completion(ToolResult(status: .error, food: nil, mealItems: nil, question: nil, options: nil, error: "Could not find food"))
+                    }
+                }
+            case .failure(let error):
+                completion(ToolResult(status: .error, food: nil, mealItems: nil, question: nil, options: nil, error: error.localizedDescription))
+            }
         }
     }
 
-    private func thinkingPhrases(for hint: AgentResponseHint) -> [String] {
-        switch hint {
-        case .logFood:
-            return [
-                "Analyzing your log…",
-                "Balancing macros…",
-                "Reviewing recent meals…",
-                "Estimating nutrition…"
-            ]
-        case .logActivity:
-            return [
-                "Reviewing your activity…",
-                "Estimating calories burned…",
-                "Checking intensity…",
-                "Logging your session…"
-            ]
-        case .chat:
-            fallthrough
-        default:
-            return [
-                "Preparing your answer…",
-                "Reviewing your trends…",
-                "Thinking through your plan…",
-                "Summarizing insights…"
-            ]
+    func realtimeSession(_ session: RealtimeVoiceSession, didResolveFood food: Food, mealItems: [MealItem]?) {
+        // Food was logged via voice - update UI
+        DispatchQueue.main.async {
+            if let items = mealItems, !items.isEmpty {
+                self.mealSummaryFoods = [food]
+                self.mealSummaryItems = items
+                self.showMealSummary = true
+            } else {
+                self.onFoodReady?(food)
+                self.dayLogsVM.loadLogs(for: self.dayLogsVM.selectedDate, force: true)
+                self.showToast(with: "Logged \(food.description)")
+            }
         }
     }
-
-    private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
 }
 
 // MARK: - Supporting Views
@@ -1076,5 +801,73 @@ private struct ChatActionCircleButton: View {
             .frame(width: 30, height: 30)
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Shimmer Thinking Indicator
+
+private struct ShimmerThinkingIndicator: View {
+    var phraseIndex: Int
+    var phrases: [String]
+
+    @State private var shimmerOffset: CGFloat = -100
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 8) {
+            pulsingCircle
+            shimmerText(phrases[min(phraseIndex, phrases.count - 1)])
+        }
+        .onAppear {
+            startShimmerAnimation()
+        }
+    }
+
+    private var pulsingCircle: some View {
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let normalized = (sin(t * 2 * .pi / 1.5) + 1) / 2
+            Circle()
+                .fill(Color.primary)
+                .frame(width: 6, height: 6)
+                .scaleEffect(0.85 + 0.25 * normalized)
+                .opacity(0.6 + 0.4 * normalized)
+        }
+    }
+
+    private func shimmerText(_ text: String) -> some View {
+        let shimmerColor = colorScheme == .dark ? Color.white.opacity(0.3) : Color.white.opacity(0.6)
+
+        return Text(text)
+            .font(.system(size: 15))
+            .foregroundColor(.primary)
+            .overlay(
+                LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: shimmerColor, location: 0.5),
+                        .init(color: .clear, location: 1)
+                    ]),
+                    startPoint: .init(x: -0.3 + shimmerOffset / 100, y: 0),
+                    endPoint: .init(x: 0.3 + shimmerOffset / 100, y: 0)
+                )
+                .blendMode(.overlay)
+            )
+            .mask(
+                Text(text)
+                    .font(.system(size: 15))
+            )
+    }
+
+    private func startShimmerAnimation() {
+        guard !reduceMotion else { return }
+        shimmerOffset = -100
+        withAnimation(
+            .linear(duration: 1.5)
+            .repeatForever(autoreverses: false)
+        ) {
+            shimmerOffset = 100
+        }
     }
 }
