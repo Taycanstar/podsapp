@@ -16,8 +16,8 @@ struct AppTimelineView: View {
 
     @State private var selectedDate: Date = Date()
     @State private var showDatePicker = false
-    @State private var scrollToBottom = false
     @State private var showAgentChat = false
+    @State private var isAtBottom = true
     @State private var pendingCoachMessage: CoachMessage?
     @StateObject private var agentChatViewModel = AgentChatViewModel(
         userEmail: UserDefaults.standard.string(forKey: "userEmail") ?? ""
@@ -39,6 +39,22 @@ struct AppTimelineView: View {
         return df
     }()
 
+    private var dateSubtitle: String {
+        let calendar = Calendar.current
+        let monthDayFormatter = DateFormatter()
+        monthDayFormatter.dateFormat = "MMMM d"
+        let monthDay = monthDayFormatter.string(from: selectedDate)
+
+        if calendar.isDateInToday(selectedDate) {
+            return "Today, \(monthDay)"
+        } else {
+            let weekdayFormatter = DateFormatter()
+            weekdayFormatter.dateFormat = "EEEE"
+            let weekday = weekdayFormatter.string(from: selectedDate)
+            return "\(weekday), \(monthDay)"
+        }
+    }
+
     var body: some View {
         ZStack {
             Color(UIColor.systemGroupedBackground).ignoresSafeArea()
@@ -51,50 +67,78 @@ struct AppTimelineView: View {
                     Spacer()
                 } else {
                     ScrollViewReader { proxy in
-                        ScrollView {
-                            ZStack(alignment: .leading) {
-                                TimelineSpineOverlay()
+                        ZStack(alignment: .bottom) {
+                            ScrollView {
+                                ZStack(alignment: .leading) {
+                                    TimelineSpineOverlay()
 
-                                VStack(spacing: 20) {
-                                    TimelineEmptyQuickActionsRow(
-                                        onAddActivity: { /* TODO: Wire up */ },
-                                        onScanMeal: { /* TODO: Wire up */ }
-                                    )
-
-                                    if filteredLogs.isEmpty {
-                                        Text("No entries yet")
+                                    VStack(spacing: 20) {
+                                        // Date subtitle
+                                        Text(dateSubtitle)
                                             .font(.system(size: 15))
                                             .foregroundColor(.secondary)
-                                            .padding(.top, 20)
-                                    } else {
-                                        ForEach(Array(filteredLogs.enumerated()), id: \.element.id) { index, log in
-                                            TimelineLogRow(
-                                                log: log,
-                                                selectedDate: selectedDate,
-                                                coachMessage: coachMessageForLog(log, at: index),
-                                                isThinking: isThinkingForLog(log, at: index),
-                                                onCoachEditTap: { coachMessage in
-                                                    openAgentChatWithCoachMessage(coachMessage)
-                                                }
-                                            )
-                                        }
-                                    }
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.leading, TimelineConnector.iconSize + 12)
 
-                                    // Anchor for scrolling to bottom
-                                    Color.clear
-                                        .frame(height: 1)
-                                        .id("bottomAnchor")
+                                        TimelineEmptyQuickActionsRow(
+                                            onAddActivity: { /* TODO: Wire up */ },
+                                            onScanMeal: { /* TODO: Wire up */ }
+                                        )
+
+                                        if groupedLogs.isEmpty {
+                                            Text("No entries yet")
+                                                .font(.system(size: 15))
+                                                .foregroundColor(.secondary)
+                                                .padding(.top, 20)
+                                        } else {
+                                            ForEach(Array(groupedLogs.enumerated()), id: \.element.id) { groupIndex, group in
+                                                TimelineLogGroupRow(
+                                                    group: group,
+                                                    selectedDate: selectedDate,
+                                                    coachMessage: coachMessageForGroup(group, at: groupIndex),
+                                                    isThinking: isThinkingForGroup(group, at: groupIndex),
+                                                    onCoachEditTap: { coachMessage in
+                                                        openAgentChatWithCoachMessage(coachMessage)
+                                                    }
+                                                )
+                                            }
+                                        }
+
+                                        // Anchor for scrolling to bottom
+                                        Color.clear
+                                            .frame(height: 1)
+                                            .id("bottomAnchor")
+                                            .onAppear { isAtBottom = true }
+                                            .onDisappear { isAtBottom = false }
+                                    }
                                 }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 16)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 16)
-                        }
-                        .onAppear {
-                            // Scroll to bottom to show most recent log
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                withAnimation {
-                                    proxy.scrollTo("bottomAnchor", anchor: .bottom)
+
+                            // Floating scroll-to-bottom button
+                            if !isAtBottom {
+                                Button {
+                                    withAnimation {
+                                        proxy.scrollTo("bottomAnchor", anchor: .bottom)
+                                    }
+                                } label: {
+                                    Image(systemName: "arrow.down")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .frame(width: 32, height: 32)
+                                        .background(
+                                            Circle()
+                                                .fill(Color(.systemBackground))
+                                                .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                                        )
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color(.separator), lineWidth: 0.5)
+                                        )
                                 }
+                                .padding(.bottom, 15)
+                                .transition(.opacity.combined(with: .scale(scale: 0.8)))
                             }
                         }
                     }
@@ -183,6 +227,25 @@ struct AppTimelineView: View {
             .sorted { logDate(for: $0) < logDate(for: $1) }  // Oldest first, newest at bottom
     }
 
+    /// Groups logs by time (rounded to minute) - food logs at same time share one connector
+    private var groupedLogs: [TimelineLogGroup] {
+        let calendar = Calendar.current
+        var groups: [Date: [CombinedLog]] = [:]
+
+        for log in filteredLogs {
+            let date = logDate(for: log)
+            // Round to minute for grouping (ignore seconds)
+            let roundedDate = calendar.date(
+                from: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+            ) ?? date
+            groups[roundedDate, default: []].append(log)
+        }
+
+        // Convert to array of groups, sorted by date
+        return groups.map { TimelineLogGroup(date: $0.key, logs: $0.value) }
+            .sorted { $0.date < $1.date }
+    }
+
     private func logDate(for log: CombinedLog) -> Date {
         if let scheduledAt = log.scheduledAt {
             return scheduledAt
@@ -193,28 +256,58 @@ struct AppTimelineView: View {
         return selectedDate
     }
 
-    /// Returns the coach message if this is the last (newest) food log and it matches
-    private func coachMessageForLog(_ log: CombinedLog, at index: Int) -> CoachMessage? {
-        // Only show for the last food log in the list (newest, since sorted oldest-first)
-        let isLastLog = index == filteredLogs.count - 1
-        guard isLastLog,
-              log.type == .food,
-              let coachMessage = foodManager.lastCoachMessage,
-              coachMessage.foodLogId == log.foodLogId else {
-            return nil
+    /// Returns the coach message if this group contains the last food log and it matches
+    private func coachMessageForGroup(_ group: TimelineLogGroup, at groupIndex: Int) -> CoachMessage? {
+        let isLastGroup = groupIndex == groupedLogs.count - 1
+        guard isLastGroup else { return nil }
+
+        // Check if any log in the group matches the coach message
+        for log in group.logs {
+            if log.type == .food,
+               let coachMessage = foodManager.lastCoachMessage,
+               coachMessage.foodLogId == log.foodLogId {
+                return coachMessage
+            }
         }
-        return coachMessage
+        return nil
     }
 
-    /// Returns true if the thinking indicator should show for this log
-    /// Shows when: it's the last food log, coach message is being generated, and no coach message yet
-    private func isThinkingForLog(_ log: CombinedLog, at index: Int) -> Bool {
-        let isLastLog = index == filteredLogs.count - 1
-        guard isLastLog, log.type == .food else { return false }
+    /// Returns true if the thinking indicator should show for this group
+    private func isThinkingForGroup(_ group: TimelineLogGroup, at groupIndex: Int) -> Bool {
+        let isLastGroup = groupIndex == groupedLogs.count - 1
+        guard isLastGroup else { return false }
 
-        // Show thinking if we're awaiting coach message and don't have one yet
-        let hasCoachMessage = coachMessageForLog(log, at: index) != nil
+        // Check if any log in the group is a food log
+        let hasFoodLog = group.logs.contains { $0.type == .food }
+        guard hasFoodLog else { return false }
+
+        let hasCoachMessage = coachMessageForGroup(group, at: groupIndex) != nil
         return foodManager.isAwaitingCoachMessage && !hasCoachMessage
+    }
+}
+
+// MARK: - Timeline Log Group
+
+private struct TimelineLogGroup: Identifiable {
+    let date: Date
+    let logs: [CombinedLog]
+
+    var id: String {
+        // Use date + first log ID for unique identification
+        "\(date.timeIntervalSince1970)-\(logs.first?.id ?? "empty")"
+    }
+
+    /// The icon to show for this group (uses first log's type)
+    var iconName: String {
+        guard let firstLog = logs.first else { return "circle.fill" }
+        switch firstLog.type {
+        case .food, .meal, .recipe:
+            return "fork.knife"
+        case .activity:
+            return "figure.run"
+        case .workout:
+            return "dumbbell.fill"
+        }
     }
 }
 
@@ -338,13 +431,13 @@ private struct TimelineEmptyQuickActionsRow: View {
     }
 }
 
-// MARK: - Timeline Log Row (matching TimelineEventRow structure)
+// MARK: - Timeline Log Group Row (handles single or multiple logs at same time)
 
-private struct TimelineLogRow: View {
-    let log: CombinedLog
+private struct TimelineLogGroupRow: View {
+    let group: TimelineLogGroup
     let selectedDate: Date
     var coachMessage: CoachMessage? = nil
-    var isThinking: Bool = false  // Show thinking indicator while coach message is generating
+    var isThinking: Bool = false
     var onCoachEditTap: ((CoachMessage) -> Void)?
 
     private static let timeFormatter: DateFormatter = {
@@ -359,22 +452,13 @@ private struct TimelineLogRow: View {
         return formatter
     }()
 
-    private static let isoFormatter: DateFormatter = {
-        let df = DateFormatter()
-        df.calendar = Calendar(identifier: .iso8601)
-        df.locale = Locale(identifier: "en_US_POSIX")
-        df.timeZone = .autoupdatingCurrent
-        df.dateFormat = "yyyy-MM-dd"
-        return df
-    }()
-
     private let labelSpacing: CGFloat = 6
 
     var body: some View {
         VStack(alignment: .leading, spacing: labelSpacing) {
-            // Top: Connector + time label
+            // Top: Single connector + time label for the group
             HStack(alignment: .center, spacing: 12) {
-                TimelineConnector(iconName: iconName(for: log.type))
+                TimelineConnector(iconName: group.iconName)
                     .frame(height: TimelineConnector.iconSize)
 
                 Text(labelText)
@@ -382,17 +466,25 @@ private struct TimelineLogRow: View {
                     .foregroundColor(.secondary)
             }
 
-            // Bottom: Spacer + Card
-            HStack(alignment: .top, spacing: 12) {
-                TimelineConnectorSpacer()
-                VStack(alignment: .leading, spacing: 8) {
-                    TimelineLogCard(log: log)
+            // Cards for all logs in the group (sharing the same connector)
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(group.logs, id: \.id) { log in
+                    HStack(alignment: .top, spacing: 12) {
+                        TimelineConnectorSpacer()
+                        TimelineLogCard(log: log)
+                    }
+                }
 
-                    // Show thinking indicator while coach is generating, otherwise show coach message
-                    if isThinking {
+                // Show thinking indicator or coach message after all cards
+                if isThinking {
+                    HStack(alignment: .top, spacing: 12) {
+                        TimelineConnectorSpacer()
                         CoachThinkingIndicator()
                             .padding(.bottom, 16)
-                    } else if let coach = coachMessage {
+                    }
+                } else if let coach = coachMessage {
+                    HStack(alignment: .top, spacing: 12) {
+                        TimelineConnectorSpacer()
                         CoachMessageText(message: coach, onEditTap: onCoachEditTap)
                             .padding(.bottom, 16)
                     }
@@ -403,31 +495,10 @@ private struct TimelineLogRow: View {
 
     private var labelText: String {
         let calendar = Calendar.current
-        let logDateValue = logDate(for: log)
-        if calendar.isDate(logDateValue, inSameDayAs: selectedDate) {
-            return Self.timeFormatter.string(from: logDateValue)
+        if calendar.isDate(group.date, inSameDayAs: selectedDate) {
+            return Self.timeFormatter.string(from: group.date)
         }
-        return Self.dateFormatter.string(from: logDateValue)
-    }
-
-    private func logDate(for log: CombinedLog) -> Date {
-        if let scheduledAt = log.scheduledAt {
-            return scheduledAt
-        }
-        if let raw = log.logDate, let parsed = Self.isoFormatter.date(from: raw) {
-            return parsed
-        }
-        return selectedDate
-    }
-
-    private func iconName(for type: LogType) -> String {
-        switch type {
-        case .food: return "fork.knife"
-        case .meal: return "takeoutbag.and.cup.and.straw"
-        case .recipe: return "book.closed"
-        case .activity: return "figure.run"
-        case .workout: return "dumbbell"
-        }
+        return Self.dateFormatter.string(from: group.date)
     }
 }
 
@@ -727,6 +798,7 @@ private struct CoachMessageText: View {
 
                     Spacer()
                 }
+                .padding(.top, 14)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }

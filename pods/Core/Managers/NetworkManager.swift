@@ -169,6 +169,46 @@ struct AgentFoodImageResponse: Codable {
     }
 }
 
+// Fast food image scan response (includes timing info)
+struct FastFoodImageResponse: Codable {
+    let status: String?
+    let type: String?
+    let message: String?
+    let foods: [Food]?
+    let mealItems: [MealItem]?
+    let totals: FastFoodTotals?
+    let timing: FastFoodTiming?
+    let error: String?
+
+    enum CodingKeys: String, CodingKey {
+        case status, type, message, foods, totals, timing, error
+        case mealItems = "meal_items"
+    }
+}
+
+struct FastFoodTotals: Codable {
+    let calories: Double?
+    let protein: Double?
+    let carbs: Double?
+    let fat: Double?
+}
+
+struct FastFoodTiming: Codable {
+    let visionMs: Int?
+    let cacheMs: Int?
+    let nutritionixMs: Int?
+    let fallbackMs: Int?
+    let totalMs: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case visionMs = "vision_ms"
+        case cacheMs = "cache_ms"
+        case nutritionixMs = "nutritionix_ms"
+        case fallbackMs = "fallback_ms"
+        case totalMs = "total_ms"
+    }
+}
+
 /// Simplified food object from the orchestrator (subset of full Food model)
 struct FoodChatFood: Codable {
     let id: Int?
@@ -5604,7 +5644,7 @@ class NetworkManager {
         }.resume()
     }
     
-    func logFood(userEmail: String, food: Food, mealType: String, servings: Double, date: Date, notes: String? = nil, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
+    func logFood(userEmail: String, food: Food, mealType: String, servings: Double, date: Date, notes: String? = nil, skipCoach: Bool = false, batchContext: [String: Any]? = nil, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
         let urlString = "\(baseUrl)/log-food/"
         
         guard let url = URL(string: urlString) else {
@@ -5635,7 +5675,7 @@ class NetworkManager {
         print("- date: \(ISO8601DateFormatter().string(from: date))")
         
         // Don't send calories directly since the backend calculates it from food.calories * servings
-        let parameters: [String: Any] = [
+        var parameters: [String: Any] = [
             "user_email": userEmail,
             "food": [
                 "fdcId": food.fdcId,
@@ -5650,8 +5690,19 @@ class NetworkManager {
             "meal_type": mealType,
             "servings": servings,
             "date": ISO8601DateFormatter().string(from: date),
-            "notes": notes ?? ""
+            "notes": notes ?? "",
+            "input_modality": "photo"  // Multi-food logging is always from photo scan
         ]
+
+        // Add skip_coach flag for batch logging (skip coach for all but last item)
+        if skipCoach {
+            parameters["skip_coach"] = true
+        }
+
+        // Add batch_context for multi-food logging (provides total meal context to coach)
+        if let batchContext = batchContext {
+            parameters["batch_context"] = batchContext
+        }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -8545,7 +8596,83 @@ class NetworkManager {
 
         task.resume()
     }
-    
+
+    // MARK: - Fast Food Image Analysis (MacroFactor-style, 2-4 seconds)
+    func analyzeFoodImageFast(
+        image: UIImage,
+        userEmail: String,
+        completion: @escaping (Bool, FastFoodImageResponse?, String?) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/fast_food_image/") else {
+            completion(false, nil, "Invalid URL")
+            return
+        }
+
+        guard let imageData = image.jpegData(compressionQuality: 0.7) else {
+            completion(false, nil, "Failed to compress image")
+            return
+        }
+
+        let base64Image = imageData.base64EncodedString()
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "image_data": base64Image
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(false, nil, "Failed to serialize request: \(error.localizedDescription)")
+            return
+        }
+
+        let startTime = Date()
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            let elapsed = Date().timeIntervalSince(startTime)
+            print("⚡ [FAST_SCAN] Network request completed in \(String(format: "%.2f", elapsed))s")
+
+            if let error = error {
+                completion(false, nil, "Network error: \(error.localizedDescription)")
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(false, nil, "Invalid response")
+                return
+            }
+
+            guard (200..<300).contains(httpResponse.statusCode), let data = data else {
+                let msg = "Server error: HTTP \(httpResponse.statusCode)"
+                completion(false, nil, msg)
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                let parsed = try decoder.decode(FastFoodImageResponse.self, from: data)
+                if let timing = parsed.timing {
+                    print("⚡ [FAST_SCAN] Server timing - vision: \(timing.visionMs ?? 0)ms, cache: \(timing.cacheMs ?? 0)ms, nutritionix: \(timing.nutritionixMs ?? 0)ms, total: \(timing.totalMs ?? 0)ms")
+                }
+                print("⚡ [FAST_SCAN] Decoded \(parsed.foods?.count ?? 0) foods, \(parsed.mealItems?.count ?? 0) mealItems")
+                completion(true, parsed, parsed.error)
+            } catch {
+                // Log detailed decode error for debugging
+                print("⚡ [FAST_SCAN] Decode error: \(error)")
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("⚡ [FAST_SCAN] Raw JSON (first 1000 chars): \(String(jsonString.prefix(1000)))")
+                }
+                completion(false, nil, "Failed to parse response: \(error.localizedDescription)")
+            }
+        }
+
+        task.resume()
+    }
+
     // Function to analyze nutrition label
     func analyzeNutritionLabel(image: UIImage, userEmail: String, mealType: String = "Lunch", shouldLog: Bool = true, logDate: String? = nil, completion: @escaping (Bool, [String: Any]?, String?) -> Void) {
         // Configure the URL
@@ -8553,13 +8680,13 @@ class NetworkManager {
             completion(false, nil, "Invalid URL")
             return
         }
-        
+
         // Compress the image to reduce upload size (quality: 0.8 for better text clarity)
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
             completion(false, nil, "Failed to compress image")
             return
         }
-        
+
         // Convert image data to Base64 string
         let base64Image = imageData.base64EncodedString()
         

@@ -2124,3 +2124,83 @@ struct UnsaveMealResponse: Codable {
     let success: Bool
     let message: String
 }
+
+// MARK: - OCR Label Scanning Support
+
+extension Food {
+    /// Creates a Food object from on-device OCR nutrition label data
+    /// - Parameter ocrData: Parsed nutrition label data from NutritionLabelOCRService
+    /// - Returns: A Food object with fdcId of -1 (indicating local/scanned food)
+    static func from(ocrData: NutritionLabelData) -> Food {
+        var nutrients: [Nutrient] = []
+
+        // Core macros
+        if let cal = ocrData.calories {
+            nutrients.append(Nutrient(nutrientName: "Energy", value: cal, unitName: "KCAL"))
+        }
+        if let protein = ocrData.protein {
+            nutrients.append(Nutrient(nutrientName: "Protein", value: protein, unitName: "G"))
+        }
+        if let carbs = ocrData.totalCarbs {
+            nutrients.append(Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "G"))
+        }
+        if let fat = ocrData.totalFat {
+            nutrients.append(Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "G"))
+        }
+
+        // Additional nutrients
+        if let saturatedFat = ocrData.saturatedFat {
+            nutrients.append(Nutrient(nutrientName: "Fatty acids, total saturated", value: saturatedFat, unitName: "G"))
+        }
+        if let transFat = ocrData.transFat {
+            nutrients.append(Nutrient(nutrientName: "Fatty acids, total trans", value: transFat, unitName: "G"))
+        }
+        if let cholesterol = ocrData.cholesterol {
+            nutrients.append(Nutrient(nutrientName: "Cholesterol", value: cholesterol, unitName: "MG"))
+        }
+        if let sodium = ocrData.sodium {
+            nutrients.append(Nutrient(nutrientName: "Sodium, Na", value: sodium, unitName: "MG"))
+        }
+        if let fiber = ocrData.dietaryFiber {
+            nutrients.append(Nutrient(nutrientName: "Fiber, total dietary", value: fiber, unitName: "G"))
+        }
+        if let sugars = ocrData.totalSugars {
+            nutrients.append(Nutrient(nutrientName: "Sugars, total including NLEA", value: sugars, unitName: "G"))
+        }
+        if let addedSugars = ocrData.addedSugars {
+            nutrients.append(Nutrient(nutrientName: "Sugars, added", value: addedSugars, unitName: "G"))
+        }
+
+        // Micronutrients
+        if let vitaminD = ocrData.vitaminD {
+            nutrients.append(Nutrient(nutrientName: "Vitamin D (D2 + D3)", value: vitaminD, unitName: "UG"))
+        }
+        if let calcium = ocrData.calcium {
+            nutrients.append(Nutrient(nutrientName: "Calcium, Ca", value: calcium, unitName: "MG"))
+        }
+        if let iron = ocrData.iron {
+            nutrients.append(Nutrient(nutrientName: "Iron, Fe", value: iron, unitName: "MG"))
+        }
+        if let potassium = ocrData.potassium {
+            nutrients.append(Nutrient(nutrientName: "Potassium, K", value: potassium, unitName: "MG"))
+        }
+
+        return Food(
+            fdcId: -1,  // Negative ID indicates local/scanned food
+            description: ocrData.name.isEmpty ? "Scanned Food" : ocrData.name,
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: 1,
+            numberOfServings: 1,
+            servingSizeUnit: "serving",
+            householdServingFullText: ocrData.servingSize,
+            foodNutrients: nutrients,
+            foodMeasures: [],
+            healthAnalysis: nil,
+            aiInsight: nil,
+            nutritionScore: nil,
+            mealItems: nil,
+            barcode: nil
+        )
+    }
+}

@@ -855,6 +855,20 @@ struct MultiFoodLogView: View {
         logFood(at: 0)
     }
 
+    /// Build batch context for multi-food coach message
+    private func buildBatchContext() -> [String: Any] {
+        let totalCalories = displayFoods.reduce(0.0) { $0 + (($1.calories ?? 0) * ($1.numberOfServings ?? 1)) }
+        let totalProtein = displayFoods.reduce(0.0) { $0 + (($1.protein ?? 0) * ($1.numberOfServings ?? 1)) }
+        let foodNames = displayFoods.map { $0.displayName }
+
+        return [
+            "total_calories": totalCalories,
+            "total_protein": totalProtein,
+            "item_count": displayFoods.count,
+            "food_names": foodNames
+        ]
+    }
+
     private func logFood(at index: Int) {
         if index >= displayFoods.count {
             isLogging = false
@@ -864,13 +878,22 @@ struct MultiFoodLogView: View {
         }
 
         let food = displayFoods[index]
+        let isLastFood = index == displayFoods.count - 1
+
+        // Skip coach generation for all but the last food
+        // For the last food, include batch context so coach message covers the entire meal
+        let skipCoach = !isLastFood
+        let batchContext: [String: Any]? = isLastFood && displayFoods.count > 1 ? buildBatchContext() : nil
+
         foodManager.logFood(
             email: onboardingViewModel.email,
             food: food,
             meal: selectedMealPeriod.title,
             servings: food.numberOfServings ?? 1,
             date: mealTime,
-            notes: nil
+            notes: nil,
+            skipCoach: skipCoach,
+            batchContext: batchContext
         ) { result in
             DispatchQueue.main.async {
                 switch result {

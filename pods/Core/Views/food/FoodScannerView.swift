@@ -490,67 +490,62 @@ private func analyzeNutritionLabel(_ image: UIImage) {
 
 private func performAnalyzeNutritionLabel(_ image: UIImage, userEmail: String) {
     isAnalyzing = true
-    if foodLabelPreviewEnabled {
-        performNutritionLabelPreview(image, userEmail: userEmail)
-    } else {
-        performNutritionLabelDirect(image, userEmail: userEmail)
-    }
-}
 
-private func performNutritionLabelPreview(_ image: UIImage, userEmail: String) {
-    isPresented = false
-    foodManager.scannedImage = image
-    foodManager.isScanningFood = true
-    foodManager.loadingMessage = "Reading nutrition label..."
-    foodManager.uploadProgress = 0.1
-    foodManager.analyzeNutritionLabel(image: image,
-                                      userEmail: userEmail,
-                                      mealType: selectedMeal,
-                                      shouldLog: false) { result in
-        switch result {
-        case .success(let combinedLog):
-            if let food = combinedLog.food?.asFood {
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(
-                        name: NSNotification.Name("ShowFoodConfirmation"),
-                        object: nil,
-                        userInfo: [
-                            "food": food,
-                            "foodLogId": combinedLog.foodLogId ?? NSNull()
-                        ]
-                    )
-                }
-            }
+    // Use on-device OCR for instant nutrition label scanning (~300ms)
+    Task { @MainActor in
+        defer {
             self.isAnalyzing = false
-        case .failure(let error):
-            self.handleNutritionLabelError(error)
-            self.isAnalyzing = false
+            self.foodManager.isScanningFood = false
+            self.foodManager.loadingMessage = ""
         }
-    }
-}
 
-private func performNutritionLabelDirect(_ image: UIImage, userEmail: String) {
-    isPresented = false
-    foodManager.scannedImage = image
-    foodManager.isScanningFood = true
-    foodManager.loadingMessage = "Reading nutrition label..."
-    foodManager.uploadProgress = 0.1
-    foodManager.analyzeNutritionLabel(image: image,
-                                      userEmail: userEmail,
-                                      mealType: selectedMeal) { result in
-        switch result {
-        case .success(let combinedLog):
-            DispatchQueue.main.async {
-                dayLogsVM.addPending(combinedLog)
-                if let idx = foodManager.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
-                    foodManager.combinedLogs.remove(at: idx)
-                }
-                foodManager.combinedLogs.insert(combinedLog, at: 0)
-                self.isAnalyzing = false
+        // Show brief loading state
+        self.isPresented = false
+        foodManager.scannedImage = image
+        foodManager.isScanningFood = true
+        foodManager.loadingMessage = "Reading nutrition label..."
+
+        // Run on-device OCR (~300ms)
+        let ocrData = await NutritionLabelOCRService.shared.extractNutrition(from: image)
+
+        if ocrData.labelDetected {
+            // Convert OCR data to Food object
+            let food = Food.from(ocrData: ocrData)
+
+            if foodLabelPreviewEnabled {
+                // Preview mode: show confirmation view for user to edit name and confirm
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShowFoodConfirmation"),
+                    object: nil,
+                    userInfo: [
+                        "food": food,
+                        "foodLogId": NSNull(),
+                        "isOCRResult": true
+                    ]
+                )
+            } else {
+                // Direct mode: log immediately (user can still edit name in logs)
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShowFoodConfirmation"),
+                    object: nil,
+                    userInfo: [
+                        "food": food,
+                        "foodLogId": NSNull(),
+                        "isOCRResult": true
+                    ]
+                )
             }
-        case .failure(let error):
-            self.handleNutritionLabelError(error)
-            self.isAnalyzing = false
+
+            print("🏷️ [OCR] Label scanned successfully: \(ocrData.calories ?? 0) cal, \(ocrData.protein ?? 0)g protein")
+        } else {
+            // No nutrition label detected - show toast
+            print("🏷️ [OCR] No nutrition label detected in image")
+            // Post notification to show toast (DashboardView listens for this)
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ShowScanError"),
+                object: nil,
+                userInfo: ["message": "No nutrition label detected. Try repositioning the camera."]
+            )
         }
     }
 }
@@ -602,7 +597,41 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
             }
         }
         do {
-            // Try agent + Nutritionix path first
+            // Try ultra-fast path first (MacroFactor-style, 2-4 seconds)
+            if let fastResult = try? await foodManager.analyzeFoodImageFast(
+                image: image,
+                userEmail: userEmail
+            ) {
+                foodManager.updateFoodScanningState(.processing)
+                let timingStr = fastResult.timingMs.map { "\($0)ms" } ?? "?"
+                print("⚡ [FAST_SCAN] Completed in \(timingStr)")
+
+                let embeddedItems = fastResult.foods.first?.mealItems ?? []
+                let resolvedMealItems = !fastResult.mealItems.isEmpty ? fastResult.mealItems : embeddedItems
+                if resolvedMealItems.count > 1 || fastResult.foods.count > 1 {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("ShowMultiFoodLog"),
+                        object: nil,
+                        userInfo: [
+                            "foods": fastResult.foods,
+                            "mealItems": resolvedMealItems
+                        ]
+                    )
+                    return
+                } else if let firstFood = fastResult.foods.first {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("ShowFoodConfirmation"),
+                        object: nil,
+                        userInfo: [
+                            "food": firstFood,
+                            "foodLogId": NSNull()
+                        ]
+                    )
+                    return
+                }
+            }
+
+            // Fallback to legacy agent path if fast scan fails
             if let agentResult = try? await foodManager.analyzeFoodImageWithAgent(
                 image: image,
                 userEmail: userEmail,
@@ -687,7 +716,41 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
             }
         }
         do {
-            // Prefer agent + Nutritionix path; fallback to legacy auto-log
+            // Try ultra-fast path first (MacroFactor-style, 2-4 seconds)
+            if let fastResult = try? await foodManager.analyzeFoodImageFast(
+                image: image,
+                userEmail: userEmail
+            ) {
+                foodManager.updateFoodScanningState(.processing)
+                let timingStr = fastResult.timingMs.map { "\($0)ms" } ?? "?"
+                print("⚡ [FAST_SCAN] Gallery completed in \(timingStr)")
+
+                let embeddedItems = fastResult.foods.first?.mealItems ?? []
+                let resolvedMealItems = !fastResult.mealItems.isEmpty ? fastResult.mealItems : embeddedItems
+                if resolvedMealItems.count > 1 || fastResult.foods.count > 1 {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("ShowMultiFoodLog"),
+                        object: nil,
+                        userInfo: [
+                            "foods": fastResult.foods,
+                            "mealItems": resolvedMealItems
+                        ]
+                    )
+                    return
+                } else if let firstFood = fastResult.foods.first {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("ShowFoodConfirmation"),
+                        object: nil,
+                        userInfo: [
+                            "food": firstFood,
+                            "foodLogId": NSNull()
+                        ]
+                    )
+                    return
+                }
+            }
+
+            // Fallback to legacy agent path if fast scan fails
             if let agentResult = try? await foodManager.analyzeFoodImageWithAgent(
                 image: image,
                 userEmail: userEmail,

@@ -153,6 +153,8 @@
 		3662A5592DFE452100847487 /* Final_Exercise_List.xlsx in Resources */ = {isa = PBXBuildFile; fileRef = 3662A5582DFE452100847487 /* Final_Exercise_List.xlsx */; };
 		3662A55B2DFE5FDA00847487 /* ExerciseDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3662A55A2DFE5FDA00847487 /* ExerciseDatabase.swift */; };
 		36667DBB2EF06C740017E9D7 /* FloatingFoodLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DBA2EF06C740017E9D7 /* FloatingFoodLoader.swift */; };
+		36667DBD2EF11FC30017E9D7 /* NutritionLabelOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DBC2EF11FC30017E9D7 /* NutritionLabelOCRService.swift */; };
+		36667DBF2EF11FE20017E9D7 /* NutritionLabelData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DBE2EF11FE20017E9D7 /* NutritionLabelData.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -575,6 +577,8 @@
 		3662A5582DFE452100847487 /* Final_Exercise_List.xlsx */ = {isa = PBXFileReference; lastKnownFileType = file; path = Final_Exercise_List.xlsx; sourceTree = "<group>"; };
 		3662A55A2DFE5FDA00847487 /* ExerciseDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDatabase.swift; sourceTree = "<group>"; };
 		36667DBA2EF06C740017E9D7 /* FloatingFoodLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingFoodLoader.swift; sourceTree = "<group>"; };
+		36667DBC2EF11FC30017E9D7 /* NutritionLabelOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionLabelOCRService.swift; sourceTree = "<group>"; };
+		36667DBE2EF11FE20017E9D7 /* NutritionLabelData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionLabelData.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -897,6 +901,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				36667DBC2EF11FC30017E9D7 /* NutritionLabelOCRService.swift */,
 				3650A1792EEE86960068ACE6 /* AnalyticsManager.swift */,
 				3650A1652EE699800068ACE6 /* RealtimeVoiceSession.swift */,
 				36DB82E52EBF9EFA004BA082 /* FeatureFlags.swift */,
@@ -934,6 +939,7 @@
 		361FF31B2E20617800B7F68E /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				36667DBE2EF11FE20017E9D7 /* NutritionLabelData.swift */,
 				36DB82D12EBA99FD004BA082 /* WorkoutContextV1.swift */,
 				9D174B3487294C0999CCBCD6 /* ProFeatureModels.swift */,
 				B6F13F3ECC08E9A4061384C6 /* NutritionModels.swift */,
@@ -1981,6 +1987,7 @@
 				361FF3112E1D998F00B7F68E /* BodyweightWithEquipment.swift in Sources */,
 				3694744C2CB70EFA00CD197F /* SingleVideoPlayerView.swift in Sources */,
 				361FF3212E2061C200B7F68E /* WorkoutSession.swift in Sources */,
+				36667DBD2EF11FC30017E9D7 /* NutritionLabelOCRService.swift in Sources */,
 				3615D1112EAF108D0063EB8B /* MainActorDiagnostics.swift in Sources */,
 				3625329F2E629D1A003C3B8D /* CircularProgressView.swift in Sources */,
 				36ED35BA2DD938B900D174FB /* WeightDataView.swift in Sources */,
@@ -2085,6 +2092,7 @@
 				36A8519B2E5A109A004E5CED /* ExerciseNotesService.swift in Sources */,
 				361FF31D2E20618800B7F68E /* SetInstance.swift in Sources */,
 				362516652C6E5D26009CA5B0 /* PodColumnsView.swift in Sources */,
+				36667DBF2EF11FE20017E9D7 /* NutritionLabelData.swift in Sources */,
 				36881DF12E6E04F900262045 /* WorkoutScheduleSettingsView.swift in Sources */,
 				36D3A50A2E8CCB2700AD6B94 /* ScheduleSelectionView.swift in Sources */,
 				36ED35D62DDBD5ED00D174FB /* UpdateDesiredWeight.swift in Sources */,

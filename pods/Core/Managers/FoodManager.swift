@@ -858,9 +858,47 @@ class FoodManager: ObservableObject {
             }
         }
     }
-    
+
+    // MARK: - Fast Food Image Analysis (MacroFactor-style, 2-4 seconds)
+
+    /// Fast food image analysis result
+    struct FastFoodImageResult {
+        let foods: [Food]
+        let mealItems: [MealItem]
+        let message: String?
+        let timingMs: Int?
+    }
+
+    /// Ultra-fast food image analysis using minimal vision + async Nutritionix
+    func analyzeFoodImageFast(
+        image: UIImage,
+        userEmail: String
+    ) async throws -> FastFoodImageResult {
+        try await withCheckedThrowingContinuation { continuation in
+            networkManager.analyzeFoodImageFast(
+                image: image,
+                userEmail: userEmail
+            ) { success, response, errorMessage in
+                if success, let response = response {
+                    let foods = response.foods ?? []
+                    let items = response.mealItems ?? []
+                    let timingMs = response.timing?.totalMs
+                    continuation.resume(returning: FastFoodImageResult(
+                        foods: foods,
+                        mealItems: items,
+                        message: response.message,
+                        timingMs: timingMs
+                    ))
+                } else {
+                    let err = NetworkError.serverError(errorMessage ?? "Unknown error")
+                    continuation.resume(throwing: err)
+                }
+            }
+        }
+    }
+
     // MARK: - Modern Network Methods (eliminates race conditions)
-    
+
     /// Modern food image analysis with deterministic state transitions (replaces timer-based method)
     @MainActor
     func analyzeFoodImageModern(
@@ -1655,6 +1693,8 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
     servings: Double,
     date: Date,
     notes: String? = nil,
+    skipCoach: Bool = false,
+    batchContext: [String: Any]? = nil,
     completion: @escaping (Result<LoggedFood, Error>) -> Void
 ) {
     print("⏳ Starting logFood operation...")
@@ -1663,9 +1703,11 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
     // First, mark this as the last logged food ID to update UI appearance
     self.lastLoggedFoodId = food.fdcId
 
-    // Start awaiting coach message (will be set with actual foodLogId after response)
-    self.isAwaitingCoachMessage = true
-    self.lastCoachMessage = nil  // Clear previous coach message
+    // Only await coach message if we're not skipping it (i.e., this is the last item in a batch or a single item)
+    if !skipCoach {
+        self.isAwaitingCoachMessage = true
+        self.lastCoachMessage = nil  // Clear previous coach message
+    }
 
     // REMOVED: Check for existing logs - no longer needed as we'll wait for server response
 
@@ -1675,7 +1717,9 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
         mealType: meal,
         servings: servings,
         date: date,
-        notes: notes
+        notes: notes,
+        skipCoach: skipCoach,
+        batchContext: batchContext
     ) { [weak self] result in
         DispatchQueue.main.async {
             guard let self = self else { return }
