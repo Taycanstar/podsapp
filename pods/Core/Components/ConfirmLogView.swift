@@ -2968,6 +2968,7 @@ struct PlateView: View {
     @State private var selectedMealPeriod: MealPeriod
     @State private var mealTime: Date
     private let onFinished: (() -> Void)?
+    private let onPlateLogged: (([Food]) -> Void)?
     @State private var isLoggingPlate = false
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
@@ -2996,11 +2997,13 @@ struct PlateView: View {
     init(viewModel: PlateViewModel,
          selectedMealPeriod: MealPeriod,
          mealTime: Date,
-         onFinished: (() -> Void)? = nil) {
+         onFinished: (() -> Void)? = nil,
+         onPlateLogged: (([Food]) -> Void)? = nil) {
         self.viewModel = viewModel
         _selectedMealPeriod = State(initialValue: selectedMealPeriod)
         _mealTime = State(initialValue: mealTime)
         self.onFinished = onFinished
+        self.onPlateLogged = onPlateLogged
     }
 
     var body: some View {
@@ -3693,11 +3696,17 @@ struct PlateView: View {
         guard !viewModel.entries.isEmpty else { return }
         isLoggingPlate = true
 
+        // Capture foods being logged for the callback
+        let foodsToLog = viewModel.entries.map { $0.food }
+
         // Navigate to timeline immediately
         NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
 
         // Dismiss optimistically - don't wait for API calls
         dismiss()
+
+        // Notify caller that foods are being logged (for toast/confirmation)
+        onPlateLogged?(foodsToLog)
 
         logEntry(at: 0)
     }

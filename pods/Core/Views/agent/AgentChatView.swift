@@ -188,6 +188,12 @@ struct AgentChatView: View {
                     onFinished: {
                         showPlateView = false
                         plateViewModel.clear()
+                    },
+                    onPlateLogged: { foods in
+                        // Show toast with logged foods
+                        let foodNames = foods.prefix(2).map { $0.description }.joined(separator: ", ")
+                        let suffix = foods.count > 2 ? " +\(foods.count - 2) more" : ""
+                        showToast(with: "Logged \(foodNames)\(suffix)")
                     }
                 )
             }
@@ -806,18 +812,22 @@ struct AgentChatView: View {
         // Dismiss summary sheet first
         showMealSummary = false
 
-        // Convert foods to PlateEntry objects
         let mealPeriod = suggestedMealPeriod(for: Date())
-        for food in foods {
-            let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod)
-            plateViewModel.add(entry)
-        }
 
-        // Also add any meal items that were passed separately
-        for item in mealSummaryItems {
-            let food = foodFromMealItem(item)
-            let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod)
-            plateViewModel.add(entry)
+        // If we have meal items, use those (they contain the actual serving amounts/units)
+        // Don't also add from foods array - that would cause duplication
+        if !mealSummaryItems.isEmpty {
+            for item in mealSummaryItems {
+                let food = foodFromMealItem(item)
+                let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod)
+                plateViewModel.add(entry)
+            }
+        } else {
+            // Fallback to foods array if no meal items
+            for food in foods {
+                let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod)
+                plateViewModel.add(entry)
+            }
         }
 
         // Delay showing PlateView to allow sheet dismiss animation to complete
@@ -861,15 +871,23 @@ struct AgentChatView: View {
     }
 
     private func foodFromMealItem(_ item: MealItem) -> Food {
-        Food(
+        // Format serving amount - show as integer if whole number, otherwise show decimal
+        let servingText: String
+        if item.serving.truncatingRemainder(dividingBy: 1) == 0 {
+            servingText = "\(Int(item.serving)) \(item.servingUnit ?? "serving")"
+        } else {
+            servingText = String(format: "%.1f", item.serving) + " \(item.servingUnit ?? "serving")"
+        }
+
+        return Food(
             fdcId: item.id.hashValue,
             description: item.name,
             brandOwner: nil,
             brandName: nil,
-            servingSize: item.serving,
-            numberOfServings: 1,
+            servingSize: 1, // Base serving size is 1 unit
+            numberOfServings: item.serving, // Preserve the actual serving amount
             servingSizeUnit: item.servingUnit,
-            householdServingFullText: "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
+            householdServingFullText: servingText,
             foodNutrients: [
                 Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
                 Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
