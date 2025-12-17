@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import AVFoundation
+import SafariServices
 
 struct AgentChatView: View {
     @Environment(\.dismiss) private var dismiss
@@ -349,13 +350,31 @@ struct AgentChatView: View {
 
         case .coach:
             VStack(alignment: .leading, spacing: 8) {
-                Text(message.text)
+                // Use simple Text during streaming to avoid flicker, full markdown after
+                if isStreaming {
+                    Text(message.text)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    MarkdownMessageView(
+                        text: message.text,
+                        citations: message.citations?.map { citation in
+                            Citation(
+                                id: citation.id,
+                                title: citation.title,
+                                url: citation.url,
+                                domain: citation.domain,
+                                snippet: citation.snippet
+                            )
+                        },
+                        onLinkTapped: { url in
+                            handleLinkTap(url)
+                        },
+                        onCitationTapped: { citation in
+                            handleCitationTap(citation)
+                        }
+                    )
                     .frame(maxWidth: .infinity, alignment: .leading)
-
-                // REMOVED: Tappable clarification cards - agent should ask text-based questions instead
-                // if let options = message.options, !options.isEmpty {
-                //     clarificationOptionsView(options)
-                // }
+                }
 
                 // Show action icons only when not streaming
                 if !isStreaming {
@@ -386,8 +405,14 @@ struct AgentChatView: View {
                     .cornerRadius(16)
             }
         } else {
-            Text(message.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            MarkdownMessageView(
+                text: message.text,
+                citations: nil,
+                onLinkTapped: { url in
+                    handleLinkTap(url)
+                }
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -474,6 +499,17 @@ struct AgentChatView: View {
         utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
         utterance.rate = 0.5
         speechSynth.speak(utterance)
+    }
+
+    // MARK: - Link & Citation Handling
+
+    private func handleLinkTap(_ url: URL) {
+        SafeLinkHandler.shared.handleLink(url)
+    }
+
+    private func handleCitationTap(_ citation: Citation) {
+        guard let urlString = citation.url, let url = URL(string: urlString) else { return }
+        SafeLinkHandler.shared.handleLink(url)
     }
 
     // MARK: - Thinking Indicator (shimmer effect)

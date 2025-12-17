@@ -158,6 +158,10 @@
 		36667DC12EF1E1FF0017E9D7 /* HealthCoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DC02EF1E1FF0017E9D7 /* HealthCoachModels.swift */; };
 		36667DC32EF1E3F90017E9D7 /* HealthCoachChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DC22EF1E3F90017E9D7 /* HealthCoachChatViewModel.swift */; };
 		36667DC52EF1E5040017E9D7 /* HealthCoachService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DC42EF1E5040017E9D7 /* HealthCoachService.swift */; };
+		36667DC82EF35B490017E9D7 /* SafeLinkHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DC72EF35B490017E9D7 /* SafeLinkHandler.swift */; };
+		36667DCA2EF35B590017E9D7 /* TrustedDomains.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DC92EF35B590017E9D7 /* TrustedDomains.swift */; };
+		36667DCC2EF35C600017E9D7 /* MarkdownMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DCB2EF35C600017E9D7 /* MarkdownMessageView.swift */; };
+		36667DCE2EF35C7C0017E9D7 /* MarkdownParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DCD2EF35C7C0017E9D7 /* MarkdownParser.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -585,6 +589,10 @@
 		36667DC02EF1E1FF0017E9D7 /* HealthCoachModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthCoachModels.swift; sourceTree = "<group>"; };
 		36667DC22EF1E3F90017E9D7 /* HealthCoachChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthCoachChatViewModel.swift; sourceTree = "<group>"; };
 		36667DC42EF1E5040017E9D7 /* HealthCoachService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthCoachService.swift; sourceTree = "<group>"; };
+		36667DC72EF35B490017E9D7 /* SafeLinkHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeLinkHandler.swift; sourceTree = "<group>"; };
+		36667DC92EF35B590017E9D7 /* TrustedDomains.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrustedDomains.swift; sourceTree = "<group>"; };
+		36667DCB2EF35C600017E9D7 /* MarkdownMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownMessageView.swift; sourceTree = "<group>"; };
+		36667DCD2EF35C7C0017E9D7 /* MarkdownParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownParser.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -1116,9 +1124,19 @@
 			path = workouts;
 			sourceTree = "<group>";
 		};
+		36667DC62EF35B420017E9D7 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				36667DC92EF35B590017E9D7 /* TrustedDomains.swift */,
+				36667DC72EF35B490017E9D7 /* SafeLinkHandler.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
 		3682C8612BBADF4700B350E2 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				36667DC62EF35B420017E9D7 /* Utils */,
 				3615D10F2EAF10870063EB8B /* Diagnostics */,
 				36D3A4FC2E8C2C7500AD6B94 /* newOnboarding */,
 				361FF31B2E20617800B7F68E /* Models */,
@@ -1156,6 +1174,8 @@
 		3682C86A2BBAED5B00B350E2 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				36667DCD2EF35C7C0017E9D7 /* MarkdownParser.swift */,
+				36667DCB2EF35C600017E9D7 /* MarkdownMessageView.swift */,
 				36667DBA2EF06C740017E9D7 /* FloatingFoodLoader.swift */,
 				3615D1122EAFEA2B0063EB8B /* AgentTabBar.swift */,
 				36DB82E72EBFC6BD004BA082 /* PrimaryButtonStyle.swift */,
@@ -1922,6 +1942,7 @@
 				363AFA052D26487C00C91A14 /* ActivitySummaryView.swift in Sources */,
 				36ED35F12DDE536800D174FB /* DescribeFoodView.swift in Sources */,
 				36D3A4F92E7F4E5400AD6B94 /* WorkoutSummarySheet.swift in Sources */,
+				36667DCA2EF35B590017E9D7 /* TrustedDomains.swift in Sources */,
 				3625329D2E629512003C3B8D /* DurationExerciseTimerSheet.swift in Sources */,
 				36A851A32E5AC0AE004E5CED /* CollapsibleSection.swift in Sources */,
 				36A8519F2E5ABF53004E5CED /* FlexibilityPreferences.swift in Sources */,
@@ -1931,6 +1952,7 @@
 				3650A17E2EEF84180068ACE6 /* TimelineView.swift in Sources */,
 				3615D1152EB005EC0063EB8B /* MainContentView.swift in Sources */,
 				36D3A5222E942B7300AD6B94 /* RegisterView.swift in Sources */,
+				36667DC82EF35B490017E9D7 /* SafeLinkHandler.swift in Sources */,
 				3650A17C2EEF840E0068ACE6 /* MultiFoodLogView.swift in Sources */,
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
@@ -2128,6 +2150,7 @@
 				36A851A12E5ABFBD004E5CED /* FlexibilityPickerView.swift in Sources */,
 				361FF3132E1D999C00B7F68E /* CardioExercisesView.swift in Sources */,
 				367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */,
+				36667DCC2EF35C600017E9D7 /* MarkdownMessageView.swift in Sources */,
 				36A8518F2E56708C004E5CED /* ExerciseChart.swift in Sources */,
 				362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */,
 				361FF3232E2065B900B7F68E /* UserProfile.swift in Sources */,
@@ -2211,6 +2234,7 @@
 				36CB03332D5BA200006A74E9 /* FoodDetailView.swift in Sources */,
 				36A85CE52DB2F35000DD4266 /* GoalTimeView.swift in Sources */,
 				363AFA1D2D4759E000C91A14 /* FoldersView.swift in Sources */,
+				36667DCE2EF35C7C0017E9D7 /* MarkdownParser.swift in Sources */,
 				3619191B2EA5C547007CAA0D /* LogProUpgradeSheet.swift in Sources */,
 				36498B132EE51A1F00F62C97 /* FoodLogAgentView.swift in Sources */,
 				362532A72E6CD98B003C3B8D /* RestTimerSheet.swift in Sources */,

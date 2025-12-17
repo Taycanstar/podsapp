@@ -9,6 +9,7 @@
 import SwiftUI
 import AVFoundation
 import UIKit
+import SafariServices
 
 // Chat-style food logger reused for Text -> Add More flow
 struct FoodLogAgentView: View {
@@ -165,7 +166,8 @@ struct FoodLogAgentView: View {
                                         onLike: { toggleLike(for: message.id) },
                                         onDislike: { toggleDislike(for: message.id) },
                                         onSpeak: { speak(message.text) },
-                                        onShare: { share(text: message.text) }
+                                        onShare: { share(text: message.text) },
+                                        onLinkTapped: handleLinkTap
                                     )
                                     .id(message.id)
                                 }
@@ -198,7 +200,8 @@ struct FoodLogAgentView: View {
                                     onLike: { toggleLike(for: message.id) },
                                     onDislike: { toggleDislike(for: message.id) },
                                     onSpeak: { speak(message.text) },
-                                    onShare: { share(text: message.text) }
+                                    onShare: { share(text: message.text) },
+                                    onLinkTapped: handleLinkTap
                                 )
                                 .id(message.id)
                             }
@@ -553,6 +556,10 @@ struct FoodLogAgentView: View {
         shareText = text
         showShareSheet = true
         HapticFeedback.generate()
+    }
+
+    private func handleLinkTap(_ url: URL) {
+        SafeLinkHandler.shared.handleLink(url)
     }
 
     private func presentMealSummary(foods: [Food], items: [MealItem]) {
@@ -974,10 +981,15 @@ private struct AssistantMessageWithActions: View {
     let onDislike: () -> Void
     let onSpeak: () -> Void
     let onShare: () -> Void
+    var onLinkTapped: ((URL) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            FormattedAssistantMessage(text: text)
+            MarkdownMessageView(
+                text: text,
+                citations: nil,
+                onLinkTapped: onLinkTapped
+            )
             actionRow
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1001,93 +1013,15 @@ private struct AssistantMessageWithActions: View {
     }
 }
 
+/// Simple wrapper for streaming messages (plain text during streaming)
 private struct FormattedAssistantMessage: View {
     let text: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(formattedLines.enumerated()), id: \.offset) { _, line in
-                if line.isBullet {
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("•")
-                            .foregroundColor(.secondary)
-                        Text(line.text)
-                            .foregroundColor(.primary)
-                    }
-                } else {
-                    Text(line.text)
-                        .foregroundColor(.primary)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 4)
+        Text(text)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 4)
     }
-
-    private var formattedLines: [FormattedLine] {
-        // Parse the text to detect list items
-        // Look for patterns like "1.", "2.", numbered items, or "Or" followed by items
-        let lines = text.components(separatedBy: ". ")
-
-        // If text contains "options:" or multiple items separated by ". Or", format as bullets
-        if text.lowercased().contains("option") || text.contains(". Or ") || text.contains(", or ") {
-            return parseOptionsText(text)
-        }
-
-        // Default: just show as single text
-        return [FormattedLine(text: text, isBullet: false)]
-    }
-
-    private func parseOptionsText(_ text: String) -> [FormattedLine] {
-        var result: [FormattedLine] = []
-
-        // Try to split by common option separators
-        // Pattern: "I found a few options: ITEM1. Or ITEM2. Or ITEM3. Which one?"
-        let parts = text.components(separatedBy: ". Or ")
-
-        if parts.count > 1 {
-            // First part might have intro text before the first option
-            let firstPart = parts[0]
-            if let colonIndex = firstPart.lastIndex(of: ":") {
-                let intro = String(firstPart[...colonIndex])
-                let firstOption = String(firstPart[firstPart.index(after: colonIndex)...]).trimmingCharacters(in: .whitespaces)
-                result.append(FormattedLine(text: intro, isBullet: false))
-                if !firstOption.isEmpty {
-                    result.append(FormattedLine(text: firstOption, isBullet: true))
-                }
-            } else {
-                result.append(FormattedLine(text: firstPart, isBullet: true))
-            }
-
-            // Middle parts are options
-            for i in 1..<parts.count - 1 {
-                result.append(FormattedLine(text: parts[i].trimmingCharacters(in: .whitespaces), isBullet: true))
-            }
-
-            // Last part might have trailing question
-            let lastPart = parts[parts.count - 1]
-            if let questionIndex = lastPart.lastIndex(of: "?") {
-                let optionText = String(lastPart[..<questionIndex]).trimmingCharacters(in: .whitespaces)
-                let questionText = String(lastPart[questionIndex...])
-                if !optionText.isEmpty && !optionText.starts(with: "Which") {
-                    result.append(FormattedLine(text: optionText, isBullet: true))
-                }
-                result.append(FormattedLine(text: questionText, isBullet: false))
-            } else {
-                result.append(FormattedLine(text: lastPart.trimmingCharacters(in: .whitespaces), isBullet: true))
-            }
-
-            return result
-        }
-
-        // Fallback: just show as plain text
-        return [FormattedLine(text: text, isBullet: false)]
-    }
-}
-
-private struct FormattedLine {
-    let text: String
-    let isBullet: Bool
 }
 
 struct ShareSheetView: UIViewControllerRepresentable {

@@ -173,11 +173,12 @@ final class HealthCoachChatViewModel: ObservableObject {
                 mealItems: response.mealItems,
                 activity: response.activity,
                 data: response.data,
-                options: response.options
+                options: response.options,
+                citations: response.citations
             ))
         } else if let existingId = existingMessageId,
                   let index = messages.firstIndex(where: { $0.id == existingId }) {
-            // Update existing message with response data
+            // Update existing message with response data (including citations)
             messages[index] = HealthCoachMessage(
                 id: existingId,
                 sender: .coach,
@@ -188,7 +189,8 @@ final class HealthCoachChatViewModel: ObservableObject {
                 mealItems: response.mealItems,
                 activity: response.activity,
                 data: response.data,
-                options: response.options
+                options: response.options,
+                citations: response.citations
             )
         }
 

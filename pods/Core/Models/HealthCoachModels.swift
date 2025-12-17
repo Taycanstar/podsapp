@@ -26,6 +26,26 @@ enum HealthCoachResponseType: String, Codable {
     case error
 }
 
+// MARK: - Citations
+
+/// A citation reference from an AI response, linking to a source
+struct HealthCoachCitation: Codable, Identifiable, Equatable {
+    let id: String
+    let title: String
+    let url: String?
+    let domain: String?
+    let snippet: String?
+
+    /// Display-friendly domain (falls back to extracting from URL)
+    var displayDomain: String {
+        domain ?? (url.flatMap { URL(string: $0)?.host } ?? "Source")
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, url, domain, snippet
+    }
+}
+
 // MARK: - Main Response
 
 struct HealthCoachResponse: Codable {
@@ -38,9 +58,10 @@ struct HealthCoachResponse: Codable {
     let options: [ClarificationOption]?
     let question: String?
     let error: String?
+    let citations: [HealthCoachCitation]?
 
     enum CodingKeys: String, CodingKey {
-        case type, message, food, activity, data, options, question, error
+        case type, message, food, activity, data, options, question, error, citations
         case mealItems = "meal_items"
     }
 
@@ -53,7 +74,8 @@ struct HealthCoachResponse: Codable {
         data: HealthCoachDataPayload? = nil,
         options: [ClarificationOption]? = nil,
         question: String? = nil,
-        error: String? = nil
+        error: String? = nil,
+        citations: [HealthCoachCitation]? = nil
     ) {
         self.type = type
         self.message = message
@@ -64,6 +86,7 @@ struct HealthCoachResponse: Codable {
         self.options = options
         self.question = question
         self.error = error
+        self.citations = citations
     }
 }
 
@@ -367,6 +390,7 @@ struct HealthCoachMessage: Identifiable, Equatable {
     let activity: HealthCoachActivity?
     let data: HealthCoachDataPayload?
     let options: [ClarificationOption]?
+    let citations: [HealthCoachCitation]?
 
     init(
         id: UUID = UUID(),
@@ -378,7 +402,8 @@ struct HealthCoachMessage: Identifiable, Equatable {
         mealItems: [HealthCoachMealItem]? = nil,
         activity: HealthCoachActivity? = nil,
         data: HealthCoachDataPayload? = nil,
-        options: [ClarificationOption]? = nil
+        options: [ClarificationOption]? = nil,
+        citations: [HealthCoachCitation]? = nil
     ) {
         self.id = id
         self.sender = sender
@@ -390,6 +415,7 @@ struct HealthCoachMessage: Identifiable, Equatable {
         self.activity = activity
         self.data = data
         self.options = options
+        self.citations = citations
     }
 
     static func == (lhs: HealthCoachMessage, rhs: HealthCoachMessage) -> Bool {

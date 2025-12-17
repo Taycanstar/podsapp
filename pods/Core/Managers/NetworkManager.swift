@@ -8055,12 +8055,14 @@ class NetworkManager {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let targetDateString = dateFormatter.string(from: targetDate)
+        let tzOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
 
         var parameters: [String: Any] = [
             "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
             "message": message,
             "history": history,
-            "target_date": targetDateString
+            "target_date": targetDateString,
+            "timezone_offset_minutes": tzOffsetMinutes
         ]
 
         // Add context if provided
