@@ -6,6 +6,7 @@ struct AgentChatView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     @EnvironmentObject private var foodManager: FoodManager
+    @EnvironmentObject private var onboardingViewModel: OnboardingViewModel
 
     // New streaming ViewModel
     @StateObject private var viewModel = HealthCoachChatViewModel()
@@ -26,17 +27,23 @@ struct AgentChatView: View {
     @State private var isAtBottom = true
 
     // Action sheet state
-    @State private var likedMessageIDs: Set<UUID> = []
-    @State private var dislikedMessageIDs: Set<UUID> = []
     @State private var shareText: String?
     @State private var showShareSheet = false
     @State private var speechSynth = AVSpeechSynthesizer()
     @State private var showCopyToast = false
 
+    // Single food confirmation (uses FoodSummaryView)
+    @State private var pendingFood: Food?
+    @State private var showFoodConfirm = false
+
     // Meal summary for multi-food
     @State private var mealSummaryFoods: [Food] = []
     @State private var mealSummaryItems: [MealItem] = []
     @State private var showMealSummary = false
+
+    // Plate view state
+    @StateObject private var plateViewModel = PlateViewModel()
+    @State private var showPlateView = false
 
     // Realtime voice session
     @StateObject private var realtimeSession = RealtimeVoiceSession()
@@ -63,11 +70,17 @@ struct AgentChatView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                VStack(spacing: 0) {
-                    chatScrollView
-                    inputBar
-                }
+            ZStack(alignment: .bottom) {
+                // Chat scroll view fills the space
+                chatScrollView
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        // Dismiss keyboard when tapping outside input
+                        isInputFocused = false
+                    }
+
+                // Floating input bar at the bottom
+                inputBar
 
                 // "Start talking" overlay when connected and chat is empty
                 if realtimeSession.state == .connected && viewModel.messages.isEmpty && realtimeSession.messages.isEmpty {
@@ -144,17 +157,40 @@ struct AgentChatView: View {
                 ShareSheetView(activityItems: [shareText])
             }
         }
+        .sheet(isPresented: $showFoodConfirm) {
+            if let food = pendingFood {
+                FoodSummaryView(food: food, plateViewModel: plateViewModel)
+                    .environmentObject(foodManager)
+                    .environmentObject(onboardingViewModel)
+                    .environmentObject(dayLogsVM)
+            }
+        }
         .sheet(isPresented: $showMealSummary) {
-            MealPlateSummaryView(
-                foods: mealSummaryFoods,
-                mealItems: mealSummaryItems,
-                onLogMeal: { foods, _ in
-                    logMealFoods(foods)
-                },
-                onAddToPlate: { foods, _ in
-                    addMealFoodsToPlate(foods)
-                }
-            )
+            NavigationStack {
+                MealPlateSummaryView(
+                    foods: mealSummaryFoods,
+                    mealItems: mealSummaryItems,
+                    onLogMeal: { foods, items in
+                        logMealFoods(foods: foods, items: items)
+                    },
+                    onAddToPlate: { foods, _ in
+                        addMealFoodsToPlate(foods)
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: $showPlateView) {
+            NavigationStack {
+                PlateView(
+                    viewModel: plateViewModel,
+                    selectedMealPeriod: suggestedMealPeriod(for: Date()),
+                    mealTime: Date(),
+                    onFinished: {
+                        showPlateView = false
+                        plateViewModel.clear()
+                    }
+                )
+            }
         }
         .overlay(alignment: .top) {
             if showCopyToast {
@@ -169,27 +205,27 @@ struct AgentChatView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
         }
-        .overlay(alignment: .bottom) {
+        .overlay(alignment: .top) {
             if showToast {
                 Text(toastMessage)
                     .font(.footnote)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(.thinMaterial, in: Capsule())
-                    .padding(.bottom, 100)
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
     }
 
     private func setupCallbacks() {
-        // Set up food ready callback
+        // Set up food ready callback - show FoodSummaryView (ConfirmLogView) for single foods
         viewModel.onFoodReady = { food in
-            onFoodReady?(food)
-            dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
-            showToast(with: "Logged \(food.description)")
+            pendingFood = food
+            showFoodConfirm = true
         }
 
-        // Set up meal items ready callback
+        // Set up meal items ready callback - show MealPlateSummaryView for multi-food
         viewModel.onMealItemsReady = { food, items in
             mealSummaryFoods = [food]
             mealSummaryItems = items
@@ -233,8 +269,13 @@ struct AgentChatView: View {
                             .id("bottomAnchor")
                             .onAppear { isAtBottom = true }
                             .onDisappear { isAtBottom = false }
+
+                        // Extra space at bottom for floating input bar
+                        Spacer()
+                            .frame(height: 120)
                     }
-                    .padding()
+                    .padding(.horizontal)
+                    .padding(.top)
                 }
                 .onAppear {
                     scrollProxy = proxy
@@ -407,34 +448,6 @@ struct AgentChatView: View {
                     .foregroundColor(Color(.systemGray))
             }
 
-            // Like
-            Button {
-                if likedMessageIDs.contains(message.id) {
-                    likedMessageIDs.remove(message.id)
-                } else {
-                    likedMessageIDs.insert(message.id)
-                    dislikedMessageIDs.remove(message.id)
-                }
-            } label: {
-                Image(systemName: likedMessageIDs.contains(message.id) ? "hand.thumbsup.fill" : "hand.thumbsup")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(likedMessageIDs.contains(message.id) ? .accentColor : Color(.systemGray))
-            }
-
-            // Dislike
-            Button {
-                if dislikedMessageIDs.contains(message.id) {
-                    dislikedMessageIDs.remove(message.id)
-                } else {
-                    dislikedMessageIDs.insert(message.id)
-                    likedMessageIDs.remove(message.id)
-                }
-            } label: {
-                Image(systemName: dislikedMessageIDs.contains(message.id) ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(dislikedMessageIDs.contains(message.id) ? .red : Color(.systemGray))
-            }
-
             // Speak
             Button {
                 speakMessage(message.text)
@@ -537,8 +550,7 @@ struct AgentChatView: View {
                 .stroke(inputBarBorderColor, lineWidth: 1)
         )
         .padding(.horizontal, 16)
-        .padding(.bottom, isInputFocused ? 10 : 0)
-        .padding(.vertical, 12)
+        .padding(.bottom, 8)
         .onChange(of: speechRecognizer.transcript) { _, newTranscript in
             if !newTranscript.isEmpty {
                 inputText = newTranscript
@@ -723,17 +735,157 @@ struct AgentChatView: View {
         }
     }
 
-    private func logMealFoods(_ foods: [Food]) {
-        onMealLogged?(foods)
-        dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
+    private func logMealFoods(foods: [Food], items: [MealItem]) {
+        // Dismiss sheet immediately for better UX
         showMealSummary = false
-        showToast(with: "Meal logged successfully")
+
+        // Determine meal type based on time of day
+        let mealType = suggestedMealPeriod(for: Date()).rawValue
+        let email = onboardingViewModel.email
+        let today = dayLogsVM.selectedDate
+
+        // If we have meal items, convert them to foods and log each
+        let foodsToLog: [Food]
+        if !items.isEmpty {
+            foodsToLog = items.map { foodFromMealItem($0) }
+        } else {
+            foodsToLog = foods
+        }
+
+        guard !foodsToLog.isEmpty else {
+            showToast(with: "No food to log")
+            return
+        }
+
+        // Log each food
+        let totalFoods = foodsToLog.count
+        var loggedCount = 0
+
+        for (index, food) in foodsToLog.enumerated() {
+            // Skip coach message for all but last item to avoid multiple AI responses
+            let isLastItem = index == totalFoods - 1
+
+            foodManager.logFood(
+                email: email,
+                food: food,
+                meal: mealType,
+                servings: 1,
+                date: today,
+                notes: nil,
+                skipCoach: !isLastItem
+            ) { [weak dayLogsVM] result in
+                DispatchQueue.main.async {
+                    loggedCount += 1
+
+                    switch result {
+                    case .success:
+                        // Refresh logs after all foods are logged
+                        if loggedCount == totalFoods {
+                            dayLogsVM?.loadLogs(for: today, force: true)
+                        }
+                    case .failure(let error):
+                        print("❌ Failed to log food: \(error)")
+                    }
+                }
+            }
+        }
+
+        // Notify callback
+        onMealLogged?(foodsToLog)
+
+        // Show success toast
+        let foodNames = foodsToLog.prefix(2).map { $0.description }.joined(separator: ", ")
+        let suffix = totalFoods > 2 ? " +\(totalFoods - 2) more" : ""
+        showToast(with: "Logged \(foodNames)\(suffix)")
     }
 
     private func addMealFoodsToPlate(_ foods: [Food]) {
-        // Add foods to current plate/meal builder
+        // Add foods to plate and show PlateView
         showMealSummary = false
-        showToast(with: "Added to plate")
+
+        // Convert foods to PlateEntry objects
+        let mealPeriod = suggestedMealPeriod(for: Date())
+        for food in foods {
+            let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod)
+            plateViewModel.add(entry)
+        }
+
+        // Also add any meal items that were passed separately
+        for item in mealSummaryItems {
+            let food = foodFromMealItem(item)
+            let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod)
+            plateViewModel.add(entry)
+        }
+
+        showPlateView = true
+    }
+
+    private func buildPlateEntry(from food: Food, mealPeriod: MealPeriod) -> PlateEntry {
+        // Build base macro totals
+        let baseMacros = MacroTotals(
+            calories: food.calories ?? 0,
+            protein: food.protein ?? 0,
+            carbs: food.carbs ?? 0,
+            fat: food.fat ?? 0
+        )
+
+        // Build base nutrient values
+        var baseNutrients: [String: RawNutrientValue] = [:]
+        for nutrient in food.foodNutrients {
+            let key = nutrient.nutrientName.lowercased()
+            baseNutrients[key] = RawNutrientValue(value: nutrient.value ?? 0, unit: nutrient.unitName)
+        }
+
+        // Determine baseline gram weight
+        let baselineGramWeight = food.foodMeasures.first?.gramWeight ?? food.servingSize ?? 100
+
+        return PlateEntry(
+            food: food,
+            servings: food.numberOfServings ?? 1,
+            selectedMeasureId: food.foodMeasures.first?.id,
+            availableMeasures: food.foodMeasures,
+            baselineGramWeight: baselineGramWeight,
+            baseNutrientValues: baseNutrients,
+            baseMacroTotals: baseMacros,
+            servingDescription: food.servingSizeText ?? "1 serving",
+            mealItems: food.mealItems ?? [],
+            mealPeriod: mealPeriod,
+            mealTime: Date()
+        )
+    }
+
+    private func foodFromMealItem(_ item: MealItem) -> Food {
+        Food(
+            fdcId: item.id.hashValue,
+            description: item.name,
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: item.serving,
+            numberOfServings: 1,
+            servingSizeUnit: item.servingUnit,
+            householdServingFullText: "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
+            foodNutrients: [
+                Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+            ],
+            foodMeasures: [],
+            healthAnalysis: nil,
+            aiInsight: nil,
+            nutritionScore: nil,
+            mealItems: item.subitems
+        )
+    }
+
+    private func suggestedMealPeriod(for date: Date) -> MealPeriod {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 0..<11: return .breakfast
+        case 11..<15: return .lunch
+        case 15..<18: return .snack
+        default: return .dinner
+        }
     }
 }
 

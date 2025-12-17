@@ -26,6 +26,9 @@ struct MealPlateSummaryView: View {
     @State private var nutrientTargets: [String: NutrientTargetDetails] = NutritionGoalsStore.shared.currentTargets
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
 
+    /// Editable state for each meal item (keyed by item ID string)
+    @State private var editableItems: [String: MealEditableItem] = [:]
+
     private var plateBackground: Color {
         colorScheme == .dark ? Color("bg") : Color(UIColor.systemGroupedBackground)
     }
@@ -42,11 +45,14 @@ struct MealPlateSummaryView: View {
         var protein: Double = 0
         var carbs: Double = 0
         var fat: Double = 0
+
+        // Use editable items to get scaled values
         for item in mealItems {
-            cals += item.calories ?? 0
-            protein += item.protein ?? 0
-            carbs += item.carbs ?? 0
-            fat += item.fat ?? 0
+            let scalingFactor = editableItems[item.id.uuidString]?.scalingFactor ?? 1.0
+            cals += (item.calories) * scalingFactor
+            protein += (item.protein) * scalingFactor
+            carbs += (item.carbs) * scalingFactor
+            fat += (item.fat) * scalingFactor
         }
         // Fallback to foods if mealItems is empty
         if mealItems.isEmpty {
@@ -179,6 +185,7 @@ struct MealPlateSummaryView: View {
             // Set meal period based on current time
             selectedMealPeriod = suggestedMealPeriod(for: Date())
             reloadStoredNutrientTargets()
+            initializeEditableItems()
         }
         .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
             reloadStoredNutrientTargets()
@@ -190,6 +197,33 @@ struct MealPlateSummaryView: View {
 
     private func reloadStoredNutrientTargets() {
         nutrientTargets = NutritionGoalsStore.shared.currentTargets
+    }
+
+    private func initializeEditableItems() {
+        guard editableItems.isEmpty else { return }
+
+        // Initialize editable state for each meal item
+        for item in mealItems {
+            editableItems[item.id.uuidString] = MealEditableItem(from: item)
+        }
+    }
+
+    /// Create a binding for an editable item at a given ID
+    private func editableItemBinding(for itemId: String) -> Binding<MealEditableItem> {
+        Binding(
+            get: {
+                editableItems[itemId] ?? MealEditableItem(
+                    servingAmount: 1,
+                    servingAmountInput: "1",
+                    selectedMeasureId: nil,
+                    measures: [],
+                    baselineServing: 1
+                )
+            },
+            set: { newValue in
+                editableItems[itemId] = newValue
+            }
+        )
     }
 
     // MARK: - Meal Items Section
@@ -205,7 +239,26 @@ struct MealPlateSummaryView: View {
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
+            } else if !mealItems.isEmpty {
+                // Use editable rows for meal items
+                VStack(spacing: 12) {
+                    ForEach(mealItems) { item in
+                        MealEditableItemRow(
+                            item: item,
+                            editableItem: editableItemBinding(for: item.id.uuidString),
+                            cardColor: cardColor,
+                            chipColor: chipColor,
+                            onTap: {
+                                if let food = foodForMealItemById(item.id.uuidString) {
+                                    selectedFood = food
+                                }
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal)
             } else {
+                // Fallback to static rows for foods without meal items
                 VStack(spacing: 12) {
                     ForEach(mealItemsFromFoodsOrFallback, id: \.id) { item in
                         Button {
@@ -514,6 +567,16 @@ struct MealPlateSummaryView: View {
     private func foodForMealItem(_ item: MealItemListDisplay) -> Food? {
         if let match = foods.first(where: { $0.displayName == item.name }) {
             return match
+        }
+        return foods.first
+    }
+
+    private func foodForMealItemById(_ itemId: String) -> Food? {
+        // Try to find a matching food by name from the mealItems
+        if let mealItem = mealItems.first(where: { $0.id.uuidString == itemId }) {
+            if let match = foods.first(where: { $0.displayName == mealItem.name }) {
+                return match
+            }
         }
         return foods.first
     }
@@ -1059,4 +1122,266 @@ private struct MealGoalShareBubble: View {
     }
 }
 
+// MARK: - Editable Item State
+
+private struct MealEditableItem {
+    var servingAmount: Double
+    var servingAmountInput: String
+    var selectedMeasureId: UUID?
+    let measures: [MealItemMeasure]
+    let baselineServing: Double
+    let baselineMeasureId: UUID?
+
+    /// The currently selected measure
+    var selectedMeasure: MealItemMeasure? {
+        if let id = selectedMeasureId,
+           let match = measures.first(where: { $0.id == id }) {
+            return match
+        }
+        if let baselineId = baselineMeasureId,
+           let match = measures.first(where: { $0.id == baselineId }) {
+            return match
+        }
+        return measures.first
+    }
+
+    /// Whether there are multiple measure options to choose from
+    var hasMeasureOptions: Bool {
+        measures.count > 1
+    }
+
+    /// Scaling factor based on serving amount and measure change
+    var scalingFactor: Double {
+        guard baselineServing > 0 else { return servingAmount }
+        if let baselineWeight = measures.first(where: { $0.id == baselineMeasureId })?.gramWeight,
+           baselineWeight > 0,
+           let selectedWeight = selectedMeasure?.gramWeight,
+           selectedWeight > 0 {
+            return (servingAmount * selectedWeight) / (baselineServing * baselineWeight)
+        }
+        return servingAmount / baselineServing
+    }
+
+    /// Initialize from a MealItem object
+    init(from mealItem: MealItem) {
+        self.servingAmount = mealItem.serving
+        self.servingAmountInput = MealEditableItem.formatServing(mealItem.serving)
+        self.measures = mealItem.measures
+        self.baselineServing = mealItem.baselineServing
+        self.baselineMeasureId = mealItem.measures.first?.id
+        self.selectedMeasureId = mealItem.selectedMeasureId ?? mealItem.measures.first?.id
+    }
+
+    /// Manual initializer
+    init(servingAmount: Double, servingAmountInput: String, selectedMeasureId: UUID?, measures: [MealItemMeasure], baselineServing: Double) {
+        self.servingAmount = servingAmount
+        self.servingAmountInput = servingAmountInput
+        self.selectedMeasureId = selectedMeasureId
+        self.measures = measures
+        self.baselineServing = baselineServing
+        self.baselineMeasureId = measures.first?.id
+    }
+
+    /// Format serving amount for display
+    static func formatServing(_ value: Double) -> String {
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(Int(value))
+        } else {
+            return String(format: "%.2f", value)
+                .replacingOccurrences(of: "\\.?0+$", with: "", options: .regularExpression)
+        }
+    }
+
+    /// Parse serving input string to Double
+    static func parseServing(_ input: String) -> Double? {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        // Handle fractions like "1/2"
+        if let slashIndex = trimmed.firstIndex(of: "/") {
+            let numeratorStr = String(trimmed[..<slashIndex])
+            let denominatorStr = String(trimmed[trimmed.index(after: slashIndex)...])
+            if let num = Double(numeratorStr.trimmingCharacters(in: .whitespaces)),
+               let denom = Double(denominatorStr.trimmingCharacters(in: .whitespaces)),
+               denom != 0 {
+                return num / denom
+            }
+        }
+
+        return Double(trimmed)
+    }
+}
+
+// MARK: - Editable Item Row
+
+private struct MealEditableItemRow: View {
+    let item: MealItem
+    @Binding var editableItem: MealEditableItem
+    let cardColor: Color
+    let chipColor: Color
+    var onTap: () -> Void = {}
+
+    /// Scaled calories based on serving adjustments
+    private var scaledCalories: Double {
+        item.calories * editableItem.scalingFactor
+    }
+
+    /// Scaled protein based on serving adjustments
+    private var scaledProtein: Double {
+        item.protein * editableItem.scalingFactor
+    }
+
+    /// Scaled carbs based on serving adjustments
+    private var scaledCarbs: Double {
+        item.carbs * editableItem.scalingFactor
+    }
+
+    /// Scaled fat based on serving adjustments
+    private var scaledFat: Double {
+        item.fat * editableItem.scalingFactor
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Name + serving controls on same row
+            HStack(alignment: .top, spacing: 12) {
+                // Food name (tappable)
+                Button(action: onTap) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.name.isEmpty ? "Meal Item" : item.name)
+                            .font(.system(size: 15))
+                            .fontWeight(.regular)
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 8)
+
+                // Serving controls on the right
+                servingControls
+            }
+
+            // Macro summary row
+            HStack(spacing: 10) {
+                Label("\(Int(scaledCalories.rounded()))cal", systemImage: "flame.fill")
+                    .font(.caption)
+                    .foregroundColor(.primary)
+                Text(macroLine)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(cardColor)
+        )
+    }
+
+    private var servingControls: some View {
+        HStack(spacing: 6) {
+            // Amount input field
+            TextField("1", text: servingAmountBinding)
+                .keyboardType(.numbersAndPunctuation)
+                .multilineTextAlignment(.center)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 8)
+                .frame(width: 50)
+                .background(
+                    Capsule().fill(chipColor)
+                )
+                .font(.system(size: 15))
+
+            // Unit picker or static label
+            if editableItem.hasMeasureOptions {
+                measureMenu
+            } else {
+                // Show static unit label
+                Text(unitLabel(for: editableItem.selectedMeasure))
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(
+                        Capsule().fill(chipColor)
+                    )
+            }
+        }
+        .fixedSize()
+    }
+
+    private var measureMenu: some View {
+        Menu {
+            ForEach(editableItem.measures) { measure in
+                Button(action: { selectMeasure(measure) }) {
+                    HStack {
+                        Text(unitLabel(for: measure))
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(1)
+                        Spacer()
+                        if measure.id == editableItem.selectedMeasureId {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(unitLabel(for: editableItem.selectedMeasure))
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(
+                Capsule().fill(chipColor)
+            )
+        }
+        .menuStyle(.borderlessButton)
+    }
+
+    private var servingAmountBinding: Binding<String> {
+        Binding(
+            get: { editableItem.servingAmountInput },
+            set: { newValue in
+                editableItem.servingAmountInput = newValue
+                if let parsed = MealEditableItem.parseServing(newValue),
+                   abs(parsed - editableItem.servingAmount) > 0.0001 {
+                    editableItem.servingAmount = parsed
+                }
+            }
+        )
+    }
+
+    private func selectMeasure(_ measure: MealItemMeasure) {
+        editableItem.selectedMeasureId = measure.id
+    }
+
+    private func unitLabel(for measure: MealItemMeasure?) -> String {
+        guard let measure = measure else {
+            return item.servingUnit ?? "serving"
+        }
+        // Prefer description if it's more informative than the unit
+        if !measure.description.isEmpty && measure.description != measure.unit {
+            return measure.description
+        }
+        return measure.unit.isEmpty ? "serving" : measure.unit
+    }
+
+    private var macroLine: String {
+        let protein = Int(scaledProtein.rounded())
+        let carbs = Int(scaledCarbs.rounded())
+        let fat = Int(scaledFat.rounded())
+        return "P \(protein)g C \(carbs)g F \(fat)g"
+    }
+}
 
