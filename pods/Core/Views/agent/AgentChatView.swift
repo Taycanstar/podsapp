@@ -173,8 +173,8 @@ struct AgentChatView: View {
                     onLogMeal: { foods, items in
                         logMealFoods(foods: foods, items: items)
                     },
-                    onAddToPlate: { foods, _ in
-                        addMealFoodsToPlate(foods)
+                    onAddToPlate: { foods, mealItems in
+                        addMealFoodsToPlate(foods, mealItems: mealItems)
                     }
                 )
             }
@@ -494,69 +494,86 @@ struct AgentChatView: View {
     private var inputBar: some View {
         let hasUserInput = !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
-        return VStack(alignment: .leading, spacing: 12) {
-            ZStack(alignment: .topLeading) {
-                // Placeholder text
-                if inputText.isEmpty {
-                    Text("Log or ask anything...")
+        return VStack(spacing: 0) {
+            // Top blur strip for liquid glass fade effect
+            ChatTransparentBlurView(removeAllFilters: true)
+                .blur(radius: 14)
+                .frame(height: 10)
+                .frame(maxWidth: .infinity)
+                .allowsHitTesting(false)
+
+            // Content card
+            VStack(alignment: .leading, spacing: 12) {
+                ZStack(alignment: .topLeading) {
+                    // Placeholder text
+                    if inputText.isEmpty {
+                        Text("Log or ask anything...")
+                            .font(.system(size: 15))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 8)
+                            .allowsHitTesting(false)
+                    }
+
+                    TextEditor(text: $inputText)
+                        .textInputAutocapitalization(.sentences)
+                        .autocorrectionDisabled(false)
+                        .tint(Color.accentColor)
                         .font(.system(size: 15))
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 8)
-                        .allowsHitTesting(false)
+                        .foregroundColor(.primary)
+                        .scrollContentBackground(.hidden)
+                        .background(Color.clear)
+                        .frame(maxHeight: 120)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .focused($isInputFocused)
                 }
-
-                TextEditor(text: $inputText)
-                    .textInputAutocapitalization(.sentences)
-                    .autocorrectionDisabled(false)
-                    .tint(Color.accentColor)
-                    .font(.system(size: 15))
-                    .foregroundColor(.primary)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.clear)
-                    .frame(maxHeight: 120)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .focused($isInputFocused)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                isInputFocused = true
-            }
-            .padding(.horizontal, 4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            HStack {
-                HStack(spacing: 10) {
-                    ChatActionCircleButton(
-                        systemName: "plus",
-                        action: onPlusTapped,
-                        backgroundColor: Color.accentColor,
-                        foregroundColor: .white
-                    )
-
-                    ChatActionCircleButton(
-                        systemName: "barcode.viewfinder",
-                        action: onBarcodeTapped
-                    )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isInputFocused = true
                 }
+                .padding(.horizontal, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer()
+                HStack {
+                    HStack(spacing: 10) {
+                        ChatActionCircleButton(
+                            systemName: "plus",
+                            action: onPlusTapped,
+                            backgroundColor: Color.accentColor,
+                            foregroundColor: .white
+                        )
 
-                inputBarRightButtons(hasUserInput: hasUserInput)
+                        ChatActionCircleButton(
+                            systemName: "barcode.viewfinder",
+                            action: onBarcodeTapped
+                        )
+                    }
+
+                    Spacer()
+
+                    inputBarRightButtons(hasUserInput: hasUserInput)
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color("chat"))
+                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(inputBarBorderColor, lineWidth: 1)
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, -12)
+            .padding(.bottom, isInputFocused ? 10 : 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color("chat"))
-                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+            ChatTransparentBlurView(removeAllFilters: true)
+                .blur(radius: 14)
+                .ignoresSafeArea(edges: [.horizontal, .bottom])
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(inputBarBorderColor, lineWidth: 1)
-        )
-        .padding(.horizontal, 16)
         .padding(.bottom, 8)
         .onChange(of: speechRecognizer.transcript) { _, newTranscript in
             if !newTranscript.isEmpty {
@@ -809,16 +826,20 @@ struct AgentChatView: View {
         showToast(with: "Logged \(foodNames)\(suffix)")
     }
 
-    private func addMealFoodsToPlate(_ foods: [Food]) {
+    private func addMealFoodsToPlate(_ foods: [Food], mealItems: [MealItem] = []) {
         // Dismiss summary sheet first
         showMealSummary = false
 
         let mealPeriod = suggestedMealPeriod(for: Date())
 
+        // Use passed mealItems if available (they contain edited serving amounts)
+        // Fall back to mealSummaryItems state if callback didn't provide updated items
+        let itemsToUse = mealItems.isEmpty ? mealSummaryItems : mealItems
+
         // If we have meal items, use those (they contain the actual serving amounts/units)
         // Don't also add from foods array - that would cause duplication
-        if !mealSummaryItems.isEmpty {
-            for item in mealSummaryItems {
+        if !itemsToUse.isEmpty {
+            for item in itemsToUse {
                 let food = foodFromMealItem(item)
                 let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod)
                 plateViewModel.add(entry)
@@ -1056,6 +1077,30 @@ private struct ShimmerThinkingIndicator: View {
             .repeatForever(autoreverses: false)
         ) {
             shimmerOffset = 100
+        }
+    }
+}
+
+// MARK: - Transparent Blur View for Liquid Glass Effect
+
+private struct ChatTransparentBlurView: UIViewRepresentable {
+    var removeAllFilters: Bool = false
+
+    func makeUIView(context: Context) -> UIVisualEffectView {
+        UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+    }
+
+    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
+        DispatchQueue.main.async {
+            guard let backdropLayer = uiView.layer.sublayers?.first else { return }
+
+            if removeAllFilters {
+                backdropLayer.filters = []
+            } else {
+                backdropLayer.filters?.removeAll { filter in
+                    String(describing: filter) != "gaussianBlur"
+                }
+            }
         }
     }
 }
