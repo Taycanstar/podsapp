@@ -253,21 +253,33 @@ struct MarkdownTableView: View {
     let headers: [String]
     let rows: [[String]]
 
+    // Calculate the number of columns (max of headers and any row)
+    private var columnCount: Int {
+        let maxRowColumns = rows.map { $0.count }.max() ?? 0
+        return max(headers.count, maxRowColumns)
+    }
+
+    // Get cell content safely
+    private func cellContent(row: [String], column: Int) -> String {
+        column < row.count ? row[column] : ""
+    }
+
+    private func headerContent(column: Int) -> String {
+        column < headers.count ? headers[column] : ""
+    }
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 0) {
+            // Use Grid for consistent column widths (iOS 16+)
+            Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
                 // Header row
-                HStack(spacing: 0) {
-                    ForEach(headers.indices, id: \.self) { i in
-                        Text(headers[i])
+                GridRow {
+                    ForEach(0..<columnCount, id: \.self) { colIndex in
+                        Text(headerContent(column: colIndex))
                             .font(.subheadline.bold())
                             .padding(10)
-                            .frame(minWidth: 80, alignment: .leading)
+                            .frame(minWidth: 80, maxWidth: .infinity, alignment: .leading)
                             .background(Color(.tertiarySystemBackground))
-
-                        if i < headers.count - 1 {
-                            Divider()
-                        }
                     }
                 }
 
@@ -275,23 +287,15 @@ struct MarkdownTableView: View {
 
                 // Data rows
                 ForEach(rows.indices, id: \.self) { rowIndex in
-                    HStack(spacing: 0) {
-                        ForEach(rows[rowIndex].indices, id: \.self) { colIndex in
-                            Text(colIndex < rows[rowIndex].count ? rows[rowIndex][colIndex] : "")
+                    GridRow {
+                        ForEach(0..<columnCount, id: \.self) { colIndex in
+                            Text(cellContent(row: rows[rowIndex], column: colIndex))
                                 .font(.subheadline)
                                 .padding(10)
-                                .frame(minWidth: 80, alignment: .leading)
-
-                            if colIndex < headers.count - 1 {
-                                Divider()
-                            }
+                                .frame(minWidth: 80, maxWidth: .infinity, alignment: .leading)
                         }
                     }
                     .background(rowIndex % 2 == 0 ? Color.clear : Color(.secondarySystemBackground).opacity(0.5))
-
-                    if rowIndex < rows.count - 1 {
-                        Divider()
-                    }
                 }
             }
         }
