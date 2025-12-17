@@ -159,7 +159,7 @@ struct AgentChatView: View {
         }
         .sheet(isPresented: $showFoodConfirm) {
             if let food = pendingFood {
-                FoodSummaryView(food: food, plateViewModel: plateViewModel)
+                FoodSummaryView(food: food)
                     .environmentObject(foodManager)
                     .environmentObject(onboardingViewModel)
                     .environmentObject(dayLogsVM)
@@ -196,23 +196,23 @@ struct AgentChatView: View {
             if showCopyToast {
                 Text("Message copied")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color.black.opacity(0.8))
-                    .clipShape(Capsule())
-                    .padding(.top, 16)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 60)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .overlay(alignment: .top) {
             if showToast {
                 Text(toastMessage)
-                    .font(.footnote)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.thinMaterial, in: Capsule())
-                    .padding(.top, 8)
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 60)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
@@ -800,7 +800,7 @@ struct AgentChatView: View {
     }
 
     private func addMealFoodsToPlate(_ foods: [Food]) {
-        // Add foods to plate and show PlateView
+        // Dismiss summary sheet first
         showMealSummary = false
 
         // Convert foods to PlateEntry objects
@@ -817,7 +817,10 @@ struct AgentChatView: View {
             plateViewModel.add(entry)
         }
 
-        showPlateView = true
+        // Delay showing PlateView to allow sheet dismiss animation to complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            showPlateView = true
+        }
     }
 
     private func buildPlateEntry(from food: Food, mealPeriod: MealPeriod) -> PlateEntry {

@@ -90,6 +90,13 @@ struct HealthCoachMealItem: Codable {
     let protein: Double?
     let carbs: Double?
     let fat: Double?
+    let serving: Double?
+    let servingUnit: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, calories, protein, carbs, fat, serving
+        case servingUnit = "serving_unit"
+    }
 }
 
 // MARK: - Activity Models

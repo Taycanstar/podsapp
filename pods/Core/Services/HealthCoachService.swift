@@ -169,6 +169,8 @@ final class HealthCoachService {
     func convertToMealItem(_ item: HealthCoachMealItem) -> MealItem {
         return MealItem(
             name: item.name ?? "Unknown",
+            serving: item.serving ?? 1.0,
+            servingUnit: item.servingUnit ?? "serving",
             calories: item.calories ?? 0,
             protein: item.protein ?? 0,
             carbs: item.carbs ?? 0,
