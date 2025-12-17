@@ -3142,6 +3142,13 @@ struct PlateView: View {
         .onReceive(goalsStore.$state) { _ in
             reloadStoredNutrientTargets()
         }
+        .onDisappear {
+            // If dismissed without logging (user tapped X), clear entries
+            // so they don't persist next time PlateView is opened
+            if !isLoggingPlate {
+                viewModel.clear()
+            }
+        }
     }
 
     private var plateItemsSection: some View {
@@ -3157,7 +3164,7 @@ struct PlateView: View {
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
             } else {
-                VStack(spacing: 12) {
+                List {
                     ForEach(viewModel.entries) { entry in
                         PlateEntryRow(
                             entry: entry,
@@ -3170,9 +3177,22 @@ struct PlateView: View {
                             plateCardColor: plateCardColor,
                             chipColor: plateChipColor
                         )
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                viewModel.remove(entry)
+                            } label: {
+                                Image(systemName: "trash.fill")
+                            }
+                        }
                     }
                 }
-                .padding(.horizontal)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollDisabled(true)
+                .frame(minHeight: CGFloat(viewModel.entries.count) * 100)
             }
         }
     }
@@ -3823,15 +3843,40 @@ struct PlateView: View {
         ]
 
         // Convert MealItemMeasures to FoodMeasures
-        let foodMeasures: [FoodMeasure] = item.measures.enumerated().map { index, measure in
-            FoodMeasure(
-                disseminationText: measure.description,
-                gramWeight: measure.gramWeight,
-                id: index,
-                modifier: measure.description,
-                measureUnitName: measure.unit,
-                rank: index
-            )
+        // If no measures exist, create a default one using the item's servingUnit
+        let foodMeasures: [FoodMeasure]
+        if item.measures.isEmpty {
+            // Create a default measure from the item's serving unit
+            let unitLabel = item.servingUnit ?? "serving"
+            foodMeasures = [
+                FoodMeasure(
+                    disseminationText: unitLabel,
+                    gramWeight: item.serving,
+                    id: 0,
+                    modifier: unitLabel,
+                    measureUnitName: unitLabel,
+                    rank: 0
+                )
+            ]
+        } else {
+            foodMeasures = item.measures.enumerated().map { index, measure in
+                FoodMeasure(
+                    disseminationText: measure.description,
+                    gramWeight: measure.gramWeight,
+                    id: index,
+                    modifier: measure.description,
+                    measureUnitName: measure.unit,
+                    rank: index
+                )
+            }
+        }
+
+        // Format serving text - show integer if whole number, decimal otherwise
+        let servingText: String
+        if item.serving.truncatingRemainder(dividingBy: 1) == 0 {
+            servingText = "\(Int(item.serving)) \(item.servingUnit ?? "serving")"
+        } else {
+            servingText = String(format: "%.1f", item.serving) + " \(item.servingUnit ?? "serving")"
         }
 
         // Create a Food object from MealItem data
@@ -3840,10 +3885,10 @@ struct PlateView: View {
             description: item.name,
             brandOwner: nil,
             brandName: nil,
-            servingSize: item.serving,
-            numberOfServings: 1,
+            servingSize: 1, // Base serving size is 1 unit
+            numberOfServings: item.serving, // Use actual serving amount
             servingSizeUnit: item.servingUnit,
-            householdServingFullText: "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
+            householdServingFullText: servingText,
             foodNutrients: nutrients,
             foodMeasures: foodMeasures
         )
@@ -3858,13 +3903,13 @@ struct PlateView: View {
 
         return PlateEntry(
             food: food,
-            servings: 1.0,
+            servings: item.serving, // Use actual serving amount
             selectedMeasureId: nil,
             availableMeasures: foodMeasures,
             baselineGramWeight: baseGramWeight,
             baseNutrientValues: [:],
             baseMacroTotals: baseMacros,
-            servingDescription: "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
+            servingDescription: servingText,
             mealItems: [],
             mealPeriod: selectedMealPeriod,
             mealTime: mealTime
@@ -4021,9 +4066,13 @@ private struct PlateEntryRow: View {
     private func shortMeasureLabel(for measure: FoodMeasure?) -> String {
         guard let measure else { return "serving" }
         var label = measureLabel(for: measure)
-        if let range = label.range(of: "(") {
-            label = String(label[..<range.lowerBound])
-        }
+
+        // Only strip parenthetical if it contains weight info like "(150g)" or "(5 oz)"
+        // Keep descriptive info like "(8 pieces)"
+        let weightParenPattern = "\\s*\\([0-9.]+\\s*(g|oz|ml|mL|fl oz)\\)"
+        label = label.replacingOccurrences(of: weightParenPattern, with: "", options: .regularExpression)
+
+        // Remove leading numeric prefix like "1 " or "2.5 "
         let numberPrefixPattern = "^[0-9]+(\\.[0-9]+)?([/][0-9]+)?\\s*(x|×)?\\s*"
         label = label.replacingOccurrences(of: numberPrefixPattern, with: "", options: .regularExpression)
         return label.trimmingCharacters(in: .whitespacesAndNewlines)

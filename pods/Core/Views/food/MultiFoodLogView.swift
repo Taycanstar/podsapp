@@ -28,6 +28,9 @@ struct MultiFoodLogView: View {
     /// Editable serving state for each food item (keyed by food index)
     @State private var editableItems: [Int: EditableFoodItem] = [:]
 
+    /// Track deleted food indices for swipe-to-delete
+    @State private var deletedFoodIndices: Set<Int> = []
+
     private var plateBackground: Color {
         colorScheme == .dark ? Color("bg") : Color(UIColor.systemGroupedBackground)
     }
@@ -39,13 +42,24 @@ struct MultiFoodLogView: View {
     }
 
     // MARK: - Display Foods Logic
-    private var displayFoods: [Food] {
+    /// All foods derived from input (before filtering deleted items)
+    private var allDisplayFoods: [Food] {
         if foods.count > 1 {
             return foods
         }
         if let first = foods.first, let items = first.mealItems, !items.isEmpty {
             return items.map { item in
-                Food(
+                // Create a default measure with the item's serving unit
+                let unitLabel = item.servingUnit ?? "serving"
+                let defaultMeasure = FoodMeasure(
+                    disseminationText: unitLabel,
+                    gramWeight: item.serving,
+                    id: 0,
+                    modifier: unitLabel,
+                    measureUnitName: unitLabel,
+                    rank: 0
+                )
+                return Food(
                     fdcId: item.id.hashValue,
                     description: item.name,
                     brandOwner: nil,
@@ -60,7 +74,7 @@ struct MultiFoodLogView: View {
                         Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
                         Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
                     ],
-                    foodMeasures: [],
+                    foodMeasures: [defaultMeasure],
                     healthAnalysis: nil,
                     aiInsight: nil,
                     nutritionScore: nil,
@@ -69,7 +83,17 @@ struct MultiFoodLogView: View {
             }
         }
         return mealItems.map { item in
-            Food(
+            // Create a default measure with the item's serving unit
+            let unitLabel = item.servingUnit ?? "serving"
+            let defaultMeasure = FoodMeasure(
+                disseminationText: unitLabel,
+                gramWeight: item.serving,
+                id: 0,
+                modifier: unitLabel,
+                measureUnitName: unitLabel,
+                rank: 0
+            )
+            return Food(
                 fdcId: item.id.hashValue,
                 description: item.name,
                 brandOwner: nil,
@@ -84,13 +108,31 @@ struct MultiFoodLogView: View {
                     Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
                     Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
                 ],
-                foodMeasures: [],
+                foodMeasures: [defaultMeasure],
                 healthAnalysis: nil,
                 aiInsight: nil,
                 nutritionScore: nil,
                 mealItems: []
             )
         }
+    }
+
+    /// Filtered display foods excluding deleted items
+    private var displayFoods: [Food] {
+        allDisplayFoods
+    }
+
+    /// Foods with their original indices for display (excludes deleted)
+    private var displayFoodsWithIndices: [(index: Int, food: Food)] {
+        allDisplayFoods.enumerated()
+            .filter { !deletedFoodIndices.contains($0.offset) }
+            .map { (index: $0.offset, food: $0.element) }
+    }
+
+    /// Delete a food item at the given index
+    private func deleteFood(at index: Int) {
+        deletedFoodIndices.insert(index)
+        editableItems.removeValue(forKey: index)
     }
 
     // MARK: - Computed Macros
@@ -100,13 +142,13 @@ struct MultiFoodLogView: View {
         var carbs: Double = 0
         var fat: Double = 0
 
-        // Use editable items for scaling if available
-        for (index, food) in displayFoods.enumerated() {
-            let scalingFactor = editableItems[index]?.scalingFactor ?? 1.0
-            cals += (food.calories ?? 0) * scalingFactor
-            protein += (food.protein ?? 0) * scalingFactor
-            carbs += (food.carbs ?? 0) * scalingFactor
-            fat += (food.fat ?? 0) * scalingFactor
+        // Use editable items for scaling if available (excludes deleted items)
+        for item in displayFoodsWithIndices {
+            let scalingFactor = editableItems[item.index]?.scalingFactor ?? 1.0
+            cals += (item.food.calories ?? 0) * scalingFactor
+            protein += (item.food.protein ?? 0) * scalingFactor
+            carbs += (item.food.carbs ?? 0) * scalingFactor
+            fat += (item.food.fat ?? 0) * scalingFactor
         }
 
         return (cals, protein, carbs, fat)
@@ -147,9 +189,10 @@ struct MultiFoodLogView: View {
 
     private var aggregatedNutrients: [String: MultiFoodRawNutrientValue] {
         var result: [String: MultiFoodRawNutrientValue] = [:]
-        for (index, food) in displayFoods.enumerated() {
-            let scalingFactor = editableItems[index]?.scalingFactor ?? 1.0
-            for nutrient in food.foodNutrients {
+        // Use displayFoodsWithIndices to exclude deleted items
+        for item in displayFoodsWithIndices {
+            let scalingFactor = editableItems[item.index]?.scalingFactor ?? 1.0
+            for nutrient in item.food.foodNutrients {
                 let key = normalizedNutrientKey(nutrient.nutrientName)
                 let value = (nutrient.value ?? 0) * scalingFactor
                 if let existing = result[key] {
@@ -270,26 +313,48 @@ struct MultiFoodLogView: View {
                 .fontWeight(.semibold)
                 .padding(.horizontal)
 
-            if mealItems.isEmpty && displayFoods.isEmpty {
+            if displayFoodsWithIndices.isEmpty {
                 Text("No meal items found")
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
             } else {
-                VStack(spacing: 12) {
-                    ForEach(Array(displayFoods.enumerated()), id: \.element.id) { index, food in
+                List {
+                    ForEach(displayFoodsWithIndices, id: \.food.id) { item in
                         MultiFoodEditableItemRow(
-                            food: food,
-                            editableItem: editableItemBinding(for: index),
+                            food: item.food,
+                            editableItem: editableItemBinding(for: item.index),
                             cardColor: cardColor,
                             chipColor: chipColor,
                             onTap: {
-                                selectedFood = food
+                                selectedFood = item.food
                             }
                         )
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                deleteFood(at: item.index)
+                            } label: {
+                                Image(systemName: "trash.fill")
+                            }
+                        }
+                    }
+                    .onDelete { indexSet in
+                        // Convert display indices to original indices and delete
+                        for displayIndex in indexSet {
+                            if displayIndex < displayFoodsWithIndices.count {
+                                let originalIndex = displayFoodsWithIndices[displayIndex].index
+                                deleteFood(at: originalIndex)
+                            }
+                        }
                     }
                 }
-                .padding(.horizontal)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollDisabled(true)
+                .frame(minHeight: CGFloat(displayFoodsWithIndices.count) * 100)
             }
         }
     }
@@ -465,7 +530,7 @@ struct MultiFoodLogView: View {
                         .fill(Color("background"))
                 )
                 .foregroundColor(Color("text"))
-                .disabled(isLogging || (mealItems.isEmpty && displayFoods.isEmpty))
+                .disabled(isLogging || displayFoodsWithIndices.isEmpty)
                 .opacity(isLogging ? 0.7 : 1)
 
                 Button(action: {
@@ -484,6 +549,7 @@ struct MultiFoodLogView: View {
                         .fill(Color("background"))
                 )
                 .foregroundColor(Color("text"))
+                .disabled(displayFoodsWithIndices.isEmpty)
             }
         }
         .padding(.horizontal)
@@ -877,55 +943,58 @@ struct MultiFoodLogView: View {
     // MARK: - Logging Functions (kept from original)
 
     private func logAllFoods() {
-        guard !displayFoods.isEmpty else { return }
+        let foodsToLog = displayFoodsWithIndices
+        guard !foodsToLog.isEmpty else { return }
 
         // Navigate to timeline immediately
         NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
 
-        logFood(at: 0)
+        logFoodFromList(at: 0, items: foodsToLog)
     }
 
     /// Build batch context for multi-food coach message
     private func buildBatchContext() -> [String: Any] {
-        // Use scaled values from editable items
+        // Use scaled values from editable items (excludes deleted)
         var totalCalories: Double = 0
         var totalProtein: Double = 0
 
-        for (index, food) in displayFoods.enumerated() {
-            let scalingFactor = editableItems[index]?.scalingFactor ?? 1.0
-            totalCalories += (food.calories ?? 0) * scalingFactor
-            totalProtein += (food.protein ?? 0) * scalingFactor
+        for item in displayFoodsWithIndices {
+            let scalingFactor = editableItems[item.index]?.scalingFactor ?? 1.0
+            totalCalories += (item.food.calories ?? 0) * scalingFactor
+            totalProtein += (item.food.protein ?? 0) * scalingFactor
         }
 
-        let foodNames = displayFoods.map { $0.displayName }
+        let foodNames = displayFoodsWithIndices.map { $0.food.displayName }
 
         return [
             "total_calories": totalCalories,
             "total_protein": totalProtein,
-            "item_count": displayFoods.count,
+            "item_count": displayFoodsWithIndices.count,
             "food_names": foodNames
         ]
     }
 
-    private func logFood(at index: Int) {
-        if index >= displayFoods.count {
+    private func logFoodFromList(at listIndex: Int, items: [(index: Int, food: Food)]) {
+        if listIndex >= items.count {
             isLogging = false
             dayLogsVM.loadLogs(for: mealTime, force: true)
             dismiss()
             return
         }
 
-        let food = displayFoods[index]
-        let isLastFood = index == displayFoods.count - 1
+        let item = items[listIndex]
+        let food = item.food
+        let originalIndex = item.index
+        let isLastFood = listIndex == items.count - 1
 
         // Get the edited serving amount from editable state
-        let editableItem = editableItems[index]
+        let editableItem = editableItems[originalIndex]
         let servings = editableItem?.scalingFactor ?? (food.numberOfServings ?? 1)
 
         // Skip coach generation for all but the last food
         // For the last food, include batch context so coach message covers the entire meal
         let skipCoach = !isLastFood
-        let batchContext: [String: Any]? = isLastFood && displayFoods.count > 1 ? buildBatchContext() : nil
+        let batchContext: [String: Any]? = isLastFood && items.count > 1 ? buildBatchContext() : nil
 
         foodManager.logFood(
             email: onboardingViewModel.email,
@@ -960,19 +1029,44 @@ struct MultiFoodLogView: View {
                 case .failure:
                     break
                 }
-                self.logFood(at: index + 1)
+                self.logFoodFromList(at: listIndex + 1, items: items)
             }
         }
     }
 
     private func addToPlate() {
-        // Add foods to plate and dismiss
+        // Add only non-deleted foods to plate and dismiss
+        let remainingFoods = displayFoodsWithIndices.map { $0.food }
+
+        // Build edited meal items with current serving amounts/units from editableItems
+        var editedMealItems: [MealItem] = []
+        for (originalIndex, mealItem) in mealItems.enumerated() {
+            guard !deletedFoodIndices.contains(originalIndex) else { continue }
+
+            var editedItem = mealItem
+            if let editableState = editableItems[originalIndex] {
+                // Apply the edited serving amount
+                editedItem.serving = editableState.servingAmount
+                // Apply selected measure if changed
+                if let selectedId = editableState.selectedMeasureId {
+                    editedItem.selectedMeasureId = selectedId
+                    // Update servingUnit to match selected measure's description
+                    if let selectedMeasure = editableState.measures.first(where: { $0.id == selectedId }) {
+                        editedItem.servingUnit = selectedMeasure.description.isEmpty
+                            ? selectedMeasure.unit
+                            : selectedMeasure.description
+                    }
+                }
+            }
+            editedMealItems.append(editedItem)
+        }
+
         NotificationCenter.default.post(
             name: NSNotification.Name("AddToPlate"),
             object: nil,
             userInfo: [
-                "foods": displayFoods,
-                "mealItems": mealItems,
+                "foods": remainingFoods,
+                "mealItems": editedMealItems,
                 "mealPeriod": selectedMealPeriod,
                 "mealTime": mealTime
             ]

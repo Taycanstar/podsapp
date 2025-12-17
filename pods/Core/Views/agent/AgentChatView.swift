@@ -340,7 +340,8 @@ struct AgentChatView: View {
             HStack {
                 Spacer()
                 Text(message.text)
-                    .padding(12)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                     .background(Color.accentColor)
                     .foregroundColor(.white)
                     .cornerRadius(16)
@@ -879,6 +880,17 @@ struct AgentChatView: View {
             servingText = String(format: "%.1f", item.serving) + " \(item.servingUnit ?? "serving")"
         }
 
+        // Create a default measure with the item's serving unit
+        let unitLabel = item.servingUnit ?? "serving"
+        let defaultMeasure = FoodMeasure(
+            disseminationText: unitLabel,
+            gramWeight: item.serving,
+            id: 0,
+            modifier: unitLabel,
+            measureUnitName: unitLabel,
+            rank: 0
+        )
+
         return Food(
             fdcId: item.id.hashValue,
             description: item.name,
@@ -894,7 +906,7 @@ struct AgentChatView: View {
                 Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
                 Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
             ],
-            foodMeasures: [],
+            foodMeasures: [defaultMeasure],
             healthAnalysis: nil,
             aiInsight: nil,
             nutritionScore: nil,

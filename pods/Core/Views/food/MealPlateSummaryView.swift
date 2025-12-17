@@ -29,6 +29,9 @@ struct MealPlateSummaryView: View {
     /// Editable state for each meal item (keyed by item ID string)
     @State private var editableItems: [String: MealEditableItem] = [:]
 
+    /// Mutable copy of meal items for deletion support
+    @State private var editableMealItems: [MealItem] = []
+
     private var plateBackground: Color {
         colorScheme == .dark ? Color("bg") : Color(UIColor.systemGroupedBackground)
     }
@@ -46,16 +49,16 @@ struct MealPlateSummaryView: View {
         var carbs: Double = 0
         var fat: Double = 0
 
-        // Use editable items to get scaled values
-        for item in mealItems {
+        // Use editable items to get scaled values (from editableMealItems for deletion support)
+        for item in editableMealItems {
             let scalingFactor = editableItems[item.id.uuidString]?.scalingFactor ?? 1.0
             cals += (item.calories) * scalingFactor
             protein += (item.protein) * scalingFactor
             carbs += (item.carbs) * scalingFactor
             fat += (item.fat) * scalingFactor
         }
-        // Fallback to foods if mealItems is empty
-        if mealItems.isEmpty {
+        // Fallback to foods if editableMealItems is empty
+        if editableMealItems.isEmpty {
             for food in foods {
                 cals += food.calories ?? 0
                 protein += food.protein ?? 0
@@ -200,12 +203,22 @@ struct MealPlateSummaryView: View {
     }
 
     private func initializeEditableItems() {
+        // Initialize mutable copy of meal items
+        if editableMealItems.isEmpty {
+            editableMealItems = mealItems
+        }
+
         guard editableItems.isEmpty else { return }
 
         // Initialize editable state for each meal item
         for item in mealItems {
             editableItems[item.id.uuidString] = MealEditableItem(from: item)
         }
+    }
+
+    private func deleteMealItem(_ item: MealItem) {
+        editableMealItems.removeAll { $0.id == item.id }
+        editableItems.removeValue(forKey: item.id.uuidString)
     }
 
     /// Create a binding for an editable item at a given ID
@@ -234,15 +247,15 @@ struct MealPlateSummaryView: View {
                 .fontWeight(.semibold)
                 .padding(.horizontal)
 
-            if mealItems.isEmpty && foods.isEmpty {
+            if editableMealItems.isEmpty && foods.isEmpty {
                 Text("No meal items found")
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
-            } else if !mealItems.isEmpty {
-                // Use editable rows for meal items
-                VStack(spacing: 12) {
-                    ForEach(mealItems) { item in
+            } else if !editableMealItems.isEmpty {
+                // Use List for swipe-to-delete support
+                List {
+                    ForEach(editableMealItems) { item in
                         MealEditableItemRow(
                             item: item,
                             editableItem: editableItemBinding(for: item.id.uuidString),
@@ -254,9 +267,30 @@ struct MealPlateSummaryView: View {
                                 }
                             }
                         )
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                deleteMealItem(item)
+                            } label: {
+                                Label("Delete", systemImage: "trash.fill")
+                            }
+                        }
+                    }
+                    .onDelete { indexSet in
+                        for index in indexSet.sorted(by: >) {
+                            if index < editableMealItems.count {
+                                let item = editableMealItems[index]
+                                deleteMealItem(item)
+                            }
+                        }
                     }
                 }
-                .padding(.horizontal)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollDisabled(true)
+                .frame(minHeight: CGFloat(editableMealItems.count) * 100)
             } else {
                 // Fallback to static rows for foods without meal items
                 VStack(spacing: 12) {
@@ -421,7 +455,7 @@ struct MealPlateSummaryView: View {
                 Button(action: {
                     HapticFeedback.generateLigth()
                     isLogging = true
-                    onLogMeal(foods, mealItems)
+                    onLogMeal(foods, editableMealItems)
                 }) {
                     Text(isLogging ? "Logging..." : "Log Meal")
                         .font(.headline)
@@ -435,12 +469,12 @@ struct MealPlateSummaryView: View {
                         .fill(Color("background"))
                 )
                 .foregroundColor(Color("text"))
-                .disabled(isLogging || (mealItems.isEmpty && foods.isEmpty))
+                .disabled(isLogging || (editableMealItems.isEmpty && foods.isEmpty))
                 .opacity(isLogging ? 0.7 : 1)
 
                 Button(action: {
                     HapticFeedback.generateLigth()
-                    onAddToPlate(foods, mealItems)
+                    onAddToPlate(foods, editableMealItems)
                 }) {
                     Text("Add to Plate")
                         .font(.headline)
