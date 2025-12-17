@@ -25,6 +25,8 @@ struct AgentTabBar: View {
 
     @State private var isListening = false
     @State private var pulseScale: CGFloat = 1.0
+    @State private var isSendingMessage = false
+    @State private var sendPulseScale: CGFloat = 1.0
     @StateObject private var speechRecognizer = SpeechRecognizer()
 
     var body: some View {
@@ -144,9 +146,25 @@ struct AgentTabBar: View {
         guard !trimmed.isEmpty else { return }
         text = trimmed
         HapticFeedback.generate()
+
+        // Start pulsing animation immediately for visual feedback
+        isSendingMessage = true
+        withAnimation(.easeInOut(duration: 0.3).repeatForever(autoreverses: true)) {
+            sendPulseScale = 1.15
+        }
+
+        // Navigate optimistically - don't wait for API
         onWaveformTapped()
         text = ""
         isPromptFocused.wrappedValue = false
+
+        // Reset pulse state after a brief moment (animation continues in AgentChatView)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            withAnimation(.easeOut(duration: 0.1)) {
+                sendPulseScale = 1.0
+            }
+            isSendingMessage = false
+        }
     }
 
     @ViewBuilder
@@ -249,6 +267,7 @@ struct AgentTabBar: View {
                         backgroundColor: hasUserInput ? Color.accentColor : Color("chaticon"),
                         foregroundColor: hasUserInput ? .white : .primary
                     )
+                    .scaleEffect(isSendingMessage ? sendPulseScale : 1.0)
                 }
             }
         }

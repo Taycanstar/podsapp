@@ -742,7 +742,10 @@ struct AgentChatView: View {
         // Determine meal type based on time of day
         let mealType = suggestedMealPeriod(for: Date()).rawValue
         let email = onboardingViewModel.email
-        let today = dayLogsVM.selectedDate
+
+        // IMPORTANT: Use a single timestamp for ALL foods in this batch
+        // This ensures they group together in the timeline view
+        let batchTimestamp = Date()
 
         // If we have meal items, convert them to foods and log each
         let foodsToLog: [Food]
@@ -770,7 +773,7 @@ struct AgentChatView: View {
                 food: food,
                 meal: mealType,
                 servings: 1,
-                date: today,
+                date: batchTimestamp,
                 notes: nil,
                 skipCoach: !isLastItem
             ) { [weak dayLogsVM] result in
@@ -781,7 +784,7 @@ struct AgentChatView: View {
                     case .success:
                         // Refresh logs after all foods are logged
                         if loggedCount == totalFoods {
-                            dayLogsVM?.loadLogs(for: today, force: true)
+                            dayLogsVM?.loadLogs(for: batchTimestamp, force: true)
                         }
                     case .failure(let error):
                         print("❌ Failed to log food: \(error)")
