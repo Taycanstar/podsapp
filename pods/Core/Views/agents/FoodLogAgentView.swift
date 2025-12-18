@@ -595,52 +595,56 @@ struct FoodLogAgentView: View {
     }
 
     private var userMessageSheet: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Button {
-                    showUserMessageSheet = false
-                } label: {
-                    Image(systemName: "xmark")
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                if isUserMessageEditing {
+                    TextEditor(text: $userMessageDraft)
                         .font(.system(size: 18, weight: .semibold))
+                        .focused($isUserMessageEditorFocused)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 220)
+                } else {
+                    ScrollView {
+                        Text(userMessageSheetText)
+                            .font(.system(size: 18, weight: .semibold))
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
 
-                Spacer()
-
-                Button {
-                    let textToCopy = isUserMessageEditing ? userMessageDraft : userMessageSheetText
-                    handleCopy(text: textToCopy)
-                } label: {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 18, weight: .semibold))
+                Spacer(minLength: 0)
+            }
+            .padding()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showUserMessageSheet = false
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
                 }
-
-                Button {
-                    handleUserMessageEditAction()
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                        .font(.system(size: 18, weight: .semibold))
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    if isUserMessageEditing {
+                        checkmarkToolbarButton {
+                            handleUserMessageEditAction()
+                        }
+                    } else {
+                        Button {
+                            handleCopy(text: userMessageSheetText)
+                            showUserMessageSheet = false
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                        }
+                        Button {
+                            handleUserMessageEditAction()
+                        } label: {
+                            Image(systemName: "square.and.pencil")
+                        }
+                    }
                 }
             }
-            .foregroundColor(.primary)
-
-            if isUserMessageEditing {
-                TextEditor(text: $userMessageDraft)
-                    .font(.system(size: 18, weight: .semibold))
-                    .focused($isUserMessageEditorFocused)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: 220)
-            } else {
-                ScrollView {
-                    Text(userMessageSheetText)
-                        .font(.system(size: 18, weight: .semibold))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-
-            Spacer(minLength: 0)
         }
-        .padding()
         .onAppear {
             if isUserMessageEditing {
                 DispatchQueue.main.async {
@@ -655,6 +659,20 @@ struct FoodLogAgentView: View {
                 }
             } else {
                 isUserMessageEditorFocused = false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func checkmarkToolbarButton(action: @escaping () -> Void) -> some View {
+        if #available(iOS 26.0, *) {
+            Button(action: action) {
+                Image(systemName: "checkmark")
+            }
+            .buttonStyle(.glassProminent)
+        } else {
+            Button(action: action) {
+                Image(systemName: "checkmark")
             }
         }
     }
