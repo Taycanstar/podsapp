@@ -39,6 +39,7 @@ struct NewHomeView: View {
     // ─── Navigation state ──────────────────────────────────────────────────
     @State private var scheduleSheetLog: CombinedLog?
     @State private var scheduleAlert: ScheduleAlert?
+    @State private var showSearchView = false
     
     // ─── Nutrition label name input ────────────────────────────────────────
     @State private var nutritionProductName = ""
@@ -464,6 +465,16 @@ private var remainingCal: Double { vm.remainingCalories }
                             .foregroundColor(.primary)
                     }
                 }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showSearchView = true
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+                }
             }
         }
         .task {
@@ -590,6 +601,16 @@ private var remainingCal: Double { vm.remainingCalories }
                 destination: AppTimelineView()
                     .environmentObject(vm),
                 isActive: $showTimelineSheet
+            ) {
+                EmptyView()
+            }
+            .hidden()
+        )
+        .background(
+            NavigationLink(
+                destination: SearchView()
+                    .environmentObject(vm),
+                isActive: $showSearchView
             ) {
                 EmptyView()
             }

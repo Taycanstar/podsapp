@@ -534,6 +534,9 @@ struct AgentChatView: View {
         isUserMessageEditing = startEditing
         showUserMessageSheet = true
         isInputFocused = false
+        if startEditing {
+            focusUserMessageEditor()
+        }
     }
 
     private func resetUserMessageSheet() {
@@ -547,6 +550,7 @@ struct AgentChatView: View {
         if !isUserMessageEditing {
             userMessageDraft = userMessageSheetText
             isUserMessageEditing = true
+            focusUserMessageEditor()
             return
         }
 
@@ -562,6 +566,15 @@ struct AgentChatView: View {
         withAnimation { showCopyToast = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation { showCopyToast = false }
+        }
+    }
+
+    private func focusUserMessageEditor() {
+        DispatchQueue.main.async {
+            isUserMessageEditorFocused = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            isUserMessageEditorFocused = true
         }
     }
 
@@ -618,16 +631,12 @@ struct AgentChatView: View {
         }
         .onAppear {
             if isUserMessageEditing {
-                DispatchQueue.main.async {
-                    isUserMessageEditorFocused = true
-                }
+                focusUserMessageEditor()
             }
         }
         .onChange(of: isUserMessageEditing) { _, editing in
             if editing {
-                DispatchQueue.main.async {
-                    isUserMessageEditorFocused = true
-                }
+                focusUserMessageEditor()
             } else {
                 isUserMessageEditorFocused = false
             }
@@ -757,7 +766,7 @@ struct AgentChatView: View {
             )
             .padding(.horizontal, 16)
             .padding(.top, -12)
-            .padding(.bottom, isInputFocused ? 10 : 0)
+            .padding(.bottom, isInputFocused ? 0 : 10)
         }
         .background(
             ChatTransparentBlurView(removeAllFilters: true)

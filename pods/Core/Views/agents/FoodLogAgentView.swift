@@ -565,12 +565,24 @@ struct FoodLogAgentView: View {
         }
     }
 
+    private func focusUserMessageEditor() {
+        DispatchQueue.main.async {
+            isUserMessageEditorFocused = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            isUserMessageEditorFocused = true
+        }
+    }
+
     private func presentUserMessageSheet(text: String, startEditing: Bool) {
         userMessageSheetText = text
         userMessageDraft = text
         isUserMessageEditing = startEditing
         showUserMessageSheet = true
         isInputFocused = false
+        if startEditing {
+            focusUserMessageEditor()
+        }
     }
 
     private func resetUserMessageSheet() {
@@ -584,6 +596,7 @@ struct FoodLogAgentView: View {
         if !isUserMessageEditing {
             userMessageDraft = userMessageSheetText
             isUserMessageEditing = true
+            focusUserMessageEditor()
             return
         }
 
@@ -647,16 +660,12 @@ struct FoodLogAgentView: View {
         }
         .onAppear {
             if isUserMessageEditing {
-                DispatchQueue.main.async {
-                    isUserMessageEditorFocused = true
-                }
+                focusUserMessageEditor()
             }
         }
         .onChange(of: isUserMessageEditing) { _, editing in
             if editing {
-                DispatchQueue.main.async {
-                    isUserMessageEditorFocused = true
-                }
+                focusUserMessageEditor()
             } else {
                 isUserMessageEditorFocused = false
             }

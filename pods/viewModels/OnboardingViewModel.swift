@@ -1460,6 +1460,7 @@ class OnboardingViewModel: ObservableObject {
 
         let onboardingData: [String: Any] = [
             "user_email": email,
+            "name": name,
             "gender": gender,
             "date_of_birth": dateOfBirth?.ISO8601Format() ?? "",
             "height_cm": heightCm,
