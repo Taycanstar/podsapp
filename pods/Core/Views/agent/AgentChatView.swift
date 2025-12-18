@@ -17,6 +17,7 @@ struct AgentChatView: View {
     @State private var toastMessage = ""
     @State private var scrollProxy: ScrollViewProxy?
     @FocusState private var isInputFocused: Bool
+    @FocusState private var isUserMessageEditorFocused: Bool
     @State private var statusPhraseIndex = 0
 
     // Input bar state (matching AgentTabBar)
@@ -32,6 +33,10 @@ struct AgentChatView: View {
     @State private var showShareSheet = false
     @State private var speechSynth = AVSpeechSynthesizer()
     @State private var showCopyToast = false
+    @State private var showUserMessageSheet = false
+    @State private var userMessageSheetText = ""
+    @State private var userMessageDraft = ""
+    @State private var isUserMessageEditing = false
 
     // Single food confirmation (uses FoodSummaryView)
     @State private var pendingFood: Food?
@@ -157,6 +162,9 @@ struct AgentChatView: View {
             if let shareText {
                 ShareSheetView(activityItems: [shareText])
             }
+        }
+        .sheet(isPresented: $showUserMessageSheet, onDismiss: resetUserMessageSheet) {
+            userMessageSheet
         }
         .sheet(isPresented: $showFoodConfirm) {
             if let food = pendingFood {
@@ -346,6 +354,21 @@ struct AgentChatView: View {
                     .background(Color.accentColor)
                     .foregroundColor(.white)
                     .cornerRadius(16)
+                    .contextMenu {
+                        Button {
+                            copyMessageToClipboard(message.text)
+                        } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                        }
+                        Button {
+                            presentUserMessageSheet(text: message.text, startEditing: true)
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                    }
+                    .onTapGesture {
+                        presentUserMessageSheet(text: message.text, startEditing: false)
+                    }
             }
 
         case .coach:
@@ -403,6 +426,21 @@ struct AgentChatView: View {
                     .background(Color.accentColor)
                     .foregroundColor(.white)
                     .cornerRadius(16)
+                    .contextMenu {
+                        Button {
+                            copyMessageToClipboard(message.text)
+                        } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                        }
+                        Button {
+                            presentUserMessageSheet(text: message.text, startEditing: true)
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                    }
+                    .onTapGesture {
+                        presentUserMessageSheet(text: message.text, startEditing: false)
+                    }
             }
         } else {
             MarkdownMessageView(
@@ -469,11 +507,7 @@ struct AgentChatView: View {
         HStack(spacing: 16) {
             // Copy
             Button {
-                UIPasteboard.general.string = message.text
-                withAnimation { showCopyToast = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    withAnimation { showCopyToast = false }
-                }
+                copyMessageToClipboard(message.text)
             } label: {
                 Image(systemName: "doc.on.doc")
                     .font(.system(size: 14, weight: .medium))
@@ -492,6 +526,108 @@ struct AgentChatView: View {
             Spacer()
         }
         .padding(.top, 4)
+    }
+
+    private func presentUserMessageSheet(text: String, startEditing: Bool) {
+        userMessageSheetText = text
+        userMessageDraft = text
+        isUserMessageEditing = startEditing
+        showUserMessageSheet = true
+        isInputFocused = false
+    }
+
+    private func resetUserMessageSheet() {
+        isUserMessageEditing = false
+        userMessageSheetText = ""
+        userMessageDraft = ""
+        isUserMessageEditorFocused = false
+    }
+
+    private func handleUserMessageEditAction() {
+        if !isUserMessageEditing {
+            userMessageDraft = userMessageSheetText
+            isUserMessageEditing = true
+            return
+        }
+
+        let trimmed = userMessageDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        showUserMessageSheet = false
+        isUserMessageEditing = false
+        viewModel.send(message: trimmed)
+    }
+
+    private func copyMessageToClipboard(_ text: String) {
+        UIPasteboard.general.string = text
+        withAnimation { showCopyToast = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation { showCopyToast = false }
+        }
+    }
+
+    private var userMessageSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Button {
+                    showUserMessageSheet = false
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+
+                Spacer()
+
+                Button {
+                    let textToCopy = isUserMessageEditing ? userMessageDraft : userMessageSheetText
+                    copyMessageToClipboard(textToCopy)
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+
+                Button {
+                    handleUserMessageEditAction()
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+            }
+            .foregroundColor(.primary)
+
+            if isUserMessageEditing {
+                TextEditor(text: $userMessageDraft)
+                    .font(.system(size: 18, weight: .semibold))
+                    .focused($isUserMessageEditorFocused)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 220)
+            } else {
+                ScrollView {
+                    Text(userMessageSheetText)
+                        .font(.system(size: 18, weight: .semibold))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding()
+        .onAppear {
+            if isUserMessageEditing {
+                DispatchQueue.main.async {
+                    isUserMessageEditorFocused = true
+                }
+            }
+        }
+        .onChange(of: isUserMessageEditing) { _, editing in
+            if editing {
+                DispatchQueue.main.async {
+                    isUserMessageEditorFocused = true
+                }
+            } else {
+                isUserMessageEditorFocused = false
+            }
+        }
     }
 
     private func speakMessage(_ text: String) {

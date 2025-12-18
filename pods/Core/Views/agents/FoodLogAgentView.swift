@@ -34,6 +34,7 @@ struct FoodLogAgentView: View {
     @State private var streamingToken: UUID?
 @State private var shimmerActive = false
 @FocusState private var isInputFocused: Bool
+@FocusState private var isUserMessageEditorFocused: Bool
 @State private var statusPhraseIndex = 0
 @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
 @State private var isAtBottom = true
@@ -44,6 +45,10 @@ struct FoodLogAgentView: View {
 @State private var showShareSheet = false
 @State private var speechSynth = AVSpeechSynthesizer()
 @State private var showCopyToast = false
+@State private var showUserMessageSheet = false
+@State private var userMessageSheetText = ""
+@State private var userMessageDraft = ""
+@State private var isUserMessageEditing = false
     @State private var mealSummaryFoods: [Food] = []
     @State private var mealSummaryItems: [MealItem] = []
     @State private var showMealSummary = false
@@ -105,6 +110,9 @@ struct FoodLogAgentView: View {
                 ShareSheetView(activityItems: [shareText])
             }
         }
+        .sheet(isPresented: $showUserMessageSheet, onDismiss: resetUserMessageSheet) {
+            userMessageSheet
+        }
         .sheet(isPresented: $showMealSummary) {
             MealPlateSummaryView(
                 foods: mealSummaryFoods,
@@ -148,6 +156,21 @@ struct FoodLogAgentView: View {
                                         .background(Color.accentColor)
                                         .foregroundColor(.white)
                                         .cornerRadius(16)
+                                        .contextMenu {
+                                            Button {
+                                                handleCopy(text: message.text)
+                                            } label: {
+                                                Label("Copy", systemImage: "doc.on.doc")
+                                            }
+                                            Button {
+                                                presentUserMessageSheet(text: message.text, startEditing: true)
+                                            } label: {
+                                                Label("Edit", systemImage: "pencil")
+                                            }
+                                        }
+                                        .onTapGesture {
+                                            presentUserMessageSheet(text: message.text, startEditing: false)
+                                        }
                                 }
                                 .id(message.id)
                             case .system:
@@ -189,6 +212,21 @@ struct FoodLogAgentView: View {
                                         .background(Color.accentColor)
                                         .foregroundColor(.white)
                                         .cornerRadius(16)
+                                        .contextMenu {
+                                            Button {
+                                                handleCopy(text: message.text)
+                                            } label: {
+                                                Label("Copy", systemImage: "doc.on.doc")
+                                            }
+                                            Button {
+                                                presentUserMessageSheet(text: message.text, startEditing: true)
+                                            } label: {
+                                                Label("Edit", systemImage: "pencil")
+                                            }
+                                        }
+                                        .onTapGesture {
+                                            presentUserMessageSheet(text: message.text, startEditing: false)
+                                        }
                                 }
                                 .id(message.id)
                             } else {
@@ -310,8 +348,8 @@ struct FoodLogAgentView: View {
         .padding(.bottom, 8)
     }
 
-    private func sendPrompt() {
-        let prompt = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func sendPrompt(text: String? = nil, clearInput: Bool = true) {
+        let prompt = (text ?? inputText).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty else { return }
 
         // If user asks to repeat pending options, just repeat without re-calling API
@@ -320,13 +358,17 @@ struct FoodLogAgentView: View {
             messages.append(FoodLogMessage(id: UUID(), sender: .system, text: pending))
             realtimeSession.speakText(simplifyQuestionForSpeech(pending))
             conversationHistory.append(["role": "assistant", "content": pending])
-            inputText = ""
+            if clearInput {
+                inputText = ""
+            }
             return
         }
 
         messages.append(FoodLogMessage(id: UUID(), sender: .user, text: prompt))
         conversationHistory.append(["role": "user", "content": prompt])
-        inputText = ""
+        if clearInput {
+            inputText = ""
+        }
         isLoading = true
         HapticFeedback.generateBurstThenSingle(count: 4)
 
@@ -519,6 +561,100 @@ struct FoodLogAgentView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation(.easeInOut(duration: 0.2)) {
                 showCopyToast = false
+            }
+        }
+    }
+
+    private func presentUserMessageSheet(text: String, startEditing: Bool) {
+        userMessageSheetText = text
+        userMessageDraft = text
+        isUserMessageEditing = startEditing
+        showUserMessageSheet = true
+        isInputFocused = false
+    }
+
+    private func resetUserMessageSheet() {
+        isUserMessageEditing = false
+        userMessageSheetText = ""
+        userMessageDraft = ""
+        isUserMessageEditorFocused = false
+    }
+
+    private func handleUserMessageEditAction() {
+        if !isUserMessageEditing {
+            userMessageDraft = userMessageSheetText
+            isUserMessageEditing = true
+            return
+        }
+
+        let trimmed = userMessageDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        showUserMessageSheet = false
+        isUserMessageEditing = false
+        sendPrompt(text: trimmed, clearInput: true)
+    }
+
+    private var userMessageSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Button {
+                    showUserMessageSheet = false
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+
+                Spacer()
+
+                Button {
+                    let textToCopy = isUserMessageEditing ? userMessageDraft : userMessageSheetText
+                    handleCopy(text: textToCopy)
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+
+                Button {
+                    handleUserMessageEditAction()
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+            }
+            .foregroundColor(.primary)
+
+            if isUserMessageEditing {
+                TextEditor(text: $userMessageDraft)
+                    .font(.system(size: 18, weight: .semibold))
+                    .focused($isUserMessageEditorFocused)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 220)
+            } else {
+                ScrollView {
+                    Text(userMessageSheetText)
+                        .font(.system(size: 18, weight: .semibold))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding()
+        .onAppear {
+            if isUserMessageEditing {
+                DispatchQueue.main.async {
+                    isUserMessageEditorFocused = true
+                }
+            }
+        }
+        .onChange(of: isUserMessageEditing) { _, editing in
+            if editing {
+                DispatchQueue.main.async {
+                    isUserMessageEditorFocused = true
+                }
+            } else {
+                isUserMessageEditorFocused = false
             }
         }
     }
