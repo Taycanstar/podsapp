@@ -1554,7 +1554,7 @@ extension MealSummary: MealDisplayable {
 // MARK: - Recipe Structs
 
 // Recipe food items (similar to MealFoodItem)
-struct RecipeFoodItem: Codable {
+struct RecipeFoodItem: Codable, Identifiable {
     let foodId: Int
     let externalId: String
     let name: String
@@ -1565,6 +1565,8 @@ struct RecipeFoodItem: Codable {
     let protein: Double
     let carbs: Double
     let fat: Double
+
+    var id: Int { foodId }
 }
 
 // Full Recipe struct (similar to Meal)
@@ -1573,6 +1575,7 @@ struct Recipe: Codable, Identifiable {
     let title: String
     let description: String?
     let instructions: String?
+    let link: String?  // Source URL for imported recipes
     let privacy: String
     let servings: Int
     let createdAt: Date

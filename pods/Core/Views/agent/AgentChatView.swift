@@ -64,12 +64,18 @@ struct AgentChatView: View {
     // Using Binding so SwiftUI reads current value when view appears, not when closure is captured
     @Binding private var initialMessage: String?
 
+    // Whether to auto-start voice mode when view appears
+    // Using Binding so SwiftUI reads current value when view appears, not when closure is captured
+    @Binding private var startWithVoiceMode: Bool
+
     init(
         initialMessage: Binding<String?> = .constant(nil),
+        startWithVoiceMode: Binding<Bool> = .constant(false),
         onPlusTapped: @escaping () -> Void = {},
         onBarcodeTapped: @escaping () -> Void = {}
     ) {
         self._initialMessage = initialMessage
+        self._startWithVoiceMode = startWithVoiceMode
         self.onPlusTapped = onPlusTapped
         self.onBarcodeTapped = onBarcodeTapped
     }
@@ -77,25 +83,31 @@ struct AgentChatView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
-                // Chat scroll view fills the space
                 chatScrollView
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        // Dismiss keyboard when tapping outside input
-                        isInputFocused = false
-                    }
 
-                // Floating input bar at the bottom
                 inputBar
 
-                // "Start talking" overlay when connected and chat is empty
-                if realtimeSession.state == .connected && viewModel.messages.isEmpty && realtimeSession.messages.isEmpty {
-                    VStack {
-                        Spacer()
-                        Text("Start talking")
-                            .font(.title2)
-                            .foregroundColor(.secondary)
-                        Spacer()
+                // "Start talking" overlay when in voice mode and chat is empty
+                if viewModel.messages.isEmpty && realtimeSession.messages.isEmpty {
+                    if realtimeSession.state == .connecting {
+                        VStack {
+                            Spacer()
+                            ProgressView()
+                                .scaleEffect(1.2)
+                                .padding(.bottom, 8)
+                            Text("Connecting...")
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                    } else if realtimeSession.state == .connected {
+                        VStack {
+                            Spacer()
+                            Text("Start talking")
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
                     }
                 }
             }
@@ -145,12 +157,22 @@ struct AgentChatView: View {
             realtimeSession.delegate = self
 
             // Send initial message if provided (from AgentTabBar)
-            print("🤖 AgentChatView.onAppear - initialMessage: \(initialMessage ?? "nil")")
+            print("🤖 AgentChatView.onAppear - initialMessage: \(initialMessage ?? "nil"), startWithVoiceMode: \(startWithVoiceMode)")
             if let message = initialMessage, !message.isEmpty {
                 print("🤖 AgentChatView: Sending initial message: \(message)")
                 viewModel.send(message: message)
                 // Clear it to avoid re-sending on re-appear
                 initialMessage = nil
+            }
+
+            // Auto-start voice mode if requested
+            if startWithVoiceMode {
+                print("🎤 AgentChatView: Auto-starting voice mode")
+                // Clear it to avoid re-starting on re-appear
+                startWithVoiceMode = false
+                Task {
+                    try? await realtimeSession.connect()
+                }
             }
         }
         .onDisappear {
@@ -269,13 +291,45 @@ struct AgentChatView: View {
 
                         // Voice session messages (from realtime mode)
                         ForEach(realtimeSession.messages) { voiceMessage in
-                            voiceMessageRow(voiceMessage)
+                            voiceMessageRow(voiceMessage, isLastAssistant: isLastAssistantMessage(voiceMessage))
                                 .id(voiceMessage.id)
                         }
 
-                        // Thinking indicator
+                        // Streaming user text (what user is currently saying via voice)
+                        if !realtimeSession.currentUserText.isEmpty {
+                            HStack {
+                                Spacer()
+                                Text(realtimeSession.currentUserText)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.accentColor.opacity(0.6))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(16)
+                            }
+                            .id("streamingUser")
+                            .onAppear {
+                                print("🎤 [UI] User bubble appeared with text: '\(realtimeSession.currentUserText)'")
+                            }
+                        }
+
+                        // Streaming assistant text (voice realtime response)
+                        if !realtimeSession.currentAssistantText.isEmpty {
+                            Text(realtimeSession.currentAssistantText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 4)
+                                .foregroundColor(.secondary)
+                                .id("streamingAssistant")
+                        }
+
+                        // Thinking indicator (text mode)
                         if viewModel.isLoading && viewModel.streamingMessageId == nil {
                             thinkingIndicator
+                        }
+
+                        // Thinking indicator (voice mode - when realtime agent is processing)
+                        if realtimeSession.isProcessing {
+                            thinkingIndicator
+                                .id("realtimeThinking")
                         }
 
                         // Bottom anchor for scroll detection
@@ -289,20 +343,15 @@ struct AgentChatView: View {
                         Spacer()
                             .frame(height: 120)
                     }
-                    .padding(.horizontal)
-                    .padding(.top)
+                    .padding()
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { isInputFocused = false }
                 .onAppear {
                     scrollProxy = proxy
                 }
-                .onChange(of: viewModel.messages.count) { _, _ in
-                    scrollToBottom(proxy: proxy)
-                }
-                .onChange(of: viewModel.streamingText) { _, _ in
-                    scrollToBottom(proxy: proxy)
-                }
 
-                // Floating scroll-to-bottom button
+                // Floating scroll-to-bottom button (positioned above input bar)
                 if !isAtBottom {
                     Button {
                         withAnimation {
@@ -323,7 +372,7 @@ struct AgentChatView: View {
                                     .stroke(Color(.separator), lineWidth: 0.5)
                             )
                     }
-                    .padding(.bottom, 15)
+                    .padding(.bottom, 140)
                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
             }
@@ -331,10 +380,8 @@ struct AgentChatView: View {
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy) {
-        if let lastId = viewModel.messages.last?.id {
-            withAnimation {
-                proxy.scrollTo(lastId, anchor: .bottom)
-            }
+        withAnimation {
+            proxy.scrollTo("bottomAnchor", anchor: .bottom)
         }
     }
 
@@ -416,13 +463,24 @@ struct AgentChatView: View {
         }
     }
 
+    /// Check if this message is the last assistant message in the voice messages array
+    private func isLastAssistantMessage(_ message: RealtimeMessage) -> Bool {
+        guard !message.isUser else { return false }
+        // Find the last assistant message
+        if let lastAssistant = realtimeSession.messages.last(where: { !$0.isUser }) {
+            return lastAssistant.id == message.id
+        }
+        return false
+    }
+
     @ViewBuilder
-    private func voiceMessageRow(_ message: RealtimeMessage) -> some View {
+    private func voiceMessageRow(_ message: RealtimeMessage, isLastAssistant: Bool) -> some View {
         if message.isUser {
             HStack {
                 Spacer()
                 Text(message.text)
-                    .padding(12)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                     .background(Color.accentColor)
                     .foregroundColor(.white)
                     .cornerRadius(16)
@@ -443,15 +501,51 @@ struct AgentChatView: View {
                     }
             }
         } else {
-            MarkdownMessageView(
-                text: message.text,
-                citations: nil,
-                onLinkTapped: { url in
-                    handleLinkTap(url)
+            VStack(alignment: .leading, spacing: 8) {
+                MarkdownMessageView(
+                    text: message.text,
+                    citations: nil,
+                    onLinkTapped: { url in
+                        handleLinkTap(url)
+                    }
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Only show action icons on the last assistant message when not processing/streaming
+                let shouldShowIcons = isLastAssistant &&
+                    !realtimeSession.isProcessing &&
+                    realtimeSession.currentAssistantText.isEmpty
+                if shouldShowIcons {
+                    voiceMessageActions(for: message.text)
                 }
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
+    }
+
+    @ViewBuilder
+    private func voiceMessageActions(for text: String) -> some View {
+        HStack(spacing: 16) {
+            // Copy
+            Button {
+                copyMessageToClipboard(text)
+            } label: {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color(.systemGray))
+            }
+
+            // Speak
+            Button {
+                speakMessage(text)
+            } label: {
+                Image(systemName: "speaker.wave.2")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color(.systemGray))
+            }
+
+            Spacer()
+        }
+        .padding(.top, 4)
     }
 
     @ViewBuilder
@@ -683,7 +777,7 @@ struct AgentChatView: View {
 
     private var statusPhrases: [String] {
         // Simple rotating phrases for all cases
-        return ["Thinking...", "Analyzing...", "Processing..."]
+        return ["Thinking...", "Analyzing...", "Shimmering...", "Sparkling...", "Pondering...", "Tinkering..."]
     }
 
     private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
@@ -800,23 +894,24 @@ struct AgentChatView: View {
     private func inputBarRightButtons(hasUserInput: Bool) -> some View {
         switch realtimeSession.state {
         case .connecting:
-            HStack(spacing: 8) {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .primary))
-                Button {
-                    HapticFeedback.generate()
-                    realtimeSession.disconnect()
-                } label: {
+            Button {
+                HapticFeedback.generate()
+                realtimeSession.disconnect()
+            } label: {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color(UIColor { $0.userInterfaceStyle == .dark ? .black : .white })))
+                        .scaleEffect(0.8)
                     Text("Cancel")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color(UIColor { $0.userInterfaceStyle == .dark ? .black : .white }))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Color(UIColor { $0.userInterfaceStyle == .dark ? .white : .black }))
-                        .clipShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .foregroundColor(Color(UIColor { $0.userInterfaceStyle == .dark ? .black : .white }))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color(UIColor { $0.userInterfaceStyle == .dark ? .white : .black }))
+                .clipShape(Capsule())
             }
+            .buttonStyle(.plain)
 
         case .connected, .muted:
             HStack(spacing: 10) {
@@ -1148,6 +1243,8 @@ struct AgentChatView: View {
 // MARK: - RealtimeVoiceSessionDelegate
 
 extension AgentChatView: RealtimeVoiceSessionDelegate {
+    // MARK: - Food Logging (existing)
+
     func realtimeSession(_ session: RealtimeVoiceSession, didRequestFoodLookup query: String, isBranded: Bool, brandName: String?, nixItemId: String?, selectionLabel: String?, completion: @escaping (ToolResult) -> Void) {
         // Use FoodManager to look up food
         foodManager.generateFoodWithAI(
@@ -1184,6 +1281,72 @@ extension AgentChatView: RealtimeVoiceSessionDelegate {
                 self.onFoodReady?(food)
                 self.dayLogsVM.loadLogs(for: self.dayLogsVM.selectedDate, force: true)
                 self.showToast(with: "Logged \(food.description)")
+            }
+        }
+    }
+
+    // MARK: - Activity Logging (new)
+
+    func realtimeSession(_ session: RealtimeVoiceSession, didRequestActivityLog activityName: String, activityType: String?, durationMinutes: Int, caloriesBurned: Int?, notes: String?, completion: @escaping (VoiceToolResult) -> Void) {
+        Task {
+            do {
+                let result = try await VoiceToolService.shared.logActivity(
+                    activityName: activityName,
+                    activityType: activityType,
+                    durationMinutes: durationMinutes,
+                    caloriesBurned: caloriesBurned,
+                    notes: notes
+                )
+                completion(result)
+
+                // If activity was logged successfully, refresh logs
+                if result.success {
+                    await MainActor.run {
+                        self.dayLogsVM.loadLogs(for: self.dayLogsVM.selectedDate, force: true)
+                        let calories = caloriesBurned ?? 0
+                        self.showToast(with: "Logged \(activityName) - \(calories) cal burned")
+                    }
+                }
+            } catch {
+                completion(VoiceToolResult.failure(error: error.localizedDescription))
+            }
+        }
+    }
+
+    // MARK: - Data Queries (new)
+
+    func realtimeSession(_ session: RealtimeVoiceSession, didRequestQuery queryType: VoiceQueryType, args: [String: Any], completion: @escaping (VoiceToolResult) -> Void) {
+        Task {
+            do {
+                let result = try await VoiceToolService.shared.executeQuery(queryType: queryType, args: args)
+                completion(result)
+            } catch {
+                completion(VoiceToolResult.failure(error: error.localizedDescription))
+            }
+        }
+    }
+
+    // MARK: - Goal Updates (new)
+
+    func realtimeSession(_ session: RealtimeVoiceSession, didRequestGoalUpdate goals: [String: Int], completion: @escaping (VoiceToolResult) -> Void) {
+        Task {
+            do {
+                let result = try await VoiceToolService.shared.updateGoals(goals: goals)
+                completion(result)
+
+                // If goals were updated successfully, post notification to refresh UI
+                if result.success {
+                    await MainActor.run {
+                        NotificationCenter.default.post(
+                            name: Notification.Name("NutritionGoalsUpdatedNotification"),
+                            object: nil
+                        )
+                        let goalsList = goals.keys.joined(separator: ", ")
+                        self.showToast(with: "Updated \(goalsList) goals")
+                    }
+                }
+            } catch {
+                completion(VoiceToolResult.failure(error: error.localizedDescription))
             }
         }
     }

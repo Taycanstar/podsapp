@@ -277,6 +277,13 @@ final class DayLogsViewModel: ObservableObject {
         self?.refreshConsistency(force: true, refreshWeight: false)
       }
       .store(in: &notificationCancellables)
+
+    NotificationCenter.default.publisher(for: Notification.Name("NutritionGoalsUpdatedNotification"))
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _ in
+        self?.fetchNutritionGoals(forceRefresh: true)
+      }
+      .store(in: &notificationCancellables)
   }
 
   // MARK: - Public Methods
@@ -1544,6 +1551,8 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   }
 
   /// Clean up stale pending logs older than 5 minutes to prevent accumulation
+  /// NOTE: Optimistic logs (isOptimistic = true) are never cleaned up - they will be
+  /// replaced when the server confirms or removed on failure
   private func cleanupStalePendingLogs() {
       let staleThreshold: TimeInterval = 5 * 60 // 5 minutes
       let now = Date()
@@ -1551,8 +1560,13 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       var keysToRemove: [Date] = []
 
       for (dateKey, logs) in pendingByDate {
-          // Filter out logs older than 5 minutes
+          // Filter out logs older than 5 minutes, but keep optimistic logs
+          // Optimistic logs will be replaced when server confirms or removed on failure
           let freshLogs = logs.filter { log in
+              // Always keep optimistic logs - they'll be replaced when server confirms
+              if log.isOptimistic {
+                  return true
+              }
               guard let scheduledAt = log.scheduledAt else { return false }
               return now.timeIntervalSince(scheduledAt) < staleThreshold
           }

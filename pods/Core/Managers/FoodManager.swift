@@ -570,7 +570,7 @@ class FoodManager: ObservableObject {
     private let userFoodsRepository = UserFoodsRepository.shared
     private var feedCancellables: Set<AnyCancellable> = []
     private var repositoryCancellables: Set<AnyCancellable> = []
-    private var userEmail: String?
+     var userEmail: String?
     private var currentPage = 1
     private let pageSize = 20
     // Add these properties
@@ -2707,10 +2707,10 @@ func updateRecipe(
                     for page in 1...9 {
                         UserDefaults.standard.removeObject(forKey: "recipes_\(email)_page_\(page)")
                     }
-                    
+
                     // Notify success
                     completion?(.success(updatedRecipe))
-                    
+
                 case .failure(let error):
                     print("❌ Error updating recipe: \(error)")
                     completion?(.failure(error))
@@ -2719,6 +2719,75 @@ func updateRecipe(
         }
     }
 }
+
+func deleteRecipe(
+    recipeId: Int,
+    completion: ((Result<Void, Error>) -> Void)? = nil
+) {
+    guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
+        print("❌ No user email found for delete recipe")
+        completion?(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No user email"])))
+        return
+    }
+
+    networkManager.deleteRecipe(recipeId: recipeId, userEmail: email) { [weak self] result in
+        DispatchQueue.main.async {
+            switch result {
+            case .success:
+                // Remove recipe from local list
+                self?.recipes.removeAll { $0.id == recipeId }
+
+                // Refresh the repository
+                Task {
+                    await self?.recipesRepository.refresh(force: true)
+                }
+
+                print("✅ Recipe deleted successfully")
+                completion?(.success(()))
+
+            case .failure(let error):
+                print("❌ Error deleting recipe: \(error.localizedDescription)")
+                completion?(.failure(error))
+            }
+        }
+    }
+}
+
+func importRecipe(
+    url: String,
+    completion: ((Result<Recipe, Error>) -> Void)? = nil
+) {
+    guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
+        print("❌ No user email found for import recipe")
+        completion?(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No user email"])))
+        return
+    }
+
+    print("📥 FoodManager: Importing recipe from URL: \(url)")
+
+    networkManager.importRecipe(url: url, userEmail: email) { [weak self] result in
+        DispatchQueue.main.async {
+            switch result {
+            case .success(let recipe):
+                // Add the imported recipe to our list
+                self?.recipes.insert(recipe, at: 0)
+
+                // Refresh the repository
+                Task {
+                    await self?.recipesRepository.refresh(force: true)
+                }
+
+                print("✅ Recipe imported successfully: \(recipe.title)")
+                completion?(.success(recipe))
+
+            case .failure(let error):
+                print("❌ Error importing recipe: \(error.localizedDescription)")
+                completion?(.failure(error))
+            }
+        }
+    }
+}
+
 // Update the generateMacrosWithAI method
 @MainActor
 func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {

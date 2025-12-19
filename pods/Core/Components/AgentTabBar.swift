@@ -171,23 +171,24 @@ struct AgentTabBar: View {
     private func rightButtons(hasUserInput: Bool) -> some View {
         switch realtimeState {
         case .connecting:
-            HStack(spacing: 8) {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .primary))
-                Button {
-                    HapticFeedback.generate()
-                    onRealtimeEnd?()
-                } label: {
+            Button {
+                HapticFeedback.generate()
+                onRealtimeEnd?()
+            } label: {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color(UIColor { $0.userInterfaceStyle == .dark ? .black : .white })))
+                        .scaleEffect(0.8)
                     Text("Cancel")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color(UIColor { $0.userInterfaceStyle == .dark ? .black : .white }))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Color(UIColor { $0.userInterfaceStyle == .dark ? .white : .black }))
-                        .clipShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .foregroundColor(Color(UIColor { $0.userInterfaceStyle == .dark ? .black : .white }))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color(UIColor { $0.userInterfaceStyle == .dark ? .white : .black }))
+                .clipShape(Capsule())
             }
+            .buttonStyle(.plain)
 
         case .connected, .muted:
             HStack(spacing: 10) {

@@ -42,6 +42,7 @@ struct MainContentView: View {
     @State private var agentPendingRetryMealType: String?
     @State private var showAgentChat = false
     @State private var pendingAgentMessage: String?
+    @State private var startAgentWithVoiceMode = false
     
     // State for selected meal - initialized with time-based default
     @State private var selectedMeal: String = {
@@ -307,6 +308,10 @@ struct MainContentView: View {
                             },
                             onSubmit: {
                                 handleAgentSubmit()
+                            },
+                            onRealtimeStart: {
+                                HapticFeedback.generate()
+                                handleRealtimeStart()
                             }
                         )
                     case 2:
@@ -379,8 +384,12 @@ struct MainContentView: View {
         }
         .fullScreenCover(isPresented: $showAgentChat, onDismiss: {
             pendingAgentMessage = nil  // Clear pending message after dismiss
+            startAgentWithVoiceMode = false  // Reset voice mode flag
         }) {
-            AgentChatView(initialMessage: $pendingAgentMessage)
+            AgentChatView(
+                initialMessage: $pendingAgentMessage,
+                startWithVoiceMode: $startAgentWithVoiceMode
+            )
         }
         .fullScreenCover(isPresented: $showLogWorkoutView) {
             WorkoutContainerView(selectedTab: $selectedTab)
@@ -435,6 +444,23 @@ struct MainContentView: View {
         // Present the chat view - it will send the message via its internal HealthCoachChatViewModel
         if !showAgentChat {
             print("🤖 MainContentView.handleAgentSubmit: Setting showAgentChat = true")
+            showAgentChat = true
+        }
+    }
+
+    private func handleRealtimeStart() {
+        // Clear any existing state
+        agentPendingRetryDescription = nil
+        agentPendingRetryMealType = nil
+        agentInputText = ""
+        pendingAgentMessage = nil
+
+        // Set flag to auto-start voice mode
+        startAgentWithVoiceMode = true
+        print("🎤 MainContentView.handleRealtimeStart: Starting agent chat with voice mode")
+
+        // Present the chat view - it will auto-start the realtime session
+        if !showAgentChat {
             showAgentChat = true
         }
     }

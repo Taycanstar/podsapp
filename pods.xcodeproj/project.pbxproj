@@ -163,6 +163,14 @@
 		36667DCC2EF35C600017E9D7 /* MarkdownMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DCB2EF35C600017E9D7 /* MarkdownMessageView.swift */; };
 		36667DCE2EF35C7C0017E9D7 /* MarkdownParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DCD2EF35C7C0017E9D7 /* MarkdownParser.swift */; };
 		36667DD12EF3A21B0017E9D7 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DD02EF3A2180017E9D7 /* SearchView.swift */; };
+		36667DD32EF3B5B90017E9D7 /* QuickAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DD22EF3B5B90017E9D7 /* QuickAddSheet.swift */; };
+		36667DD52EF4552D0017E9D7 /* VoiceToolService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DD42EF4552D0017E9D7 /* VoiceToolService.swift */; };
+		36667DD72EF479D70017E9D7 /* FoodsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DD62EF479D70017E9D7 /* FoodsView.swift */; };
+		36667DDB2EF48FBD0017E9D7 /* NewRecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DDA2EF48FB80017E9D7 /* NewRecipeView.swift */; };
+		36667DDD2EF48FC60017E9D7 /* NewFoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DDC2EF48FC10017E9D7 /* NewFoodView.swift */; };
+		36667DDF2EF4A28C0017E9D7 /* RecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DDE2EF4A28C0017E9D7 /* RecipeView.swift */; };
+		36667DE12EF4A3740017E9D7 /* RecipeSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DE02EF4A3740017E9D7 /* RecipeSummaryView.swift */; };
+		36667DE32EF4A37F0017E9D7 /* ImportRecipeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DE22EF4A37F0017E9D7 /* ImportRecipeSheet.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -595,6 +603,14 @@
 		36667DCB2EF35C600017E9D7 /* MarkdownMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownMessageView.swift; sourceTree = "<group>"; };
 		36667DCD2EF35C7C0017E9D7 /* MarkdownParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownParser.swift; sourceTree = "<group>"; };
 		36667DD02EF3A2180017E9D7 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		36667DD22EF3B5B90017E9D7 /* QuickAddSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddSheet.swift; sourceTree = "<group>"; };
+		36667DD42EF4552D0017E9D7 /* VoiceToolService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceToolService.swift; sourceTree = "<group>"; };
+		36667DD62EF479D70017E9D7 /* FoodsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodsView.swift; sourceTree = "<group>"; };
+		36667DDA2EF48FB80017E9D7 /* NewRecipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewRecipeView.swift; sourceTree = "<group>"; };
+		36667DDC2EF48FC10017E9D7 /* NewFoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewFoodView.swift; sourceTree = "<group>"; };
+		36667DDE2EF4A28C0017E9D7 /* RecipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeView.swift; sourceTree = "<group>"; };
+		36667DE02EF4A3740017E9D7 /* RecipeSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeSummaryView.swift; sourceTree = "<group>"; };
+		36667DE22EF4A37F0017E9D7 /* ImportRecipeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportRecipeSheet.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -917,6 +933,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				36667DD42EF4552D0017E9D7 /* VoiceToolService.swift */,
 				36667DC42EF1E5040017E9D7 /* HealthCoachService.swift */,
 				36667DBC2EF11FC30017E9D7 /* NutritionLabelOCRService.swift */,
 				3650A1792EEE86960068ACE6 /* AnalyticsManager.swift */,
@@ -1138,6 +1155,13 @@
 		36667DCF2EF3A2120017E9D7 /* search */ = {
 			isa = PBXGroup;
 			children = (
+				36667DE22EF4A37F0017E9D7 /* ImportRecipeSheet.swift */,
+				36667DE02EF4A3740017E9D7 /* RecipeSummaryView.swift */,
+				36667DDE2EF4A28C0017E9D7 /* RecipeView.swift */,
+				36667DDC2EF48FC10017E9D7 /* NewFoodView.swift */,
+				36667DDA2EF48FB80017E9D7 /* NewRecipeView.swift */,
+				36667DD62EF479D70017E9D7 /* FoodsView.swift */,
+				36667DD22EF3B5B90017E9D7 /* QuickAddSheet.swift */,
 				36667DD02EF3A2180017E9D7 /* SearchView.swift */,
 			);
 			path = search;
@@ -1969,6 +1993,7 @@
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,
+				36667DD52EF4552D0017E9D7 /* VoiceToolService.swift in Sources */,
 				36ED35DD2DDE52A200D174FB /* DescribeLogView.swift in Sources */,
 				36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */,
 				3650A1782EED12B30068ACE6 /* VitalMetricType.swift in Sources */,
@@ -1988,11 +2013,13 @@
 				369474582CB9D14600CD197F /* ConsistencyTrackerView.swift in Sources */,
 				361507282B7DBA270060974A /* CameraViewModel.swift in Sources */,
 				36A85CDD2DB2BF2000DD4266 /* DobView.swift in Sources */,
+				36667DE32EF4A37F0017E9D7 /* ImportRecipeSheet.swift in Sources */,
 				369474522CB9B8CB00CD197F /* BoundsView.swift in Sources */,
 				3662A5552DFE3B8500847487 /* WorkoutContainerView.swift in Sources */,
 				3650A1682EE7DB760068ACE6 /* AgentTabBarMinimal.swift in Sources */,
 				365B7DC42CA2703D00CC43CC /* ItemTrendsView.swift in Sources */,
 				368A27372B977F5A0001BBCA /* LandingView.swift in Sources */,
+				36667DDB2EF48FBD0017E9D7 /* NewRecipeView.swift in Sources */,
 				3698E4F62C24872F0040AF60 /* ConfigurationManager.swift in Sources */,
 				36A85CFD2DBEF20500DD4266 /* OnboardingPlanOverview.swift in Sources */,
 				363AF9F92D1E57F500C91A14 /* ActivityView.swift in Sources */,
@@ -2099,6 +2126,7 @@
 				36C458EA2B746D650060355F /* ProfileView.swift in Sources */,
 				36ED35B02DD675B900D174FB /* WeightProgressView.swift in Sources */,
 				361FF31A2E20615200B7F68E /* WorkoutSyncService.swift in Sources */,
+				36667DE12EF4A3740017E9D7 /* RecipeSummaryView.swift in Sources */,
 				36ED35E52DDE52FF00D174FB /* LogExistingView.swift in Sources */,
 				36BBC8102C2B39C70037CF74 /* TourView.swift in Sources */,
 				363AFA032D24D27600C91A14 /* ActivityCountdownView.swift in Sources */,
@@ -2109,6 +2137,7 @@
 				3650A17A2EEE86960068ACE6 /* AnalyticsManager.swift in Sources */,
 				363AFA072D2CE75D00C91A14 /* FullSummaryView.swift in Sources */,
 				36A851A72E5E270D004E5CED /* DynamicParameterService.swift in Sources */,
+				36667DD72EF479D70017E9D7 /* FoodsView.swift in Sources */,
 				36ED35F52DDE538300D174FB /* TapCreateFoodView.swift in Sources */,
 				3662A54B2DFB98BE00847487 /* CreateFoodWithScan.swift in Sources */,
 				36291B802B8166F9000B5F38 /* CarouselView.swift in Sources */,
@@ -2160,6 +2189,7 @@
 				36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */,
 				36D3A51C2E91A19600AD6B94 /* YourProgramView.swift in Sources */,
 				36A851A12E5ABFBD004E5CED /* FlexibilityPickerView.swift in Sources */,
+				36667DDF2EF4A28C0017E9D7 /* RecipeView.swift in Sources */,
 				361FF3132E1D999C00B7F68E /* CardioExercisesView.swift in Sources */,
 				367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */,
 				36667DCC2EF35C600017E9D7 /* MarkdownMessageView.swift in Sources */,
@@ -2224,6 +2254,7 @@
 				50FB9842CD464A8F9D9E63AB /* ProFoodSearchLoader.swift in Sources */,
 				363068D52E1078EB00F2D4EC /* AddFoodWithVoice.swift in Sources */,
 				36ED35BE2DDB9A8000D174FB /* FoodLogDetails.swift in Sources */,
+				36667DDD2EF48FC60017E9D7 /* NewFoodView.swift in Sources */,
 				36ED35DF2DDE52B400D174FB /* GenerateLogView.swift in Sources */,
 				361FF33B2E234F5500B7F68E /* WeightSyncService.swift in Sources */,
 				36DB82DA2EBA9B05004BA082 /* WorkoutPlanValidator.swift in Sources */,
@@ -2236,6 +2267,7 @@
 				36CB03442D72C1B9006A74E9 /* BottomPopup.swift in Sources */,
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,
 				36ED359D2DD0DE1600D174FB /* LogRepository.swift in Sources */,
+				36667DD32EF3B5B90017E9D7 /* QuickAddSheet.swift in Sources */,
 				36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */,
 				361FF3492E2B279400B7F68E /* TargetMusclesView.swift in Sources */,
 				362969B52D0D3E4700DF0B26 /* EditActivityView.swift in Sources */,

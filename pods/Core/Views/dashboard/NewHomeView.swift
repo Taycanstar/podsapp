@@ -11,6 +11,7 @@ struct NewHomeView: View {
     var onWaveformTapped: () -> Void
     var onSubmit: () -> Void
     var onShowChats: () -> Void = {}
+    var onRealtimeStart: () -> Void = {}
 
     // ─── Shared app-wide state ──────────────────────────────────────────────
     @EnvironmentObject private var onboarding: OnboardingViewModel
@@ -273,7 +274,7 @@ private var remainingCal: Double { vm.remainingCalories }
         if isToday { return "Today" }
         if isYesterday { return "Yesterday" }
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d"
+        formatter.dateFormat = "EEE, MMM d"
         return formatter.string(from: vm.selectedDate)
     }
 
@@ -428,12 +429,12 @@ private var remainingCal: Double { vm.remainingCalories }
                             .font(.system(size: 18, weight: .medium))
                             .foregroundColor(.primary)
                     } else {
-                        HStack(spacing: 12) {
+                        HStack(spacing: 8) {
                             Button {
                                 vm.selectedDate.addDays(-1)
                             } label: {
                                 Image(systemName: "chevron.left")
-                                    .font(.system(size: 18, weight: .medium))
+                                    .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.primary)
                             }
 
@@ -449,7 +450,7 @@ private var remainingCal: Double { vm.remainingCalories }
                                 vm.selectedDate.addDays(+1)
                             } label: {
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 18, weight: .medium))
+                                    .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.primary)
                             }
                         }
@@ -457,22 +458,22 @@ private var remainingCal: Double { vm.remainingCalories }
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showTimelineSheet = true
-                    } label: {
-                        Image(systemName: "newspaper")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.primary)
-                    }
-                }
+                    HStack(spacing: 16) {
+                        Button {
+                            showTimelineSheet = true
+                        } label: {
+                            Image(systemName: "newspaper")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.primary)
+                        }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showSearchView = true
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.primary)
+                        Button {
+                            showSearchView = true
+                        } label: {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.primary)
+                        }
                     }
                 }
             }
@@ -1265,7 +1266,8 @@ private extension NewHomeView {
                         onBarcodeTapped: onBarcodeTapped,
                         onMicrophoneTapped: onMicrophoneTapped,
                         onWaveformTapped: onWaveformTapped,
-                        onSubmit: onSubmit
+                        onSubmit: onSubmit,
+                        onRealtimeStart: onRealtimeStart
                     )
                     .ignoresSafeArea(edges: [.horizontal])
                 }

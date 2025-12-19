@@ -232,6 +232,11 @@ struct AppTimelineView: View {
             AgentChatView(initialMessage: $pendingAgentMessage)
                 .environmentObject(dayLogsVM)
         }
+        .onChange(of: foodManager.showLogSuccess) { _, newValue in
+            if newValue, let item = foodManager.lastLoggedItem {
+                showToast(message: "\(item.name) logged")
+            }
+        }
     }
 
     /// Opens AgentChatView with the coach message seeded as the first assistant message
@@ -326,8 +331,9 @@ private struct TimelineLogGroup: Identifiable {
     let logs: [CombinedLog]
 
     var id: String {
-        // Use date + first log ID for unique identification
-        "\(date.timeIntervalSince1970)-\(logs.first?.id ?? "empty")"
+        // Use date only for stable identification
+        // This prevents view recreation when optimistic logs are replaced with server logs
+        "\(date.timeIntervalSince1970)"
     }
 
     /// The icon to show for this group (uses first log's type)

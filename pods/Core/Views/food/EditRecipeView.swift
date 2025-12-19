@@ -598,6 +598,7 @@ struct EditRecipeView: View {
             title: recipeName,
             description: recipe.description,
             instructions: instructions,
+            link: recipe.link,
             privacy: shareWith.lowercased(),
             servings: servings,
             createdAt: recipe.createdAt,
@@ -610,7 +611,7 @@ struct EditRecipeView: View {
             totalProtein: totals.protein,
             totalCarbs: totals.carbs,
             totalFat: totals.fat,
-            scheduledAt: scheduledDate  
+            scheduledAt: scheduledDate
         )
         
         foodManager.updateRecipe(recipe: updatedRecipe, foods: selectedFoods) { result in

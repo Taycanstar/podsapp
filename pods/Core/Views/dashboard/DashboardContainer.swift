@@ -16,6 +16,7 @@ struct DashboardContainer: View {
     var onMicrophoneTapped: () -> Void
     var onWaveformTapped: () -> Void
     var onSubmit: () -> Void
+    var onRealtimeStart: () -> Void = {}
 
     // Navigation State - starts TRUE to auto-push DashboardView
     @State private var showDashboard = true
@@ -52,7 +53,8 @@ struct DashboardContainer: View {
                         onShowChats: {
                             // Dismiss back to ChatsView
                             showDashboard = false
-                        }
+                        },
+                        onRealtimeStart: onRealtimeStart
                     )
                     .navigationBarBackButtonHidden(true),
                     isActive: $showDashboard

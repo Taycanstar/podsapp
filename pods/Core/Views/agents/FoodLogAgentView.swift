@@ -915,7 +915,9 @@ extension FoodLogAgentView {
             "Thinking...",
             "Shimmering...",
             "Analyzing...",
-            "Tinkering..."
+            "Tinkering...",
+            "Pondering...",
+            "Sparkling..."
         ]
     }
 
@@ -1130,6 +1132,27 @@ extension FoodLogAgentView: RealtimeVoiceSessionDelegate {
                 isPresented = false
             }
         }
+    }
+
+    // MARK: - Activity Logging (not supported in FoodLogAgentView)
+
+    func realtimeSession(_ session: RealtimeVoiceSession, didRequestActivityLog activityName: String, activityType: String?, durationMinutes: Int, caloriesBurned: Int?, notes: String?, completion: @escaping (VoiceToolResult) -> Void) {
+        // FoodLogAgentView is food-only; return error for activity logging
+        completion(VoiceToolResult.failure(error: "Activity logging is not supported in this view. Please use the main agent."))
+    }
+
+    // MARK: - Data Queries (not supported in FoodLogAgentView)
+
+    func realtimeSession(_ session: RealtimeVoiceSession, didRequestQuery queryType: VoiceQueryType, args: [String: Any], completion: @escaping (VoiceToolResult) -> Void) {
+        // FoodLogAgentView is food-only; return error for queries
+        completion(VoiceToolResult.failure(error: "Data queries are not supported in this view. Please use the main agent."))
+    }
+
+    // MARK: - Goal Updates (not supported in FoodLogAgentView)
+
+    func realtimeSession(_ session: RealtimeVoiceSession, didRequestGoalUpdate goals: [String: Int], completion: @escaping (VoiceToolResult) -> Void) {
+        // FoodLogAgentView is food-only; return error for goal updates
+        completion(VoiceToolResult.failure(error: "Goal updates are not supported in this view. Please use the main agent."))
     }
 }
 

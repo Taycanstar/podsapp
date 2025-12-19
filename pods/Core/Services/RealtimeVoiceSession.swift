@@ -392,12 +392,12 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
         // Log ALL events with full content for debugging
         if type.contains("error") {
             print("❌ [REALTIME EVENT] \(type): \(json)")
-        } else if type.contains("transcript") {
-            // Log transcript events with full content to debug message display
+        } else if type.contains("transcript") || type.contains("input_audio") || type.contains("speech") {
+            // Log transcript and input audio events with full content to debug message display
             if let rawString = String(data: buffer.data, encoding: .utf8) {
-                print("📨 [REALTIME TRANSCRIPT] \(type): \(rawString.prefix(500))")
+                print("📨 [REALTIME TRANSCRIPT/INPUT] \(type): \(rawString.prefix(800))")
             } else {
-                print("📨 [REALTIME TRANSCRIPT] \(type): \(json)")
+                print("📨 [REALTIME TRANSCRIPT/INPUT] \(type): \(json)")
             }
         } else if type.contains("audio") {
             print("📨 [REALTIME EVENT] \(type)")
@@ -454,11 +454,26 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
             }
         }
 
-        // Handle user input transcription streaming (legacy event names)
-        if type == "conversation.item.input_audio_transcription.delta",
-           let delta = json["delta"] as? String {
+        // Handle user input transcription streaming
+        // Try multiple event name patterns as OpenAI Realtime API has evolved
+        if type == "conversation.item.input_audio_transcription.delta" ||
+           type == "input_audio_transcription.delta" ||
+           type == "input_audio_transcription.part" {
+            // Try different JSON structures
+            let delta = json["delta"] as? String ?? json["part"] as? String ?? json["transcript"] as? String
+            if let delta = delta {
+                print("🎤 [USER STREAMING] delta: '\(delta)'")
+                Task { @MainActor in
+                    self.currentUserText += delta
+                }
+            }
+        }
+
+        // Handle speech started - clear previous user text
+        if type == "input_audio_buffer.speech_started" {
+            print("🎤 [SPEECH STARTED]")
             Task { @MainActor in
-                self.currentUserText += delta
+                self.currentUserText = ""
             }
         }
 
@@ -558,24 +573,56 @@ enum RealtimeError: LocalizedError {
 private extension RealtimeVoiceSession {
     func handleToolCall(callId: String, name: String, arguments: String) async {
         print("🎤 [TOOL CALL] name=\(name) arguments=\(arguments)")
-        guard name == "log_food" else { return }
+
         guard let data = arguments.data(using: .utf8),
-              let args = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let query = args["query"] as? String else {
+              let args = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             sendToolResult(callId: callId, resultJSON: ["status": "error", "error": "Invalid arguments"])
             return
         }
-        let isBranded = args["is_branded"] as? Bool ?? false
-        let brandName = args["brand_name"] as? String
-        print("🎤 [TOOL CALL] Received query from voice AI: '\(query)' is_branded=\(isBranded) brand='\(brandName ?? "")'")
-        let nixItemId = args["nix_item_id"] as? String
-        let selectionLabel = args["selection_label"] as? String
 
-        // Always return a tool result to avoid hanging the model
         guard let delegate = delegate else {
             sendToolResult(callId: callId, resultJSON: ["status": "error", "error": "No delegate available"])
             return
         }
+
+        // Route to appropriate tool handler
+        switch name {
+        case "log_food":
+            handleLogFoodTool(callId: callId, args: args, delegate: delegate)
+        case "log_activity":
+            handleLogActivityTool(callId: callId, args: args, delegate: delegate)
+        case "query_nutrition":
+            handleQueryTool(callId: callId, queryType: .nutrition, args: args, delegate: delegate)
+        case "query_workout":
+            handleQueryTool(callId: callId, queryType: .workout, args: args, delegate: delegate)
+        case "query_health_metrics":
+            handleQueryTool(callId: callId, queryType: .healthMetrics, args: args, delegate: delegate)
+        case "query_goals":
+            handleQueryTool(callId: callId, queryType: .goals, args: args, delegate: delegate)
+        case "query_user_profile":
+            handleQueryTool(callId: callId, queryType: .userProfile, args: args, delegate: delegate)
+        case "update_goals":
+            handleUpdateGoalsTool(callId: callId, args: args, delegate: delegate)
+        default:
+            print("⚠️ [TOOL CALL] Unknown tool: \(name)")
+            sendToolResult(callId: callId, resultJSON: ["status": "error", "error": "Unknown tool: \(name)"])
+        }
+    }
+
+    // MARK: - Individual Tool Handlers
+
+    func handleLogFoodTool(callId: String, args: [String: Any], delegate: RealtimeVoiceSessionDelegate) {
+        guard let query = args["query"] as? String else {
+            sendToolResult(callId: callId, resultJSON: ["status": "error", "error": "Missing required 'query' parameter"])
+            return
+        }
+
+        let isBranded = args["is_branded"] as? Bool ?? false
+        let brandName = args["brand_name"] as? String
+        let nixItemId = args["nix_item_id"] as? String
+        let selectionLabel = args["selection_label"] as? String
+
+        print("🎤 [LOG_FOOD] query='\(query)' is_branded=\(isBranded) brand='\(brandName ?? "")'")
 
         delegate.realtimeSession(
             self,
@@ -585,13 +632,71 @@ private extension RealtimeVoiceSession {
             nixItemId: nixItemId,
             selectionLabel: selectionLabel
         ) { [weak self] result in
-            guard let self else {
-                return
-            }
+            guard let self else { return }
             sendToolResult(callId: callId, resultJSON: result.toJSON())
             if result.status == .success, let food = result.food {
                 delegate.realtimeSession(self, didResolveFood: food, mealItems: result.mealItems)
             }
+        }
+    }
+
+    func handleLogActivityTool(callId: String, args: [String: Any], delegate: RealtimeVoiceSessionDelegate) {
+        let activityName = args["activity_name"] as? String ?? "Activity"
+        let activityType = args["activity_type"] as? String
+        let durationMinutes = args["duration_minutes"] as? Int ?? 30
+        let caloriesBurned = args["calories_burned"] as? Int
+        let notes = args["notes"] as? String
+
+        print("🎤 [LOG_ACTIVITY] name='\(activityName)' type=\(activityType ?? "nil") duration=\(durationMinutes)min")
+
+        delegate.realtimeSession(
+            self,
+            didRequestActivityLog: activityName,
+            activityType: activityType,
+            durationMinutes: durationMinutes,
+            caloriesBurned: caloriesBurned,
+            notes: notes
+        ) { [weak self] result in
+            guard let self else { return }
+            sendToolResult(callId: callId, resultJSON: result.toJSON())
+        }
+    }
+
+    func handleQueryTool(callId: String, queryType: VoiceQueryType, args: [String: Any], delegate: RealtimeVoiceSessionDelegate) {
+        print("🎤 [QUERY] type=\(queryType.rawValue) args=\(args)")
+
+        delegate.realtimeSession(
+            self,
+            didRequestQuery: queryType,
+            args: args
+        ) { [weak self] result in
+            guard let self else { return }
+            sendToolResult(callId: callId, resultJSON: result.toJSON())
+        }
+    }
+
+    func handleUpdateGoalsTool(callId: String, args: [String: Any], delegate: RealtimeVoiceSessionDelegate) {
+        var goalUpdates: [String: Int] = [:]
+        if let calories = args["calories"] as? Int { goalUpdates["calories"] = calories }
+        if let protein = args["protein"] as? Int { goalUpdates["protein"] = protein }
+        if let carbs = args["carbs"] as? Int { goalUpdates["carbs"] = carbs }
+        if let fat = args["fat"] as? Int { goalUpdates["fat"] = fat }
+        if let water = args["water"] as? Int { goalUpdates["water"] = water }
+        if let steps = args["steps"] as? Int { goalUpdates["steps"] = steps }
+
+        guard !goalUpdates.isEmpty else {
+            sendToolResult(callId: callId, resultJSON: ["status": "error", "error": "No valid goals provided"])
+            return
+        }
+
+        print("🎤 [UPDATE_GOALS] updates=\(goalUpdates)")
+
+        delegate.realtimeSession(
+            self,
+            didRequestGoalUpdate: goalUpdates
+        ) { [weak self] result in
+            guard let self else { return }
+            sendToolResult(callId: callId, resultJSON: result.toJSON())
         }
     }
 
@@ -631,87 +736,16 @@ private extension RealtimeVoiceSession {
         }
     }
 
-    /// Configure the realtime session for food logging with tool calling.
+    /// Configure the realtime session audio settings.
     /// Called when the data channel opens.
+    /// Note: Tools and instructions are now provided by the backend via the ephemeral key.
     func sendSessionUpdate() {
         guard let dataChannel = dataChannel, dataChannel.readyState == .open else { return }
 
-        let instructions = """
-            You are a voice assistant for a food logging app called Metryc.
-
-            CRITICAL - Constructing Search Queries:
-            Your query construction is THE most important factor for accurate results.
-
-            1. BRANDED PRODUCTS (energy drinks, protein bars, supplements, packaged snacks):
-               - Set is_branded=true and include brand_name
-               - Include the COMPLETE product name with brand, flavor, variant
-               - "Ghost Energy Sour Patch Kids Blue Raspberry" → query="Ghost Energy Sour Patch Kids Blue Raspberry", is_branded=true, brand_name="Ghost"
-               - "Celsius" → ask for flavor first, then query="Celsius Sparkling [flavor]", is_branded=true, brand_name="Celsius"
-
-            2. RESTAURANT FOODS:
-               - ALWAYS include restaurant name, set is_branded=true
-               - "Chipotle bowl" → query="Chipotle Chicken Burrito Bowl", is_branded=true, brand_name="Chipotle"
-
-            3. GENERIC/HOMEMADE FOODS:
-               - Keep it simple: "grilled chicken breast 6oz", "banana"
-               - is_branded=false or omit
-
-            Tool Usage:
-            - Multiple foods → call log_food ONCE with all foods: "pizza, hotdog, and a coke"
-            - If tool returns options (status='needsClarification'), list each with bullets (•):
-              'I found a few options:
-              • NAME by BRAND, about CALORIES calories
-              • NAME by BRAND, about CALORIES calories
-              Which one?'
-            - User picks → call log_food with selection_label='A'/'B'/'C'
-            - IMPORTANT: If user specifies a DIFFERENT flavor than options shown (e.g., "blue raspberry" when you showed "redberry"), do a NEW search with brand + their flavor. Don't ask for more details.
-            - On success → confirm: 'Got it, logged NAME at CALORIES calories.'
-            - On error → apologize briefly, ask to try again.
-
-            Keep responses brief and conversational.
-            """
-
+        // Only configure audio settings - tools and instructions come from backend session config
         let update: [String: Any] = [
             "type": "session.update",
             "session": [
-                "type": "realtime",
-                "model": "gpt-realtime",
-                "output_modalities": ["audio"],
-                "instructions": instructions,
-                "tool_choice": "auto",
-                "tools": [
-                    [
-                        "type": "function",
-                        "name": "log_food",
-                        "description": "Look up and log nutrition info for food the user mentions eating. IMPORTANT - Query Construction: 1. BRANDED products: Set is_branded=true, include FULL brand+product+flavor in query. 2. RESTAURANT foods: Include restaurant name, set is_branded=true. 3. GENERIC foods: Keep simple like 'grilled chicken breast', is_branded=false. The more specific the query, the more accurate the lookup.",
-                        "parameters": [
-                            "type": "object",
-                            "properties": [
-                                "query": [
-                                    "type": "string",
-                                    "description": "Optimized search query. For branded items, include FULL brand + product + flavor."
-                                ],
-                                "is_branded": [
-                                    "type": "boolean",
-                                    "description": "True if branded/packaged product or restaurant item. False for generic/homemade."
-                                ],
-                                "brand_name": [
-                                    "type": "string",
-                                    "description": "Brand or restaurant name (e.g., 'Ghost', 'Celsius', 'Chipotle')."
-                                ],
-                                "nix_item_id": [
-                                    "type": "string",
-                                    "description": "Nutritionix item ID to select a specific option"
-                                ],
-                                "selection_label": [
-                                    "type": "string",
-                                    "description": "Option label (A/B/C) when user picks from choices"
-                                ]
-                            ],
-                            "required": ["query"]
-                        ]
-                    ]
-                ],
                 "audio": [
                     "input": [
                         "format": [
@@ -741,7 +775,7 @@ private extension RealtimeVoiceSession {
         if let jsonData = try? JSONSerialization.data(withJSONObject: update) {
             let buffer = RTCDataBuffer(data: jsonData, isBinary: false)
             dataChannel.sendData(buffer)
-            print("📤 [REALTIME] Sent session.update with tools and auto-response enabled")
+            print("📤 [REALTIME] Sent session.update with audio config")
         } else {
             print("❌ [REALTIME] Failed to encode session.update payload")
         }
@@ -767,7 +801,47 @@ private extension RealtimeVoiceSession {
     }
 }
 
+/// Query types for voice mode data queries
+enum VoiceQueryType: String {
+    case nutrition = "query_nutrition"
+    case workout = "query_workout"
+    case healthMetrics = "query_health_metrics"
+    case goals = "query_goals"
+    case userProfile = "query_user_profile"
+}
+
+/// Generic result for voice tool calls (non-food tools)
+struct VoiceToolResult {
+    let success: Bool
+    let type: String
+    let data: [String: Any]?
+    let error: String?
+
+    func toJSON() -> [String: Any] {
+        var dict: [String: Any] = ["type": type]
+        if success {
+            dict["status"] = "success"
+            if let data = data {
+                dict["data"] = data
+            }
+        } else {
+            dict["status"] = "error"
+            dict["error"] = error ?? "Unknown error"
+        }
+        return dict
+    }
+
+    static func success(type: String, data: [String: Any]? = nil) -> VoiceToolResult {
+        VoiceToolResult(success: true, type: type, data: data, error: nil)
+    }
+
+    static func failure(error: String) -> VoiceToolResult {
+        VoiceToolResult(success: false, type: "error", data: nil, error: error)
+    }
+}
+
 protocol RealtimeVoiceSessionDelegate {
+    // MARK: - Food Logging (existing)
     func realtimeSession(_ session: RealtimeVoiceSession,
                          didRequestFoodLookup query: String,
                          isBranded: Bool,
@@ -776,6 +850,26 @@ protocol RealtimeVoiceSessionDelegate {
                          selectionLabel: String?,
                          completion: @escaping (ToolResult) -> Void)
     func realtimeSession(_ session: RealtimeVoiceSession, didResolveFood food: Food, mealItems: [MealItem]?)
+
+    // MARK: - Activity Logging (new)
+    func realtimeSession(_ session: RealtimeVoiceSession,
+                         didRequestActivityLog activityName: String,
+                         activityType: String?,
+                         durationMinutes: Int,
+                         caloriesBurned: Int?,
+                         notes: String?,
+                         completion: @escaping (VoiceToolResult) -> Void)
+
+    // MARK: - Data Queries (new)
+    func realtimeSession(_ session: RealtimeVoiceSession,
+                         didRequestQuery queryType: VoiceQueryType,
+                         args: [String: Any],
+                         completion: @escaping (VoiceToolResult) -> Void)
+
+    // MARK: - Goal Updates (new)
+    func realtimeSession(_ session: RealtimeVoiceSession,
+                         didRequestGoalUpdate goals: [String: Int],
+                         completion: @escaping (VoiceToolResult) -> Void)
 }
 
 struct ToolResult {

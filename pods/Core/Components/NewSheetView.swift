@@ -22,7 +22,7 @@ struct NewSheetView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     let options = [
-        ("Food", "magnifyingglass"),
+        ("Search", "magnifyingglass"),
         ("Voice Log", "mic"),
         ("Scan Food", "barcode.viewfinder"),
         ("Saved Meals", "bookmark"),
@@ -35,39 +35,7 @@ struct NewSheetView: View {
                 .frame(width: 36, height: 2)
                 .foregroundColor(Color("grabber"))
                 .padding(.top, 12)
-
-            Menu {
-
-                Button("Snacks") {
-                    selectedMeal = "Snacks"
-                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
-                }
-                 Button("Dinner") {
-                    selectedMeal = "Dinner"
-                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
-                }
-                        Button("Lunch") {
-                    selectedMeal = "Lunch"
-                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
-                }
-
-                Button("Breakfast") {
-                    selectedMeal = "Breakfast"
-                    print("🍽️ NewSheetView: Selected meal changed to: \(selectedMeal)")
-                }
-
-            } label: {
-                HStack(spacing: 4) {
-                    Text(selectedMeal)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.primary)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-            }
-            .padding(.top, 24)
-            .padding(.bottom, 24)
+                .padding(.bottom, 24)
 
             // Grid layout
             LazyVGrid(columns: [

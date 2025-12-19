@@ -21,9 +21,53 @@ enum HealthCoachResponseType: String, Codable {
     case text
     case foodLogged = "food_logged"
     case activityLogged = "activity_logged"
+    case goalsUpdated = "goals_updated"
+    case weightLogged = "weight_logged"
     case dataResponse = "data_response"
     case needsClarification = "needs_clarification"
     case error
+}
+
+// MARK: - Updated Goals Payload
+
+/// Payload returned when goals are updated via the agent
+struct UpdatedGoalsPayload: Codable {
+    let caloriesGoal: Int?
+    let proteinGoal: Int?
+    let carbsGoal: Int?
+    let fatGoal: Int?
+    let waterGoal: Int?
+    let stepsGoal: Int?
+    let message: String?
+
+    enum CodingKeys: String, CodingKey {
+        case caloriesGoal = "calories_goal"
+        case proteinGoal = "protein_goal"
+        case carbsGoal = "carbs_goal"
+        case fatGoal = "fat_goal"
+        case waterGoal = "water_goal"
+        case stepsGoal = "steps_goal"
+        case message
+    }
+}
+
+// MARK: - Weight Logged Payload
+
+/// Payload returned when weight is logged via the agent
+struct HealthCoachWeightPayload: Codable {
+    let id: Int
+    let weightKg: Double
+    let weightLbs: Double
+    let dateLogged: String
+    let notes: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case weightKg = "weight_kg"
+        case weightLbs = "weight_lbs"
+        case dateLogged = "date_logged"
+        case notes
+    }
 }
 
 // MARK: - Citations
@@ -55,13 +99,15 @@ struct HealthCoachResponse: Codable {
     let mealItems: [HealthCoachMealItem]?
     let activity: HealthCoachActivity?
     let data: HealthCoachDataPayload?
+    let goals: UpdatedGoalsPayload?
+    let weight: HealthCoachWeightPayload?
     let options: [ClarificationOption]?
     let question: String?
     let error: String?
     let citations: [HealthCoachCitation]?
 
     enum CodingKeys: String, CodingKey {
-        case type, message, food, activity, data, options, question, error, citations
+        case type, message, food, activity, data, goals, weight, options, question, error, citations
         case mealItems = "meal_items"
     }
 
@@ -72,6 +118,8 @@ struct HealthCoachResponse: Codable {
         mealItems: [HealthCoachMealItem]? = nil,
         activity: HealthCoachActivity? = nil,
         data: HealthCoachDataPayload? = nil,
+        goals: UpdatedGoalsPayload? = nil,
+        weight: HealthCoachWeightPayload? = nil,
         options: [ClarificationOption]? = nil,
         question: String? = nil,
         error: String? = nil,
@@ -83,6 +131,8 @@ struct HealthCoachResponse: Codable {
         self.mealItems = mealItems
         self.activity = activity
         self.data = data
+        self.goals = goals
+        self.weight = weight
         self.options = options
         self.question = question
         self.error = error

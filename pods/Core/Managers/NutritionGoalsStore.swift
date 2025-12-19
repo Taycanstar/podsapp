@@ -71,16 +71,23 @@ final class NutritionGoalsStore: ObservableObject {
         guard !isRefreshing else { return }
         isRefreshing = true
         state = .loading
-        
-        NetworkManagerTwo.shared.generateNutritionGoals(userEmail: email) { [weak self] result in
+
+        // Use updateNutritionGoals instead of generateNutritionGoals
+        // generate-goals/ endpoint clears user overrides, which breaks agent goal updates
+        // update-nutrition-goals/ respects existing overrides in the database
+        NetworkManagerTwo.shared.updateNutritionGoals(userEmail: email) { [weak self] result in
             guard let self else { return }
+            self.isRefreshing = false
             switch result {
             case .success(let response):
-                self.isRefreshing = false
                 self.cache(goals: response.goals)
             case .failure(let error):
-                print("⚠️ NutritionGoalsStore.generateGoals failed: \(error.localizedDescription). Falling back to update-nutrition-goals.")
-                self.fetchGoalsUsingUpdateEndpoint(email: email, fallbackError: error)
+                print("⚠️ NutritionGoalsStore fetch failed: \(error.localizedDescription)")
+                if let cached = self.currentGoals {
+                    self.state = .ready(cached)
+                } else {
+                    self.state = .error(error.localizedDescription)
+                }
             }
         }
     }
@@ -102,24 +109,5 @@ final class NutritionGoalsStore: ObservableObject {
     private static func loadCached(from defaults: UserDefaults, key: String) -> NutritionGoals? {
         guard let data = defaults.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(NutritionGoals.self, from: data)
-    }
-
-    private func fetchGoalsUsingUpdateEndpoint(email: String, fallbackError: Error) {
-        NetworkManagerTwo.shared.updateNutritionGoals(userEmail: email) { [weak self] result in
-            guard let self else { return }
-            self.isRefreshing = false
-            switch result {
-            case .success(let response):
-                print("✅ NutritionGoalsStore fallback fetched \(response.goals.nutrients?.count ?? 0) nutrient targets")
-                self.cache(goals: response.goals)
-            case .failure(let secondaryError):
-                print("❌ NutritionGoalsStore fallback failed: \(secondaryError.localizedDescription)")
-                if let cached = self.currentGoals {
-                    self.state = .ready(cached)
-                } else {
-                    self.state = .error(fallbackError.localizedDescription)
-                }
-            }
-        }
     }
 }

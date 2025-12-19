@@ -256,8 +256,8 @@ extension Date {
 class NetworkManager {
     
     //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-      let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.4:8000"
+    //   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.4:8000"
     
     private let iso8601FractionalFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -7614,16 +7614,157 @@ class NetworkManager {
             }
         }.resume()
     }
-    
+
+    // MARK: - Delete Recipe
+
+    func deleteRecipe(
+        recipeId: Int,
+        userEmail: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/delete-recipe/\(recipeId)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let parameters: [String: Any] = [
+            "user_email": userEmail
+        ]
+
+        let jsonData: Data
+        do {
+            jsonData = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(NetworkError.jsonEncodingFailed))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.httpBody = jsonData
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                print("✅ Successfully deleted recipe ID: \(recipeId)")
+                completion(.success(()))
+            } else {
+                let errorMessage = data.flatMap { String(data: $0, encoding: .utf8) } ?? "Unknown error"
+                print("❌ Failed to delete recipe: \(errorMessage)")
+                completion(.failure(NetworkError.serverError("HTTP \(httpResponse.statusCode): \(errorMessage)")))
+            }
+        }.resume()
+    }
+
+    // MARK: - Import Recipe from URL
+
+    func importRecipe(
+        url: String,
+        userEmail: String,
+        completion: @escaping (Result<Recipe, Error>) -> Void
+    ) {
+        guard let requestUrl = URL(string: "\(baseUrl)/import-recipe/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "url": url
+        ]
+
+        let jsonData: Data
+        do {
+            jsonData = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(NetworkError.jsonEncodingFailed))
+            return
+        }
+
+        var request = URLRequest(url: requestUrl)
+        request.httpMethod = "POST"
+        request.httpBody = jsonData
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        // Set a longer timeout for AI processing
+        request.timeoutInterval = 60
+
+        print("📥 Importing recipe from URL: \(url)")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("❌ Error importing recipe: \(error)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+
+            // DEBUG: print server response
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("⬇️ RECEIVED FROM SERVER - importRecipe response:")
+                print(responseString)
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+                // Use a custom date decoding strategy
+                let isoFormatter = ISO8601DateFormatter()
+                isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                decoder.dateDecodingStrategy = .custom { decoder in
+                    let container = try decoder.singleValueContainer()
+                    let dateString = try container.decode(String.self)
+                    if let date = isoFormatter.date(from: dateString) {
+                        return date
+                    }
+                    // Try without fractional seconds
+                    let basicFormatter = ISO8601DateFormatter()
+                    basicFormatter.formatOptions = [.withInternetDateTime]
+                    if let date = basicFormatter.date(from: dateString) {
+                        return date
+                    }
+                    throw DecodingError.dataCorruptedError(
+                        in: container,
+                        debugDescription: "Expected ISO8601 date, got \(dateString)"
+                    )
+                }
+
+                let recipe = try decoder.decode(Recipe.self, from: data)
+                print("✅ Successfully imported recipe: \(recipe.title) (ID: \(recipe.id))")
+                completion(.success(recipe))
+            } catch {
+                print("❌ Decoding error when importing recipe: \(error)")
+                print("JSON data: \(String(data: data, encoding: .utf8) ?? "invalid UTF-8")")
+                completion(.failure(NetworkError.decodingFailed(error)))
+            }
+        }.resume()
+    }
+
     func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
         let parameters: [String: Any] = [
             "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
             "food_description": foodDescription,
             "meal_type": mealType
         ]
-        
+
         let urlString = "\(baseUrl)/generate-ai-macros/"
-        
+
         guard let url = URL(string: urlString) else {
             completion(.failure(NetworkError.invalidURL))
             return

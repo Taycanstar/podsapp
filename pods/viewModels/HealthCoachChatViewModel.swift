@@ -43,6 +43,8 @@ final class HealthCoachChatViewModel: ObservableObject {
     var onFoodReady: ((Food) -> Void)?
     var onMealItemsReady: ((Food, [MealItem]) -> Void)?
     var onActivityLogged: ((HealthCoachActivity) -> Void)?
+    var onGoalsUpdated: ((UpdatedGoalsPayload) -> Void)?
+    var onWeightLogged: ((HealthCoachWeightPayload) -> Void)?
 
     // MARK: - Initialization
 
@@ -230,6 +232,32 @@ final class HealthCoachChatViewModel: ObservableObject {
             pendingClarificationQuestion = nil
             pendingOptions = nil
             // Data is displayed in the message UI
+
+        case .goalsUpdated:
+            pendingClarificationQuestion = nil
+            pendingOptions = nil
+
+            if let goals = response.goals {
+                onGoalsUpdated?(goals)
+                // Post notification to refresh nutrition goals across the app
+                NotificationCenter.default.post(
+                    name: Notification.Name("NutritionGoalsUpdatedNotification"),
+                    object: nil
+                )
+            }
+
+        case .weightLogged:
+            pendingClarificationQuestion = nil
+            pendingOptions = nil
+
+            if let weight = response.weight {
+                onWeightLogged?(weight)
+                // Post notification to refresh weight data across the app
+                NotificationCenter.default.post(
+                    name: Notification.Name("WeightLoggedNotification"),
+                    object: nil
+                )
+            }
 
         case .needsClarification:
             if let options = response.options {

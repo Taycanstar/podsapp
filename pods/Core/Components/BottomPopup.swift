@@ -10,22 +10,15 @@ import SwiftUI
 
 struct BottomPopup: View {
     let message: String
-    
+
     var body: some View {
         Text(message)
-            .font(.system(size: 14))
-            .foregroundColor(Color(.label))  // Adapt to color scheme
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(Color(.label))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(
-                Material.ultraThin,  // Apply the glass effect
-                in: RoundedRectangle(cornerRadius: 12)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(.label).opacity(0.7), lineWidth: 1)  // Add a border for contrast
-            ) 
-            .padding(.horizontal, 16)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 20)
             .padding(.bottom, 22)
             .transition(.move(edge: .bottom).combined(with: .opacity))
     }
