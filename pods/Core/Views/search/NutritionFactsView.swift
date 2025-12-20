@@ -159,14 +159,17 @@ struct NutritionFactsView: View {
     var body: some View {
         List {
             // Segmented Picker - scrolls with content
-            Picker("", selection: $selectedTab) {
-                ForEach(NutritionTab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
+            Section {
+                Picker("", selection: $selectedTab) {
+                    ForEach(NutritionTab.allCases, id: \.self) { tab in
+                        Text(tab.rawValue).tag(tab)
+                    }
                 }
+                .pickerStyle(.segmented)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 16, trailing: 0))
+                .listRowBackground(Color.clear)
             }
-            .pickerStyle(.segmented)
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-            .listRowBackground(Color.clear)
+            .listSectionSpacing(.custom(0))
 
             // Content based on tab
             switch selectedTab {
@@ -177,6 +180,8 @@ struct NutritionFactsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
+        .contentMargins(.top, 0, for: .scrollContent)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             footerBar
