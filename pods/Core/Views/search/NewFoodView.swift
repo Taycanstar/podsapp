@@ -186,7 +186,7 @@ struct NewFoodView: View {
                 HapticFeedback.generateLigth()
                 // TODO: Navigate to next step
             }) {
-                Text("Next")
+                Text("Continue")
                     .font(.headline)
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity)

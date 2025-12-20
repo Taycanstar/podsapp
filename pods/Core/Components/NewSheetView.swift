@@ -25,7 +25,7 @@ struct NewSheetView: View {
         ("Search", "magnifyingglass"),
         ("Voice Log", "mic"),
         ("Scan Food", "barcode.viewfinder"),
-        ("Saved Meals", "bookmark"),
+        ("Saved", "bookmark"),
         ("Workout", "dumbbell")
     ]
 
