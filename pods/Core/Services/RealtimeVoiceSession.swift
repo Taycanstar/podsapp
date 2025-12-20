@@ -764,24 +764,18 @@ private extension RealtimeVoiceSession {
     func sendSessionUpdate() {
         guard let dataChannel = dataChannel, dataChannel.readyState == .open else { return }
 
-        // Session config per OpenAI Realtime API docs
-        // Required: modalities, input_audio_transcription for user speech transcription
+        // Session config per OpenAI Realtime API docs for CONVERSATION mode
+        // Transcription goes under audio.input.transcription (NOT input_audio_transcription)
         let update: [String: Any] = [
             "type": "session.update",
             "session": [
-                "modalities": ["text", "audio"],
-                "voice": "coral",
-                "input_audio_format": "pcm16",
-                "output_audio_format": "pcm16",
-                "input_audio_transcription": [
-                    "model": "whisper-1"
-                ],
-                "turn_detection": [
-                    "type": "server_vad",
-                    "threshold": 0.5,
-                    "prefix_padding_ms": 300,
-                    "silence_duration_ms": 500,
-                    "create_response": true
+                "type": "realtime",
+                "audio": [
+                    "input": [
+                        "transcription": [
+                            "model": "gpt-4o-transcribe"
+                        ]
+                    ]
                 ]
             ]
         ]
@@ -789,7 +783,7 @@ private extension RealtimeVoiceSession {
         if let jsonData = try? JSONSerialization.data(withJSONObject: update) {
             let buffer = RTCDataBuffer(data: jsonData, isBinary: false)
             dataChannel.sendData(buffer)
-            print("📤 [REALTIME] Sent session.update with audio config")
+            print("📤 [REALTIME] Sent session.update with type=realtime and audio.input.transcription")
         } else {
             print("❌ [REALTIME] Failed to encode session.update payload")
         }

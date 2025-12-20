@@ -591,6 +591,7 @@ struct ConfirmLogView: View {
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .background(
@@ -610,6 +611,7 @@ struct ConfirmLogView: View {
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .background(
@@ -3708,6 +3710,7 @@ struct PlateView: View {
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .background(
@@ -3746,6 +3749,7 @@ struct PlateView: View {
                         RoundedRectangle(cornerRadius: 999, style: .continuous)
                             .fill(Color("background"))
                     )
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(Color("text"))

@@ -8462,6 +8462,7 @@ class NetworkManager {
             do {
                 let decoder = JSONDecoder()
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
+                decoder.dateDecodingStrategy = .iso8601
 
                 // Check if there's an error response
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

@@ -15,7 +15,7 @@ struct SearchView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
-    @StateObject private var recentFoodsRepo = RecentFoodLogsRepository.shared
+    @ObservedObject private var recentFoodsRepo = RecentFoodLogsRepository.shared
     @State private var showQuickAddSheet = false
     @State private var searchText = ""
     @State private var isSearchFocused = false

@@ -379,7 +379,7 @@ private var remainingCal: Double { vm.remainingCalories }
         switch onboarding.unitsSystem {
         case .imperial:
             let weightLbs = weightKg * 2.20462
-            return String(format: "%.0f", weightLbs)
+            return String(format: "%.1f", weightLbs)
         case .metric:
             return String(format: "%.1f", weightKg)
         }
@@ -491,21 +491,21 @@ private var remainingCal: Double { vm.remainingCalories }
                 .publisher(for: Notification.Name("WeightLoggedNotification"))
                 .receive(on: RunLoop.main)
         ) { _ in
-            refreshWeightTrendEntries()
+            fetchAndRefreshWeightLogs()
         }
         .onReceive(
             NotificationCenter.default
                 .publisher(for: Notification.Name("WeightLogUpdatedNotification"))
                 .receive(on: RunLoop.main)
         ) { _ in
-            refreshWeightTrendEntries()
+            fetchAndRefreshWeightLogs()
         }
         .onReceive(
             NotificationCenter.default
                 .publisher(for: Notification.Name("WeightLogDeletedNotification"))
                 .receive(on: RunLoop.main)
         ) { _ in
-            refreshWeightTrendEntries()
+            fetchAndRefreshWeightLogs()
         }
         .onChange(of: healthViewModel.isAuthorized) { authorized in
             if authorized {
@@ -2970,9 +2970,13 @@ private struct RecoveryRingView: View {
         var resolvedLogs: [WeightLogResponse] = []
 
         if let profileLogs = onboarding.profileData?.weightLogsRecent, !profileLogs.isEmpty {
+            print("📊 refreshWeightTrendEntries: Using \(profileLogs.count) profile logs")
             resolvedLogs = profileLogs
         } else if let cachedLogs = loadCachedWeightLogs() {
+            print("📊 refreshWeightTrendEntries: Using \(cachedLogs.count) cached logs")
             resolvedLogs = cachedLogs
+        } else {
+            print("📊 refreshWeightTrendEntries: No logs found")
         }
 
         var entries: [BodyCompositionEntry] = resolvedLogs.compactMap { log in
@@ -2984,11 +2988,15 @@ private struct RecoveryRingView: View {
         if entries.isEmpty {
             let fallbackWeight = vm.weight > 0 ? vm.weight : (onboarding.weightKg > 0 ? onboarding.weightKg : nil)
             if let fallback = fallbackWeight {
+                print("📊 refreshWeightTrendEntries: Using fallback weight: \(fallback) kg")
                 entries = [BodyCompositionEntry(value: convertWeightToDisplayUnit(fallback), date: Date())]
             }
         }
 
         weightTrendEntries = Array(entries.prefix(7)).sorted { $0.date < $1.date }
+        if let latest = weightTrendEntries.last {
+            print("📊 refreshWeightTrendEntries: Latest displayed weight: \(latest.value)")
+        }
     }
 
     private func fetchBodyFatHistoryIfNeeded() {
@@ -3017,6 +3025,32 @@ private struct RecoveryRingView: View {
             return nil
         }
         return response.logs
+    }
+
+    /// Fetch fresh weight logs from the network and update the cache
+    private func fetchAndRefreshWeightLogs() {
+        let email = onboarding.email
+        guard !email.isEmpty else { return }
+
+        print("🔄 fetchAndRefreshWeightLogs: Fetching weight logs for \(email)")
+        NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
+            switch result {
+            case .success(let response):
+                print("✅ fetchAndRefreshWeightLogs: Got \(response.logs.count) logs")
+                if let firstLog = response.logs.first {
+                    print("   Latest log: \(firstLog.weightKg) kg on \(firstLog.dateLogged)")
+                }
+                if let encodedData = try? JSONEncoder().encode(response) {
+                    UserDefaults.standard.set(encodedData, forKey: "preloadedWeightLogs")
+                    UserDefaults.standard.set(Date(), forKey: "preloadedWeightLogsTimestamp")
+                }
+                DispatchQueue.main.async {
+                    self.refreshWeightTrendEntries()
+                }
+            case .failure(let error):
+                print("❌ fetchAndRefreshWeightLogs Error: \(error)")
+            }
+        }
     }
 
     private func parseLogDate(_ dateString: String) -> Date? {
