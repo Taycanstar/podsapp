@@ -166,7 +166,7 @@ struct NutritionFactsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 16, trailing: 0))
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 22, trailing: 16))
                 .listRowBackground(Color.clear)
             }
             .listSectionSpacing(.custom(0))
@@ -181,7 +181,7 @@ struct NutritionFactsView: View {
         }
         .listStyle(.insetGrouped)
         .listSectionSpacing(.compact)
-        .contentMargins(.top, 0, for: .scrollContent)
+        .contentMargins(.top, 4, for: .scrollContent)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             footerBar
