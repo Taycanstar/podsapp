@@ -166,7 +166,7 @@ struct NutritionFactsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 22, trailing: 16))
+                .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 22, trailing: 0))
                 .listRowBackground(Color.clear)
             }
             .listSectionSpacing(.custom(0))
