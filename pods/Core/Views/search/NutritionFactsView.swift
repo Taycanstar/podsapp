@@ -159,17 +159,17 @@ struct NutritionFactsView: View {
     var body: some View {
         List {
             // Segmented Picker - scrolls with content
-            Section {
-                Picker("", selection: $selectedTab) {
-                    ForEach(NutritionTab.allCases, id: \.self) { tab in
-                        Text(tab.rawValue).tag(tab)
-                    }
+            // Picker as plain row (not in a Section) to avoid inset margins
+            Picker("", selection: $selectedTab) {
+                ForEach(NutritionTab.allCases, id: \.self) { tab in
+                    Text(tab.rawValue).tag(tab)
                 }
-                .pickerStyle(.segmented)
-                .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 22, trailing: 0))
-                .listRowBackground(Color.clear)
             }
-            .listSectionSpacing(.custom(0))
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 22, trailing: 0))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
 
             // Content based on tab
             switch selectedTab {
@@ -182,6 +182,7 @@ struct NutritionFactsView: View {
         .listStyle(.insetGrouped)
         .listSectionSpacing(.compact)
         .contentMargins(.top, 4, for: .scrollContent)
+        .contentMargins(.horizontal, 0, for: .scrollContent)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             footerBar
