@@ -171,6 +171,7 @@
 		36667DDF2EF4A28C0017E9D7 /* RecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DDE2EF4A28C0017E9D7 /* RecipeView.swift */; };
 		36667DE12EF4A3740017E9D7 /* RecipeSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DE02EF4A3740017E9D7 /* RecipeSummaryView.swift */; };
 		36667DE32EF4A37F0017E9D7 /* ImportRecipeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DE22EF4A37F0017E9D7 /* ImportRecipeSheet.swift */; };
+		36667DE62EF5CFD30017E9D7 /* RecentFoodLogsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DE52EF5CFD30017E9D7 /* RecentFoodLogsRepository.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -611,6 +612,7 @@
 		36667DDE2EF4A28C0017E9D7 /* RecipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeView.swift; sourceTree = "<group>"; };
 		36667DE02EF4A3740017E9D7 /* RecipeSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeSummaryView.swift; sourceTree = "<group>"; };
 		36667DE22EF4A37F0017E9D7 /* ImportRecipeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportRecipeSheet.swift; sourceTree = "<group>"; };
+		36667DE52EF5CFD30017E9D7 /* RecentFoodLogsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentFoodLogsRepository.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -1587,6 +1589,7 @@
 		36F5A00C2F9C1AAB00A1B234 /* Repositories */ = {
 			isa = PBXGroup;
 			children = (
+				36667DE52EF5CFD30017E9D7 /* RecentFoodLogsRepository.swift */,
 				36DB82DB2EBAA800004BA082 /* WorkoutContextRepository.swift */,
 				36F5A0022F9C1AAB00A1B234 /* RepositoryTTL.swift */,
 				36F5A0002F9C1AAB00A1B234 /* UserContextStore.swift */,
@@ -1949,6 +1952,7 @@
 				361FF30F2E1D96F900B7F68E /* WeightedExercisesView.swift in Sources */,
 				36A851B52E60CF54004E5CED /* FlexibleExerciseInputs.swift in Sources */,
 				36A7B0022F0B4C9B00A6A1B0 /* StartupCoordinator.swift in Sources */,
+				36667DE62EF5CFD30017E9D7 /* RecentFoodLogsRepository.swift in Sources */,
 				36A91DB92E39B37500414543 /* MealLogDetails.swift in Sources */,
 				36D3A5182E90E5C000AD6B94 /* EnterNameView.swift in Sources */,
 				363068C92E089EF800F2D4EC /* ByEquipmentView.swift in Sources */,

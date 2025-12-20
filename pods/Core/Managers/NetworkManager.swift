@@ -256,8 +256,8 @@ extension Date {
 class NetworkManager {
     
     //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-    //   let baseUrl = "http://192.168.1.92:8000"
-    let baseUrl = "http://172.20.10.4:8000"
+      let baseUrl = "http://192.168.1.92:8000"
+    // let baseUrl = "http://172.20.10.4:8000"
     
     private let iso8601FractionalFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -8420,9 +8420,73 @@ class NetworkManager {
             }
         }.resume()
     }
-    
+
+    // MARK: - Get Recent Food Logs
+
+    func getRecentFoodLogs(userEmail: String, page: Int = 1, pageSize: Int = 20, completion: @escaping (Result<RecentFoodLogsResponse, Error>) -> Void) {
+        guard var urlComponents = URLComponents(string: "\(baseUrl)/get-recent-food-logs/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        urlComponents.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "page_size", value: String(pageSize))
+        ]
+
+        guard let url = urlComponents.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+                // Check if there's an error response
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let errorMessage = json["error"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.serverError(errorMessage)))
+                    }
+                    return
+                }
+
+                let response = try decoder.decode(RecentFoodLogsResponse.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(response))
+                }
+            } catch {
+                print("Decoding error in getRecentFoodLogs: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+
     // Add these functions to the NetworkManager class to handle deletion
-    
+
     // Delete food log
     func deleteFoodLog(logId: Int, userEmail: String, completion: @escaping (Result<Void, Error>) -> Void) {
         let parameters: [String: Any] = [

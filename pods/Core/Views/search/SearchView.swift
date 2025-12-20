@@ -13,20 +13,17 @@ import UIKit
 struct SearchView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    @EnvironmentObject var vm: DayLogsViewModel
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @StateObject private var recentFoodsRepo = RecentFoodLogsRepository.shared
     @State private var showQuickAddSheet = false
     @State private var searchText = ""
     @State private var isSearchFocused = false
     @State private var selectedFood: Food?
 
-    /// Recent food logs (filtered to show only food type logs)
+    /// Recent food logs from the repository
     private var recentFoodLogs: [CombinedLog] {
-        vm.logs
-            .filter { $0.type == .food }
-            .prefix(10)
-            .map { $0 }
+        recentFoodsRepo.snapshot.logs
     }
 
     var body: some View {
@@ -64,8 +61,15 @@ struct SearchView: View {
             FoodSummaryView(food: food)
                 .environmentObject(foodManager)
         }
-        .onAppear {
-            vm.loadLogs(for: Date())
+        .task {
+            if let email = foodManager.userEmail {
+                print("[SearchView] Configuring with email: \(email)")
+                recentFoodsRepo.configure(email: email)
+                let success = await recentFoodsRepo.refresh(force: true)
+                print("[SearchView] Refresh result: \(success), logs count: \(recentFoodsRepo.snapshot.logs.count)")
+            } else {
+                print("[SearchView] No user email available")
+            }
         }
     }
 
@@ -96,7 +100,7 @@ struct SearchView: View {
                     showQuickAddSheet = true
                 }
             }
-            .listRowBackground(Color("containerbg"))
+            .listRowBackground(Color("sheetcard"))
 
             // Recents Section
             if !recentFoodLogs.isEmpty {
@@ -119,7 +123,7 @@ struct SearchView: View {
                         .foregroundColor(.primary)
                         .textCase(nil)
                 }
-                .listRowBackground(Color("containerbg"))
+                .listRowBackground(Color("sheetcard"))
             }
         }
         .listStyle(.insetGrouped)
@@ -161,7 +165,13 @@ struct SearchView: View {
     // MARK: - Delete Log
     private func deleteLog(_ log: CombinedLog) {
         guard let foodLogId = log.foodLogId else { return }
-        foodManager.deleteFoodLog(id: foodLogId) { _ in }
+        foodManager.deleteFoodLog(id: foodLogId) { result in
+            if case .success = result {
+                Task {
+                    await recentFoodsRepo.refresh(force: true)
+                }
+            }
+        }
     }
 }
 
@@ -323,7 +333,6 @@ struct RecentFoodRow: View {
 #Preview {
     NavigationStack {
         SearchView()
-            .environmentObject(DayLogsViewModel())
             .environmentObject(FoodManager())
             .environmentObject(OnboardingViewModel())
     }

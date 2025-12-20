@@ -15,7 +15,7 @@ struct FoodsView: View {
 
     @State private var searchText = ""
     @State private var showQuickAddSheet = false
-    @State private var navigationPath = NavigationPath()
+    @State private var showNewFoodSheet = false
     @State private var selectedFood: Food?
 
     // Filtered foods based on search
@@ -34,10 +34,8 @@ struct FoodsView: View {
                 // Action Buttons
                 HStack(spacing: 12) {
                     // Create Food button
-                    NavigationLink {
-                        CreateFoodView(path: $navigationPath)
-                            .environmentObject(foodManager)
-                            .environmentObject(viewModel)
+                    Button {
+                        showNewFoodSheet = true
                     } label: {
                         Text("Create")
                             .font(.system(size: 17, weight: .semibold))
@@ -98,6 +96,11 @@ struct FoodsView: View {
         .sheet(isPresented: $showQuickAddSheet) {
             QuickAddSheet()
                 .environmentObject(foodManager)
+        }
+        .sheet(isPresented: $showNewFoodSheet) {
+            NewFoodView()
+                .environmentObject(foodManager)
+                .environmentObject(viewModel)
         }
         .sheet(item: $selectedFood) { food in
             FoodSummaryView(food: food)

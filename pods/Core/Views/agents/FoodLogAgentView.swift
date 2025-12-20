@@ -251,8 +251,8 @@ struct FoodLogAgentView: View {
                                 Spacer()
                                 Text(realtimeSession.currentUserText)
                                     .padding(10)
-                                    .background(Color.accentColor.opacity(0.6))
-                                    .foregroundColor(.white)
+                                    .background(Color(.systemGray5))
+                                    .foregroundColor(.primary)
                                     .cornerRadius(16)
                             }
                             .id("streamingUser")

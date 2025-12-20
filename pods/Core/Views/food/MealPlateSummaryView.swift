@@ -695,23 +695,44 @@ struct MealPlateSummaryView: View {
     }
 
     private func nutrientSection(title: String, rows: [MealNutrientRowDescriptor]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.title3)
-                .fontWeight(.semibold)
-
-            VStack(spacing: 16) {
-                ForEach(rows) { descriptor in
-                    nutrientRow(for: descriptor)
+        // Filter rows to only show nutrients that exist in the data
+        // Zero values ARE shown (e.g., 0g sugar means sugar-free)
+        // Only nutrients completely absent from the response are hidden
+        let filteredRows = rows.filter { descriptor in
+            switch descriptor.source {
+            case .macro, .computed:
+                // Always show macros and computed values (e.g., net carbs, calories)
+                return true
+            case .nutrient(let names, _):
+                // Show if the nutrient exists in the data (even if value is 0)
+                return names.contains { name in
+                    aggregatedNutrients[normalizedNutrientKey(name)] != nil
                 }
             }
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(cardColor)
-            )
         }
-        .padding(.horizontal)
+
+        // Don't render empty sections
+        return Group {
+            if !filteredRows.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(title)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+
+                    VStack(spacing: 16) {
+                        ForEach(filteredRows) { descriptor in
+                            nutrientRow(for: descriptor)
+                        }
+                    }
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(cardColor)
+                    )
+                }
+                .padding(.horizontal)
+            }
+        }
     }
 
     @ViewBuilder

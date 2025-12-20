@@ -302,14 +302,11 @@ struct AgentChatView: View {
                                 Text(realtimeSession.currentUserText)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 8)
-                                    .background(Color.accentColor.opacity(0.6))
-                                    .foregroundColor(.white)
+                                    .background(Color(.systemGray5))
+                                    .foregroundColor(.primary)
                                     .cornerRadius(16)
                             }
                             .id("streamingUser")
-                            .onAppear {
-                                print("🎤 [UI] User bubble appeared with text: '\(realtimeSession.currentUserText)'")
-                            }
                         }
 
                         // Streaming assistant text (voice realtime response)

@@ -420,51 +420,53 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
         if (type == "conversation.item.added" || type == "conversation.item.done"),
            let item = json["item"] as? [String: Any],
            let itemId = item["id"] as? String,
-           let role = item["role"] as? String,
-           let content = item["content"] as? [[String: Any]] {
+           let role = item["role"] as? String {
+            let content = item["content"] as? [[String: Any]] ?? []
             print("🗒️ [REALTIME ITEM] role=\(role) id=\(itemId) keys=\(item.keys.sorted()) contentKeys=\(content.map { $0.keys.joined(separator: ",") })")
+
+            // Extract text from content array
+            var extracted = Self.extractText(from: content)
+            // Fallback: some event shapes include transcripts under input_audio_transcription
+            if extracted.isEmpty,
+               let transcription = item["input_audio_transcription"] as? [String: Any],
+               let transcript = transcription["transcript"] as? String {
+                extracted = transcript
+            }
+
+            if !extracted.isEmpty {
+                print("📝 [REALTIME TEXT] role=\(role) text='\(extracted)'")
+            }
+
             Task { @MainActor in
+                let isUser = role == "user"
+
+                // For user messages, show in currentUserText bubble first
+                if isUser && !extracted.isEmpty {
+                    self.currentUserText = extracted
+                    print("🎤 [USER BUBBLE] Showing: '\(extracted)'")
+                }
+
+                // Only add to messages array once (avoid duplicates)
                 guard !self.processedItemIds.contains(itemId) else { return }
                 self.processedItemIds.insert(itemId)
+
                 // If this is an echo of text we already inserted locally, skip to avoid duplicates.
                 if self.localAssistantItemIds.contains(itemId) {
                     return
                 }
-                var extracted = Self.extractText(from: content)
-                // Fallback: some event shapes include transcripts under input_audio_transcription
-                if extracted.isEmpty,
-                   let transcription = item["input_audio_transcription"] as? [String: Any],
-                   let transcript = transcription["transcript"] as? String {
-                    extracted = transcript
-                }
+
                 if !extracted.isEmpty {
-                    print("📝 [REALTIME TEXT] role=\(role) text='\(extracted)'")
-                }
-                if !extracted.isEmpty {
-                    let isUser = role == "user"
                     self.messages.append(RealtimeMessage(isUser: isUser, text: extracted))
                     if isUser {
                         self.transcribedText = extracted
-                        self.currentUserText = ""
-                        // Model auto-responds via create_response: true in turn_detection
+                        // Clear the streaming bubble after adding to messages
+                        // Use slight delay so user sees the bubble before it moves to messages
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            self.currentUserText = ""
+                        }
                     } else {
                         self.currentAssistantText = ""
                     }
-                }
-            }
-        }
-
-        // Handle user input transcription streaming
-        // Try multiple event name patterns as OpenAI Realtime API has evolved
-        if type == "conversation.item.input_audio_transcription.delta" ||
-           type == "input_audio_transcription.delta" ||
-           type == "input_audio_transcription.part" {
-            // Try different JSON structures
-            let delta = json["delta"] as? String ?? json["part"] as? String ?? json["transcript"] as? String
-            if let delta = delta {
-                print("🎤 [USER STREAMING] delta: '\(delta)'")
-                Task { @MainActor in
-                    self.currentUserText += delta
                 }
             }
         }
@@ -477,18 +479,38 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
             }
         }
 
-        // Handle user input transcription completed
-        if type == "conversation.item.input_audio_transcription.completed",
-           let transcript = json["transcript"] as? String {
-            Task { @MainActor in
-                let finalText = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-                print("🎤 [USER TRANSCRIPT] '\(finalText)'")
-                if !finalText.isEmpty {
-                    self.messages.append(RealtimeMessage(isUser: true, text: finalText))
-                    print("✅ [MESSAGES] Added user message, count now: \(self.messages.count)")
-                    self.transcribedText = finalText
+        // Handle speech stopped
+        if type == "input_audio_buffer.speech_stopped" {
+            print("🎤 [SPEECH STOPPED]")
+        }
+
+        // Handle user input transcription streaming (per OpenAI docs)
+        // Event: conversation.item.input_audio_transcription.delta
+        // JSON: { "delta": "Hello," }
+        if type == "conversation.item.input_audio_transcription.delta" {
+            if let delta = json["delta"] as? String, !delta.isEmpty {
+                print("🎤 [USER STREAMING] delta: '\(delta)'")
+                Task { @MainActor in
+                    self.currentUserText += delta
                 }
-                self.currentUserText = ""
+            }
+        }
+
+        // Handle user input transcription completed (per OpenAI docs)
+        // Event: conversation.item.input_audio_transcription.completed
+        // JSON: { "transcript": "Hello, how are you?" }
+        if type == "conversation.item.input_audio_transcription.completed" {
+            if let transcript = json["transcript"] as? String {
+                let finalText = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                print("🎤 [USER TRANSCRIPT COMPLETED] '\(finalText)'")
+                Task { @MainActor in
+                    if !finalText.isEmpty {
+                        self.messages.append(RealtimeMessage(isUser: true, text: finalText))
+                        print("✅ [MESSAGES] Added user message, count now: \(self.messages.count)")
+                        self.transcribedText = finalText
+                    }
+                    self.currentUserText = ""
+                }
             }
         }
 
@@ -742,32 +764,24 @@ private extension RealtimeVoiceSession {
     func sendSessionUpdate() {
         guard let dataChannel = dataChannel, dataChannel.readyState == .open else { return }
 
-        // Only configure audio settings - tools and instructions come from backend session config
+        // Session config per OpenAI Realtime API docs
+        // Required: modalities, input_audio_transcription for user speech transcription
         let update: [String: Any] = [
             "type": "session.update",
             "session": [
-                "audio": [
-                    "input": [
-                        "format": [
-                            "type": "audio/pcm",
-                            "rate": 24000
-                        ],
-                        "turn_detection": [
-                            "type": "semantic_vad",
-                            "create_response": true,
-                            "interrupt_response": true
-                        ],
-                        "transcription": [
-                            "model": "gpt-4o-transcribe"
-                        ]
-                    ],
-                    "output": [
-                        "format": [
-                            "type": "audio/pcm",
-                            "rate": 24000
-                        ],
-                        "voice": "marin"
-                    ]
+                "modalities": ["text", "audio"],
+                "voice": "coral",
+                "input_audio_format": "pcm16",
+                "output_audio_format": "pcm16",
+                "input_audio_transcription": [
+                    "model": "whisper-1"
+                ],
+                "turn_detection": [
+                    "type": "server_vad",
+                    "threshold": 0.5,
+                    "prefix_padding_ms": 300,
+                    "silence_duration_ms": 500,
+                    "create_response": true
                 ]
             ]
         ]
@@ -783,7 +797,7 @@ private extension RealtimeVoiceSession {
 
     /// Extract any textual content from a realtime content array.
     /// Supports both `text` and `transcript` fields as returned by the API.
-    static func extractText(from content: [[String: Any]]) -> String {
+    nonisolated static func extractText(from content: [[String: Any]]) -> String {
         var parts: [String] = []
         for piece in content {
             if let text = piece["text"] as? String {

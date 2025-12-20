@@ -126,6 +126,22 @@ struct Food: Codable, Identifiable, Hashable{
         let currentPage: Int
     }
 
+struct RecentFoodLogsResponse: Codable {
+    let logs: [CombinedLog]
+    let pagination: RecentFoodLogsPagination
+
+    struct RecentFoodLogsPagination: Codable {
+        let page: Int
+        let pageSize: Int
+        let totalPages: Int
+        let totalCount: Int
+        let hasNext: Bool
+        let hasPrevious: Bool
+    }
+
+    var hasMore: Bool { pagination.hasNext }
+}
+
 struct Nutrient: Codable {
     let nutrientName: String
     let value: Double?

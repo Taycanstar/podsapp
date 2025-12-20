@@ -475,6 +475,7 @@ private var remainingCal: Double { vm.remainingCalories }
                                 .foregroundColor(.primary)
                         }
                     }
+                    .padding(.horizontal, 6)
                 }
             }
         }
