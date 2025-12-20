@@ -42,6 +42,9 @@ struct NewFoodView: View {
     @State private var servingAmount = "1"
     @State private var servingUnit = "serving"
 
+    // Navigation
+    @State private var showNutritionFacts = false
+
     private var chipColor: Color {
         colorScheme == .dark ? Color(.tertiarySystemFill) : Color(.secondarySystemFill)
     }
@@ -172,6 +175,16 @@ struct NewFoodView: View {
             .onAppear {
                 dismissSearch()
             }
+            .navigationDestination(isPresented: $showNutritionFacts) {
+                NutritionFactsView(
+                    name: name,
+                    brand: brand,
+                    basedOn: basedOn,
+                    weight: weight,
+                    servingAmount: servingAmount,
+                    servingUnit: servingUnit
+                )
+            }
         }
     }
 
@@ -184,7 +197,7 @@ struct NewFoodView: View {
 
             Button(action: {
                 HapticFeedback.generateLigth()
-                // TODO: Navigate to next step
+                showNutritionFacts = true
             }) {
                 Text("Continue")
                     .font(.headline)
