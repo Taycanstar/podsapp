@@ -85,6 +85,57 @@ struct NutritionLabelData: Codable, Equatable {
     /// Potassium in milligrams
     var potassium: Double?
 
+    // MARK: - B Vitamins
+
+    /// Thiamin (Vitamin B1) in milligrams
+    var thiamin: Double?
+
+    /// Riboflavin (Vitamin B2) in milligrams
+    var riboflavin: Double?
+
+    /// Niacin (Vitamin B3) in milligrams
+    var niacin: Double?
+
+    /// Pantothenic Acid (Vitamin B5) in milligrams
+    var pantothenicAcid: Double?
+
+    /// Vitamin B6 in milligrams
+    var vitaminB6: Double?
+
+    /// Folate (Vitamin B9) in micrograms
+    var folate: Double?
+
+    /// Vitamin B12 in micrograms
+    var vitaminB12: Double?
+
+    /// Biotin (Vitamin B7) in micrograms
+    var biotin: Double?
+
+    // MARK: - Other Vitamins
+
+    /// Vitamin A in micrograms (RAE) or IU
+    var vitaminA: Double?
+
+    /// Vitamin C in milligrams
+    var vitaminC: Double?
+
+    /// Vitamin E in milligrams
+    var vitaminE: Double?
+
+    /// Vitamin K in micrograms
+    var vitaminK: Double?
+
+    // MARK: - Additional Minerals
+
+    /// Magnesium in milligrams
+    var magnesium: Double?
+
+    /// Zinc in milligrams
+    var zinc: Double?
+
+    /// Phosphorus in milligrams
+    var phosphorus: Double?
+
     // MARK: - Debug Info
 
     /// Raw OCR text for debugging

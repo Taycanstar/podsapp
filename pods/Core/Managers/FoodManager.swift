@@ -189,7 +189,9 @@ final class NutritionixService {
         var addedKeys = Set<String>()
 
         func appendNutrient(name: String, value: Double?, unit: String) {
-            guard let value, value > 0 else { return }
+            // Keep zero values - they indicate the nutrient was measured (e.g., 0g trans fat)
+            // Only skip if value is nil (not present in response)
+            guard let value else { return }
             if !addedKeys.contains(name) {
                 nutrients.append(Nutrient(nutrientName: name, value: value, unitName: unit))
                 addedKeys.insert(name)
@@ -326,15 +328,95 @@ final class NutritionixService {
     }
 
     private static let attrIdMap: [Int: (name: String, unit: String)] = [
+        // Carbohydrates
         269: ("Sugars, total including NLEA", "g"),
         291: ("Fiber, total dietary", "g"),
-        307: ("Sodium, Na", "mg"),
+        539: ("Sugars, added", "g"),
+        209: ("Starch", "g"),
+        // Sugar alcohols
+        299: ("Sugar Alcohol", "g"),
+        1001: ("Erythritol", "g"),
+        1006: ("Allulose", "g"),
+        // Fats
         601: ("Cholesterol", "mg"),
         605: ("Fatty acids, total trans", "g"),
         606: ("Fatty acids, total saturated", "g"),
-        306: ("Potassium, K", "mg"),
+        645: ("Fatty acids, total monounsaturated", "g"),
+        646: ("Fatty acids, total polyunsaturated", "g"),
+        // Omega fatty acids
+        851: ("18:3 n-3 c,c,c (ALA)", "g"),
+        629: ("20:5 n-3 (EPA)", "g"),
+        621: ("22:6 n-3 (DHA)", "g"),
+        631: ("22:5 n-3 (DPA)", "g"),
+        // Minerals
         301: ("Calcium, Ca", "mg"),
-        303: ("Iron, Fe", "mg")
+        303: ("Iron, Fe", "mg"),
+        304: ("Magnesium, Mg", "mg"),
+        305: ("Phosphorus, P", "mg"),
+        306: ("Potassium, K", "mg"),
+        307: ("Sodium, Na", "mg"),
+        309: ("Zinc, Zn", "mg"),
+        312: ("Copper, Cu", "mg"),
+        315: ("Manganese, Mn", "mg"),
+        317: ("Selenium, Se", "mcg"),
+        313: ("Fluoride, F", "mcg"),
+        // Vitamins
+        320: ("Vitamin A, RAE", "mcg"),
+        318: ("Vitamin A, IU", "IU"),
+        404: ("Thiamin", "mg"),
+        405: ("Riboflavin", "mg"),
+        406: ("Niacin", "mg"),
+        410: ("Pantothenic acid", "mg"),
+        415: ("Vitamin B-6", "mg"),
+        418: ("Vitamin B-12", "mcg"),
+        401: ("Vitamin C, total ascorbic acid", "mg"),
+        324: ("Vitamin D", "IU"),
+        328: ("Vitamin D (D2 + D3)", "mcg"),
+        323: ("Vitamin E (alpha-tocopherol)", "mg"),
+        430: ("Vitamin K (phylloquinone)", "mcg"),
+        417: ("Folate, total", "mcg"),
+        431: ("Folic acid", "mcg"),
+        435: ("Folate, DFE", "mcg"),
+        // Other vitamins/compounds
+        321: ("Carotene, beta", "mcg"),
+        322: ("Carotene, alpha", "mcg"),
+        334: ("Cryptoxanthin, beta", "mcg"),
+        337: ("Lycopene", "mcg"),
+        338: ("Lutein + zeaxanthin", "mcg"),
+        319: ("Retinol", "mcg"),
+        421: ("Choline, total", "mg"),
+        454: ("Betaine", "mg"),
+        // Amino acids
+        512: ("Histidine", "g"),
+        503: ("Isoleucine", "g"),
+        504: ("Leucine", "g"),
+        505: ("Lysine", "g"),
+        506: ("Methionine", "g"),
+        507: ("Cystine", "g"),
+        508: ("Phenylalanine", "g"),
+        502: ("Threonine", "g"),
+        501: ("Tryptophan", "g"),
+        509: ("Tyrosine", "g"),
+        510: ("Valine", "g"),
+        511: ("Arginine", "g"),
+        513: ("Alanine", "g"),
+        514: ("Aspartic acid", "g"),
+        515: ("Glutamic acid", "g"),
+        516: ("Glycine", "g"),
+        517: ("Proline", "g"),
+        518: ("Serine", "g"),
+        // Other compounds
+        255: ("Water", "g"),
+        221: ("Alcohol, ethyl", "g"),
+        262: ("Caffeine", "mg"),
+        263: ("Theobromine", "mg"),
+        // Individual sugars
+        212: ("Fructose", "g"),
+        211: ("Glucose (dextrose)", "g"),
+        213: ("Lactose", "g"),
+        214: ("Maltose", "g"),
+        210: ("Sucrose", "g"),
+        287: ("Galactose", "g")
     ]
 }
 

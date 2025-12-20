@@ -57,6 +57,27 @@ final class NutritionLabelOCRService {
         static let calcium = #"(?i)calcium[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
         static let iron = #"(?i)iron[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
         static let potassium = #"(?i)potassium[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+
+        // B Vitamins - handle various OCR text variations (partial text like "in B6" from "Vitamin B6")
+        static let thiamin = #"(?i)(?:thiamin[e]?|vitamin\s*b[\-\s]?1|vit\.?\s*b[\-\s]?1)[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        static let riboflavin = #"(?i)(?:riboflavin|vitamin\s*b[\-\s]?2|vit\.?\s*b[\-\s]?2)[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        static let niacin = #"(?i)(?:niacin|vitamin\s*b[\-\s]?3|vit\.?\s*b[\-\s]?3)[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        static let pantothenicAcid = #"(?i)(?:pantothenic\s*acid|vitamin\s*b[\-\s]?5|vit\.?\s*b[\-\s]?5|enic\s*acid)[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        static let vitaminB6 = #"(?i)(?:vitamin\s*b[\-\s]?6|vit\.?\s*b[\-\s]?6|in\s*b[\-\s]?6|[^a-z]b[\-\s]?6)[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        static let folate = #"(?i)(?:folate|folic\s*acid|vitamin\s*b[\-\s]?9|vit\.?\s*b[\-\s]?9)[:\s]*(\d+\.?\d*)\s*(?:mcg|µg|ug)?"#
+        static let vitaminB12 = #"(?i)(?:vitamin\s*b[\-\s]?12|vit\.?\s*b[\-\s]?12|in\s*b[\-\s]?12|[^a-z]b[\-\s]?12|nin\s*b[\-\s]?12)[:\s]*(\d+\.?\d*)\s*(?:mcg|µg|ug)?"#
+        static let biotin = #"(?i)(?:biotin|vitamin\s*b[\-\s]?7|vit\.?\s*b[\-\s]?7)[:\s]*(\d+\.?\d*)\s*(?:mcg|µg|ug)?"#
+
+        // Other Vitamins
+        static let vitaminA = #"(?i)(?:vitamin\s*a|vit\.?\s*a)[:\s]*(\d+\.?\d*)\s*(?:mcg|µg|iu|rae)?"#
+        static let vitaminC = #"(?i)(?:vitamin\s*c|vit\.?\s*c|ascorbic\s*acid)[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        static let vitaminE = #"(?i)(?:vitamin\s*e|vit\.?\s*e)[:\s]*(\d+\.?\d*)\s*(?:mg|iu)?"#
+        static let vitaminK = #"(?i)(?:vitamin\s*k|vit\.?\s*k)[:\s]*(\d+\.?\d*)\s*(?:mcg|µg|ug)?"#
+
+        // Additional Minerals
+        static let magnesium = #"(?i)magnesium[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        static let zinc = #"(?i)zinc[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
+        static let phosphorus = #"(?i)phosphorus[:\s]*(\d+\.?\d*)\s*(?:mg)?"#
     }
 
     /// EU/International patterns
@@ -147,10 +168,28 @@ final class NutritionLabelOCRService {
         print("🏷️ [OCR] Fiber: \(data.dietaryFiber ?? 0)g")
         print("🏷️ [OCR] Sugars: \(data.totalSugars ?? 0)g")
         print("🏷️ [OCR] Added Sugars: \(data.addedSugars ?? 0)g")
-        print("🏷️ [OCR] Vitamin D: \(data.vitaminD ?? 0)mcg")
-        print("🏷️ [OCR] Calcium: \(data.calcium ?? 0)mg")
-        print("🏷️ [OCR] Iron: \(data.iron ?? 0)mg")
-        print("🏷️ [OCR] Potassium: \(data.potassium ?? 0)mg")
+        print("🏷️ [OCR] --- Vitamins ---")
+        print("🏷️ [OCR] Vitamin A: \(data.vitaminA.map { "\($0)" } ?? "nil")")
+        print("🏷️ [OCR] Vitamin C: \(data.vitaminC.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Vitamin D: \(data.vitaminD.map { "\($0)mcg" } ?? "nil")")
+        print("🏷️ [OCR] Vitamin E: \(data.vitaminE.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Vitamin K: \(data.vitaminK.map { "\($0)mcg" } ?? "nil")")
+        print("🏷️ [OCR] --- B Vitamins ---")
+        print("🏷️ [OCR] Thiamin (B1): \(data.thiamin.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Riboflavin (B2): \(data.riboflavin.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Niacin (B3): \(data.niacin.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Pantothenic Acid (B5): \(data.pantothenicAcid.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Vitamin B6: \(data.vitaminB6.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Biotin (B7): \(data.biotin.map { "\($0)mcg" } ?? "nil")")
+        print("🏷️ [OCR] Folate (B9): \(data.folate.map { "\($0)mcg" } ?? "nil")")
+        print("🏷️ [OCR] Vitamin B12: \(data.vitaminB12.map { "\($0)mcg" } ?? "nil")")
+        print("🏷️ [OCR] --- Minerals ---")
+        print("🏷️ [OCR] Calcium: \(data.calcium.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Iron: \(data.iron.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Potassium: \(data.potassium.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Magnesium: \(data.magnesium.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Zinc: \(data.zinc.map { "\($0)mg" } ?? "nil")")
+        print("🏷️ [OCR] Phosphorus: \(data.phosphorus.map { "\($0)mg" } ?? "nil")")
         print("🏷️ [OCR] Serving Size: \(data.servingSize ?? "not detected")")
         print("🏷️ [OCR] ========================")
 
@@ -275,6 +314,27 @@ final class NutritionLabelOCRService {
         data.calcium = extractNumber(from: text, pattern: USPatterns.calcium)
         data.iron = extractNumber(from: text, pattern: USPatterns.iron)
         data.potassium = extractNumber(from: text, pattern: USPatterns.potassium)
+
+        // B Vitamins
+        data.thiamin = extractNumber(from: text, pattern: USPatterns.thiamin)
+        data.riboflavin = extractNumber(from: text, pattern: USPatterns.riboflavin)
+        data.niacin = extractNumber(from: text, pattern: USPatterns.niacin)
+        data.pantothenicAcid = extractNumber(from: text, pattern: USPatterns.pantothenicAcid)
+        data.vitaminB6 = extractNumber(from: text, pattern: USPatterns.vitaminB6)
+        data.folate = extractNumber(from: text, pattern: USPatterns.folate)
+        data.vitaminB12 = extractNumber(from: text, pattern: USPatterns.vitaminB12)
+        data.biotin = extractNumber(from: text, pattern: USPatterns.biotin)
+
+        // Other Vitamins
+        data.vitaminA = extractNumber(from: text, pattern: USPatterns.vitaminA)
+        data.vitaminC = extractNumber(from: text, pattern: USPatterns.vitaminC)
+        data.vitaminE = extractNumber(from: text, pattern: USPatterns.vitaminE)
+        data.vitaminK = extractNumber(from: text, pattern: USPatterns.vitaminK)
+
+        // Additional Minerals
+        data.magnesium = extractNumber(from: text, pattern: USPatterns.magnesium)
+        data.zinc = extractNumber(from: text, pattern: USPatterns.zinc)
+        data.phosphorus = extractNumber(from: text, pattern: USPatterns.phosphorus)
     }
 
     /// Parses EU format nutrition label

@@ -137,17 +137,30 @@ final class HealthCoachService {
     func convertToFood(_ healthCoachFood: HealthCoachFood) -> Food {
         var nutrients: [Nutrient] = []
 
-        if let calories = healthCoachFood.calories {
-            nutrients.append(Nutrient(nutrientName: "Energy", value: calories, unitName: "KCAL"))
-        }
-        if let protein = healthCoachFood.protein {
-            nutrients.append(Nutrient(nutrientName: "Protein", value: protein, unitName: "G"))
-        }
-        if let carbs = healthCoachFood.carbs {
-            nutrients.append(Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "G"))
-        }
-        if let fat = healthCoachFood.fat {
-            nutrients.append(Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "G"))
+        // If we have full foodNutrients from the response, use those
+        // This includes all vitamins, minerals, and other nutrients from Nutritionix
+        if let foodNutrients = healthCoachFood.foodNutrients, !foodNutrients.isEmpty {
+            for nutrient in foodNutrients {
+                nutrients.append(Nutrient(
+                    nutrientName: nutrient.nutrientName,
+                    value: nutrient.value,
+                    unitName: nutrient.unitName ?? "G"
+                ))
+            }
+        } else {
+            // Fallback: only macros available
+            if let calories = healthCoachFood.calories {
+                nutrients.append(Nutrient(nutrientName: "Energy", value: calories, unitName: "KCAL"))
+            }
+            if let protein = healthCoachFood.protein {
+                nutrients.append(Nutrient(nutrientName: "Protein", value: protein, unitName: "G"))
+            }
+            if let carbs = healthCoachFood.carbs {
+                nutrients.append(Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "G"))
+            }
+            if let fat = healthCoachFood.fat {
+                nutrients.append(Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "G"))
+            }
         }
 
         return Food(

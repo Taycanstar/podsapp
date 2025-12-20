@@ -2198,6 +2198,57 @@ extension Food {
             nutrients.append(Nutrient(nutrientName: "Potassium, K", value: potassium, unitName: "MG"))
         }
 
+        // B Vitamins
+        if let thiamin = ocrData.thiamin {
+            nutrients.append(Nutrient(nutrientName: "Thiamin", value: thiamin, unitName: "MG"))
+        }
+        if let riboflavin = ocrData.riboflavin {
+            nutrients.append(Nutrient(nutrientName: "Riboflavin", value: riboflavin, unitName: "MG"))
+        }
+        if let niacin = ocrData.niacin {
+            nutrients.append(Nutrient(nutrientName: "Niacin", value: niacin, unitName: "MG"))
+        }
+        if let pantothenicAcid = ocrData.pantothenicAcid {
+            nutrients.append(Nutrient(nutrientName: "Pantothenic acid", value: pantothenicAcid, unitName: "MG"))
+        }
+        if let vitaminB6 = ocrData.vitaminB6 {
+            nutrients.append(Nutrient(nutrientName: "Vitamin B-6", value: vitaminB6, unitName: "MG"))
+        }
+        if let folate = ocrData.folate {
+            nutrients.append(Nutrient(nutrientName: "Folate, total", value: folate, unitName: "UG"))
+        }
+        if let vitaminB12 = ocrData.vitaminB12 {
+            nutrients.append(Nutrient(nutrientName: "Vitamin B-12", value: vitaminB12, unitName: "UG"))
+        }
+        if let biotin = ocrData.biotin {
+            nutrients.append(Nutrient(nutrientName: "Biotin", value: biotin, unitName: "UG"))
+        }
+
+        // Other Vitamins
+        if let vitaminA = ocrData.vitaminA {
+            nutrients.append(Nutrient(nutrientName: "Vitamin A, RAE", value: vitaminA, unitName: "UG"))
+        }
+        if let vitaminC = ocrData.vitaminC {
+            nutrients.append(Nutrient(nutrientName: "Vitamin C, total ascorbic acid", value: vitaminC, unitName: "MG"))
+        }
+        if let vitaminE = ocrData.vitaminE {
+            nutrients.append(Nutrient(nutrientName: "Vitamin E (alpha-tocopherol)", value: vitaminE, unitName: "MG"))
+        }
+        if let vitaminK = ocrData.vitaminK {
+            nutrients.append(Nutrient(nutrientName: "Vitamin K (phylloquinone)", value: vitaminK, unitName: "UG"))
+        }
+
+        // Additional Minerals
+        if let magnesium = ocrData.magnesium {
+            nutrients.append(Nutrient(nutrientName: "Magnesium, Mg", value: magnesium, unitName: "MG"))
+        }
+        if let zinc = ocrData.zinc {
+            nutrients.append(Nutrient(nutrientName: "Zinc, Zn", value: zinc, unitName: "MG"))
+        }
+        if let phosphorus = ocrData.phosphorus {
+            nutrients.append(Nutrient(nutrientName: "Phosphorus, P", value: phosphorus, unitName: "MG"))
+        }
+
         return Food(
             fdcId: -1,  // Negative ID indicates local/scanned food
             description: ocrData.name.isEmpty ? "Scanned Food" : ocrData.name,
