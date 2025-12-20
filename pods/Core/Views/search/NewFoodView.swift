@@ -32,6 +32,9 @@ struct NewFoodView: View {
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
 
+    // Callback for when food is created and should be added to plate
+    var onFoodCreatedAndAdd: ((Food) -> Void)?
+
     // Basic Info
     @State private var name = ""
     @State private var brand = ""
@@ -182,8 +185,15 @@ struct NewFoodView: View {
                     basedOn: basedOn,
                     weight: weight,
                     servingAmount: servingAmount,
-                    servingUnit: servingUnit
+                    servingUnit: servingUnit,
+                    onFoodCreated: { food, action in
+                        if action == .createAndAdd {
+                            onFoodCreatedAndAdd?(food)
+                        }
+                        dismiss()
+                    }
                 )
+                .environmentObject(foodManager)
             }
         }
     }

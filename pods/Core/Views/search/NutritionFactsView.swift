@@ -42,11 +42,19 @@ enum VitaminType {
     }
 }
 
+// MARK: - Create Food Action
+
+enum CreateFoodAction {
+    case createOnly
+    case createAndAdd
+}
+
 // MARK: - NutritionFactsView
 
 struct NutritionFactsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject var foodManager: FoodManager
 
     // Data from NewFoodView
     let name: String
@@ -55,6 +63,12 @@ struct NutritionFactsView: View {
     let weight: String
     let servingAmount: String
     let servingUnit: String
+
+    // Callback for when food is created
+    var onFoodCreated: ((Food, CreateFoodAction) -> Void)?
+
+    // Loading state
+    @State private var isSubmitting = false
 
     // Tab selection
     @State private var selectedTab: NutritionTab = .standard
@@ -144,7 +158,7 @@ struct NutritionFactsView: View {
 
     var body: some View {
         List {
-            // Tab Picker Section
+            // Segmented Picker as first section
             Section {
                 Picker("", selection: $selectedTab) {
                     ForEach(NutritionTab.allCases, id: \.self) { tab in
@@ -152,8 +166,8 @@ struct NutritionFactsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
             }
 
             // Content based on tab
@@ -165,21 +179,19 @@ struct NutritionFactsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             footerBar
         }
         .navigationTitle("Nutrition Facts")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button { dismiss() } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                }
-            }
+        .onTapGesture {
+            hideKeyboard()
         }
+    }
+
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 
     // MARK: - Standard Tab Sections
@@ -198,12 +210,12 @@ struct NutritionFactsView: View {
             nutrientRow(label: "Fiber", unit: "g", text: $fiber)
             nutrientRow(label: "Sugars", unit: "g", text: $sugars)
             nutrientRow(label: "Added Sugars", unit: "g", text: $addedSugars)
-            nutrientRow(label: "Vitamin C", unit: "mg", text: $vitaminC)
-            vitaminRowWithUnitPicker(label: "Vitamin D", text: $vitaminD, unit: $vitaminDUnit)
-            vitaminRowWithUnitPicker(label: "Vitamin A", text: $vitaminA, unit: $vitaminAUnit)
             nutrientRow(label: "Calcium", unit: "mg", text: $calcium)
             nutrientRow(label: "Iron", unit: "mg", text: $iron)
             nutrientRow(label: "Potassium", unit: "mg", text: $potassium)
+            nutrientRow(label: "Vitamin C", unit: "mg", text: $vitaminC)
+            vitaminRowWithUnitPicker(label: "Vitamin D", text: $vitaminD, unit: $vitaminDUnit)
+            vitaminRowWithUnitPicker(label: "Vitamin A", text: $vitaminA, unit: $vitaminAUnit)
         }
     }
 
@@ -315,29 +327,67 @@ struct NutritionFactsView: View {
     // MARK: - Footer Bar
 
     private var footerBar: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             Divider()
                 .padding(.horizontal, -16)
 
-            Button(action: {
-                HapticFeedback.generateLigth()
-                submitFood()
-            }) {
-                Text("Create Food")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .contentShape(Rectangle())
+            HStack(spacing: 12) {
+                // Create button
+                Button(action: {
+                    HapticFeedback.generateLigth()
+                    submitFood(action: .createOnly)
+                }) {
+                    if isSubmitting {
+                        ProgressView()
+                            .tint(Color("text"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    } else {
+                        Text("Create")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .contentShape(Rectangle())
+                    }
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 999, style: .continuous)
+                        .fill(Color("background"))
+                )
+                .foregroundColor(Color("text"))
+                .disabled(calories.isEmpty || isSubmitting)
+                .opacity(calories.isEmpty || isSubmitting ? 0.5 : 1)
+
+                // Create & Add button
+                Button(action: {
+                    HapticFeedback.generateLigth()
+                    submitFood(action: .createAndAdd)
+                }) {
+                    if isSubmitting {
+                        ProgressView()
+                            .tint(Color("text"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    } else {
+                        Text("Create & Add")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .contentShape(Rectangle())
+                    }
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 999, style: .continuous)
+                        .fill(Color("background"))
+                )
+                .foregroundColor(Color("text"))
+                .disabled(calories.isEmpty || isSubmitting)
+                .opacity(calories.isEmpty || isSubmitting ? 0.5 : 1)
             }
-            .buttonStyle(.plain)
-            .background(
-                RoundedRectangle(cornerRadius: 999, style: .continuous)
-                    .fill(Color("background"))
-            )
-            .foregroundColor(Color("text"))
-            .disabled(calories.isEmpty)
-            .opacity(calories.isEmpty ? 0.5 : 1)
         }
         .padding(.horizontal)
         .padding(.bottom, 12)
@@ -408,10 +458,159 @@ struct NutritionFactsView: View {
 
     // MARK: - Submit
 
-    private func submitFood() {
-        // TODO: Create food with all nutrient values
-        // Convert IU to mcg for storage if needed
-        // Submit to backend
+    private func submitFood(action: CreateFoodAction) {
+        isSubmitting = true
+
+        let food = buildFood()
+
+        foodManager.createManualFood(food: food, showPreview: false) { result in
+            isSubmitting = false
+
+            switch result {
+            case .success(let createdFood):
+                onFoodCreated?(createdFood, action)
+                dismiss()
+            case .failure(let error):
+                print("Failed to create food: \(error.localizedDescription)")
+                // Could add error handling/alert here
+            }
+        }
+    }
+
+    // MARK: - Build Food Object
+
+    private func buildFood() -> Food {
+        var nutrients: [Nutrient] = []
+
+        // Helper to add nutrient if value is not empty
+        func addNutrient(_ name: String, _ value: String, _ unit: String) {
+            guard !value.isEmpty, let numericValue = Double(value.replacingOccurrences(of: ",", with: ".")) else { return }
+            nutrients.append(Nutrient(nutrientName: name, value: numericValue, unitName: unit))
+        }
+
+        // Helper to convert vitamin IU to base unit if needed
+        func addVitamin(_ name: String, _ value: String, unit: VitaminUnit, type: VitaminType, baseUnit: String) {
+            guard !value.isEmpty, let numericValue = Double(value.replacingOccurrences(of: ",", with: ".")) else { return }
+            let convertedValue = type.toBaseUnit(numericValue, from: unit)
+            nutrients.append(Nutrient(nutrientName: name, value: convertedValue, unitName: baseUnit))
+        }
+
+        // Standard nutrients
+        addNutrient("Energy", calories, "kcal")
+        addNutrient("Protein", protein, "g")
+        addNutrient("Carbohydrate, by difference", carbs, "g")
+        addNutrient("Total lipid (fat)", fat, "g")
+        addNutrient("Fatty acids, total saturated", saturatedFat, "g")
+        addNutrient("Fatty acids, total trans", transFat, "g")
+        addNutrient("Cholesterol", cholesterol, "mg")
+        addNutrient("Sodium, Na", sodium, "mg")
+        addNutrient("Fiber, total dietary", fiber, "g")
+        addNutrient("Sugars, total including NLEA", sugars, "g")
+        addNutrient("Sugars, added", addedSugars, "g")
+        addNutrient("Calcium, Ca", calcium, "mg")
+        addNutrient("Iron, Fe", iron, "mg")
+        addNutrient("Potassium, K", potassium, "mg")
+        addNutrient("Vitamin C, total ascorbic acid", vitaminC, "mg")
+
+        // Vitamins with IU conversion
+        addVitamin("Vitamin D (D2 + D3)", vitaminD, unit: vitaminDUnit, type: .vitaminD, baseUnit: "mcg")
+        addVitamin("Vitamin A, RAE", vitaminA, unit: vitaminAUnit, type: .vitaminA, baseUnit: "mcg")
+        addVitamin("Vitamin E (alpha-tocopherol)", vitaminE, unit: vitaminEUnit, type: .vitaminE, baseUnit: "mg")
+
+        // Advanced - General
+        addNutrient("Alcohol, ethyl", alcohol, "g")
+        addNutrient("Caffeine", caffeine, "mg")
+        addNutrient("Choline, total", choline, "mg")
+        addNutrient("Water", water, "g")
+
+        // Advanced - Fats
+        addNutrient("Fatty acids, total monounsaturated", monoFat, "g")
+        addNutrient("Fatty acids, total polyunsaturated", polyFat, "g")
+        addNutrient("18:3 n-3 c,c,c (ALA)", omega3ALA, "g")
+        addNutrient("20:5 n-3 (EPA)", omega3EPA, "g")
+        addNutrient("22:6 n-3 (DHA)", omega3DHA, "g")
+        addNutrient("22:5 n-3 (DPA)", omega3DPA, "g")
+
+        // Advanced - Carbs
+        addNutrient("Starch", starch, "g")
+        addNutrient("Sugar Alcohol", sugarAlcohol, "g")
+
+        // Advanced - Vitamins
+        addNutrient("Vitamin K (phylloquinone)", vitaminK, "mcg")
+        addNutrient("Thiamin", thiamin, "mg")
+        addNutrient("Riboflavin", riboflavin, "mg")
+        addNutrient("Niacin", niacin, "mg")
+        addNutrient("Pantothenic acid", pantothenicAcid, "mg")
+        addNutrient("Vitamin B-6", vitaminB6, "mg")
+        addNutrient("Vitamin B-12", vitaminB12, "mcg")
+        addNutrient("Folate, total", folate, "mcg")
+        addNutrient("Biotin", biotin, "mcg")
+
+        // Advanced - Minerals
+        addNutrient("Magnesium, Mg", magnesium, "mg")
+        addNutrient("Phosphorus, P", phosphorus, "mg")
+        addNutrient("Zinc, Zn", zinc, "mg")
+        addNutrient("Copper, Cu", copper, "mg")
+        addNutrient("Manganese, Mn", manganese, "mg")
+        addNutrient("Selenium, Se", selenium, "mcg")
+        addNutrient("Fluoride, F", fluoride, "mcg")
+
+        // Advanced - Amino Acids
+        addNutrient("Histidine", histidine, "g")
+        addNutrient("Isoleucine", isoleucine, "g")
+        addNutrient("Leucine", leucine, "g")
+        addNutrient("Lysine", lysine, "g")
+        addNutrient("Methionine", methionine, "g")
+        addNutrient("Cystine", cysteine, "g")
+        addNutrient("Phenylalanine", phenylalanine, "g")
+        addNutrient("Threonine", threonine, "g")
+        addNutrient("Tryptophan", tryptophan, "g")
+        addNutrient("Tyrosine", tyrosine, "g")
+        addNutrient("Valine", valine, "g")
+        addNutrient("Arginine", arginine, "g")
+        addNutrient("Alanine", alanine, "g")
+        addNutrient("Aspartic acid", asparticAcid, "g")
+        addNutrient("Glutamic acid", glutamicAcid, "g")
+        addNutrient("Glycine", glycine, "g")
+        addNutrient("Proline", proline, "g")
+        addNutrient("Serine", serine, "g")
+
+        // Build serving description
+        let servingQty = Double(servingAmount.replacingOccurrences(of: ",", with: ".")) ?? 1.0
+        let servingText = "\(servingAmount) \(servingUnit)"
+        let weightGrams = Double(weight.replacingOccurrences(of: ",", with: "."))
+
+        // Create a measure for this food
+        let measureId = Int.random(in: 100_000...999_999)
+        let measure = FoodMeasure(
+            disseminationText: servingText,
+            gramWeight: weightGrams ?? 0,
+            id: measureId,
+            modifier: servingText,
+            measureUnitName: servingUnit,
+            rank: 1
+        )
+
+        // Get resolved brand
+        let trimmedBrand = brand.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedBrand = trimmedBrand.isEmpty ? nil : trimmedBrand
+
+        return Food(
+            fdcId: Int.random(in: 10_000_000...99_999_999),
+            description: name,
+            brandOwner: resolvedBrand,
+            brandName: resolvedBrand,
+            servingSize: servingQty,
+            numberOfServings: 1,
+            servingSizeUnit: servingUnit,
+            householdServingFullText: servingText,
+            foodNutrients: nutrients,
+            foodMeasures: [measure],
+            healthAnalysis: nil,
+            aiInsight: nil,
+            nutritionScore: nil,
+            mealItems: nil
+        )
     }
 }
 
@@ -425,5 +624,6 @@ struct NutritionFactsView: View {
             servingAmount: "1",
             servingUnit: "serving"
         )
+        .environmentObject(FoodManager())
     }
 }

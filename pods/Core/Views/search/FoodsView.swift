@@ -19,6 +19,7 @@ struct FoodsView: View {
     @State private var showQuickAddSheet = false
     @State private var showNewFoodSheet = false
     @State private var selectedFood: Food?
+    @State private var createdFoodToAdd: Food?
 
     // Filtered foods based on search
     private var filteredFoods: [Food] {
@@ -108,11 +109,21 @@ struct FoodsView: View {
                 .environmentObject(foodManager)
         }
         .sheet(isPresented: $showNewFoodSheet) {
-            NewFoodView()
-                .environmentObject(foodManager)
-                .environmentObject(viewModel)
+            NewFoodView(onFoodCreatedAndAdd: { food in
+                // Close the sheet first, then show FoodSummaryView
+                showNewFoodSheet = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    createdFoodToAdd = food
+                }
+            })
+            .environmentObject(foodManager)
+            .environmentObject(viewModel)
         }
         .sheet(item: $selectedFood) { food in
+            FoodSummaryView(food: food)
+                .environmentObject(foodManager)
+        }
+        .sheet(item: $createdFoodToAdd) { food in
             FoodSummaryView(food: food)
                 .environmentObject(foodManager)
         }
