@@ -204,6 +204,7 @@ struct NewFoodView: View {
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .background(

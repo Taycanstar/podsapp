@@ -22,11 +22,13 @@ enum VitaminUnit: String, CaseIterable {
 enum VitaminType {
     case vitaminA
     case vitaminD
+    case vitaminE
 
-    /// Converts to mcg based on vitamin type
+    /// Converts to mcg/mg based on vitamin type
     /// Vitamin A: 1 mcg = 3.33 IU
     /// Vitamin D: 1 mcg = 40 IU
-    func toMcg(_ value: Double, from unit: VitaminUnit) -> Double {
+    /// Vitamin E: 1 mg = 1.49 IU
+    func toBaseUnit(_ value: Double, from unit: VitaminUnit) -> Double {
         switch unit {
         case .mcg:
             return value
@@ -34,6 +36,7 @@ enum VitaminType {
             switch self {
             case .vitaminA: return value / 3.33
             case .vitaminD: return value / 40
+            case .vitaminE: return value / 1.49
             }
         }
     }
@@ -59,6 +62,7 @@ struct NutritionFactsView: View {
     // Unit preferences for vitamins with dual units
     @State private var vitaminAUnit: VitaminUnit = .mcg
     @State private var vitaminDUnit: VitaminUnit = .mcg
+    @State private var vitaminEUnit: VitaminUnit = .mcg
 
     // MARK: - Standard Nutrients
     @State private var calories = ""
@@ -139,31 +143,29 @@ struct NutritionFactsView: View {
     @State private var serine = ""
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Segmented Picker
-            Picker("", selection: $selectedTab) {
-                ForEach(NutritionTab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .padding(.top, 8)
-
-            // Content based on tab
-            ScrollView {
-                VStack(spacing: 20) {
-                    switch selectedTab {
-                    case .standard:
-                        standardNutrients
-                    case .advanced:
-                        advancedNutrients
+        List {
+            // Tab Picker Section
+            Section {
+                Picker("", selection: $selectedTab) {
+                    ForEach(NutritionTab.allCases, id: \.self) { tab in
+                        Text(tab.rawValue).tag(tab)
                     }
                 }
-                .padding(.top, 16)
-                .padding(.bottom, 32)
+                .pickerStyle(.segmented)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
             }
 
+            // Content based on tab
+            switch selectedTab {
+            case .standard:
+                standardSections
+            case .advanced:
+                advancedSections
+            }
+        }
+        .listStyle(.insetGrouped)
+        .safeAreaInset(edge: .bottom) {
             footerBar
         }
         .navigationTitle("Nutrition Facts")
@@ -180,200 +182,134 @@ struct NutritionFactsView: View {
         }
     }
 
-    // MARK: - Standard Tab
+    // MARK: - Standard Tab Sections
 
-    private var standardNutrients: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            card {
-                nutrientField(label: "Calories", unit: "kcal", text: $calories, required: true)
-                Divider()
-                nutrientField(label: "Protein", unit: "g", text: $protein)
-                Divider()
-                nutrientField(label: "Carbs", unit: "g", text: $carbs)
-                Divider()
-                nutrientField(label: "Fat", unit: "g", text: $fat)
-                Divider()
-                nutrientField(label: "Saturated Fat", unit: "g", text: $saturatedFat)
-                Divider()
-                nutrientField(label: "Trans Fat", unit: "g", text: $transFat)
-                Divider()
-                nutrientField(label: "Cholesterol", unit: "mg", text: $cholesterol)
-                Divider()
-                nutrientField(label: "Sodium", unit: "mg", text: $sodium)
-                Divider()
-                nutrientField(label: "Fiber", unit: "g", text: $fiber)
-                Divider()
-                nutrientField(label: "Sugars", unit: "g", text: $sugars)
-                Divider()
-                nutrientField(label: "Added Sugars", unit: "g", text: $addedSugars)
-                Divider()
-                vitaminFieldWithUnitPicker(label: "Vitamin D", text: $vitaminD, unit: $vitaminDUnit)
-                Divider()
-                nutrientField(label: "Vitamin C", unit: "mg", text: $vitaminC)
-                Divider()
-                vitaminFieldWithUnitPicker(label: "Vitamin A", text: $vitaminA, unit: $vitaminAUnit)
-                Divider()
-                nutrientField(label: "Calcium", unit: "mg", text: $calcium)
-                Divider()
-                nutrientField(label: "Iron", unit: "mg", text: $iron)
-                Divider()
-                nutrientField(label: "Potassium", unit: "mg", text: $potassium)
-            }
+    @ViewBuilder
+    private var standardSections: some View {
+        Section {
+            nutrientRow(label: "Calories", unit: "kcal", text: $calories, required: true)
+            nutrientRow(label: "Protein", unit: "g", text: $protein)
+            nutrientRow(label: "Carbs", unit: "g", text: $carbs)
+            nutrientRow(label: "Fat", unit: "g", text: $fat)
+            nutrientRow(label: "Saturated Fat", unit: "g", text: $saturatedFat)
+            nutrientRow(label: "Trans Fat", unit: "g", text: $transFat)
+            nutrientRow(label: "Cholesterol", unit: "mg", text: $cholesterol)
+            nutrientRow(label: "Sodium", unit: "mg", text: $sodium)
+            nutrientRow(label: "Fiber", unit: "g", text: $fiber)
+            nutrientRow(label: "Sugars", unit: "g", text: $sugars)
+            nutrientRow(label: "Added Sugars", unit: "g", text: $addedSugars)
+            nutrientRow(label: "Vitamin C", unit: "mg", text: $vitaminC)
+            vitaminRowWithUnitPicker(label: "Vitamin D", text: $vitaminD, unit: $vitaminDUnit)
+            vitaminRowWithUnitPicker(label: "Vitamin A", text: $vitaminA, unit: $vitaminAUnit)
+            nutrientRow(label: "Calcium", unit: "mg", text: $calcium)
+            nutrientRow(label: "Iron", unit: "mg", text: $iron)
+            nutrientRow(label: "Potassium", unit: "mg", text: $potassium)
         }
-        .padding(.horizontal)
     }
 
-    // MARK: - Advanced Tab
+    // MARK: - Advanced Tab Sections
 
-    private var advancedNutrients: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // General Section
-            section(title: "General") {
-                nutrientField(label: "Calories", unit: "kcal", text: $calories, required: true)
-                Divider()
-                nutrientField(label: "Alcohol", unit: "g", text: $alcohol)
-                Divider()
-                nutrientField(label: "Caffeine", unit: "mg", text: $caffeine)
-                Divider()
-                nutrientField(label: "Cholesterol", unit: "mg", text: $cholesterol)
-                Divider()
-                nutrientField(label: "Choline", unit: "mg", text: $choline)
-                Divider()
-                nutrientField(label: "Water", unit: "g", text: $water)
-            }
-
-            // Protein Section
-            section(title: "Protein") {
-                nutrientField(label: "Protein", unit: "g", text: $protein)
-                Divider()
-                nutrientField(label: "Histidine", unit: "g", text: $histidine)
-                Divider()
-                nutrientField(label: "Isoleucine", unit: "g", text: $isoleucine)
-                Divider()
-                nutrientField(label: "Leucine", unit: "g", text: $leucine)
-                Divider()
-                nutrientField(label: "Lysine", unit: "g", text: $lysine)
-                Divider()
-                nutrientField(label: "Methionine", unit: "g", text: $methionine)
-                Divider()
-                nutrientField(label: "Cysteine", unit: "g", text: $cysteine)
-                Divider()
-                nutrientField(label: "Phenylalanine", unit: "g", text: $phenylalanine)
-                Divider()
-                nutrientField(label: "Threonine", unit: "g", text: $threonine)
-                Divider()
-                nutrientField(label: "Tryptophan", unit: "g", text: $tryptophan)
-                Divider()
-                nutrientField(label: "Tyrosine", unit: "g", text: $tyrosine)
-                Divider()
-                nutrientField(label: "Valine", unit: "g", text: $valine)
-                Divider()
-                nutrientField(label: "Arginine", unit: "g", text: $arginine)
-                Divider()
-                nutrientField(label: "Alanine", unit: "g", text: $alanine)
-                Divider()
-                nutrientField(label: "Aspartic Acid", unit: "g", text: $asparticAcid)
-                Divider()
-                nutrientField(label: "Glutamic Acid", unit: "g", text: $glutamicAcid)
-                Divider()
-                nutrientField(label: "Glycine", unit: "g", text: $glycine)
-                Divider()
-                nutrientField(label: "Proline", unit: "g", text: $proline)
-                Divider()
-                nutrientField(label: "Serine", unit: "g", text: $serine)
-            }
-
-            // Fat Section
-            section(title: "Fat") {
-                nutrientField(label: "Total Fat", unit: "g", text: $fat)
-                Divider()
-                nutrientField(label: "Saturated Fat", unit: "g", text: $saturatedFat)
-                Divider()
-                nutrientField(label: "Trans Fat", unit: "g", text: $transFat)
-                Divider()
-                nutrientField(label: "Monounsaturated Fat", unit: "g", text: $monoFat)
-                Divider()
-                nutrientField(label: "Polyunsaturated Fat", unit: "g", text: $polyFat)
-                Divider()
-                nutrientField(label: "Omega-3 ALA", unit: "g", text: $omega3ALA)
-                Divider()
-                nutrientField(label: "Omega-3 EPA", unit: "g", text: $omega3EPA)
-                Divider()
-                nutrientField(label: "Omega-3 DHA", unit: "g", text: $omega3DHA)
-                Divider()
-                nutrientField(label: "Omega-3 DPA", unit: "g", text: $omega3DPA)
-            }
-
-            // Carbohydrates Section
-            section(title: "Carbohydrates") {
-                nutrientField(label: "Total Carbs", unit: "g", text: $carbs)
-                Divider()
-                nutrientField(label: "Fiber", unit: "g", text: $fiber)
-                Divider()
-                nutrientField(label: "Sugars", unit: "g", text: $sugars)
-                Divider()
-                nutrientField(label: "Added Sugars", unit: "g", text: $addedSugars)
-                Divider()
-                nutrientField(label: "Starch", unit: "g", text: $starch)
-                Divider()
-                nutrientField(label: "Sugar Alcohol", unit: "g", text: $sugarAlcohol)
-            }
-
-            // Vitamins Section
-            section(title: "Vitamins") {
-                vitaminFieldWithUnitPicker(label: "Vitamin A", text: $vitaminA, unit: $vitaminAUnit)
-                Divider()
-                nutrientField(label: "Vitamin C", unit: "mg", text: $vitaminC)
-                Divider()
-                vitaminFieldWithUnitPicker(label: "Vitamin D", text: $vitaminD, unit: $vitaminDUnit)
-                Divider()
-                nutrientField(label: "Vitamin E", unit: "mg", text: $vitaminE)
-                Divider()
-                nutrientField(label: "Vitamin K", unit: "mcg", text: $vitaminK)
-                Divider()
-                nutrientField(label: "Thiamin (B1)", unit: "mg", text: $thiamin)
-                Divider()
-                nutrientField(label: "Riboflavin (B2)", unit: "mg", text: $riboflavin)
-                Divider()
-                nutrientField(label: "Niacin (B3)", unit: "mg", text: $niacin)
-                Divider()
-                nutrientField(label: "Pantothenic Acid (B5)", unit: "mg", text: $pantothenicAcid)
-                Divider()
-                nutrientField(label: "Vitamin B6", unit: "mg", text: $vitaminB6)
-                Divider()
-                nutrientField(label: "Vitamin B12", unit: "mcg", text: $vitaminB12)
-                Divider()
-                nutrientField(label: "Folate", unit: "mcg", text: $folate)
-                Divider()
-                nutrientField(label: "Biotin", unit: "mcg", text: $biotin)
-            }
-
-            // Minerals Section
-            section(title: "Minerals") {
-                nutrientField(label: "Calcium", unit: "mg", text: $calcium)
-                Divider()
-                nutrientField(label: "Iron", unit: "mg", text: $iron)
-                Divider()
-                nutrientField(label: "Magnesium", unit: "mg", text: $magnesium)
-                Divider()
-                nutrientField(label: "Phosphorus", unit: "mg", text: $phosphorus)
-                Divider()
-                nutrientField(label: "Potassium", unit: "mg", text: $potassium)
-                Divider()
-                nutrientField(label: "Sodium", unit: "mg", text: $sodium)
-                Divider()
-                nutrientField(label: "Zinc", unit: "mg", text: $zinc)
-                Divider()
-                nutrientField(label: "Copper", unit: "mg", text: $copper)
-                Divider()
-                nutrientField(label: "Manganese", unit: "mg", text: $manganese)
-                Divider()
-                nutrientField(label: "Selenium", unit: "mcg", text: $selenium)
-                Divider()
-                nutrientField(label: "Fluoride", unit: "mcg", text: $fluoride)
-            }
+    @ViewBuilder
+    private var advancedSections: some View {
+        // General Section
+        Section {
+            nutrientRow(label: "Calories", unit: "kcal", text: $calories, required: true)
+            nutrientRow(label: "Alcohol", unit: "g", text: $alcohol)
+            nutrientRow(label: "Caffeine", unit: "mg", text: $caffeine)
+            nutrientRow(label: "Cholesterol", unit: "mg", text: $cholesterol)
+            nutrientRow(label: "Choline", unit: "mg", text: $choline)
+            nutrientRow(label: "Water", unit: "g", text: $water)
+        } header: {
+            Text("General")
         }
-        .padding(.horizontal)
+
+        // Protein Section
+        Section {
+            nutrientRow(label: "Protein", unit: "g", text: $protein)
+            nutrientRow(label: "Histidine", unit: "g", text: $histidine)
+            nutrientRow(label: "Isoleucine", unit: "g", text: $isoleucine)
+            nutrientRow(label: "Leucine", unit: "g", text: $leucine)
+            nutrientRow(label: "Lysine", unit: "g", text: $lysine)
+            nutrientRow(label: "Methionine", unit: "g", text: $methionine)
+            nutrientRow(label: "Cysteine", unit: "g", text: $cysteine)
+            nutrientRow(label: "Phenylalanine", unit: "g", text: $phenylalanine)
+            nutrientRow(label: "Threonine", unit: "g", text: $threonine)
+            nutrientRow(label: "Tryptophan", unit: "g", text: $tryptophan)
+            nutrientRow(label: "Tyrosine", unit: "g", text: $tyrosine)
+            nutrientRow(label: "Valine", unit: "g", text: $valine)
+            nutrientRow(label: "Arginine", unit: "g", text: $arginine)
+            nutrientRow(label: "Alanine", unit: "g", text: $alanine)
+            nutrientRow(label: "Aspartic Acid", unit: "g", text: $asparticAcid)
+            nutrientRow(label: "Glutamic Acid", unit: "g", text: $glutamicAcid)
+            nutrientRow(label: "Glycine", unit: "g", text: $glycine)
+            nutrientRow(label: "Proline", unit: "g", text: $proline)
+            nutrientRow(label: "Serine", unit: "g", text: $serine)
+        } header: {
+            Text("Protein")
+        }
+
+        // Fat Section
+        Section {
+            nutrientRow(label: "Total Fat", unit: "g", text: $fat)
+            nutrientRow(label: "Saturated Fat", unit: "g", text: $saturatedFat)
+            nutrientRow(label: "Trans Fat", unit: "g", text: $transFat)
+            nutrientRow(label: "Monounsaturated Fat", unit: "g", text: $monoFat)
+            nutrientRow(label: "Polyunsaturated Fat", unit: "g", text: $polyFat)
+            nutrientRow(label: "Omega-3 ALA", unit: "g", text: $omega3ALA)
+            nutrientRow(label: "Omega-3 EPA", unit: "g", text: $omega3EPA)
+            nutrientRow(label: "Omega-3 DHA", unit: "g", text: $omega3DHA)
+            nutrientRow(label: "Omega-3 DPA", unit: "g", text: $omega3DPA)
+        } header: {
+            Text("Fat")
+        }
+
+        // Carbohydrates Section
+        Section {
+            nutrientRow(label: "Total Carbs", unit: "g", text: $carbs)
+            nutrientRow(label: "Fiber", unit: "g", text: $fiber)
+            nutrientRow(label: "Sugars", unit: "g", text: $sugars)
+            nutrientRow(label: "Added Sugars", unit: "g", text: $addedSugars)
+            nutrientRow(label: "Starch", unit: "g", text: $starch)
+            nutrientRow(label: "Sugar Alcohol", unit: "g", text: $sugarAlcohol)
+        } header: {
+            Text("Carbohydrates")
+        }
+
+        // Vitamins Section - A, D, E first (they have pickers)
+        Section {
+            vitaminRowWithUnitPicker(label: "Vitamin A", text: $vitaminA, unit: $vitaminAUnit)
+            vitaminRowWithUnitPicker(label: "Vitamin D", text: $vitaminD, unit: $vitaminDUnit)
+            vitaminRowWithUnitPicker(label: "Vitamin E", text: $vitaminE, unit: $vitaminEUnit)
+            nutrientRow(label: "Vitamin C", unit: "mg", text: $vitaminC)
+            nutrientRow(label: "Vitamin K", unit: "mcg", text: $vitaminK)
+            nutrientRow(label: "Thiamin (B1)", unit: "mg", text: $thiamin)
+            nutrientRow(label: "Riboflavin (B2)", unit: "mg", text: $riboflavin)
+            nutrientRow(label: "Niacin (B3)", unit: "mg", text: $niacin)
+            nutrientRow(label: "Pantothenic Acid (B5)", unit: "mg", text: $pantothenicAcid)
+            nutrientRow(label: "Vitamin B6", unit: "mg", text: $vitaminB6)
+            nutrientRow(label: "Vitamin B12", unit: "mcg", text: $vitaminB12)
+            nutrientRow(label: "Folate", unit: "mcg", text: $folate)
+            nutrientRow(label: "Biotin", unit: "mcg", text: $biotin)
+        } header: {
+            Text("Vitamins")
+        }
+
+        // Minerals Section
+        Section {
+            nutrientRow(label: "Calcium", unit: "mg", text: $calcium)
+            nutrientRow(label: "Iron", unit: "mg", text: $iron)
+            nutrientRow(label: "Magnesium", unit: "mg", text: $magnesium)
+            nutrientRow(label: "Phosphorus", unit: "mg", text: $phosphorus)
+            nutrientRow(label: "Potassium", unit: "mg", text: $potassium)
+            nutrientRow(label: "Sodium", unit: "mg", text: $sodium)
+            nutrientRow(label: "Zinc", unit: "mg", text: $zinc)
+            nutrientRow(label: "Copper", unit: "mg", text: $copper)
+            nutrientRow(label: "Manganese", unit: "mg", text: $manganese)
+            nutrientRow(label: "Selenium", unit: "mcg", text: $selenium)
+            nutrientRow(label: "Fluoride", unit: "mcg", text: $fluoride)
+        } header: {
+            Text("Minerals")
+        }
     }
 
     // MARK: - Footer Bar
@@ -411,26 +347,9 @@ struct NutritionFactsView: View {
         )
     }
 
-    // MARK: - Helper Components
+    // MARK: - Row Components
 
-    private func card<T: View>(@ViewBuilder content: () -> T) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            content()
-        }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 24).fill(Color("iosnp")))
-    }
-
-    private func section<T: View>(title: String, @ViewBuilder content: () -> T) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.title3)
-                .fontWeight(.semibold)
-            card { content() }
-        }
-    }
-
-    private func nutrientField(
+    private func nutrientRow(
         label: String,
         unit: String,
         text: Binding<String>,
@@ -445,17 +364,17 @@ struct NutritionFactsView: View {
                 }
             }
             Spacer()
-            TextField("0", text: text)
-                .multilineTextAlignment(.trailing)
-                .keyboardType(.decimalPad)
-                .frame(width: 80)
-            Text(unit)
-                .foregroundColor(.secondary)
-                .frame(width: 40, alignment: .leading)
+            HStack(spacing: 4) {
+                TextField("0", text: text)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                Text(unit)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 
-    private func vitaminFieldWithUnitPicker(
+    private func vitaminRowWithUnitPicker(
         label: String,
         text: Binding<String>,
         unit: Binding<VitaminUnit>
@@ -464,9 +383,8 @@ struct NutritionFactsView: View {
             Text(label)
             Spacer()
             TextField("0", text: text)
-                .multilineTextAlignment(.trailing)
                 .keyboardType(.decimalPad)
-                .frame(width: 80)
+                .multilineTextAlignment(.trailing)
             Menu {
                 ForEach(VitaminUnit.allCases, id: \.self) { unitOption in
                     Button(unitOption.rawValue) {
@@ -477,10 +395,13 @@ struct NutritionFactsView: View {
                 HStack(spacing: 4) {
                     Text(unit.wrappedValue.rawValue)
                     Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 10))
+                        .font(.system(size: 12))
                 }
-                .foregroundColor(.secondary)
-                .frame(width: 40, alignment: .leading)
+                .foregroundColor(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color("iosbtn"))
+                .cornerRadius(8)
             }
         }
     }
