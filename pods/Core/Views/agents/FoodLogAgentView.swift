@@ -153,8 +153,8 @@ struct FoodLogAgentView: View {
                                     Spacer()
                                     Text(message.text)
                                         .padding(10)
-                                        .background(Color.accentColor)
-                                        .foregroundColor(.white)
+                                        .background(Color(.systemGray4))
+                                        .foregroundColor(.primary)
                                         .cornerRadius(16)
                                         .contextMenu {
                                             Button {
@@ -209,8 +209,8 @@ struct FoodLogAgentView: View {
                                     Spacer()
                                     Text(message.text)
                                         .padding(10)
-                                        .background(Color.accentColor)
-                                        .foregroundColor(.white)
+                                        .background(Color(.systemGray4))
+                                        .foregroundColor(.primary)
                                         .cornerRadius(16)
                                         .contextMenu {
                                             Button {

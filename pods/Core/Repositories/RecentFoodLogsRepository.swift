@@ -68,9 +68,7 @@ final class RecentFoodLogsRepository: ObservableObject {
         defer { isRefreshing = false }
 
         do {
-            print("[RecentFoodLogsRepo] Fetching page 1 for email: \(email)")
             let response = try await fetchPage(for: email, page: 1)
-            print("[RecentFoodLogsRepo] Got \(response.logs.count) logs, hasMore: \(response.hasMore)")
             snapshot = RecentFoodLogsSnapshot(
                 logs: response.logs,
                 nextPage: response.hasMore ? 2 : 1,
@@ -79,7 +77,6 @@ final class RecentFoodLogsRepository: ObservableObject {
             persist()
             return true
         } catch {
-            print("[RecentFoodLogsRepo] refresh error: \(error)")
             return false
         }
     }

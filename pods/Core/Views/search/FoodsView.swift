@@ -9,11 +9,13 @@ import SwiftUI
 
 struct FoodsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismissSearch) private var dismissSearch
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
     @StateObject private var userFoodsRepo = UserFoodsRepository.shared
 
     @State private var searchText = ""
+    @State private var isSearchPresented = false
     @State private var showQuickAddSheet = false
     @State private var showNewFoodSheet = false
     @State private var selectedFood: Food?
@@ -28,6 +30,11 @@ struct FoodsView: View {
         }
     }
 
+    private func closeSearchIfNeeded() {
+        dismissSearch()
+        isSearchPresented = false
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -35,6 +42,7 @@ struct FoodsView: View {
                 HStack(spacing: 12) {
                     // Create Food button
                     Button {
+                        closeSearchIfNeeded()
                         showNewFoodSheet = true
                     } label: {
                         Text("Create")
@@ -49,6 +57,7 @@ struct FoodsView: View {
 
                     // Quick Add button
                     Button {
+                        closeSearchIfNeeded()
                         showQuickAddSheet = true
                     } label: {
                         Text("Quick Add")
@@ -78,6 +87,7 @@ struct FoodsView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(filteredFoods) { food in
                             UserFoodRow(food: food, onPlusTapped: {
+                                closeSearchIfNeeded()
                                 selectedFood = food
                             })
                             if food.id != filteredFoods.last?.id {
@@ -92,7 +102,7 @@ struct FoodsView: View {
         .background(Color(UIColor.systemBackground).ignoresSafeArea())
         .navigationTitle("Foods")
         .navigationBarTitleDisplayMode(.large)
-        .searchable(text: $searchText)
+        .searchable(text: $searchText, isPresented: $isSearchPresented)
         .sheet(isPresented: $showQuickAddSheet) {
             QuickAddSheet()
                 .environmentObject(foodManager)

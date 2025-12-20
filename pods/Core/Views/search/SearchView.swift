@@ -6,9 +6,6 @@
 //
 
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 struct SearchView: View {
     @Environment(\.dismiss) private var dismiss
@@ -26,9 +23,13 @@ struct SearchView: View {
         recentFoodsRepo.snapshot.logs
     }
 
+    private var isSearchMode: Bool {
+        isSearchFocused || !searchText.isEmpty
+    }
+
     var body: some View {
         Group {
-            if isSearchFocused {
+            if isSearchMode {
                 // MARK: - Focused State: Plain list, no cards
                 focusedListContent
             } else {
@@ -38,20 +39,9 @@ struct SearchView: View {
         }
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.large)
-        .searchable(text: $searchText)
+        .searchable(text: $searchText, isPresented: $isSearchFocused)
         .onSubmit(of: .search) {
             // Handle search submission
-        }
-        .onChange(of: searchText) { newValue in
-            isSearchFocused = !newValue.isEmpty || isSearchFocused
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-            isSearchFocused = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-            if searchText.isEmpty {
-                isSearchFocused = false
-            }
         }
         .sheet(isPresented: $showQuickAddSheet) {
             QuickAddSheet()
@@ -63,12 +53,8 @@ struct SearchView: View {
         }
         .task {
             if let email = foodManager.userEmail {
-                print("[SearchView] Configuring with email: \(email)")
                 recentFoodsRepo.configure(email: email)
-                let success = await recentFoodsRepo.refresh(force: true)
-                print("[SearchView] Refresh result: \(success), logs count: \(recentFoodsRepo.snapshot.logs.count)")
-            } else {
-                print("[SearchView] No user email available")
+                await recentFoodsRepo.refresh()
             }
         }
     }

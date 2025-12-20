@@ -395,8 +395,8 @@ struct AgentChatView: View {
                 Text(message.text)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
+                    .background(Color(.systemGray5))
+                    .foregroundColor(.primary)
                     .cornerRadius(16)
                     .contextMenu {
                         Button {
@@ -478,8 +478,8 @@ struct AgentChatView: View {
                 Text(message.text)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
+                    .background(Color(.systemGray4))
+                    .foregroundColor(.primary)
                     .cornerRadius(16)
                     .contextMenu {
                         Button {

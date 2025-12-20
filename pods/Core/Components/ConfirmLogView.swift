@@ -3223,7 +3223,7 @@ struct PlateView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .scrollDisabled(true)
-                .frame(minHeight: CGFloat(viewModel.entries.count) * 100)
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -3998,17 +3998,20 @@ private struct PlateEntryRow: View {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(entry.title)
-                        .font(.body)
+                        .font(.system(size: 14))
                         .fontWeight(.regular)
                         .foregroundColor(.primary)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                     if !entry.brand.isEmpty {
                         Text(entry.brand)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
+                .layoutPriority(1)
 
-                Spacer(minLength: 12)
+                Spacer(minLength: 8)
 
                 servingControl
             }
@@ -4020,6 +4023,8 @@ private struct PlateEntryRow: View {
                 Text(macroLine)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer()
             }
         }
@@ -4038,18 +4043,20 @@ private struct PlateEntryRow: View {
     }
 
     private var servingControl: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             TextField("1", text: $servingsInput)
+                .font(.system(size: 14))
                 .keyboardType(.numbersAndPunctuation)
                 .submitLabel(.done)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .frame(height: 36)
+                .frame(height: 32)
+                .frame(minWidth: 40)
+                .fixedSize(horizontal: true, vertical: false)
                 .background(
                     Capsule().fill(chipColor)
                 )
-                .frame(width: 70)
                 .onChange(of: servingsInput) { newValue in
                     if let parsed = ConfirmLogView.parseServingsInput(newValue) {
                         onServingsChange(parsed)
@@ -4070,18 +4077,18 @@ private struct PlateEntryRow: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 4) {
                         Text(shortMeasureLabel(for: entry.selectedMeasure ?? entry.availableMeasures.first))
-                            .font(.body)
+                            .font(.system(size: 14))
                             .foregroundColor(.primary)
                             .fixedSize(horizontal: true, vertical: false)
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .frame(height: 36)
+                    .frame(height: 32)
                     .background(
                         Capsule().fill(chipColor)
                     )
@@ -4089,11 +4096,11 @@ private struct PlateEntryRow: View {
                 .menuStyle(.borderlessButton)
             } else {
                 Text(shortMeasureLabel(for: entry.selectedMeasure ?? entry.availableMeasures.first))
-                    .font(.body)
+                    .font(.system(size: 14))
                     .foregroundColor(.primary)
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .frame(height: 36)
+                    .frame(height: 32)
                     .background(
                         Capsule().fill(chipColor)
                     )

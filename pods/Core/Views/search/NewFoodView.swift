@@ -28,6 +28,7 @@ enum NutritionBasis: String, CaseIterable {
 struct NewFoodView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismissSearch) private var dismissSearch
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
 
@@ -107,10 +108,12 @@ struct NewFoodView: View {
                             }
                         }
 
-                        // Serving Size row
+                        // Serving Size row with chips
                         HStack {
                             Text("Serving Size")
+
                             Spacer()
+
                             HStack(spacing: 6) {
                                 TextField("1", text: $servingAmount)
                                     .keyboardType(.decimalPad)
@@ -122,6 +125,7 @@ struct NewFoodView: View {
                                         Capsule().fill(chipColor)
                                     )
                                     .font(.system(size: 15))
+                                    .fixedSize()
 
                                 TextField("serving", text: $servingUnit)
                                     .multilineTextAlignment(.center)
@@ -131,6 +135,7 @@ struct NewFoodView: View {
                                         Capsule().fill(chipColor)
                                     )
                                     .font(.system(size: 15))
+                                    .fixedSize()
                             }
                         }
                     } header: {
@@ -154,15 +159,18 @@ struct NewFoodView: View {
                     }
                 }
             }
-        }
-        .onChange(of: basedOn) { newValue in
-            // Reset serving values when switching basis
-            if newValue.hasDefaultServingValues {
-                servingAmount = "1"
-                servingUnit = "serving"
-            } else {
-                servingAmount = ""
-                servingUnit = ""
+            .onChange(of: basedOn) { oldValue, newValue in
+                // Reset serving values when switching basis
+                if newValue.hasDefaultServingValues {
+                    servingAmount = "1"
+                    servingUnit = "serving"
+                } else {
+                    servingAmount = ""
+                    servingUnit = ""
+                }
+            }
+            .onAppear {
+                dismissSearch()
             }
         }
     }
