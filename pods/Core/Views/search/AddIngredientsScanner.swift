@@ -36,6 +36,11 @@ struct AddIngredientsScanner: View {
     @State private var scannedMealItems: [MealItem] = []
     @State private var showIngredientPlateSummary = false
 
+    // Toast state
+    @State private var ingredientAddedFromSheet = false
+    @State private var showAddedToast = false
+    @State private var toastMessage = ""
+
     enum ScanMode {
         case food, nutritionLabel, barcode, gallery
     }
@@ -70,37 +75,14 @@ struct AddIngredientsScanner: View {
 
             // UI Overlay
             VStack {
-                // Top controls
+                // Top controls - Flash only (xmark is in parent nav)
                 HStack(alignment: .top) {
-                    // Left cluster: Close button + Flashlight
-                    VStack(spacing: 12) {
-                        Button {
-                            dismiss()
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(12)
-                                .background(Color.black.opacity(0.6))
-                                .clipShape(Circle())
-                        }
-
-                        Button {
-                            toggleFlash()
-                        } label: {
-                            Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(12)
-                                .background(Color.black.opacity(0.6))
-                                .clipShape(Circle())
-                        }
-                    }
-                    .padding(.leading)
+                    flashButton
+                        .padding(.leading)
 
                     Spacer()
                 }
-                .padding(.top, 16)
+                .padding(.top, 8)
 
                 Spacer()
 
@@ -115,8 +97,15 @@ struct AddIngredientsScanner: View {
 
                 // Bottom controls
                 VStack(spacing: 24) {
-                    // Capture button
-                    if selectedMode != .gallery {
+                    // Shutter row with gallery button on right
+                    HStack {
+                        // Empty spacer for balance
+                        Color.clear
+                            .frame(width: 44, height: 44)
+
+                        Spacer()
+
+                        // Capture button (center)
                         Button {
                             takePhoto()
                         } label: {
@@ -129,55 +118,20 @@ struct AddIngredientsScanner: View {
                                         .frame(width: 80, height: 80)
                                 )
                         }
+
+                        Spacer()
+
+                        // Gallery button (right)
+                        galleryButton
                     }
+                    .padding(.horizontal, 24)
 
-                    // Mode selection buttons
-                    GeometryReader { geometry in
-                        let horizontalPadding: CGFloat = 20
-                        let spacing: CGFloat = 12
-                        let buttonCount: CGFloat = 4
-                        let availableWidth = max(0, geometry.size.width - (horizontalPadding * 2) - (spacing * (buttonCount - 1)))
-                        let buttonWidth = min(92, availableWidth / buttonCount)
-
-                        HStack(spacing: spacing) {
-                            ScanOptionButton(
-                                icon: "text.viewfinder",
-                                title: "Food",
-                                isSelected: selectedMode == .food,
-                                preferredWidth: buttonWidth,
-                                action: { selectedMode = .food }
-                            )
-
-                            ScanOptionButton(
-                                icon: "tag",
-                                title: "Label",
-                                isSelected: selectedMode == .nutritionLabel,
-                                preferredWidth: buttonWidth,
-                                action: { selectedMode = .nutritionLabel }
-                            )
-
-                            ScanOptionButton(
-                                icon: "barcode.viewfinder",
-                                title: "Barcode",
-                                isSelected: selectedMode == .barcode,
-                                preferredWidth: buttonWidth,
-                                action: { selectedMode = .barcode }
-                            )
-
-                            ScanOptionButton(
-                                icon: "photo",
-                                title: "Gallery",
-                                isSelected: selectedMode == .gallery,
-                                preferredWidth: buttonWidth,
-                                action: { openGallery() }
-                            )
-                        }
-                        .padding(.horizontal, horizontalPadding)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                    }
-                    .frame(height: 72)
+                    // Mode selection segmented picker
+                    scanModeSegmentedPicker
+                        .padding(.horizontal, 16)
                 }
-                .padding(.bottom, 55)
+                // bottom padding
+                .padding(.bottom, -5)
             }
 
             // Loading overlay
@@ -193,18 +147,33 @@ struct AddIngredientsScanner: View {
             PhotosPickerView(selectedImages: $selectedImages, selectionLimit: 0)
                 .ignoresSafeArea()
         }
-        .sheet(isPresented: $showIngredientSummary) {
+        .sheet(isPresented: $showIngredientSummary, onDismiss: {
+            // Show toast when ingredient was added
+            if ingredientAddedFromSheet, let food = scannedFood {
+                showToast("Added \(food.description) to recipe")
+                ingredientAddedFromSheet = false
+            }
+        }) {
             if let food = scannedFood {
                 IngredientSummaryView(food: food, onAddToRecipe: { updatedFood in
+                    ingredientAddedFromSheet = true
                     onIngredientAdded(updatedFood)
                 })
             }
         }
-        .sheet(isPresented: $showIngredientPlateSummary) {
+        .sheet(isPresented: $showIngredientPlateSummary, onDismiss: {
+            // Show toast when ingredients were added
+            if ingredientAddedFromSheet {
+                let count = scannedFoods.count
+                showToast("Added \(count) ingredient\(count == 1 ? "" : "s") to recipe")
+                ingredientAddedFromSheet = false
+            }
+        }) {
             IngredientPlateSummaryView(
                 foods: scannedFoods,
                 mealItems: scannedMealItems,
                 onAddToRecipe: { foods, mealItems in
+                    ingredientAddedFromSheet = true
                     // Add all foods as ingredients
                     for food in foods {
                         onIngredientAdded(food)
@@ -220,9 +189,90 @@ struct AddIngredientsScanner: View {
         .onAppear {
             checkCameraPermissions()
         }
+        .overlay(alignment: .top) {
+            if showAddedToast {
+                ingredientToastView
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
     }
 
     // MARK: - Helper Views
+
+    @ViewBuilder
+    private var flashButton: some View {
+        if #available(iOS 26.0, *) {
+            Button {
+                toggleFlash()
+            } label: {
+                Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.glass)
+            .clipShape(Circle())
+        } else {
+            Button {
+                toggleFlash()
+            } label: {
+                Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.black.opacity(0.6))
+                    .clipShape(Circle())
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var galleryButton: some View {
+        if #available(iOS 26.0, *) {
+            Button {
+                openGallery()
+            } label: {
+                Image(systemName: "photo")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.glass)
+            .clipShape(Circle())
+        } else {
+            Button {
+                openGallery()
+            } label: {
+                Image(systemName: "photo")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.black.opacity(0.6))
+                    .clipShape(Circle())
+            }
+        }
+    }
+
+    private var scanModeSegmentedPicker: some View {
+        Picker("", selection: $selectedMode) {
+            Text("Food")
+                .font(.system(size: 17, weight: .medium))
+                .tag(ScanMode.food)
+            Text("Label")
+                .font(.system(size: 17, weight: .medium))
+                .tag(ScanMode.nutritionLabel)
+            Text("Barcode")
+                .font(.system(size: 17, weight: .medium))
+                .tag(ScanMode.barcode)
+        }
+        .pickerStyle(.segmented)
+        .controlSize(.large)
+        .onChange(of: selectedMode) { _, _ in
+            HapticFeedback.generateLigth()
+        }
+    }
 
     private var cameraPermissionDeniedView: some View {
         ZStack {
@@ -420,6 +470,40 @@ struct AddIngredientsScanner: View {
         guard let firstImage = images.first else { return }
         selectedImages = []
         analyzeImage(firstImage)
+    }
+
+    // MARK: - Toast
+
+    private func showToast(_ message: String) {
+        toastMessage = message
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showAddedToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showAddedToast = false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var ingredientToastView: some View {
+        if #available(iOS 26.0, *) {
+            Text(toastMessage)
+                .font(.system(size: 13, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .padding(.horizontal, 20)
+                .glassEffect(.regular.interactive())
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else {
+            Text(toastMessage)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 12))
+        }
     }
 }
 

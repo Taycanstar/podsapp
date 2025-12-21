@@ -57,43 +57,19 @@ struct AddIngredientsDescribe: View {
     @State private var showIngredientSummary = false
     @State private var ingredientAddedViaVoice = false
 
+    // Toast state
+    @State private var showAddedToast = false
+    @State private var toastMessage = ""
+
     // Realtime voice session
     @StateObject private var realtimeSession = RealtimeVoiceSession()
 
     private let statusPhrases = ["Thinking...", "Analyzing...", "Processing..."]
 
     var body: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                chatScroll
-                inputBar
-            }
-
-            // Empty state - show when no messages and not in voice mode
-            if messages.isEmpty && realtimeSession.messages.isEmpty && realtimeSession.state == .idle {
-                VStack {
-                    Spacer()
-                    Text("Describe your ingredients")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                    Text("e.g. \"2 eggs and a slice of toast\"")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary.opacity(0.7))
-                        .padding(.top, 4)
-                    Spacer()
-                }
-            }
-
-            // "Start talking" overlay when connected and chat is empty
-            if realtimeSession.state == .connected && messages.isEmpty && realtimeSession.messages.isEmpty {
-                VStack {
-                    Spacer()
-                    Text("Start talking")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-            }
+        VStack(spacing: 0) {
+            chatScroll
+            inputBar
         }
         .onReceive(thinkingTimer) { _ in
             guard isLoading else { return }
@@ -113,10 +89,9 @@ struct AddIngredientsDescribe: View {
             }
         }
         .sheet(isPresented: $showIngredientSummary, onDismiss: {
-            // When sheet dismisses, check if ingredient was added via voice and show confirmation
+            // When sheet dismisses, check if ingredient was added and show toast
             if ingredientAddedViaVoice, let food = scannedFood {
-                // Add confirmation message to realtime chat
-                realtimeSession.addSystemMessage("Added \(food.description) to recipe.")
+                showToast("Added \(food.description) to recipe")
                 ingredientAddedViaVoice = false
             }
         }) {
@@ -127,6 +102,14 @@ struct AddIngredientsDescribe: View {
                     // IngredientSummaryView will dismiss itself
                     // Don't dismiss AddIngredientsDescribe - user may want to describe more ingredients
                 })
+            }
+        }
+        .overlay(alignment: .top) {
+            if showAddedToast {
+                ingredientToastView
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .overlay(alignment: .top) {
@@ -557,6 +540,39 @@ struct AddIngredientsDescribe: View {
         utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
         let synthesizer = AVSpeechSynthesizer()
         synthesizer.speak(utterance)
+    }
+
+    // MARK: - Toast
+
+    private func showToast(_ message: String) {
+        toastMessage = message
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showAddedToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showAddedToast = false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var ingredientToastView: some View {
+        if #available(iOS 26.0, *) {
+            Text(toastMessage)
+                .font(.system(size: 13, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .padding(.horizontal, 20)
+                .glassEffect(.regular.interactive())
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else {
+            Text(toastMessage)
+                .font(.system(size: 13, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        }
     }
 }
 

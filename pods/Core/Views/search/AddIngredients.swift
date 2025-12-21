@@ -87,18 +87,15 @@ struct AddIngredients: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 240)
+                    .controlSize(.large) 
+                    .frame(maxWidth: .infinity)
                 }
             }
             .overlay(alignment: .top) {
                 if showAddedToast {
-                    Text(toastMessage)
-                        .font(.system(size: 13, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    toastView
                         .padding(.horizontal, 20)
-                        .padding(.top, 60)
+                        .padding(.top, 8)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
@@ -168,6 +165,27 @@ struct AddIngredients: View {
         .searchable(text: $searchText, isPresented: $isSearchFocused, prompt: "Search foods")
         .onSubmit(of: .search) {
             // Handle search submission - TODO: implement search API call
+        }
+    }
+
+    // MARK: - Toast View
+
+    @ViewBuilder
+    private var toastView: some View {
+        if #available(iOS 26.0, *) {
+            Text(toastMessage)
+                .font(.system(size: 13, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .padding(.horizontal, 20)
+                .glassEffect(.regular.interactive())
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else {
+            Text(toastMessage)
+                .font(.system(size: 13, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         }
     }
 }
@@ -262,6 +280,9 @@ struct IngredientSearchRow: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
+        .onTapGesture {
+            onPlusTapped?()
+        }
     }
 
     private func macroLabel(prefix: String, value: Int) -> some View {
