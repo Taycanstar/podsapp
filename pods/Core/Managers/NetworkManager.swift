@@ -218,9 +218,11 @@ struct FoodChatFood: Codable {
     let carbs: Double?
     let fat: Double?
     let servingSizeText: String?
+    let foodNutrients: [Nutrient]?
 
     enum CodingKeys: String, CodingKey {
         case id, name, calories, protein, carbs, fat
+        case foodNutrients = "food_nutrients"
         case servingSizeText = "serving_size_text"
     }
 }
@@ -9220,7 +9222,7 @@ class NetworkManager {
                            historyLimit: Int = 5,
                            customLimit: Int = 5,
                            commonLimit: Int = 5,
-                           brandedLimit: Int = 10,
+                           brandedLimit: Int = 7,
                            completion: @escaping (Result<InstantFoodSearchResponse, Error>) -> Void) {
         guard let url = URL(string: "\(baseUrl)/instant-food-search/") else {
             completion(.failure(NetworkError.invalidURL))

@@ -158,16 +158,14 @@ struct SearchView: View {
     private var focusedListContent: some View {
         List {
             if isSearching {
-                // Loading state
+                // Loading state with shimmer placeholders
                 Section {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                            .padding(.vertical, 20)
-                        Spacer()
+                    ForEach(0..<5, id: \.self) { _ in
+                        FoodSearchShimmerRow()
                     }
+                } header: {
+                    searchSectionHeader("Searching...")
                 }
-                .listRowBackground(Color.clear)
             } else if let results = searchResults, !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 // Multi-tier search results
                 if results.isEmpty {
@@ -652,6 +650,11 @@ struct FoodSearchResultRow: View {
         Int(item.carbs.rounded())
     }
 
+    /// True when all macros are zero (common foods from instant search only have calories)
+    private var hasMacros: Bool {
+        proteinValue > 0 || fatValue > 0 || carbsValue > 0
+    }
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
@@ -676,10 +679,13 @@ struct FoodSearchResultRow: View {
                         Text("\(caloriesValue) cal")
                     }
 
-                    // Macros: P F C
-                    macroLabel(prefix: "P", value: proteinValue)
-                    macroLabel(prefix: "F", value: fatValue)
-                    macroLabel(prefix: "C", value: carbsValue)
+                    // Macros: P F C (only show if we have macro data)
+                    // Common foods from instant search only have calories
+                    if hasMacros {
+                        macroLabel(prefix: "P", value: proteinValue)
+                        macroLabel(prefix: "F", value: fatValue)
+                        macroLabel(prefix: "C", value: carbsValue)
+                    }
                 }
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
@@ -716,6 +722,54 @@ struct FoodSearchResultRow: View {
                 .foregroundColor(.secondary)
             Text("\(value)g")
         }
+    }
+}
+
+// MARK: - Shimmer Placeholder Row
+
+struct FoodSearchShimmerRow: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var placeholderColor: Color {
+        colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray5)
+    }
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 6) {
+                // Food name placeholder
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(placeholderColor)
+                    .frame(width: 140, height: 14)
+                    .overlay(ShimmerView())
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                // Macros placeholder
+                HStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(placeholderColor)
+                        .frame(width: 60, height: 12)
+                        .overlay(ShimmerView())
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(placeholderColor)
+                        .frame(width: 80, height: 12)
+                        .overlay(ShimmerView())
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+            }
+
+            Spacer()
+
+            // Plus button placeholder
+            Circle()
+                .fill(placeholderColor)
+                .frame(width: 22, height: 22)
+                .overlay(ShimmerView())
+                .clipShape(Circle())
+        }
+        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
     }
 }
 

@@ -271,6 +271,7 @@ struct NewRecipeView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
         .scrollDisabled(true)
         .frame(height: calculateListHeight())
     }
@@ -424,7 +425,7 @@ struct NewRecipeView: View {
         .padding(.horizontal)
         .padding(.bottom, 12)
         .background(
-            Color(UIColor.systemGroupedBackground)
+            backgroundColor
                 .ignoresSafeArea(edges: .bottom)
         )
     }

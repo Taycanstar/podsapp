@@ -544,19 +544,27 @@ struct AddIngredientsDescribe: View {
     }
 
     private func convertChatFoodToFood(_ chatFood: FoodChatFood) -> Food {
-        var nutrients: [Nutrient] = []
-        if let calories = chatFood.calories {
-            nutrients.append(Nutrient(nutrientName: "Energy", value: calories, unitName: "kcal"))
-        }
-        if let protein = chatFood.protein {
-            nutrients.append(Nutrient(nutrientName: "Protein", value: protein, unitName: "g"))
-        }
-        if let carbs = chatFood.carbs {
-            nutrients.append(Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "g"))
-        }
-        if let fat = chatFood.fat {
-            nutrients.append(Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "g"))
-        }
+        // Prefer full nutrient payload when provided by the orchestrator; fall back to macros
+        let nutrients: [Nutrient] = {
+            if let full = chatFood.foodNutrients, !full.isEmpty {
+                return full
+            }
+
+            var compact: [Nutrient] = []
+            if let calories = chatFood.calories {
+                compact.append(Nutrient(nutrientName: "Energy", value: calories, unitName: "kcal"))
+            }
+            if let protein = chatFood.protein {
+                compact.append(Nutrient(nutrientName: "Protein", value: protein, unitName: "g"))
+            }
+            if let carbs = chatFood.carbs {
+                compact.append(Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "g"))
+            }
+            if let fat = chatFood.fat {
+                compact.append(Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "g"))
+            }
+            return compact
+        }()
 
         let measure = FoodMeasure(
             disseminationText: chatFood.servingSizeText ?? "1 serving",
