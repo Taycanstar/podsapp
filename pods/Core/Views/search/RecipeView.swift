@@ -63,20 +63,6 @@ struct RecipeView: View {
                     }
                     .buttonStyle(.plain)
 
-                    // Import button
-                    Button {
-                        closeSearchIfNeeded()
-                        showImportSheet = true
-                    } label: {
-                        Text("Import")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.primary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color(.systemGray6))
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal)
 

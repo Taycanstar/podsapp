@@ -208,26 +208,53 @@ struct FoodScannerView: View {
                         // Left cluster: Close button + Flashlight (stacked vertically)
                         VStack(spacing: 12) {
                             // Close button
-                            Button(action: {
-                                isPresented = false
-                            }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .padding(12)
-                                    .background(Color.black.opacity(0.6))
-                                    .clipShape(Circle())
+                            if #available(iOS 26.0, *) {
+                                Button(action: {
+                                    isPresented = false
+                                }) {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                }
+                                .frame(width: 44, height: 44)
+                                .glassEffect(.regular.interactive())
+                                .clipShape(Circle())
+                            } else {
+                                Button(action: {
+                                    isPresented = false
+                                }) {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .padding(12)
+                                        .background(Color.black.opacity(0.6))
+                                        .clipShape(Circle())
+                                }
                             }
 
                             // Flash toggle button (moved under X)
-                            Button(action: {
-                                toggleFlash()
-                            }) {
-                                Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .padding(12)
-                                    .background(Color.black.opacity(0.6))
-                                    .clipShape(Circle())
+                            if #available(iOS 26.0, *) {
+                                Button(action: {
+                                    toggleFlash()
+                                }) {
+                                    Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                }
+                                .frame(width: 44, height: 44)
+                                .glassEffect(.regular.interactive())
+                                .clipShape(Circle())
+                            } else {
+                                Button(action: {
+                                    toggleFlash()
+                                }) {
+                                    Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .padding(12)
+                                        .background(Color.black.opacity(0.6))
+                                        .clipShape(Circle())
+                                }
                             }
                         }
                         .padding(.leading)
@@ -245,19 +272,35 @@ struct FoodScannerView: View {
                                     }
                                 }
                             } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: selectedFoodMode.icon)
-                                        .font(.system(size: 14, weight: .medium))
-                                    Text(selectedFoodMode.displayName)
-                                        .font(.system(size: 14, weight: .medium))
-                                    Image(systemName: "chevron.down")
-                                        .font(.system(size: 10, weight: .semibold))
+                                if #available(iOS 26.0, *) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: selectedFoodMode.icon)
+                                            .font(.system(size: 14, weight: .medium))
+                                        Text(selectedFoodMode.displayName)
+                                            .font(.system(size: 14, weight: .medium))
+                                        Image(systemName: "chevron.down")
+                                            .font(.system(size: 10, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
+                                    .glassEffect(.regular.interactive())
+                                    .clipShape(Capsule())
+                                } else {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: selectedFoodMode.icon)
+                                            .font(.system(size: 14, weight: .medium))
+                                        Text(selectedFoodMode.displayName)
+                                            .font(.system(size: 14, weight: .medium))
+                                        Image(systemName: "chevron.down")
+                                            .font(.system(size: 10, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
+                                    .background(Color.black.opacity(0.6))
+                                    .clipShape(Capsule())
                                 }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .background(Color.black.opacity(0.6))
-                                .clipShape(Capsule())
                             }
                             .padding(.trailing)
                         }
@@ -424,6 +467,7 @@ struct FoodScannerView: View {
             } label: {
                 Image(systemName: "photo.fill")
                     .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
             }
             .frame(width: 50, height: 50)
             .glassEffect(.regular.interactive())

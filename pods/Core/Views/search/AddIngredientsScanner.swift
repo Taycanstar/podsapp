@@ -209,6 +209,7 @@ struct AddIngredientsScanner: View {
             } label: {
                 Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
                     .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.primary)
             }
             .frame(width: 36, height: 36)
             .glassEffect(.regular.interactive())
@@ -234,6 +235,7 @@ struct AddIngredientsScanner: View {
             } label: {
                 Image(systemName: "photo.fill")
                     .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
             }
             .frame(width: 50, height: 50)
             .glassEffect(.regular.interactive())
