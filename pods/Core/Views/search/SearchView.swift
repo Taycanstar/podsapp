@@ -222,6 +222,8 @@ struct SearchView: View {
                     Task {
                         await recentFoodsRepo.refresh(force: true)
                     }
+                    // Go back to TimelineView after successful log
+                    dismiss()
                 case .failure:
                     break
                 }

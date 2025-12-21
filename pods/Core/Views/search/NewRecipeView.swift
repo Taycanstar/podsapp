@@ -76,38 +76,14 @@ struct NewRecipeView: View {
                     // Ingredients Section
                     Section {
                         if ingredients.isEmpty {
-                            Button {
-                                showAddIngredients = true
-                            } label: {
-                                HStack {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.accentColor)
-                                    Text("Add Ingredient")
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                }
-                            }
-                            .buttonStyle(.plain)
+                            addIngredientRow
                         } else {
                             ForEach(ingredients, id: \.fdcId) { food in
                                 IngredientRow(food: food)
                             }
                             .onDelete(perform: deleteIngredient)
 
-                            Button {
-                                showAddIngredients = true
-                            } label: {
-                                HStack {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(.accentColor)
-                                    Text("Add Ingredient")
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                }
-                            }
-                            .buttonStyle(.plain)
+                            addIngredientRow
                         }
                     } header: {
                         Text("Ingredients")
@@ -138,6 +114,25 @@ struct NewRecipeView: View {
                 .environmentObject(viewModel)
             }
         }
+    }
+
+    // MARK: - Add Ingredient Row
+
+    private var addIngredientRow: some View {
+        Button {
+            showAddIngredients = true
+        } label: {
+            HStack {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.accentColor)
+                Text("Add Ingredient")
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Footer Bar

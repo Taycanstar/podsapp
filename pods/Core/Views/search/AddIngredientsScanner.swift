@@ -209,7 +209,6 @@ struct AddIngredientsScanner: View {
             } label: {
                 Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.white)
             }
             .frame(width: 36, height: 36)
             .glassEffect(.regular.interactive())
@@ -220,7 +219,6 @@ struct AddIngredientsScanner: View {
             } label: {
                 Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.white)
                     .frame(width: 36, height: 36)
                     .background(Color.black.opacity(0.6))
                     .clipShape(Circle())
@@ -234,9 +232,8 @@ struct AddIngredientsScanner: View {
             Button {
                 openGallery()
             } label: {
-                Image(systemName: "photo")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.white)
+                Image(systemName: "photo.fill")
+                    .font(.system(size: 20, weight: .semibold))
             }
             .frame(width: 50, height: 50)
             .glassEffect(.regular.interactive())
@@ -245,11 +242,10 @@ struct AddIngredientsScanner: View {
             Button {
                 openGallery()
             } label: {
-                Image(systemName: "photo")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.white)
+                Image(systemName: "photo.fill")
+                    .font(.system(size: 20, weight: .semibold))
                     .frame(width: 50, height: 50)
-                    .background(Color.black.opacity(0.6))
+                    .background(Color.black.opacity(0.7))
                     .clipShape(Circle())
             }
         }

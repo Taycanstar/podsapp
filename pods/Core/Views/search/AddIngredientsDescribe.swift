@@ -52,10 +52,16 @@ struct AddIngredientsDescribe: View {
     @State private var pendingOptions: [ClarificationOption]? = nil
     @State private var pendingClarificationQuestion: String? = nil
 
-    // Ingredient summary sheet
+    // Ingredient summary sheet (single food)
     @State private var scannedFood: Food?
     @State private var showIngredientSummary = false
     @State private var ingredientAddedViaVoice = false
+
+    // Multi-ingredient summary sheet
+    @State private var scannedFoods: [Food] = []
+    @State private var scannedMealItems: [MealItem] = []
+    @State private var showIngredientPlateSummary = false
+    @State private var ingredientsAddedViaPlate = false
 
     // Toast state
     @State private var showAddedToast = false
@@ -103,6 +109,33 @@ struct AddIngredientsDescribe: View {
                     // Don't dismiss AddIngredientsDescribe - user may want to describe more ingredients
                 })
             }
+        }
+        .sheet(isPresented: $showIngredientPlateSummary, onDismiss: {
+            // When sheet dismisses, check if ingredients were added and show toast
+            if ingredientsAddedViaPlate {
+                let count = scannedMealItems.isEmpty ? scannedFoods.count : scannedMealItems.count
+                showToast("Added \(count) ingredient\(count == 1 ? "" : "s") to recipe")
+                ingredientsAddedViaPlate = false
+            }
+        }) {
+            IngredientPlateSummaryView(
+                foods: scannedFoods,
+                mealItems: scannedMealItems,
+                onAddToRecipe: { foods, mealItems in
+                    ingredientsAddedViaPlate = true
+                    // Add all foods as ingredients
+                    for food in foods {
+                        onIngredientAdded(food)
+                    }
+                    // If we have meal items but no corresponding foods, convert meal items to foods
+                    if foods.isEmpty && !mealItems.isEmpty {
+                        for item in mealItems {
+                            let food = convertMealItemToFood(item)
+                            onIngredientAdded(food)
+                        }
+                    }
+                }
+            )
         }
         .overlay(alignment: .top) {
             if showAddedToast {
@@ -467,8 +500,16 @@ struct AddIngredientsDescribe: View {
             break
 
         case .foodLogged:
-            // Food identified - show ingredient summary
-            if let food = response.food {
+            // Food identified - check if we have multiple meal items
+            if let chatMealItems = response.mealItems, !chatMealItems.isEmpty {
+                // Multiple foods - convert and show plate summary
+                let convertedMealItems = chatMealItems.map { convertChatMealItemToMealItem($0) }
+                scannedMealItems = convertedMealItems
+                // Create foods from meal items for the view
+                scannedFoods = convertedMealItems.map { convertMealItemToFood($0) }
+                showIngredientPlateSummary = true
+            } else if let food = response.food {
+                // Single food - show ingredient summary
                 let convertedFood = convertChatFoodToFood(food)
                 scannedFood = convertedFood
                 showIngredientSummary = true
@@ -482,6 +523,22 @@ struct AddIngredientsDescribe: View {
             // Error already displayed
             break
         }
+    }
+
+    private func convertChatMealItemToMealItem(_ chatItem: FoodChatMealItem) -> MealItem {
+        MealItem(
+            name: chatItem.name ?? "Unknown",
+            serving: 1.0,
+            servingUnit: "serving",
+            calories: chatItem.calories ?? 0,
+            protein: chatItem.protein ?? 0,
+            carbs: chatItem.carbs ?? 0,
+            fat: chatItem.fat ?? 0,
+            subitems: nil,
+            baselineServing: nil,
+            measures: [],
+            originalServing: nil
+        )
     }
 
     private func convertChatFoodToFood(_ chatFood: FoodChatFood) -> Food {
@@ -519,6 +576,39 @@ struct AddIngredientsDescribe: View {
             householdServingFullText: chatFood.servingSizeText,
             foodNutrients: nutrients,
             foodMeasures: [measure]
+        )
+    }
+
+    private func convertMealItemToFood(_ item: MealItem) -> Food {
+        let unitLabel = item.servingUnit ?? "serving"
+        let defaultMeasure = FoodMeasure(
+            disseminationText: unitLabel,
+            gramWeight: item.serving,
+            id: 0,
+            modifier: unitLabel,
+            measureUnitName: unitLabel,
+            rank: 0
+        )
+        return Food(
+            fdcId: item.id.hashValue,
+            description: item.name,
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: item.serving,
+            numberOfServings: 1,
+            servingSizeUnit: item.servingUnit,
+            householdServingFullText: item.originalServing?.resolvedText ?? "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
+            foodNutrients: [
+                Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+            ],
+            foodMeasures: [defaultMeasure],
+            healthAnalysis: nil,
+            aiInsight: nil,
+            nutritionScore: nil,
+            mealItems: item.subitems
         )
     }
 
@@ -673,10 +763,16 @@ extension AddIngredientsDescribe: RealtimeVoiceSessionDelegate {
     }
 
     func realtimeSession(_ session: RealtimeVoiceSession, didResolveFood food: Food, mealItems: [MealItem]?) {
-        // Show ingredient summary for single food
-        // Don't disconnect - let user continue adding more ingredients after reviewing
-        scannedFood = food
-        showIngredientSummary = true
+        // Check if we have multiple meal items - if so, show the plate summary view
+        if let items = mealItems, !items.isEmpty {
+            scannedFoods = [food]
+            scannedMealItems = items
+            showIngredientPlateSummary = true
+        } else {
+            // Single food - show ingredient summary
+            scannedFood = food
+            showIngredientSummary = true
+        }
     }
 
     // MARK: - Activity Logging (not supported)

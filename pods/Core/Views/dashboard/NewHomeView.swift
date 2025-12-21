@@ -1107,7 +1107,8 @@ private extension NewHomeView {
 
     private var dashboardList: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            // padding 10
+            VStack(spacing: 10) {
                 dashboardHeaderCards
                 dashboardMainContent
                 Spacer(minLength: 110) // Leave room for tab bar
@@ -1408,7 +1409,7 @@ private extension NewHomeView {
                     onLogWeight: { showingWeightLogSheet = true },
                     onLogWater: { showWaterLogSheet = true }
                 )
-                .padding(.top, 20)
+                .padding(.top, 0)
             }
         }
     }
@@ -2969,12 +2970,13 @@ private struct RecoveryRingView: View {
     private func refreshWeightTrendEntries() {
         var resolvedLogs: [WeightLogResponse] = []
 
-        if let profileLogs = onboarding.profileData?.weightLogsRecent, !profileLogs.isEmpty {
-            print("📊 refreshWeightTrendEntries: Using \(profileLogs.count) profile logs")
-            resolvedLogs = profileLogs
-        } else if let cachedLogs = loadCachedWeightLogs() {
+        // Prioritize cached logs (freshly fetched from network) over profile logs (may be stale)
+        if let cachedLogs = loadCachedWeightLogs(), !cachedLogs.isEmpty {
             print("📊 refreshWeightTrendEntries: Using \(cachedLogs.count) cached logs")
             resolvedLogs = cachedLogs
+        } else if let profileLogs = onboarding.profileData?.weightLogsRecent, !profileLogs.isEmpty {
+            print("📊 refreshWeightTrendEntries: Using \(profileLogs.count) profile logs (fallback)")
+            resolvedLogs = profileLogs
         } else {
             print("📊 refreshWeightTrendEntries: No logs found")
         }

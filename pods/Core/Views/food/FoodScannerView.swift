@@ -225,7 +225,6 @@ struct FoodScannerView: View {
                             }) {
                                 Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
                                     .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(.white)
                                     .padding(12)
                                     .background(Color.black.opacity(0.6))
                                     .clipShape(Circle())
@@ -301,66 +300,21 @@ struct FoodScannerView: View {
                     }
                     
                     Spacer()
-                    
+
                     // Bottom controls
-                    VStack(spacing: 30) {
-                        // Mode selection buttons
-                        GeometryReader { geometry in
-                            let horizontalPadding: CGFloat = 20
-                            let spacing: CGFloat = 12
-                            let buttonCount: CGFloat = 4
-                            let availableWidth = max(0, geometry.size.width - (horizontalPadding * 2) - (spacing * (buttonCount - 1)))
-                            let buttonWidth = min(92, availableWidth / buttonCount)
-                            
-                            HStack(spacing: spacing) {
-                                // Food Scan Button
-                                ScanOptionButton(
-                                    icon: "text.viewfinder",
-                                    title: "Food",
-                                    isSelected: selectedMode == .food,
-                                    preferredWidth: buttonWidth,
-                                    action: { selectedMode = .food }
-                                )
-                                
-                                // Nutrition Label Button
-                                ScanOptionButton(
-                                    icon: "tag",
-                                    title: "Label",
-                                    isSelected: selectedMode == .nutritionLabel,
-                                    preferredWidth: buttonWidth,
-                                    action: { selectedMode = .nutritionLabel }
-                                )
-                                
-                                // Barcode Button
-                                ScanOptionButton(
-                                    icon: "barcode.viewfinder",
-                                    title: "Barcode",
-                                    isSelected: selectedMode == .barcode,
-                                    preferredWidth: buttonWidth,
-                                    action: { selectedMode = .barcode }
-                                )
-                                
-                                // Gallery Button
-                                ScanOptionButton(
-                                    icon: "photo",
-                                    title: "Gallery",
-                                    isSelected: selectedMode == .gallery,
-                                    preferredWidth: buttonWidth,
-                                    action: {
-                                        openGallery()
-                                    }
-                                )
-                            }
-                            .padding(.horizontal, horizontalPadding)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                        }
-                        .frame(height: 72)
-                        
-                        // Capture button
-                        if selectedMode != .gallery {
-                            Button(action: {
+                    VStack(spacing: 24) {
+                        // Shutter row with gallery button on right
+                        HStack(spacing: 24) {
+                            // Empty spacer for balance (same size as gallery button)
+                            Color.clear
+                                .frame(width: 50, height: 50)
+
+                            Spacer()
+
+                            // Capture button (center)
+                            Button {
                                 takePhoto()
-                            }) {
+                            } label: {
                                 Circle()
                                     .fill(Color.white)
                                     .frame(width: 70, height: 70)
@@ -370,9 +324,19 @@ struct FoodScannerView: View {
                                             .frame(width: 80, height: 80)
                                     )
                             }
+
+                            Spacer()
+
+                            // Gallery button (right)
+                            galleryButton
                         }
+                        .padding(.horizontal, 32)
+
+                        // Mode selection segmented picker
+                        scanModeSegmentedPicker
+                            .padding(.horizontal, 16)
                     }
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 30)
                 }
             }
             .sheet(isPresented: $showPhotosPicker) {
@@ -449,7 +413,69 @@ struct FoodScannerView: View {
         flashEnabled.toggle()
         NotificationCenter.default.post(name: .toggleFlash, object: flashEnabled)
     }
-    
+
+    // MARK: - Bottom Control Views
+
+    @ViewBuilder
+    private var galleryButton: some View {
+        if #available(iOS 26.0, *) {
+            Button {
+                openGallery()
+            } label: {
+                Image(systemName: "photo.fill")
+                    .font(.system(size: 20, weight: .semibold))
+            }
+            .frame(width: 50, height: 50)
+            .glassEffect(.regular.interactive())
+            .clipShape(Circle())
+        } else {
+            Button {
+                openGallery()
+            } label: {
+                Image(systemName: "photo.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .frame(width: 50, height: 50)
+                    .background(Color.black.opacity(0.7))
+                    .clipShape(Circle())
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var scanModeSegmentedPicker: some View {
+        if #available(iOS 26.0, *) {
+            Picker("", selection: $selectedMode) {
+                Text("Food")
+                    .tag(ScanMode.food)
+                Text("Label")
+                    .tag(ScanMode.nutritionLabel)
+                Text("Barcode")
+                    .tag(ScanMode.barcode)
+            }
+            .pickerStyle(.segmented)
+            .controlSize(.large)
+            .glassEffect(.regular.interactive())
+            .onChange(of: selectedMode) { _, _ in
+                HapticFeedback.generateLigth()
+            }
+        } else {
+            Picker("", selection: $selectedMode) {
+                Text("Food")
+                    .tag(ScanMode.food)
+                Text("Label")
+                    .tag(ScanMode.nutritionLabel)
+                Text("Barcode")
+                    .tag(ScanMode.barcode)
+            }
+            .pickerStyle(.segmented)
+            .controlSize(.large)
+            .background(Color.black.opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .onChange(of: selectedMode) { _, _ in
+                HapticFeedback.generateLigth()
+            }
+        }
+    }
 
 private func analyzeImage(_ image: UIImage) {
     guard !isAnalyzing, let userEmail = currentUserEmail else { return }
