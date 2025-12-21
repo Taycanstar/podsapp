@@ -1349,7 +1349,7 @@ private extension NewHomeView {
 
     var nutritionSummaryCard: some View {
         //padding 8
-        VStack(spacing: 0) {
+        VStack(spacing: 3) {
             VStack(spacing: 4) {
                 TabView(selection: $nutritionCarouselSelection) {
                     // Using AnyView to reduce SwiftUI type complexity and prevent stack overflow
@@ -4392,7 +4392,7 @@ private struct DailySleepMetric {
     var body: some View {
         // 2x2 grid: Row 1 = Weight, Sleep | Row 2 = Steps, Water
         // No section header
-        LazyVGrid(columns: columns, spacing: 10) {
+        LazyVGrid(columns: columns, spacing: 8) {
             // Row 1
             DailyWeightCard(metric: weight, onLogWeight: onLogWeight)
             DailySleepCard(metric: sleep)
