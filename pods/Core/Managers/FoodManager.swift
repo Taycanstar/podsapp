@@ -3223,9 +3223,9 @@ func createManualFood(food: Food, showPreview: Bool = true, completion: @escapin
                 if !self.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
                     self.userFoods.insert(food, at: 0) // Add to beginning of list
                 }
-                
-                // Clear the userFoods cache to force refresh from server next time
-                self.clearUserFoodsCache()
+
+                // Note: Don't clear cache here - optimistic updates handle this via insertOptimistically
+                // The repository will sync with server on next refresh
                 
                 // UNIFIED: Show completion if we started the scanning flow
                 if !wasAlreadyScanning {

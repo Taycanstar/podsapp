@@ -32,6 +32,8 @@ struct NewFoodView: View {
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
 
+    // Callback for when any food is created (for optimistic UI updates)
+    var onFoodCreated: ((Food) -> Void)?
     // Callback for when food is created and should be added to plate
     var onFoodCreatedAndAdd: ((Food) -> Void)?
 
@@ -187,6 +189,8 @@ struct NewFoodView: View {
                     servingAmount: servingAmount,
                     servingUnit: servingUnit,
                     onFoodCreated: { food, action in
+                        // Always notify about created food (for optimistic updates)
+                        onFoodCreated?(food)
                         if action == .createAndAdd {
                             onFoodCreatedAndAdd?(food)
                         }

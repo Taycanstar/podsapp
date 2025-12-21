@@ -12,7 +12,7 @@ struct FoodsView: View {
     @Environment(\.dismissSearch) private var dismissSearch
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
-    @StateObject private var userFoodsRepo = UserFoodsRepository.shared
+    @ObservedObject private var userFoodsRepo = UserFoodsRepository.shared
 
     @State private var searchText = ""
     @State private var isSearchPresented = false
@@ -109,13 +109,19 @@ struct FoodsView: View {
                 .environmentObject(foodManager)
         }
         .sheet(isPresented: $showNewFoodSheet) {
-            NewFoodView(onFoodCreatedAndAdd: { food in
-                // Close the sheet first, then show FoodSummaryView
-                showNewFoodSheet = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    createdFoodToAdd = food
+            NewFoodView(
+                onFoodCreated: { food in
+                    // Optimistically add to local list immediately
+                    userFoodsRepo.insertOptimistically(food)
+                },
+                onFoodCreatedAndAdd: { food in
+                    // Close the sheet first, then show FoodSummaryView
+                    showNewFoodSheet = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        createdFoodToAdd = food
+                    }
                 }
-            })
+            )
             .environmentObject(foodManager)
             .environmentObject(viewModel)
         }

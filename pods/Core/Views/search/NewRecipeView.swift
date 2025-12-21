@@ -111,11 +111,7 @@ struct NewRecipeView: View {
                         }
                     } header: {
                         Text("Ingredients")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.primary)
-                            .textCase(nil)
                     }
-                    .listRowBackground(Color("sheetcard"))
                 }
                 .listStyle(.insetGrouped)
 
@@ -235,7 +231,6 @@ struct IngredientRow: View {
 
             Spacer()
         }
-        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
     }
 
     private func macroLabel(prefix: String, value: Int) -> some View {

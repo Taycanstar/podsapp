@@ -100,7 +100,7 @@ struct AddIngredientsScanner: View {
 
                     Spacer()
                 }
-                .padding(.top, 50)
+                .padding(.top, 16)
 
                 Spacer()
 
@@ -115,6 +115,22 @@ struct AddIngredientsScanner: View {
 
                 // Bottom controls
                 VStack(spacing: 24) {
+                    // Capture button
+                    if selectedMode != .gallery {
+                        Button {
+                            takePhoto()
+                        } label: {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 70, height: 70)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 6)
+                                        .frame(width: 80, height: 80)
+                                )
+                        }
+                    }
+
                     // Mode selection buttons
                     GeometryReader { geometry in
                         let horizontalPadding: CGFloat = 20
@@ -160,24 +176,8 @@ struct AddIngredientsScanner: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .frame(height: 72)
-
-                    // Capture button
-                    if selectedMode != .gallery {
-                        Button {
-                            takePhoto()
-                        } label: {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 70, height: 70)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white.opacity(0.3), lineWidth: 6)
-                                        .frame(width: 80, height: 80)
-                                )
-                        }
-                    }
                 }
-                .padding(.bottom, 60)
+                .padding(.bottom, 55)
             }
 
             // Loading overlay
@@ -219,14 +219,6 @@ struct AddIngredientsScanner: View {
         .background(Color.black)
         .onAppear {
             checkCameraPermissions()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowFoodConfirmation"))) { notification in
-            // Handle barcode lookup result
-            if let userInfo = notification.userInfo,
-               let food = userInfo["food"] as? Food {
-                scannedFood = food
-                showIngredientSummary = true
-            }
         }
     }
 
@@ -406,22 +398,20 @@ struct AddIngredientsScanner: View {
 
         let userEmail = currentUserEmail ?? ""
 
-        // Use the enhanced barcode lookup with callback
-        foodManager.lookupFoodByBarcodeEnhanced(
-            barcode: barcode,
-            userEmail: userEmail,
-            mealType: "Ingredient"
-        ) { success, message in
+        // Use NutritionixService directly to avoid global notification conflicts
+        NutritionixService.shared.lookupFood(by: barcode, userEmail: userEmail) { [self] result in
             DispatchQueue.main.async {
                 self.isAnalyzing = false
                 self.isProcessingBarcode = false
 
-                if !success {
-                    print("Barcode lookup failed: \(message ?? "Unknown error")")
+                switch result {
+                case .success(let food):
+                    self.scannedFood = food
+                    self.showIngredientSummary = true
+                case .failure(let error):
+                    print("Barcode lookup failed: \(error.localizedDescription)")
                     self.lastProcessedBarcode = nil
                 }
-                // On success, the food confirmation is handled via notification
-                // We'll listen for it separately
             }
         }
     }

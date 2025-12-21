@@ -12,6 +12,7 @@ import UIKit
 struct AgentTabBarMinimal: View {
     @Binding var text: String
     var isPromptFocused: FocusState<Bool>.Binding
+    var placeholder: String = "Log or ask anything..."
     var onMicrophoneTapped: () -> Void = {}
     var onWaveformTapped: () -> Void = {}
     var onSubmit: () -> Void = {}
@@ -36,7 +37,7 @@ struct AgentTabBarMinimal: View {
         return VStack(alignment: .leading, spacing: 12) {
             ZStack(alignment: .topLeading) {
                 if text.isEmpty {
-                    Text("Log or ask anything...")
+                    Text(placeholder)
                         .font(.system(size: 15))
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 4)

@@ -17,11 +17,13 @@ import SwiftUI
 
 struct RecipeView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismissSearch) private var dismissSearch
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
     @StateObject private var recipesRepo = RecipesRepository.shared
 
     @State private var searchText = ""
+    @State private var isSearchPresented = false
     @State private var showImportSheet = false
     @State private var showCreateRecipeSheet = false
     @State private var selectedRecipe: Recipe?
@@ -36,6 +38,11 @@ struct RecipeView: View {
         }
     }
 
+    private func closeSearchIfNeeded() {
+        dismissSearch()
+        isSearchPresented = false
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -43,6 +50,7 @@ struct RecipeView: View {
                 HStack(spacing: 12) {
                     // Create Recipe button
                     Button {
+                        closeSearchIfNeeded()
                         showCreateRecipeSheet = true
                     } label: {
                         Text("Create")
@@ -57,6 +65,7 @@ struct RecipeView: View {
 
                     // Import button
                     Button {
+                        closeSearchIfNeeded()
                         showImportSheet = true
                     } label: {
                         Text("Import")
@@ -89,6 +98,7 @@ struct RecipeView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(filteredRecipes) { recipe in
                             RecipeRow(recipe: recipe, onPlusTapped: {
+                                closeSearchIfNeeded()
                                 selectedRecipe = recipe
                             })
                             if recipe.id != filteredRecipes.last?.id {
@@ -103,7 +113,7 @@ struct RecipeView: View {
         .background(Color(UIColor.systemBackground).ignoresSafeArea())
         .navigationTitle("Recipes")
         .navigationBarTitleDisplayMode(.large)
-        .searchable(text: $searchText)
+        .searchable(text: $searchText, isPresented: $isSearchPresented)
         .sheet(isPresented: $showCreateRecipeSheet) {
             NewRecipeView()
                 .environmentObject(foodManager)

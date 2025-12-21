@@ -19,7 +19,6 @@ struct SearchView: View {
     @State private var showQuickAddSheet = false
     @State private var searchText = ""
     @State private var isSearchFocused = false
-    @State private var selectedFood: Food?
     @State private var showPlateView = false
 
     /// Recent food logs from the repository
@@ -49,10 +48,6 @@ struct SearchView: View {
         }
         .sheet(isPresented: $showQuickAddSheet) {
             QuickAddSheet()
-                .environmentObject(foodManager)
-        }
-        .sheet(item: $selectedFood) { food in
-            FoodSummaryView(food: food)
                 .environmentObject(foodManager)
         }
         .sheet(isPresented: $showPlateView) {
@@ -116,7 +111,9 @@ struct SearchView: View {
                         RecentFoodRow(
                             log: log,
                             onLogTapped: {
-                                selectedFood = log.food?.asFood
+                                if let food = log.food?.asFood {
+                                    logFoodDirectly(food)
+                                }
                             },
                             onAddToPlateTapped: {
                                 if let food = log.food?.asFood {
@@ -155,7 +152,9 @@ struct SearchView: View {
                         RecentFoodRow(
                             log: log,
                             onLogTapped: {
-                                selectedFood = log.food?.asFood
+                                if let food = log.food?.asFood {
+                                    logFoodDirectly(food)
+                                }
                             },
                             onAddToPlateTapped: {
                                 if let food = log.food?.asFood {
@@ -192,6 +191,39 @@ struct SearchView: View {
             if case .success = result {
                 Task {
                     await recentFoodsRepo.refresh(force: true)
+                }
+            }
+        }
+    }
+
+    // MARK: - Log Food Directly
+    private func logFoodDirectly(_ food: Food) {
+        let mealPeriod = suggestedMealPeriod(for: Date())
+        let mealLabel = mealPeriod.title
+        let servings = food.numberOfServings ?? 1
+
+        foodManager.logFood(
+            email: viewModel.email,
+            food: food,
+            meal: mealLabel,
+            servings: servings,
+            date: Date(),
+            notes: nil
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let logged):
+                    foodManager.lastLoggedItem = (name: logged.food.displayName, calories: Double(logged.food.calories))
+                    foodManager.showLogSuccess = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        foodManager.showLogSuccess = false
+                    }
+                    dayLogsVM.loadLogs(for: Date(), force: true)
+                    Task {
+                        await recentFoodsRepo.refresh(force: true)
+                    }
+                case .failure:
+                    break
                 }
             }
         }

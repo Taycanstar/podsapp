@@ -1026,22 +1026,49 @@ struct ScanOptionButton: View {
     let isSelected: Bool
     var preferredWidth: CGFloat? = nil
     let action: () -> Void
-    
+
     private let defaultButtonWidth: CGFloat = 90
     private let buttonHeight: CGFloat = 60
-    private let cornerRadius: CGFloat = 12
-    
+    private let cornerRadius: CGFloat = 28
+
     private var buttonWidth: CGFloat {
         preferredWidth ?? defaultButtonWidth
     }
-    
+
     var body: some View {
+        if #available(iOS 26.0, *) {
+            glassButton
+        } else {
+            legacyButton
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private var glassButton: some View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 20))
                     .foregroundColor(isSelected ? Color.black : Color.white)
-                
+
+                Text(title)
+                    .font(.system(size: 12))
+                    .foregroundColor(isSelected ? Color.black : Color.white)
+            }
+            .frame(width: buttonWidth, height: buttonHeight)
+        }
+        .buttonStyle(.glass)
+        .frame(width: buttonWidth, height: buttonHeight)
+        .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
+    }
+
+    private var legacyButton: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(isSelected ? Color.black : Color.white)
+
                 Text(title)
                     .font(.system(size: 12))
                     .foregroundColor(isSelected ? Color.black : Color.white)

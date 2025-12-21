@@ -47,10 +47,18 @@ struct AddIngredientsDescribe: View {
     @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
     @State private var isAtBottom = true
     @State private var showCopyToast = false
+    @State private var shimmerActive = false
+    @State private var isToolCallInFlight = false
+    @State private var pendingOptions: [ClarificationOption]? = nil
+    @State private var pendingClarificationQuestion: String? = nil
 
     // Ingredient summary sheet
     @State private var scannedFood: Food?
     @State private var showIngredientSummary = false
+    @State private var ingredientAddedViaVoice = false
+
+    // Realtime voice session
+    @StateObject private var realtimeSession = RealtimeVoiceSession()
 
     private let statusPhrases = ["Thinking...", "Analyzing...", "Processing..."]
 
@@ -61,8 +69,8 @@ struct AddIngredientsDescribe: View {
                 inputBar
             }
 
-            // Empty state
-            if messages.isEmpty {
+            // Empty state - show when no messages and not in voice mode
+            if messages.isEmpty && realtimeSession.messages.isEmpty && realtimeSession.state == .idle {
                 VStack {
                     Spacer()
                     Text("Describe your ingredients")
@@ -72,6 +80,17 @@ struct AddIngredientsDescribe: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary.opacity(0.7))
                         .padding(.top, 4)
+                    Spacer()
+                }
+            }
+
+            // "Start talking" overlay when connected and chat is empty
+            if realtimeSession.state == .connected && messages.isEmpty && realtimeSession.messages.isEmpty {
+                VStack {
+                    Spacer()
+                    Text("Start talking")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
                     Spacer()
                 }
             }
@@ -85,10 +104,25 @@ struct AddIngredientsDescribe: View {
         }
         .onAppear {
             isInputFocused = true
+            realtimeSession.delegate = self
         }
-        .sheet(isPresented: $showIngredientSummary) {
+        .onDisappear {
+            // Clean up realtime session when view disappears
+            if realtimeSession.state != .idle {
+                realtimeSession.disconnect()
+            }
+        }
+        .sheet(isPresented: $showIngredientSummary, onDismiss: {
+            // When sheet dismisses, check if ingredient was added via voice and show confirmation
+            if ingredientAddedViaVoice, let food = scannedFood {
+                // Add confirmation message to realtime chat
+                realtimeSession.addSystemMessage("Added \(food.description) to recipe.")
+                ingredientAddedViaVoice = false
+            }
+        }) {
             if let food = scannedFood {
                 IngredientSummaryView(food: food, onAddToRecipe: { updatedFood in
+                    ingredientAddedViaVoice = true
                     onIngredientAdded(updatedFood)
                     // IngredientSummaryView will dismiss itself
                     // Don't dismiss AddIngredientsDescribe - user may want to describe more ingredients
@@ -117,6 +151,7 @@ struct AddIngredientsDescribe: View {
             ZStack(alignment: .bottom) {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
+                        // Regular text-based messages
                         ForEach(messages) { message in
                             switch message.sender {
                             case .user:
@@ -172,6 +207,80 @@ struct AddIngredientsDescribe: View {
                             }
                         }
 
+                        // Realtime voice messages
+                        ForEach(realtimeSession.messages) { message in
+                            if message.isUser {
+                                HStack {
+                                    Spacer()
+                                    Text(message.text)
+                                        .padding(10)
+                                        .background(Color(.systemGray4))
+                                        .foregroundColor(.primary)
+                                        .cornerRadius(16)
+                                        .contextMenu {
+                                            Button {
+                                                handleCopy(text: message.text)
+                                            } label: {
+                                                Label("Copy", systemImage: "doc.on.doc")
+                                            }
+                                        }
+                                }
+                                .id(message.id)
+                            } else {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(message.text)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                                    HStack(spacing: 16) {
+                                        Button {
+                                            handleCopy(text: message.text)
+                                        } label: {
+                                            Image(systemName: "doc.on.doc")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.secondary)
+                                        }
+
+                                        Button {
+                                            speak(message.text)
+                                        } label: {
+                                            Image(systemName: "speaker.wave.2")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
+                                .id(message.id)
+                            }
+                        }
+
+                        // Streaming user text (what user is currently saying)
+                        if !realtimeSession.currentUserText.isEmpty {
+                            HStack {
+                                Spacer()
+                                Text(realtimeSession.currentUserText)
+                                    .padding(10)
+                                    .background(Color(.systemGray5))
+                                    .foregroundColor(.primary)
+                                    .cornerRadius(16)
+                            }
+                            .id("streamingUser")
+                        }
+
+                        // Streaming assistant text (voice realtime)
+                        if !realtimeSession.currentAssistantText.isEmpty {
+                            Text(realtimeSession.currentAssistantText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 4)
+                                .foregroundColor(.secondary)
+                                .id("streamingAssistant")
+                        }
+
+                        // Thinking indicator when realtime agent is processing
+                        if realtimeSession.isProcessing {
+                            thinkingIndicator
+                                .id("realtimeThinking")
+                        }
+
                         // Bottom anchor
                         Color.clear
                             .frame(height: 1)
@@ -217,51 +326,94 @@ struct AddIngredientsDescribe: View {
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        HStack(spacing: 12) {
-            TextField("Describe ingredients...", text: $inputText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(Color(.systemGray6))
-                )
-                .focused($isInputFocused)
-                .onSubmit {
-                    guard !isLoading else { return }
-                    sendPrompt()
-                }
-                .submitLabel(.send)
-
-            Button {
+        AgentTabBarMinimal(
+            text: $inputText,
+            isPromptFocused: $isInputFocused,
+            placeholder: "Describe ingredient...",
+            onMicrophoneTapped: { HapticFeedback.generateLigth() },
+            onWaveformTapped: {
                 guard !isLoading else { return }
                 sendPrompt()
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .secondary : .accentColor)
-            }
-            .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color(.systemBackground))
+            },
+            onSubmit: {
+                guard !isLoading else { return }
+                sendPrompt()
+            },
+            realtimeState: realtimeSession.state,
+            onRealtimeStart: {
+                isInputFocused = false
+                startRealtimeSession()
+            },
+            onRealtimeEnd: { endRealtimeSession() },
+            onMuteToggle: { realtimeSession.toggleMute() }
+        )
+        .padding(.bottom, 8)
     }
 
     // MARK: - Thinking Indicator
 
     private var thinkingIndicator: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(Color.secondary)
-                .frame(width: 8, height: 8)
-                .opacity(0.6)
-
-            Text(statusPhrases[statusPhraseIndex])
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+        HStack(spacing: 10) {
+            thinkingPulseCircle
+            ZStack {
+                Text(statusPhrases[statusPhraseIndex])
+                    .font(.footnote)
+                    .foregroundColor(.secondary.opacity(0.35))
+                Text(statusPhrases[statusPhraseIndex])
+                    .font(.footnote)
+                    .foregroundColor(.clear)
+                    .overlay(
+                        GeometryReader { geo in
+                            let width = geo.size.width
+                            LinearGradient(
+                                gradient: Gradient(colors: [.clear, Color.secondary.opacity(0.7), .clear]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                            .frame(width: width, height: geo.size.height)
+                            .offset(x: shimmerActive ? width : -width)
+                            .animation(.linear(duration: 1.1).repeatForever(autoreverses: false), value: shimmerActive)
+                        }
+                        .mask(Text(statusPhrases[statusPhraseIndex]).font(.footnote))
+                    )
+            }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
+        .onAppear { shimmerActive = true }
+    }
+
+    private var thinkingPulseCircle: some View {
+        TimelineView(.animation) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            let normalized = (sin(t * 2 * .pi / 1.5) + 1) / 2
+            Circle()
+                .fill(Color.primary)
+                .frame(width: 10, height: 10)
+                .scaleEffect(0.85 + 0.25 * normalized)
+                .opacity(0.6 + 0.4 * normalized)
+        }
+    }
+
+    // MARK: - Realtime Voice Session
+
+    private func startRealtimeSession() {
+        Task {
+            do {
+                // Configure audio session for voice chat + TTS
+                let audioSession = AVAudioSession.sharedInstance()
+                try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+                try audioSession.setActive(true)
+
+                try await realtimeSession.connect()
+            } catch {
+                print("❌ Realtime connection failed: \(error)")
+                messages.append(IngredientMessage(sender: .system, text: "Voice connection failed. Please try again."))
+            }
+        }
+    }
+
+    private func endRealtimeSession() {
+        realtimeSession.disconnect()
     }
 
     // MARK: - Functions
@@ -405,6 +557,128 @@ struct AddIngredientsDescribe: View {
         utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
         let synthesizer = AVSpeechSynthesizer()
         synthesizer.speak(utterance)
+    }
+}
+
+// MARK: - RealtimeVoiceSessionDelegate
+
+extension AddIngredientsDescribe: RealtimeVoiceSessionDelegate {
+    func realtimeSession(_ session: RealtimeVoiceSession,
+                         didRequestFoodLookup query: String,
+                         isBranded: Bool,
+                         brandName: String?,
+                         nixItemId: String?,
+                         selectionLabel: String?,
+                         completion: @escaping (ToolResult) -> Void) {
+        guard !isToolCallInFlight else {
+            completion(
+                ToolResult(
+                    status: .error,
+                    food: nil,
+                    mealItems: nil,
+                    question: nil,
+                    options: nil,
+                    error: "Another request is in progress. Please wait a moment."
+                )
+            )
+            return
+        }
+        isToolCallInFlight = true
+
+        var effectiveDescription = query
+        if let selectionLabel = selectionLabel,
+           let option = pendingOptions?.first(where: { ($0.label ?? "").lowercased() == selectionLabel.lowercased() }),
+           let name = option.name {
+            effectiveDescription = name
+        }
+
+        foodManager.generateFoodWithAI(
+            foodDescription: effectiveDescription,
+            history: conversationHistory,
+            skipConfirmation: true,
+            isBrandedHint: isBranded,
+            brandNameHint: brandName
+        ) { result in
+            DispatchQueue.main.async {
+                self.isToolCallInFlight = false
+                switch result {
+                case .success(let response):
+                    if response.needsClarification {
+                        self.pendingOptions = response.options
+                        completion(
+                            ToolResult(
+                                status: .needsClarification,
+                                food: nil,
+                                mealItems: nil,
+                                question: response.question,
+                                options: response.options,
+                                error: nil
+                            )
+                        )
+                    } else if let food = response.food {
+                        self.pendingOptions = nil
+                        let mealItems = response.mealItems ?? food.mealItems
+                        completion(
+                            ToolResult(
+                                status: .success,
+                                food: food,
+                                mealItems: mealItems,
+                                question: nil,
+                                options: nil,
+                                error: nil
+                            )
+                        )
+                    } else {
+                        completion(
+                            ToolResult(
+                                status: .error,
+                                food: nil,
+                                mealItems: nil,
+                                question: nil,
+                                options: nil,
+                                error: response.error ?? "Unable to generate nutrition data."
+                            )
+                        )
+                    }
+                case .failure(let error):
+                    completion(
+                        ToolResult(
+                            status: .error,
+                            food: nil,
+                            mealItems: nil,
+                            question: nil,
+                            options: nil,
+                            error: error.localizedDescription
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    func realtimeSession(_ session: RealtimeVoiceSession, didResolveFood food: Food, mealItems: [MealItem]?) {
+        // Show ingredient summary for single food
+        // Don't disconnect - let user continue adding more ingredients after reviewing
+        scannedFood = food
+        showIngredientSummary = true
+    }
+
+    // MARK: - Activity Logging (not supported)
+
+    func realtimeSession(_ session: RealtimeVoiceSession, didRequestActivityLog activityName: String, activityType: String?, durationMinutes: Int, caloriesBurned: Int?, notes: String?, completion: @escaping (VoiceToolResult) -> Void) {
+        completion(VoiceToolResult.failure(error: "Activity logging is not supported when adding ingredients."))
+    }
+
+    // MARK: - Data Queries (not supported)
+
+    func realtimeSession(_ session: RealtimeVoiceSession, didRequestQuery queryType: VoiceQueryType, args: [String: Any], completion: @escaping (VoiceToolResult) -> Void) {
+        completion(VoiceToolResult.failure(error: "Data queries are not supported when adding ingredients."))
+    }
+
+    // MARK: - Goal Updates (not supported)
+
+    func realtimeSession(_ session: RealtimeVoiceSession, didRequestGoalUpdate goals: [String: Int], completion: @escaping (VoiceToolResult) -> Void) {
+        completion(VoiceToolResult.failure(error: "Goal updates are not supported when adding ingredients."))
     }
 }
 

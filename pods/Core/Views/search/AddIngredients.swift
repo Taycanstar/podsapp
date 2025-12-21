@@ -25,27 +25,31 @@ struct AddIngredients: View {
     @State private var selectedTab: IngredientTab = .search
     @State private var searchText = ""
     @State private var isSearchFocused = false
+    @State private var addedFoodId: Int? = nil
+    @State private var showAddedToast = false
+    @State private var toastMessage = ""
 
     /// Recent food logs from the repository
     private var recentFoodLogs: [CombinedLog] {
         recentFoodsRepo.snapshot.logs
     }
 
+    private func showToast(_ message: String) {
+        toastMessage = message
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showAddedToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showAddedToast = false
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Segmented Picker
-                Picker("", selection: $selectedTab) {
-                    ForEach(IngredientTab.allCases, id: \.self) { tab in
-                        Text(tab.rawValue)
-                            .tag(tab)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-
-                // Tab Content
+            // Tab Content
+            Group {
                 switch selectedTab {
                 case .search:
                     searchTabContent
@@ -74,6 +78,28 @@ struct AddIngredients: View {
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.primary)
                     }
+                }
+                ToolbarItem(placement: .principal) {
+                    Picker("", selection: $selectedTab) {
+                        ForEach(IngredientTab.allCases, id: \.self) { tab in
+                            Text(tab.rawValue)
+                                .tag(tab)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 240)
+                }
+            }
+            .overlay(alignment: .top) {
+                if showAddedToast {
+                    Text(toastMessage)
+                        .font(.system(size: 13, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                        .padding(.horizontal, 20)
+                        .padding(.top, 60)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
             .task {
@@ -104,12 +130,26 @@ struct AddIngredients: View {
 
                     // Recent foods list
                     ForEach(recentFoodLogs) { log in
-                        IngredientSearchRow(log: log, onPlusTapped: {
-                            if let food = log.food?.asFood {
-                                onIngredientAdded(food)
-                                dismiss()
+                        IngredientSearchRow(
+                            log: log,
+                            isAdded: addedFoodId == log.food?.fdcId,
+                            onPlusTapped: {
+                                if let food = log.food?.asFood {
+                                    // Show checkmark
+                                    addedFoodId = food.fdcId
+                                    HapticFeedback.generateLigth()
+                                    onIngredientAdded(food)
+                                    showToast("Ingredient added to recipe")
+
+                                    // Revert checkmark after delay
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                        if addedFoodId == food.fdcId {
+                                            addedFoodId = nil
+                                        }
+                                    }
+                                }
                             }
-                        })
+                        )
 
                         if log.id != recentFoodLogs.last?.id {
                             Divider()
@@ -136,6 +176,7 @@ struct AddIngredients: View {
 
 struct IngredientSearchRow: View {
     let log: CombinedLog
+    var isAdded: Bool = false
     var onPlusTapped: (() -> Void)?
 
     private var displayName: String {
@@ -207,15 +248,16 @@ struct IngredientSearchRow: View {
 
             Spacer()
 
-            // Plus button
+            // Plus/Checkmark button
             Button {
                 onPlusTapped?()
             } label: {
-                Image(systemName: "plus.circle.fill")
+                Image(systemName: isAdded ? "checkmark.circle.fill" : "plus.circle.fill")
                     .font(.system(size: 22))
-                    .foregroundColor(.primary)
+                    .foregroundColor(isAdded ? .accentColor : .primary)
             }
             .buttonStyle(.plain)
+            .animation(.easeInOut(duration: 0.2), value: isAdded)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
