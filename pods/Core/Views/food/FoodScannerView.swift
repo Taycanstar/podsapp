@@ -281,7 +281,7 @@ struct FoodScannerView: View {
                                         Image(systemName: "chevron.down")
                                             .font(.system(size: 10, weight: .semibold))
                                     }
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 10)
                                     .glassEffect(.regular.interactive())

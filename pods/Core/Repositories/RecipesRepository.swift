@@ -21,11 +21,15 @@ final class RecipesRepository: ObservableObject {
     private let network = NetworkManager()
     private let store = UserContextStore.shared
 
+    /// Recipes that were optimistically inserted and should be preserved across refreshes
+    private var optimisticRecipes: [Recipe] = []
+
     private init() {}
 
     func configure(email: String) {
         guard currentEmail != email else { return }
         currentEmail = email
+        optimisticRecipes = [] // Clear optimistic recipes when switching users
 
         if let cached: CachedEntry<RecipesSnapshot> = store.load(RecipesSnapshot.self,
                                                                  for: key(for: email)) {
@@ -43,7 +47,17 @@ final class RecipesRepository: ObservableObject {
            let cached: CachedEntry<RecipesSnapshot> = store.load(RecipesSnapshot.self,
                                                                  for: key(for: email)),
            cached.isFresh(ttl: RepositoryTTL.recipes) {
-            snapshot = cached.value
+            // Merge optimistic recipes at the front when using cached data
+            let cachedIds = Set(cached.value.recipes.map { $0.id })
+            let stillPendingOptimistic = optimisticRecipes.filter { !cachedIds.contains($0.id) }
+            let mergedRecipes = stillPendingOptimistic + cached.value.recipes
+            optimisticRecipes = stillPendingOptimistic
+
+            snapshot = RecipesSnapshot(
+                recipes: mergedRecipes,
+                nextPage: cached.value.nextPage,
+                hasMore: cached.value.hasMore
+            )
             return true
         }
 
@@ -53,8 +67,16 @@ final class RecipesRepository: ObservableObject {
 
         do {
             let response = try await fetchPage(for: email, page: 1)
+            // Merge optimistic recipes at the front, removing any that now exist in the response
+            let responseIds = Set(response.recipes.map { $0.id })
+            let stillPendingOptimistic = optimisticRecipes.filter { !responseIds.contains($0.id) }
+            let mergedRecipes = stillPendingOptimistic + response.recipes
+
+            // Clear optimistic recipes that are now confirmed by the server
+            optimisticRecipes = stillPendingOptimistic
+
             snapshot = RecipesSnapshot(
-                recipes: response.recipes,
+                recipes: mergedRecipes,
                 nextPage: response.hasMore ? 2 : 1,
                 hasMore: response.hasMore
             )
@@ -89,9 +111,43 @@ final class RecipesRepository: ObservableObject {
 
     func clear() {
         snapshot = .empty
+        optimisticRecipes = []
         if let email = currentEmail {
             store.clear(for: key(for: email))
         }
+    }
+
+    /// Optimistically insert a newly created recipe at the top of the list
+    func insertOptimistically(_ recipe: Recipe) {
+        // Track in optimistic array to preserve across refreshes
+        if !optimisticRecipes.contains(where: { $0.id == recipe.id }) {
+            optimisticRecipes.insert(recipe, at: 0)
+        }
+
+        var recipes = snapshot.recipes
+        // Avoid duplicates in snapshot
+        if !recipes.contains(where: { $0.id == recipe.id }) {
+            recipes.insert(recipe, at: 0)
+        }
+        snapshot = RecipesSnapshot(
+            recipes: recipes,
+            nextPage: snapshot.nextPage,
+            hasMore: snapshot.hasMore
+        )
+        persist()
+    }
+
+    /// Remove an optimistic recipe (on failure)
+    func removeOptimistic(id: Int) {
+        optimisticRecipes.removeAll { $0.id == id }
+        var recipes = snapshot.recipes
+        recipes.removeAll { $0.id == id }
+        snapshot = RecipesSnapshot(
+            recipes: recipes,
+            nextPage: snapshot.nextPage,
+            hasMore: snapshot.hasMore
+        )
+        persist()
     }
 
     private func merge(existing: [Recipe], with newRecipes: [Recipe]) -> [Recipe] {
