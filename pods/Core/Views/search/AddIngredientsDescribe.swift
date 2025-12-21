@@ -175,7 +175,7 @@ struct AddIngredientsDescribe: View {
                                     Spacer()
                                     Text(message.text)
                                         .padding(10)
-                                        .background(Color(.systemGray4))
+                                        .background(Color(.systemGray5))
                                         .foregroundColor(.primary)
                                         .cornerRadius(16)
                                         .contextMenu {
