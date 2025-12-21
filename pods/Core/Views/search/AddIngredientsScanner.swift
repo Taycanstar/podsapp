@@ -78,10 +78,10 @@ struct AddIngredientsScanner: View {
                 // Top controls - Flash only (xmark is in parent nav)
                 HStack(alignment: .top) {
                     flashButton
-                        .padding(.leading)
 
                     Spacer()
                 }
+                .padding(.leading, 16)
                 .padding(.top, 8)
 
                 Spacer()
@@ -98,10 +98,10 @@ struct AddIngredientsScanner: View {
                 // Bottom controls
                 VStack(spacing: 24) {
                     // Shutter row with gallery button on right
-                    HStack {
-                        // Empty spacer for balance
+                    HStack(spacing: 24) {
+                        // Empty spacer for balance (same size as gallery button)
                         Color.clear
-                            .frame(width: 44, height: 44)
+                            .frame(width: 50, height: 50)
 
                         Spacer()
 
@@ -124,14 +124,14 @@ struct AddIngredientsScanner: View {
                         // Gallery button (right)
                         galleryButton
                     }
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, 32)
 
                     // Mode selection segmented picker
                     scanModeSegmentedPicker
                         .padding(.horizontal, 16)
                 }
                 // bottom padding
-                .padding(.bottom, -5)
+                .padding(.bottom, 0)
             }
 
             // Loading overlay
@@ -210,9 +210,9 @@ struct AddIngredientsScanner: View {
                 Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.white)
-                    .frame(width: 44, height: 44)
             }
-            .buttonStyle(.glass)
+            .frame(width: 36, height: 36)
+            .glassEffect(.regular.interactive())
             .clipShape(Circle())
         } else {
             Button {
@@ -221,7 +221,7 @@ struct AddIngredientsScanner: View {
                 Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.white)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 36, height: 36)
                     .background(Color.black.opacity(0.6))
                     .clipShape(Circle())
             }
@@ -235,42 +235,59 @@ struct AddIngredientsScanner: View {
                 openGallery()
             } label: {
                 Image(systemName: "photo")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundColor(.white)
-                    .frame(width: 44, height: 44)
             }
-            .buttonStyle(.glass)
+            .frame(width: 50, height: 50)
+            .glassEffect(.regular.interactive())
             .clipShape(Circle())
         } else {
             Button {
                 openGallery()
             } label: {
                 Image(systemName: "photo")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundColor(.white)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 50, height: 50)
                     .background(Color.black.opacity(0.6))
                     .clipShape(Circle())
             }
         }
     }
 
+    @ViewBuilder
     private var scanModeSegmentedPicker: some View {
-        Picker("", selection: $selectedMode) {
-            Text("Food")
-                .font(.system(size: 17, weight: .medium))
-                .tag(ScanMode.food)
-            Text("Label")
-                .font(.system(size: 17, weight: .medium))
-                .tag(ScanMode.nutritionLabel)
-            Text("Barcode")
-                .font(.system(size: 17, weight: .medium))
-                .tag(ScanMode.barcode)
-        }
-        .pickerStyle(.segmented)
-        .controlSize(.large)
-        .onChange(of: selectedMode) { _, _ in
-            HapticFeedback.generateLigth()
+        if #available(iOS 26.0, *) {
+            Picker("", selection: $selectedMode) {
+                Text("Food")
+                    .tag(ScanMode.food)
+                Text("Label")
+                    .tag(ScanMode.nutritionLabel)
+                Text("Barcode")
+                    .tag(ScanMode.barcode)
+            }
+            .pickerStyle(.segmented)
+            .controlSize(.large)
+            .glassEffect(.regular.interactive())
+            .onChange(of: selectedMode) { _, _ in
+                HapticFeedback.generateLigth()
+            }
+        } else {
+            Picker("", selection: $selectedMode) {
+                Text("Food")
+                    .tag(ScanMode.food)
+                Text("Label")
+                    .tag(ScanMode.nutritionLabel)
+                Text("Barcode")
+                    .tag(ScanMode.barcode)
+            }
+            .pickerStyle(.segmented)
+            .controlSize(.large)
+            .background(Color.black.opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .onChange(of: selectedMode) { _, _ in
+                HapticFeedback.generateLigth()
+            }
         }
     }
 
