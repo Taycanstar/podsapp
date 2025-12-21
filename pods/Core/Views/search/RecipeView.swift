@@ -92,11 +92,12 @@ struct RecipeView: View {
                             closeSearchIfNeeded()
                             selectedRecipe = recipe
                         })
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 deleteRecipe(recipe)
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                Image(systemName: "trash")
                             }
                         }
                     }
@@ -134,12 +135,17 @@ struct RecipeView: View {
 
     // MARK: - Delete Recipe
     private func deleteRecipe(_ recipe: Recipe) {
+        // Remove optimistically FIRST for smooth UI
+        recipesRepo.removeOptimistic(id: recipe.id)
+
         foodManager.deleteRecipe(recipeId: recipe.id) { result in
-            if case .success = result {
+            if case .failure = result {
+                // On failure, refresh to restore the item
                 Task {
                     await recipesRepo.refresh(force: true)
                 }
             }
+            // On success, no need to refresh - already removed optimistically
         }
     }
 }
@@ -186,8 +192,6 @@ struct RecipeRow: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
         .contentShape(Rectangle())
     }
 }

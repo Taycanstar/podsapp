@@ -97,11 +97,12 @@ struct FoodsView: View {
                             closeSearchIfNeeded()
                             selectedFood = food
                         })
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 deleteFood(food)
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                Image(systemName: "trash")
                             }
                         }
                     }
@@ -150,12 +151,17 @@ struct FoodsView: View {
 
     // MARK: - Delete Food
     private func deleteFood(_ food: Food) {
+        // Remove optimistically FIRST for smooth UI
+        userFoodsRepo.removeOptimistically(fdcId: food.fdcId)
+
         foodManager.deleteUserFood(id: food.fdcId) { result in
-            if case .success = result {
+            if case .failure = result {
+                // On failure, refresh to restore the item
                 Task {
                     await userFoodsRepo.refresh(force: true)
                 }
             }
+            // On success, no need to refresh - already removed optimistically
         }
     }
 }
@@ -208,8 +214,6 @@ struct UserFoodRow: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
         .contentShape(Rectangle())
     }
 }

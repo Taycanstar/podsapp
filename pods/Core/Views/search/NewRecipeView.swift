@@ -276,15 +276,26 @@ struct NewRecipeView: View {
     }
 
     private func calculateListHeight() -> CGFloat {
-        // Base height for the two sections
+        // Basic info section: Name row (44) + Servings row (44) + section padding (22)
         let basicInfoHeight: CGFloat = 110
-        let sectionHeaderHeight: CGFloat = 40
-        // IngredientRow has 2 lines (name + macros) so needs more height than standard 44pt
-        let ingredientRowHeight: CGFloat = 60
+
+        // Ingredients section header
+        let sectionHeaderHeight: CGFloat = 32
+
+        // Each ingredient row (2-line content needs ~52pt)
+        let ingredientRowHeight: CGFloat = 52
+
+        // Add ingredient button row
         let addButtonHeight: CGFloat = 44
 
+        // Spacing between sections in .insetGrouped style
+        let sectionSpacing: CGFloat = 35
+
+        // Bottom padding for the list
+        let bottomPadding: CGFloat = 20
+
         let ingredientRowsHeight = CGFloat(ingredients.count) * ingredientRowHeight
-        let totalHeight = basicInfoHeight + sectionHeaderHeight + ingredientRowsHeight + addButtonHeight + 40
+        let totalHeight = basicInfoHeight + sectionSpacing + sectionHeaderHeight + ingredientRowsHeight + addButtonHeight + bottomPadding
 
         return totalHeight
     }

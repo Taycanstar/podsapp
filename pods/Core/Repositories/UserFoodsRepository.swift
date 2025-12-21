@@ -162,6 +162,22 @@ final class UserFoodsRepository: ObservableObject {
         persist()
     }
 
+    /// Optimistically remove a food from the list (for deletion)
+    func removeOptimistically(fdcId: Int) {
+        // Remove from optimistic array if present
+        optimisticFoods.removeAll { $0.fdcId == fdcId }
+
+        // Remove from snapshot
+        var foods = snapshot.foods
+        foods.removeAll { $0.fdcId == fdcId }
+        snapshot = UserFoodsSnapshot(
+            foods: foods,
+            nextPage: snapshot.nextPage,
+            hasMore: snapshot.hasMore
+        )
+        persist()
+    }
+
     private func merge(existing: [Food], with newFoods: [Food]) -> [Food] {
         var seen = Set(existing.map { $0.fdcId })
         var combined = existing
