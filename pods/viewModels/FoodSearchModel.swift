@@ -2268,3 +2268,117 @@ extension Food {
         )
     }
 }
+
+// MARK: - Instant Food Search (MacroFactor-style multi-tier search)
+
+/// Response from the instant-food-search endpoint containing multi-tier results
+struct InstantFoodSearchResponse: Codable {
+    let history: [FoodSearchResult]
+    let custom: [FoodSearchResult]
+    let common: [FoodSearchResult]
+    let branded: [FoodSearchResult]
+
+    /// Check if all result tiers are empty
+    var isEmpty: Bool {
+        history.isEmpty && custom.isEmpty && common.isEmpty && branded.isEmpty
+    }
+
+    /// Total count of all results across all tiers
+    var totalCount: Int {
+        history.count + custom.count + common.count + branded.count
+    }
+}
+
+/// Individual food search result from any tier
+struct FoodSearchResult: Codable, Identifiable, Hashable {
+    let fdcId: Int?
+    let nixItemId: String?
+    let name: String
+    let brandName: String?
+    let calories: Double
+    let protein: Double
+    let carbs: Double
+    let fat: Double
+    let servingText: String?
+
+    // Optional fields for history tier
+    let frequency: Int?
+    let lastLogged: String?
+
+    var id: String {
+        if let nixItemId = nixItemId, !nixItemId.isEmpty {
+            return nixItemId
+        }
+        return "\(fdcId ?? 0)"
+    }
+
+    /// Display name for the food (capitalized)
+    var displayName: String {
+        name.capitalized
+    }
+
+    /// Convert to a Food object for logging
+    func toFood() -> Food {
+        let syntheticId = fdcId ?? Int.random(in: 9_000_000_000...9_999_999_999)
+
+        let nutrients: [Nutrient] = [
+            Nutrient(nutrientName: "Energy", value: calories, unitName: "kcal"),
+            Nutrient(nutrientName: "Protein", value: protein, unitName: "g"),
+            Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "g"),
+            Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "g")
+        ]
+
+        let measure = FoodMeasure(
+            disseminationText: servingText ?? "1 serving",
+            gramWeight: 0,
+            id: syntheticId,
+            modifier: nil,
+            measureUnitName: servingText ?? "serving",
+            rank: 1
+        )
+
+        return Food(
+            fdcId: syntheticId,
+            description: name,
+            brandOwner: brandName,
+            brandName: brandName,
+            servingSize: 1,
+            numberOfServings: 1,
+            servingSizeUnit: nil,
+            householdServingFullText: servingText,
+            foodNutrients: nutrients,
+            foodMeasures: [measure],
+            healthAnalysis: nil,
+            aiInsight: nil,
+            nutritionScore: nil,
+            mealItems: nil,
+            barcode: nil
+        )
+    }
+
+    // Hashable conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: FoodSearchResult, rhs: FoodSearchResult) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+// MARK: - FoodService Extension for Instant Search
+
+extension FoodService {
+    /// Perform an instant food search with multi-tier results
+    /// - Parameters:
+    ///   - query: The search query
+    ///   - userEmail: The user's email for personalized results
+    /// - Returns: InstantFoodSearchResponse with history, custom, common, and branded tiers
+    func instantSearch(query: String, userEmail: String) async throws -> InstantFoodSearchResponse {
+        try await withCheckedThrowingContinuation { continuation in
+            networkManager.instantFoodSearch(query: query, userEmail: userEmail) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+}

@@ -73,7 +73,9 @@ struct FoodsView: View {
                 }
                 .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
                 .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
+            .listSectionSeparator(.hidden)
 
             // User Foods List Section
             if filteredFoods.isEmpty {

@@ -294,8 +294,11 @@ struct NewRecipeView: View {
         // Bottom padding for the list
         let bottomPadding: CGFloat = 20
 
+        // Extra inset applied by .insetGrouped sections (footer + rounded corners)
+        let groupedInsets: CGFloat = 24
+
         let ingredientRowsHeight = CGFloat(ingredients.count) * ingredientRowHeight
-        let totalHeight = basicInfoHeight + sectionSpacing + sectionHeaderHeight + ingredientRowsHeight + addButtonHeight + bottomPadding
+        let totalHeight = basicInfoHeight + sectionSpacing + sectionHeaderHeight + ingredientRowsHeight + addButtonHeight + bottomPadding + groupedInsets
 
         return totalHeight
     }

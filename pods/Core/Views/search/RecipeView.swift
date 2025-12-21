@@ -65,7 +65,9 @@ struct RecipeView: View {
                 }
                 .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
                 .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
+            .listSectionSeparator(.hidden)
 
             // Recipes List Section
             if filteredRecipes.isEmpty {

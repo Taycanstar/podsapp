@@ -256,8 +256,8 @@ extension Date {
 class NetworkManager {
     
     //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-      let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.4:8000"
+    //   let baseUrl = "http://192.168.1.92:8000"
+    let baseUrl = "http://172.20.10.4:8000"
     
     private let iso8601FractionalFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -9212,7 +9212,91 @@ class NetworkManager {
             }
         }.resume()
     }
-    
+
+    // MARK: - Instant Food Search (MacroFactor-style multi-tier search)
+
+    func instantFoodSearch(query: String,
+                           userEmail: String,
+                           historyLimit: Int = 5,
+                           customLimit: Int = 5,
+                           commonLimit: Int = 5,
+                           brandedLimit: Int = 10,
+                           completion: @escaping (Result<InstantFoodSearchResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/instant-food-search/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let payload: [String: Any] = [
+            "query": query,
+            "user_email": userEmail,
+            "history_limit": historyLimit,
+            "custom_limit": customLimit,
+            "common_limit": commonLimit,
+            "branded_limit": brandedLimit
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+
+            if httpResponse.statusCode != 200 {
+                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
+                }
+                return
+            }
+
+            do {
+                let decoder = self.makeJSONDecoder()
+                let result = try decoder.decode(InstantFoodSearchResponse.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(result))
+                }
+            } catch {
+                #if DEBUG
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("🔍 [InstantFoodSearch] Decode error: \(error)")
+                    print("🔍 [InstantFoodSearch] Raw response: \(jsonString)")
+                }
+                #endif
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+
     func scheduleMealLog(logId: Int,
                          logType: String,
                          scheduleType: String,
@@ -9224,16 +9308,16 @@ class NetworkManager {
             completion(.failure(NetworkError.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         let dateFormatter = DateFormatter()
         dateFormatter.calendar = Calendar(identifier: .gregorian)
         dateFormatter.timeZone = TimeZone.current
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        
+
         var payload: [String: Any] = [
             "user_email": userEmail,
             "log_id": logId,
