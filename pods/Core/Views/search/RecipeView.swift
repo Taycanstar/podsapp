@@ -23,9 +23,8 @@ struct RecipeView: View {
 
     @State private var searchText = ""
     @State private var showImportSheet = false
-    @State private var navigationPath = NavigationPath()
+    @State private var showCreateRecipeSheet = false
     @State private var selectedRecipe: Recipe?
-    @State private var selectedFoods: [Food] = []
 
     // Filtered recipes based on search
     private var filteredRecipes: [Recipe] {
@@ -43,10 +42,8 @@ struct RecipeView: View {
                 // Action Buttons
                 HStack(spacing: 12) {
                     // Create Recipe button
-                    NavigationLink {
-                        CreateRecipeView(path: $navigationPath, selectedFoods: $selectedFoods)
-                            .environmentObject(foodManager)
-                            .environmentObject(viewModel)
+                    Button {
+                        showCreateRecipeSheet = true
                     } label: {
                         Text("Create")
                             .font(.system(size: 17, weight: .semibold))
@@ -107,6 +104,11 @@ struct RecipeView: View {
         .navigationTitle("Recipes")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText)
+        .sheet(isPresented: $showCreateRecipeSheet) {
+            NewRecipeView()
+                .environmentObject(foodManager)
+                .environmentObject(viewModel)
+        }
         .sheet(isPresented: $showImportSheet) {
             ImportRecipeSheet()
                 .environmentObject(foodManager)

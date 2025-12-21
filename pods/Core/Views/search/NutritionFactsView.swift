@@ -159,17 +159,20 @@ struct NutritionFactsView: View {
     var body: some View {
         List {
             // Segmented Picker - scrolls with content
-            // Picker as plain row (not in a Section) to avoid inset margins
-            Picker("", selection: $selectedTab) {
-                ForEach(NutritionTab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
+            // Picker row: single 16pt inset (matches cards) and slight vertical pad to avoid clipping
+            HStack {
+                Picker("", selection: $selectedTab) {
+                    ForEach(NutritionTab.allCases, id: \.self) { tab in
+                        Text(tab.rawValue).tag(tab)
+                    }
                 }
+                .pickerStyle(.segmented)
+                .controlSize(.large)    // increase the control's intrinsic vertical padding
+                .padding(.vertical, 2)  // tiny bleed to keep corners from clipping
+                .frame(maxWidth: .infinity)
             }
-            .pickerStyle(.segmented)
-            // Keep the default horizontal insets so the row matches the rest of the list,
-            // but add a slight vertical pad so the segmented control corners aren’t clipped.
-            .padding(.vertical, 2)
-            .padding(.horizontal, 16)
+            // Give the content a single 16pt inset; zero the row inset to avoid a second inset
+            // .padding(.horizontal, 16)
             .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 22, trailing: 0))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)

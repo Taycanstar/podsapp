@@ -12,11 +12,15 @@ struct SearchView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
     @ObservedObject private var recentFoodsRepo = RecentFoodLogsRepository.shared
+    @StateObject private var plateViewModel = PlateViewModel()
     @State private var showQuickAddSheet = false
     @State private var searchText = ""
     @State private var isSearchFocused = false
     @State private var selectedFood: Food?
+    @State private var showPlateView = false
 
     /// Recent food logs from the repository
     private var recentFoodLogs: [CombinedLog] {
@@ -50,6 +54,23 @@ struct SearchView: View {
         .sheet(item: $selectedFood) { food in
             FoodSummaryView(food: food)
                 .environmentObject(foodManager)
+        }
+        .sheet(isPresented: $showPlateView) {
+            NavigationStack {
+                PlateView(
+                    viewModel: plateViewModel,
+                    selectedMealPeriod: suggestedMealPeriod(for: Date()),
+                    mealTime: Date(),
+                    onFinished: {
+                        showPlateView = false
+                        plateViewModel.clear()
+                    }
+                )
+                .environmentObject(foodManager)
+                .environmentObject(dayLogsVM)
+                .environmentObject(viewModel)
+                .environmentObject(proFeatureGate)
+            }
         }
         .task {
             if let email = foodManager.userEmail {
@@ -92,9 +113,17 @@ struct SearchView: View {
             if !recentFoodLogs.isEmpty {
                 Section {
                     ForEach(recentFoodLogs) { log in
-                        RecentFoodRow(log: log, onPlusTapped: {
-                            selectedFood = log.food?.asFood
-                        })
+                        RecentFoodRow(
+                            log: log,
+                            onLogTapped: {
+                                selectedFood = log.food?.asFood
+                            },
+                            onAddToPlateTapped: {
+                                if let food = log.food?.asFood {
+                                    addFoodToPlate(food)
+                                }
+                            }
+                        )
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 deleteLog(log)
@@ -123,9 +152,17 @@ struct SearchView: View {
             if !recentFoodLogs.isEmpty {
                 Section {
                     ForEach(recentFoodLogs) { log in
-                        RecentFoodRow(log: log, onPlusTapped: {
-                            selectedFood = log.food?.asFood
-                        })
+                        RecentFoodRow(
+                            log: log,
+                            onLogTapped: {
+                                selectedFood = log.food?.asFood
+                            },
+                            onAddToPlateTapped: {
+                                if let food = log.food?.asFood {
+                                    addFoodToPlate(food)
+                                }
+                            }
+                        )
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 deleteLog(log)
@@ -157,6 +194,54 @@ struct SearchView: View {
                     await recentFoodsRepo.refresh(force: true)
                 }
             }
+        }
+    }
+
+    // MARK: - Add Food to Plate
+    private func addFoodToPlate(_ food: Food) {
+        let entry = buildPlateEntry(from: food)
+        plateViewModel.add(entry)
+        showPlateView = true
+    }
+
+    private func buildPlateEntry(from food: Food) -> PlateEntry {
+        let baseMacros = MacroTotals(
+            calories: food.calories ?? 0,
+            protein: food.protein ?? 0,
+            carbs: food.carbs ?? 0,
+            fat: food.fat ?? 0
+        )
+
+        var baseNutrients: [String: RawNutrientValue] = [:]
+        for nutrient in food.foodNutrients {
+            let key = nutrient.nutrientName.lowercased()
+            baseNutrients[key] = RawNutrientValue(value: nutrient.value ?? 0, unit: nutrient.unitName)
+        }
+
+        let baselineGramWeight = food.foodMeasures.first?.gramWeight ?? food.servingSize ?? 100
+
+        return PlateEntry(
+            food: food,
+            servings: food.numberOfServings ?? 1,
+            selectedMeasureId: food.foodMeasures.first?.id,
+            availableMeasures: food.foodMeasures,
+            baselineGramWeight: baselineGramWeight,
+            baseNutrientValues: baseNutrients,
+            baseMacroTotals: baseMacros,
+            servingDescription: food.servingSizeText ?? "1 serving",
+            mealItems: food.mealItems ?? [],
+            mealPeriod: suggestedMealPeriod(for: Date()),
+            mealTime: Date()
+        )
+    }
+
+    private func suggestedMealPeriod(for date: Date) -> MealPeriod {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 0..<11: return .breakfast
+        case 11..<15: return .lunch
+        case 15..<18: return .snack
+        default: return .dinner
         }
     }
 }
@@ -222,7 +307,8 @@ struct QuickAddRow: View {
 
 struct RecentFoodRow: View {
     let log: CombinedLog
-    var onPlusTapped: (() -> Void)?
+    var onLogTapped: (() -> Void)?
+    var onAddToPlateTapped: (() -> Void)?
 
     private var displayName: String {
         log.food?.displayName ?? log.message
@@ -293,15 +379,24 @@ struct RecentFoodRow: View {
 
             Spacer()
 
-            // Plus button
-            Button {
-                onPlusTapped?()
+            // Dropdown menu button
+            Menu {
+                Button {
+                    onLogTapped?()
+                } label: {
+                    Label("Log", systemImage: "plus.circle")
+                }
+
+                Button {
+                    onAddToPlateTapped?()
+                } label: {
+                    Label("Add to Plate", systemImage: "fork.knife")
+                }
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 22))
                     .foregroundColor(.primary)
             }
-            .buttonStyle(.plain)
         }
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
         .contentShape(Rectangle())
@@ -321,5 +416,7 @@ struct RecentFoodRow: View {
         SearchView()
             .environmentObject(FoodManager())
             .environmentObject(OnboardingViewModel())
+            .environmentObject(DayLogsViewModel())
+            .environmentObject(ProFeatureGate())
     }
 }
