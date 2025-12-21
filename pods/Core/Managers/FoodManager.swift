@@ -3165,15 +3165,18 @@ func generateMealWithAI(mealDescription: String, mealType: String, completion: @
     }
 
     /// Streaming food chat with orchestrator - streams AI response token by token
+    /// - Parameter context: Optional context string. Pass "ingredient" for recipe ingredient mode (uses "Found" instead of "Logged")
     func foodChatWithOrchestratorStream(
         message: String,
         history: [[String: String]] = [],
+        context: String? = nil,
         onDelta: @escaping (String) -> Void,
         onComplete: @escaping (Result<FoodChatResponse, Error>) -> Void
     ) {
         networkManager.foodChatWithOrchestratorStream(
             message: message,
             history: history,
+            context: context,
             onDelta: onDelta,
             onComplete: onComplete
         )

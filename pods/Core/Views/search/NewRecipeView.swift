@@ -93,7 +93,7 @@ struct NewRecipeView: View {
 
                 footerBar
             }
-            .navigationTitle("Create Recipe")
+            .navigationTitle("New Recipe")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -146,7 +146,7 @@ struct NewRecipeView: View {
                 HapticFeedback.generateLigth()
                 // TBD: Next step after Continue
             }) {
-                Text("Continue")
+                Text("Create")
                     .font(.headline)
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity)

@@ -451,10 +451,12 @@ struct AddIngredientsDescribe: View {
         streamingMessageId = nil
         streamingText = ""
 
-        // Use the food chat orchestrator endpoint
+        // Use the food chat orchestrator endpoint with "ingredient" context
+        // This tells the backend to use "Found" instead of "Logged" in responses
         foodManager.foodChatWithOrchestratorStream(
             message: prompt,
             history: conversationHistory,
+            context: "ingredient",
             onDelta: { delta in
                 if streamingMessageId == nil {
                     let newId = UUID()

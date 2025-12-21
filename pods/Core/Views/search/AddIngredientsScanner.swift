@@ -211,7 +211,7 @@ struct AddIngredientsScanner: View {
                     .font(.system(size: 18, weight: .medium))
                     .foregroundColor(.primary)
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 45)
             .glassEffect(.regular.interactive())
             .clipShape(Circle())
         } else {
@@ -220,7 +220,7 @@ struct AddIngredientsScanner: View {
             } label: {
                 Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
                     .font(.system(size: 18, weight: .medium))
-                    .frame(width: 36, height: 36)
+                    .frame(width: 45, height: 45)
                     .background(Color.black.opacity(0.6))
                     .clipShape(Circle())
             }
