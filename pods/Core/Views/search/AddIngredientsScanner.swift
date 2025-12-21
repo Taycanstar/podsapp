@@ -208,7 +208,7 @@ struct AddIngredientsScanner: View {
                 toggleFlash()
             } label: {
                 Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundColor(.white)
             }
             .frame(width: 36, height: 36)
@@ -219,7 +219,7 @@ struct AddIngredientsScanner: View {
                 toggleFlash()
             } label: {
                 Image(systemName: flashEnabled ? "bolt.fill" : "bolt.slash")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundColor(.white)
                     .frame(width: 36, height: 36)
                     .background(Color.black.opacity(0.6))

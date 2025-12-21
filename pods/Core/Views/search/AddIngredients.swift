@@ -239,50 +239,47 @@ struct IngredientSearchRow: View {
     }
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(displayName)
-                    .font(.system(size: 15))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
+        Button {
+            onPlusTapped?()
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(displayName)
+                        .font(.system(size: 15))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
 
-                HStack(spacing: 12) {
-                    // Calories with flame icon
-                    HStack(spacing: 4) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                        Text("\(caloriesValue) cal")
+                    HStack(spacing: 12) {
+                        // Calories with flame icon
+                        HStack(spacing: 4) {
+                            Image(systemName: "flame.fill")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                            Text("\(caloriesValue) cal")
+                        }
+
+                        // Macros: P F C
+                        macroLabel(prefix: "P", value: proteinValue)
+                        macroLabel(prefix: "F", value: fatValue)
+                        macroLabel(prefix: "C", value: carbsValue)
                     }
-
-                    // Macros: P F C
-                    macroLabel(prefix: "P", value: proteinValue)
-                    macroLabel(prefix: "F", value: fatValue)
-                    macroLabel(prefix: "C", value: carbsValue)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
                 }
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
-            }
 
-            Spacer()
+                Spacer()
 
-            // Plus/Checkmark button
-            Button {
-                onPlusTapped?()
-            } label: {
+                // Plus/Checkmark icon
                 Image(systemName: isAdded ? "checkmark.circle.fill" : "plus.circle.fill")
                     .font(.system(size: 22))
                     .foregroundColor(isAdded ? .accentColor : .primary)
+                    .animation(.easeInOut(duration: 0.2), value: isAdded)
             }
-            .buttonStyle(.plain)
-            .animation(.easeInOut(duration: 0.2), value: isAdded)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onPlusTapped?()
-        }
+        .buttonStyle(.plain)
     }
 
     private func macroLabel(prefix: String, value: Int) -> some View {
