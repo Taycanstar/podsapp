@@ -166,6 +166,9 @@ struct NutritionFactsView: View {
                 }
             }
             .pickerStyle(.segmented)
+            // Keep the default horizontal insets so the row matches the rest of the list,
+            // but add a slight vertical pad so the segmented control corners aren’t clipped.
+            .padding(.vertical, 2)
             .padding(.horizontal, 16)
             .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 22, trailing: 0))
             .listRowBackground(Color.clear)
@@ -182,7 +185,6 @@ struct NutritionFactsView: View {
         .listStyle(.insetGrouped)
         .listSectionSpacing(.compact)
         .contentMargins(.top, 4, for: .scrollContent)
-        .contentMargins(.horizontal, 0, for: .scrollContent)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             footerBar
