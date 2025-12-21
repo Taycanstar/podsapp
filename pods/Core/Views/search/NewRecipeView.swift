@@ -279,10 +279,11 @@ struct NewRecipeView: View {
         // Base height for the two sections
         let basicInfoHeight: CGFloat = 110
         let sectionHeaderHeight: CGFloat = 40
-        let rowHeight: CGFloat = 44
+        // IngredientRow has 2 lines (name + macros) so needs more height than standard 44pt
+        let ingredientRowHeight: CGFloat = 60
         let addButtonHeight: CGFloat = 44
 
-        let ingredientRowsHeight = CGFloat(ingredients.count) * rowHeight
+        let ingredientRowsHeight = CGFloat(ingredients.count) * ingredientRowHeight
         let totalHeight = basicInfoHeight + sectionHeaderHeight + ingredientRowsHeight + addButtonHeight + 40
 
         return totalHeight

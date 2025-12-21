@@ -37,9 +37,9 @@ struct FoodsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // Action Buttons
+        List {
+            // Action Buttons Section
+            Section {
                 HStack(spacing: 12) {
                     // Create Food button
                     Button {
@@ -71,11 +71,14 @@ struct FoodsView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal)
+                .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
+                .listRowBackground(Color.clear)
+            }
 
-                // User Foods List
-                if filteredFoods.isEmpty {
-                    // Empty state
+            // User Foods List Section
+            if filteredFoods.isEmpty {
+                // Empty state
+                Section {
                     VStack(spacing: 8) {
                         Text("No foods yet")
                             .font(.headline)
@@ -83,23 +86,30 @@ struct FoodsView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                    .padding(.top, 60)
-                } else {
-                    LazyVStack(spacing: 0) {
-                        ForEach(filteredFoods) { food in
-                            UserFoodRow(food: food, onPlusTapped: {
-                                closeSearchIfNeeded()
-                                selectedFood = food
-                            })
-                            if food.id != filteredFoods.last?.id {
-                                Divider().padding(.leading, 16)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                    .listRowBackground(Color.clear)
+                }
+            } else {
+                Section {
+                    ForEach(filteredFoods) { food in
+                        UserFoodRow(food: food, onPlusTapped: {
+                            closeSearchIfNeeded()
+                            selectedFood = food
+                        })
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                deleteFood(food)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
                         }
                     }
                 }
             }
-            .padding(.top, 16)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .background(Color(UIColor.systemBackground).ignoresSafeArea())
         .navigationTitle("Foods")
         .navigationBarTitleDisplayMode(.large)
@@ -135,6 +145,17 @@ struct FoodsView: View {
         }
         .task {
             await userFoodsRepo.refresh()
+        }
+    }
+
+    // MARK: - Delete Food
+    private func deleteFood(_ food: Food) {
+        foodManager.deleteUserFood(id: food.fdcId) { result in
+            if case .success = result {
+                Task {
+                    await userFoodsRepo.refresh(force: true)
+                }
+            }
         }
     }
 }

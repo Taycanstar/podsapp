@@ -1348,7 +1348,8 @@ private extension NewHomeView {
     }
 
     var nutritionSummaryCard: some View {
-        VStack(spacing: 8) {
+        //padding 8
+        VStack(spacing: 0) {
             VStack(spacing: 4) {
                 TabView(selection: $nutritionCarouselSelection) {
                     // Using AnyView to reduce SwiftUI type complexity and prevent stack overflow

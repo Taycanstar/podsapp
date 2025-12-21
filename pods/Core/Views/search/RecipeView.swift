@@ -44,9 +44,9 @@ struct RecipeView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // Action Buttons
+        List {
+            // Action Buttons Section
+            Section {
                 HStack(spacing: 12) {
                     // Create Recipe button
                     Button {
@@ -62,13 +62,15 @@ struct RecipeView: View {
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
-
                 }
-                .padding(.horizontal)
+                .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
+                .listRowBackground(Color.clear)
+            }
 
-                // Recipes List
-                if filteredRecipes.isEmpty {
-                    // Empty state
+            // Recipes List Section
+            if filteredRecipes.isEmpty {
+                // Empty state
+                Section {
                     VStack(spacing: 12) {
                         Image(systemName: "fork.knife")
                             .font(.system(size: 48))
@@ -79,23 +81,30 @@ struct RecipeView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                    .padding(.top, 60)
-                } else {
-                    LazyVStack(spacing: 0) {
-                        ForEach(filteredRecipes) { recipe in
-                            RecipeRow(recipe: recipe, onPlusTapped: {
-                                closeSearchIfNeeded()
-                                selectedRecipe = recipe
-                            })
-                            if recipe.id != filteredRecipes.last?.id {
-                                Divider().padding(.leading, 16)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                    .listRowBackground(Color.clear)
+                }
+            } else {
+                Section {
+                    ForEach(filteredRecipes) { recipe in
+                        RecipeRow(recipe: recipe, onPlusTapped: {
+                            closeSearchIfNeeded()
+                            selectedRecipe = recipe
+                        })
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                deleteRecipe(recipe)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
                         }
                     }
                 }
             }
-            .padding(.top, 16)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .background(Color(UIColor.systemBackground).ignoresSafeArea())
         .navigationTitle("Recipes")
         .navigationBarTitleDisplayMode(.large)
@@ -119,6 +128,17 @@ struct RecipeView: View {
             }
             Task {
                 await recipesRepo.refresh()
+            }
+        }
+    }
+
+    // MARK: - Delete Recipe
+    private func deleteRecipe(_ recipe: Recipe) {
+        foodManager.deleteRecipe(recipeId: recipe.id) { result in
+            if case .success = result {
+                Task {
+                    await recipesRepo.refresh(force: true)
+                }
             }
         }
     }
