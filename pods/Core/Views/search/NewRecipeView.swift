@@ -547,6 +547,9 @@ struct NewRecipeView: View {
             isCreating = false
             switch result {
             case .success:
+                // Remove optimistic recipe before refresh brings in the real one
+                // This prevents duplicate entries (temp ID vs real ID)
+                RecipesRepository.shared.removeOptimistic(id: tempId)
                 // Recipe created successfully, dismiss
                 dismiss()
             case .failure(let error):

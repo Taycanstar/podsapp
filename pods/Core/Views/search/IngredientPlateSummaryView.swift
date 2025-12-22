@@ -43,6 +43,50 @@ struct IngredientPlateSummaryView: View {
         if foods.count > 1 {
             return foods
         }
+        // PRIORITY: Use top-level mealItems if available (has actual serving amounts from backend)
+        if !mealItems.isEmpty {
+            return mealItems.map { item in
+                // Create a default measure with the item's serving unit
+                let unitLabel = item.servingUnit ?? "serving"
+                let defaultMeasure = FoodMeasure(
+                    disseminationText: unitLabel,
+                    gramWeight: item.serving,
+                    id: 0,
+                    modifier: unitLabel,
+                    measureUnitName: unitLabel,
+                    rank: 0
+                )
+                // Use full nutrients if available, otherwise fallback to basic macros
+                let nutrients: [Nutrient]
+                if let fullNutrients = item.foodNutrients, !fullNutrients.isEmpty {
+                    nutrients = fullNutrients
+                } else {
+                    nutrients = [
+                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                    ]
+                }
+                return Food(
+                    fdcId: item.id.hashValue,
+                    description: item.name,
+                    brandOwner: nil,
+                    brandName: nil,
+                    servingSize: item.serving,
+                    numberOfServings: item.serving, // Use actual serving amount from MealItem
+                    servingSizeUnit: item.servingUnit,
+                    householdServingFullText: item.originalServing?.resolvedText ?? "\(formatServing(item.serving)) \(item.servingUnit ?? "serving")",
+                    foodNutrients: nutrients,
+                    foodMeasures: [defaultMeasure],
+                    healthAnalysis: nil,
+                    aiInsight: nil,
+                    nutritionScore: nil,
+                    mealItems: item.subitems
+                )
+            }
+        }
+        // Fallback: Use embedded mealItems from Food object (legacy path)
         if let first = foods.first, let items = first.mealItems, !items.isEmpty {
             return items.map { item in
                 // Create a default measure with the item's serving unit
@@ -55,21 +99,28 @@ struct IngredientPlateSummaryView: View {
                     measureUnitName: unitLabel,
                     rank: 0
                 )
+                // Use full nutrients if available, otherwise fallback to basic macros
+                let nutrients: [Nutrient]
+                if let fullNutrients = item.foodNutrients, !fullNutrients.isEmpty {
+                    nutrients = fullNutrients
+                } else {
+                    nutrients = [
+                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                    ]
+                }
                 return Food(
                     fdcId: item.id.hashValue,
                     description: item.name,
                     brandOwner: nil,
                     brandName: nil,
                     servingSize: item.serving,
-                    numberOfServings: 1,
+                    numberOfServings: item.serving, // Use actual serving amount from MealItem
                     servingSizeUnit: item.servingUnit,
-                    householdServingFullText: item.originalServing?.resolvedText ?? "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
-                    foodNutrients: [
-                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
-                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
-                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
-                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
-                    ],
+                    householdServingFullText: item.originalServing?.resolvedText ?? "\(formatServing(item.serving)) \(item.servingUnit ?? "serving")",
+                    foodNutrients: nutrients,
                     foodMeasures: [defaultMeasure],
                     healthAnalysis: nil,
                     aiInsight: nil,
@@ -78,38 +129,16 @@ struct IngredientPlateSummaryView: View {
                 )
             }
         }
-        return mealItems.map { item in
-            // Create a default measure with the item's serving unit
-            let unitLabel = item.servingUnit ?? "serving"
-            let defaultMeasure = FoodMeasure(
-                disseminationText: unitLabel,
-                gramWeight: item.serving,
-                id: 0,
-                modifier: unitLabel,
-                measureUnitName: unitLabel,
-                rank: 0
-            )
-            return Food(
-                fdcId: item.id.hashValue,
-                description: item.name,
-                brandOwner: nil,
-                brandName: nil,
-                servingSize: item.serving,
-                numberOfServings: 1,
-                servingSizeUnit: item.servingUnit,
-                householdServingFullText: item.originalServing?.resolvedText ?? "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
-                foodNutrients: [
-                    Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
-                    Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
-                    Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
-                    Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
-                ],
-                foodMeasures: [defaultMeasure],
-                healthAnalysis: nil,
-                aiInsight: nil,
-                nutritionScore: nil,
-                mealItems: []
-            )
+        // Final fallback: return empty array
+        return []
+    }
+
+    /// Format serving amount for display (removes unnecessary decimals)
+    private func formatServing(_ value: Double) -> String {
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(Int(value))
+        } else {
+            return String(format: "%.1f", value)
         }
     }
 

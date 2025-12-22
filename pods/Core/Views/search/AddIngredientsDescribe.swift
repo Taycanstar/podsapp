@@ -51,6 +51,7 @@ struct AddIngredientsDescribe: View {
     @State private var isToolCallInFlight = false
     @State private var pendingOptions: [ClarificationOption]? = nil
     @State private var pendingClarificationQuestion: String? = nil
+    @State private var activeStatusMessageId: UUID?
 
     // Ingredient summary sheet (single food)
     @State private var scannedFood: Food?
@@ -355,6 +356,8 @@ struct AddIngredientsDescribe: View {
                 guard !isLoading else { return }
                 sendPrompt()
             },
+            isStreaming: isLoading || streamingMessageId != nil,
+            onStopTapped: { stopStreaming() },
             realtimeState: realtimeSession.state,
             onRealtimeStart: {
                 isInputFocused = false
@@ -447,6 +450,7 @@ struct AddIngredientsDescribe: View {
         // Add status message
         let statusMessageId = UUID()
         messages.append(IngredientMessage(id: statusMessageId, sender: .status, text: ""))
+        activeStatusMessageId = statusMessageId
 
         streamingMessageId = nil
         streamingText = ""
@@ -462,6 +466,9 @@ struct AddIngredientsDescribe: View {
                     let newId = UUID()
                     streamingMessageId = newId
                     messages.removeAll { $0.id == statusMessageId }
+                    if activeStatusMessageId == statusMessageId {
+                        activeStatusMessageId = nil
+                    }
                     messages.append(IngredientMessage(id: newId, sender: .system, text: delta))
                 } else if let currentId = streamingMessageId,
                           let index = messages.firstIndex(where: { $0.id == currentId }) {
@@ -472,6 +479,9 @@ struct AddIngredientsDescribe: View {
             onComplete: { result in
                 isLoading = false
                 messages.removeAll { $0.id == statusMessageId }
+                if activeStatusMessageId == statusMessageId {
+                    activeStatusMessageId = nil
+                }
 
                 let completedMessageId = streamingMessageId
                 streamingMessageId = nil
@@ -488,6 +498,19 @@ struct AddIngredientsDescribe: View {
                 }
             }
         )
+    }
+
+    private func stopStreaming() {
+        isLoading = false
+        if let statusId = activeStatusMessageId {
+            messages.removeAll { $0.id == statusId }
+            activeStatusMessageId = nil
+        }
+        if let streamingId = streamingMessageId {
+            messages.removeAll { $0.id == streamingId }
+        }
+        streamingMessageId = nil
+        streamingText = ""
     }
 
     private func handleOrchestratorResponse(_ response: FoodChatResponse, existingMessageId: UUID? = nil) {
@@ -528,20 +551,34 @@ struct AddIngredientsDescribe: View {
     }
 
     private func convertChatMealItemToMealItem(_ chatItem: FoodChatMealItem) -> MealItem {
-        MealItem(
+        // Debug: Log incoming values from FoodChatMealItem
+        print("[CONVERT] FoodChatMealItem: name=\(chatItem.name ?? "nil"), serving=\(chatItem.serving ?? -1), servingUnit=\(chatItem.servingUnit ?? "nil")")
+
+        // Create a measure from the serving unit so IngredientEditableFoodItem can display it
+        let unitLabel = chatItem.servingUnit ?? "serving"
+        let servingAmount = chatItem.serving ?? 1.0
+        let measure = MealItemMeasure(
+            unit: unitLabel,
+            description: unitLabel,
+            gramWeight: servingAmount
+        )
+
+        let result = MealItem(
             name: chatItem.name ?? "Unknown",
-            serving: chatItem.serving ?? 1.0,
-            servingUnit: chatItem.servingUnit ?? "serving",
+            serving: servingAmount,
+            servingUnit: unitLabel,
             calories: chatItem.calories ?? 0,
             protein: chatItem.protein ?? 0,
             carbs: chatItem.carbs ?? 0,
             fat: chatItem.fat ?? 0,
             subitems: nil,
             baselineServing: nil,
-            measures: [],
+            measures: [measure],
             originalServing: nil,
             foodNutrients: chatItem.foodNutrients
         )
+        print("[CONVERT] MealItem result: name=\(result.name), serving=\(result.serving), servingUnit=\(result.servingUnit ?? "nil"), measures=\(result.measures.count)")
+        return result
     }
 
     private func convertChatFoodToFood(_ chatFood: FoodChatFood) -> Food {

@@ -36,6 +36,7 @@ struct FoodLogAgentView: View {
 @FocusState private var isInputFocused: Bool
 @FocusState private var isUserMessageEditorFocused: Bool
 @State private var statusPhraseIndex = 0
+@State private var activeStatusMessageId: UUID?
 @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
 @State private var isAtBottom = true
 @State private var scrollProxy: ScrollViewProxy?
@@ -337,6 +338,8 @@ struct FoodLogAgentView: View {
                 guard !isLoading else { return }
                 sendPrompt()
             },
+            isStreaming: isLoading || streamingMessageId != nil,
+            onStopTapped: { stopStreamingResponse() },
             realtimeState: realtimeSession.state,
             onRealtimeStart: {
                 isInputFocused = false
@@ -375,6 +378,8 @@ struct FoodLogAgentView: View {
         // Add a status message for the thinking indicator
         let statusMessageId = UUID()
         messages.append(FoodLogMessage(id: statusMessageId, sender: .status, text: ""))
+        activeStatusMessageId = statusMessageId
+        activeStatusMessageId = statusMessageId
 
         // Track streaming message separately (nil until first delta arrives)
         streamingMessageId = nil
@@ -391,6 +396,9 @@ struct FoodLogAgentView: View {
                     let newId = UUID()
                     streamingMessageId = newId
                     messages.removeAll { $0.id == statusMessageId }
+                    if activeStatusMessageId == statusMessageId {
+                        activeStatusMessageId = nil
+                    }
                     messages.append(FoodLogMessage(id: newId, sender: .system, text: delta))
                 } else if let currentId = streamingMessageId,
                           let index = messages.firstIndex(where: { $0.id == currentId }) {
@@ -402,6 +410,9 @@ struct FoodLogAgentView: View {
                 isLoading = false
                 // Remove status message if still present
                 messages.removeAll { $0.id == statusMessageId }
+                if activeStatusMessageId == statusMessageId {
+                    activeStatusMessageId = nil
+                }
 
                 // Keep the streaming message ID for reference, then clear tracking
                 let completedMessageId = streamingMessageId
@@ -838,6 +849,23 @@ struct FoodLogAgentView: View {
         } else {
             print("[STREAM UI] streaming token is nil (stream could not start)")
         }
+    }
+
+    private func stopStreamingResponse() {
+        if let token = streamingToken {
+            foodManager.cancelStream(token: token)
+        }
+        streamingToken = nil
+        streamingText = ""
+        if let statusId = activeStatusMessageId {
+            messages.removeAll { $0.id == statusId }
+        }
+        if let placeholderId = streamingMessageId {
+            messages.removeAll { $0.id == placeholderId }
+        }
+        streamingMessageId = nil
+        activeStatusMessageId = nil
+        isLoading = false
     }
 
     private func stopStreamingStatus() {

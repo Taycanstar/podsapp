@@ -140,7 +140,7 @@ struct FoodChatResponse: Codable {
 
     enum CodingKeys: String, CodingKey {
         case type, message, food, options, question, error
-        case mealItems  // .convertFromSnakeCase handles "meal_items" -> "mealItems"
+        case mealItems = "meal_items"
     }
 
     init(type: ResponseType, message: String, food: FoodChatFood? = nil, mealItems: [FoodChatMealItem]? = nil, options: [ClarificationOption]? = nil, question: String? = nil, error: String? = nil) {
@@ -236,7 +236,7 @@ struct FoodChatMealItem: Codable {
 
     enum CodingKeys: String, CodingKey {
         case name, calories, protein, carbs, fat, serving, foodNutrients
-        case servingUnit  // .convertFromSnakeCase handles "serving_unit" -> "servingUnit"
+        case servingUnit = "serving_unit"
     }
 }
 
@@ -8131,6 +8131,7 @@ class NetworkManager {
 
             do {
                 let decoder = JSONDecoder()
+                // Using explicit CodingKey mappings instead of .convertFromSnakeCase
                 let responseObject = try decoder.decode(FoodChatResponse.self, from: data)
 
                 DispatchQueue.main.async {
@@ -9646,7 +9647,15 @@ private final class FoodChatStreamingDelegate: NSObject, URLSessionDataDelegate 
                 if let responseData = trimmed.data(using: .utf8) {
                     do {
                         let decoder = JSONDecoder()
+                        // Using explicit CodingKey mappings instead of .convertFromSnakeCase
                         let response = try decoder.decode(FoodChatResponse.self, from: responseData)
+                        print("[FOOD_STREAM] decoded response - type: \(response.type), mealItems count: \(response.mealItems?.count ?? 0), food: \(response.food != nil)")
+                        // Debug: Print each mealItem's servingUnit to verify decoding
+                        if let items = response.mealItems {
+                            for (idx, item) in items.enumerated() {
+                                print("[FOOD_STREAM] mealItem[\(idx)]: name=\(item.name ?? "nil"), serving=\(item.serving ?? 0), servingUnit=\(item.servingUnit ?? "nil")")
+                            }
+                        }
                         DispatchQueue.main.async { self.onComplete(.success(response)) }
                     } catch {
                         print("[FOOD_STREAM] failed to decode FoodChatResponse:", error)

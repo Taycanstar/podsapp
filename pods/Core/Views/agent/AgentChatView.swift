@@ -976,8 +976,9 @@ struct AgentChatView: View {
                     )
 
                     ChatActionCircleButton(
-                        systemName: hasUserInput ? "arrow.up" : "waveform",
+                        systemName: viewModel.isLoading ? "square.fill" : (hasUserInput ? "arrow.up" : "waveform"),
                         action: {
+                            guard !viewModel.isLoading else { return }
                             if hasUserInput {
                                 submitAgentPrompt()
                             } else {
@@ -988,8 +989,8 @@ struct AgentChatView: View {
                                 }
                             }
                         },
-                        backgroundColor: hasUserInput ? Color.accentColor : Color("chaticon"),
-                        foregroundColor: hasUserInput ? .white : .primary
+                        backgroundColor: viewModel.isLoading ? Color.accentColor : (hasUserInput ? Color.accentColor : Color("chaticon")),
+                        foregroundColor: viewModel.isLoading ? .white : (hasUserInput ? .white : .primary)
                     )
                 }
             }
@@ -1358,12 +1359,13 @@ private struct ChatActionCircleButton: View {
     var foregroundColor: Color = .primary
 
     var body: some View {
+        let iconSize: CGFloat = systemName == "square.fill" ? 14 : 16
         Button(action: action) {
             ZStack {
                 Circle()
                     .fill(backgroundColor)
                 Image(systemName: systemName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: iconSize, weight: .semibold))
                     .foregroundColor(foregroundColor)
             }
             .frame(width: 30, height: 30)

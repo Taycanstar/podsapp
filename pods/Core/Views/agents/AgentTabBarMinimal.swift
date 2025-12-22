@@ -16,6 +16,8 @@ struct AgentTabBarMinimal: View {
     var onMicrophoneTapped: () -> Void = {}
     var onWaveformTapped: () -> Void = {}
     var onSubmit: () -> Void = {}
+    var isStreaming: Bool = false
+    var onStopTapped: () -> Void = {}
 
     // Realtime voice session properties
     var realtimeState: RealtimeSessionState = .idle
@@ -211,17 +213,20 @@ struct AgentTabBarMinimal: View {
                     )
 
                     ActionCircleButtonMinimal(
-                        systemName: hasUserInput ? "arrow.up" : "waveform",
+                        systemName: isStreaming ? "square.fill" : (hasUserInput ? "arrow.up" : "waveform"),
                         action: {
-                            if hasUserInput {
+                            if isStreaming {
+                                HapticFeedback.generate()
+                                onStopTapped()
+                            } else if hasUserInput {
                                 submitAgentPrompt()
                             } else {
                                 HapticFeedback.generate()
                                 onRealtimeStart?()
                             }
                         },
-                        backgroundColor: hasUserInput ? Color.accentColor : Color("chaticon"),
-                        foregroundColor: hasUserInput ? .white : .primary
+                        backgroundColor: isStreaming ? Color.accentColor : (hasUserInput ? Color.accentColor : Color("chaticon")),
+                        foregroundColor: isStreaming ? .white : (hasUserInput ? .white : .primary)
                     )
                 }
             }
@@ -245,12 +250,13 @@ private struct ActionCircleButtonMinimal: View {
     var foregroundColor: Color = .primary
 
     var body: some View {
+        let iconSize: CGFloat = systemName == "square.fill" ? 14 : 16
         Button(action: action) {
             ZStack {
                 Circle()
                     .fill(backgroundColor)
                 Image(systemName: systemName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: iconSize, weight: .semibold))
                     .foregroundColor(foregroundColor)
             }
             .frame(width: 30, height: 30)
