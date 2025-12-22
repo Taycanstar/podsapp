@@ -23,16 +23,8 @@ struct AddIngredients: View {
     var onIngredientAdded: (Food) -> Void
 
     @State private var selectedTab: IngredientTab = .search
-    @State private var searchText = ""
-    @State private var isSearchFocused = false
-    @State private var addedFoodId: Int? = nil
     @State private var showAddedToast = false
     @State private var toastMessage = ""
-
-    /// Recent food logs from the repository
-    private var recentFoodLogs: [CombinedLog] {
-        recentFoodsRepo.snapshot.logs
-    }
 
     private func showToast(_ message: String) {
         toastMessage = message
@@ -111,61 +103,11 @@ struct AddIngredients: View {
     // MARK: - Search Tab Content
 
     private var searchTabContent: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                if !recentFoodLogs.isEmpty {
-                    // Recents Header
-                    Text("Recents")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
-
-                    Divider()
-                        .padding(.leading, 16)
-
-                    // Recent foods list
-                    ForEach(recentFoodLogs) { log in
-                        IngredientSearchRow(
-                            log: log,
-                            isAdded: addedFoodId == log.food?.fdcId,
-                            onPlusTapped: {
-                                if let food = log.food?.asFood {
-                                    // Show checkmark
-                                    addedFoodId = food.fdcId
-                                    HapticFeedback.generateLigth()
-                                    onIngredientAdded(food)
-                                    showToast("Ingredient added to recipe")
-
-                                    // Revert checkmark after delay
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                        if addedFoodId == food.fdcId {
-                                            addedFoodId = nil
-                                        }
-                                    }
-                                }
-                            }
-                        )
-
-                        if log.id != recentFoodLogs.last?.id {
-                            Divider()
-                                .padding(.leading, 16)
-                        }
-                    }
-                } else {
-                    Text("No recent foods")
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 32)
-                }
-            }
+        AddIngredientsSearch { food in
+            onIngredientAdded(food)
+            showToast("Ingredient added to recipe")
         }
-        .background(Color(UIColor.systemBackground).ignoresSafeArea())
-        .searchable(text: $searchText, isPresented: $isSearchFocused, prompt: "Search foods")
-        .onSubmit(of: .search) {
-            // Handle search submission - TODO: implement search API call
-        }
+        .environmentObject(foodManager)
     }
 
     // MARK: - Toast View

@@ -35,13 +35,9 @@ struct NewRecipeView: View {
         colorScheme == .dark ? Color(.tertiarySystemFill) : Color(.secondarySystemFill)
     }
 
-    private var cardColor: Color {
-        colorScheme == .dark ? Color(UIColor.systemGroupedBackground) : Color("bg")
-    }
+    private var cardColor: Color { Color(UIColor.secondarySystemGroupedBackground) }
 
-    private var backgroundColor: Color {
-        colorScheme == .dark ? Color("bg") : Color(UIColor.systemGroupedBackground)
-    }
+    private var backgroundColor: Color { Color(UIColor.systemGroupedBackground) }
 
     // MARK: - Computed Macros
 
@@ -132,39 +128,113 @@ struct NewRecipeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        // Basic Info and Ingredients in List style
-                        infoAndIngredientsSection
+                List {
+                    // Basic Info Section
+                    Section {
+                        HStack {
+                            Text("Name")
+                            Spacer()
+                            TextField("Required", text: $name)
+                                .multilineTextAlignment(.trailing)
+                        }
 
-                        // Nutrition breakdown sections (only show if we have ingredients)
-                        if !ingredients.isEmpty {
-                            VStack(spacing: 20) {
-                                macroSummaryCard
-                                dailyGoalShareCard
-
-                                if shouldShowGoalsLoader {
-                                    goalsLoadingView
-                                } else if nutrientTargets.isEmpty {
-                                    missingTargetsCallout
-                                } else {
-                                    totalCarbsSection
-                                    fatTotalsSection
-                                    proteinTotalsSection
-                                    vitaminSection
-                                    mineralSection
-                                    otherNutrientSection
+                        HStack {
+                            Text("Servings")
+                            Spacer()
+                            HStack(spacing: 12) {
+                                Button {
+                                    if servings > 1 {
+                                        servings -= 1
+                                    }
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundColor(servings > 1 ? .primary : .secondary.opacity(0.5))
                                 }
+                                .buttonStyle(.plain)
+                                .disabled(servings <= 1)
+
+                                Text("\(servings)")
+                                    .font(.system(size: 17, weight: .medium))
+                                    .frame(minWidth: 30)
+
+                                Button {
+                                    if servings < 99 {
+                                        servings += 1
+                                    }
+                                } label: {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundColor(servings < 99 ? .primary : .secondary.opacity(0.5))
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(servings >= 99)
                             }
-                            .padding(.top, 20)
-                            .padding(.bottom, 32)
+                        }
+                    }
+
+                    // Ingredients Section
+                    Section {
+                        // Use indices for unique IDs - same food can be added multiple times
+                        ForEach(ingredients.indices, id: \.self) { index in
+                            HStack {
+                                IngredientRow(food: ingredients[index])
+                                Spacer()
+                                Button {
+                                    deleteIngredient(at: IndexSet(integer: index))
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .foregroundColor(.red)
+                                        .font(.system(size: 18))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+
+                        addIngredientRow
+                    } header: {
+                        Text("Ingredients")
+                    }
+
+                    // Nutrition breakdown sections (only show if we have ingredients)
+                    if !ingredients.isEmpty {
+                        // Macro Summary Section
+                        Section {
+                            macroSummaryContent
+                        }
+                        .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
+
+                        // Daily Goal Share Section
+                        Section {
+                            dailyGoalShareContent
+                        } header: {
+                            Text("Daily Goal Share")
+                        }
+                        .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
+
+                        if shouldShowGoalsLoader {
+                            Section {
+                                goalsLoadingContent
+                            }
+                        } else if nutrientTargets.isEmpty {
+                            Section {
+                                missingTargetsContent
+                            }
+                        } else {
+                            totalCarbsListSection
+                            fatTotalsListSection
+                            proteinTotalsListSection
+                            vitaminListSection
+                            mineralListSection
+                            otherNutrientListSection
                         }
                     }
                 }
+                .listStyle(.insetGrouped)
 
                 footerBar
             }
-            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+            .background(backgroundColor.ignoresSafeArea())
             .navigationTitle("New Recipe")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -206,103 +276,6 @@ struct NewRecipeView: View {
         nutrientTargets = NutritionGoalsStore.shared.currentTargets
     }
 
-    // MARK: - Info and Ingredients Section
-
-    private var infoAndIngredientsSection: some View {
-        List {
-            // Basic Info Section
-            Section {
-                HStack {
-                    Text("Name")
-                    Spacer()
-                    TextField("Required", text: $name)
-                        .multilineTextAlignment(.trailing)
-                }
-
-                HStack {
-                    Text("Servings")
-                    Spacer()
-                    HStack(spacing: 12) {
-                        Button {
-                            if servings > 1 {
-                                servings -= 1
-                            }
-                        } label: {
-                            Image(systemName: "minus.circle.fill")
-                                .font(.system(size: 22))
-                                .foregroundColor(servings > 1 ? .primary : .secondary.opacity(0.5))
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(servings <= 1)
-
-                        Text("\(servings)")
-                            .font(.system(size: 17, weight: .medium))
-                            .frame(minWidth: 30)
-
-                        Button {
-                            if servings < 99 {
-                                servings += 1
-                            }
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 22))
-                                .foregroundColor(servings < 99 ? .primary : .secondary.opacity(0.5))
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(servings >= 99)
-                    }
-                }
-            }
-
-            // Ingredients Section
-            Section {
-                if ingredients.isEmpty {
-                    addIngredientRow
-                } else {
-                    ForEach(ingredients, id: \.fdcId) { food in
-                        IngredientRow(food: food)
-                    }
-                    .onDelete(perform: deleteIngredient)
-
-                    addIngredientRow
-                }
-            } header: {
-                Text("Ingredients")
-            }
-        }
-        .listStyle(.insetGrouped)
-        .scrollDisabled(true)
-        .frame(height: calculateListHeight())
-    }
-
-    private func calculateListHeight() -> CGFloat {
-        // Basic info section: Name row (44) + Servings row (44) + section padding (22)
-        let basicInfoHeight: CGFloat = 110
-
-        // Ingredients section header
-        let sectionHeaderHeight: CGFloat = 32
-
-        // Each ingredient row (2-line content needs ~52pt)
-        let ingredientRowHeight: CGFloat = 52
-
-        // Add ingredient button row
-        let addButtonHeight: CGFloat = 44
-
-        // Spacing between sections in .insetGrouped style
-        let sectionSpacing: CGFloat = 35
-
-        // Bottom padding for the list
-        let bottomPadding: CGFloat = 20
-
-        // Extra inset applied by .insetGrouped sections (footer + rounded corners)
-        let groupedInsets: CGFloat = 24
-
-        let ingredientRowsHeight = CGFloat(ingredients.count) * ingredientRowHeight
-        let totalHeight = basicInfoHeight + sectionSpacing + sectionHeaderHeight + ingredientRowsHeight + addButtonHeight + bottomPadding + groupedInsets
-
-        return totalHeight
-    }
-
     // MARK: - Add Ingredient Row
 
     private var addIngredientRow: some View {
@@ -322,15 +295,15 @@ struct NewRecipeView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Macro Summary Card
+    // MARK: - Macro Summary Content (for List section)
 
-    private var macroSummaryCard: some View {
+    private var macroSummaryContent: some View {
         HStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 12) {
                 macroStatRow(title: "Protein", value: totalMacros.protein, unit: "g", color: Color("protein"))
-                Divider().background(Color.white.opacity(0.2))
+                Divider()
                 macroStatRow(title: "Fat", value: totalMacros.fat, unit: "g", color: Color("fat"))
-                Divider().background(Color.white.opacity(0.2))
+                Divider()
                 macroStatRow(title: "Carbs", value: totalMacros.carbs, unit: "g", color: Color("carbs"))
             }
 
@@ -339,12 +312,6 @@ struct NewRecipeView: View {
             RecipeMacroRingView(calories: totalMacros.calories, arcs: macroArcs)
                 .frame(width: 100, height: 100)
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(cardColor)
-        )
-        .padding(.horizontal)
     }
 
     private func macroStatRow(title: String, value: Double, unit: String, color: Color) -> some View {
@@ -363,38 +330,122 @@ struct NewRecipeView: View {
         }
     }
 
-    // MARK: - Daily Goal Share Card
+    // MARK: - Daily Goal Share Content (for List section)
 
-    private var dailyGoalShareCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Daily Goal Share")
-                .font(.title3)
-                .fontWeight(.semibold)
-
-            HStack(spacing: 12) {
-                RecipeGoalShareBubble(title: "Protein",
-                                percent: proteinGoalPercent,
-                                grams: totalMacros.protein,
-                                goal: dayLogsVM.proteinGoal,
-                                color: Color("protein"))
-                RecipeGoalShareBubble(title: "Fat",
-                                percent: fatGoalPercent,
-                                grams: totalMacros.fat,
-                                goal: dayLogsVM.fatGoal,
-                                color: Color("fat"))
-                RecipeGoalShareBubble(title: "Carbs",
-                                percent: carbGoalPercent,
-                                grams: totalMacros.carbs,
-                                goal: dayLogsVM.carbsGoal,
-                                color: Color("carbs"))
-            }
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(cardColor)
-            )
+    private var dailyGoalShareContent: some View {
+        HStack(spacing: 12) {
+            RecipeGoalShareBubble(title: "Protein",
+                            percent: proteinGoalPercent,
+                            grams: totalMacros.protein,
+                            goal: dayLogsVM.proteinGoal,
+                            color: Color("protein"))
+            RecipeGoalShareBubble(title: "Fat",
+                            percent: fatGoalPercent,
+                            grams: totalMacros.fat,
+                            goal: dayLogsVM.fatGoal,
+                            color: Color("fat"))
+            RecipeGoalShareBubble(title: "Carbs",
+                            percent: carbGoalPercent,
+                            grams: totalMacros.carbs,
+                            goal: dayLogsVM.carbsGoal,
+                            color: Color("carbs"))
         }
-        .padding(.horizontal)
+    }
+
+    // MARK: - Goals Loading Content
+
+    private var goalsLoadingContent: some View {
+        VStack(spacing: 12) {
+            ProgressView("Syncing your targets…")
+                .progressViewStyle(CircularProgressViewStyle())
+            Text("Hang tight while we fetch your personalized nutrient plan.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Missing Targets Content
+
+    private var missingTargetsContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Finish goal setup to unlock detailed targets")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+            Text("We'll automatically sync your nutrition plan and show daily percentages once it's ready.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+            Button(action: {
+                dayLogsVM.refreshNutritionGoals(forceRefresh: true)
+            }) {
+                HStack {
+                    if dayLogsVM.isRefreshingNutritionGoals {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(0.8)
+                    }
+                    Text(dayLogsVM.isRefreshingNutritionGoals ? "Syncing Targets" : "Sync Now")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.accentColor.opacity(dayLogsVM.isRefreshingNutritionGoals ? 0.4 : 0.15))
+                .foregroundColor(.accentColor)
+                .cornerRadius(12)
+            }
+            .disabled(dayLogsVM.isRefreshingNutritionGoals)
+        }
+    }
+
+    // MARK: - Nutrient List Sections
+
+    private var totalCarbsListSection: some View {
+        nutrientListSection(title: "Total Carbs", rows: RecipeNutrientDescriptors.totalCarbRows)
+    }
+
+    private var fatTotalsListSection: some View {
+        nutrientListSection(title: "Total Fat", rows: RecipeNutrientDescriptors.fatRows)
+    }
+
+    private var proteinTotalsListSection: some View {
+        nutrientListSection(title: "Total Protein", rows: RecipeNutrientDescriptors.proteinRows)
+    }
+
+    private var vitaminListSection: some View {
+        nutrientListSection(title: "Vitamins", rows: RecipeNutrientDescriptors.vitaminRows)
+    }
+
+    private var mineralListSection: some View {
+        nutrientListSection(title: "Minerals", rows: RecipeNutrientDescriptors.mineralRows)
+    }
+
+    private var otherNutrientListSection: some View {
+        nutrientListSection(title: "Other", rows: RecipeNutrientDescriptors.otherRows)
+    }
+
+    @ViewBuilder
+    private func nutrientListSection(title: String, rows: [RecipeNutrientRowDescriptor]) -> some View {
+        let filteredRows = rows.filter { descriptor in
+            switch descriptor.source {
+            case .macro, .computed:
+                return true
+            case .nutrient(let names, _):
+                return names.contains { name in
+                    aggregatedNutrients[normalizedNutrientKey(name)] != nil
+                }
+            }
+        }
+
+        if !filteredRows.isEmpty {
+            Section {
+                ForEach(filteredRows) { descriptor in
+                    nutrientRow(for: descriptor)
+                }
+            } header: {
+                Text(title)
+            }
+        }
     }
 
     // MARK: - Footer Bar
@@ -424,7 +475,7 @@ struct NewRecipeView: View {
         .padding(.horizontal)
         .padding(.bottom, 12)
         .background(
-            Color(UIColor.systemGroupedBackground)
+            backgroundColor
                 .ignoresSafeArea(edges: .bottom)
         )
     }
@@ -508,119 +559,7 @@ struct NewRecipeView: View {
         }
     }
 
-    // MARK: - Nutrient Sections
-
-    private var totalCarbsSection: some View {
-        nutrientSection(title: "Total Carbs", rows: RecipeNutrientDescriptors.totalCarbRows)
-    }
-
-    private var fatTotalsSection: some View {
-        nutrientSection(title: "Total Fat", rows: RecipeNutrientDescriptors.fatRows)
-    }
-
-    private var proteinTotalsSection: some View {
-        nutrientSection(title: "Total Protein", rows: RecipeNutrientDescriptors.proteinRows)
-    }
-
-    private var vitaminSection: some View {
-        nutrientSection(title: "Vitamins", rows: RecipeNutrientDescriptors.vitaminRows)
-    }
-
-    private var mineralSection: some View {
-        nutrientSection(title: "Minerals", rows: RecipeNutrientDescriptors.mineralRows)
-    }
-
-    private var otherNutrientSection: some View {
-        nutrientSection(title: "Other", rows: RecipeNutrientDescriptors.otherRows)
-    }
-
-    private var goalsLoadingView: some View {
-        VStack(spacing: 12) {
-            ProgressView("Syncing your targets…")
-                .progressViewStyle(CircularProgressViewStyle())
-            Text("Hang tight while we fetch your personalized nutrient plan.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(cardColor)
-        )
-        .padding(.horizontal)
-    }
-
-    private var missingTargetsCallout: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Finish goal setup to unlock detailed targets")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            Text("We'll automatically sync your nutrition plan and show daily percentages once it's ready.")
-                .font(.footnote)
-                .foregroundColor(.secondary)
-            Button(action: {
-                dayLogsVM.refreshNutritionGoals(forceRefresh: true)
-            }) {
-                HStack {
-                    if dayLogsVM.isRefreshingNutritionGoals {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .scaleEffect(0.8)
-                    }
-                    Text(dayLogsVM.isRefreshingNutritionGoals ? "Syncing Targets" : "Sync Now")
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(Color.accentColor.opacity(dayLogsVM.isRefreshingNutritionGoals ? 0.4 : 0.15))
-                .foregroundColor(.accentColor)
-                .cornerRadius(12)
-            }
-            .disabled(dayLogsVM.isRefreshingNutritionGoals)
-        }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(cardColor)
-        )
-        .padding(.horizontal)
-    }
-
-    private func nutrientSection(title: String, rows: [RecipeNutrientRowDescriptor]) -> some View {
-        let filteredRows = rows.filter { descriptor in
-            switch descriptor.source {
-            case .macro, .computed:
-                return true
-            case .nutrient(let names, _):
-                return names.contains { name in
-                    aggregatedNutrients[normalizedNutrientKey(name)] != nil
-                }
-            }
-        }
-
-        return Group {
-            if !filteredRows.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(title)
-                        .font(.title3)
-                        .fontWeight(.semibold)
-
-                    VStack(spacing: 16) {
-                        ForEach(filteredRows) { descriptor in
-                            nutrientRow(for: descriptor)
-                        }
-                    }
-                    .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(cardColor)
-                    )
-                }
-                .padding(.horizontal)
-            }
-        }
-    }
+    // MARK: - Nutrient Row
 
     @ViewBuilder
     private func nutrientRow(for descriptor: RecipeNutrientRowDescriptor) -> some View {
