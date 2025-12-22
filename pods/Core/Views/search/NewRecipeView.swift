@@ -106,9 +106,7 @@ struct NewRecipeView: View {
         return result
     }
 
-    private func normalizedNutrientKey(_ name: String) -> String {
-        name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-    }
+    // Uses global normalizedNutrientKey() from NutrientDescriptors.swift
 
     private var fiberValue: Double {
         let keys = ["fiber, total dietary", "dietary fiber", "fiber"]
@@ -401,31 +399,31 @@ struct NewRecipeView: View {
     // MARK: - Nutrient List Sections
 
     private var totalCarbsListSection: some View {
-        nutrientListSection(title: "Total Carbs", rows: RecipeNutrientDescriptors.totalCarbRows)
+        nutrientListSection(title: "Total Carbs", rows: NutrientDescriptors.totalCarbRows)
     }
 
     private var fatTotalsListSection: some View {
-        nutrientListSection(title: "Total Fat", rows: RecipeNutrientDescriptors.fatRows)
+        nutrientListSection(title: "Total Fat", rows: NutrientDescriptors.fatRows)
     }
 
     private var proteinTotalsListSection: some View {
-        nutrientListSection(title: "Total Protein", rows: RecipeNutrientDescriptors.proteinRows)
+        nutrientListSection(title: "Total Protein", rows: NutrientDescriptors.proteinRows)
     }
 
     private var vitaminListSection: some View {
-        nutrientListSection(title: "Vitamins", rows: RecipeNutrientDescriptors.vitaminRows)
+        nutrientListSection(title: "Vitamins", rows: NutrientDescriptors.vitaminRows)
     }
 
     private var mineralListSection: some View {
-        nutrientListSection(title: "Minerals", rows: RecipeNutrientDescriptors.mineralRows)
+        nutrientListSection(title: "Minerals", rows: NutrientDescriptors.mineralRows)
     }
 
     private var otherNutrientListSection: some View {
-        nutrientListSection(title: "Other", rows: RecipeNutrientDescriptors.otherRows)
+        nutrientListSection(title: "Other", rows: NutrientDescriptors.otherRows)
     }
 
     @ViewBuilder
-    private func nutrientListSection(title: String, rows: [RecipeNutrientRowDescriptor]) -> some View {
+    private func nutrientListSection(title: String, rows: [NutrientRowDescriptor]) -> some View {
         let filteredRows = rows.filter { descriptor in
             switch descriptor.source {
             case .macro, .computed:
@@ -562,7 +560,7 @@ struct NewRecipeView: View {
     // MARK: - Nutrient Row
 
     @ViewBuilder
-    private func nutrientRow(for descriptor: RecipeNutrientRowDescriptor) -> some View {
+    private func nutrientRow(for descriptor: NutrientRowDescriptor) -> some View {
         let value = nutrientValue(for: descriptor)
         let goal = nutrientGoal(for: descriptor)
         let unit = nutrientUnit(for: descriptor)
@@ -593,7 +591,7 @@ struct NewRecipeView: View {
         }
     }
 
-    private func nutrientValue(for descriptor: RecipeNutrientRowDescriptor) -> Double {
+    private func nutrientValue(for descriptor: NutrientRowDescriptor) -> Double {
         switch descriptor.source {
         case .macro(let macro):
             switch macro {
@@ -624,7 +622,7 @@ struct NewRecipeView: View {
         }
     }
 
-    private func nutrientGoal(for descriptor: RecipeNutrientRowDescriptor) -> Double? {
+    private func nutrientGoal(for descriptor: NutrientRowDescriptor) -> Double? {
         var resolvedGoal: Double?
         if let slug = descriptor.slug,
            let details = nutrientTargets[slug] {
@@ -662,7 +660,7 @@ struct NewRecipeView: View {
         }
     }
 
-    private func nutrientUnit(for descriptor: RecipeNutrientRowDescriptor) -> String {
+    private func nutrientUnit(for descriptor: NutrientRowDescriptor) -> String {
         if descriptor.defaultUnit.isEmpty,
            let slug = descriptor.slug,
            let unit = nutrientTargets[slug]?.unit,
@@ -717,7 +715,7 @@ struct NewRecipeView: View {
         return value
     }
 
-    private func convertGoal(_ goal: Double, for descriptor: RecipeNutrientRowDescriptor) -> Double {
+    private func convertGoal(_ goal: Double, for descriptor: NutrientRowDescriptor) -> Double {
         guard let slug = descriptor.slug,
               let storedUnit = nutrientTargets[slug]?.unit,
               !storedUnit.isEmpty else { return goal }
@@ -873,125 +871,7 @@ private struct RecipeGoalShareBubble: View {
     }
 }
 
-// MARK: - Nutrient Row Descriptor
-
-private enum RecipeMacroType {
-    case protein, carbs, fat
-}
-
-private enum RecipeNutrientAggregation {
-    case first, sum
-}
-
-private enum RecipeNutrientComputation {
-    case netCarbs, calories
-}
-
-private enum RecipeNutrientSource {
-    case macro(RecipeMacroType)
-    case nutrient(names: [String], aggregation: RecipeNutrientAggregation = .first)
-    case computed(RecipeNutrientComputation)
-}
-
-private struct RecipeNutrientRowDescriptor: Identifiable {
-    let id = UUID()
-    let label: String
-    let slug: String?
-    let defaultUnit: String
-    let source: RecipeNutrientSource
-    let color: Color
-}
-
-private enum RecipeNutrientDescriptors {
-    static let proteinColor = Color("protein")
-    static let fatColor = Color("fat")
-    static let carbColor = Color("carbs")
-
-    static var totalCarbRows: [RecipeNutrientRowDescriptor] {
-        [
-            RecipeNutrientRowDescriptor(label: "Carbs", slug: "carbs", defaultUnit: "g", source: .macro(.carbs), color: carbColor),
-            RecipeNutrientRowDescriptor(label: "Fiber", slug: "fiber", defaultUnit: "g", source: .nutrient(names: ["fiber, total dietary", "dietary fiber"]), color: carbColor),
-            RecipeNutrientRowDescriptor(label: "Net (Non-fiber)", slug: "net_carbs", defaultUnit: "g", source: .computed(.netCarbs), color: carbColor),
-            RecipeNutrientRowDescriptor(label: "Sugars", slug: "sugars", defaultUnit: "g", source: .nutrient(names: ["sugars, total including nlea", "sugars, total", "sugar"]), color: carbColor),
-            RecipeNutrientRowDescriptor(label: "Sugars Added", slug: "added_sugars", defaultUnit: "g", source: .nutrient(names: ["sugars, added", "added sugars"]), color: carbColor)
-        ]
-    }
-
-    static var fatRows: [RecipeNutrientRowDescriptor] {
-        [
-            RecipeNutrientRowDescriptor(label: "Fat", slug: "fat", defaultUnit: "g", source: .macro(.fat), color: fatColor),
-            RecipeNutrientRowDescriptor(label: "Monounsaturated", slug: "monounsaturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total monounsaturated"]), color: fatColor),
-            RecipeNutrientRowDescriptor(label: "Polyunsaturated", slug: "polyunsaturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total polyunsaturated"]), color: fatColor),
-            RecipeNutrientRowDescriptor(label: "Omega-3", slug: "omega_3_total", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-3", "omega 3", "omega-3"]), color: fatColor),
-            RecipeNutrientRowDescriptor(label: "Omega-3 ALA", slug: "omega_3_ala", defaultUnit: "g", source: .nutrient(names: ["18:3 n-3 c,c,c (ala)", "alpha-linolenic acid", "omega-3 ala", "omega 3 ala"]), color: fatColor),
-            RecipeNutrientRowDescriptor(label: "Omega-3 EPA", slug: "omega_3_epa_dha", defaultUnit: "mg", source: .nutrient(names: ["20:5 n-3 (epa)", "22:6 n-3 (dha)", "epa", "dha", "eicosapentaenoic acid", "docosahexaenoic acid", "omega-3 epa + dha"], aggregation: .sum), color: fatColor),
-            RecipeNutrientRowDescriptor(label: "Omega-6", slug: "omega_6", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total n-6", "omega 6", "omega-6"]), color: fatColor),
-            RecipeNutrientRowDescriptor(label: "Saturated", slug: "saturated_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total saturated"]), color: fatColor),
-            RecipeNutrientRowDescriptor(label: "Trans Fat", slug: "trans_fat", defaultUnit: "g", source: .nutrient(names: ["fatty acids, total trans"]), color: fatColor)
-        ]
-    }
-
-    static var proteinRows: [RecipeNutrientRowDescriptor] {
-        [
-            RecipeNutrientRowDescriptor(label: "Protein", slug: "protein", defaultUnit: "g", source: .macro(.protein), color: proteinColor),
-            RecipeNutrientRowDescriptor(label: "Cysteine", slug: "cysteine", defaultUnit: "mg", source: .nutrient(names: ["cysteine", "cystine"]), color: proteinColor),
-            RecipeNutrientRowDescriptor(label: "Histidine", slug: "histidine", defaultUnit: "mg", source: .nutrient(names: ["histidine"]), color: proteinColor),
-            RecipeNutrientRowDescriptor(label: "Isoleucine", slug: "isoleucine", defaultUnit: "mg", source: .nutrient(names: ["isoleucine"]), color: proteinColor),
-            RecipeNutrientRowDescriptor(label: "Leucine", slug: "leucine", defaultUnit: "mg", source: .nutrient(names: ["leucine"]), color: proteinColor),
-            RecipeNutrientRowDescriptor(label: "Lysine", slug: "lysine", defaultUnit: "mg", source: .nutrient(names: ["lysine"]), color: proteinColor),
-            RecipeNutrientRowDescriptor(label: "Methionine", slug: "methionine", defaultUnit: "mg", source: .nutrient(names: ["methionine"]), color: proteinColor),
-            RecipeNutrientRowDescriptor(label: "Phenylalanine", slug: "phenylalanine", defaultUnit: "mg", source: .nutrient(names: ["phenylalanine"]), color: proteinColor),
-            RecipeNutrientRowDescriptor(label: "Threonine", slug: "threonine", defaultUnit: "mg", source: .nutrient(names: ["threonine"]), color: proteinColor),
-            RecipeNutrientRowDescriptor(label: "Tryptophan", slug: "tryptophan", defaultUnit: "mg", source: .nutrient(names: ["tryptophan"]), color: proteinColor),
-            RecipeNutrientRowDescriptor(label: "Tyrosine", slug: "tyrosine", defaultUnit: "mg", source: .nutrient(names: ["tyrosine"]), color: proteinColor),
-            RecipeNutrientRowDescriptor(label: "Valine", slug: "valine", defaultUnit: "mg", source: .nutrient(names: ["valine"]), color: proteinColor)
-        ]
-    }
-
-    static var vitaminRows: [RecipeNutrientRowDescriptor] {
-        [
-            RecipeNutrientRowDescriptor(label: "B1, Thiamine", slug: "vitamin_b1_thiamin", defaultUnit: "mg", source: .nutrient(names: ["thiamin", "vitamin b-1"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "B2, Riboflavin", slug: "vitamin_b2_riboflavin", defaultUnit: "mg", source: .nutrient(names: ["riboflavin", "vitamin b-2"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "B3, Niacin", slug: "vitamin_b3_niacin", defaultUnit: "mg", source: .nutrient(names: ["niacin", "vitamin b-3"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "B6, Pyridoxine", slug: "vitamin_b6_pyridoxine", defaultUnit: "mg", source: .nutrient(names: ["vitamin b-6", "pyridoxine", "vitamin b6"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "B5, Pantothenic Acid", slug: "vitamin_b5_pantothenic_acid", defaultUnit: "mg", source: .nutrient(names: ["pantothenic acid"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "B12, Cobalamin", slug: "vitamin_b12_cobalamin", defaultUnit: "mcg", source: .nutrient(names: ["vitamin b-12", "cobalamin"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "Biotin", slug: "biotin", defaultUnit: "mcg", source: .nutrient(names: ["biotin"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "Folate", slug: "folate", defaultUnit: "mcg", source: .nutrient(names: ["folate, total", "folic acid"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "Vitamin A", slug: "vitamin_a", defaultUnit: "mcg", source: .nutrient(names: ["vitamin a, rae", "vitamin a"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "Vitamin C", slug: "vitamin_c", defaultUnit: "mg", source: .nutrient(names: ["vitamin c, total ascorbic acid", "vitamin c"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "Vitamin D", slug: "vitamin_d", defaultUnit: "IU", source: .nutrient(names: ["vitamin d (d2 + d3)", "vitamin d"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "Vitamin E", slug: "vitamin_e", defaultUnit: "mg", source: .nutrient(names: ["vitamin e (alpha-tocopherol)", "vitamin e"]), color: .orange),
-            RecipeNutrientRowDescriptor(label: "Vitamin K", slug: "vitamin_k", defaultUnit: "mcg", source: .nutrient(names: ["vitamin k (phylloquinone)", "vitamin k"]), color: .orange)
-        ]
-    }
-
-    static var mineralRows: [RecipeNutrientRowDescriptor] {
-        [
-            RecipeNutrientRowDescriptor(label: "Calcium", slug: "calcium", defaultUnit: "mg", source: .nutrient(names: ["calcium, ca"]), color: .blue),
-            RecipeNutrientRowDescriptor(label: "Copper", slug: "copper", defaultUnit: "mcg", source: .nutrient(names: ["copper, cu"]), color: .blue),
-            RecipeNutrientRowDescriptor(label: "Iron", slug: "iron", defaultUnit: "mg", source: .nutrient(names: ["iron, fe"]), color: .blue),
-            RecipeNutrientRowDescriptor(label: "Magnesium", slug: "magnesium", defaultUnit: "mg", source: .nutrient(names: ["magnesium, mg"]), color: .blue),
-            RecipeNutrientRowDescriptor(label: "Manganese", slug: "manganese", defaultUnit: "mg", source: .nutrient(names: ["manganese, mn"]), color: .blue),
-            RecipeNutrientRowDescriptor(label: "Phosphorus", slug: "phosphorus", defaultUnit: "mg", source: .nutrient(names: ["phosphorus, p"]), color: .blue),
-            RecipeNutrientRowDescriptor(label: "Potassium", slug: "potassium", defaultUnit: "mg", source: .nutrient(names: ["potassium, k"]), color: .blue),
-            RecipeNutrientRowDescriptor(label: "Selenium", slug: "selenium", defaultUnit: "mcg", source: .nutrient(names: ["selenium, se"]), color: .blue),
-            RecipeNutrientRowDescriptor(label: "Sodium", slug: "sodium", defaultUnit: "mg", source: .nutrient(names: ["sodium, na"]), color: .blue),
-            RecipeNutrientRowDescriptor(label: "Zinc", slug: "zinc", defaultUnit: "mg", source: .nutrient(names: ["zinc, zn"]), color: .blue)
-        ]
-    }
-
-    static var otherRows: [RecipeNutrientRowDescriptor] {
-        [
-            RecipeNutrientRowDescriptor(label: "Calories", slug: "calories", defaultUnit: "kcal", source: .computed(.calories), color: .purple),
-            RecipeNutrientRowDescriptor(label: "Alcohol", slug: "alcohol", defaultUnit: "g", source: .nutrient(names: ["alcohol, ethyl"]), color: .purple),
-            RecipeNutrientRowDescriptor(label: "Caffeine", slug: "caffeine", defaultUnit: "mg", source: .nutrient(names: ["caffeine"]), color: .purple),
-            RecipeNutrientRowDescriptor(label: "Cholesterol", slug: "cholesterol", defaultUnit: "mg", source: .nutrient(names: ["cholesterol"]), color: .purple),
-            RecipeNutrientRowDescriptor(label: "Choline", slug: "choline", defaultUnit: "mg", source: .nutrient(names: ["choline, total"]), color: .purple),
-            RecipeNutrientRowDescriptor(label: "Water", slug: "water", defaultUnit: "ml", source: .nutrient(names: ["water"]), color: .purple)
-        ]
-    }
-}
+// MARK: - Uses shared NutrientDescriptors from NutrientDescriptors.swift
 
 #Preview {
     NewRecipeView()

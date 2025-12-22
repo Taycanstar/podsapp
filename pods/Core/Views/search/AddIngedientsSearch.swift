@@ -135,8 +135,11 @@ struct AddIngredientsSearch: View {
                     Section {
                         ForEach(recentFoodLogs) { log in
                             if let food = log.food {
-                                RecentIngredientRow(log: log) {
-                                    onIngredientAdded(food.asFood)
+                                RecentIngredientRow(
+                                    log: log,
+                                    isAdded: addedItemIds.contains(log.id)
+                                ) {
+                                    addRecentIngredient(log: log, food: food.asFood)
                                 }
                             }
                         }
@@ -228,6 +231,13 @@ struct AddIngredientsSearch: View {
     private func addIngredient(_ item: FoodSearchResult) {
         addedItemIds.insert(item.id)
         let food = item.toFood()
+        onIngredientAdded(food)
+        showToast("Ingredient added to recipe")
+    }
+
+    // MARK: - Add Recent Ingredient
+    private func addRecentIngredient(log: CombinedLog, food: Food) {
+        addedItemIds.insert(log.id)
         onIngredientAdded(food)
         showToast("Ingredient added to recipe")
     }
@@ -358,6 +368,7 @@ extension AddIngredientsSearch {
 
 struct RecentIngredientRow: View {
     let log: CombinedLog
+    let isAdded: Bool
     var onTapped: (() -> Void)?
 
     private var displayName: String {
@@ -421,9 +432,16 @@ struct RecentIngredientRow: View {
 
                 Spacer()
 
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundColor(.primary)
+                // Add button or checkmark
+                if isAdded {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.accentColor)
+                } else {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.primary)
+                }
             }
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
             .contentShape(Rectangle())
