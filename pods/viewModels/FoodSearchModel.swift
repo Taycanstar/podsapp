@@ -2293,6 +2293,7 @@ struct InstantFoodSearchResponse: Codable {
 struct FoodSearchResult: Codable, Identifiable, Hashable {
     let fdcId: Int?
     let nixItemId: String?
+    let nixTagId: Int?
     let name: String
     let brandName: String?
     let calories: Double
@@ -2309,7 +2310,15 @@ struct FoodSearchResult: Codable, Identifiable, Hashable {
         if let nixItemId = nixItemId, !nixItemId.isEmpty {
             return nixItemId
         }
-        return "\(fdcId ?? 0)"
+        if let fdcId = fdcId {
+            return "\(fdcId)"
+        }
+        if let nixTagId = nixTagId {
+            return "tag-\(nixTagId)"
+        }
+        // Fallback to deterministic name/brand key to avoid duplicate IDs
+        let brandComponent = brandName?.lowercased() ?? "unknown"
+        return "name-\(name.lowercased())-\(brandComponent)"
     }
 
     /// Display name for the food (capitalized)
