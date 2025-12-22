@@ -427,25 +427,24 @@ struct AddIngredientsScanner: View {
     }
 
     private func analyzeNutritionLabel(_ image: UIImage) {
-        guard !isAnalyzing, let userEmail = currentUserEmail else { return }
+        guard !isAnalyzing else { return }
 
         isAnalyzing = true
 
         Task { @MainActor in
             defer { isAnalyzing = false }
-            do {
-                let combinedLog = try await foodManager.analyzeFoodImageModern(
-                    image: image,
-                    userEmail: userEmail,
-                    mealType: "Ingredient",
-                    shouldLog: false
-                )
-                if let food = combinedLog.food?.asFood {
-                    scannedFood = food
-                    showIngredientSummary = true
-                }
-            } catch {
-                print("Nutrition label scan failed: \(error.localizedDescription)")
+
+            // Use on-device OCR (fast path) instead of the backend label agent
+            let ocrData = await NutritionLabelOCRService.shared.extractNutrition(from: image)
+
+            if ocrData.labelDetected {
+                let food = Food.from(ocrData: ocrData)
+                scannedFood = food
+                showIngredientSummary = true
+                print("🏷️ [OCR] Label scanned successfully for ingredient flow")
+            } else {
+                print("🏷️ [OCR] No nutrition label detected in image")
+                showToast("No nutrition label detected. Try repositioning the camera.")
             }
         }
     }

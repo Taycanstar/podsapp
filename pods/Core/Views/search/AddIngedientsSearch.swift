@@ -23,6 +23,8 @@ struct AddIngredientsSearch: View {
     @State private var isSearching = false
     @State private var searchTask: Task<Void, Never>?
     @State private var addedItemIds: Set<String> = []
+    @State private var showAddedToast = false
+    @State private var toastMessage = ""
 
     @ObservedObject private var recentFoodsRepo = RecentFoodLogsRepository.shared
 
@@ -162,6 +164,14 @@ struct AddIngredientsSearch: View {
                 await recentFoodsRepo.refresh()
             }
         }
+        .overlay(alignment: .top) {
+            if showAddedToast {
+                toastView
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
     }
 
     // MARK: - Section Header
@@ -221,6 +231,19 @@ struct AddIngredientsSearch: View {
         addedItemIds.insert(item.id)
         let food = item.toFood()
         onIngredientAdded(food)
+        showToast("Ingredient added to recipe")
+    }
+
+    private func showToast(_ message: String) {
+        toastMessage = message
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showAddedToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showAddedToast = false
+            }
+        }
     }
 }
 
@@ -305,6 +328,30 @@ struct FoodSearchResultIngredientRow: View {
             Text(prefix)
                 .foregroundColor(.secondary)
             Text("\(value)g")
+        }
+    }
+}
+
+// MARK: - Toast View
+
+extension AddIngredientsSearch {
+    @ViewBuilder
+    fileprivate var toastView: some View {
+        if #available(iOS 26.0, *) {
+            Text(toastMessage)
+                .font(.system(size: 13, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .padding(.horizontal, 20)
+                .glassEffect(.regular.interactive())
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else {
+            Text(toastMessage)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 12))
         }
     }
 }
