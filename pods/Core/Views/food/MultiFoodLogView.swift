@@ -47,7 +47,59 @@ struct MultiFoodLogView: View {
         if foods.count > 1 {
             return foods
         }
+        // PRIORITY: Use top-level mealItems if available (has full nutrients from fast_food_image)
+        // Fall back to embedded food.mealItems only if top-level is empty
+        if !mealItems.isEmpty {
+            print("[MultiFoodLogView] Using top-level mealItems (\(mealItems.count) items)")
+            return mealItems.map { item in
+                print("[MultiFoodLogView] Item '\(item.name)': foodNutrients count = \(item.foodNutrients?.count ?? 0)")
+                if let first = item.foodNutrients?.first {
+                    print("[MultiFoodLogView] Sample nutrient: \(first.nutrientName) = \(first.value ?? 0) \(first.unitName)")
+                }
+
+                let unitLabel = item.servingUnit ?? "serving"
+                let defaultMeasure = FoodMeasure(
+                    disseminationText: unitLabel,
+                    gramWeight: item.serving,
+                    id: 0,
+                    modifier: unitLabel,
+                    measureUnitName: unitLabel,
+                    rank: 0
+                )
+                let nutrients: [Nutrient]
+                if let fullNutrients = item.foodNutrients, !fullNutrients.isEmpty {
+                    print("[MultiFoodLogView] Using \(fullNutrients.count) full nutrients for '\(item.name)'")
+                    nutrients = fullNutrients
+                } else {
+                    print("[MultiFoodLogView] Using 4 basic macros fallback for '\(item.name)'")
+                    nutrients = [
+                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                    ]
+                }
+                return Food(
+                    fdcId: item.id.hashValue,
+                    description: item.name,
+                    brandOwner: nil,
+                    brandName: nil,
+                    servingSize: item.serving,
+                    numberOfServings: 1,
+                    servingSizeUnit: item.servingUnit,
+                    householdServingFullText: item.originalServing?.resolvedText ?? "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
+                    foodNutrients: nutrients,
+                    foodMeasures: [defaultMeasure],
+                    healthAnalysis: nil,
+                    aiInsight: nil,
+                    nutritionScore: nil,
+                    mealItems: item.subitems
+                )
+            }
+        }
+        // Fallback: Use embedded mealItems from Food object (legacy path)
         if let first = foods.first, let items = first.mealItems, !items.isEmpty {
+            print("[MultiFoodLogView] Using embedded food.mealItems (\(items.count) items)")
             return items.map { item in
                 // Create a default measure with the item's serving unit
                 let unitLabel = item.servingUnit ?? "serving"
@@ -89,46 +141,8 @@ struct MultiFoodLogView: View {
                 )
             }
         }
-        return mealItems.map { item in
-            // Create a default measure with the item's serving unit
-            let unitLabel = item.servingUnit ?? "serving"
-            let defaultMeasure = FoodMeasure(
-                disseminationText: unitLabel,
-                gramWeight: item.serving,
-                id: 0,
-                modifier: unitLabel,
-                measureUnitName: unitLabel,
-                rank: 0
-            )
-            // Use full nutrients if available, otherwise fallback to basic macros
-            let nutrients: [Nutrient]
-            if let fullNutrients = item.foodNutrients, !fullNutrients.isEmpty {
-                nutrients = fullNutrients
-            } else {
-                nutrients = [
-                    Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
-                    Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
-                    Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
-                    Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
-                ]
-            }
-            return Food(
-                fdcId: item.id.hashValue,
-                description: item.name,
-                brandOwner: nil,
-                brandName: nil,
-                servingSize: item.serving,
-                numberOfServings: 1,
-                servingSizeUnit: item.servingUnit,
-                householdServingFullText: item.originalServing?.resolvedText ?? "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
-                foodNutrients: nutrients,
-                foodMeasures: [defaultMeasure],
-                healthAnalysis: nil,
-                aiInsight: nil,
-                nutritionScore: nil,
-                mealItems: []
-            )
-        }
+        // Final fallback: return empty array
+        return []
     }
 
     /// Filtered display foods excluding deleted items

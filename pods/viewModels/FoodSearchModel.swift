@@ -142,10 +142,31 @@ struct Nutrient: Codable {
     let nutrientName: String
     let value: Double?
     let unitName: String
-    
+
     // Add a computed property that always returns a non-optional Double
     var safeValue: Double {
         return value ?? 0.0
+    }
+
+    // Custom decoder to handle missing/null fields gracefully
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // nutrientName is required, but try with default if missing
+        self.nutrientName = try container.decodeIfPresent(String.self, forKey: .nutrientName) ?? "Unknown"
+        self.value = try container.decodeIfPresent(Double.self, forKey: .value)
+        // unitName might be null or missing in some responses
+        self.unitName = try container.decodeIfPresent(String.self, forKey: .unitName) ?? ""
+    }
+
+    init(nutrientName: String, value: Double?, unitName: String) {
+        self.nutrientName = nutrientName
+        self.value = value
+        self.unitName = unitName
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case nutrientName, value, unitName
+        // .convertFromSnakeCase handles nutrient_name -> nutrientName, unit_name -> unitName
     }
 }
 

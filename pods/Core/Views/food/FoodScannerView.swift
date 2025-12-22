@@ -210,9 +210,7 @@ struct FoodScannerView: View {
                             // Close button
                             if #available(iOS 26.0, *) {
                                 Button(action: {
-                                    stopCameraSession {
-                                        isPresented = false
-                                    }
+                                    dismissScanner()
                                 }) {
                                     Image(systemName: "xmark")
                                         .font(.system(size: 20, weight: .semibold))
@@ -223,9 +221,7 @@ struct FoodScannerView: View {
                                 .clipShape(Circle())
                             } else {
                                 Button(action: {
-                                    stopCameraSession {
-                                        isPresented = false
-                                    }
+                                    dismissScanner()
                                 }) {
                                     Image(systemName: "xmark")
                                         .font(.system(size: 20, weight: .semibold))
@@ -1010,6 +1006,21 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
             }
             completion()
         }
+    }
+
+    private func dismissScanner() {
+        // Immediately flip the binding so the sheet attempts to close
+        isPresented = false
+
+        // Stop camera to avoid capture assertions
+        stopCameraSession {}
+
+        // Reset transient flags to avoid guards blocking subsequent opens
+        isProcessingBarcode = false
+        isAnalyzing = false
+        foodManager.isAnalyzingFood = false
+        foodManager.loadingMessage = ""
+        foodManager.uploadProgress = 0
     }
 
     private func sanitizeBarcode(_ value: String) -> String {

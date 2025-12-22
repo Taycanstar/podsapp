@@ -140,7 +140,7 @@ struct FoodChatResponse: Codable {
 
     enum CodingKeys: String, CodingKey {
         case type, message, food, options, question, error
-        case mealItems = "meal_items"
+        case mealItems  // .convertFromSnakeCase handles "meal_items" -> "mealItems"
     }
 
     init(type: ResponseType, message: String, food: FoodChatFood? = nil, mealItems: [FoodChatMealItem]? = nil, options: [ClarificationOption]? = nil, question: String? = nil, error: String? = nil) {
@@ -165,7 +165,7 @@ struct AgentFoodImageResponse: Codable {
 
     enum CodingKeys: String, CodingKey {
         case status, type, message, foods, error
-        case mealItems = "meal_items"
+        case mealItems  // .convertFromSnakeCase handles "meal_items" -> "mealItems"
     }
 }
 
@@ -236,7 +236,7 @@ struct FoodChatMealItem: Codable {
 
     enum CodingKeys: String, CodingKey {
         case name, calories, protein, carbs, fat, serving, foodNutrients
-        case servingUnit = "serving_unit"
+        case servingUnit  // .convertFromSnakeCase handles "serving_unit" -> "servingUnit"
     }
 }
 
