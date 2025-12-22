@@ -410,18 +410,28 @@ struct AddIngredientsScanner: View {
         Task { @MainActor in
             defer { isAnalyzing = false }
             do {
-                let combinedLog = try await foodManager.analyzeFoodImageModern(
+                // Use fast pipeline (MacroFactor-style, 2-4 seconds) instead of legacy GPT-5
+                let fastResult = try await foodManager.analyzeFoodImageFast(
                     image: image,
-                    userEmail: userEmail,
-                    mealType: "Ingredient",
-                    shouldLog: false
+                    userEmail: userEmail
                 )
-                if let food = combinedLog.food?.asFood {
+
+                if fastResult.foods.count == 1, let food = fastResult.foods.first {
+                    // Single food item - show summary sheet
                     scannedFood = food
                     showIngredientSummary = true
+                } else if fastResult.foods.count > 1 {
+                    // Multiple foods detected - show plate summary
+                    scannedFoods = fastResult.foods
+                    scannedMealItems = fastResult.mealItems
+                    showIngredientPlateSummary = true
+                } else {
+                    print("[AddIngredientsScanner] No foods detected in image")
+                    showToast("No food detected. Try repositioning the camera.")
                 }
             } catch {
-                print("Ingredient scan failed: \(error.localizedDescription)")
+                print("[AddIngredientsScanner] Fast scan failed: \(error.localizedDescription)")
+                showToast("Scan failed. Please try again.")
             }
         }
     }
