@@ -63,11 +63,7 @@ struct Food: Codable, Identifiable, Hashable{
     enum CodingKeys: String, CodingKey {
         case fdcId, description, brandOwner, brandName, servingSize, numberOfServings
         case servingSizeUnit, householdServingFullText, foodNutrients, foodMeasures
-        case healthAnalysis  // .convertFromSnakeCase: "health_analysis" -> "healthAnalysis"
-        case aiInsight       // .convertFromSnakeCase: "ai_insight" -> "aiInsight"
-        case nutritionScore  // .convertFromSnakeCase: "nutrition_score" -> "nutritionScore"
-        case mealItems       // .convertFromSnakeCase: "meal_items" -> "mealItems"
-        case barcode
+        case healthAnalysis, aiInsight, nutritionScore, mealItems, barcode
     }
     
     var calories: Double? {
@@ -272,18 +268,10 @@ struct MealItem: Codable, Identifiable, Hashable {
     var originalServing: MealItemServingDescriptor?
     var foodNutrients: [Nutrient]?
 
+    // With .convertFromSnakeCase decoder, the decoder auto-converts snake_case to camelCase
     enum CodingKeys: String, CodingKey {
-        case name
-        case serving
-        case servingUnit  // With .convertFromSnakeCase, decoder auto-converts "serving_unit" -> "servingUnit"
-        case calories
-        case protein
-        case carbs
-        case fat
-        case subitems
-        case measures
-        case originalServing  // With .convertFromSnakeCase, decoder auto-converts "original_serving" -> "originalServing"
-        case foodNutrients
+        case name, serving, servingUnit, calories, protein, carbs, fat
+        case subitems, measures, originalServing, foodNutrients
     }
 
     init(name: String,

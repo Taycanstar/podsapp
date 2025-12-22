@@ -210,7 +210,9 @@ struct FoodScannerView: View {
                             // Close button
                             if #available(iOS 26.0, *) {
                                 Button(action: {
-                                    isPresented = false
+                                    stopCameraSession {
+                                        isPresented = false
+                                    }
                                 }) {
                                     Image(systemName: "xmark")
                                         .font(.system(size: 20, weight: .semibold))
@@ -221,7 +223,9 @@ struct FoodScannerView: View {
                                 .clipShape(Circle())
                             } else {
                                 Button(action: {
-                                    isPresented = false
+                                    stopCameraSession {
+                                        isPresented = false
+                                    }
                                 }) {
                                     Image(systemName: "xmark")
                                         .font(.system(size: 20, weight: .semibold))

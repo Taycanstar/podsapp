@@ -182,7 +182,7 @@ struct FastFoodImageResponse: Codable {
 
     enum CodingKeys: String, CodingKey {
         case status, type, message, foods, totals, timing, error
-        case mealItems = "meal_items"
+        case mealItems  // .convertFromSnakeCase handles "meal_items" -> "mealItems"
     }
 }
 
@@ -201,11 +201,8 @@ struct FastFoodTiming: Codable {
     let totalMs: Int?
 
     enum CodingKeys: String, CodingKey {
-        case visionMs = "vision_ms"
-        case cacheMs = "cache_ms"
-        case nutritionixMs = "nutritionix_ms"
-        case fallbackMs = "fallback_ms"
-        case totalMs = "total_ms"
+        case visionMs, cacheMs, nutritionixMs, fallbackMs, totalMs
+        // .convertFromSnakeCase handles snake_case -> camelCase conversions
     }
 }
 
@@ -222,8 +219,7 @@ struct FoodChatFood: Codable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, calories, protein, carbs, fat
-        case foodNutrients = "food_nutrients"
-        case servingSizeText = "serving_size_text"
+        case foodNutrients, servingSizeText  // .convertFromSnakeCase handles snake_case
     }
 }
 

@@ -59,6 +59,18 @@ struct MultiFoodLogView: View {
                     measureUnitName: unitLabel,
                     rank: 0
                 )
+                // Use full nutrients if available, otherwise fallback to basic macros
+                let nutrients: [Nutrient]
+                if let fullNutrients = item.foodNutrients, !fullNutrients.isEmpty {
+                    nutrients = fullNutrients
+                } else {
+                    nutrients = [
+                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                    ]
+                }
                 return Food(
                     fdcId: item.id.hashValue,
                     description: item.name,
@@ -68,12 +80,7 @@ struct MultiFoodLogView: View {
                     numberOfServings: 1,
                     servingSizeUnit: item.servingUnit,
                     householdServingFullText: item.originalServing?.resolvedText ?? "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
-                    foodNutrients: [
-                        Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
-                        Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
-                        Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
-                        Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
-                    ],
+                    foodNutrients: nutrients,
                     foodMeasures: [defaultMeasure],
                     healthAnalysis: nil,
                     aiInsight: nil,
@@ -93,6 +100,18 @@ struct MultiFoodLogView: View {
                 measureUnitName: unitLabel,
                 rank: 0
             )
+            // Use full nutrients if available, otherwise fallback to basic macros
+            let nutrients: [Nutrient]
+            if let fullNutrients = item.foodNutrients, !fullNutrients.isEmpty {
+                nutrients = fullNutrients
+            } else {
+                nutrients = [
+                    Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+                    Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+                    Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+                    Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+                ]
+            }
             return Food(
                 fdcId: item.id.hashValue,
                 description: item.name,
@@ -102,12 +121,7 @@ struct MultiFoodLogView: View {
                 numberOfServings: 1,
                 servingSizeUnit: item.servingUnit,
                 householdServingFullText: item.originalServing?.resolvedText ?? "\(Int(item.serving)) \(item.servingUnit ?? "serving")",
-                foodNutrients: [
-                    Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
-                    Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
-                    Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
-                    Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
-                ],
+                foodNutrients: nutrients,
                 foodMeasures: [defaultMeasure],
                 healthAnalysis: nil,
                 aiInsight: nil,
