@@ -25,6 +25,7 @@ struct AddIngredientsSearch: View {
     @State private var addedItemIds: Set<String> = []
     @State private var showAddedToast = false
     @State private var toastMessage = ""
+    @State private var isLoadingFullData = false
 
     @ObservedObject private var recentFoodsRepo = RecentFoodLogsRepository.shared
 
@@ -173,6 +174,19 @@ struct AddIngredientsSearch: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
+        .overlay {
+            if isLoadingFullData {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .overlay {
+                        ProgressView("Loading nutrition data...")
+                            .padding()
+                            .background(.regularMaterial)
+                            .cornerRadius(12)
+                    }
+            }
+        }
+        .allowsHitTesting(!isLoadingFullData)
     }
 
     // MARK: - Section Header
@@ -229,10 +243,55 @@ struct AddIngredientsSearch: View {
 
     // MARK: - Add Ingredient
     private func addIngredient(_ item: FoodSearchResult) {
-        addedItemIds.insert(item.id)
-        let food = item.toFood()
-        onIngredientAdded(food)
-        showToast("Ingredient added to recipe")
+        // Check if this item already has full nutrients (history/custom items)
+        // History and custom items have foodNutrients from the database
+        if let nutrients = item.foodNutrients, nutrients.count > 10 {
+            // Item already has full nutrients, add directly
+            addedItemIds.insert(item.id)
+            let food = item.toFood()
+            onIngredientAdded(food)
+            showToast("Ingredient added to recipe")
+            return
+        }
+
+        // For common/branded items, fetch full nutrients from Nutritionix
+        guard let email = foodManager.userEmail else {
+            // Fallback: add with limited nutrients
+            addedItemIds.insert(item.id)
+            let food = item.toFood()
+            onIngredientAdded(food)
+            showToast("Ingredient added to recipe")
+            return
+        }
+
+        isLoadingFullData = true
+        Task {
+            do {
+                // Use nixItemId for branded, food name for common
+                let fullResult = try await FoodService.shared.fullFoodLookup(
+                    nixItemId: item.nixItemId,
+                    foodName: item.nixItemId == nil ? item.name : nil,
+                    userEmail: email
+                )
+                await MainActor.run {
+                    isLoadingFullData = false
+                    addedItemIds.insert(item.id)
+                    let food = fullResult.toFood()
+                    onIngredientAdded(food)
+                    showToast("Ingredient added to recipe")
+                }
+            } catch {
+                print("[AddIngredientsSearch] Full lookup failed: \(error), using instant search data")
+                await MainActor.run {
+                    isLoadingFullData = false
+                    // Fallback to instant search data
+                    addedItemIds.insert(item.id)
+                    let food = item.toFood()
+                    onIngredientAdded(food)
+                    showToast("Ingredient added to recipe")
+                }
+            }
+        }
     }
 
     // MARK: - Add Recent Ingredient

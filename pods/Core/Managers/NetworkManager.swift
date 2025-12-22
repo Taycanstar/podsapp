@@ -9307,6 +9307,91 @@ class NetworkManager {
         }.resume()
     }
 
+    // MARK: - Full Food Lookup (for getting complete nutrients)
+
+    /// Fetches full nutrient data for a food item from Nutritionix.
+    /// For branded items: Uses nix_item_id
+    /// For common items: Uses food name
+    func foodFullLookup(nixItemId: String?,
+                        foodName: String?,
+                        userEmail: String,
+                        completion: @escaping (Result<FoodSearchResult, Error>) -> Void) {
+        guard let url = URL(string: "\(baseUrl)/food-full-lookup/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        var payload: [String: Any] = [
+            "user_email": userEmail
+        ]
+        if let nixItemId = nixItemId, !nixItemId.isEmpty {
+            payload["nix_item_id"] = nixItemId
+        }
+        if let foodName = foodName, !foodName.isEmpty {
+            payload["food_name"] = foodName
+        }
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.invalidResponse))
+                }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+
+            if httpResponse.statusCode != 200 {
+                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(errorMessage)))
+                }
+                return
+            }
+
+            do {
+                let decoder = self.makeJSONDecoder()
+                let result = try decoder.decode(FoodSearchResult.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(result))
+                }
+            } catch {
+                #if DEBUG
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("🔍 [FoodFullLookup] Decode error: \(error)")
+                    print("🔍 [FoodFullLookup] Raw response: \(jsonString)")
+                }
+                #endif
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+
     func scheduleMealLog(logId: Int,
                          logType: String,
                          scheduleType: String,

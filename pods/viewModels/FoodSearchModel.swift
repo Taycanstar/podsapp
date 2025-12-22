@@ -2417,4 +2417,18 @@ extension FoodService {
             }
         }
     }
+
+    /// Fetch full nutrient data for a food item from Nutritionix
+    /// - Parameters:
+    ///   - nixItemId: The Nutritionix item ID (for branded foods)
+    ///   - foodName: The food name (for common foods, used if nixItemId is nil)
+    ///   - userEmail: The user's email
+    /// - Returns: FoodSearchResult with full nutrient data
+    func fullFoodLookup(nixItemId: String?, foodName: String?, userEmail: String) async throws -> FoodSearchResult {
+        try await withCheckedThrowingContinuation { continuation in
+            networkManager.foodFullLookup(nixItemId: nixItemId, foodName: foodName, userEmail: userEmail) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
 }
