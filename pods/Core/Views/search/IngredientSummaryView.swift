@@ -177,7 +177,7 @@ struct IngredientSummaryView: View {
     private var nutrientLookup: [String: (value: Double, unit: String)] {
         var lookup: [String: (Double, String)] = [:]
         for nutrient in food.foodNutrients {
-            let key = nutrient.nutrientName.lowercased()
+            let key = normalizedNutrientKey(nutrient.nutrientName)
             let value = nutrient.value ?? 0
             let unit = nutrient.unitName ?? ""
             lookup[key] = (value, unit)
@@ -196,7 +196,7 @@ struct IngredientSummaryView: View {
             case .fat: return adjustedFat
             }
         case .nutrient(let names, let aggregation):
-            let matches = names.compactMap { nutrientLookup[$0.lowercased()] }
+            let matches = names.compactMap { nutrientLookup[normalizedNutrientKey($0)] }
             guard !matches.isEmpty else { return 0 }
             let baseValue: Double
             switch aggregation {
@@ -487,7 +487,7 @@ struct IngredientSummaryView: View {
                 return true
             case .nutrient(let names, _):
                 return names.contains { name in
-                    nutrientLookup[name.lowercased()] != nil
+                    nutrientLookup[normalizedNutrientKey(name)] != nil
                 }
             }
         }

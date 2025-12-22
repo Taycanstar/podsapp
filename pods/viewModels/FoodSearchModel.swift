@@ -2306,6 +2306,9 @@ struct FoodSearchResult: Codable, Identifiable, Hashable {
     let frequency: Int?
     let lastLogged: String?
 
+    // Full nutrient data from backend (vitamins, minerals, etc.)
+    let foodNutrients: [Nutrient]?
+
     var id: String {
         if let nixItemId = nixItemId, !nixItemId.isEmpty {
             return nixItemId
@@ -2330,12 +2333,18 @@ struct FoodSearchResult: Codable, Identifiable, Hashable {
     func toFood() -> Food {
         let syntheticId = fdcId ?? Int.random(in: 9_000_000_000...9_999_999_999)
 
-        let nutrients: [Nutrient] = [
-            Nutrient(nutrientName: "Energy", value: calories, unitName: "kcal"),
-            Nutrient(nutrientName: "Protein", value: protein, unitName: "g"),
-            Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "g"),
-            Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "g")
-        ]
+        // Use full nutrient data from backend if available, otherwise fall back to basic macros
+        let nutrients: [Nutrient]
+        if let fullNutrients = foodNutrients, !fullNutrients.isEmpty {
+            nutrients = fullNutrients
+        } else {
+            nutrients = [
+                Nutrient(nutrientName: "Energy", value: calories, unitName: "kcal"),
+                Nutrient(nutrientName: "Protein", value: protein, unitName: "g"),
+                Nutrient(nutrientName: "Carbohydrate, by difference", value: carbs, unitName: "g"),
+                Nutrient(nutrientName: "Total lipid (fat)", value: fat, unitName: "g")
+            ]
+        }
 
         let measure = FoodMeasure(
             disseminationText: servingText ?? "1 serving",

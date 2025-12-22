@@ -111,7 +111,7 @@ struct NewRecipeView: View {
     private var fiberValue: Double {
         let keys = ["fiber, total dietary", "dietary fiber", "fiber"]
         for key in keys {
-            if let val = aggregatedNutrients[key]?.value, val > 0 {
+            if let val = aggregatedNutrients[normalizedNutrientKey(key)]?.value, val > 0 {
                 return val
             }
         }
