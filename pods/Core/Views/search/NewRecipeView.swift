@@ -164,7 +164,7 @@ struct NewRecipeView: View {
 
                 footerBar
             }
-            .background(backgroundColor.ignoresSafeArea())
+            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("New Recipe")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -271,7 +271,6 @@ struct NewRecipeView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
         .scrollDisabled(true)
         .frame(height: calculateListHeight())
     }
@@ -425,7 +424,7 @@ struct NewRecipeView: View {
         .padding(.horizontal)
         .padding(.bottom, 12)
         .background(
-            backgroundColor
+            Color(UIColor.systemGroupedBackground)
                 .ignoresSafeArea(edges: .bottom)
         )
     }
