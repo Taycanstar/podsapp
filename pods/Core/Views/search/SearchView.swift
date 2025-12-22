@@ -25,6 +25,7 @@ struct SearchView: View {
     @State private var searchResults: InstantFoodSearchResponse?
     @State private var isSearching = false
     @State private var searchTask: Task<Void, Never>?
+    @State private var loadingItemId: String?
 
     /// Debounce time for search (250ms recommended by MacroFactor)
     private let searchDebounceNanoseconds: UInt64 = 250_000_000
@@ -188,7 +189,10 @@ struct SearchView: View {
                     if !results.history.isEmpty {
                         Section {
                             ForEach(results.history) { item in
-                                FoodSearchResultRow(item: item) {
+                                FoodSearchResultRow(
+                                    item: item,
+                                    isLoading: loadingItemId == item.id
+                                ) {
                                     handleFoodSearchResultTapped(item)
                                 } onAddToPlate: {
                                     handleAddToPlate(item)
@@ -203,7 +207,10 @@ struct SearchView: View {
                     if !results.custom.isEmpty {
                         Section {
                             ForEach(results.custom) { item in
-                                FoodSearchResultRow(item: item) {
+                                FoodSearchResultRow(
+                                    item: item,
+                                    isLoading: loadingItemId == item.id
+                                ) {
                                     handleFoodSearchResultTapped(item)
                                 } onAddToPlate: {
                                     handleAddToPlate(item)
@@ -218,7 +225,10 @@ struct SearchView: View {
                     if !results.common.isEmpty {
                         Section {
                             ForEach(results.common) { item in
-                                FoodSearchResultRow(item: item) {
+                                FoodSearchResultRow(
+                                    item: item,
+                                    isLoading: loadingItemId == item.id
+                                ) {
                                     handleFoodSearchResultTapped(item)
                                 } onAddToPlate: {
                                     handleAddToPlate(item)
@@ -233,7 +243,10 @@ struct SearchView: View {
                     if !results.branded.isEmpty {
                         Section {
                             ForEach(results.branded) { item in
-                                FoodSearchResultRow(item: item) {
+                                FoodSearchResultRow(
+                                    item: item,
+                                    isLoading: loadingItemId == item.id
+                                ) {
                                     handleFoodSearchResultTapped(item)
                                 } onAddToPlate: {
                                     handleAddToPlate(item)
@@ -356,14 +369,82 @@ struct SearchView: View {
 
     // MARK: - Handle Food Search Result Tapped
     private func handleFoodSearchResultTapped(_ item: FoodSearchResult) {
-        let food = item.toFood()
-        logFoodDirectly(food)
+        // Check if item already has full nutrients (history/custom items)
+        if let nutrients = item.foodNutrients, nutrients.count > 10 {
+            let food = item.toFood()
+            logFoodDirectly(food)
+            return
+        }
+
+        // For common/branded, fetch full nutrients from Nutritionix
+        guard let email = foodManager.userEmail else {
+            let food = item.toFood()
+            logFoodDirectly(food)
+            return
+        }
+
+        loadingItemId = item.id
+        Task {
+            do {
+                let fullResult = try await FoodService.shared.fullFoodLookup(
+                    nixItemId: item.nixItemId,
+                    foodName: item.nixItemId == nil ? item.name : nil,
+                    userEmail: email
+                )
+                await MainActor.run {
+                    loadingItemId = nil
+                    let food = fullResult.toFood()
+                    logFoodDirectly(food)
+                }
+            } catch {
+                print("[SearchView] Full lookup failed: \(error), using instant search data")
+                await MainActor.run {
+                    loadingItemId = nil
+                    let food = item.toFood()
+                    logFoodDirectly(food)
+                }
+            }
+        }
     }
 
     // MARK: - Handle Add to Plate
     private func handleAddToPlate(_ item: FoodSearchResult) {
-        let food = item.toFood()
-        addFoodToPlate(food)
+        // Check if item already has full nutrients (history/custom items)
+        if let nutrients = item.foodNutrients, nutrients.count > 10 {
+            let food = item.toFood()
+            addFoodToPlate(food)
+            return
+        }
+
+        // For common/branded, fetch full nutrients from Nutritionix
+        guard let email = foodManager.userEmail else {
+            let food = item.toFood()
+            addFoodToPlate(food)
+            return
+        }
+
+        loadingItemId = item.id
+        Task {
+            do {
+                let fullResult = try await FoodService.shared.fullFoodLookup(
+                    nixItemId: item.nixItemId,
+                    foodName: item.nixItemId == nil ? item.name : nil,
+                    userEmail: email
+                )
+                await MainActor.run {
+                    loadingItemId = nil
+                    let food = fullResult.toFood()
+                    addFoodToPlate(food)
+                }
+            } catch {
+                print("[SearchView] Full lookup failed: \(error), using instant search data")
+                await MainActor.run {
+                    loadingItemId = nil
+                    let food = item.toFood()
+                    addFoodToPlate(food)
+                }
+            }
+        }
     }
 
     // MARK: - Delete Log
@@ -631,6 +712,7 @@ struct RecentFoodRow: View {
 
 struct FoodSearchResultRow: View {
     let item: FoodSearchResult
+    var isLoading: Bool = false
     var onTapped: (() -> Void)?
     var onAddToPlate: (() -> Void)?
 
@@ -693,23 +775,28 @@ struct FoodSearchResultRow: View {
 
             Spacer()
 
-            // Dropdown menu button
-            Menu {
-                Button {
-                    onTapped?()
-                } label: {
-                    Label("Log", systemImage: "plus.circle")
-                }
+            // Loading, or dropdown menu button
+            if isLoading {
+                ProgressView()
+                    .frame(width: 22, height: 22)
+            } else {
+                Menu {
+                    Button {
+                        onTapped?()
+                    } label: {
+                        Label("Log", systemImage: "plus.circle")
+                    }
 
-                Button {
-                    onAddToPlate?()
+                    Button {
+                        onAddToPlate?()
+                    } label: {
+                        Label("Add to Plate", systemImage: "fork.knife")
+                    }
                 } label: {
-                    Label("Add to Plate", systemImage: "fork.knife")
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.primary)
                 }
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundColor(.primary)
             }
         }
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))

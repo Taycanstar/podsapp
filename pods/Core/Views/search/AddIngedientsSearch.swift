@@ -25,7 +25,7 @@ struct AddIngredientsSearch: View {
     @State private var addedItemIds: Set<String> = []
     @State private var showAddedToast = false
     @State private var toastMessage = ""
-    @State private var isLoadingFullData = false
+    @State private var loadingItemId: String?
 
     @ObservedObject private var recentFoodsRepo = RecentFoodLogsRepository.shared
 
@@ -72,7 +72,8 @@ struct AddIngredientsSearch: View {
                             ForEach(results.history) { item in
                                 FoodSearchResultIngredientRow(
                                     item: item,
-                                    isAdded: addedItemIds.contains(item.id)
+                                    isAdded: addedItemIds.contains(item.id),
+                                    isLoading: loadingItemId == item.id
                                 ) {
                                     addIngredient(item)
                                 }
@@ -88,7 +89,8 @@ struct AddIngredientsSearch: View {
                             ForEach(results.custom) { item in
                                 FoodSearchResultIngredientRow(
                                     item: item,
-                                    isAdded: addedItemIds.contains(item.id)
+                                    isAdded: addedItemIds.contains(item.id),
+                                    isLoading: loadingItemId == item.id
                                 ) {
                                     addIngredient(item)
                                 }
@@ -104,7 +106,8 @@ struct AddIngredientsSearch: View {
                             ForEach(results.common) { item in
                                 FoodSearchResultIngredientRow(
                                     item: item,
-                                    isAdded: addedItemIds.contains(item.id)
+                                    isAdded: addedItemIds.contains(item.id),
+                                    isLoading: loadingItemId == item.id
                                 ) {
                                     addIngredient(item)
                                 }
@@ -120,7 +123,8 @@ struct AddIngredientsSearch: View {
                             ForEach(results.branded) { item in
                                 FoodSearchResultIngredientRow(
                                     item: item,
-                                    isAdded: addedItemIds.contains(item.id)
+                                    isAdded: addedItemIds.contains(item.id),
+                                    isLoading: loadingItemId == item.id
                                 ) {
                                     addIngredient(item)
                                 }
@@ -174,19 +178,6 @@ struct AddIngredientsSearch: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .overlay {
-            if isLoadingFullData {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .overlay {
-                        ProgressView("Loading nutrition data...")
-                            .padding()
-                            .background(.regularMaterial)
-                            .cornerRadius(12)
-                    }
-            }
-        }
-        .allowsHitTesting(!isLoadingFullData)
     }
 
     // MARK: - Section Header
@@ -264,7 +255,7 @@ struct AddIngredientsSearch: View {
             return
         }
 
-        isLoadingFullData = true
+        loadingItemId = item.id
         Task {
             do {
                 // Use nixItemId for branded, food name for common
@@ -274,7 +265,7 @@ struct AddIngredientsSearch: View {
                     userEmail: email
                 )
                 await MainActor.run {
-                    isLoadingFullData = false
+                    loadingItemId = nil
                     addedItemIds.insert(item.id)
                     let food = fullResult.toFood()
                     onIngredientAdded(food)
@@ -283,7 +274,7 @@ struct AddIngredientsSearch: View {
             } catch {
                 print("[AddIngredientsSearch] Full lookup failed: \(error), using instant search data")
                 await MainActor.run {
-                    isLoadingFullData = false
+                    loadingItemId = nil
                     // Fallback to instant search data
                     addedItemIds.insert(item.id)
                     let food = item.toFood()
@@ -319,6 +310,7 @@ struct AddIngredientsSearch: View {
 struct FoodSearchResultIngredientRow: View {
     let item: FoodSearchResult
     let isAdded: Bool
+    var isLoading: Bool = false
     var onTapped: (() -> Void)?
 
     private var caloriesValue: Int {
@@ -373,8 +365,11 @@ struct FoodSearchResultIngredientRow: View {
 
                 Spacer()
 
-                // Add button or checkmark
-                if isAdded {
+                // Add button, loading, or checkmark
+                if isLoading {
+                    ProgressView()
+                        .frame(width: 22, height: 22)
+                } else if isAdded {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 22))
                         .foregroundColor(.accentColor)
