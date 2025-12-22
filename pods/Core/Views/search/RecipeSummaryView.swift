@@ -38,6 +38,40 @@ struct RecipeSummaryView: View {
     private var scaledCarbs: Double { recipe.carbs * servings }
     private var scaledFat: Double { recipe.fat * servings }
 
+    // Aggregated nutrients from all recipe items (vitamins, minerals, etc.)
+    private var aggregatedNutrients: [String: (value: Double, unit: String)] {
+        var result: [String: (value: Double, unit: String)] = [:]
+        for item in recipe.recipeItems {
+            guard let nutrients = item.foodNutrients else { continue }
+            for nutrient in nutrients {
+                let key = normalizedNutrientKey(nutrient.nutrientName)
+                let value = (nutrient.value ?? 0) * servings
+                if let existing = result[key] {
+                    result[key] = (value: existing.value + value, unit: existing.unit)
+                } else {
+                    result[key] = (value: value, unit: nutrient.unitName ?? "")
+                }
+            }
+        }
+        return result
+    }
+
+    // Fiber value for net carbs calculation
+    private var fiberValue: Double {
+        let keys = ["fiber, total dietary", "dietary fiber", "fiber"]
+        for key in keys {
+            if let val = aggregatedNutrients[normalizedNutrientKey(key)]?.value, val > 0 {
+                return val
+            }
+        }
+        return 0
+    }
+
+    // Check if we have any micronutrient data
+    private var hasNutrientData: Bool {
+        !aggregatedNutrients.isEmpty
+    }
+
     private var backgroundColor: Color {
         colorScheme == .dark ? Color("bg") : Color(UIColor.systemGroupedBackground)
     }
@@ -66,6 +100,11 @@ struct RecipeSummaryView: View {
 
                         // Macro summary
                         macroSummaryCard
+
+                        // Detailed nutrient sections (when data is available)
+                        if hasNutrientData {
+                            nutrientSectionsCard
+                        }
 
                         // Recipe items list
                         if !recipe.recipeItems.isEmpty {
@@ -337,6 +376,108 @@ struct RecipeSummaryView: View {
             Text("\(Int(value))\(unit)")
                 .font(.body)
                 .foregroundColor(.secondary)
+        }
+    }
+
+    // MARK: - Nutrient Sections Card
+
+    private var nutrientSectionsCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Detailed Nutrition")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            VStack(spacing: 16) {
+                nutrientSection(title: "Carbohydrates", rows: NutrientDescriptors.totalCarbRows, color: NutrientDescriptors.carbColor)
+                nutrientSection(title: "Fats", rows: NutrientDescriptors.fatRows, color: NutrientDescriptors.fatColor)
+                nutrientSection(title: "Protein & Amino Acids", rows: NutrientDescriptors.proteinRows, color: NutrientDescriptors.proteinColor)
+                nutrientSection(title: "Vitamins", rows: NutrientDescriptors.vitaminRows, color: .orange)
+                nutrientSection(title: "Minerals", rows: NutrientDescriptors.mineralRows, color: .blue)
+                nutrientSection(title: "Other", rows: NutrientDescriptors.otherRows, color: .purple)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(cardColor)
+            )
+        }
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private func nutrientSection(title: String, rows: [NutrientRowDescriptor], color: Color) -> some View {
+        let filteredRows = rows.filter { descriptor in
+            switch descriptor.source {
+            case .macro, .computed:
+                return true
+            case .nutrient(let names, _):
+                return names.contains { name in
+                    aggregatedNutrients[normalizedNutrientKey(name)] != nil
+                }
+            }
+        }
+
+        if !filteredRows.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+
+                ForEach(filteredRows) { descriptor in
+                    nutrientRow(for: descriptor)
+                }
+            }
+        }
+    }
+
+    private func nutrientRow(for descriptor: NutrientRowDescriptor) -> some View {
+        let value = nutrientValue(for: descriptor)
+        let unit = descriptor.defaultUnit
+
+        return HStack {
+            Text(descriptor.label)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+            Spacer()
+            Text(formatNutrientValue(value, unit: unit))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private func nutrientValue(for descriptor: NutrientRowDescriptor) -> Double {
+        switch descriptor.source {
+        case .macro(let macro):
+            switch macro {
+            case .protein: return scaledProtein
+            case .carbs: return scaledCarbs
+            case .fat: return scaledFat
+            }
+        case .nutrient(let names, let aggregation):
+            let matches = names.compactMap { aggregatedNutrients[normalizedNutrientKey($0)] }
+            guard !matches.isEmpty else { return 0 }
+            switch aggregation {
+            case .first:
+                return matches.first?.value ?? 0
+            case .sum:
+                return matches.reduce(0) { $0 + $1.value }
+            }
+        case .computed(let computation):
+            switch computation {
+            case .netCarbs:
+                return max(scaledCarbs - fiberValue, 0)
+            case .calories:
+                return scaledCalories
+            }
+        }
+    }
+
+    private func formatNutrientValue(_ value: Double, unit: String) -> String {
+        if value < 1 && value > 0 {
+            return String(format: "%.1f %@", value, unit)
+        } else {
+            return "\(Int(value.rounded())) \(unit)"
         }
     }
 

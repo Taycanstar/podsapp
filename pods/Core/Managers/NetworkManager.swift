@@ -234,6 +234,14 @@ struct FoodChatMealItem: Codable {
     let protein: Double?
     let carbs: Double?
     let fat: Double?
+    let serving: Double?
+    let servingUnit: String?
+    let foodNutrients: [Nutrient]?
+
+    enum CodingKeys: String, CodingKey {
+        case name, calories, protein, carbs, fat, serving, foodNutrients
+        case servingUnit = "serving_unit"
+    }
 }
 
 struct AppVersionResponse: Codable {

@@ -502,7 +502,8 @@ struct NewRecipeView: View {
                 calories: food.calories ?? 0,
                 protein: food.protein ?? 0,
                 carbs: food.carbs ?? 0,
-                fat: food.fat ?? 0
+                fat: food.fat ?? 0,
+                foodNutrients: food.foodNutrients
             )
         }
 

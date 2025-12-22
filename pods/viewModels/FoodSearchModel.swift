@@ -270,6 +270,7 @@ struct MealItem: Codable, Identifiable, Hashable {
     var selectedMeasureId: MealItemMeasure.ID?
     private(set) var baselineMeasureId: MealItemMeasure.ID?
     var originalServing: MealItemServingDescriptor?
+    var foodNutrients: [Nutrient]?
 
     enum CodingKeys: String, CodingKey {
         case name
@@ -282,6 +283,7 @@ struct MealItem: Codable, Identifiable, Hashable {
         case subitems
         case measures
         case originalServing  // With .convertFromSnakeCase, decoder auto-converts "original_serving" -> "originalServing"
+        case foodNutrients
     }
 
     init(name: String,
@@ -294,7 +296,8 @@ struct MealItem: Codable, Identifiable, Hashable {
         subitems: [MealItem]? = nil,
         baselineServing: Double? = nil,
         measures: [MealItemMeasure] = [],
-        originalServing: MealItemServingDescriptor? = nil) {
+        originalServing: MealItemServingDescriptor? = nil,
+        foodNutrients: [Nutrient]? = nil) {
         self.id = UUID()
         self.name = name
         self.serving = serving
@@ -309,6 +312,7 @@ struct MealItem: Codable, Identifiable, Hashable {
         self.baselineMeasureId = MealItem.matchingBaselineMeasure(servingUnit: servingUnit, in: self.measures)
         self.selectedMeasureId = self.baselineMeasureId ?? self.measures.first?.id
         self.originalServing = originalServing
+        self.foodNutrients = foodNutrients
         alignServingUnitWithSelection()
     }
 
@@ -329,6 +333,7 @@ struct MealItem: Codable, Identifiable, Hashable {
         self.baselineMeasureId = MealItem.matchingBaselineMeasure(servingUnit: servingUnit, in: self.measures)
         self.selectedMeasureId = self.baselineMeasureId ?? self.measures.first?.id
         self.originalServing = try container.decodeIfPresent(MealItemServingDescriptor.self, forKey: .originalServing)
+        self.foodNutrients = try container.decodeIfPresent([Nutrient].self, forKey: .foodNutrients)
         alignServingUnitWithSelection()
     }
 
@@ -346,6 +351,7 @@ struct MealItem: Codable, Identifiable, Hashable {
             try container.encode(measures, forKey: .measures)
         }
         try container.encodeIfPresent(originalServing, forKey: .originalServing)
+        try container.encodeIfPresent(foodNutrients, forKey: .foodNutrients)
     }
 
     func toDictionary() -> [String: Any] {
@@ -376,6 +382,15 @@ struct MealItem: Codable, Identifiable, Hashable {
                 originalDict["text"] = text
             }
             dict["original_serving"] = originalDict
+        }
+        if let foodNutrients, !foodNutrients.isEmpty {
+            dict["foodNutrients"] = foodNutrients.map { nutrient in
+                [
+                    "nutrientName": nutrient.nutrientName,
+                    "value": nutrient.value,
+                    "unitName": nutrient.unitName
+                ]
+            }
         }
         return dict
     }
@@ -1581,6 +1596,9 @@ struct RecipeFoodItem: Codable, Identifiable {
     let protein: Double
     let carbs: Double
     let fat: Double
+
+    // Full nutrient data (vitamins, minerals, etc.) from backend
+    let foodNutrients: [Nutrient]?
 
     var id: Int { foodId }
 }
