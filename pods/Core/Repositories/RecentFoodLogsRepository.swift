@@ -111,6 +111,45 @@ final class RecentFoodLogsRepository: ObservableObject {
         }
     }
 
+    /// Optimistically insert a newly logged food at the top of the list
+    func insertOptimistically(_ loggedFood: LoggedFood) {
+        // Create a CombinedLog from the LoggedFood response
+        let combinedLog = CombinedLog(
+            type: .food,
+            status: loggedFood.status,
+            calories: loggedFood.calories,
+            message: loggedFood.message,
+            isOptimistic: true,
+            foodLogId: loggedFood.foodLogId,
+            food: loggedFood.food,
+            mealType: loggedFood.mealType,
+            mealLogId: nil,
+            meal: nil,
+            mealTime: nil,
+            scheduledAt: Date(),
+            recipeLogId: nil,
+            recipe: nil,
+            activityLogId: nil,
+            activity: nil,
+            workoutLogId: nil,
+            workout: nil,
+            logDate: nil,
+            dayOfWeek: nil
+        )
+
+        var logs = snapshot.logs
+        // Avoid duplicates by foodLogId
+        if !logs.contains(where: { $0.foodLogId == loggedFood.foodLogId }) {
+            logs.insert(combinedLog, at: 0)
+        }
+        snapshot = RecentFoodLogsSnapshot(
+            logs: logs,
+            nextPage: snapshot.nextPage,
+            hasMore: snapshot.hasMore
+        )
+        persist()
+    }
+
     private func merge(existing: [CombinedLog], with newLogs: [CombinedLog]) -> [CombinedLog] {
         var seen = Set(existing.map { $0.id })
         var combined = existing

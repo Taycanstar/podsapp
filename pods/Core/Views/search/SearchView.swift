@@ -553,6 +553,9 @@ struct SearchView: View {
                         foodManager.showLogSuccess = false
                     }
                     dayLogsVM.loadLogs(for: Date(), force: true)
+                    // Optimistically insert the logged food into recents
+                    recentFoodsRepo.insertOptimistically(logged)
+                    // Also refresh in background to get canonical data
                     Task {
                         await recentFoodsRepo.refresh(force: true)
                     }
@@ -761,12 +764,6 @@ struct RecentFoodRow: View {
                 } label: {
                     Label("Add to Plate", systemImage: "fork.knife")
                 }
-
-                Button {
-                    onViewDetailsTapped?()
-                } label: {
-                    Label("View Details", systemImage: "info.circle")
-                }
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 22))
@@ -873,12 +870,6 @@ struct FoodSearchResultRow: View {
                         onAddToPlate?()
                     } label: {
                         Label("Add to Plate", systemImage: "fork.knife")
-                    }
-
-                    Button {
-                        onViewDetails?()
-                    } label: {
-                        Label("View Details", systemImage: "info.circle")
                     }
                 } label: {
                     Image(systemName: "plus.circle.fill")

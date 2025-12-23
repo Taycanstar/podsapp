@@ -133,9 +133,41 @@ struct EditFoodSheet: View {
         _name = State(initialValue: food.displayName)
         _brand = State(initialValue: food.brandName ?? "")
         _basedOn = State(initialValue: .serving)
-        _weight = State(initialValue: food.servingSize.map { String(format: "%.0f", $0) } ?? "")
-        _servingAmount = State(initialValue: food.servingSize.map { String(format: "%.0f", $0) } ?? "1")
-        _servingUnit = State(initialValue: food.servingSizeUnit ?? "serving")
+
+        // For weight, prefer gramWeight from measures if available (for database foods)
+        // Fall back to servingSize for custom foods
+        let gramWeight: Double? = food.foodMeasures.first?.gramWeight
+        let weightValue: Double? = (gramWeight ?? 0) > 0 ? gramWeight : food.servingSize
+        _weight = State(initialValue: weightValue.map { String(format: "%.0f", $0) } ?? "")
+
+        // Parse householdServingFullText (e.g., "1 piece", "2 cups") for serving info
+        // This is especially important for Nutritionix common foods that don't have foodMeasures
+        var parsedAmount: Double = 1
+        var parsedUnit: String = "serving"
+
+        if let servingText = food.householdServingFullText, !servingText.isEmpty {
+            // Try to parse "1 piece", "2 cups", "1.5 oz" etc.
+            let components = servingText.trimmingCharacters(in: .whitespaces)
+                .split(separator: " ", maxSplits: 1)
+            if components.count >= 1, let amount = Double(components[0]) {
+                parsedAmount = amount
+                if components.count >= 2 {
+                    parsedUnit = String(components[1])
+                }
+            } else {
+                // Couldn't parse number, use the whole text as unit
+                parsedUnit = servingText
+            }
+        }
+
+        // For serving amount, prefer parsed value, then foodMeasures, then servingSize
+        let measureAmount = food.foodMeasures.first.flatMap { _ in food.servingSize }
+        let finalAmount = measureAmount ?? parsedAmount
+        _servingAmount = State(initialValue: String(format: "%.0f", finalAmount))
+
+        // For serving unit, try foodMeasures first, then parsed unit, then servingSizeUnit
+        let measureUnit = food.foodMeasures.first?.measureUnitName
+        _servingUnit = State(initialValue: measureUnit ?? (food.servingSizeUnit ?? parsedUnit))
 
         // Pre-populate nutrients from food
         _calories = State(initialValue: Self.nutrientString(food, names: ["Energy", "Calories"]) ?? String(format: "%.0f", food.calories ?? 0))
