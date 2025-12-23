@@ -293,6 +293,11 @@ struct SearchView: View {
                                     if let food = log.food?.asFood {
                                         addFoodToPlate(food)
                                     }
+                                },
+                                onViewDetailsTapped: {
+                                    if let food = log.food?.asFood {
+                                        selectedFoodForDetails = food
+                                    }
                                 }
                             )
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -711,7 +716,7 @@ struct RecentFoodRow: View {
 
     var body: some View {
         HStack {
-            // Tappable content area (shows food details when tapped)
+            // Food info
             VStack(alignment: .leading, spacing: 2) {
                 Text(displayName)
                     .font(.system(size: 15))
@@ -736,10 +741,6 @@ struct RecentFoodRow: View {
                 .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                onViewDetailsTapped?()
-            }
 
             // Dropdown menu button
             Menu {
@@ -765,6 +766,10 @@ struct RecentFoodRow: View {
                     .font(.system(size: 22))
                     .foregroundColor(.primary)
             }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onViewDetailsTapped?()
         }
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
     }
@@ -810,7 +815,7 @@ struct FoodSearchResultRow: View {
 
     var body: some View {
         HStack {
-            // Tappable content area (shows food details when tapped)
+            // Food info
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.displayName)
                     .font(.system(size: 15))
@@ -845,10 +850,6 @@ struct FoodSearchResultRow: View {
                 .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                onViewDetails?()
-            }
 
             // Loading, or dropdown menu button
             if isLoading {
@@ -879,6 +880,10 @@ struct FoodSearchResultRow: View {
                         .foregroundColor(.primary)
                 }
             }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onViewDetails?()
         }
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
     }

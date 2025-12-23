@@ -187,7 +187,7 @@ struct UserFoodRow: View {
 
     var body: some View {
         HStack {
-            // Tappable content area (shows food details when tapped)
+            // Food info (tappable area for details)
             VStack(alignment: .leading, spacing: 2) {
                 Text(food.displayName)
                     .font(.system(size: 15))
@@ -216,10 +216,6 @@ struct UserFoodRow: View {
                 .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                onViewDetailsTapped?()
-            }
 
             // Plus button
             Button {
@@ -230,6 +226,10 @@ struct UserFoodRow: View {
                     .foregroundColor(.primary)
             }
             .buttonStyle(.plain)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onViewDetailsTapped?()
         }
     }
 }

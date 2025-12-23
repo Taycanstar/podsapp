@@ -221,7 +221,7 @@ struct FoodDetails: View {
                     .font(.system(size: 15))
                     .foregroundColor(.primary)
                 Spacer()
-                Text(activeFood.description)
+                Text(activeFood.displayName)
                     .font(.system(size: 15))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.trailing)

@@ -478,6 +478,14 @@ private var remainingCal: Double { vm.remainingCalories }
                     .padding(.horizontal, 6)
                 }
             }
+            .navigationDestination(isPresented: $showTimelineSheet) {
+                AppTimelineView()
+                    .environmentObject(vm)
+            }
+            .navigationDestination(isPresented: $showSearchView) {
+                SearchView()
+                    .environmentObject(vm)
+            }
         }
         .task {
             refreshWeightTrendEntries()
@@ -598,26 +606,6 @@ private var remainingCal: Double { vm.remainingCalories }
         } message: {
             Text(foodMgr.scanFailureMessage)
         }
-        .background(
-            NavigationLink(
-                destination: AppTimelineView()
-                    .environmentObject(vm),
-                isActive: $showTimelineSheet
-            ) {
-                EmptyView()
-            }
-            .hidden()
-        )
-        .background(
-            NavigationLink(
-                destination: SearchView()
-                    .environmentObject(vm),
-                isActive: $showSearchView
-            ) {
-                EmptyView()
-            }
-            .hidden()
-        )
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToTimeline")).receive(on: RunLoop.main)) { _ in
             showTimelineSheet = true
         }
