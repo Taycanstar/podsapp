@@ -30,9 +30,10 @@ struct SavedView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
             }
             .listRowBackground(Color.clear)
+            .listSectionSeparator(.hidden)
 
             // Content based on selected tab
             switch selectedTab {
@@ -45,6 +46,7 @@ struct SavedView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Saved")
@@ -159,8 +161,12 @@ struct SavedView: View {
     // MARK: - Actions
 
     private func unsaveFood(_ savedFood: SavedFood) {
+        // Optimistically remove immediately for smooth UI
+        savedFoodsRepo.removeOptimistically(foodId: savedFood.food.fdcId)
+
         foodManager.unsaveFoodByFoodId(foodId: savedFood.food.fdcId) { result in
-            if case .success = result {
+            if case .failure = result {
+                // On failure, refresh to restore the item
                 Task {
                     await savedFoodsRepo.refresh(force: true)
                 }
@@ -174,40 +180,49 @@ struct SavedView: View {
 private struct SavedFoodRow: View {
     let savedFood: SavedFood
 
+    private var proteinValue: Int {
+        Int(savedFood.food.protein ?? 0)
+    }
+
+    private var fatValue: Int {
+        Int(savedFood.food.fat ?? 0)
+    }
+
+    private var carbsValue: Int {
+        Int(savedFood.food.carbs ?? 0)
+    }
+
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(savedFood.displayName)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 15))
                     .foregroundColor(.primary)
-                    .lineLimit(2)
+                    .lineLimit(1)
 
-                HStack(spacing: 4) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                    Text("\(Int(savedFood.calories)) cal")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-
-                    if let brand = savedFood.food.brandName, !brand.isEmpty {
-                        Text("•")
-                            .foregroundColor(.secondary)
-                        Text(brand)
+                HStack(spacing: 12) {
+                    // Calories with flame icon
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill")
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
-                            .lineLimit(1)
+                        Text("\(Int(savedFood.calories)) cal")
                     }
-                }
-            }
 
-            Spacer()
+                    // Macros: P F C
+                    Text("P \(proteinValue)g")
+                    Text("F \(fatValue)g")
+                    Text("C \(carbsValue)g")
+                }
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.secondary.opacity(0.5))
         }
-        .padding(.vertical, 8)
     }
 }
 

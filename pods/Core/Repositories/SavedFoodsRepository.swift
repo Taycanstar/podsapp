@@ -103,6 +103,33 @@ final class SavedFoodsRepository: ObservableObject {
         }
     }
 
+    /// Optimistically insert a newly saved food at the top of the list
+    func insertOptimistically(_ savedFood: SavedFood) {
+        var foods = snapshot.savedFoods
+        // Avoid duplicates
+        if !foods.contains(where: { $0.id == savedFood.id || $0.food.fdcId == savedFood.food.fdcId }) {
+            foods.insert(savedFood, at: 0)
+        }
+        snapshot = SavedFoodsSnapshot(
+            savedFoods: foods,
+            nextPage: snapshot.nextPage,
+            hasMore: snapshot.hasMore
+        )
+        persist()
+    }
+
+    /// Optimistically remove a saved food from the list
+    func removeOptimistically(foodId: Int) {
+        var foods = snapshot.savedFoods
+        foods.removeAll { $0.food.fdcId == foodId }
+        snapshot = SavedFoodsSnapshot(
+            savedFoods: foods,
+            nextPage: snapshot.nextPage,
+            hasMore: snapshot.hasMore
+        )
+        persist()
+    }
+
     private func merge(existing: [SavedFood], with newFoods: [SavedFood]) -> [SavedFood] {
         var seen = Set(existing.map { $0.id })
         var combined = existing

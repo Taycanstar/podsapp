@@ -303,13 +303,22 @@ struct FoodDetails: View {
             foodManager.unsaveFoodByFoodId(foodId: food.fdcId) { result in
                 if case .success = result {
                     isSaved = false
+                    // Optimistically remove from saved foods
+                    SavedFoodsRepository.shared.removeOptimistically(foodId: food.fdcId)
                 }
             }
         } else {
             // Save the food
             foodManager.saveFood(foodId: food.fdcId) { result in
-                if case .success = result {
+                switch result {
+                case .success(let response):
                     isSaved = true
+                    // Optimistically add to saved foods if we got the saved food back
+                    if let savedFood = response.savedFood {
+                        SavedFoodsRepository.shared.insertOptimistically(savedFood)
+                    }
+                case .failure:
+                    break
                 }
             }
         }
