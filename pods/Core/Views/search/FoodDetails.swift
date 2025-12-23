@@ -36,11 +36,11 @@ struct FoodDetails: View {
     private let carbColor = Color("carbs")
 
     private var backgroundColor: Color {
-        colorScheme == .dark ? Color("bg") : Color(UIColor.systemGroupedBackground)
+        Color(UIColor.systemGroupedBackground)
     }
 
     private var cardColor: Color {
-        colorScheme == .dark ? Color(UIColor.systemGroupedBackground) : Color("bg")
+        Color("sheetcard")
     }
 
     private var chipColor: Color {
