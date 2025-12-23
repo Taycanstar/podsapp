@@ -146,13 +146,15 @@ struct FoodsView: View {
             .environmentObject(foodManager)
             .environmentObject(viewModel)
         }
-        .sheet(item: $selectedFood) { food in
+        .navigationDestination(item: $selectedFood) { food in
             FoodDetails(food: food)
                 .environmentObject(dayLogsVM)
+                .environmentObject(foodManager)
         }
-        .sheet(item: $createdFoodToAdd) { food in
+        .navigationDestination(item: $createdFoodToAdd) { food in
             FoodDetails(food: food)
                 .environmentObject(dayLogsVM)
+                .environmentObject(foodManager)
         }
         .task {
             await userFoodsRepo.refresh()

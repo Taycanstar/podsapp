@@ -17,6 +17,7 @@ struct MealPlateSummaryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
+    @EnvironmentObject private var foodManager: FoodManager
 
     @State private var selectedFood: Food?
     @State private var selectedMealPeriod: MealPeriod = .lunch
@@ -181,6 +182,8 @@ struct MealPlateSummaryView: View {
         }
         .navigationDestination(item: $selectedFood) { food in
             FoodDetails(food: food)
+                .environmentObject(dayLogsVM)
+                .environmentObject(foodManager)
         }
         .onAppear {
             // Set meal period based on current time

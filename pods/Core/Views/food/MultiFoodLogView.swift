@@ -296,6 +296,8 @@ struct MultiFoodLogView: View {
             }
             .navigationDestination(item: $selectedFood) { food in
                 FoodDetails(food: food)
+                    .environmentObject(dayLogsVM)
+                    .environmentObject(foodManager)
             }
             .onAppear {
                 selectedMealPeriod = suggestedMealPeriod(for: Date())

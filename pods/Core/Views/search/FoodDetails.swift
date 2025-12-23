@@ -13,9 +13,22 @@ struct FoodDetails: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
+    @EnvironmentObject private var foodManager: FoodManager
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
 
     @State private var nutrientTargets: [String: NutrientTargetDetails] = NutritionGoalsStore.shared.currentTargets
+    @State private var displayFood: Food?
+    @State private var isLoadingNutrients = false
+
+    /// The food to display - uses fetched full nutrients if available, otherwise the original
+    private var activeFood: Food {
+        displayFood ?? food
+    }
+
+    /// Threshold for considering nutrients as "full" (more than basic macros)
+    private var hasFullNutrients: Bool {
+        activeFood.foodNutrients.count > 10
+    }
 
     // MARK: - Colors
     private let proteinColor = Color("protein")
@@ -36,19 +49,19 @@ struct FoodDetails: View {
 
     // MARK: - Computed Nutrition Values
     private var calories: Double {
-        food.calories ?? 0
+        activeFood.calories ?? 0
     }
 
     private var protein: Double {
-        food.protein ?? 0
+        activeFood.protein ?? 0
     }
 
     private var carbs: Double {
-        food.carbs ?? 0
+        activeFood.carbs ?? 0
     }
 
     private var fat: Double {
-        food.fat ?? 0
+        activeFood.fat ?? 0
     }
 
     private var fiber: Double {
@@ -58,7 +71,7 @@ struct FoodDetails: View {
     // MARK: - Nutrient Lookup
     private var nutrientValues: [String: RawNutrientValue] {
         var result: [String: RawNutrientValue] = [:]
-        for nutrient in food.foodNutrients {
+        for nutrient in activeFood.foodNutrients {
             let key = normalizedNutrientKey(nutrient.nutrientName)
             result[key] = RawNutrientValue(value: nutrient.value ?? 0, unit: nutrient.unitName)
         }
@@ -122,7 +135,9 @@ struct FoodDetails: View {
                 macroSummaryCard
                 dailyGoalShareCard
 
-                if shouldShowGoalsLoader {
+                if isLoadingNutrients {
+                    nutrientsLoadingView
+                } else if shouldShowGoalsLoader {
                     goalsLoadingView
                 } else if nutrientTargets.isEmpty {
                     missingTargetsCallout
@@ -143,14 +158,53 @@ struct FoodDetails: View {
         .background(backgroundColor.ignoresSafeArea())
         .navigationTitle("Food Details")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
+        .task {
             reloadStoredNutrientTargets()
+            await loadFullNutrientsIfNeeded()
         }
         .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
             reloadStoredNutrientTargets()
         }
         .onReceive(goalsStore.$state) { _ in
             reloadStoredNutrientTargets()
+        }
+    }
+
+    // MARK: - Nutrients Loading View
+    private var nutrientsLoadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.2)
+            Text("Loading nutrition data...")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+
+    // MARK: - Load Full Nutrients
+    private func loadFullNutrientsIfNeeded() async {
+        // Skip if already has full nutrients
+        guard food.foodNutrients.count <= 10 else { return }
+
+        // Need user email for API call
+        guard let email = foodManager.userEmail else { return }
+
+        isLoadingNutrients = true
+        defer { isLoadingNutrients = false }
+
+        do {
+            // Try to fetch full nutrients using the food name
+            let fullResult = try await FoodService.shared.fullFoodLookup(
+                nixItemId: nil,
+                foodName: food.description,
+                userEmail: email
+            )
+            displayFood = fullResult.toFood()
+        } catch {
+            print("[FoodDetails] Failed to load full nutrients: \(error)")
+            // Keep using the original food with limited nutrients
         }
     }
 
@@ -167,7 +221,7 @@ struct FoodDetails: View {
                     .font(.system(size: 15))
                     .foregroundColor(.primary)
                 Spacer()
-                Text(food.description)
+                Text(activeFood.description)
                     .font(.system(size: 15))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.trailing)
@@ -240,10 +294,10 @@ struct FoodDetails: View {
     }
 
     private var servingDescription: String {
-        if let household = food.householdServingFullText, !household.isEmpty {
+        if let household = activeFood.householdServingFullText, !household.isEmpty {
             return household
         }
-        if let size = food.servingSize, let unit = food.servingSizeUnit {
+        if let size = activeFood.servingSize, let unit = activeFood.servingSizeUnit {
             let formattedSize = size == floor(size) ? String(Int(size)) : String(format: "%.1f", size)
             return "\(formattedSize) \(unit)"
         }

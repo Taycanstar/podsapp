@@ -80,9 +80,10 @@ struct SearchView: View {
                 .environmentObject(proFeatureGate)
             }
         }
-        .sheet(item: $selectedFoodForDetails) { food in
+        .navigationDestination(item: $selectedFoodForDetails) { food in
             FoodDetails(food: food)
                 .environmentObject(dayLogsVM)
+                .environmentObject(foodManager)
         }
         .task {
             if let email = foodManager.userEmail {

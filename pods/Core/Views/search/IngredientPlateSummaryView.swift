@@ -15,6 +15,7 @@ struct IngredientPlateSummaryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
+    @EnvironmentObject private var foodManager: FoodManager
 
     @State private var selectedFood: Food?
     @State private var isAdding = false
@@ -292,6 +293,8 @@ struct IngredientPlateSummaryView: View {
             }
             .navigationDestination(item: $selectedFood) { food in
                 FoodDetails(food: food)
+                    .environmentObject(dayLogsVM)
+                    .environmentObject(foodManager)
             }
             .onAppear {
                 reloadStoredNutrientTargets()
