@@ -178,6 +178,29 @@ final class UserFoodsRepository: ObservableObject {
         persist()
     }
 
+    /// Optimistically update a food in the list (for edits)
+    func updateOptimistically(_ food: Food) {
+        print("🍎 [UserFoodsRepo] updateOptimistically called for fdcId: \(food.fdcId)")
+
+        // Update in optimistic array if present
+        if let index = optimisticFoods.firstIndex(where: { $0.fdcId == food.fdcId }) {
+            optimisticFoods[index] = food
+        }
+
+        // Update in snapshot
+        var foods = snapshot.foods
+        if let index = foods.firstIndex(where: { $0.fdcId == food.fdcId }) {
+            foods[index] = food
+            print("🍎 [UserFoodsRepo] Updated food at index \(index)")
+        }
+        snapshot = UserFoodsSnapshot(
+            foods: foods,
+            nextPage: snapshot.nextPage,
+            hasMore: snapshot.hasMore
+        )
+        persist()
+    }
+
     private func merge(existing: [Food], with newFoods: [Food]) -> [Food] {
         var seen = Set(existing.map { $0.fdcId })
         var combined = existing

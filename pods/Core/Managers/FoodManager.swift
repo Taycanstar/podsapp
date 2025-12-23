@@ -779,6 +779,7 @@ class FoodManager: ObservableObject {
     private var currentSavedMealsPage = 1
     private var hasMoreSavedMeals = true
     @Published var savedLogIds: Set<Int> = [] // Track which log IDs are saved
+    @Published var savedFoodIds: Set<Int> = [] // Track which food IDs are saved (favorites)
 
     // Reference to DayLogsViewModel for updating UI after voice logging
     weak var dayLogsViewModel: DayLogsViewModel?
@@ -3258,6 +3259,61 @@ func createManualFood(food: Food, showPreview: Bool = true, completion: @escapin
         }
     }
 }
+
+    // Update an existing food definition (not a log)
+    func updateFood(food: Food, completion: @escaping (Result<Food, Error>) -> Void) {
+        guard let email = userEmail else {
+            completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
+            return
+        }
+
+        // Build nutrients array for the API
+        var nutrients: [[String: Any]] = []
+        for nutrient in food.foodNutrients {
+            if let value = nutrient.value, value > 0 {
+                nutrients.append([
+                    "nutrient_name": nutrient.nutrientName,
+                    "value": value,
+                    "unit_name": nutrient.unitName
+                ])
+            }
+        }
+
+        // Build serving text
+        let servingText = food.householdServingFullText ?? "\(food.servingSize ?? 1) \(food.servingSizeUnit ?? "serving")"
+
+        networkManager.updateFood(
+            foodId: food.fdcId,
+            userEmail: email,
+            name: food.displayName,
+            brand: food.brandName,
+            servingSize: food.servingSize ?? 1,
+            servingUnit: food.servingSizeUnit ?? "serving",
+            servingText: servingText,
+            calories: food.calories ?? 0,
+            protein: food.protein ?? 0,
+            carbs: food.carbs ?? 0,
+            fat: food.fat ?? 0,
+            nutrients: nutrients
+        ) { [weak self] result in
+            guard let self = self else { return }
+
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedFood):
+                    // Update in userFoods array if present
+                    if let index = self.userFoods.firstIndex(where: { $0.fdcId == updatedFood.fdcId }) {
+                        self.userFoods[index] = updatedFood
+                    }
+                    completion(.success(updatedFood))
+                case .failure(let error):
+                    print("❌ Failed to update food: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
 // Add these functions to the FoodManager class to handle deletion
     // Delete a food log
     func deleteFoodLog(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -3392,25 +3448,29 @@ func createManualFood(food: Food, showPreview: Bool = true, completion: @escapin
             return
         }
 
-        if let index = userFoods.firstIndex(where: { $0.fdcId == id }) {
-            let removedFood = userFoods.remove(at: index)
-            networkManager.deleteFood(foodId: id, userEmail: email) { [weak self] result in // Uses networkManager.deleteFood
-                guard let self = self else { return }
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success:
-                        print("✅ Successfully deleted user food with ID: \(id)")
-                        completion(.success(()))
-                    case .failure(let error):
-                        print("❌ Failed to delete user food: \(error)")
-                        self.userFoods.insert(removedFood, at: index) // Add back on failure
-                        completion(.failure(error))
+        // Optimistically remove from local array if present
+        let index = userFoods.firstIndex(where: { $0.fdcId == id })
+        var removedFood: Food?
+        if let index = index {
+            removedFood = userFoods.remove(at: index)
+        }
+
+        networkManager.deleteFood(foodId: id, userEmail: email) { [weak self] result in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("✅ Successfully deleted user food with ID: \(id)")
+                    completion(.success(()))
+                case .failure(let error):
+                    print("❌ Failed to delete user food: \(error)")
+                    // Restore to local array if it was removed
+                    if let index = index, let food = removedFood {
+                        self.userFoods.insert(food, at: index)
                     }
+                    completion(.failure(error))
                 }
             }
-        } else {
-            print("⚠️ User food with ID \(id) not found in userFoods")
-            completion(.failure(NSError(domain: "FoodManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "User food not found"])))
         }
     }
  
@@ -5255,7 +5315,70 @@ func analyzeNutritionLabel(
 
         unsaveMeal(savedMealId: savedMeal.id, completion: completion)
     }
-    
+
+    // MARK: - Saved Foods Functions (Food Templates/Favorites)
+
+    func saveFood(foodId: Int, customName: String? = nil, notes: String? = nil, completion: @escaping (Result<SaveFoodResponse, Error>) -> Void) {
+        guard let email = userEmail else {
+            completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: "User email not available")))
+            return
+        }
+
+        NetworkManagerTwo.shared.saveFood(
+            userEmail: email,
+            foodId: foodId,
+            customName: customName,
+            notes: notes
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    print("✅ Successfully saved food: \(response.message)")
+                    self?.savedFoodIds.insert(foodId)
+                    completion(.success(response))
+
+                case .failure(let error):
+                    print("❌ Failed to save food: \(error)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    func unsaveFoodByFoodId(foodId: Int, completion: @escaping (Result<UnsaveFoodResponse, Error>) -> Void) {
+        guard let email = userEmail else {
+            completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: "User email not available")))
+            return
+        }
+
+        NetworkManagerTwo.shared.unsaveFoodByFoodId(
+            userEmail: email,
+            foodId: foodId
+        ) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    print("✅ Successfully unsaved food: \(response.message)")
+                    self?.savedFoodIds.remove(foodId)
+                    completion(.success(response))
+
+                case .failure(let error):
+                    print("❌ Failed to unsave food: \(error)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    func isFoodSaved(foodId: Int) -> Bool {
+        savedFoodIds.contains(foodId)
+    }
+
+    /// Check if a food is user-created (can be edited in-place)
+    func isUserFood(fdcId: Int) -> Bool {
+        userFoods.contains { $0.fdcId == fdcId }
+    }
+
     // MARK: - Nutrition Label Name Input
     func createNutritionLabelFoodWithName(_ productName: String, completion: @escaping (Result<CombinedLog, Error>) -> Void) {
         guard !productName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,

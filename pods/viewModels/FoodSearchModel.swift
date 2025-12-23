@@ -2165,6 +2165,75 @@ struct UnsaveMealResponse: Codable {
     let message: String
 }
 
+// MARK: - Saved Foods (Food Templates/Favorites)
+
+struct SavedFood: Codable, Identifiable {
+    let id: Int
+    let customName: String?
+    let savedAt: String
+    let notes: String?
+    let food: Food
+
+    var displayName: String {
+        customName ?? food.displayName
+    }
+
+    var calories: Double {
+        food.calories ?? 0
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case customName = "custom_name"
+        case savedAt = "saved_at"
+        case notes
+        case food
+    }
+}
+
+struct SavedFoodsResponse: Codable {
+    let savedFoods: [SavedFood]
+    let hasMore: Bool
+    let totalPages: Int
+    let currentPage: Int
+    let totalCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case savedFoods = "saved_foods"
+        case hasMore = "has_more"
+        case totalPages = "total_pages"
+        case currentPage = "current_page"
+        case totalCount = "total_count"
+    }
+}
+
+struct SaveFoodResponse: Codable {
+    let success: Bool
+    let message: String
+    let savedFood: SavedFood?
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case message
+        case savedFood = "saved_food"
+    }
+}
+
+struct UnsaveFoodResponse: Codable {
+    let success: Bool
+    let message: String
+}
+
+struct IsFoodSavedResponse: Codable {
+    let isSaved: Bool
+    let savedFoodId: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case isSaved = "is_saved"
+        case savedFoodId = "saved_food_id"
+    }
+}
+
 // MARK: - OCR Label Scanning Support
 
 extension Food {

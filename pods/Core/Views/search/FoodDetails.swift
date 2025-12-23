@@ -20,9 +20,20 @@ struct FoodDetails: View {
     @State private var displayFood: Food?
     @State private var isLoadingNutrients = false
 
+    // Toolbar action states
+    @State private var isSaved = false
+    @State private var showEditSheet = false
+    @State private var showDuplicateSheet = false
+    @State private var showDeleteConfirmation = false
+
     /// The food to display - uses fetched full nutrients if available, otherwise the original
     private var activeFood: Food {
         displayFood ?? food
+    }
+
+    /// Check if this is a user-created food (can be edited in-place)
+    private var isUserFood: Bool {
+        foodManager.isUserFood(fdcId: food.fdcId)
     }
 
     /// Threshold for considering nutrients as "full" (more than basic macros)
@@ -158,9 +169,82 @@ struct FoodDetails: View {
         .background(backgroundColor.ignoresSafeArea())
         .navigationTitle("Food Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: 16) {
+                    Button {
+                        toggleSave()
+                    } label: {
+                        Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                        .font(.system(size: 15))
+                            .foregroundColor(.primary)
+                    }
+
+                    Menu {
+                        Button {
+                            showEditSheet = true
+                        } label: {
+                            Label(isUserFood ? "Edit" : "Edit a Copy",
+                                  systemImage: isUserFood ? "pencil" : "doc.badge.plus")
+                        }
+
+                        // Only show Duplicate for user foods (Edit a Copy IS duplication for database foods)
+                        if isUserFood {
+                            Button {
+                                showDuplicateSheet = true
+                            } label: {
+                                Label("Duplicate", systemImage: "doc.on.doc")
+                            }
+                        }
+
+                        // Only show Delete for user foods
+                        if isUserFood {
+                            Button(role: .destructive) {
+                                showDeleteConfirmation = true
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .foregroundColor(.primary)
+                    }
+                }
+                .padding(.horizontal, 6)
+            }
+        }
+        .confirmationDialog("Delete Food?", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                deleteFood()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This action cannot be undone.")
+        }
+        .sheet(isPresented: $showEditSheet) {
+            EditFoodSheet(
+                food: activeFood,
+                mode: isUserFood ? .editInPlace : .editACopy
+            ) { updatedFood in
+                displayFood = updatedFood
+                // Update the repository so FoodsView reflects the change
+                if isUserFood {
+                    UserFoodsRepository.shared.updateOptimistically(updatedFood)
+                }
+            }
+            .environmentObject(foodManager)
+        }
+        .sheet(isPresented: $showDuplicateSheet) {
+            DuplicateFoodSheet(food: activeFood) { createdFood in
+                // Add the duplicated food to the repository so FoodsView shows it
+                UserFoodsRepository.shared.insertOptimistically(createdFood)
+            }
+            .environmentObject(foodManager)
+        }
         .task {
             reloadStoredNutrientTargets()
             await loadFullNutrientsIfNeeded()
+            checkIfSaved()
         }
         .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
             reloadStoredNutrientTargets()
@@ -210,6 +294,37 @@ struct FoodDetails: View {
 
     private func reloadStoredNutrientTargets() {
         nutrientTargets = NutritionGoalsStore.shared.currentTargets
+    }
+
+    // MARK: - Toolbar Actions
+    private func toggleSave() {
+        if isSaved {
+            // Unsave the food
+            foodManager.unsaveFoodByFoodId(foodId: food.fdcId) { result in
+                if case .success = result {
+                    isSaved = false
+                }
+            }
+        } else {
+            // Save the food
+            foodManager.saveFood(foodId: food.fdcId) { result in
+                if case .success = result {
+                    isSaved = true
+                }
+            }
+        }
+    }
+
+    private func checkIfSaved() {
+        isSaved = foodManager.isFoodSaved(foodId: food.fdcId)
+    }
+
+    private func deleteFood() {
+        foodManager.deleteUserFood(id: food.fdcId) { result in
+            if case .success = result {
+                dismiss()
+            }
+        }
     }
 
     // MARK: - Food Info Card (Name + Serving Size)

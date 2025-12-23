@@ -3749,6 +3749,303 @@ class NetworkManagerTwo {
         }.resume()
     }
 
+    // MARK: - Saved Foods API (Food Templates/Favorites)
+
+    /// Get saved foods for a user with pagination
+    func getSavedFoods(
+        userEmail: String,
+        page: Int = 1,
+        pageSize: Int = 20,
+        completion: @escaping (Result<SavedFoodsResponse, Error>) -> Void
+    ) {
+        var urlComponents = URLComponents(string: "\(baseUrl)/get-saved-foods/")
+        urlComponents?.queryItems = [
+            URLQueryItem(name: "email", value: userEmail),
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "page_size", value: String(pageSize))
+        ]
+
+        guard let url = urlComponents?.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        print("📋 Fetching saved foods for user \(userEmail) (page \(page))")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(SavedFoodsResponse.self, from: data)
+                DispatchQueue.main.async {
+                    print("✅ Successfully fetched \(response.savedFoods.count) saved foods")
+                    completion(.success(response))
+                }
+            } catch {
+                print("❌ Decoding error in get saved foods: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+
+    /// Save a food (add to favorites)
+    func saveFood(
+        userEmail: String,
+        foodId: Int,
+        customName: String? = nil,
+        notes: String? = nil,
+        completion: @escaping (Result<SaveFoodResponse, Error>) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/save-food/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        var body: [String: Any] = [
+            "email": userEmail,
+            "food_id": foodId
+        ]
+        if let customName = customName { body["custom_name"] = customName }
+        if let notes = notes { body["notes"] = notes }
+
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        print("💾 Saving food \(foodId) for user \(userEmail)")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(SaveFoodResponse.self, from: data)
+                DispatchQueue.main.async {
+                    print("✅ Successfully saved food: \(response.message)")
+                    completion(.success(response))
+                }
+            } catch {
+                print("❌ Decoding error in save food: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+
+    /// Unsave a food by saved_food ID
+    func unsaveFood(
+        userEmail: String,
+        savedFoodId: Int,
+        completion: @escaping (Result<UnsaveFoodResponse, Error>) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/unsave-food/\(savedFoodId)/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        urlComponents?.queryItems = [URLQueryItem(name: "email", value: userEmail)]
+
+        guard let finalUrl = urlComponents?.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        request.url = finalUrl
+
+        print("🗑️ Unsaving food \(savedFoodId) for user \(userEmail)")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(UnsaveFoodResponse.self, from: data)
+                DispatchQueue.main.async {
+                    print("✅ Successfully unsaved food: \(response.message)")
+                    completion(.success(response))
+                }
+            } catch {
+                print("❌ Decoding error in unsave food: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+
+    /// Unsave a food by the food's ID (not the saved_food ID)
+    func unsaveFoodByFoodId(
+        userEmail: String,
+        foodId: Int,
+        completion: @escaping (Result<UnsaveFoodResponse, Error>) -> Void
+    ) {
+        var urlComponents = URLComponents(string: "\(baseUrl)/unsave-food-by-id/\(foodId)/")
+        urlComponents?.queryItems = [URLQueryItem(name: "email", value: userEmail)]
+
+        guard let url = urlComponents?.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        print("🗑️ Unsaving food by foodId \(foodId) for user \(userEmail)")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(UnsaveFoodResponse.self, from: data)
+                DispatchQueue.main.async {
+                    print("✅ Successfully unsaved food: \(response.message)")
+                    completion(.success(response))
+                }
+            } catch {
+                print("❌ Decoding error in unsave food: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+
+    /// Check if a food is saved by the user
+    func isFoodSaved(
+        userEmail: String,
+        foodId: Int,
+        completion: @escaping (Result<IsFoodSavedResponse, Error>) -> Void
+    ) {
+        var urlComponents = URLComponents(string: "\(baseUrl)/is-food-saved/")
+        urlComponents?.queryItems = [
+            URLQueryItem(name: "email", value: userEmail),
+            URLQueryItem(name: "food_id", value: String(foodId))
+        ]
+
+        guard let url = urlComponents?.url else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+
+            guard let data = data else {
+                DispatchQueue.main.async { completion(.failure(NetworkError.invalidResponse)) }
+                return
+            }
+
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = json["error"] as? String {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.serverError(message: errorMessage)))
+                }
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let response = try decoder.decode(IsFoodSavedResponse.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(response))
+                }
+            } catch {
+                print("❌ Decoding error in is food saved: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingError))
+                }
+            }
+        }.resume()
+    }
+
     /// Update a weight log by ID with full parameters
     /// - Parameters:
     ///   - logId: ID of the weight log to update

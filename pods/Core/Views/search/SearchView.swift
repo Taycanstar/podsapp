@@ -114,7 +114,13 @@ struct SearchView: View {
                 } label: {
                     SearchCategoryRow(icon: "fork.knife", title: "Recipes", iconColor: .primary, showChevron: false)
                 }
-                SearchCategoryRow(icon: "bookmark", title: "Saved", iconColor: .primary)
+                NavigationLink {
+                    SavedView()
+                        .environmentObject(foodManager)
+                        .environmentObject(dayLogsVM)
+                } label: {
+                    SearchCategoryRow(icon: "bookmark", title: "Saved", iconColor: .primary, showChevron: false)
+                }
                 SearchCategoryRow(icon: "dumbbell", title: "Workouts", iconColor: .primary)
 
                 QuickAddRow {
