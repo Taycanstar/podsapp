@@ -180,7 +180,7 @@ struct MealPlateSummaryView: View {
             }
         }
         .navigationDestination(item: $selectedFood) { food in
-            FoodSummaryView(food: food)
+            FoodDetails(food: food)
         }
         .onAppear {
             // Set meal period based on current time

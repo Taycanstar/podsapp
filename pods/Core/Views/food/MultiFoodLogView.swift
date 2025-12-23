@@ -295,7 +295,7 @@ struct MultiFoodLogView: View {
                 }
             }
             .navigationDestination(item: $selectedFood) { food in
-                FoodSummaryView(food: food)
+                FoodDetails(food: food)
             }
             .onAppear {
                 selectedMealPeriod = suggestedMealPeriod(for: Date())

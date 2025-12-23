@@ -291,7 +291,7 @@ struct IngredientPlateSummaryView: View {
                 }
             }
             .navigationDestination(item: $selectedFood) { food in
-                FoodSummaryView(food: food)
+                FoodDetails(food: food)
             }
             .onAppear {
                 reloadStoredNutrientTargets()

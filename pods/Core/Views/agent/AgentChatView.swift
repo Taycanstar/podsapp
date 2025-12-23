@@ -1359,7 +1359,7 @@ private struct ChatActionCircleButton: View {
     var foregroundColor: Color = .primary
 
     var body: some View {
-        let iconSize: CGFloat = systemName == "square.fill" ? 14 : 16
+        let iconSize: CGFloat = systemName == "square.fill" ? 13 : 16
         Button(action: action) {
             ZStack {
                 Circle()

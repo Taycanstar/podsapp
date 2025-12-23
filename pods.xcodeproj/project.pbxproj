@@ -180,6 +180,7 @@
 		36667DF22EF77E840017E9D7 /* IngredientSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DF12EF77E840017E9D7 /* IngredientSummaryView.swift */; };
 		36667DF42EF77E950017E9D7 /* IngredientPlateSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DF32EF77E950017E9D7 /* IngredientPlateSummaryView.swift */; };
 		36667DF62EF904740017E9D7 /* NutrientDescriptors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DF52EF904740017E9D7 /* NutrientDescriptors.swift */; };
+		36667DF82EFA0FDD0017E9D7 /* FoodDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667DF72EFA0FB90017E9D7 /* FoodDetails.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -629,6 +630,7 @@
 		36667DF12EF77E840017E9D7 /* IngredientSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientSummaryView.swift; sourceTree = "<group>"; };
 		36667DF32EF77E950017E9D7 /* IngredientPlateSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientPlateSummaryView.swift; sourceTree = "<group>"; };
 		36667DF52EF904740017E9D7 /* NutrientDescriptors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutrientDescriptors.swift; sourceTree = "<group>"; };
+		36667DF72EFA0FB90017E9D7 /* FoodDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodDetails.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -1174,6 +1176,7 @@
 		36667DCF2EF3A2120017E9D7 /* search */ = {
 			isa = PBXGroup;
 			children = (
+				36667DF72EFA0FB90017E9D7 /* FoodDetails.swift */,
 				36667DF32EF77E950017E9D7 /* IngredientPlateSummaryView.swift */,
 				36667DF12EF77E840017E9D7 /* IngredientSummaryView.swift */,
 				36667DEF2EF777660017E9D7 /* AddIngredientsDescribe.swift */,
@@ -2122,6 +2125,7 @@
 				363068E42E19EA7300F2D4EC /* EditUsernameView.swift in Sources */,
 				364A83C12D9F8B71009D2620 /* QuickLogFood.swift in Sources */,
 				3662A5512DFDFF7B00847487 /* WorkoutManager.swift in Sources */,
+				36667DF82EFA0FDD0017E9D7 /* FoodDetails.swift in Sources */,
 				36D3A5102E8E2EC000AD6B94 /* OnboardingColors.swift in Sources */,
 				36A85CEB2DB41EF300DD4266 /* ObstaclesView.swift in Sources */,
 				369474672CD5365400CD197F /* GracieView.swift in Sources */,

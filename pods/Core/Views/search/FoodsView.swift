@@ -12,6 +12,7 @@ struct FoodsView: View {
     @Environment(\.dismissSearch) private var dismissSearch
     @EnvironmentObject var foodManager: FoodManager
     @EnvironmentObject var viewModel: OnboardingViewModel
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
     @ObservedObject private var userFoodsRepo = UserFoodsRepository.shared
 
     @State private var searchText = ""
@@ -128,7 +129,7 @@ struct FoodsView: View {
                     userFoodsRepo.insertOptimistically(food)
                 },
                 onFoodCreatedAndAdd: { food in
-                    // Close the sheet first, then show FoodSummaryView
+                    // Close the sheet first, then show FoodDetails
                     showNewFoodSheet = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         createdFoodToAdd = food
@@ -139,12 +140,12 @@ struct FoodsView: View {
             .environmentObject(viewModel)
         }
         .sheet(item: $selectedFood) { food in
-            FoodSummaryView(food: food)
-                .environmentObject(foodManager)
+            FoodDetails(food: food)
+                .environmentObject(dayLogsVM)
         }
         .sheet(item: $createdFoodToAdd) { food in
-            FoodSummaryView(food: food)
-                .environmentObject(foodManager)
+            FoodDetails(food: food)
+                .environmentObject(dayLogsVM)
         }
         .task {
             await userFoodsRepo.refresh()
