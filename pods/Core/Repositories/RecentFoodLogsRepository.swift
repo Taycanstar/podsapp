@@ -119,7 +119,6 @@ final class RecentFoodLogsRepository: ObservableObject {
             status: loggedFood.status,
             calories: loggedFood.calories,
             message: loggedFood.message,
-            isOptimistic: true,
             foodLogId: loggedFood.foodLogId,
             food: loggedFood.food,
             mealType: loggedFood.mealType,
@@ -129,12 +128,14 @@ final class RecentFoodLogsRepository: ObservableObject {
             scheduledAt: Date(),
             recipeLogId: nil,
             recipe: nil,
-            activityLogId: nil,
+            servingsConsumed: nil,
+            activityId: nil,
             activity: nil,
             workoutLogId: nil,
             workout: nil,
             logDate: nil,
-            dayOfWeek: nil
+            dayOfWeek: nil,
+            isOptimistic: true
         )
 
         var logs = snapshot.logs
