@@ -1236,22 +1236,19 @@ private struct MultiFoodEditableItemRow: View {
         VStack(alignment: .leading, spacing: 12) {
             // Name + serving controls on same row
             HStack(alignment: .top, spacing: 12) {
-                // Food name and brand (tappable)
-                Button(action: onTap) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(food.displayName.isEmpty ? "Meal Item" : food.displayName)
-                            .font(.system(size: 15))
-                            .fontWeight(.regular)
-                            .foregroundColor(.primary)
-                            .multilineTextAlignment(.leading)
-                        if let brand = food.brandText, !brand.isEmpty {
-                            Text(brand)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                // Food name and brand
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(food.displayName.isEmpty ? "Meal Item" : food.displayName)
+                        .font(.system(size: 15))
+                        .fontWeight(.regular)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
+                    if let brand = food.brandText, !brand.isEmpty {
+                        Text(brand)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
-                .buttonStyle(.plain)
 
                 Spacer(minLength: 8)
 
@@ -1276,6 +1273,10 @@ private struct MultiFoodEditableItemRow: View {
             RoundedRectangle(cornerRadius: 18)
                 .fill(cardColor)
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
     }
 
     private var servingControls: some View {

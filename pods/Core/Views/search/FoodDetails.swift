@@ -30,6 +30,10 @@ struct FoodDetails: View {
         colorScheme == .dark ? Color(UIColor.systemGroupedBackground) : Color("bg")
     }
 
+    private var chipColor: Color {
+        colorScheme == .dark ? Color(.tertiarySystemFill) : Color(.secondarySystemFill)
+    }
+
     // MARK: - Computed Nutrition Values
     private var calories: Double {
         food.calories ?? 0
@@ -112,53 +116,41 @@ struct FoodDetails: View {
 
     // MARK: - Body
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
-                    headerCard
-                    macroSummaryCard
-                    servingInfoCard
-                    dailyGoalShareCard
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 20) {
+                foodInfoCard
+                macroSummaryCard
+                dailyGoalShareCard
 
-                    if shouldShowGoalsLoader {
-                        goalsLoadingView
-                    } else if nutrientTargets.isEmpty {
-                        missingTargetsCallout
-                    } else {
-                        totalCarbsSection
-                        fatTotalsSection
-                        proteinTotalsSection
-                        vitaminSection
-                        mineralSection
-                        otherNutrientSection
-                    }
+                if shouldShowGoalsLoader {
+                    goalsLoadingView
+                } else if nutrientTargets.isEmpty {
+                    missingTargetsCallout
+                } else {
+                    totalCarbsSection
+                    fatTotalsSection
+                    proteinTotalsSection
+                    vitaminSection
+                    mineralSection
+                    otherNutrientSection
+                }
 
-                    Spacer(minLength: 20)
-                }
-                .padding(.top, 16)
-                .padding(.bottom, 32)
+                Spacer(minLength: 20)
             }
-            .background(backgroundColor.ignoresSafeArea())
-            .navigationTitle("Food Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark")
-                            .font(.headline.weight(.semibold))
-                            .foregroundColor(.primary)
-                    }
-                }
-            }
-            .onAppear {
-                reloadStoredNutrientTargets()
-            }
-            .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
-                reloadStoredNutrientTargets()
-            }
-            .onReceive(goalsStore.$state) { _ in
-                reloadStoredNutrientTargets()
-            }
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+        }
+        .background(backgroundColor.ignoresSafeArea())
+        .navigationTitle("Food Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            reloadStoredNutrientTargets()
+        }
+        .onReceive(dayLogsVM.$nutritionGoalsVersion) { _ in
+            reloadStoredNutrientTargets()
+        }
+        .onReceive(goalsStore.$state) { _ in
+            reloadStoredNutrientTargets()
         }
     }
 
@@ -166,22 +158,41 @@ struct FoodDetails: View {
         nutrientTargets = NutritionGoalsStore.shared.currentTargets
     }
 
-    // MARK: - Header Card
-    private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(food.description)
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
-
-            if let brand = food.brandText, !brand.isEmpty {
-                Text(brand)
-                    .font(.subheadline)
+    // MARK: - Food Info Card (Name + Serving Size)
+    private var foodInfoCard: some View {
+        VStack(spacing: 0) {
+            // Row 1: Name
+            HStack {
+                Text("Name")
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+                Spacer()
+                Text(food.description)
+                    .font(.system(size: 15))
                     .foregroundColor(.secondary)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(2)
             }
+            .padding(.vertical, 12)
+
+            Divider()
+
+            // Row 2: Serving Size
+            HStack {
+                Text("Serving Size")
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+                Spacer()
+                Text(servingDescription)
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(chipColor))
+            }
+            .padding(.vertical, 12)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
+        .padding(.horizontal, 20)
         .background(
             RoundedRectangle(cornerRadius: 24)
                 .fill(cardColor)
@@ -226,26 +237,6 @@ struct FoodDetails: View {
                 .font(.subheadline)
                 .fontWeight(.medium)
         }
-    }
-
-    // MARK: - Serving Info Card
-    private var servingInfoCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Serving Size")
-                .font(.title3)
-                .fontWeight(.semibold)
-
-            Text(servingDescription)
-                .font(.body)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(cardColor)
-        )
-        .padding(.horizontal)
     }
 
     private var servingDescription: String {

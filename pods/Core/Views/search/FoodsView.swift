@@ -96,10 +96,17 @@ struct FoodsView: View {
             } else {
                 Section {
                     ForEach(filteredFoods) { food in
-                        UserFoodRow(food: food, onPlusTapped: {
-                            closeSearchIfNeeded()
-                            selectedFood = food
-                        })
+                        UserFoodRow(
+                            food: food,
+                            onPlusTapped: {
+                                closeSearchIfNeeded()
+                                selectedFood = food
+                            },
+                            onViewDetailsTapped: {
+                                closeSearchIfNeeded()
+                                selectedFood = food
+                            }
+                        )
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
@@ -174,9 +181,11 @@ struct FoodsView: View {
 struct UserFoodRow: View {
     let food: Food
     var onPlusTapped: (() -> Void)?
+    var onViewDetailsTapped: (() -> Void)?
 
     var body: some View {
         HStack {
+            // Tappable content area (shows food details when tapped)
             VStack(alignment: .leading, spacing: 2) {
                 Text(food.displayName)
                     .font(.system(size: 15))
@@ -204,8 +213,11 @@ struct UserFoodRow: View {
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
             }
-
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onViewDetailsTapped?()
+            }
 
             // Plus button
             Button {
@@ -217,7 +229,6 @@ struct UserFoodRow: View {
             }
             .buttonStyle(.plain)
         }
-        .contentShape(Rectangle())
     }
 }
 

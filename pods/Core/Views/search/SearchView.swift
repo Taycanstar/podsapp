@@ -710,6 +710,7 @@ struct RecentFoodRow: View {
 
     var body: some View {
         HStack {
+            // Tappable content area (shows food details when tapped)
             VStack(alignment: .leading, spacing: 2) {
                 Text(displayName)
                     .font(.system(size: 15))
@@ -733,8 +734,11 @@ struct RecentFoodRow: View {
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
             }
-
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onViewDetailsTapped?()
+            }
 
             // Dropdown menu button
             Menu {
@@ -762,7 +766,6 @@ struct RecentFoodRow: View {
             }
         }
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-        .contentShape(Rectangle())
     }
 
     private func macroLabel(prefix: String, value: Int) -> some View {
@@ -806,6 +809,7 @@ struct FoodSearchResultRow: View {
 
     var body: some View {
         HStack {
+            // Tappable content area (shows food details when tapped)
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.displayName)
                     .font(.system(size: 15))
@@ -839,8 +843,11 @@ struct FoodSearchResultRow: View {
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
             }
-
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onViewDetails?()
+            }
 
             // Loading, or dropdown menu button
             if isLoading {
@@ -873,7 +880,6 @@ struct FoodSearchResultRow: View {
             }
         }
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-        .contentShape(Rectangle())
     }
 
     private func macroLabel(prefix: String, value: Int) -> some View {

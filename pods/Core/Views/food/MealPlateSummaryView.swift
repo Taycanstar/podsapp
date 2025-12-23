@@ -606,13 +606,70 @@ struct MealPlateSummaryView: View {
     }
 
     private func foodForMealItemById(_ itemId: String) -> Food? {
-        // Try to find a matching food by name from the mealItems
-        if let mealItem = mealItems.first(where: { $0.id.uuidString == itemId }) {
-            if let match = foods.first(where: { $0.displayName == mealItem.name }) {
-                return match
-            }
+        // Find the meal item by ID
+        guard let mealItem = editableMealItems.first(where: { $0.id.uuidString == itemId }) else {
+            return nil
         }
-        return foods.first
+
+        // Get the editable state to apply scaling factor
+        let editableState = editableItems[itemId]
+        let scalingFactor = editableState?.scalingFactor ?? 1.0
+
+        // Build serving text from editable state or meal item
+        let servingText: String
+        if let editableState = editableState,
+           let selectedMeasure = editableState.selectedMeasure {
+            let amountText = MealEditableItem.formatServing(editableState.servingAmount)
+            let unitText = selectedMeasure.description.isEmpty ? selectedMeasure.unit : selectedMeasure.description
+            servingText = "\(amountText) \(unitText)"
+        } else {
+            let amountText = MealEditableItem.formatServing(mealItem.serving)
+            servingText = "\(amountText) \(mealItem.servingUnit ?? "serving")"
+        }
+
+        // Scale macros based on current serving adjustments
+        let scaledCalories = mealItem.calories * scalingFactor
+        let scaledProtein = mealItem.protein * scalingFactor
+        let scaledCarbs = mealItem.carbs * scalingFactor
+        let scaledFat = mealItem.fat * scalingFactor
+
+        // Build nutrients array - use full nutrients if available, otherwise create from macros
+        let nutrients: [Nutrient]
+        if let fullNutrients = mealItem.foodNutrients, !fullNutrients.isEmpty {
+            // Scale each nutrient value
+            nutrients = fullNutrients.map { nutrient in
+                Nutrient(
+                    nutrientName: nutrient.nutrientName,
+                    value: (nutrient.value ?? 0) * scalingFactor,
+                    unitName: nutrient.unitName
+                )
+            }
+        } else {
+            nutrients = [
+                Nutrient(nutrientName: "Energy", value: scaledCalories, unitName: "kcal"),
+                Nutrient(nutrientName: "Protein", value: scaledProtein, unitName: "g"),
+                Nutrient(nutrientName: "Carbohydrate, by difference", value: scaledCarbs, unitName: "g"),
+                Nutrient(nutrientName: "Total lipid (fat)", value: scaledFat, unitName: "g")
+            ]
+        }
+
+        // Create Food object from MealItem data with scaled values
+        return Food(
+            fdcId: mealItem.id.hashValue,
+            description: mealItem.name,
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: editableState?.servingAmount ?? mealItem.serving,
+            numberOfServings: 1,
+            servingSizeUnit: mealItem.servingUnit,
+            householdServingFullText: servingText,
+            foodNutrients: nutrients,
+            foodMeasures: [],
+            healthAnalysis: nil,
+            aiInsight: nil,
+            nutritionScore: nil,
+            mealItems: mealItem.subitems
+        )
     }
 
     // MARK: - Nutrient Sections
@@ -1300,17 +1357,14 @@ private struct MealEditableItemRow: View {
         VStack(alignment: .leading, spacing: 12) {
             // Name + serving controls on same row
             HStack(alignment: .top, spacing: 12) {
-                // Food name (tappable)
-                Button(action: onTap) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.name.isEmpty ? "Meal Item" : item.name)
-                            .font(.system(size: 15))
-                            .fontWeight(.regular)
-                            .foregroundColor(.primary)
-                            .multilineTextAlignment(.leading)
-                    }
+                // Food name
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.name.isEmpty ? "Meal Item" : item.name)
+                        .font(.system(size: 15))
+                        .fontWeight(.regular)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
                 }
-                .buttonStyle(.plain)
 
                 Spacer(minLength: 8)
 
@@ -1335,6 +1389,10 @@ private struct MealEditableItemRow: View {
             RoundedRectangle(cornerRadius: 18)
                 .fill(cardColor)
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
     }
 
     private var servingControls: some View {
