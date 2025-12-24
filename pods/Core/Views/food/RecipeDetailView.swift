@@ -23,6 +23,8 @@ struct RecipeDetailView: View {
     @State private var isShowingEditRecipe = false
     @State private var isShowingDeleteAlert = false
     @State private var recipeWasSaved = false
+    @State private var isDuplicating = false
+    @State private var duplicatedRecipe: Recipe?
     
     @State private var servingsCount: Int
     @State private var selectedPrivacy: String
@@ -140,7 +142,13 @@ struct RecipeDetailView: View {
                             } label: {
                                 Label("Edit", systemImage: "pencil")
                             }
-                            
+
+                            Button {
+                                duplicateRecipe()
+                            } label: {
+                                Label("Duplicate", systemImage: "doc.on.doc")
+                            }
+
                             Button(role: .destructive) {
                                 isShowingDeleteAlert = true
                             } label: {
@@ -204,8 +212,27 @@ struct RecipeDetailView: View {
                     )
                 }
             })
+            .sheet(item: $duplicatedRecipe) { newRecipe in
+                NavigationStack {
+                    RecipeDetailView(recipe: newRecipe, path: .constant(NavigationPath()))
+                        .environmentObject(foodManager)
+                        .environmentObject(viewModel)
+                }
+            }
+            .overlay {
+                if isDuplicating {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .overlay {
+                            ProgressView("Duplicating recipe...")
+                                .padding()
+                                .background(Color("iosnp"))
+                                .cornerRadius(12)
+                        }
+                }
+            }
             .onAppear(perform: handleOnAppear)
-   
+
         }
     }
     
@@ -517,12 +544,43 @@ struct RecipeDetailView: View {
         )
     }
     
-    /// "Delete" the recipe. You might have a function in `NetworkManager` or `FoodManager`.
+    /// Delete the recipe using FoodManager
     private func deleteRecipe() {
-        // Example:
-        print("Deleting recipe with ID: \(recipe.id)")
-        dismiss()
+        // Remove optimistically from repository
+        RecipesRepository.shared.removeOptimistic(id: recipe.id)
+
+        foodManager.deleteRecipe(recipeId: recipe.id) { result in
+            switch result {
+            case .success:
+                print("✅ Recipe deleted successfully")
+                dismiss()
+
+            case .failure(let error):
+                print("❌ Failed to delete recipe: \(error.localizedDescription)")
+                // Restore on failure
+                Task {
+                    await RecipesRepository.shared.refresh(force: true)
+                }
+            }
+        }
     }
-    
+
+    /// Duplicate the recipe using FoodManager
+    private func duplicateRecipe() {
+        isDuplicating = true
+
+        foodManager.duplicateRecipe(recipe: recipe) { result in
+            isDuplicating = false
+
+            switch result {
+            case .success(let newRecipe):
+                // Open the duplicated recipe for editing
+                duplicatedRecipe = newRecipe
+
+            case .failure(let error):
+                print("❌ Failed to duplicate recipe: \(error.localizedDescription)")
+            }
+        }
+    }
 
 }

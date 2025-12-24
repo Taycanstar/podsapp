@@ -1777,6 +1777,7 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
     date: Date,
     notes: String? = nil,
     skipCoach: Bool = false,
+    skipToast: Bool = false,  // Skip showing toast (caller handles it optimistically)
     batchContext: [String: Any]? = nil,
     completion: @escaping (Result<LoggedFood, Error>) -> Void
 ) {
@@ -1846,27 +1847,30 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
                     // Track the food in recently added - fdcId is non-optional
                     self.lastLoggedFoodId = food.fdcId
                     self.trackRecentlyAdded(foodId: food.fdcId)
-                    
-                    // Set data for success toast in dashboard
-                    self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
-                    self.showLogSuccess = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        self.showLogSuccess = false
-                    }
-                    
-                    // Trigger review check after successful food log
-                    ReviewManager.shared.foodWasLogged()
-                    
-                    // Track meal timing for smart reminders
-                    MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
-                    
-                    // Show the local toast if the food was added manually (not AI generated)
-                    if !self.isAnalyzingFood {
-                        self.showToast = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            self.showToast = false
+
+                    // Only show toast if caller didn't handle it optimistically
+                    if !skipToast {
+                        // Set data for success toast in dashboard
+                        self.lastLoggedItem = (name: food.displayName, calories: Double(loggedFood.food.calories))
+                        self.showLogSuccess = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            self.showLogSuccess = false
+                        }
+
+                        // Show the local toast if the food was added manually (not AI generated)
+                        if !self.isAnalyzingFood {
+                            self.showToast = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                self.showToast = false
+                            }
                         }
                     }
+
+                    // Trigger review check after successful food log
+                    ReviewManager.shared.foodWasLogged()
+
+                    // Track meal timing for smart reminders
+                    MealReminderService.shared.mealWasLogged(mealType: loggedFood.mealType)
                 }
                 
                 // Clear the lastLoggedFoodId after 2 seconds
@@ -2830,6 +2834,39 @@ func deleteRecipe(
 
             case .failure(let error):
                 print("❌ Error deleting recipe: \(error.localizedDescription)")
+                completion?(.failure(error))
+            }
+        }
+    }
+}
+
+func duplicateRecipe(
+    recipe: Recipe,
+    completion: ((Result<Recipe, Error>) -> Void)? = nil
+) {
+    guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
+        print("❌ No user email found for duplicate recipe")
+        completion?(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No user email"])))
+        return
+    }
+
+    print("📋 FoodManager: Duplicating recipe: \(recipe.title)")
+
+    networkManager.duplicateRecipe(recipeId: recipe.id, userEmail: email) { [weak self] result in
+        DispatchQueue.main.async {
+            switch result {
+            case .success(let newRecipe):
+                // Add the duplicated recipe to our list
+                self?.recipes.insert(newRecipe, at: 0)
+
+                // Insert into repository optimistically
+                RecipesRepository.shared.insertOptimistically(newRecipe)
+
+                print("✅ Recipe duplicated successfully: \(newRecipe.title)")
+                completion?(.success(newRecipe))
+
+            case .failure(let error):
+                print("❌ Error duplicating recipe: \(error.localizedDescription)")
                 completion?(.failure(error))
             }
         }

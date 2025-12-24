@@ -588,7 +588,8 @@ struct SearchView: View {
             meal: mealLabel,
             servings: servings,
             date: mealDate,
-            notes: nil
+            notes: nil,
+            skipToast: true  // We already showed toast optimistically above
         ) { result in
             DispatchQueue.main.async {
                 switch result {
@@ -614,9 +615,11 @@ struct SearchView: View {
                     upsertCombinedLog(combined, replacing: optimisticLog.id)
                     recentFoodsRepo.replaceOptimisticLog(placeholderId: placeholderId, with: logged)
 
-                    Task {
-                        await recentFoodsRepo.refresh(force: true)
-                    }
+                    // Note: We intentionally do NOT call recentFoodsRepo.refresh(force: true) here.
+                    // The replaceOptimisticLog() already updated the snapshot with the real log.
+                    // Calling refresh would fetch from server which may not have indexed the new log yet,
+                    // causing a race condition that overwrites our local state.
+
                     dayLogsVM.loadLogs(for: mealDate, force: true)
                 case .failure:
                     dayLogsVM.removeOptimisticLog(identifier: optimisticLog.id)

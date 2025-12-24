@@ -28,6 +28,15 @@ struct RecipeView: View {
     @State private var showCreateRecipeSheet = false
     @State private var selectedRecipe: Recipe?
 
+    // Edit/Duplicate state
+    @State private var recipeToEdit: Recipe?
+    @State private var recipeToEditAfterDuplicate: Recipe?
+    @State private var isDuplicating = false
+
+    // Delete state
+    @State private var recipeToDelete: Recipe?
+    @State private var showDeleteConfirmation = false
+
     // Filtered recipes based on search
     private var filteredRecipes: [Recipe] {
         if searchText.isEmpty {
@@ -90,10 +99,26 @@ struct RecipeView: View {
             } else {
                 Section {
                     ForEach(filteredRecipes) { recipe in
-                        RecipeRow(recipe: recipe, onPlusTapped: {
-                            closeSearchIfNeeded()
-                            selectedRecipe = recipe
-                        })
+                        RecipeRow(
+                            recipe: recipe,
+                            onPlusTapped: {
+                                closeSearchIfNeeded()
+                                selectedRecipe = recipe
+                            },
+                            onEditTapped: {
+                                closeSearchIfNeeded()
+                                recipeToEdit = recipe
+                            },
+                            onDuplicateTapped: {
+                                closeSearchIfNeeded()
+                                duplicateRecipe(recipe)
+                            },
+                            onDeleteTapped: {
+                                closeSearchIfNeeded()
+                                recipeToDelete = recipe
+                                showDeleteConfirmation = true
+                            }
+                        )
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
@@ -125,6 +150,40 @@ struct RecipeView: View {
             RecipeSummaryView(recipe: recipe)
                 .environmentObject(foodManager)
         }
+        .sheet(item: $recipeToEdit) { recipe in
+            RecipeDetailSheet(recipe: recipe)
+                .environmentObject(foodManager)
+                .environmentObject(viewModel)
+        }
+        .sheet(item: $recipeToEditAfterDuplicate) { recipe in
+            RecipeDetailSheet(recipe: recipe)
+                .environmentObject(foodManager)
+                .environmentObject(viewModel)
+        }
+        .confirmationDialog(
+            "Delete Recipe?",
+            isPresented: $showDeleteConfirmation,
+            presenting: recipeToDelete
+        ) { recipe in
+            Button("Delete", role: .destructive) {
+                deleteRecipe(recipe)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { recipe in
+            Text("Are you sure you want to delete \"\(recipe.title)\"? This action cannot be undone.")
+        }
+        .overlay {
+            if isDuplicating {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .overlay {
+                        ProgressView("Duplicating recipe...")
+                            .padding()
+                            .background(Color("iosnp"))
+                            .cornerRadius(12)
+                    }
+            }
+        }
         .onAppear {
             if !viewModel.email.isEmpty {
                 recipesRepo.configure(email: viewModel.email)
@@ -150,6 +209,37 @@ struct RecipeView: View {
             // On success, no need to refresh - already removed optimistically
         }
     }
+
+    // MARK: - Duplicate Recipe
+    private func duplicateRecipe(_ recipe: Recipe) {
+        isDuplicating = true
+
+        foodManager.duplicateRecipe(recipe: recipe) { result in
+            isDuplicating = false
+
+            switch result {
+            case .success(let newRecipe):
+                // Open the duplicated recipe for editing
+                recipeToEditAfterDuplicate = newRecipe
+
+            case .failure(let error):
+                print("❌ Failed to duplicate recipe: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+// MARK: - Recipe Detail Sheet Wrapper
+// Wraps RecipeDetailView in a NavigationStack for sheet presentation
+struct RecipeDetailSheet: View {
+    let recipe: Recipe
+    @State private var path = NavigationPath()
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            RecipeDetailView(recipe: recipe, path: $path)
+        }
+    }
 }
 
 // MARK: - Recipe Row
@@ -157,6 +247,9 @@ struct RecipeView: View {
 struct RecipeRow: View {
     let recipe: Recipe
     var onPlusTapped: (() -> Void)?
+    var onEditTapped: (() -> Void)?
+    var onDuplicateTapped: (() -> Void)?
+    var onDeleteTapped: (() -> Void)?
 
     var body: some View {
         HStack {
@@ -184,15 +277,52 @@ struct RecipeRow: View {
 
             Spacer()
 
-            // Plus button
-            Button {
-                onPlusTapped?()
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundColor(.primary)
+            HStack(spacing: 16) {
+                // Bookmark button
+                Button {
+                    // TODO: Implement bookmark/save functionality
+                } label: {
+                    Image(systemName: "bookmark")
+                        .font(.system(size: 15))
+                        .foregroundColor(.primary)
+                }
+                .buttonStyle(.plain)
+
+                // Ellipsis menu
+                Menu {
+                    Button {
+                        onEditTapped?()
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+
+                    Button {
+                        onDuplicateTapped?()
+                    } label: {
+                        Label("Duplicate", systemImage: "doc.on.doc")
+                    }
+
+                    Button(role: .destructive) {
+                        onDeleteTapped?()
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 15))
+                        .foregroundColor(.primary)
+                }
+
+                // Plus button
+                Button {
+                    onPlusTapped?()
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.primary)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .contentShape(Rectangle())
     }

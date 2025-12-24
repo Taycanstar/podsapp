@@ -7683,6 +7683,73 @@ class NetworkManager {
         }.resume()
     }
 
+    // MARK: - Duplicate Recipe
+
+    func duplicateRecipe(
+        recipeId: Int,
+        userEmail: String,
+        completion: @escaping (Result<Recipe, Error>) -> Void
+    ) {
+        guard let url = URL(string: "\(baseUrl)/duplicate-recipe/") else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "recipe_id": recipeId
+        ]
+
+        let jsonData: Data
+        do {
+            jsonData = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(NetworkError.jsonEncodingFailed))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.httpBody = jsonData
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NetworkError.noData))
+                return
+            }
+
+            if httpResponse.statusCode == 201 {
+                do {
+                    let decoder = JSONDecoder()
+                    decoder.keyDecodingStrategy = .convertFromSnakeCase
+                    decoder.dateDecodingStrategy = .iso8601
+                    let recipe = try decoder.decode(Recipe.self, from: data)
+                    print("✅ Successfully duplicated recipe: \(recipe.title)")
+                    completion(.success(recipe))
+                } catch {
+                    print("❌ Failed to decode duplicated recipe: \(error)")
+                    completion(.failure(error))
+                }
+            } else {
+              
+                print("❌ Failed to duplicate recipe: ")
+                completion(.failure(NetworkError.serverError("HTTP \(httpResponse.statusCode): error")))
+            }
+        }.resume()
+    }
+
     // MARK: - Import Recipe from URL
 
     func importRecipe(

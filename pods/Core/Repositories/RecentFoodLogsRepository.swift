@@ -55,11 +55,16 @@ final class RecentFoodLogsRepository: ObservableObject {
     func refresh(force: Bool = false) async -> Bool {
         guard let email = currentEmail else { return false }
 
+        // If not forcing and cache is fresh, keep in-memory snapshot (it may have optimistic updates)
+        // Only load from cache if in-memory snapshot is empty
         if !force,
            let cached: CachedEntry<RecentFoodLogsSnapshot> = store.load(RecentFoodLogsSnapshot.self,
                                                                         for: key(for: email)),
            cached.isFresh(ttl: RepositoryTTL.recentFoodLogs) {
-            snapshot = cached.value
+            // Only overwrite if current snapshot is empty (initial load)
+            if snapshot.logs.isEmpty {
+                snapshot = cached.value
+            }
             return true
         }
 
@@ -69,8 +74,29 @@ final class RecentFoodLogsRepository: ObservableObject {
 
         do {
             let response = try await fetchPage(for: email, page: 1)
+
+            // Preserve any optimistic entries that aren't yet in the server response
+            // This handles the race condition where we log a food and immediately refresh
+            // before the server has indexed the new log
+            let existingOptimistic = snapshot.logs.filter { $0.isOptimistic == true }
+            var mergedLogs = response.logs
+
+            // Add optimistic entries that don't have a matching foodLogId in server response
+            for optimistic in existingOptimistic {
+                let alreadyInResponse = mergedLogs.contains { serverLog in
+                    // Match by foodLogId if both have it
+                    if let optId = optimistic.foodLogId, let serverId = serverLog.foodLogId {
+                        return optId == serverId
+                    }
+                    return false
+                }
+                if !alreadyInResponse {
+                    mergedLogs.insert(optimistic, at: 0)
+                }
+            }
+
             snapshot = RecentFoodLogsSnapshot(
-                logs: response.logs,
+                logs: mergedLogs,
                 nextPage: response.hasMore ? 2 : 1,
                 hasMore: response.hasMore
             )
