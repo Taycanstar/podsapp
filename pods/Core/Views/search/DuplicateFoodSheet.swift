@@ -127,10 +127,9 @@ struct DuplicateFoodSheet: View {
         _brand = State(initialValue: food.brandName ?? "")
         _basedOn = State(initialValue: .serving)
 
-        // For weight, prefer gramWeight from measures if available (for database foods)
-        // Fall back to servingSize for custom foods
-        let gramWeight: Double? = food.foodMeasures.first?.gramWeight
-        let weightValue: Double? = (gramWeight ?? 0) > 0 ? gramWeight : food.servingSize
+        // For weight, prefer servingWeightGrams, then gramWeight from measures, finally servingSize
+        let gramWeight: Double? = food.servingWeightGrams ?? food.foodMeasures.first?.gramWeight
+        let weightValue: Double? = (gramWeight ?? 0) > 0 ? gramWeight : nil
         _weight = State(initialValue: weightValue.map { String(format: "%.0f", $0) } ?? "")
 
         // Parse householdServingFullText (e.g., "1 piece", "2 cups") for serving info
@@ -741,6 +740,7 @@ struct DuplicateFoodSheet: View {
             brandOwner: resolvedBrand,
             brandName: resolvedBrand,
             servingSize: servingQty,
+            servingWeightGrams: weightGrams,
             numberOfServings: 1,
             servingSizeUnit: servingUnit,
             householdServingFullText: servingText,

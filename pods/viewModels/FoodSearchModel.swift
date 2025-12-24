@@ -45,6 +45,7 @@ struct Food: Codable, Identifiable, Hashable{
     let brandOwner: String?
     let brandName: String?
     var servingSize: Double?
+    var servingWeightGrams: Double? = nil  // Gram weight per serving (e.g., 85g for 1 drumstick)
     var numberOfServings: Double?
     let servingSizeUnit: String?
     var householdServingFullText: String?
@@ -55,13 +56,13 @@ struct Food: Codable, Identifiable, Hashable{
     var nutritionScore: Double? = nil
     var mealItems: [MealItem]? = nil
     var barcode: String? = nil
-    
+
     var id: Int { fdcId }
-    
+
     // With .convertFromSnakeCase decoder, do NOT use explicit snake_case mappings
     // The decoder auto-converts snake_case to camelCase
     enum CodingKeys: String, CodingKey {
-        case fdcId, description, brandOwner, brandName, servingSize, numberOfServings
+        case fdcId, description, brandOwner, brandName, servingSize, servingWeightGrams, numberOfServings
         case servingSizeUnit, householdServingFullText, foodNutrients, foodMeasures
         case healthAnalysis, aiInsight, nutritionScore, mealItems, barcode
     }
@@ -258,11 +259,12 @@ extension Food {
             brandOwner: loggedItem.brandText,
             brandName: loggedItem.brandText,
             servingSize: nil,
+            servingWeightGrams: loggedItem.servingWeightGrams,
             numberOfServings: loggedItem.numberOfServings,
             servingSizeUnit: nil,
             householdServingFullText: loggedItem.servingSizeText,
             foodNutrients: loggedItem.foodNutrients ?? [],
-            foodMeasures: [],
+            foodMeasures: loggedItem.foodMeasures ?? [],
             healthAnalysis: loggedItem.healthAnalysis,
             aiInsight: loggedItem.aiInsight,
             nutritionScore: loggedItem.nutritionScore,
@@ -701,7 +703,7 @@ typealias HealthNutriScore = NutriScore
 // For logged foods from our database
 struct LoggedFoodItem: Codable {
     let foodLogId: Int?   // Add food log ID
-    let fdcId: Int 
+    let fdcId: Int
     let displayName: String
     let calories: Double
     let servingSizeText: String
@@ -715,7 +717,9 @@ struct LoggedFoodItem: Codable {
     let aiInsight: String?
     let nutritionScore: Double?
     var mealItems: [MealItem]?
-    
+    let servingWeightGrams: Double?  // Gram weight per serving (e.g., 192g for grilled chicken)
+    let foodMeasures: [FoodMeasure]?  // Measure options with gram weights
+
     // With .convertFromSnakeCase decoder, do NOT use explicit snake_case mappings
     enum CodingKeys: String, CodingKey {
         case foodLogId, fdcId, displayName, calories, servingSizeText, numberOfServings, brandText, protein, carbs, fat
@@ -724,6 +728,8 @@ struct LoggedFoodItem: Codable {
         case aiInsight       // .convertFromSnakeCase: "ai_insight" -> "aiInsight"
         case nutritionScore  // .convertFromSnakeCase: "nutrition_score" -> "nutritionScore"
         case mealItems       // .convertFromSnakeCase: "meal_items" -> "mealItems"
+        case servingWeightGrams  // .convertFromSnakeCase: "serving_weight_grams" -> "servingWeightGrams"
+        case foodMeasures    // .convertFromSnakeCase: "food_measures" -> "foodMeasures"
     }
 
     init(
@@ -741,7 +747,9 @@ struct LoggedFoodItem: Codable {
         foodNutrients: [Nutrient]?,
         aiInsight: String? = nil,
         nutritionScore: Double? = nil,
-        mealItems: [MealItem]? = nil
+        mealItems: [MealItem]? = nil,
+        servingWeightGrams: Double? = nil,
+        foodMeasures: [FoodMeasure]? = nil
     ) {
         self.foodLogId = foodLogId
         self.fdcId = fdcId
@@ -758,6 +766,8 @@ struct LoggedFoodItem: Codable {
         self.aiInsight = aiInsight
         self.nutritionScore = nutritionScore
         self.mealItems = mealItems
+        self.servingWeightGrams = servingWeightGrams
+        self.foodMeasures = foodMeasures
     }
 }
 
@@ -923,11 +933,12 @@ extension LoggedFoodItem {
             brandOwner: nil,
             brandName: brandText,
             servingSize: nil,
+            servingWeightGrams: self.servingWeightGrams,  // Pass through gram weight
             numberOfServings: normalizedServings,
             servingSizeUnit: nil,
             householdServingFullText: servingSizeText,
             foodNutrients: nutrients,
-            foodMeasures: [],
+            foodMeasures: self.foodMeasures ?? [],  // Pass through measures
             healthAnalysis: self.healthAnalysis,  // Preserve health analysis
             aiInsight: self.aiInsight,
             nutritionScore: self.nutritionScore,
@@ -952,6 +963,8 @@ extension LoggedFoodItem {
         self.aiInsight = aiInsight
         self.nutritionScore = nutritionScore
         self.mealItems = mealItems
+        self.servingWeightGrams = nil
+        self.foodMeasures = nil
     }
 }
 
@@ -2405,6 +2418,13 @@ struct FoodSearchResult: Codable, Identifiable, Hashable {
     // Full nutrient data from backend (vitamins, minerals, etc.)
     let foodNutrients: [Nutrient]?
 
+    // Weight and measures from full lookup
+    let servingSize: Double?
+    let servingWeightGrams: Double?  // Gram weight per serving (e.g., 85g for 1 drumstick)
+    let servingSizeUnit: String?
+    let householdServingFullText: String?
+    let foodMeasures: [FoodMeasure]?
+
     var id: String {
         if let nixItemId = nixItemId, !nixItemId.isEmpty {
             return nixItemId
@@ -2442,26 +2462,39 @@ struct FoodSearchResult: Codable, Identifiable, Hashable {
             ]
         }
 
-        let measure = FoodMeasure(
-            disseminationText: servingText ?? "1 serving",
-            gramWeight: 0,
-            id: syntheticId,
-            modifier: nil,
-            measureUnitName: servingText ?? "serving",
-            rank: 1
-        )
+        // Use foodMeasures from backend if available, otherwise create a basic measure
+        let measures: [FoodMeasure]
+        if let backendMeasures = foodMeasures, !backendMeasures.isEmpty {
+            measures = backendMeasures
+        } else {
+            // Use servingWeightGrams for gramWeight if available
+            let gramWeight = servingWeightGrams ?? servingSize ?? 0
+            let measure = FoodMeasure(
+                disseminationText: servingText ?? "1 serving",
+                gramWeight: gramWeight,
+                id: syntheticId,
+                modifier: nil,
+                measureUnitName: servingText ?? "serving",
+                rank: 1
+            )
+            measures = [measure]
+        }
+
+        // Use householdServingFullText from backend, or fall back to servingText
+        let servingFullText = householdServingFullText ?? servingText
 
         return Food(
             fdcId: syntheticId,
             description: name,
             brandOwner: brandName,
             brandName: brandName,
-            servingSize: 1,
+            servingSize: servingSize,
+            servingWeightGrams: servingWeightGrams,
             numberOfServings: 1,
-            servingSizeUnit: nil,
-            householdServingFullText: servingText,
+            servingSizeUnit: servingSizeUnit,
+            householdServingFullText: servingFullText,
             foodNutrients: nutrients,
-            foodMeasures: [measure],
+            foodMeasures: measures,
             healthAnalysis: nil,
             aiInsight: nil,
             nutritionScore: nil,

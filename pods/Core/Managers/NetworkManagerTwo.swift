@@ -1509,6 +1509,7 @@ class NetworkManagerTwo {
               let description = dict["description"] as? String else { return nil }
 
         let servingSize = doubleValue(dict["servingSize"]) ?? (dict["serving_size"] as? Double)
+        let servingWeightGrams = doubleValue(dict["servingWeightGrams"]) ?? doubleValue(dict["serving_weight_grams"])
         let numberOfServings = doubleValue(dict["numberOfServings"]) ?? (dict["number_of_servings"] as? Double)
         let nutrients = ((dict["foodNutrients"] as? [[String: Any]]) ?? []).compactMap { makeNutrient(from: $0) }
         let measures = ((dict["foodMeasures"] as? [[String: Any]]) ?? []).compactMap { makeMeasure(from: $0) }
@@ -1519,6 +1520,7 @@ class NetworkManagerTwo {
             brandOwner: dict["brandOwner"] as? String,
             brandName: dict["brandName"] as? String,
             servingSize: servingSize,
+            servingWeightGrams: servingWeightGrams,
             numberOfServings: numberOfServings,
             servingSizeUnit: dict["servingSizeUnit"] as? String,
             householdServingFullText: dict["householdServingFullText"] as? String,

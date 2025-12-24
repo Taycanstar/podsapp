@@ -5681,18 +5681,28 @@ class NetworkManager {
         print("- date: \(ISO8601DateFormatter().string(from: date))")
         
         // Don't send calories directly since the backend calculates it from food.calories * servings
+        var foodDict: [String: Any] = [
+            "fdcId": food.fdcId,
+            "description": food.displayName,
+            "brandOwner": food.brandText ?? "",
+            "servingSize": food.servingSize ?? 0,
+            "servingSizeUnit": food.servingSizeUnit ?? "",
+            "householdServingFullText": food.servingSizeText,
+            "foodNutrients": nutrients,
+            "meal_items": food.mealItems?.map { $0.toDictionary() } ?? []
+        ]
+
+        // Include servingWeightGrams if available (gram weight per serving)
+        if let gramWeight = food.servingWeightGrams {
+            foodDict["servingWeightGrams"] = gramWeight
+        } else if let firstMeasure = food.foodMeasures.first, firstMeasure.gramWeight > 0 {
+            // Fallback to first foodMeasure's gramWeight if servingWeightGrams not set
+            foodDict["servingWeightGrams"] = firstMeasure.gramWeight
+        }
+
         var parameters: [String: Any] = [
             "user_email": userEmail,
-            "food": [
-                "fdcId": food.fdcId,
-                "description": food.displayName,
-                "brandOwner": food.brandText ?? "",
-                "servingSize": food.servingSize ?? 0,
-                "servingSizeUnit": food.servingSizeUnit ?? "",
-                "householdServingFullText": food.servingSizeText,
-                "foodNutrients": nutrients,
-                "meal_items": food.mealItems?.map { $0.toDictionary() } ?? []
-            ],
+            "food": foodDict,
             "meal_type": mealType,
             "servings": servings,
             "date": ISO8601DateFormatter().string(from: date),

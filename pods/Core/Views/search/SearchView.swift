@@ -31,6 +31,20 @@ struct SearchView: View {
     /// Debounce time for search (250ms recommended by MacroFactor)
     private let searchDebounceNanoseconds: UInt64 = 250_000_000
 
+    private static let isoDayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = .current
+        return formatter
+    }()
+
+    private static let weekdayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE"
+        formatter.timeZone = .current
+        return formatter
+    }()
+
     /// Recent food logs from the repository
     private var recentFoodLogs: [CombinedLog] {
         recentFoodsRepo.snapshot.logs
@@ -532,37 +546,82 @@ struct SearchView: View {
 
     // MARK: - Log Food Directly
     private func logFoodDirectly(_ food: Food) {
-        let mealPeriod = suggestedMealPeriod(for: Date())
+        let mealDate = Date()
+        let mealPeriod = suggestedMealPeriod(for: mealDate)
         let mealLabel = mealPeriod.title
-        let servings = food.numberOfServings ?? 1
+        let servings = max(food.numberOfServings ?? 1, 0.0001)
+        let email = foodManager.userEmail ?? viewModel.email
+        guard !email.isEmpty else { return }
+
+        let placeholderId = generateTemporaryFoodLogID()
+        let optimisticLog = makeOptimisticCombinedLog(
+            from: food,
+            placeholderId: placeholderId,
+            mealLabel: mealLabel,
+            mealDate: mealDate,
+            servings: servings
+        )
+        dayLogsVM.addPending(optimisticLog)
+        upsertCombinedLog(optimisticLog)
+
+        let optimisticRecent = makeOptimisticLoggedFood(
+            from: food,
+            mealLabel: mealLabel,
+            servings: servings,
+            placeholderId: placeholderId
+        )
+        recentFoodsRepo.insertOptimistically(optimisticRecent)
+
+        foodManager.lastLoggedItem = (name: optimisticLog.food?.displayName ?? food.displayName,
+                                      calories: optimisticLog.displayCalories)
+        foodManager.showLogSuccess = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            foodManager.showLogSuccess = false
+        }
+
+        // Navigate back immediately so the user sees the log appear without waiting on the network
+        dismiss()
 
         foodManager.logFood(
-            email: viewModel.email,
+            email: email,
             food: food,
             meal: mealLabel,
             servings: servings,
-            date: Date(),
+            date: mealDate,
             notes: nil
         ) { result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let logged):
-                    foodManager.lastLoggedItem = (name: logged.food.displayName, calories: Double(logged.food.calories))
-                    foodManager.showLogSuccess = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        foodManager.showLogSuccess = false
-                    }
-                    dayLogsVM.loadLogs(for: Date(), force: true)
-                    // Optimistically insert the logged food into recents
-                    recentFoodsRepo.insertOptimistically(logged)
-                    // Also refresh in background to get canonical data
+                    let combined = CombinedLog(
+                        type: .food,
+                        status: logged.status,
+                        calories: Double(logged.food.calories),
+                        message: "\(logged.food.displayName) - \(logged.mealType)",
+                        foodLogId: logged.foodLogId,
+                        food: logged.food,
+                        mealType: logged.mealType,
+                        mealLogId: nil,
+                        meal: nil,
+                        mealTime: nil,
+                        scheduledAt: mealDate,
+                        recipeLogId: nil,
+                        recipe: nil,
+                        servingsConsumed: nil
+                    )
+
+                    dayLogsVM.replaceOptimisticLog(identifier: optimisticLog.id, with: combined)
+                    upsertCombinedLog(combined, replacing: optimisticLog.id)
+                    recentFoodsRepo.replaceOptimisticLog(placeholderId: placeholderId, with: logged)
+
                     Task {
                         await recentFoodsRepo.refresh(force: true)
                     }
-                    // Go back to TimelineView after successful log
-                    dismiss()
+                    dayLogsVM.loadLogs(for: mealDate, force: true)
                 case .failure:
-                    break
+                    dayLogsVM.removeOptimisticLog(identifier: optimisticLog.id)
+                    recentFoodsRepo.removeOptimisticLog(placeholderId: placeholderId)
+                    foodManager.combinedLogs.removeAll { $0.id == optimisticLog.id }
                 }
             }
         }
@@ -614,6 +673,128 @@ struct SearchView: View {
         case 15..<18: return .snack
         default: return .dinner
         }
+    }
+
+    private func makeOptimisticCombinedLog(
+        from food: Food,
+        placeholderId: Int,
+        mealLabel: String,
+        mealDate: Date,
+        servings: Double
+    ) -> CombinedLog {
+        let servingText = normalizedServingText(for: food)
+        let perServingCalories = food.calories ?? 0
+
+        let loggedItem = LoggedFoodItem(
+            foodLogId: placeholderId,
+            fdcId: food.fdcId,
+            displayName: food.displayName,
+            calories: perServingCalories,
+            servingSizeText: servingText,
+            numberOfServings: servings,
+            brandText: food.brandText,
+            protein: food.protein,
+            carbs: food.carbs,
+            fat: food.fat,
+            healthAnalysis: food.healthAnalysis,
+            foodNutrients: food.foodNutrients,
+            aiInsight: food.aiInsight,
+            nutritionScore: food.nutritionScore,
+            mealItems: food.mealItems,
+            servingWeightGrams: food.servingWeightGrams,
+            foodMeasures: food.foodMeasures
+        )
+
+        let logDate = SearchView.isoDayFormatter.string(from: mealDate)
+        let dayName = SearchView.weekdayFormatter.string(from: mealDate)
+
+        return CombinedLog(
+            type: .food,
+            status: "pending",
+            calories: perServingCalories * servings,
+            message: "\(food.displayName) - \(mealLabel)",
+            foodLogId: placeholderId,
+            food: loggedItem,
+            mealType: mealLabel,
+            mealLogId: nil,
+            meal: nil,
+            mealTime: mealLabel,
+            scheduledAt: mealDate,
+            recipeLogId: nil,
+            recipe: nil,
+            servingsConsumed: nil,
+            logDate: logDate,
+            dayOfWeek: dayName,
+            isOptimistic: true
+        )
+    }
+
+    private func makeOptimisticLoggedFood(
+        from food: Food,
+        mealLabel: String,
+        servings: Double,
+        placeholderId: Int
+    ) -> LoggedFood {
+        let servingText = normalizedServingText(for: food)
+        let perServingCalories = food.calories ?? 0
+
+        let loggedItem = LoggedFoodItem(
+            foodLogId: placeholderId,
+            fdcId: food.fdcId,
+            displayName: food.displayName,
+            calories: perServingCalories,
+            servingSizeText: servingText,
+            numberOfServings: servings,
+            brandText: food.brandText,
+            protein: food.protein,
+            carbs: food.carbs,
+            fat: food.fat,
+            healthAnalysis: food.healthAnalysis,
+            foodNutrients: food.foodNutrients,
+            aiInsight: food.aiInsight,
+            nutritionScore: food.nutritionScore,
+            mealItems: food.mealItems,
+            servingWeightGrams: food.servingWeightGrams,
+            foodMeasures: food.foodMeasures
+        )
+
+        return LoggedFood(
+            status: "pending",
+            foodLogId: placeholderId,
+            calories: perServingCalories * servings,
+            message: "\(food.displayName) - \(mealLabel)",
+            food: loggedItem,
+            mealType: mealLabel
+        )
+    }
+
+    private func upsertCombinedLog(_ log: CombinedLog, replacing identifier: String? = nil) {
+        if let identifier {
+            foodManager.combinedLogs.removeAll { $0.id == identifier }
+        }
+        foodManager.combinedLogs.removeAll { $0.id == log.id }
+        foodManager.combinedLogs.insert(log, at: 0)
+    }
+
+    private func generateTemporaryFoodLogID() -> Int {
+        let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+        return -abs(timestamp)
+    }
+
+    private func normalizedServingText(for food: Food) -> String {
+        let text = food.servingSizeText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !text.isEmpty {
+            return text
+        }
+        let qty = food.servingSize ?? 1
+        let unit = food.servingSizeUnit ?? "serving"
+        let qtyText: String
+        if qty.truncatingRemainder(dividingBy: 1) == 0 {
+            qtyText = String(Int(qty))
+        } else {
+            qtyText = String(format: "%.2f", qty)
+        }
+        return "\(qtyText) \(unit)"
     }
 }
 

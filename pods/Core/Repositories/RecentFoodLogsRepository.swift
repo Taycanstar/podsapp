@@ -113,8 +113,54 @@ final class RecentFoodLogsRepository: ObservableObject {
 
     /// Optimistically insert a newly logged food at the top of the list
     func insertOptimistically(_ loggedFood: LoggedFood) {
-        // Create a CombinedLog from the LoggedFood response
-        let combinedLog = CombinedLog(
+        let combinedLog = makeCombinedLog(from: loggedFood, isOptimistic: true)
+
+        var logs = snapshot.logs
+        // Avoid duplicates by foodLogId
+        if !logs.contains(where: { $0.foodLogId == loggedFood.foodLogId }) {
+            logs.insert(combinedLog, at: 0)
+        }
+        snapshot = RecentFoodLogsSnapshot(
+            logs: logs,
+            nextPage: snapshot.nextPage,
+            hasMore: snapshot.hasMore
+        )
+        persist()
+    }
+
+    /// Replace an optimistic placeholder (by its temporary `foodLogId`) with the canonical server log
+    func replaceOptimisticLog(placeholderId: Int, with loggedFood: LoggedFood) {
+        var logs = snapshot.logs
+        logs.removeAll { $0.foodLogId == placeholderId }
+
+        let combinedLog = makeCombinedLog(from: loggedFood, isOptimistic: false)
+        logs.insert(combinedLog, at: 0)
+
+        snapshot = RecentFoodLogsSnapshot(
+            logs: logs,
+            nextPage: snapshot.nextPage,
+            hasMore: snapshot.hasMore
+        )
+        persist()
+    }
+
+    /// Remove an optimistic placeholder if the server rejects the log
+    func removeOptimisticLog(placeholderId: Int) {
+        var logs = snapshot.logs
+        let originalCount = logs.count
+        logs.removeAll { $0.foodLogId == placeholderId }
+        guard logs.count != originalCount else { return }
+
+        snapshot = RecentFoodLogsSnapshot(
+            logs: logs,
+            nextPage: snapshot.nextPage,
+            hasMore: snapshot.hasMore
+        )
+        persist()
+    }
+
+    private func makeCombinedLog(from loggedFood: LoggedFood, isOptimistic: Bool) -> CombinedLog {
+        CombinedLog(
             type: .food,
             status: loggedFood.status,
             calories: loggedFood.calories,
@@ -135,20 +181,8 @@ final class RecentFoodLogsRepository: ObservableObject {
             workout: nil,
             logDate: nil,
             dayOfWeek: nil,
-            isOptimistic: true
+            isOptimistic: isOptimistic
         )
-
-        var logs = snapshot.logs
-        // Avoid duplicates by foodLogId
-        if !logs.contains(where: { $0.foodLogId == loggedFood.foodLogId }) {
-            logs.insert(combinedLog, at: 0)
-        }
-        snapshot = RecentFoodLogsSnapshot(
-            logs: logs,
-            nextPage: snapshot.nextPage,
-            hasMore: snapshot.hasMore
-        )
-        persist()
     }
 
     private func merge(existing: [CombinedLog], with newLogs: [CombinedLog]) -> [CombinedLog] {
