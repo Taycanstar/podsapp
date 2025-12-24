@@ -150,6 +150,25 @@ final class RecipesRepository: ObservableObject {
         persist()
     }
 
+    /// Optimistically update an existing recipe in place
+    func updateOptimistically(_ recipe: Recipe) {
+        // Update in optimistic array if present
+        if let index = optimisticRecipes.firstIndex(where: { $0.id == recipe.id }) {
+            optimisticRecipes[index] = recipe
+        }
+        // Update in snapshot
+        if let index = snapshot.recipes.firstIndex(where: { $0.id == recipe.id }) {
+            var recipes = snapshot.recipes
+            recipes[index] = recipe
+            snapshot = RecipesSnapshot(
+                recipes: recipes,
+                nextPage: snapshot.nextPage,
+                hasMore: snapshot.hasMore
+            )
+        }
+        persist()
+    }
+
     private func merge(existing: [Recipe], with newRecipes: [Recipe]) -> [Recipe] {
         var seen = Set(existing.map { $0.id })
         var combined = existing

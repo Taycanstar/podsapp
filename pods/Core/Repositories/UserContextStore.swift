@@ -71,6 +71,7 @@ struct UserScopedKey: Hashable {
         case recipes
         case savedMeals
         case savedFoods
+        case savedRecipes
         case userFoods
         case recentFoodLogs
         case workoutContext

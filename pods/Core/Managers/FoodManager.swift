@@ -5416,6 +5416,77 @@ func analyzeNutritionLabel(
         userFoods.contains { $0.fdcId == fdcId }
     }
 
+    // MARK: - Saved Recipes
+
+    func saveRecipe(recipeId: Int, completion: @escaping (Result<SaveRecipeResponse, Error>) -> Void) {
+        guard let email = userEmail else {
+            completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: "User email not available")))
+            return
+        }
+
+        NetworkManagerTwo.shared.saveRecipe(
+            userEmail: email,
+            recipeId: recipeId
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    print("✅ Successfully saved recipe: \(response.message)")
+                    completion(.success(response))
+
+                case .failure(let error):
+                    print("❌ Failed to save recipe: \(error)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    func unsaveRecipe(recipeId: Int, completion: @escaping (Result<UnsaveRecipeResponse, Error>) -> Void) {
+        guard let email = userEmail else {
+            completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: "User email not available")))
+            return
+        }
+
+        NetworkManagerTwo.shared.unsaveRecipe(
+            userEmail: email,
+            recipeId: recipeId
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    print("✅ Successfully unsaved recipe: \(response.message)")
+                    completion(.success(response))
+
+                case .failure(let error):
+                    print("❌ Failed to unsave recipe: \(error)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    func isRecipeSaved(recipeId: Int, completion: @escaping (Bool) -> Void) {
+        guard let email = userEmail else {
+            completion(false)
+            return
+        }
+
+        NetworkManagerTwo.shared.isRecipeSaved(
+            userEmail: email,
+            recipeId: recipeId
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    completion(response.isSaved)
+                case .failure:
+                    completion(false)
+                }
+            }
+        }
+    }
+
     // MARK: - Nutrition Label Name Input
     func createNutritionLabelFoodWithName(_ productName: String, completion: @escaping (Result<CombinedLog, Error>) -> Void) {
         guard !productName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,

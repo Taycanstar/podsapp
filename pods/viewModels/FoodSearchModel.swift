@@ -1623,10 +1623,26 @@ struct RecipeFoodItem: Codable, Identifiable {
     let foodNutrients: [Nutrient]?
 
     var id: Int { foodId }
+
+    enum CodingKeys: String, CodingKey {
+        case foodId = "food_id"
+        case externalId = "external_id"
+        case name, servings, notes, calories, protein, carbs, fat
+        case servingText = "serving_text"
+        case foodNutrients  // Backend sends camelCase "foodNutrients"
+    }
 }
 
 // Full Recipe struct (similar to Meal)
-struct Recipe: Codable, Identifiable {
+struct Recipe: Codable, Identifiable, Hashable {
+    static func == (lhs: Recipe, rhs: Recipe) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
     let id: Int
     let title: String
     let description: String?
@@ -1645,6 +1661,20 @@ struct Recipe: Codable, Identifiable {
     let totalCarbs: Double?
     let totalFat: Double?
     let scheduledAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, description, instructions, link, privacy, servings, image
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case recipeItems = "recipe_items"
+        case prepTime = "prep_time"
+        case cookTime = "cook_time"
+        case totalCalories = "total_calories"
+        case totalProtein = "total_protein"
+        case totalCarbs = "total_carbs"
+        case totalFat = "total_fat"
+        case scheduledAt = "scheduled_at"
+    }
     
     // Add computed properties to provide default values when the fields are nil
     var calories: Double {
@@ -2247,6 +2277,63 @@ struct IsFoodSavedResponse: Codable {
     }
 }
 
+// MARK: - Saved Recipes (Recipe Favorites)
+
+struct SavedRecipe: Codable, Identifiable {
+    let id: Int
+    let savedAt: String
+    let recipe: Recipe
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case savedAt = "saved_at"
+        case recipe
+    }
+}
+
+struct SavedRecipesResponse: Codable {
+    let savedRecipes: [SavedRecipe]
+    let hasMore: Bool
+    let totalPages: Int
+    let currentPage: Int
+    let totalCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case savedRecipes = "saved_recipes"
+        case hasMore = "has_more"
+        case totalPages = "total_pages"
+        case currentPage = "current_page"
+        case totalCount = "total_count"
+    }
+}
+
+struct SaveRecipeResponse: Codable {
+    let success: Bool
+    let message: String
+    let savedRecipe: SavedRecipe?
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case message
+        case savedRecipe = "saved_recipe"
+    }
+}
+
+struct UnsaveRecipeResponse: Codable {
+    let success: Bool
+    let message: String
+}
+
+struct IsRecipeSavedResponse: Codable {
+    let isSaved: Bool
+    let savedRecipeId: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case isSaved = "is_saved"
+        case savedRecipeId = "saved_recipe_id"
+    }
+}
+
 // MARK: - OCR Label Scanning Support
 
 extension Food {
@@ -2432,12 +2519,16 @@ struct FoodSearchResult: Codable, Identifiable, Hashable {
         if let fdcId = fdcId {
             return "\(fdcId)"
         }
+        // nixTagId alone is not unique (multiple foods can share the same tag)
+        // Combine with name and serving for uniqueness
         if let nixTagId = nixTagId {
-            return "tag-\(nixTagId)"
+            let servingComponent = servingText?.replacingOccurrences(of: " ", with: "_") ?? "default"
+            return "tag-\(nixTagId)-\(name.lowercased().prefix(20))-\(servingComponent)"
         }
-        // Fallback to deterministic name/brand key to avoid duplicate IDs
+        // Fallback to deterministic name/brand/serving key to avoid duplicate IDs
         let brandComponent = brandName?.lowercased() ?? "unknown"
-        return "name-\(name.lowercased())-\(brandComponent)"
+        let servingComponent = servingText?.replacingOccurrences(of: " ", with: "_") ?? "default"
+        return "name-\(name.lowercased())-\(brandComponent)-\(servingComponent)"
     }
 
     /// Display name for the food (capitalized)
