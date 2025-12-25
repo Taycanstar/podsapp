@@ -2439,6 +2439,13 @@ class WorkoutManager: ObservableObject {
         lastModelContext = context
     }
 
+    #if DEBUG
+    /// Test helper to force restore the active workout snapshot from storage.
+    func debugRestoreActiveWorkoutSnapshot() {
+        restoreActiveWorkoutSnapshotIfNeeded()
+    }
+    #endif
+
     /// Start workout session
     func startWorkout(_ workout: TodayWorkout) {
         let sanitized = sanitizeWarmupsIfNeeded(workout)
@@ -3316,6 +3323,19 @@ class WorkoutManager: ObservableObject {
                 self?.handleActiveWorkoutProfileChange()
             }
             .store(in: &cancellables)
+
+        #if canImport(UIKit)
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            if let active = self.currentWorkout {
+                self.persistActiveWorkoutSnapshot(active)
+            }
+        }
+        #endif
     }
 
     private func handleActiveWorkoutProfileChange() {

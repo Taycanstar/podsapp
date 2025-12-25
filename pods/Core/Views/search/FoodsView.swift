@@ -21,6 +21,8 @@ struct FoodsView: View {
     @State private var showNewFoodSheet = false
     @State private var selectedFood: Food?
     @State private var createdFoodToAdd: Food?
+    @StateObject private var plateViewModel = PlateViewModel()
+    @State private var showPlateView = false
 
     // Filtered foods based on search
     private var filteredFoods: [Food] {
@@ -98,9 +100,13 @@ struct FoodsView: View {
                     ForEach(filteredFoods) { food in
                         UserFoodRow(
                             food: food,
-                            onPlusTapped: {
+                            onLogTapped: {
                                 closeSearchIfNeeded()
                                 selectedFood = food
+                            },
+                            onAddToPlateTapped: {
+                                closeSearchIfNeeded()
+                                addFoodToPlate(food)
                             },
                             onViewDetailsTapped: {
                                 closeSearchIfNeeded()
@@ -156,6 +162,22 @@ struct FoodsView: View {
                 .environmentObject(dayLogsVM)
                 .environmentObject(foodManager)
         }
+        .sheet(isPresented: $showPlateView) {
+            NavigationStack {
+                PlateView(
+                    viewModel: plateViewModel,
+                    selectedMealPeriod: suggestedMealPeriod(for: Date()),
+                    mealTime: Date(),
+                    onFinished: {
+                        showPlateView = false
+                        plateViewModel.clear()
+                    }
+                )
+                .environmentObject(foodManager)
+                .environmentObject(dayLogsVM)
+                .environmentObject(viewModel)
+            }
+        }
         .task {
             await userFoodsRepo.refresh()
         }
@@ -176,13 +198,62 @@ struct FoodsView: View {
             // On success, no need to refresh - already removed optimistically
         }
     }
+
+    private func addFoodToPlate(_ food: Food) {
+        let entry = buildPlateEntry(from: food)
+        plateViewModel.add(entry)
+        showPlateView = true
+    }
+
+    private func buildPlateEntry(from food: Food) -> PlateEntry {
+        let baseMacros = MacroTotals(
+            calories: food.calories ?? 0,
+            protein: food.protein ?? 0,
+            carbs: food.carbs ?? 0,
+            fat: food.fat ?? 0
+        )
+
+        var baseNutrients: [String: RawNutrientValue] = [:]
+        for nutrient in food.foodNutrients {
+            let key = nutrient.nutrientName.lowercased()
+            baseNutrients[key] = RawNutrientValue(value: nutrient.value ?? 0, unit: nutrient.unitName)
+        }
+
+        let baselineGramWeight = food.foodMeasures.first?.gramWeight ?? food.servingSize ?? 100
+
+        return PlateEntry(
+            food: food,
+            servings: food.numberOfServings ?? 1,
+            selectedMeasureId: food.foodMeasures.first?.id,
+            availableMeasures: food.foodMeasures,
+            baselineGramWeight: baselineGramWeight,
+            baseNutrientValues: baseNutrients,
+            baseMacroTotals: baseMacros,
+            servingDescription: food.servingSizeText ?? "1 serving",
+            mealItems: food.mealItems ?? [],
+            mealPeriod: suggestedMealPeriod(for: Date()),
+            mealTime: Date(),
+            recipeItems: []
+        )
+    }
+
+    private func suggestedMealPeriod(for date: Date) -> MealPeriod {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 0..<11: return .breakfast
+        case 11..<15: return .lunch
+        case 15..<18: return .snack
+        default: return .dinner
+        }
+    }
 }
 
 // MARK: - User Food Row
 
 struct UserFoodRow: View {
     let food: Food
-    var onPlusTapped: (() -> Void)?
+    var onLogTapped: (() -> Void)?
+    var onAddToPlateTapped: (() -> Void)?
     var onViewDetailsTapped: (() -> Void)?
 
     var body: some View {
@@ -217,15 +288,24 @@ struct UserFoodRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Plus button
-            Button {
-                onPlusTapped?()
+            // Plus button menu
+            Menu {
+                Button {
+                    onLogTapped?()
+                } label: {
+                    Label("Log", systemImage: "plus.circle")
+                }
+
+                Button {
+                    onAddToPlateTapped?()
+                } label: {
+                    Label("Add to Plate", systemImage: "fork.knife")
+                }
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 22))
                     .foregroundColor(.primary)
             }
-            .buttonStyle(.plain)
         }
         .contentShape(Rectangle())
         .onTapGesture {

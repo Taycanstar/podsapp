@@ -51,11 +51,23 @@ class WorkoutGenerationService {
             flexibilityPreferences: flexibilityPreferences
         )
 
-        if targetDuration.minutes >= 50 {
+        let minimumTarget: Int
+        if targetDuration.minutes >= 55 {
+            let minTotal = 8
             optimalExerciseCount = (
-                total: max(optimalExerciseCount.total, 6),
+                total: max(optimalExerciseCount.total, minTotal),
                 perMuscle: max(optimalExerciseCount.perMuscle, 2)
             )
+            minimumTarget = minTotal
+        } else if targetDuration.minutes >= 45 {
+            let minTotal = 6
+            optimalExerciseCount = (
+                total: max(optimalExerciseCount.total, minTotal),
+                perMuscle: max(optimalExerciseCount.perMuscle, 2)
+            )
+            minimumTarget = minTotal
+        } else {
+            minimumTarget = max(4, optimalExerciseCount.total)
         }
 
         let sessionBudget = TimeEstimator.shared.makeSessionBudget(
@@ -104,7 +116,8 @@ class WorkoutGenerationService {
             flexibilityPreferences: flexibilityPreferences,
             optimalExerciseCount: optimalExerciseCount,
             sessionBudget: sessionBudget,
-            sessionPhase: sessionPhase
+            sessionPhase: sessionPhase,
+            minimumTarget: minimumTarget
         )
     }
 
@@ -118,20 +131,23 @@ class WorkoutGenerationService {
         flexibilityPreferences: FlexibilityPreferences,
         optimalExerciseCount: (total: Int, perMuscle: Int),
         sessionBudget: TimeEstimator.SessionTimeBudget,
-        sessionPhase: SessionPhase
+        sessionPhase: SessionPhase,
+        minimumTarget: Int
     ) throws -> WorkoutPlan {
         let targetDurationMinutes = targetDuration.minutes
         
         print("🏗️ WorkoutGenerationService: Generating \(targetDurationMinutes)min \(fitnessGoal) workout using research-based algorithm")
         
-        print("🎯 Optimal exercise count: \(optimalExerciseCount.total) total, \(optimalExerciseCount.perMuscle) per muscle")
+        let desiredTotal = max(optimalExerciseCount.total, minimumTarget)
+        print("🎯 Optimal exercise count: \(optimalExerciseCount.total) total, \(optimalExerciseCount.perMuscle) per muscle (enforcing minimum \(minimumTarget))")
 
         var mutableBudget = sessionBudget
 
         // Generate exercises directly using optimal count with proper distribution
         var exercises = generateOptimizedExercisesWithTotalBudget(
             muscleGroups: muscleGroups,
-            totalExercises: optimalExerciseCount.total,
+            totalExercises: desiredTotal,
+            minimumTarget: minimumTarget,
             basePerMuscle: optimalExerciseCount.perMuscle,
             targetDuration: targetDuration,
             fitnessGoal: fitnessGoal,
@@ -404,21 +420,44 @@ class WorkoutGenerationService {
         }
     }
 
-    func prioritizeHypertrophyExercises(_ exercises: [ExerciseData], fitnessGoal: FitnessGoal, customEquipment: [Equipment]?) -> [ExerciseData] {
+    func prioritizeHypertrophyExercises(_ exercises: [ExerciseData], fitnessGoal: FitnessGoal, customEquipment: [Equipment]?, hasLoadableEquipment: Bool) -> [ExerciseData] {
         guard fitnessGoal == .hypertrophy else { return exercises }
-        let hasLoadableEquipment = customEquipment?.contains(where: { $0 != .resistanceBands && $0 != .bodyWeight }) ?? true
-        guard hasLoadableEquipment else { return exercises }
 
         func isBand(_ ex: ExerciseData) -> Bool {
-            ex.equipment.lowercased().contains("band")
+            ex.equipment.localizedCaseInsensitiveContains("band")
+        }
+
+        func isLoadable(_ ex: ExerciseData) -> Bool {
+            let lower = ex.equipment.lowercased()
+            return lower.contains("barbell") ||
+                lower.contains("dumbbell") ||
+                lower.contains("machine") ||
+                lower.contains("cable") ||
+                lower.contains("smith") ||
+                lower.contains("kettlebell") ||
+                lower.contains("leg press")
+        }
+
+        func score(_ ex: ExerciseData) -> Int {
+            var s = 0
+            if SetSchemePlanner.isCompoundExercise(ex) { s += 3 }
+            if isLoadable(ex) { s += 4 }
+            if isBand(ex) && hasLoadableEquipment { s -= 4 }
+            if ex.equipment.localizedCaseInsensitiveContains("body weight") && hasLoadableEquipment { s -= 2 }
+            return s
         }
 
         return exercises.sorted { lhs, rhs in
-            let lBand = isBand(lhs)
-            let rBand = isBand(rhs)
-            if lBand == rBand { return lhs.id < rhs.id }
-            return !lBand && rBand
+            let l = score(lhs)
+            let r = score(rhs)
+            if l == r { return lhs.id < rhs.id }
+            return l > r
         }
+    }
+
+    private func hasLoadableEquipment(_ customEquipment: [Equipment]?) -> Bool {
+        guard let customEquipment else { return true }
+        return customEquipment.contains { $0 != .resistanceBands && $0 != .bodyWeight }
     }
 
     // MARK: - Optimized Exercise Generation (No More Iterative Testing)
@@ -427,6 +466,7 @@ class WorkoutGenerationService {
     private func generateOptimizedExercisesWithTotalBudget(
         muscleGroups: [String],
         totalExercises: Int,
+        minimumTarget: Int,
         basePerMuscle _: Int,
         targetDuration: WorkoutDuration,
         fitnessGoal: FitnessGoal,
@@ -439,6 +479,7 @@ class WorkoutGenerationService {
         var exercises: [TodayWorkoutExercise] = []
         var usedIds = Set<Int>() // Avoid duplicate exercises across muscle groups
         let estimator = TimeEstimator.shared
+        let hasLoadableEquipment = hasLoadableEquipment(customEquipment)
         
         print("🏗️ Starting recovery-aware distribution: \(totalExercises) total exercises across \(muscleGroups.count) muscles")
 
@@ -469,7 +510,7 @@ class WorkoutGenerationService {
                 customEquipment: customEquipment,
                 flexibilityPreferences: flexibilityPreferences
             )
-            recommended = prioritizeHypertrophyExercises(recommended, fitnessGoal: fitnessGoal, customEquipment: customEquipment)
+            recommended = prioritizeHypertrophyExercises(recommended, fitnessGoal: fitnessGoal, customEquipment: customEquipment, hasLoadableEquipment: hasLoadableEquipment)
 
             print("🎯 \(muscle): requested \(plannedCount), got \(recommended.count) exercises")
 
@@ -532,7 +573,7 @@ class WorkoutGenerationService {
                     customEquipment: customEquipment,
                     flexibilityPreferences: flexibilityPreferences
                 )
-                supplemental = prioritizeHypertrophyExercises(supplemental, fitnessGoal: fitnessGoal, customEquipment: customEquipment)
+                supplemental = prioritizeHypertrophyExercises(supplemental, fitnessGoal: fitnessGoal, customEquipment: customEquipment, hasLoadableEquipment: hasLoadableEquipment)
 
                 for exercise in supplemental where !usedIds.contains(exercise.id) {
                     let built = makeWorkoutExercise(
@@ -595,7 +636,7 @@ class WorkoutGenerationService {
                     customEquipment: customEquipment,
                     flexibilityPreferences: flexibilityPreferences
                 )
-                fallbackExercises = prioritizeHypertrophyExercises(fallbackExercises, fitnessGoal: fitnessGoal, customEquipment: customEquipment)
+                fallbackExercises = prioritizeHypertrophyExercises(fallbackExercises, fitnessGoal: fitnessGoal, customEquipment: customEquipment, hasLoadableEquipment: hasLoadableEquipment)
 
                 if fallbackExercises.isEmpty {
                     continue
@@ -639,6 +680,67 @@ class WorkoutGenerationService {
             }
 
             print("✅ After fallback fill: \(exercises.count) exercises (target \(totalExercises))")
+        }
+
+        // Final safeguard using global pool
+        if exercises.count < totalExercises, !sessionBudget.isOutOfTime {
+            let needed = totalExercises - exercises.count
+            let global = globalCandidates(
+                excluding: usedIds,
+                fitnessGoal: fitnessGoal,
+                customEquipment: customEquipment,
+                flexibilityPreferences: flexibilityPreferences,
+                hasLoadableEquipment: hasLoadableEquipment,
+                muscles: muscleGroups
+            )
+            for exercise in global.prefix(needed) {
+                let built = makeWorkoutExercise(
+                    for: exercise,
+                    targetDuration: targetDuration,
+                    fitnessGoal: fitnessGoal,
+                    recoveryPercentage: 80,
+                    sessionPhase: sessionPhase
+                )
+                guard built.sets > 0 else { continue }
+                let estimateSeconds = estimator.estimateExerciseSeconds(
+                    for: built,
+                    fitnessGoal: fitnessGoal,
+                    experienceLevel: experienceLevel,
+                    format: sessionBudget.format
+                )
+                guard sessionBudget.tryConsume(estimateSeconds) else { break }
+                exercises.append(built)
+                usedIds.insert(exercise.id)
+                if exercises.count >= totalExercises { break }
+            }
+            print("✅ After global fill: \(exercises.count) exercises (target \(totalExercises))")
+        }
+
+        // Hard floor to guarantee minimum visible volume even if time budgeting was conservative
+        if exercises.count < minimumTarget {
+            let needed = minimumTarget - exercises.count
+            print("🧩 Minimum target safeguard: adding \(needed) exercises to reach \(minimumTarget)")
+            let global = globalCandidates(
+                excluding: usedIds,
+                fitnessGoal: fitnessGoal,
+                customEquipment: customEquipment,
+                flexibilityPreferences: flexibilityPreferences,
+                hasLoadableEquipment: hasLoadableEquipment,
+                muscles: muscleGroups
+            )
+            for exercise in global where !usedIds.contains(exercise.id) && exercises.count < minimumTarget {
+                let built = makeWorkoutExercise(
+                    for: exercise,
+                    targetDuration: targetDuration,
+                    fitnessGoal: fitnessGoal,
+                    recoveryPercentage: 75,
+                    sessionPhase: sessionPhase
+                )
+                guard built.sets > 0 else { continue }
+                exercises.append(built)
+                usedIds.insert(exercise.id)
+            }
+            print("✅ After minimum safeguard: \(exercises.count) exercises (minimum \(minimumTarget))")
         }
 
         return exercises
@@ -789,6 +891,30 @@ class WorkoutGenerationService {
     private func describeEquipmentSet(_ equipment: Set<Equipment>) -> String {
         if equipment.isEmpty { return "[]" }
         return "[" + equipment.map { $0.rawValue }.sorted().joined(separator: ", ") + "]"
+    }
+
+    private func globalCandidates(
+        excluding usedIds: Set<Int>,
+        fitnessGoal: FitnessGoal,
+        customEquipment: [Equipment]?,
+        flexibilityPreferences: FlexibilityPreferences,
+        hasLoadableEquipment: Bool,
+        muscles: [String]
+    ) -> [ExerciseData] {
+        var pool: [ExerciseData] = []
+        for muscle in muscles {
+            let more = recommendationService.getDurationOptimizedExercises(
+                for: muscle,
+                count: 5,
+                duration: .oneHour,
+                fitnessGoal: fitnessGoal,
+                customEquipment: customEquipment,
+                flexibilityPreferences: flexibilityPreferences
+            )
+            pool.append(contentsOf: more)
+        }
+        let filtered = pool.filter { !usedIds.contains($0.id) }
+        return prioritizeHypertrophyExercises(filtered, fitnessGoal: fitnessGoal, customEquipment: customEquipment, hasLoadableEquipment: hasLoadableEquipment)
     }
 
     private func volumeMultiplier(for recovery: Double) -> Double {

@@ -17,7 +17,6 @@ struct EditLogSheet: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     @EnvironmentObject var foodManager: FoodManager
-    @EnvironmentObject var proFeatureGate: ProFeatureGate
 
     // Editable state
     @State private var editedServings: Double

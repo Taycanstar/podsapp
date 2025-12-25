@@ -491,7 +491,7 @@ struct RecipeSummaryView: View {
                 .padding(.horizontal)
 
             VStack(spacing: 8) {
-                ForEach(recipe.recipeItems) { item in
+                ForEach(Array(recipe.recipeItems.enumerated()), id: \.offset) { _, item in
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.name)

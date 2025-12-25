@@ -91,7 +91,6 @@ struct SearchView: View {
                 .environmentObject(foodManager)
                 .environmentObject(dayLogsVM)
                 .environmentObject(viewModel)
-                .environmentObject(proFeatureGate)
             }
         }
         .navigationDestination(item: $selectedFoodForDetails) { food in
@@ -620,7 +619,6 @@ struct SearchView: View {
                     // Calling refresh would fetch from server which may not have indexed the new log yet,
                     // causing a race condition that overwrites our local state.
 
-                    dayLogsVM.loadLogs(for: mealDate, force: true)
                 case .failure:
                     dayLogsVM.removeOptimisticLog(identifier: optimisticLog.id)
                     recentFoodsRepo.removeOptimisticLog(placeholderId: placeholderId)

@@ -228,11 +228,6 @@ struct AppTimelineView: View {
         }
         .onAppear {
             selectedDate = dayLogsVM.selectedDate
-            guard !didTriggerInitialFetch else { return }
-            didTriggerInitialFetch = true
-            if filteredLogs.isEmpty {
-                dayLogsVM.loadLogs(for: selectedDate, force: true)
-            }
         }
         .onChange(of: selectedDate) { _, newValue in
             dayLogsVM.loadLogs(for: newValue, force: true)
@@ -310,33 +305,23 @@ struct AppTimelineView: View {
         let isLastGroup = groupIndex == groupedLogs.count - 1
         guard isLastGroup else { return nil }
 
-        guard let coachMessage = foodManager.lastCoachMessage else {
-            print("[DEBUG] coachMessageForGroup: No lastCoachMessage available")
-            return nil
-        }
-
-        print("[DEBUG] coachMessageForGroup: Looking for match. Coach has foodLogId=\(coachMessage.foodLogId ?? -1), recipeLogId=\(coachMessage.recipeLogId ?? -1)")
+        guard let coachMessage = foodManager.lastCoachMessage else { return nil }
 
         // Check if any log in the group matches the coach message
         for log in group.logs {
-            print("[DEBUG] coachMessageForGroup: Checking log type=\(log.type), foodLogId=\(log.foodLogId ?? -1), recipeLogId=\(log.recipeLogId ?? -1)")
-
             // Match food logs
             if log.type == .food,
                let foodLogId = coachMessage.foodLogId,
                foodLogId == log.foodLogId {
-                print("[DEBUG] coachMessageForGroup: ✅ Food log match found!")
                 return coachMessage
             }
             // Match recipe logs
             if log.type == .recipe,
                let recipeLogId = coachMessage.recipeLogId,
                recipeLogId == log.recipeLogId {
-                print("[DEBUG] coachMessageForGroup: ✅ Recipe log match found!")
                 return coachMessage
             }
         }
-        print("[DEBUG] coachMessageForGroup: ❌ No match found in group with \(group.logs.count) logs")
         return nil
     }
 
@@ -854,7 +839,6 @@ private struct CoachMessageText: View {
     @State private var displayedText: String = ""
     @State private var isAnimating: Bool = false
     @State private var streamingComplete: Bool = false
-    @StateObject private var speechCoordinator = SpeechCoordinator()
 
     private var fullText: String {
         message.fullText
@@ -876,20 +860,6 @@ private struct CoachMessageText: View {
                         onCopyTap?()
                     } label: {
                         Image(systemName: "doc.on.doc")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.primary)
-                    }
-                    .buttonStyle(.plain)
-
-                    // Speaker button
-                    Button {
-                        if speechCoordinator.isSpeaking {
-                            speechCoordinator.stop()
-                        } else {
-                            speechCoordinator.speak(fullText)
-                        }
-                    } label: {
-                        Image(systemName: speechCoordinator.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.primary)
                     }

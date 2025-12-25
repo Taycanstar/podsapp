@@ -684,7 +684,7 @@ private var remainingCal: Double { vm.remainingCalories }
                     // Update DayLogsViewModel
                     vm.setEmail(newEmail)
                     vm.logs = [] // Clear existing logs
-                    vm.loadLogs(for: vm.selectedDate) // Load logs for new user
+                    // Do not refetch here; rely on foreground/date change
                     homeInitialLoadDone = false
                     
                     // Update UserDefaults
@@ -707,8 +707,6 @@ private var remainingCal: Double { vm.remainingCalories }
             .onChange(of: vm.selectedDate) { newDate in
                 // Force refresh to ensure correct data for the selected date
                 // This prevents stale cache from showing wrong date's logs
-                vm.loadLogs(for: newDate, force: true)
-
                 // Update health data for the selected date
                 healthViewModel.reloadHealthData(for: newDate)
 
@@ -730,15 +728,13 @@ private var remainingCal: Double { vm.remainingCalories }
             .onChange(of: foodMgr.foodScanningState) { oldState, newState in
 
             }
-            .onReceive(
-                NotificationCenter.default
-                    .publisher(for: NSNotification.Name("WaterLoggedNotification"))
-                    .receive(on: RunLoop.main)
-            ) { _ in
-                print("💧 DashboardView received WaterLoggedNotification - refreshing logs for \(vm.selectedDate)")
-                // Refresh logs data when water is logged (for current selected date)
-                vm.loadLogs(for: vm.selectedDate, force: true)
-            }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: NSNotification.Name("WaterLoggedNotification"))
+                .receive(on: RunLoop.main)
+        ) { _ in
+            print("💧 DashboardView received WaterLoggedNotification - skipping full reload (handled locally)")
+        }
             .onReceive(
                 NotificationCenter.default
                     .publisher(for: NSNotification.Name("FoodLogUpdated"))
@@ -762,7 +758,7 @@ private var remainingCal: Double { vm.remainingCalories }
                     .receive(on: RunLoop.main)
             ) { _ in
                 print("📊 Health data available - reloading dashboard")
-                vm.loadLogs(for: vm.selectedDate)
+                // Health data updates do not require a full log fetch; rely on scheduled foreground refresh/pull-to-refresh
             }
             .onChange(of: scenePhase) { phase in
                 if phase == .active {
@@ -2906,19 +2902,18 @@ private struct RecoveryRingView: View {
 
     private func targetedMuscles(for workout: TodayWorkout?) -> [String] {
         if let custom = workoutManager.baselineCustomMuscles, !custom.isEmpty {
-            return custom
-                .map { formattedMuscleName($0) }
-                .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+            return canonicalizedMuscles(custom)
         }
 
         guard let workout else { return [] }
         var counts: [String: Int] = [:]
         for exercise in workout.exercises {
-            let bodyPart = exercise.exercise.bodyPart
-            if !bodyPart.isEmpty {
-                counts[bodyPart, default: 0] += 1
-            } else if !exercise.exercise.target.isEmpty {
-                counts[exercise.exercise.target, default: 0] += 1
+            if let canonical = canonicalMuscleGroup(from: exercise.exercise.bodyPart) {
+                counts[canonical, default: 0] += 1
+                continue
+            }
+            if let canonical = canonicalMuscleGroup(from: exercise.exercise.target) {
+                counts[canonical, default: 0] += 1
             }
         }
         return counts
@@ -2929,11 +2924,52 @@ private struct RecoveryRingView: View {
                 return lhs.value > rhs.value
             }
             .prefix(4)
-            .map { formattedMuscleName($0.key) }
+            .map { $0.key }
     }
 
     private func formattedMuscleName(_ raw: String) -> String {
         raw.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+
+    private func canonicalizedMuscles(_ rawMuscles: [String]) -> [String] {
+        let mapped = rawMuscles.compactMap { canonicalMuscleGroup(from: $0) }
+        let unique = Array(Set(mapped))
+        return unique.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+
+    private func canonicalMuscleGroup(from raw: String?) -> String? {
+        guard let raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        let cleaned = raw.replacingOccurrences(of: "_", with: " ").lowercased()
+
+        let table: [(name: String, patterns: [String])] = [
+            ("Chest", ["chest", "pectoral", "pectoralis"]),
+            ("Back", ["back", "lat", "lats", "latissimus", "teres", "rhomboid"]),
+            ("Trapezius", ["trapezius", "trap"]),
+            ("Shoulders", ["shoulder", "deltoid", "delts"]),
+            ("Biceps", ["bicep", "brachii", "brachialis"]),
+            ("Triceps", ["tricep"]),
+            ("Forearms", ["forearm", "brachioradialis"]),
+            ("Abs", ["abdominal", "abdominis", "abs", "core", "oblique"]),
+            ("Lower Back", ["lower back", "lumbar", "erector"]),
+            ("Glutes", ["glute", "glutes", "gluteus"]),
+            ("Quadriceps", ["quad", "quadricep", "vastus", "rectus femoris", "thigh"]),
+            ("Hamstrings", ["hamstring", "biceps femoris", "semimembranosus", "semitendinosus"]),
+            ("Calves", ["calf", "calves", "gastrocnemius", "soleus"]),
+            ("Adductors", ["adductor"]),
+            ("Abductors", ["abductor"]),
+            ("Neck", ["neck"])
+        ]
+
+        if let match = table.first(where: { entry in entry.patterns.contains { cleaned.contains($0) } }) {
+            return match.name
+        }
+
+        // Fall back to known muscle enum names if they appear as substrings
+        if let enumMatch = MuscleRecoveryService.MuscleGroup.allCases.first(where: { cleaned.contains($0.rawValue.lowercased()) }) {
+            return enumMatch.rawValue
+        }
+
+        return formattedMuscleName(raw)
     }
 
     private func metricValueText(_ value: Double?) -> String {
@@ -6359,11 +6395,6 @@ private extension NewHomeView {
         } else {
             print("⚠️ DashboardView - No email available from onboarding")
             return
-        }
-        
-        // Only load logs if the list is empty (to avoid duplicate loading)
-        if vm.logs.isEmpty {
-            vm.loadLogs(for: vm.selectedDate)
         }
         
         // Preload weight and height logs for the current user

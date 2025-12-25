@@ -141,37 +141,44 @@ struct RecipeDetails: View {
         return 0
     }
 
+    // MARK: - Logging State
+    @State private var isLogging = false
+
     // MARK: - Body
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
-                recipeInfoCard
-                macroSummaryCard
-                dailyGoalShareCard
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+                    recipeInfoCard
+                    macroSummaryCard
+                    dailyGoalShareCard
 
-                if !activeRecipe.recipeItems.isEmpty {
-                    ingredientsSection
+                    if !activeRecipe.recipeItems.isEmpty {
+                        ingredientsSection
+                    }
+
+                    if isLoadingNutrients {
+                        nutrientsLoadingView
+                    } else if shouldShowGoalsLoader {
+                        goalsLoadingView
+                    } else if nutrientTargets.isEmpty {
+                        missingTargetsCallout
+                    } else {
+                        totalCarbsSection
+                        fatTotalsSection
+                        proteinTotalsSection
+                        vitaminSection
+                        mineralSection
+                        otherNutrientSection
+                    }
+
+                    Spacer(minLength: 20)
                 }
-
-                if isLoadingNutrients {
-                    nutrientsLoadingView
-                } else if shouldShowGoalsLoader {
-                    goalsLoadingView
-                } else if nutrientTargets.isEmpty {
-                    missingTargetsCallout
-                } else {
-                    totalCarbsSection
-                    fatTotalsSection
-                    proteinTotalsSection
-                    vitaminSection
-                    mineralSection
-                    otherNutrientSection
-                }
-
-                Spacer(minLength: 20)
+                .padding(.top, 16)
+                .padding(.bottom, 32)
             }
-            .padding(.top, 16)
-            .padding(.bottom, 32)
+
+            recipeFooterBar
         }
         .background(backgroundColor.ignoresSafeArea())
         .navigationTitle("Recipe Details")
@@ -440,13 +447,13 @@ struct RecipeDetails: View {
         plateViewModel.clear()
         let mealPeriod = suggestedMealPeriod(for: Date())
 
-        print("[RecipeDetails] Exploding \(items.count) items to PlateView")
+        print("[RecipeDetails] Exploding \(items.count) items to PlateView (VM id: \(plateViewModel.instanceId))")
         for item in items {
             let entry = buildPlateEntry(from: item, mealPeriod: mealPeriod)
             plateViewModel.add(entry)
             print("[RecipeDetails] Added entry: \(item.name)")
         }
-        print("[RecipeDetails] PlateViewModel now has \(plateViewModel.entries.count) entries")
+        print("[RecipeDetails] PlateViewModel \(plateViewModel.instanceId) now has \(plateViewModel.entries.count) entries")
 
         // Open PlateView immediately
         showPlateView = true
@@ -514,6 +521,143 @@ struct RecipeDetails: View {
         case 14..<17: return .snack
         default: return .dinner
         }
+    }
+
+    // MARK: - Footer Bar
+    private var recipeFooterBar: some View {
+        VStack(spacing: 16) {
+            Divider()
+                .padding(.horizontal, -16)
+
+            HStack(spacing: 12) {
+                Button(action: {
+                    HapticFeedback.generateLigth()
+                    logRecipeDirectly()
+                }) {
+                    Text(isLogging ? "Logging..." : "Log Recipe")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 999, style: .continuous)
+                        .fill(Color("background"))
+                )
+                .foregroundColor(Color("text"))
+                .disabled(isLogging)
+                .opacity(isLogging ? 0.7 : 1)
+
+                Button(action: {
+                    HapticFeedback.generateLigth()
+                    addToPlate()
+                }) {
+                    Text("Add to Plate")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 999, style: .continuous)
+                        .fill(Color("background"))
+                )
+                .foregroundColor(Color("text"))
+            }
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 12)
+        .background(
+            Color(UIColor.systemGroupedBackground)
+                .ignoresSafeArea(edges: .bottom)
+        )
+    }
+
+    private func logRecipeDirectly() {
+        isLogging = true
+        let mealType = suggestedMealPeriod(for: Date()).title
+
+        foodManager.logRecipe(
+            recipe: activeRecipe,
+            mealTime: mealType,
+            date: Date(),
+            notes: nil,
+            calories: activeRecipe.calories
+        ) { result in
+            isLogging = false
+            switch result {
+            case .success:
+                // Navigate to timeline
+                NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
+                dismiss()
+            case .failure(let error):
+                print("Failed to log recipe: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func addToPlate() {
+        let mealPeriod = suggestedMealPeriod(for: Date())
+
+        // Build base macro totals
+        let baseMacros = MacroTotals(
+            calories: activeRecipe.calories,
+            protein: activeRecipe.protein,
+            carbs: activeRecipe.carbs,
+            fat: activeRecipe.fat
+        )
+
+        // Aggregate nutrients from all recipe items
+        var baseNutrients: [String: RawNutrientValue] = [:]
+        for item in activeRecipe.recipeItems {
+            if let nutrients = item.foodNutrients {
+                for nutrient in nutrients {
+                    let key = nutrient.nutrientName.lowercased()
+                    let value = nutrient.value ?? 0
+                    if let existing = baseNutrients[key] {
+                        baseNutrients[key] = RawNutrientValue(value: existing.value + value, unit: existing.unit)
+                    } else {
+                        baseNutrients[key] = RawNutrientValue(value: value, unit: nutrient.unitName)
+                    }
+                }
+            }
+        }
+
+        // Create a Food object representing the whole recipe
+        let food = Food(
+            fdcId: activeRecipe.id,
+            description: activeRecipe.title,
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: nil,
+            numberOfServings: 1.0,
+            servingSizeUnit: nil,
+            householdServingFullText: "1 serving",
+            foodNutrients: [],
+            foodMeasures: []
+        )
+
+        let entry = PlateEntry(
+            food: food,
+            servings: 1.0,
+            selectedMeasureId: nil,
+            availableMeasures: [],
+            baselineGramWeight: 100,
+            baseNutrientValues: baseNutrients,
+            baseMacroTotals: baseMacros,
+            servingDescription: "1 serving",
+            mealItems: [],
+            mealPeriod: mealPeriod,
+            mealTime: Date(),
+            recipeItems: activeRecipe.recipeItems
+        )
+
+        plateViewModel.add(entry)
+        showPlateView = true
     }
 
     // MARK: - Recipe Info Card
@@ -666,7 +810,7 @@ struct RecipeDetails: View {
                 .fontWeight(.semibold)
 
             VStack(spacing: 0) {
-                ForEach(Array(activeRecipe.recipeItems.enumerated()), id: \.element.foodId) { index, item in
+                ForEach(Array(activeRecipe.recipeItems.enumerated()), id: \.offset) { index, item in
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.name)

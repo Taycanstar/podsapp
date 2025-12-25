@@ -33,4 +33,30 @@ final class WorkoutSessionStateTests: XCTestCase {
         XCTAssertFalse(set.isCompleted)
         XCTAssertEqual(set.wasLogged, false)
     }
+
+    func testActiveWorkoutSnapshotRestores() {
+        let manager = WorkoutManager.shared
+        let exercise = TodayWorkoutExercise(
+            exercise: ExerciseData(id: 10, name: "Test", exerciseType: "Strength", bodyPart: "Chest", equipment: "Dumbbells", gender: "Both", target: "Chest", synergist: ""),
+            sets: 3,
+            reps: 8,
+            weight: 50,
+            restTime: 90
+        )
+        let workout = TodayWorkout(
+            id: UUID(),
+            date: Date(),
+            title: "Snapshot",
+            exercises: [exercise],
+            estimatedDuration: 30,
+            fitnessGoal: .strength,
+            difficulty: 3,
+            warmUpExercises: nil,
+            coolDownExercises: nil
+        )
+        manager.setTodayWorkout(workout)
+        manager.startWorkout(workout)
+        manager.debugRestoreActiveWorkoutSnapshot() // ensure no crash when called
+        manager.cancelActiveWorkout()
+    }
 }

@@ -1116,6 +1116,11 @@ enum LogType: String, Codable {
 }
 
 // MARK: - Coach Message (AI-generated coaching after food/recipe log)
+// NOTE: Do NOT use explicit CodingKeys with snake_case mappings here!
+// The decoder uses .convertFromSnakeCase which auto-converts keys.
+// Adding explicit mappings like `case foodLogId = "food_log_id"` causes a CONFLICT
+// because the decoder looks for "foodLogId" (already converted) but CodingKeys
+// says look for "food_log_id" - resulting in nil values.
 struct CoachMessage: Codable, Equatable {
     let foodLogId: Int?  // Optional - present for food logs
     let recipeLogId: Int?  // Optional - present for recipe logs
@@ -1124,15 +1129,6 @@ struct CoachMessage: Codable, Equatable {
     let scanMode: String?
     let todayTotals: CoachTodayTotals?
     let calorieTarget: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case foodLogId = "food_log_id"
-        case recipeLogId = "recipe_log_id"
-        case message
-        case scanMode = "scan_mode"
-        case todayTotals = "today_totals"
-        case calorieTarget = "calorie_target"
-    }
 
     /// Full text of the coach message (for UI compatibility)
     var fullText: String { message }

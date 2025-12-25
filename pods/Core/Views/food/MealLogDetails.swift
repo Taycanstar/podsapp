@@ -588,11 +588,6 @@ extension MealLogDetails {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let response):
-                    let calendar = Calendar.current
-                    if calendar.isDate(response.targetDate, inSameDayAs: dayLogsVM.selectedDate) {
-                        dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
-                    }
-
                     self.scheduleAlert = .success("This meal will appear in your scheduled previews for the selected day.")
                 case .failure(let error):
                     self.scheduleAlert = .failure(error.localizedDescription)

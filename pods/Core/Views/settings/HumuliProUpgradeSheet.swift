@@ -73,8 +73,8 @@ enum HumuliProPlanOption: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .monthly: return "Humuli Pro Monthly"
-        case .yearly: return "Humuli Pro Yearly"
+        case .monthly: return "Metryc Pro Monthly"
+        case .yearly: return "Metryc Pro Yearly"
         }
     }
 
@@ -250,7 +250,7 @@ struct ManageSubscriptionSheet: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(planName)
                         .font(.headline)
-                    Text("Humuli Pro")
+                    Text("Metryc Pro")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -545,7 +545,7 @@ extension HumuliProUpgradeSheet {
                         .font(.system(size: 35))
                         .foregroundColor(.blue)
 
-                    Text(titleOverride ?? "Humuli Pro")
+                    Text(titleOverride ?? "Metryc Pro")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.black)
 
@@ -561,7 +561,7 @@ extension HumuliProUpgradeSheet {
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         } else {
-                            Text("Unlock the complete Humuli experience.")
+                            Text("Unlock the complete Metryc experience.")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
@@ -822,10 +822,6 @@ extension HumuliProUpgradeSheet {
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.black)
                 Spacer()
-                Text("Free")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.gray)
-                    .frame(width: 60)
                 Text("Pro")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.blue)
@@ -833,17 +829,15 @@ extension HumuliProUpgradeSheet {
             }
             .padding(.vertical, 12)
 
-            // Feature rows - first 2 are included in both Free and Plus
-            FeatureRow(name: "Food Scanning", free: true, plus: true)
-            FeatureRow(name: "Personalized Workout Program", free: true, plus: true)
+            // Feature rows - all included in Pro
+            FeatureRow(name: "Personalized Workout Program", pro: true)
 
-            // Remaining 6 features - Plus only
-            FeatureRow(name: "Unlimited Food Scans", free: false, plus: true)
-            FeatureRow(name: "Unlimited Workout Sessions", free: false, plus: true)
-            FeatureRow(name: "Pro Food Search", free: false, plus: true)
-            FeatureRow(name: "Advanced Analytics", free: false, plus: true)
-            FeatureRow(name: "Scheduled Meal Logging", free: false, plus: true)
-            FeatureRow(name: "Bulk Photo Logging", free: false, plus: true)
+            FeatureRow(name: "Unlimited Food Scans", pro: true)
+            FeatureRow(name: "Unlimited Workout Sessions", pro: true)
+            FeatureRow(name: "Pro Food Search", pro: true)
+            FeatureRow(name: "Advanced Analytics", pro: true)
+            FeatureRow(name: "Scheduled Meal Logging", pro: true)
+            FeatureRow(name: "Bulk Photo Logging", pro: true)
         }
         .padding(16)
         .background(
@@ -886,8 +880,7 @@ extension HumuliProUpgradeSheet {
 
 struct FeatureRow: View {
     let name: String
-    let free: Bool
-    let plus: Bool
+    let pro: Bool
 
     var body: some View {
         HStack {
@@ -895,13 +888,9 @@ struct FeatureRow: View {
                 .font(.system(size: 15))
                 .foregroundColor(.black)
             Spacer()
-            Image(systemName: free ? "checkmark" : "minus")
+            Image(systemName: pro ? "checkmark" : "minus")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(free ? .blue : .gray)
-                .frame(width: 60)
-            Image(systemName: plus ? "checkmark" : "minus")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(plus ? .blue : .gray)
+                .foregroundColor(pro ? .blue : .gray)
                 .frame(width: 60)
         }
         .padding(.vertical, 10)

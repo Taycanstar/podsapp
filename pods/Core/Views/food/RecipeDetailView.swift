@@ -329,7 +329,7 @@ struct RecipeDetailView: View {
                 .fontWeight(.bold)
             
             List {
-                ForEach(Array(recipe.recipeItems.enumerated()), id: \.element.foodId) { index, item in
+                ForEach(Array(recipe.recipeItems.enumerated()), id: \.offset) { index, item in
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.name)

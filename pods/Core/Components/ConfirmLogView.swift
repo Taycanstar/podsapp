@@ -2992,7 +2992,6 @@ struct PlateView: View {
     @EnvironmentObject private var foodManager: FoodManager
     @EnvironmentObject private var dayLogsVM: DayLogsViewModel
     @EnvironmentObject private var onboardingViewModel: OnboardingViewModel
-    @EnvironmentObject private var proFeatureGate: ProFeatureGate
     @Environment(\.colorScheme) private var plateColorScheme
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
 
@@ -3036,35 +3035,41 @@ struct PlateView: View {
         _mealTime = State(initialValue: mealTime)
         self.onFinished = onFinished
         self.onPlateLogged = onPlateLogged
+        print("[PlateView] init with VM id: \(viewModel.instanceId), entries: \(viewModel.entries.count)")
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
-                    plateItemsSection
-                    macroSummaryCard
-                    mealTimeSelector
-                    if viewModel.hasEntries {
-                        dailyGoalShareCard
-                        if shouldShowGoalsLoader {
-                            goalsLoadingView
-                        } else if nutrientTargets.isEmpty {
-                            missingTargetsCallout
-                        } else {
-                            totalCarbsSection
-                            fatTotalsSection
-                            proteinTotalsSection
-                            vitaminSection
-                            mineralSection
-                            otherNutrientSection
+            List {
+                plateItemsSection
+                plateListRow {
+                    VStack(spacing: 20) {
+                        macroSummaryCard
+                        mealTimeSelector
+                        if viewModel.hasEntries {
+                            dailyGoalShareCard
+                            if shouldShowGoalsLoader {
+                                goalsLoadingView
+                            } else if nutrientTargets.isEmpty {
+                                missingTargetsCallout
+                            } else {
+                                totalCarbsSection
+                                fatTotalsSection
+                                proteinTotalsSection
+                                vitaminSection
+                                mineralSection
+                                otherNutrientSection
+                            }
                         }
+                        Color.clear.frame(height: 20)
                     }
-                    Spacer(minLength: 20)
+                    .padding(.top, 20)
+                    .padding(.bottom, 32)
                 }
-                .padding(.top, 16)
-                .padding(.bottom, 32)
             }
+            .listStyle(.plain)
+            .listSectionSeparator(.hidden)
+            .scrollContentBackground(.hidden)
 
             footerBar
         }
@@ -3082,6 +3087,10 @@ struct PlateView: View {
             }
         }
         .onAppear {
+            print("[PlateView] onAppear (VM id: \(viewModel.instanceId)) - entries count: \(viewModel.entries.count)")
+            for entry in viewModel.entries {
+                print("[PlateView] Entry: \(entry.title)")
+            }
             reloadStoredNutrientTargets()
         }
         .alert(isPresented: $showErrorAlert) {
@@ -3184,23 +3193,21 @@ struct PlateView: View {
     }
 
     private var plateItemsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Meal Items")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .padding(.horizontal)
-
+        Section {
             if viewModel.entries.isEmpty {
-                Text("Add foods to build your plate")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal)
-                    .onAppear {
-                        print("[PlateView] Entries are EMPTY")
-                    }
+                plateListRow {
+                    Text("Add foods to build your plate")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                }
+                .onAppear {
+                    print("[PlateView] Entries are EMPTY")
+                }
             } else {
-                List {
-                    ForEach(viewModel.entries) { entry in
+                ForEach(viewModel.entries) { entry in
+                    plateListRow {
                         PlateEntryRow(
                             entry: entry,
                             onServingsChange: { servings in
@@ -3212,24 +3219,33 @@ struct PlateView: View {
                             plateCardColor: plateCardColor,
                             chipColor: plateChipColor
                         )
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                viewModel.remove(entry)
-                            } label: {
-                                Image(systemName: "trash.fill")
-                            }
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 16)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            viewModel.remove(entry)
+                        } label: {
+                            Image(systemName: "trash.fill")
                         }
                     }
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .scrollDisabled(true)
-                .fixedSize(horizontal: false, vertical: true)
             }
+        } header: {
+            Text("Meal Items")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .padding(.horizontal)
+                .padding(.top, 16)
+                .textCase(nil)
         }
+    }
+
+    private func plateListRow<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
 
     private var mealTimeSelector: some View {
@@ -4056,7 +4072,7 @@ private struct PlateEntryRow: View {
 
                 if isIngredientsExpanded {
                     VStack(alignment: .leading, spacing: 8) {
-                        ForEach(entry.recipeItems, id: \.foodId) { item in
+                        ForEach(Array(entry.recipeItems.enumerated()), id: \.offset) { _, item in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(item.name)

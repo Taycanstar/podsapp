@@ -26,6 +26,11 @@ struct FoodDetails: View {
     @State private var showDuplicateSheet = false
     @State private var showDeleteConfirmation = false
 
+    // Plate functionality
+    @StateObject private var plateViewModel = PlateViewModel()
+    @State private var showPlateView = false
+    @State private var isLogging = false
+
     /// The food to display - uses fetched full nutrients if available, otherwise the original
     private var activeFood: Food {
         displayFood ?? food
@@ -140,31 +145,35 @@ struct FoodDetails: View {
 
     // MARK: - Body
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
-                foodInfoCard
-                macroSummaryCard
-                dailyGoalShareCard
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+                    foodInfoCard
+                    macroSummaryCard
+                    dailyGoalShareCard
 
-                if isLoadingNutrients {
-                    nutrientsLoadingView
-                } else if shouldShowGoalsLoader {
-                    goalsLoadingView
-                } else if nutrientTargets.isEmpty {
-                    missingTargetsCallout
-                } else {
-                    totalCarbsSection
-                    fatTotalsSection
-                    proteinTotalsSection
-                    vitaminSection
-                    mineralSection
-                    otherNutrientSection
+                    if isLoadingNutrients {
+                        nutrientsLoadingView
+                    } else if shouldShowGoalsLoader {
+                        goalsLoadingView
+                    } else if nutrientTargets.isEmpty {
+                        missingTargetsCallout
+                    } else {
+                        totalCarbsSection
+                        fatTotalsSection
+                        proteinTotalsSection
+                        vitaminSection
+                        mineralSection
+                        otherNutrientSection
+                    }
+
+                    Spacer(minLength: 20)
                 }
-
-                Spacer(minLength: 20)
+                .padding(.top, 16)
+                .padding(.bottom, 32)
             }
-            .padding(.top, 16)
-            .padding(.bottom, 32)
+
+            foodFooterBar
         }
         .background(backgroundColor.ignoresSafeArea())
         .navigationTitle("Food Details")
@@ -240,6 +249,21 @@ struct FoodDetails: View {
                 UserFoodsRepository.shared.insertOptimistically(createdFood)
             }
             .environmentObject(foodManager)
+        }
+        .sheet(isPresented: $showPlateView) {
+            NavigationStack {
+                PlateView(
+                    viewModel: plateViewModel,
+                    selectedMealPeriod: suggestedMealPeriod(for: Date()),
+                    mealTime: Date(),
+                    onFinished: {
+                        showPlateView = false
+                        plateViewModel.clear()
+                    }
+                )
+                .environmentObject(foodManager)
+                .environmentObject(dayLogsVM)
+            }
         }
         .task {
             reloadStoredNutrientTargets()
@@ -334,6 +358,142 @@ struct FoodDetails: View {
                 dismiss()
             }
         }
+    }
+
+    // MARK: - Footer Bar
+    private var foodFooterBar: some View {
+        VStack(spacing: 16) {
+            Divider()
+                .padding(.horizontal, -16)
+
+            HStack(spacing: 12) {
+                Button(action: {
+                    HapticFeedback.generateLigth()
+                    logFoodDirectly()
+                }) {
+                    Text(isLogging ? "Logging..." : "Log Food")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 999, style: .continuous)
+                        .fill(Color("background"))
+                )
+                .foregroundColor(Color("text"))
+                .disabled(isLogging)
+                .opacity(isLogging ? 0.7 : 1)
+
+                Button(action: {
+                    HapticFeedback.generateLigth()
+                    addToPlate()
+                }) {
+                    Text("Add to Plate")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 999, style: .continuous)
+                        .fill(Color("background"))
+                )
+                .foregroundColor(Color("text"))
+            }
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 12)
+        .background(
+            Color(UIColor.systemGroupedBackground)
+                .ignoresSafeArea(edges: .bottom)
+        )
+    }
+
+    // MARK: - Suggested Meal Period
+    private func suggestedMealPeriod(for date: Date) -> MealPeriod {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 5..<11: return .breakfast
+        case 11..<14: return .lunch
+        case 14..<17: return .snack
+        default: return .dinner
+        }
+    }
+
+    // MARK: - Log Food Directly
+    private func logFoodDirectly() {
+        guard let email = foodManager.userEmail, !email.isEmpty else {
+            print("Failed to log food: No user email available")
+            return
+        }
+
+        isLogging = true
+        let mealType = suggestedMealPeriod(for: Date()).title
+
+        foodManager.logFood(
+            email: email,
+            food: activeFood,
+            meal: mealType,
+            servings: 1.0,
+            date: Date(),
+            notes: nil
+        ) { result in
+            isLogging = false
+            switch result {
+            case .success:
+                // Navigate to timeline
+                NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
+                dismiss()
+            case .failure(let error):
+                print("Failed to log food: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Add to Plate
+    private func addToPlate() {
+        let mealPeriod = suggestedMealPeriod(for: Date())
+        let entry = buildPlateEntry(mealPeriod: mealPeriod)
+        plateViewModel.add(entry)
+        showPlateView = true
+    }
+
+    /// Build a PlateEntry from the current food
+    private func buildPlateEntry(mealPeriod: MealPeriod) -> PlateEntry {
+        // Build base macro totals
+        let baseMacros = MacroTotals(
+            calories: calories,
+            protein: protein,
+            carbs: carbs,
+            fat: fat
+        )
+
+        // Build base nutrient values from food nutrients
+        var baseNutrients: [String: RawNutrientValue] = [:]
+        for nutrient in activeFood.foodNutrients {
+            let key = nutrient.nutrientName.lowercased()
+            baseNutrients[key] = RawNutrientValue(value: nutrient.value ?? 0, unit: nutrient.unitName)
+        }
+
+        return PlateEntry(
+            food: activeFood,
+            servings: 1.0,
+            selectedMeasureId: nil,
+            availableMeasures: activeFood.foodMeasures,
+            baselineGramWeight: activeFood.servingSize ?? 100,
+            baseNutrientValues: baseNutrients,
+            baseMacroTotals: baseMacros,
+            servingDescription: servingDescription,
+            mealItems: [],
+            mealPeriod: mealPeriod,
+            mealTime: Date(),
+            recipeItems: []
+        )
     }
 
     // MARK: - Food Info Card (Name + Serving Size)

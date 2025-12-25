@@ -70,6 +70,7 @@ struct PlateEntry: Identifiable, Equatable {
 }
 
 final class PlateViewModel: ObservableObject {
+    let instanceId = UUID()
     @Published private(set) var entries: [PlateEntry] = []
 
     var hasEntries: Bool { !entries.isEmpty }
@@ -99,6 +100,7 @@ final class PlateViewModel: ObservableObject {
 
     func add(_ entry: PlateEntry) {
         entries.append(entry)
+        print("[PlateViewModel \(instanceId)] Added entry, now have \(entries.count) entries")
     }
 
     func updateServings(for entryID: UUID, servings: Double) {
@@ -120,6 +122,7 @@ final class PlateViewModel: ObservableObject {
     }
 
     func clear() {
+        print("[PlateViewModel \(instanceId)] Clearing all entries")
         entries.removeAll()
     }
 }

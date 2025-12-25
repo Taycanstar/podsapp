@@ -17,7 +17,6 @@ struct LogDetails: View {
     @Environment(\.isTabBarVisible) private var isTabBarVisible
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     @EnvironmentObject var foodManager: FoodManager
-    @EnvironmentObject var proFeatureGate: ProFeatureGate
 
     var body: some View {
         Group {
@@ -50,7 +49,6 @@ private struct FoodLogDetailsContent: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     @EnvironmentObject var foodManager: FoodManager
-    @EnvironmentObject var proFeatureGate: ProFeatureGate
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
 
     @State private var nutrientTargets: [String: NutrientTargetDetails] = NutritionGoalsStore.shared.currentTargets
@@ -191,12 +189,9 @@ private struct FoodLogDetailsContent: View {
         }
         .sheet(isPresented: $showEditSheet) {
             EditLogSheet(log: log) {
-                // Refresh logs after edit
-                dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
             }
             .environmentObject(dayLogsVM)
             .environmentObject(foodManager)
-            .environmentObject(proFeatureGate)
         }
         .overlay {
             if isDeleting {
@@ -430,7 +425,6 @@ private struct RecipeLogDetailsContent: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     @EnvironmentObject var foodManager: FoodManager
-    @EnvironmentObject var proFeatureGate: ProFeatureGate
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
 
     @State private var nutrientTargets: [String: NutrientTargetDetails] = NutritionGoalsStore.shared.currentTargets
@@ -603,12 +597,9 @@ private struct RecipeLogDetailsContent: View {
         }
         .sheet(isPresented: $showEditSheet) {
             EditLogSheet(log: log) {
-                // Refresh logs after edit
-                dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
             }
             .environmentObject(dayLogsVM)
             .environmentObject(foodManager)
-            .environmentObject(proFeatureGate)
         }
         .overlay {
             if isDeleting || isExploding || isDuplicating {
@@ -840,7 +831,7 @@ private struct RecipeLogDetailsContent: View {
                 .fontWeight(.semibold)
 
             VStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.foodId) { index, item in
+                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.name)
