@@ -38,6 +38,34 @@ struct LogsByDateResponse: Codable {
         case userData = "user_data"
         case scheduledLogs = "scheduled_logs"
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        logs = try container.decodeIfPresent([CombinedLog].self, forKey: .logs) ?? []
+        // Some responses omit water_logs/scheduled_logs when empty; default to [] instead of failing
+        waterLogs = try container.decodeIfPresent([WaterLogResponse].self, forKey: .waterLogs) ?? []
+        targetDate = try container.decodeIfPresent(String.self, forKey: .targetDate) ?? ""
+        adjacentDaysIncluded = try container.decodeIfPresent(Bool.self, forKey: .adjacentDaysIncluded) ?? false
+        goals = try container.decodeIfPresent(NutritionGoals.self, forKey: .goals)
+        userData = try container.decodeIfPresent(UserData.self, forKey: .userData)
+        scheduledLogs = try container.decodeIfPresent([ScheduledLogPreview].self, forKey: .scheduledLogs) ?? []
+    }
+
+    init(logs: [CombinedLog],
+         waterLogs: [WaterLogResponse] = [],
+         targetDate: String,
+         adjacentDaysIncluded: Bool,
+         goals: NutritionGoals? = nil,
+         userData: UserData? = nil,
+         scheduledLogs: [ScheduledLogPreview] = []) {
+        self.logs = logs
+        self.waterLogs = waterLogs
+        self.targetDate = targetDate
+        self.adjacentDaysIncluded = adjacentDaysIncluded
+        self.goals = goals
+        self.userData = userData
+        self.scheduledLogs = scheduledLogs
+    }
 }
 
 struct ScheduledLogSummary: Codable {

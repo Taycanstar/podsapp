@@ -3218,6 +3218,7 @@ private extension View {
         @State private var exercises: [TodayWorkoutExercise]
         @State private var warmUpExpanded: Bool = true
         @State private var coolDownExpanded: Bool = true
+        @State private var editMode: EditMode = .active
         @Binding var showAddExerciseSheet: Bool
         let onPresentLogSheet: (LogExerciseSheetContext) -> Void
         let onRefresh: () -> Void
@@ -3335,6 +3336,7 @@ private extension View {
             addExerciseSection
         }
         .listStyle(PlainListStyle())
+        .environment(\.editMode, $editMode) // Keep drag handles available for reordering
         .scrollIndicators(.hidden)
         .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
@@ -3411,41 +3413,49 @@ private extension View {
     @ViewBuilder
     private var mainExercisesSection: some View {
         if circuitOrSupersetBlocks.isEmpty {
-            // One big card with all exercises
-            VStack(alignment: .leading, spacing: 0) {
-                // Deduplicate by exercise.id for display to avoid accidental duplicates
+            // One section with draggable exercises
+            Section {
                 let uniqueExercises: [TodayWorkoutExercise] = {
                     var seen = Set<Int>()
                     return exercises.filter { seen.insert($0.exercise.id).inserted }
                 }()
+
                 ForEach(Array(uniqueExercises.enumerated()), id: \.element.exercise.id) { idx, exercise in
-                    // Map display index to the first index in the underlying array for callbacks
                     let originalIndex = exercises.firstIndex(where: { $0.exercise.id == exercise.exercise.id }) ?? idx
-                    ExerciseWorkoutCard(
-                        exercise: exercise,
-                        allExercises: exercises,
-                        exerciseIndex: originalIndex,
-                        onExerciseReplaced: { index, newEx in replaceExercise(at: index, with: newEx) },
-                        onOpen: {
-                            onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: exercises, index: originalIndex))
-                        },
-                        useBackground: false
-                    )
-                    // compact spacing; rely on internal row padding only
-                    if idx != uniqueExercises.count - 1 {
-                        Divider().opacity(0.08)
+                    VStack(spacing: 0) {
+                        ExerciseWorkoutCard(
+                            exercise: exercise,
+                            allExercises: exercises,
+                            exerciseIndex: originalIndex,
+                            onExerciseReplaced: { index, newEx in replaceExercise(at: index, with: newEx) },
+                            onOpen: {
+                                onPresentLogSheet(LogExerciseSheetContext(exercise: exercise, allExercises: exercises, index: originalIndex))
+                            },
+                            useBackground: false
+                        )
+                        if idx != uniqueExercises.count - 1 {
+                            Divider().opacity(0.08)
+                        }
                     }
+                    .padding(.vertical, 4)
+                    .background(Color("containerbg"))
+                    .cornerRadius(24)
+                    .listRowInsets(EdgeInsets(top: idx == 0 ? 16 : 8, leading: 16, bottom: idx == uniqueExercises.count - 1 ? 8 : 0, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
+                .onMove(perform: moveMainExercises)
             }
-            .background(Color("containerbg"))
-            .cornerRadius(24)
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
+            .listSectionSeparator(.hidden)
         } else {
             nonGroupedCardView
             groupedBlocksView
         }
+    }
+
+    private func moveMainExercises(from offsets: IndexSet, to destination: Int) {
+        exercises.move(fromOffsets: offsets, toOffset: destination)
+        workoutManager.reorderMainExercises(fromOffsets: offsets, toOffset: destination)
     }
 
     @ViewBuilder

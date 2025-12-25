@@ -19,6 +19,7 @@ struct DynamicSetsInputView: View {
     let onSetFocused: ((Int?) -> Void)? // Callback when a set gains/loses focus
     let onSetDataChanged: (() -> Void)? // Callback when set data changes
     let onPickerStateChanged: ((Int, Bool) -> Void)?
+    let onToggleCompletion: ((Int) -> Void)?
     
     @State private var showingAddSetOptions = false
     @FocusState private var focusedSetIndex: Int?
@@ -34,7 +35,8 @@ struct DynamicSetsInputView: View {
         onDurationChanged: ((Int, TimeInterval) -> Void)? = nil,
         onSetFocused: ((Int?) -> Void)? = nil,
         onSetDataChanged: (() -> Void)? = nil,
-        onPickerStateChanged: ((Int, Bool) -> Void)? = nil
+        onPickerStateChanged: ((Int, Bool) -> Void)? = nil,
+        onToggleCompletion: ((Int) -> Void)? = nil
     ) {
         self._sets = sets
         self.workoutExercise = workoutExercise
@@ -46,6 +48,7 @@ struct DynamicSetsInputView: View {
         self.onSetFocused = onSetFocused
         self.onSetDataChanged = onSetDataChanged
         self.onPickerStateChanged = onPickerStateChanged
+        self.onToggleCompletion = onToggleCompletion
     }
     
     var body: some View {
@@ -94,29 +97,30 @@ struct DynamicSetsInputView: View {
         let _ = print("🟢 DEBUG setsForEachView: About to render \(sets.count) sets")
         ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
             let _ = print("🟢 - Rendering set \(index + 1): \(set)")
-            DynamicSetRowView(
-                set: binding(for: index),
-                setNumber: index + 1,
-                workoutExercise: workoutExercise,
-                onDurationChanged: { duration in
-                    onDurationChanged?(index, duration)
-                },
-                isActive: index == focusedSetIndex,
-                onFocusChanged: { focused in
-                    if focused {
-                        focusedSetIndex = index
-                    } else if focusedSetIndex == index {
-                        focusedSetIndex = nil
-                    }
-                },
-                onSetChanged: onSetDataChanged,
-                onPickerStateChanged: { isExpanded in
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        expandedPickerIndex = isExpanded ? index : nil
-                    }
-                    onPickerStateChanged?(index, isExpanded)
-                }
-            )
+                DynamicSetRowView(
+                    set: binding(for: index),
+                    setNumber: index + 1,
+                    workoutExercise: workoutExercise,
+                    onDurationChanged: { duration in
+                        onDurationChanged?(index, duration)
+                    },
+                    isActive: index == focusedSetIndex,
+                    onFocusChanged: { focused in
+                        if focused {
+                            focusedSetIndex = index
+                        } else if focusedSetIndex == index {
+                            focusedSetIndex = nil
+                        }
+                    },
+                    onSetChanged: onSetDataChanged,
+                    onPickerStateChanged: { isExpanded in
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            expandedPickerIndex = isExpanded ? index : nil
+                        }
+                        onPickerStateChanged?(index, isExpanded)
+                    },
+                    onCompletionToggle: { onToggleCompletion?(index) }
+                )
             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)

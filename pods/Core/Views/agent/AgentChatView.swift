@@ -1261,7 +1261,8 @@ struct AgentChatView: View {
             servingDescription: food.servingSizeText ?? "1 serving",
             mealItems: food.mealItems ?? [],
             mealPeriod: mealPeriod,
-            mealTime: Date()
+            mealTime: Date(),
+            recipeItems: []
         )
     }
 

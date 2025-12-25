@@ -19,6 +19,7 @@ struct WorkoutInProgressView: View {
     @State private var navigationPath = NavigationPath()
     // Full-screen logging sheet context
     @State private var loggingContext: LogExerciseSheetContext?
+    @State private var showingReorderSheet = false
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject private var workoutManager: WorkoutManager
     @Environment(\.modelContext) private var modelContext
@@ -244,7 +245,12 @@ struct WorkoutInProgressView: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.primary)
                             .padding(6)
-                       
+                           
+                    }
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Reorder") {
+                        showingReorderSheet = true
                     }
                 }
             }
@@ -279,6 +285,26 @@ struct WorkoutInProgressView: View {
             }
         } message: {
             Text("You have logged sets in this workout. Are you sure you want to discard this workout?")
+        }
+        .sheet(isPresented: $showingReorderSheet) {
+            NavigationStack {
+                List {
+                    ForEach(Array(workout.exercises.enumerated()), id: \.element.exercise.id) { index, exercise in
+                        Text(exercise.exercise.name)
+                            .font(.body)
+                            .padding(.vertical, 8)
+                    }
+                    .onMove(perform: moveExercises)
+                }
+                .listStyle(.insetGrouped)
+                .environment(\.editMode, .constant(.active))
+                .navigationTitle("Reorder Exercises")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") { showingReorderSheet = false }
+                    }
+                }
+            }
         }
     }
     
@@ -490,6 +516,11 @@ struct WorkoutInProgressView: View {
     private func logWorkout() {
         // Complete workout without feedback (simplified for now)
         completeWorkout()
+    }
+
+    private func moveExercises(from offsets: IndexSet, to destination: Int) {
+        workout.exercises.move(fromOffsets: offsets, toOffset: destination)
+        workoutManager.reorderMainExercises(fromOffsets: offsets, toOffset: destination)
     }
     
     private func completeWorkout() {

@@ -189,6 +189,7 @@ class WorkoutManager: ObservableObject {
     private let todayWorkoutTrainingSplitKey = "todayWorkoutTrainingSplit"
     private let todayWorkoutBodyweightOnlyKey = "todayWorkoutBodyweightOnly"
     private let activeWorkoutStateKey = "activeWorkoutState"
+    private let activeWorkoutSnapshotKey = "activeWorkoutSnapshot"
     private let customWorkoutsKey = "custom_workouts"
     private let customWorkoutIdCounterKey = "customWorkoutIdCounter"
     private let customWorkoutsLastFetchKey = "customWorkoutsLastFetch"
@@ -294,6 +295,7 @@ class WorkoutManager: ObservableObject {
         loadSessionData()
         loadDefaultMusclePreferences()
         loadTodayWorkout()
+        restoreActiveWorkoutSnapshotIfNeeded()
         setupSessionMonitoring()
         setupDynamicProgramming()  // Initialize dynamic programming
         loadLastWorkoutCompletionState()
@@ -1808,8 +1810,7 @@ class WorkoutManager: ObservableObject {
             coolDownExercises: currentWorkout.coolDownExercises
         )
         
-        todayWorkout = updatedWorkout
-        saveTodayWorkout()
+        applyUpdatedWorkoutToStores(updatedWorkout)
     }
     
     /// Update exercise at index with modified exercise data
@@ -1833,13 +1834,21 @@ class WorkoutManager: ObservableObject {
             coolDownExercises: currentWorkout.coolDownExercises
         )
 
-        todayWorkout = updatedWorkout
-        saveTodayWorkout()
+        applyUpdatedWorkoutToStores(updatedWorkout)
     }
 
     /// Apply a manual block creation result and persist the updated workout
     func applyManualBlockResult(_ result: BlockCreationService.CreationResult) {
         todayWorkout = result.workout
+        saveTodayWorkout()
+    }
+
+    private func applyUpdatedWorkoutToStores(_ updatedWorkout: TodayWorkout) {
+        todayWorkout = updatedWorkout
+        if let active = currentWorkout, active.id == updatedWorkout.id {
+            currentWorkout = updatedWorkout
+            persistActiveWorkoutSnapshot(updatedWorkout)
+        }
         saveTodayWorkout()
     }
 
@@ -1897,6 +1906,26 @@ class WorkoutManager: ObservableObject {
         }
 
         return currentWorkout ?? updatedToday
+    }
+
+    /// Reorder main exercises in today's workout and active workout (if any)
+    func reorderMainExercises(fromOffsets: IndexSet, toOffset: Int) {
+        guard var workout = todayWorkout else { return }
+        var exercises = workout.exercises
+        exercises.move(fromOffsets: fromOffsets, toOffset: toOffset)
+        workout = TodayWorkout(
+            id: workout.id,
+            date: workout.date,
+            title: workout.title,
+            exercises: exercises,
+            blocks: workout.blocks,
+            estimatedDuration: workout.estimatedDuration,
+            fitnessGoal: workout.fitnessGoal,
+            difficulty: workout.difficulty,
+            warmUpExercises: workout.warmUpExercises,
+            coolDownExercises: workout.coolDownExercises
+        )
+        applyUpdatedWorkoutToStores(workout)
     }
 
     private func removeExercise(_ exerciseId: Int, from workout: TodayWorkout) -> TodayWorkout {
@@ -2421,6 +2450,7 @@ class WorkoutManager: ObservableObject {
         )
         activeWorkoutState = state
         persistActiveWorkoutState(state)
+        persistActiveWorkoutSnapshot(sanitized)
         print("🏃‍♂️ WorkoutManager: Started workout - \(sanitized.title)")
     }
 
@@ -2430,6 +2460,7 @@ class WorkoutManager: ObservableObject {
         guard currentWorkout != nil || activeWorkoutState != nil else { return }
         currentWorkout = nil
         clearActiveWorkoutState()
+        persistActiveWorkoutSnapshot(nil)
 
         if discardSessionOverrides {
             clearSessionOverrides()
@@ -2510,6 +2541,7 @@ class WorkoutManager: ObservableObject {
            let index = active.exercises.firstIndex(where: { $0.exercise.id == sanitizedExercise.exercise.id }) {
             active.exercises[index] = sanitizedExercise
             currentWorkout = active
+            persistActiveWorkoutSnapshot(active)
         }
 
         if var today = todayWorkout,
@@ -3435,6 +3467,36 @@ class WorkoutManager: ObservableObject {
         return try? JSONDecoder().decode(ActiveWorkoutState.self, from: data)
     }
 
+    private func loadActiveWorkoutSnapshot() -> TodayWorkout? {
+        let defaults = UserDefaults.standard
+        guard let data = defaults.data(forKey: profileStorageKey(activeWorkoutSnapshotKey)) else { return nil }
+        return try? JSONDecoder().decode(TodayWorkout.self, from: data)
+    }
+
+    private func persistActiveWorkoutSnapshot(_ workout: TodayWorkout?) {
+        let defaults = UserDefaults.standard
+        let key = profileStorageKey(activeWorkoutSnapshotKey)
+        if let workout,
+           let data = try? JSONEncoder().encode(workout) {
+            defaults.set(data, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    private func restoreActiveWorkoutSnapshotIfNeeded() {
+        guard activeWorkoutState == nil else { return }
+        if let state = loadActiveWorkoutState() {
+            activeWorkoutState = state
+        }
+
+        guard let snapshot = loadActiveWorkoutSnapshot() else { return }
+        if let state = activeWorkoutState, state.workoutId == snapshot.id {
+            currentWorkout = snapshot
+            print("🏃‍♂️ Restored active workout snapshot for \(snapshot.title)")
+        }
+    }
+
     private func persistActiveWorkoutState(_ state: ActiveWorkoutState?) {
         let defaults = UserDefaults.standard
         let key = profileStorageKey(activeWorkoutStateKey)
@@ -3460,6 +3522,7 @@ class WorkoutManager: ObservableObject {
     private func clearActiveWorkoutState() {
         activeWorkoutState = nil
         persistActiveWorkoutState(nil)
+        persistActiveWorkoutSnapshot(nil)
     }
     
     private func loadSessionData() {

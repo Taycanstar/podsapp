@@ -28,11 +28,16 @@ struct ChatsView: View {
     @State private var recentIds: [String] = []
     @State private var recentTitles: [String] = []
     @State private var isLoading = false
+    @State private var isLoadingMore = false
+    @State private var hasMore = false
+    @State private var currentOffset = 0
     @State private var searchText = ""
 
     // Rename state - only primitives
     @State private var renameConversationId: String?
     @State private var renameText = ""
+
+    private let pageSize = 50
 
     var body: some View {
         List {
@@ -71,7 +76,7 @@ struct ChatsView: View {
                 }
             }
 
-            // Loading indicator
+            // Loading indicator for initial load
             if isLoading {
                 Section {
                     HStack {
@@ -80,6 +85,32 @@ struct ChatsView: View {
                         Spacer()
                     }
                 }
+            }
+
+            // Load more trigger at bottom of list
+            if hasMore && !isLoading && !isLoadingMore {
+                Section {
+                    Color.clear
+                        .frame(height: 1)
+                        .onAppear {
+                            loadMoreConversations()
+                        }
+                }
+                .listRowSeparator(.hidden)
+            }
+
+            // Loading more indicator
+            if isLoadingMore {
+                Section {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
+                }
+                .listRowSeparator(.hidden)
             }
         }
         .listStyle(.plain)
@@ -252,12 +283,13 @@ struct ChatsView: View {
         guard !email.isEmpty else { return }
 
         isLoading = true
+        currentOffset = 0
 
         Task {
             do {
                 let response = try await NetworkManager().getConversations(
                     userEmail: email,
-                    limit: 50,
+                    limit: pageSize,
                     offset: 0
                 )
 
@@ -272,12 +304,67 @@ struct ChatsView: View {
                     recentIds = recent.map { $0.id }
                     recentTitles = recent.map { $0.title }
 
+                    hasMore = response.hasMore
+                    currentOffset = response.conversations.count
                     isLoading = false
                 }
             } catch {
                 print("Failed to load conversations: \(error)")
                 await MainActor.run {
                     isLoading = false
+                }
+            }
+        }
+    }
+
+    private func loadMoreConversations() {
+        guard !isLoadingMore && hasMore else { return }
+
+        let email = onboardingViewModel.email.isEmpty
+            ? (UserDefaults.standard.string(forKey: "userEmail") ?? "")
+            : onboardingViewModel.email
+
+        guard !email.isEmpty else { return }
+
+        isLoadingMore = true
+
+        Task {
+            do {
+                let response = try await NetworkManager().getConversations(
+                    userEmail: email,
+                    limit: pageSize,
+                    offset: currentOffset
+                )
+
+                await MainActor.run {
+                    // Append new conversations (only recent, pinned are already loaded)
+                    let pinned = response.conversations.filter { $0.isPinned }
+                    let recent = response.conversations.filter { !$0.isPinned }
+
+                    // Append pinned (unlikely but handle it)
+                    for conv in pinned {
+                        if !pinnedIds.contains(conv.id) {
+                            pinnedIds.append(conv.id)
+                            pinnedTitles.append(conv.title)
+                        }
+                    }
+
+                    // Append recent
+                    for conv in recent {
+                        if !recentIds.contains(conv.id) {
+                            recentIds.append(conv.id)
+                            recentTitles.append(conv.title)
+                        }
+                    }
+
+                    hasMore = response.hasMore
+                    currentOffset += response.conversations.count
+                    isLoadingMore = false
+                }
+            } catch {
+                print("Failed to load more conversations: \(error)")
+                await MainActor.run {
+                    isLoadingMore = false
                 }
             }
         }
@@ -310,6 +397,8 @@ struct ChatsView: View {
                     pinnedTitles = []
                     recentIds = []
                     recentTitles = []
+                    hasMore = false
+                    currentOffset = 0
                 }
                 loadConversations()
             } catch {

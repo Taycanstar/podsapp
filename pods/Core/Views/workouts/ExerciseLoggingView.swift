@@ -237,6 +237,9 @@ struct ExerciseLoggingView: View {
                 onPickerStateChanged: { expanded in
                     if expanded { currentSetIndex = setIndex }
                     isDurationPickerExpanded = expanded
+                },
+                onCompletionToggle: {
+                    toggleSetCompletion(at: setIndex)
                 }
             )
             .listRowSeparator(.hidden)
@@ -935,36 +938,39 @@ struct ExerciseLoggingView: View {
             // SIMPLIFIED: For duration-based exercises, use existing perfect style with direct binding
             if isDurationBasedExercise {
                 // Keep the existing perfect duration input style with set-specific durations
-                DynamicSetsInputView(
-                    sets: $flexibleSets,
-                    workoutExercise: currentExercise,
-                    trackingType: trackingType,
-                    onSetCompleted: { setIndex in
-                        handleFlexibleSetCompletion(at: setIndex)
-                    },
-                    onAddSet: {
-                        addNewSet()
-                    },
-                    onRemoveSet: { setIndex in
-                        // Handle set removal if needed  
-                    },
-                    onDurationChanged: { setIndex, duration in
-                        // Set-specific duration update - no global variable
-                        currentSetIndex = setIndex
-                        saveDurationToPersistence(duration)
-                        saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
-                    },
-                    onSetFocused: { index in
-                        if let idx = index { currentSetIndex = idx }
-                    },
-                    onSetDataChanged: {
-                        saveFlexibleSetsToExercise() // Save when any set data changes
-                    },
-                    onPickerStateChanged: { setIndex, expanded in
-                        if expanded { currentSetIndex = setIndex }
-                        isDurationPickerExpanded = expanded
-                    }
-                )
+                    DynamicSetsInputView(
+                        sets: $flexibleSets,
+                        workoutExercise: currentExercise,
+                        trackingType: trackingType,
+                        onSetCompleted: { setIndex in
+                            handleFlexibleSetCompletion(at: setIndex)
+                            },
+                            onAddSet: {
+                                addNewSet()
+                            },
+                            onRemoveSet: { setIndex in
+                                // Handle set removal if needed  
+                            },
+                            onDurationChanged: { setIndex, duration in
+                                // Set-specific duration update - no global variable
+                                currentSetIndex = setIndex
+                                saveDurationToPersistence(duration)
+                                saveFlexibleSetsToExercise() // ✅ SAVE TO WORKOUT MODEL
+                            },
+                            onSetFocused: { index in
+                                if let idx = index { currentSetIndex = idx }
+                            },
+                            onSetDataChanged: {
+                                saveFlexibleSetsToExercise() // Save when any set data changes
+                            },
+                            onPickerStateChanged: { setIndex, expanded in
+                                if expanded { currentSetIndex = setIndex }
+                                isDurationPickerExpanded = expanded
+                            },
+                            onToggleCompletion: { setIndex in
+                                toggleSetCompletion(at: setIndex)
+                            }
+                        )
                 .transition(.opacity.combined(with: .scale))
             }
             // For non-duration exercises, always use flexible tracking system
@@ -992,18 +998,21 @@ struct ExerciseLoggingView: View {
                     onSetFocused: { index in
                         if let idx = index { currentSetIndex = idx }
                     },
-                    onSetDataChanged: {
-                        saveFlexibleSetsToExercise() // Save when any set data changes
-                    },
-                    onPickerStateChanged: { setIndex, expanded in
-                        if expanded { currentSetIndex = setIndex }
-                        isDurationPickerExpanded = expanded
-                    }
-                )
-                .transition(.opacity.combined(with: .scale))
+                        onSetDataChanged: {
+                            saveFlexibleSetsToExercise() // Save when any set data changes
+                        },
+                        onPickerStateChanged: { setIndex, expanded in
+                            if expanded { currentSetIndex = setIndex }
+                            isDurationPickerExpanded = expanded
+                        },
+                        onToggleCompletion: { setIndex in
+                            toggleSetCompletion(at: setIndex)
+                        }
+                    )
+                    .transition(.opacity.combined(with: .scale))
+                }
             }
-        }
-        .onAppear {
+            .onAppear {
             initializeFlexibleSetsIfNeeded()
         }
     }
@@ -2050,6 +2059,17 @@ struct ExerciseLoggingView: View {
         if completedSetsCount == flexibleSets.count {
             showRIRSection = true
         }
+    }
+    
+    /// Toggle completion state for a set (supports unlogging)
+    private func toggleSetCompletion(at setIndex: Int) {
+        guard flexibleSets.indices.contains(setIndex) else { return }
+        var set = flexibleSets[setIndex]
+        set.isCompleted.toggle()
+        set.wasLogged = set.isCompleted
+        flexibleSets[setIndex] = set
+        saveFlexibleSetsToExercise()
+        showRIRSection = flexibleSets.allSatisfy { $0.isCompleted }
     }
     
     /// Get default set count based on tracking type

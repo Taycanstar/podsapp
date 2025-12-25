@@ -2522,7 +2522,8 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
             servingDescription: description,
             mealItems: mealItems,
             mealPeriod: selectedMealPeriod,
-            mealTime: mealTime
+            mealTime: mealTime,
+            recipeItems: []
         )
     }
 
@@ -3194,6 +3195,9 @@ struct PlateView: View {
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
+                    .onAppear {
+                        print("[PlateView] Entries are EMPTY")
+                    }
             } else {
                 List {
                     ForEach(viewModel.entries) { entry in
@@ -3883,7 +3887,8 @@ struct PlateView: View {
             servingDescription: food.servingSizeText,
             mealItems: food.mealItems ?? [],
             mealPeriod: selectedMealPeriod,
-            mealTime: mealTime
+            mealTime: mealTime,
+            recipeItems: []
         )
     }
 
@@ -3966,7 +3971,8 @@ struct PlateView: View {
             servingDescription: servingText,
             mealItems: [],
             mealPeriod: selectedMealPeriod,
-            mealTime: mealTime
+            mealTime: mealTime,
+            recipeItems: []
         )
     }
 }
@@ -3979,6 +3985,7 @@ private struct PlateEntryRow: View {
     let chipColor: Color
 
     @State private var servingsInput: String
+    @State private var isIngredientsExpanded = false
 
     init(entry: PlateEntry,
          onServingsChange: @escaping (Double) -> Void,
@@ -4026,6 +4033,54 @@ private struct PlateEntryRow: View {
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer()
+            }
+
+            // Expand Ingredients disclosure for recipes
+            if !entry.recipeItems.isEmpty {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isIngredientsExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: isIngredientsExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        Text("Expand Ingredients (\(entry.recipeItems.count))")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+
+                if isIngredientsExpanded {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(entry.recipeItems, id: \.foodId) { item in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.name)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.primary)
+                                    Text(item.servingText ?? "\(item.servings) serving")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Text("\(Int(item.calories.rounded())) cal")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(.systemGray6))
+                            )
+                        }
+                    }
+                    .padding(.top, 4)
+                }
             }
         }
         .padding(.vertical, 12)

@@ -21,6 +21,7 @@ struct DynamicSetRowView: View {
     let onFocusChanged: ((Bool) -> Void)? // Callback when this row gains/loses focus
     let onSetChanged: (() -> Void)? // Callback when set data changes
     let onPickerStateChanged: ((Bool) -> Void)? // Callback when time picker state changes
+    let onCompletionToggle: (() -> Void)?
     @FocusState private var focusedField: FocusedField?
     @EnvironmentObject var onboarding: OnboardingViewModel
 
@@ -59,31 +60,36 @@ struct DynamicSetRowView: View {
     }
     
     private var setNumberIndicator: some View {
-        ZStack {
-            // Background rounded rectangle (matches input style)
-            RoundedRectangle(cornerRadius: 16)
-                .fill(set.isCompleted ? Color.accentColor : Color("containerbg"))
-                .strokeBorder(
-                    set.isCompleted ? Color.accentColor : Color(.systemGray4), 
-                    lineWidth: set.isCompleted ? 0 : 0.5
-                )
-                .frame(width: 44, height: 44)
-            
-            // Content (number or checkmark)
-            if set.isCompleted {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-            } else if set.isWarmupSet {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.primary)
-            } else {
-                Text("\(setNumber)")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(.primary)
+        Button {
+            onCompletionToggle?()
+        } label: {
+            ZStack {
+                // Background rounded rectangle (matches input style)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(set.isCompleted ? Color.accentColor : Color("containerbg"))
+                    .strokeBorder(
+                        set.isCompleted ? Color.accentColor : Color(.systemGray4), 
+                        lineWidth: set.isCompleted ? 0 : 0.5
+                    )
+                    .frame(width: 44, height: 44)
+                
+                // Content (number or checkmark)
+                if set.isCompleted {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                } else if set.isWarmupSet {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                } else {
+                    Text("\(setNumber)")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundColor(.primary)
+                }
             }
         }
+        .buttonStyle(.plain)
     }
 
     private var adjustmentOverlay: some View {

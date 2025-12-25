@@ -35,43 +35,44 @@ struct DurationExerciseTimerSheet: View {
                 
                 // Main timer display area
                 VStack(spacing: 12) {
-                    // Clean, minimal countdown text - shows correct time immediately
-                    Text(formatTime(timeRemaining))
-                        .font(.system(size: 48, weight: .bold, design: .default))
-                        // .fontDesign(.monospaced)
-                        .foregroundColor(.primary)
-                        .scaleEffect(showingCompletionAnimation ? 1.1 : 1.0)
-                        .animation(.easeInOut(duration: 0.3), value: showingCompletionAnimation)
-                    
-                
-                }
-                .frame(maxHeight: .infinity)
-                .padding(.horizontal, 20)
-                
-                // Control buttons at bottom
-                if timeRemaining > 0 {
-                    HStack {
+                    HStack(alignment: .center, spacing: 16) {
+                        Text(formatTime(timeRemaining))
+                            .font(.system(size: 64, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary)
+                            .scaleEffect(showingCompletionAnimation ? 1.08 : 1.0)
+                            .animation(.easeInOut(duration: 0.3), value: showingCompletionAnimation)
+                            .minimumScaleFactor(0.6)
+
                         Spacer()
+
                         Button(action: toggleTimer) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.orange.opacity(0.15))
-                                    .frame(width: 64, height: 64)
-                                Image(systemName: isRunning ? "pause" : "play.fill")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.orange)
-                            }
+                            Image(systemName: isRunning ? "pause.fill" : "play.fill")
+                                .font(.system(size: 26, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(width: 60, height: 60)
+                                .background(Color.orange)
+                                .clipShape(Circle())
+                                .shadow(color: .orange.opacity(0.2), radius: 8, x: 0, y: 4)
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        Spacer()
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
+                    .padding(.vertical, 18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(Color(.secondarySystemBackground))
+                    )
+                    .padding(.horizontal, 16)
                 }
+                .frame(maxHeight: .infinity)
+                .padding(.top, 12)
+
             }
             .background(Color(.systemBackground))
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.height(260)])
+        .presentationDragIndicator(.visible)
   
         .onAppear {
             startTimer() // Start immediately with correct duration

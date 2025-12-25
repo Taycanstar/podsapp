@@ -1614,7 +1614,7 @@ extension MealSummary: MealDisplayable {
 // MARK: - Recipe Structs
 
 // Recipe food items (similar to MealFoodItem)
-struct RecipeFoodItem: Codable, Identifiable {
+struct RecipeFoodItem: Codable, Identifiable, Equatable {
     let foodId: Int
     let externalId: String
     let name: String
@@ -1630,6 +1630,10 @@ struct RecipeFoodItem: Codable, Identifiable {
     let foodNutrients: [Nutrient]?
 
     var id: Int { foodId }
+
+    static func == (lhs: RecipeFoodItem, rhs: RecipeFoodItem) -> Bool {
+        lhs.foodId == rhs.foodId
+    }
 }
 
 // Full Recipe struct (similar to Meal)

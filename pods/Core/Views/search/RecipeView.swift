@@ -34,6 +34,10 @@ struct RecipeView: View {
     // For viewing details (row tap)
     @State private var selectedRecipeForDetails: Recipe?
 
+    // Plate functionality
+    @StateObject private var plateViewModel = PlateViewModel()
+    @State private var showPlateView = false
+
     // Filtered recipes based on search
     private var filteredRecipes: [Recipe] {
         if searchText.isEmpty {
@@ -98,9 +102,13 @@ struct RecipeView: View {
                     ForEach(filteredRecipes) { recipe in
                         RecipeRow(
                             recipe: recipe,
-                            onPlusTapped: {
+                            onLogTapped: {
                                 closeSearchIfNeeded()
-                                selectedRecipeForLogging = recipe
+                                logRecipeDirectly(recipe)
+                            },
+                            onAddToPlateTapped: {
+                                closeSearchIfNeeded()
+                                addRecipeToPlate(recipe)
                             }
                         )
                         .contentShape(Rectangle())
@@ -139,6 +147,22 @@ struct RecipeView: View {
             RecipeSummaryView(recipe: recipe)
                 .environmentObject(foodManager)
         }
+        .sheet(isPresented: $showPlateView) {
+            NavigationStack {
+                PlateView(
+                    viewModel: plateViewModel,
+                    selectedMealPeriod: suggestedMealPeriod(for: Date()),
+                    mealTime: Date(),
+                    onFinished: {
+                        showPlateView = false
+                        plateViewModel.clear()
+                    }
+                )
+                .environmentObject(foodManager)
+                .environmentObject(dayLogsVM)
+                .environmentObject(viewModel)
+            }
+        }
         .navigationDestination(item: $selectedRecipeForDetails) { recipe in
             RecipeDetails(recipe: recipe)
                 .environmentObject(foodManager)
@@ -153,6 +177,104 @@ struct RecipeView: View {
                 await recipesRepo.refresh()
             }
         }
+    }
+
+    // MARK: - Suggested Meal Period
+    private func suggestedMealPeriod(for date: Date) -> MealPeriod {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 5..<11: return .breakfast
+        case 11..<14: return .lunch
+        case 14..<17: return .snack
+        default: return .dinner
+        }
+    }
+
+    // MARK: - Log Recipe Directly
+    private func logRecipeDirectly(_ recipe: Recipe) {
+        let mealType = suggestedMealPeriod(for: Date()).title
+
+        foodManager.logRecipe(
+            recipe: recipe,
+            mealTime: mealType,
+            date: Date(),
+            notes: nil,
+            calories: recipe.calories
+        ) { result in
+            switch result {
+            case .success:
+                // Navigate to timeline
+                NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
+            case .failure(let error):
+                print("Failed to log recipe: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Add Recipe to Plate
+    private func addRecipeToPlate(_ recipe: Recipe) {
+        let mealPeriod = suggestedMealPeriod(for: Date())
+
+        // Create a single PlateEntry for the entire recipe (not exploded)
+        let entry = buildPlateEntry(from: recipe, mealPeriod: mealPeriod)
+        plateViewModel.add(entry)
+        showPlateView = true
+    }
+
+    /// Build a PlateEntry from a Recipe (the whole recipe as one item)
+    private func buildPlateEntry(from recipe: Recipe, mealPeriod: MealPeriod) -> PlateEntry {
+        // Build base macro totals
+        let baseMacros = MacroTotals(
+            calories: recipe.calories,
+            protein: recipe.protein,
+            carbs: recipe.carbs,
+            fat: recipe.fat
+        )
+
+        // Aggregate nutrients from all recipe items
+        var baseNutrients: [String: RawNutrientValue] = [:]
+        for item in recipe.recipeItems {
+            if let nutrients = item.foodNutrients {
+                for nutrient in nutrients {
+                    let key = nutrient.nutrientName.lowercased()
+                    let value = nutrient.value ?? 0
+                    if let existing = baseNutrients[key] {
+                        baseNutrients[key] = RawNutrientValue(value: existing.value + value, unit: existing.unit)
+                    } else {
+                        baseNutrients[key] = RawNutrientValue(value: value, unit: nutrient.unitName)
+                    }
+                }
+            }
+        }
+
+        // Create a Food object representing the whole recipe
+        let food = Food(
+            fdcId: recipe.id,
+            description: recipe.title,
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: nil,
+            numberOfServings: 1.0,
+            servingSizeUnit: nil,
+            householdServingFullText: "1 serving",
+            foodNutrients: [],
+            foodMeasures: []
+        )
+
+        return PlateEntry(
+            food: food,
+            servings: 1.0,
+            selectedMeasureId: nil,
+            availableMeasures: [],
+            baselineGramWeight: 100,
+            baseNutrientValues: baseNutrients,
+            baseMacroTotals: baseMacros,
+            servingDescription: "1 serving",
+            mealItems: [],
+            mealPeriod: mealPeriod,
+            mealTime: Date(),
+            recipeItems: recipe.recipeItems
+        )
     }
 
     // MARK: - Delete Recipe
@@ -176,7 +298,8 @@ struct RecipeView: View {
 
 struct RecipeRow: View {
     let recipe: Recipe
-    var onPlusTapped: (() -> Void)?
+    var onLogTapped: (() -> Void)?
+    var onAddToPlateTapped: (() -> Void)?
 
     var body: some View {
         HStack {
@@ -204,15 +327,24 @@ struct RecipeRow: View {
 
             Spacer()
 
-            // Plus button for quick logging
-            Button {
-                onPlusTapped?()
+            // Menu with Log and Add to Plate options
+            Menu {
+                Button {
+                    onLogTapped?()
+                } label: {
+                    Label("Log", systemImage: "plus.circle")
+                }
+
+                Button {
+                    onAddToPlateTapped?()
+                } label: {
+                    Label("Add to Plate", systemImage: "fork.knife")
+                }
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 22))
                     .foregroundColor(.primary)
             }
-            .buttonStyle(.plain)
         }
     }
 }

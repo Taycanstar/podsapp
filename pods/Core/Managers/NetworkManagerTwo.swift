@@ -2118,6 +2118,9 @@ class NetworkManagerTwo {
             
             do {
                 let decoder = JSONDecoder()
+                // Server responds with snake_case keys (food_log_id, scheduled_at, etc.)
+                // without this, IDs/timestamps decode as nil and replace optimistic logs with *_0 placeholders.
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
                 
                 // Use a more robust custom date decoding strategy
                 decoder.dateDecodingStrategy = .custom { decoder -> Date in

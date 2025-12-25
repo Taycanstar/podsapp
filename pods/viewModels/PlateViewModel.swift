@@ -15,6 +15,9 @@ struct PlateEntry: Identifiable, Equatable {
     let mealPeriod: MealPeriod
     let mealTime: Date
 
+    // Recipe ingredients for "Expand Ingredients" feature
+    let recipeItems: [RecipeFoodItem]
+
     var title: String { food.displayName }
     var brand: String { food.brandText ?? "" }
 

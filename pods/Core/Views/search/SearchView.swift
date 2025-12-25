@@ -664,7 +664,8 @@ struct SearchView: View {
             servingDescription: food.servingSizeText ?? "1 serving",
             mealItems: food.mealItems ?? [],
             mealPeriod: suggestedMealPeriod(for: Date()),
-            mealTime: Date()
+            mealTime: Date(),
+            recipeItems: []
         )
     }
 
