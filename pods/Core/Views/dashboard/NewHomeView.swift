@@ -4999,6 +4999,7 @@ private struct TimelineSectionView: View {
     var onUnsaveLog: ((CombinedLog) -> Void)? = nil
     var isLogSaved: ((CombinedLog) -> Bool)? = nil
     var onLogTap: ((CombinedLog) -> Void)? = nil
+    @EnvironmentObject private var foodManager: FoodManager
 
     var body: some View {
         let rowSpacing: CGFloat = 20
@@ -5034,10 +5035,11 @@ private struct TimelineSectionView: View {
                             .foregroundColor(.secondary)
                             .padding(.top, rowSpacing)
                     } else {
-                        ForEach(events) { event in
+                        ForEach(Array(events.enumerated()), id: \.element.id) { _, event in
                             TimelineEventRow(
                                 event: event,
                                 selectedDate: selectedDate,
+                                coachMessage: coachMessageForEvent(event),
                                 canDelete: event.log.map { canDelete(log: $0) } ?? false,
                                 canToggleSave: event.log.map { canSave(log: $0) } ?? false,
                                 onDelete: onDeleteLog,
@@ -5076,6 +5078,24 @@ private extension TimelineSectionView {
         default:
             return false
         }
+    }
+
+    func coachMessageForEvent(_ event: TimelineEvent) -> CoachMessage? {
+        guard let coachMessage = foodManager.lastCoachMessage else { return nil }
+
+        for log in event.logs {
+            if log.type == .food,
+               let foodLogId = coachMessage.foodLogId,
+               foodLogId == log.foodLogId {
+                return coachMessage
+            }
+            if log.type == .recipe,
+               let recipeLogId = coachMessage.recipeLogId,
+               recipeLogId == log.recipeLogId {
+                return coachMessage
+            }
+        }
+        return nil
     }
 }
 
@@ -5165,6 +5185,7 @@ private struct TimelineSpineOverlay: View {
 private struct TimelineEventRow: View {
     let event: TimelineEvent
     let selectedDate: Date
+    var coachMessage: CoachMessage? = nil
     var canDelete: Bool = false
     var canToggleSave: Bool = false
     var onDelete: ((CombinedLog) -> Void)? = nil
@@ -5212,6 +5233,14 @@ private struct TimelineEventRow: View {
                 HStack(alignment: .top, spacing: 12) {
                     TimelineConnectorSpacer()
                     swipeableCard
+                }
+            }
+
+            if let coachMessage {
+                HStack(alignment: .top, spacing: 12) {
+                    TimelineConnectorSpacer()
+                    TimelineCoachMessageText(message: coachMessage)
+                        .padding(.bottom, 16)
                 }
             }
         }
@@ -5320,6 +5349,17 @@ private struct TimelineEventRow: View {
         } else {
             TimelineEventCard(event: event)
         }
+    }
+}
+
+private struct TimelineCoachMessageText: View {
+    let message: CoachMessage
+
+    var body: some View {
+        Text(message.fullText)
+            .font(.system(size: 15))
+            .foregroundColor(.primary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 

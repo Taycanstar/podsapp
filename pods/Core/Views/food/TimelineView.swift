@@ -100,7 +100,7 @@ struct AppTimelineView: View {
                                                     TimelineLogGroupRow(
                                                         group: group,
                                                         selectedDate: selectedDate,
-                                                        coachMessage: coachMessageForGroup(group, at: groupIndex),
+                                                        coachMessage: coachMessageForGroup(group),
                                                         isThinking: isThinkingForGroup(group, at: groupIndex),
                                                         onCoachEditTap: { coachMessage in
                                                             openAgentChatWithCoachMessage(coachMessage)
@@ -301,10 +301,7 @@ struct AppTimelineView: View {
     }
 
     /// Returns the coach message if this group contains the last food or recipe log and it matches
-    private func coachMessageForGroup(_ group: TimelineLogGroup, at groupIndex: Int) -> CoachMessage? {
-        let isLastGroup = groupIndex == groupedLogs.count - 1
-        guard isLastGroup else { return nil }
-
+    private func coachMessageForGroup(_ group: TimelineLogGroup) -> CoachMessage? {
         guard let coachMessage = foodManager.lastCoachMessage else { return nil }
 
         // Check if any log in the group matches the coach message
@@ -334,7 +331,7 @@ struct AppTimelineView: View {
         let hasFoodOrRecipeLog = group.logs.contains { $0.type == .food || $0.type == .recipe }
         guard hasFoodOrRecipeLog else { return false }
 
-        let hasCoachMessage = coachMessageForGroup(group, at: groupIndex) != nil
+        let hasCoachMessage = coachMessageForGroup(group) != nil
         return foodManager.isAwaitingCoachMessage && !hasCoachMessage
     }
 }

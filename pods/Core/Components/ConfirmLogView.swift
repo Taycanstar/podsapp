@@ -3787,11 +3787,12 @@ struct PlateView: View {
     }
 
     private func logPlate() {
-        guard !viewModel.entries.isEmpty else { return }
+        let entriesToLog = viewModel.entries
+        guard !entriesToLog.isEmpty else { return }
         isLoggingPlate = true
 
         // Capture foods being logged for the callback
-        let foodsToLog = viewModel.entries.map { $0.food }
+        let foodsToLog = entriesToLog.map { $0.food }
 
         // Navigate to timeline immediately
         NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
@@ -3802,36 +3803,35 @@ struct PlateView: View {
         // Notify caller that foods are being logged (for toast/confirmation)
         onPlateLogged?(foodsToLog)
 
-        logEntry(at: 0)
-    }
-
-    private func logEntry(at index: Int) {
-        if index >= viewModel.entries.count {
-            isLoggingPlate = false
-            viewModel.clear()
-            dayLogsVM.loadLogs(for: mealTime, force: true)
-            // View already dismissed optimistically in logPlate()
-            // Only call onFinished callback if provided (for cleanup)
-            onFinished?()
-            return
-        }
-
-        let entry = viewModel.entries[index]
-
-        var food = entry.food
-        food.numberOfServings = entry.servings
-        food.householdServingFullText = entry.currentMeasureLabel
         let mealLabel = selectedMealPeriod.title
+        let logDate = mealTime
+        let batchContext = entriesToLog.count > 1 ? buildBatchContext(from: entriesToLog) : nil
+        let lastIndex = entriesToLog.count - 1
 
-        foodManager.logFood(
-            email: onboardingViewModel.email,
-            food: food,
-            meal: mealLabel,
-            servings: entry.servings,
-            date: mealTime,
-            notes: nil
-        ) { result in
-            DispatchQueue.main.async {
+        let group = DispatchGroup()
+        var pendingLogs: [(index: Int, log: CombinedLog)] = []
+        var firstError: Error?
+
+        for (index, entry) in entriesToLog.enumerated() {
+            group.enter()
+
+            var food = entry.food
+            food.numberOfServings = entry.servings
+            food.householdServingFullText = entry.currentMeasureLabel
+
+            let skipCoach = index != lastIndex
+            let context = index == lastIndex ? batchContext : nil
+
+            foodManager.logFood(
+                email: onboardingViewModel.email,
+                food: food,
+                meal: mealLabel,
+                servings: entry.servings,
+                date: logDate,
+                notes: nil,
+                skipCoach: skipCoach,
+                batchContext: context
+            ) { result in
                 switch result {
                 case .success(let logged):
                     let combined = CombinedLog(
@@ -3845,20 +3845,58 @@ struct PlateView: View {
                         mealLogId: nil,
                         meal: nil,
                         mealTime: mealLabel,
-                        scheduledAt: mealTime,
+                        scheduledAt: logDate,
                         recipeLogId: nil,
                         recipe: nil,
                         servingsConsumed: nil
                     )
-                    dayLogsVM.addPending(combined)
-                    logEntry(at: index + 1)
+                    pendingLogs.append((index: index, log: combined))
                 case .failure(let error):
-                    isLoggingPlate = false
-                    errorMessage = error.localizedDescription
-                    showErrorAlert = true
+                    if firstError == nil {
+                        firstError = error
+                    }
                 }
+                group.leave()
             }
         }
+
+        group.notify(queue: .main) {
+            let orderedLogs = pendingLogs.sorted { $0.index < $1.index }
+            for item in orderedLogs {
+                dayLogsVM.addPending(item.log)
+            }
+
+            if let error = firstError, pendingLogs.isEmpty {
+                isLoggingPlate = false
+                errorMessage = error.localizedDescription
+                showErrorAlert = true
+                return
+            }
+
+            isLoggingPlate = false
+            viewModel.clear()
+            dayLogsVM.loadLogs(for: logDate, force: true)
+            onFinished?()
+        }
+    }
+
+    private func buildBatchContext(from entries: [PlateEntry]) -> [String: Any] {
+        var totalCalories: Double = 0
+        var totalProtein: Double = 0
+
+        for entry in entries {
+            let totals = entry.macroTotals
+            totalCalories += totals.calories
+            totalProtein += totals.protein
+        }
+
+        let foodNames = entries.map { $0.title }
+        return [
+            "total_calories": totalCalories,
+            "total_protein": totalProtein,
+            "item_count": entries.count,
+            "food_names": foodNames
+        ]
     }
 
     private func labeledRow(_ title: String,
