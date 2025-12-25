@@ -310,23 +310,33 @@ struct AppTimelineView: View {
         let isLastGroup = groupIndex == groupedLogs.count - 1
         guard isLastGroup else { return nil }
 
-        guard let coachMessage = foodManager.lastCoachMessage else { return nil }
+        guard let coachMessage = foodManager.lastCoachMessage else {
+            print("[DEBUG] coachMessageForGroup: No lastCoachMessage available")
+            return nil
+        }
+
+        print("[DEBUG] coachMessageForGroup: Looking for match. Coach has foodLogId=\(coachMessage.foodLogId ?? -1), recipeLogId=\(coachMessage.recipeLogId ?? -1)")
 
         // Check if any log in the group matches the coach message
         for log in group.logs {
+            print("[DEBUG] coachMessageForGroup: Checking log type=\(log.type), foodLogId=\(log.foodLogId ?? -1), recipeLogId=\(log.recipeLogId ?? -1)")
+
             // Match food logs
             if log.type == .food,
                let foodLogId = coachMessage.foodLogId,
                foodLogId == log.foodLogId {
+                print("[DEBUG] coachMessageForGroup: ✅ Food log match found!")
                 return coachMessage
             }
             // Match recipe logs
             if log.type == .recipe,
                let recipeLogId = coachMessage.recipeLogId,
                recipeLogId == log.recipeLogId {
+                print("[DEBUG] coachMessageForGroup: ✅ Recipe log match found!")
                 return coachMessage
             }
         }
+        print("[DEBUG] coachMessageForGroup: ❌ No match found in group with \(group.logs.count) logs")
         return nil
     }
 

@@ -25,6 +25,7 @@ struct NewHomeView: View {
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("isAuthenticated") private var isAuthenticated: Bool = false
     @AppStorage(WaterUnit.storageKey) private var storedWaterUnitRawValue: String = WaterUnit.defaultUnit.rawValue
+    @AppStorage("homeInitialLoadDone") private var homeInitialLoadDone: Bool = false
     @ObservedObject private var workoutManager = WorkoutManager.shared
     @ObservedObject private var userProfileService = UserProfileService.shared
     
@@ -648,6 +649,11 @@ private var remainingCal: Double { vm.remainingCalories }
             Text(quickActivityErrorMessage ?? "")
         }
         .onAppear {
+            // Avoid re-fetching when returning to this view in the same app session with data already loaded
+            if homeInitialLoadDone && onboarding.email == vm.email && !vm.logs.isEmpty {
+                return
+            }
+
             guard !hasRunInitialAppear else { return }
             hasRunInitialAppear = true
 
@@ -666,6 +672,7 @@ private var remainingCal: Double { vm.remainingCalories }
             vm.refreshWeeklyNutritionSummaries(endingAt: vm.selectedDate)
             vm.refreshExpenditureData(force: false, historyDays: 30)
             handleHealthMetricsLoadingChange(vm.isLoadingHealthMetrics)
+            homeInitialLoadDone = true
         }
             .onChange(of: onboarding.email) { newEmail in
                 print("🔄 DashboardView - User email changed to: \(newEmail)")
@@ -678,6 +685,7 @@ private var remainingCal: Double { vm.remainingCalories }
                     vm.setEmail(newEmail)
                     vm.logs = [] // Clear existing logs
                     vm.loadLogs(for: vm.selectedDate) // Load logs for new user
+                    homeInitialLoadDone = false
                     
                     // Update UserDefaults
                     UserDefaults.standard.set(newEmail, forKey: "userEmail")

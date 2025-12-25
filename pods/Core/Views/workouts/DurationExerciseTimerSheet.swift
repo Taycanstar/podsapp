@@ -41,6 +41,7 @@ struct DurationExerciseTimerSheet: View {
                 }
             }
             .padding(.horizontal, 12)
+            .padding(.top, 6)
             
             HStack(alignment: .center, spacing: 16) {
                 Text(formatTime(timeRemaining))
