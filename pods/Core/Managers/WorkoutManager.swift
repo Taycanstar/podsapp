@@ -2916,17 +2916,22 @@ class WorkoutManager: ObservableObject {
             muscleGroups = customMuscles
             print("🎯 WorkoutManager: Using CUSTOM muscle selection: \(muscleGroups)")
         } else {
-            // Use schedule-aware + recovery optimization for selection with training split
             let trainingSplit = userProfileService.trainingSplit
-            muscleGroups = recoveryService.getScheduleOptimizedMuscleGroups(targetCount: 4, trainingSplit: trainingSplit)
+            let splitGroups = workoutGenerationService.plannedMuscles(for: trainingSplit)
+            if !splitGroups.isEmpty {
+                muscleGroups = splitGroups
+                print("🧠 WorkoutManager: Using training split muscles (\(trainingSplit.displayName)): \(muscleGroups)")
+            } else {
+                muscleGroups = recoveryService.getScheduleOptimizedMuscleGroups(targetCount: 4, trainingSplit: trainingSplit)
 
-            // FALLBACK: If recovery service returns empty, use default muscles to prevent errors
-            if muscleGroups.isEmpty {
-                print("⚠️ Recovery service returned empty muscles, using fallback for \(trainingSplit.displayName)")
-                muscleGroups = ["Chest", "Back", "Quadriceps", "Shoulders"]
+                // FALLBACK: If recovery service returns empty, use default muscles to prevent errors
+                if muscleGroups.isEmpty {
+                    print("⚠️ Recovery service returned empty muscles, using fallback for \(trainingSplit.displayName)")
+                    muscleGroups = ["Chest", "Back", "Quadriceps", "Shoulders"]
+                }
+
+                print("🧠 WorkoutManager: Using recovery-optimized muscles (\(trainingSplit.displayName)): \(muscleGroups)")
             }
-
-            print("🧠 WorkoutManager: Using split-optimized muscles (\(trainingSplit.displayName)): \(muscleGroups)")
         }
 
         guard !muscleGroups.isEmpty else {

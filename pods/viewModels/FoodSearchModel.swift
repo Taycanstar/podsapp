@@ -1115,9 +1115,10 @@ enum LogType: String, Codable {
     case workout
 }
 
-// MARK: - Coach Message (AI-generated coaching after food log)
+// MARK: - Coach Message (AI-generated coaching after food/recipe log)
 struct CoachMessage: Codable, Equatable {
-    let foodLogId: Int
+    let foodLogId: Int?  // Optional - present for food logs
+    let recipeLogId: Int?  // Optional - present for recipe logs
     let message: String
     // Additional context for edit-to-chat seeding
     let scanMode: String?
@@ -1126,6 +1127,7 @@ struct CoachMessage: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case foodLogId = "food_log_id"
+        case recipeLogId = "recipe_log_id"
         case message
         case scanMode = "scan_mode"
         case todayTotals = "today_totals"
@@ -1134,6 +1136,9 @@ struct CoachMessage: Codable, Equatable {
 
     /// Full text of the coach message (for UI compatibility)
     var fullText: String { message }
+
+    /// Convenience to get the associated log ID (food or recipe)
+    var logId: Int? { foodLogId ?? recipeLogId }
 }
 
 /// Today's totals context from coach message
@@ -1751,7 +1756,8 @@ struct LoggedRecipe: Codable, Identifiable {
     let recipe: RecipeSummary
     let mealTime: String
     let notes: String?
-    
+    var coach: CoachMessage?  // AI coach message (optional)
+
     var id: Int { recipeLogId }
 }
 

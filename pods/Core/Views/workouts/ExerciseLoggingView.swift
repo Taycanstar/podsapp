@@ -468,6 +468,7 @@ struct ExerciseLoggingView: View {
                     }
                 }
             )
+            .id(timerDuration)
         }
         .sheet(isPresented: $showRestTimerSheet) {
             RestTimerSheet(
@@ -1186,11 +1187,15 @@ struct ExerciseLoggingView: View {
             return
         }
 
-        timerDuration = setDuration
-        // Defer presentation until the next run loop so the sheet picks up the updated duration
-        DispatchQueue.main.async {
-            showTimerSheet = true
+        // Persist duration to the active set before presenting
+        if flexibleSets.indices.contains(currentSetIndex) {
+            flexibleSets[currentSetIndex].duration = setDuration
+            flexibleSets[currentSetIndex].durationString = formatDuration(setDuration)
+            saveFlexibleSetsToExercise()
         }
+
+        timerDuration = setDuration
+        showTimerSheet = true
     }
 
     // MARK: - Set Helpers (List Inline)
@@ -2064,10 +2069,7 @@ struct ExerciseLoggingView: View {
     /// Toggle completion state for a set (supports unlogging)
     private func toggleSetCompletion(at setIndex: Int) {
         guard flexibleSets.indices.contains(setIndex) else { return }
-        var set = flexibleSets[setIndex]
-        set.isCompleted.toggle()
-        set.wasLogged = set.isCompleted
-        flexibleSets[setIndex] = set
+        flexibleSets[setIndex].toggleCompletion()
         saveFlexibleSetsToExercise()
         showRIRSection = flexibleSets.allSatisfy { $0.isCompleted }
     }

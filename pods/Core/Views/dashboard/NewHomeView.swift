@@ -21,6 +21,7 @@ struct NewHomeView: View {
     @EnvironmentObject private var mealReminderService: MealReminderService
     @EnvironmentObject private var proFeatureGate: ProFeatureGate
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("isAuthenticated") private var isAuthenticated: Bool = false
     @AppStorage(WaterUnit.storageKey) private var storedWaterUnitRawValue: String = WaterUnit.defaultUnit.rawValue
@@ -68,6 +69,8 @@ struct NewHomeView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
+    private let foregroundRefreshCooldown: TimeInterval = 120
+    @State private var lastForegroundRefresh: Date = .distantPast
 
     // ─── Sort state ─────────────────────────────────────────────────────────
     @State private var nutritionCarouselSelection: Int = 0
@@ -403,6 +406,61 @@ private var remainingCal: Double { vm.remainingCalories }
         }
     }
 
+    private var principalToolbarContent: some View {
+        Group {
+            if isHealthMetricsUpdating {
+                Text(headerTitle)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.primary)
+            } else {
+                HStack(spacing: 8) {
+                    Button {
+                        vm.selectedDate.addDays(-1)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+
+                    Button {
+                        showDatePicker = true
+                    } label: {
+                        Text(headerTitle)
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+
+                    Button {
+                        vm.selectedDate.addDays(+1)
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
+        }
+    }
+
+    private var trailingToolbarContent: some View {
+        HStack(spacing: 16) {
+            Button {
+                showTimelineSheet = true
+            } label: {
+                Image(systemName: "newspaper")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+            }
+
+            Button {
+                showSearchView = true
+            } label: {
+                Image(systemName: "magnifyingglass")
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     // ────────────────────────────────────────────────────────────────────────
     // MARK: -- View body
     // ────────────────────────────────────────────────────────────────────────
@@ -430,58 +488,11 @@ private var remainingCal: Double { vm.remainingCalories }
                 }
 
                 ToolbarItem(placement: .principal) {
-                    if isHealthMetricsUpdating {
-                        Text(headerTitle)
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.primary)
-                    } else {
-                        HStack(spacing: 8) {
-                            Button {
-                                vm.selectedDate.addDays(-1)
-                            } label: {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.primary)
-                            }
-
-                            Button {
-                                showDatePicker = true
-                            } label: {
-                                Text(headerTitle)
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(.primary)
-                            }
-
-                            Button {
-                                vm.selectedDate.addDays(+1)
-                            } label: {
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.primary)
-                            }
-                        }
-                    }
+                    principalToolbarContent
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 16) {
-                        Button {
-                            showTimelineSheet = true
-                        } label: {
-                            Image(systemName: "newspaper")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.primary)
-                        }
-
-                        Button {
-                            showSearchView = true
-                        } label: {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.primary)
-                        }
-                    }
-                    .padding(.horizontal, 6)
+                    trailingToolbarContent
                 }
             }
             .navigationDestination(isPresented: $showTimelineSheet) {
@@ -744,6 +755,11 @@ private var remainingCal: Double { vm.remainingCalories }
             ) { _ in
                 print("📊 Health data available - reloading dashboard")
                 vm.loadLogs(for: vm.selectedDate)
+            }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active {
+                    triggerForegroundRefreshIfNeeded()
+                }
             }
             .onReceive(
                 NotificationCenter.default
@@ -1111,7 +1127,8 @@ private extension NewHomeView {
             onTap: { isAgentInputFocused = false },
             onAppear: { refreshTrainingInsights() },
             workoutManager: workoutManager,
-            refreshTrainingInsights: { refreshTrainingInsights() }
+            refreshTrainingInsights: { refreshTrainingInsights() },
+            onRefresh: { refreshAll(force: true) }
         )
     }
 
@@ -1295,6 +1312,7 @@ private extension NewHomeView {
         let onAppear: () -> Void
         @ObservedObject var workoutManager: WorkoutManager
         let refreshTrainingInsights: () -> Void
+        let onRefresh: () -> Void
 
         var body: some View {
             ScrollView {
@@ -1305,6 +1323,9 @@ private extension NewHomeView {
                 }
             }
             .scrollIndicators(.hidden)
+            .refreshable {
+                onRefresh()
+            }
             .contentShape(Rectangle())
             .onTapGesture(perform: onTap)
             .onAppear(perform: onAppear)
@@ -7343,6 +7364,27 @@ private struct ScheduledLogPreviewCard: View {
                     .foregroundColor(.secondary)
             }
         }
+    }
+
+}
+
+// MARK: - Foreground + Refresh helpers
+extension NewHomeView {
+    fileprivate func refreshAll(force: Bool = true) {
+        vm.loadLogs(for: vm.selectedDate, force: force)
+        vm.refreshHealthMetrics(force: true, targetDate: vm.selectedDate)
+        vm.refreshWeeklyNutritionSummaries(endingAt: vm.selectedDate, force: force)
+        vm.refreshExpenditureData(force: false, historyDays: 30)
+        healthViewModel.reloadHealthData(for: vm.selectedDate)
+    }
+
+    fileprivate func triggerForegroundRefreshIfNeeded() {
+        let now = Date()
+        if now.timeIntervalSince(lastForegroundRefresh) < foregroundRefreshCooldown {
+            return
+        }
+        lastForegroundRefresh = now
+        refreshAll(force: true)
     }
 }
 

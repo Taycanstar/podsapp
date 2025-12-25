@@ -471,6 +471,9 @@ struct WorkoutInProgressView: View {
             },
             onSkip: {
                 skipExercise(exercise: exercise)
+            },
+            onReplace: { updated in
+                replaceExercise(exercise, with: updated)
             }
         )
     }
@@ -545,6 +548,38 @@ struct WorkoutInProgressView: View {
         let managerPaused = workoutManager.isActiveWorkoutPaused
         if managerPaused != isPaused {
             isPaused = managerPaused
+        }
+    }
+
+    private func replaceExercise(_ current: TodayWorkoutExercise, with newExercise: ExerciseData) {
+        if let idx = workout.exercises.firstIndex(where: { $0.exercise.id == current.exercise.id }) {
+            let updated = TodayWorkoutExercise(
+                exercise: newExercise,
+                sets: current.sets,
+                reps: current.reps,
+                weight: current.weight,
+                restTime: current.restTime,
+                notes: current.notes,
+                warmupSets: current.warmupSets,
+                flexibleSets: current.flexibleSets,
+                trackingType: current.trackingType
+            )
+            workout.exercises[idx] = updated
+        }
+
+        if let idx = workoutManager.todayWorkout?.exercises.firstIndex(where: { $0.exercise.id == current.exercise.id }) {
+            let updated = TodayWorkoutExercise(
+                exercise: newExercise,
+                sets: current.sets,
+                reps: current.reps,
+                weight: current.weight,
+                restTime: current.restTime,
+                notes: current.notes,
+                warmupSets: current.warmupSets,
+                flexibleSets: current.flexibleSets,
+                trackingType: current.trackingType
+            )
+            workoutManager.updateExercise(at: idx, with: updated)
         }
     }
     
@@ -718,6 +753,7 @@ struct ExerciseRowInProgress: View {
     let onToggle: () -> Void
     let onExerciseTap: () -> Void
     let onSkip: () -> Void
+    let onReplace: (ExerciseData) -> Void
     @EnvironmentObject var workoutManager: WorkoutManager
     @State private var showHistory = false
     @State private var showReplace = false
@@ -738,7 +774,15 @@ struct ExerciseRowInProgress: View {
         return loggedCount >= exercise.sets
     }
     
-    init(exercise: TodayWorkoutExercise, allExercises: [TodayWorkoutExercise], isCompleted: Bool, loggedSetsCount: Int?, useBackground: Bool = true, onToggle: @escaping () -> Void, onExerciseTap: @escaping () -> Void, onSkip: @escaping () -> Void) {
+    init(exercise: TodayWorkoutExercise,
+         allExercises: [TodayWorkoutExercise],
+         isCompleted: Bool,
+         loggedSetsCount: Int?,
+         useBackground: Bool = true,
+         onToggle: @escaping () -> Void,
+         onExerciseTap: @escaping () -> Void,
+         onSkip: @escaping () -> Void,
+         onReplace: @escaping (ExerciseData) -> Void) {
         self.exercise = exercise
         self.allExercises = allExercises
         self.isCompleted = isCompleted
@@ -747,6 +791,7 @@ struct ExerciseRowInProgress: View {
         self.onToggle = onToggle
         self.onExerciseTap = onExerciseTap
         self.onSkip = onSkip
+        self.onReplace = onReplace
         self._tempExercise = State(initialValue: exercise)
     }
 
@@ -864,21 +909,7 @@ struct ExerciseRowInProgress: View {
             ReplaceExerciseSheet(
                 currentExercise: tempExercise,
                 onExerciseReplaced: { newExercise in
-                    if let idx = exerciseIndexInToday {
-                        // Build updated TodayWorkoutExercise preserving fields
-                        let updated = TodayWorkoutExercise(
-                            exercise: newExercise,
-                            sets: exercise.sets,
-                            reps: exercise.reps,
-                            weight: exercise.weight,
-                            restTime: exercise.restTime,
-                            notes: exercise.notes,
-                            warmupSets: exercise.warmupSets,
-                            flexibleSets: exercise.flexibleSets,
-                            trackingType: exercise.trackingType
-                        )
-                        workoutManager.updateExercise(at: idx, with: updated)
-                    }
+                    onReplace(newExercise)
                 }
             )
         }

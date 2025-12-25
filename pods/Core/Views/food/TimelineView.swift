@@ -23,6 +23,7 @@ struct AppTimelineView: View {
     @State private var showToast = false
     @State private var toastMessage = ""
     @State private var pendingAgentMessage: String?
+    @State private var didTriggerInitialFetch = false
 
     private let dateFormatter: DateFormatter = {
         let df = DateFormatter()
@@ -121,6 +122,11 @@ struct AppTimelineView: View {
                                     }
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 16)
+                                }
+                            }
+                            .refreshable {
+                                await MainActor.run {
+                                    dayLogsVM.loadLogs(for: selectedDate, force: true)
                                 }
                             }
 
@@ -222,7 +228,11 @@ struct AppTimelineView: View {
         }
         .onAppear {
             selectedDate = dayLogsVM.selectedDate
-            dayLogsVM.loadLogs(for: selectedDate, force: true)
+            guard !didTriggerInitialFetch else { return }
+            didTriggerInitialFetch = true
+            if filteredLogs.isEmpty {
+                dayLogsVM.loadLogs(for: selectedDate, force: true)
+            }
         }
         .onChange(of: selectedDate) { _, newValue in
             dayLogsVM.loadLogs(for: newValue, force: true)
@@ -295,16 +305,25 @@ struct AppTimelineView: View {
         return selectedDate
     }
 
-    /// Returns the coach message if this group contains the last food log and it matches
+    /// Returns the coach message if this group contains the last food or recipe log and it matches
     private func coachMessageForGroup(_ group: TimelineLogGroup, at groupIndex: Int) -> CoachMessage? {
         let isLastGroup = groupIndex == groupedLogs.count - 1
         guard isLastGroup else { return nil }
 
+        guard let coachMessage = foodManager.lastCoachMessage else { return nil }
+
         // Check if any log in the group matches the coach message
         for log in group.logs {
+            // Match food logs
             if log.type == .food,
-               let coachMessage = foodManager.lastCoachMessage,
-               coachMessage.foodLogId == log.foodLogId {
+               let foodLogId = coachMessage.foodLogId,
+               foodLogId == log.foodLogId {
+                return coachMessage
+            }
+            // Match recipe logs
+            if log.type == .recipe,
+               let recipeLogId = coachMessage.recipeLogId,
+               recipeLogId == log.recipeLogId {
                 return coachMessage
             }
         }
@@ -316,9 +335,9 @@ struct AppTimelineView: View {
         let isLastGroup = groupIndex == groupedLogs.count - 1
         guard isLastGroup else { return false }
 
-        // Check if any log in the group is a food log
-        let hasFoodLog = group.logs.contains { $0.type == .food }
-        guard hasFoodLog else { return false }
+        // Check if any log in the group is a food or recipe log
+        let hasFoodOrRecipeLog = group.logs.contains { $0.type == .food || $0.type == .recipe }
+        guard hasFoodOrRecipeLog else { return false }
 
         let hasCoachMessage = coachMessageForGroup(group, at: groupIndex) != nil
         return foodManager.isAwaitingCoachMessage && !hasCoachMessage

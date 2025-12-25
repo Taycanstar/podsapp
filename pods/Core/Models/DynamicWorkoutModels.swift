@@ -905,6 +905,11 @@ struct FlexibleSetData: Identifiable, Codable, Hashable {
             self.duration = nil
         }
     }
+
+    mutating func toggleCompletion() {
+        isCompleted.toggle()
+        wasLogged = isCompleted
+    }
     
     /// Returns a user-friendly display string for this set
     var displayValue: String {

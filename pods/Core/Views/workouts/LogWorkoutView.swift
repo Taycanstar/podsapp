@@ -1396,92 +1396,86 @@ private struct TodayWorkoutView: View {
     }
 
     var body: some View {
-        Group {
-            // Show workout content (generation is handled at parent level)
-            if let workout = workoutToShow {
-                VStack(spacing: 12) {
-                    // Session phase header for dynamic workouts
-                    if let dynamicParams = workoutManager.dynamicParameters, showSessionPhaseCard {
-                        DynamicSessionPhaseView(
-                            sessionPhase: dynamicParams.sessionPhase,
-                            workoutCount: calculateWorkoutCountInPhase()
-                        )
-                        .padding(.horizontal)
+        content
+            .background(Color("primarybg").ignoresSafeArea(edges: [.top, .horizontal]))
+            .overlay(alignment: .bottom) {
+                if let workout = workoutManager.todayWorkout {
+                    HStack {
+                        Button(action: { onStartWorkout(workout) }) {
+                            Text("Start Workout")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
                     }
-
-                    // Exercises list with swipe actions
-                    TodayWorkoutExerciseList(
-                        workout: workout,
-                        navigationPath: $navigationPath,
-                        onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
-                        onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
-                        showAddExerciseSheet: $showAddExerciseSheet,
-                        onPresentLogSheet: onPresentLogSheet,
-                        onRefresh: onRefresh,
-                        onRenameWorkout: onRenameWorkout,
-                        onSaveWorkout: onSaveWorkout,
-                        canShowSupersetMenu: canShowSupersetMenu,
-                        onShowSuperset: onShowSuperset
-                    )
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
                 }
-            } else {
-                // Empty state when no workout and not generating
-                WorkoutSkeletonPlaceholderView()
-                    .padding(.top, 32)
-
-                Spacer()
             }
-        }
-        // Paint background without bottom safe area spacing
-        .background(Color("primarybg").ignoresSafeArea(edges: [.top, .horizontal]))
-        .overlay(alignment: .bottom) {
-            if let workout = workoutManager.todayWorkout {
-                HStack {
-                    Button(action: { onStartWorkout(workout) }) {
-                        Text("Start Workout")
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
+            .ignoresSafeArea(edges: .bottom)
+            .onAppear {
+                loadOrGenerateTodayWorkout()
+            }
+            .onChange(of: shouldRegenerate) { _, newValue in
+                if newValue {
+                    requestTodayWorkoutGeneration()
+                    shouldRegenerate = false
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 20)
             }
-        }
-        // Remove bottom safe-area reservation; we handle spacing ourselves
-        .ignoresSafeArea(edges: .bottom)
-        .onAppear {
-            loadOrGenerateTodayWorkout()
-        }
-        .onChange(of: shouldRegenerate) { _, newValue in
-            if newValue {
-                // Reset the flag and regenerate workout
+            .onChange(of: selectedDuration) { _, newDuration in
+                print("🔄 Duration changed to \(newDuration.minutes) minutes - regenerating workout")
                 requestTodayWorkoutGeneration()
-                shouldRegenerate = false
             }
-        }
-        .onChange(of: selectedDuration) { _, newDuration in
-            // Regenerate workout when duration changes (ensures fresh data)
-            print("🔄 Duration changed to \(newDuration.minutes) minutes - regenerating workout")
-            requestTodayWorkoutGeneration()
-        }
-        .onChange(of: customTargetMuscles) { _, newMuscles in
-            print("🎯 Custom muscles changed to: \(newMuscles?.description ?? "nil") - regenerating workout")
-            requestTodayWorkoutGeneration()
-        }
-        .onChange(of: effectiveFlexibilityPreferences) { _, newPreferences in
-            print("🧘 Flexibility preferences changed to: warmUp=\(newPreferences.warmUpEnabled), coolDown=\(newPreferences.coolDownEnabled) - regenerating workout")
-            requestTodayWorkoutGeneration()
-        }
-        .onChange(of: customEquipment) { _, newEquipment in
-            print("⚙️ Custom equipment changed to: \(newEquipment?.description ?? "nil") - regenerating workout") 
-            requestTodayWorkoutGeneration()
-        }
-        .onChange(of: effectiveFitnessGoal) { _, newGoal in
-            print("🏋️ Fitness goal changed to: \(newGoal.displayName) - regenerating workout")
-            requestTodayWorkoutGeneration()
-        }
-        .onChange(of: effectiveFitnessLevel) { _, newLevel in
-            print("📈 Fitness level changed to: \(newLevel.displayName) - regenerating workout")
-            requestTodayWorkoutGeneration()
+            .onChange(of: customTargetMuscles) { _, newMuscles in
+                print("🎯 Custom muscles changed to: \(newMuscles?.description ?? "nil") - regenerating workout")
+                requestTodayWorkoutGeneration()
+            }
+            .onChange(of: effectiveFlexibilityPreferences) { _, newPreferences in
+                print("🧘 Flexibility preferences changed to: warmUp=\(newPreferences.warmUpEnabled), coolDown=\(newPreferences.coolDownEnabled) - regenerating workout")
+                requestTodayWorkoutGeneration()
+            }
+            .onChange(of: customEquipment) { _, newEquipment in
+                print("⚙️ Custom equipment changed to: \(newEquipment?.description ?? "nil") - regenerating workout") 
+                requestTodayWorkoutGeneration()
+            }
+            .onChange(of: effectiveFitnessGoal) { _, newGoal in
+                print("🏋️ Fitness goal changed to: \(newGoal.displayName) - regenerating workout")
+                requestTodayWorkoutGeneration()
+            }
+            .onChange(of: effectiveFitnessLevel) { _, newLevel in
+                print("📈 Fitness level changed to: \(newLevel.displayName) - regenerating workout")
+                requestTodayWorkoutGeneration()
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let workout = workoutToShow {
+            VStack(spacing: 12) {
+                if let dynamicParams = workoutManager.dynamicParameters, showSessionPhaseCard {
+                    DynamicSessionPhaseView(
+                        sessionPhase: dynamicParams.sessionPhase,
+                        workoutCount: calculateWorkoutCountInPhase()
+                    )
+                    .padding(.horizontal)
+                }
+
+                TodayWorkoutExerciseList(
+                    workout: workout,
+                    navigationPath: $navigationPath,
+                    onExerciseReplacementCallbackSet: onExerciseReplacementCallbackSet,
+                    onExerciseUpdateCallbackSet: onExerciseUpdateCallbackSet,
+                    showAddExerciseSheet: $showAddExerciseSheet,
+                    onPresentLogSheet: onPresentLogSheet,
+                    onRefresh: onRefresh,
+                    onRenameWorkout: onRenameWorkout,
+                    onSaveWorkout: onSaveWorkout,
+                    canShowSupersetMenu: canShowSupersetMenu,
+                    onShowSuperset: onShowSuperset
+                )
+            }
+        } else {
+            WorkoutSkeletonPlaceholderView()
+                .padding(.top, 32)
+            Spacer()
         }
     }
 
@@ -3216,9 +3210,9 @@ private extension View {
         let onExerciseUpdateCallbackSet: (((Int, TodayWorkoutExercise) -> Void)?) -> Void
         @EnvironmentObject var workoutManager: WorkoutManager
         @State private var exercises: [TodayWorkoutExercise]
-        @State private var warmUpExpanded: Bool = true
-        @State private var coolDownExpanded: Bool = true
-        @State private var editMode: EditMode = .active
+    @State private var warmUpExpanded: Bool = true
+    @State private var coolDownExpanded: Bool = true
+    @State private var showingReorderSheet = false
         @Binding var showAddExerciseSheet: Bool
         let onPresentLogSheet: (LogExerciseSheetContext) -> Void
         let onRefresh: () -> Void
@@ -3235,9 +3229,9 @@ private extension View {
              onPresentLogSheet: @escaping (LogExerciseSheetContext) -> Void,
              onRefresh: @escaping () -> Void,
              onRenameWorkout: @escaping () -> Void,
-             onSaveWorkout: @escaping () -> Void,
-             canShowSupersetMenu: Bool,
-             onShowSuperset: @escaping () -> Void) {
+            onSaveWorkout: @escaping () -> Void,
+            canShowSupersetMenu: Bool,
+            onShowSuperset: @escaping () -> Void) {
             self.workout = workout
             self._navigationPath = navigationPath
             self.onExerciseReplacementCallbackSet = onExerciseReplacementCallbackSet
@@ -3280,15 +3274,19 @@ private extension View {
                             Label("Rename Workout", systemImage: "pencil")
                         }
 
-                        Button(action: onSaveWorkout) {
-                            Label("Save Workout", systemImage: "bookmark")
-                        }
+                    Button(action: onSaveWorkout) {
+                        Label("Save Workout", systemImage: "bookmark")
+                    }
 
-                        if canShowSupersetMenu {
-                            Button(action: onShowSuperset) {
-                                Label("Build superset/circuit", systemImage: "arrow.left.arrow.right")
-                            }
+                    Button(action: { showingReorderSheet = true }) {
+                        Label("Reorder Exercises", systemImage: "arrow.up.arrow.down")
+                    }
+
+                    if canShowSupersetMenu {
+                        Button(action: onShowSuperset) {
+                            Label("Build superset/circuit", systemImage: "arrow.left.arrow.right")
                         }
+                    }
                     } label: {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 16, weight: .semibold))
@@ -3336,11 +3334,13 @@ private extension View {
             addExerciseSection
         }
         .listStyle(PlainListStyle())
-        .environment(\.editMode, $editMode) // Keep drag handles available for reordering
         .scrollIndicators(.hidden)
         .scrollContentBackground(.hidden)
         .background(Color("primarybg"))
         .cornerRadius(24)
+        .sheet(isPresented: $showingReorderSheet) {
+            reorderSheet
+        }
         .onAppear {
             // Register callbacks once
             onExerciseReplacementCallbackSet { index, newExercise in
@@ -3444,7 +3444,6 @@ private extension View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
-                .onMove(perform: moveMainExercises)
             }
             .listSectionSeparator(.hidden)
         } else {
@@ -3456,6 +3455,26 @@ private extension View {
     private func moveMainExercises(from offsets: IndexSet, to destination: Int) {
         exercises.move(fromOffsets: offsets, toOffset: destination)
         workoutManager.reorderMainExercises(fromOffsets: offsets, toOffset: destination)
+    }
+
+    @ViewBuilder
+    private var reorderSheet: some View {
+        NavigationStack {
+            List {
+                ForEach(Array(exercises.enumerated()), id: \.element.exercise.id) { _, exercise in
+                    Text(exercise.exercise.name)
+                        .padding(.vertical, 8)
+                }
+                .onMove(perform: moveMainExercises)
+            }
+            .environment(\.editMode, .constant(.active))
+            .navigationTitle("Reorder Exercises")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { showingReorderSheet = false }
+                }
+            }
+        }
     }
 
     @ViewBuilder

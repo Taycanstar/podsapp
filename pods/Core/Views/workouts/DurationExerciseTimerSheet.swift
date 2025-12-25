@@ -24,94 +24,61 @@ struct DurationExerciseTimerSheet: View {
         self.exerciseName = exerciseName
         self.duration = duration
         self.onTimerComplete = onTimerComplete
-        self._timeRemaining = State(initialValue: duration) // Initialize immediately - no 0:00
+        self._timeRemaining = State(initialValue: duration) // Initialize immediately
     }
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Header with dismiss button and exercise name
-                headerView
-                
-                // Main timer display area
-                VStack(spacing: 12) {
-                    HStack(alignment: .center, spacing: 16) {
-                        Text(formatTime(timeRemaining))
-                            .font(.system(size: 64, weight: .bold, design: .rounded))
-                            .foregroundColor(.primary)
-                            .scaleEffect(showingCompletionAnimation ? 1.08 : 1.0)
-                            .animation(.easeInOut(duration: 0.3), value: showingCompletionAnimation)
-                            .minimumScaleFactor(0.6)
-
-                        Spacer()
-
-                        Button(action: toggleTimer) {
-                            Image(systemName: isRunning ? "pause.fill" : "play.fill")
-                                .font(.system(size: 26, weight: .bold))
-                                .foregroundColor(.white)
-                                .frame(width: 60, height: 60)
-                                .background(Color.orange)
-                                .clipShape(Circle())
-                                .shadow(color: .orange.opacity(0.2), radius: 8, x: 0, y: 4)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 18)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .fill(Color(.secondarySystemBackground))
-                    )
-                    .padding(.horizontal, 16)
+        VStack(spacing: 16) {
+            HStack {
+                Spacer()
+                Button {
+                    stopTimer()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .padding(8)
                 }
-                .frame(maxHeight: .infinity)
-                .padding(.top, 12)
+            }
+            .padding(.horizontal, 12)
+            
+            HStack(alignment: .center, spacing: 16) {
+                Text(formatTime(timeRemaining))
+                    .font(.system(size: 64, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                    .scaleEffect(showingCompletionAnimation ? 1.08 : 1.0)
+                    .animation(.easeInOut(duration: 0.3), value: showingCompletionAnimation)
+                    .minimumScaleFactor(0.6)
 
+                Spacer()
+
+                Button(action: toggleTimer) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.orange)
+                            .frame(width: 60, height: 60)
+                        Image(systemName: isRunning ? "pause.fill" : "play.fill")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+                .buttonStyle(.plain)
             }
-            .background(Color(.systemBackground))
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(Color(.systemBackground))
+            )
+            .padding(.horizontal, 16)
+            
+            Spacer()
         }
-        .presentationDetents([.height(260)])
+        .presentationDetents([.height(170)])
         .presentationDragIndicator(.visible)
-  
         .onAppear {
-            startTimer() // Start immediately with correct duration
+            startTimer()
         }
-    }
-    
-    // MARK: - Header View
-    
-    private var headerView: some View {
-        HStack {
-            // Dismiss button (X mark)
-            Button(action: {
-                stopTimer()
-            }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .frame(width: 24, height: 24)
-            }
-            .padding(.leading, 20)
-            
-            Spacer()
-            
-            // Exercise name
-            Text(exerciseName)
-                .font(.system(size: 17, weight: .medium))
-                .foregroundColor(.primary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            
-            Spacer()
-            
-            // Invisible spacer for symmetry
-            Color.clear
-                .frame(width: 24, height: 24)
-                .padding(.trailing, 20)
-        }
-        .padding(.vertical, 12)
-        .background(Color(.systemBackground))
     }
     
     // MARK: - Simple Timer Actions

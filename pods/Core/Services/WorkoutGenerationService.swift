@@ -42,7 +42,7 @@ class WorkoutGenerationService {
             throw WorkoutGenerationError.noUserEmail
         }
 
-        let optimalExerciseCount = recommendationService.getOptimalExerciseCount(
+        var optimalExerciseCount = recommendationService.getOptimalExerciseCount(
             duration: targetDuration,
             fitnessGoal: fitnessGoal,
             muscleGroupCount: muscleGroups.count,
@@ -50,6 +50,13 @@ class WorkoutGenerationService {
             equipment: customEquipment,
             flexibilityPreferences: flexibilityPreferences
         )
+
+        if targetDuration.minutes >= 50 {
+            optimalExerciseCount = (
+                total: max(optimalExerciseCount.total, 6),
+                perMuscle: max(optimalExerciseCount.perMuscle, 2)
+            )
+        }
 
         let sessionBudget = TimeEstimator.shared.makeSessionBudget(
             duration: targetDuration,
@@ -376,6 +383,44 @@ class WorkoutGenerationService {
         return exerciseCache[id]
     }
 
+    // MARK: - Split planning helpers
+
+    func plannedMuscles(for split: TrainingSplitPreference, on date: Date = Date()) -> [String] {
+        let dayIndex = Calendar.current.component(.weekday, from: date) % 7
+        switch split {
+        case .pushPullLower:
+            switch dayIndex % 3 {
+            case 0: return ["Chest", "Shoulders", "Triceps"]
+            case 1: return ["Back", "Biceps"]
+            default: return ["Quadriceps", "Hamstrings", "Glutes", "Calves"]
+            }
+        case .pushPull:
+            switch dayIndex % 2 {
+            case 0: return ["Chest", "Shoulders", "Triceps"]
+            default: return ["Back", "Biceps", "Trapezius"]
+            }
+        default:
+            return []
+        }
+    }
+
+    func prioritizeHypertrophyExercises(_ exercises: [ExerciseData], fitnessGoal: FitnessGoal, customEquipment: [Equipment]?) -> [ExerciseData] {
+        guard fitnessGoal == .hypertrophy else { return exercises }
+        let hasLoadableEquipment = customEquipment?.contains(where: { $0 != .resistanceBands && $0 != .bodyWeight }) ?? true
+        guard hasLoadableEquipment else { return exercises }
+
+        func isBand(_ ex: ExerciseData) -> Bool {
+            ex.equipment.lowercased().contains("band")
+        }
+
+        return exercises.sorted { lhs, rhs in
+            let lBand = isBand(lhs)
+            let rBand = isBand(rhs)
+            if lBand == rBand { return lhs.id < rhs.id }
+            return !lBand && rBand
+        }
+    }
+
     // MARK: - Optimized Exercise Generation (No More Iterative Testing)
     
     /// Generate exercises respecting total time budget with smart distribution
@@ -416,7 +461,7 @@ class WorkoutGenerationService {
 
             print("🎯 \(muscle): recovery \(Int(recoveryPercentage))% → requesting \(plannedCount) exercises")
 
-            let recommended = recommendationService.getDurationOptimizedExercises(
+            var recommended = recommendationService.getDurationOptimizedExercises(
                 for: muscle,
                 count: plannedCount,
                 duration: targetDuration,
@@ -424,6 +469,7 @@ class WorkoutGenerationService {
                 customEquipment: customEquipment,
                 flexibilityPreferences: flexibilityPreferences
             )
+            recommended = prioritizeHypertrophyExercises(recommended, fitnessGoal: fitnessGoal, customEquipment: customEquipment)
 
             print("🎯 \(muscle): requested \(plannedCount), got \(recommended.count) exercises")
 
@@ -478,7 +524,7 @@ class WorkoutGenerationService {
                 let muscle = allocation.muscle
                 let recoveryPercentage = allocation.recovery
 
-                let supplemental = recommendationService.getDurationOptimizedExercises(
+                var supplemental = recommendationService.getDurationOptimizedExercises(
                     for: muscle,
                     count: remainingNeeded,
                     duration: targetDuration,
@@ -486,6 +532,7 @@ class WorkoutGenerationService {
                     customEquipment: customEquipment,
                     flexibilityPreferences: flexibilityPreferences
                 )
+                supplemental = prioritizeHypertrophyExercises(supplemental, fitnessGoal: fitnessGoal, customEquipment: customEquipment)
 
                 for exercise in supplemental where !usedIds.contains(exercise.id) {
                     let built = makeWorkoutExercise(
@@ -540,7 +587,7 @@ class WorkoutGenerationService {
                 var remaining = totalExercises - exercises.count
                 guard remaining > 0, !sessionBudget.isOutOfTime else { break }
 
-                let fallbackExercises = recommendationService.getDurationOptimizedExercises(
+                var fallbackExercises = recommendationService.getDurationOptimizedExercises(
                     for: muscleName,
                     count: remaining,
                     duration: targetDuration,
@@ -548,6 +595,7 @@ class WorkoutGenerationService {
                     customEquipment: customEquipment,
                     flexibilityPreferences: flexibilityPreferences
                 )
+                fallbackExercises = prioritizeHypertrophyExercises(fallbackExercises, fitnessGoal: fitnessGoal, customEquipment: customEquipment)
 
                 if fallbackExercises.isEmpty {
                     continue

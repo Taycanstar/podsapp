@@ -2623,7 +2623,11 @@ func logRecipe(
     statusCompletion: ((Bool) -> Void)? = nil
 ) {
     guard let email = userEmail else { return }
-    
+
+    // Set awaiting coach message state
+    self.isAwaitingCoachMessage = true
+    self.lastCoachMessage = nil  // Clear previous coach message
+
     networkManager.logRecipe(
         userEmail: email,
         recipeId: recipe.id,
@@ -2634,27 +2638,35 @@ func logRecipe(
     ) { [weak self] result in
         DispatchQueue.main.async {
             guard let self = self else { return }
-            
+
             switch result {
             case .success(let recipeLog):
-       
-                
+                print("✅ Successfully logged recipe with recipeLogId: \(recipeLog.recipeLogId)")
+
+                // Stop awaiting and store coach message if present
+                self.isAwaitingCoachMessage = false
+                if let coachMessage = recipeLog.coach {
+                    self.lastCoachMessage = coachMessage
+                    print("📝 Coach message received for recipe log")
+                }
+
                 // Update last logged recipe ID for UI feedback
                 self.lastLoggedRecipeId = recipe.id
-                
+
                 // Set data for success toast in dashboard
                 self.lastLoggedItem = (name: recipe.title, calories: calories)
                 self.showLogSuccess = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                     self.showLogSuccess = false
                 }
-                
+
                 // Call completion handlers
                 completion?(.success(recipeLog))
                 statusCompletion?(true)
-                
+
             case .failure(let error):
                 print("❌ Error logging recipe: \(error.localizedDescription)")
+                self.isAwaitingCoachMessage = false  // Stop awaiting on error
                 completion?(.failure(error))
                 statusCompletion?(false)
             }
