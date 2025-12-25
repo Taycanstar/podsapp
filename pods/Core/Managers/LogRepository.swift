@@ -77,4 +77,13 @@ final class LogRepository {
             }
         }
     }
+
+    func explodeRecipeLog(userEmail: String, recipeLogId: Int, completion: @escaping (Result<ExplodeRecipeLogResponse, Error>) -> Void) {
+        print("📡 LogRepository: explodeRecipeLog called with recipeLogId: \(recipeLogId)")
+        api.explodeRecipeLog(userEmail: userEmail, recipeLogId: recipeLogId) { result in
+            DispatchQueue.main.async {
+                completion(result)
+            }
+        }
+    }
 }

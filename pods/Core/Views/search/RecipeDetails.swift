@@ -26,7 +26,9 @@ struct RecipeDetails: View {
     @State private var showEditSheet = false
     @State private var showDuplicateSheet = false
     @State private var showDeleteConfirmation = false
+    @State private var showExplodeConfirmation = false
     @State private var isDuplicating = false
+    @State private var isExploding = false
 
     /// The recipe to display - uses updated recipe if available
     private var activeRecipe: Recipe {
@@ -185,6 +187,12 @@ struct RecipeDetails: View {
                             Label("Duplicate", systemImage: "doc.on.doc")
                         }
 
+                        Button {
+                            showExplodeConfirmation = true
+                        } label: {
+                            Label("Explode", systemImage: "arrow.up.right.and.arrow.down.left.rectangle")
+                        }
+
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
                         } label: {
@@ -205,6 +213,14 @@ struct RecipeDetails: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This action cannot be undone.")
+        }
+        .confirmationDialog("Explode Recipe?", isPresented: $showExplodeConfirmation) {
+            Button("Explode") {
+                logAsIngredients()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will log each ingredient as a separate food entry. The recipe itself will not be logged.")
         }
         .sheet(isPresented: $showEditSheet) {
             EditRecipeSheet(recipe: activeRecipe) { updatedRecipe in
@@ -228,11 +244,11 @@ struct RecipeDetails: View {
             }
         }
         .overlay {
-            if isDuplicating {
+            if isDuplicating || isExploding {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
                     .overlay {
-                        ProgressView("Duplicating recipe...")
+                        ProgressView(isExploding ? "Logging ingredients..." : "Duplicating recipe...")
                             .padding()
                             .background(Color("iosnp"))
                             .cornerRadius(12)
@@ -317,6 +333,72 @@ struct RecipeDetails: View {
             case .failure(let error):
                 print("Failed to duplicate recipe: \(error.localizedDescription)")
             }
+        }
+    }
+
+    /// Log each ingredient of the recipe as a separate food entry
+    private func logAsIngredients() {
+        guard !activeRecipe.recipeItems.isEmpty else {
+            print("No ingredients to log")
+            return
+        }
+
+        isExploding = true
+
+        // Create a dispatch group to wait for all log operations
+        let group = DispatchGroup()
+        var successCount = 0
+        let now = Date()
+        let mealType = determineMealType(for: now)
+
+        for item in activeRecipe.recipeItems {
+            group.enter()
+
+            // Build a Food object from the recipe item
+            let food = Food(
+                fdcId: item.foodId,
+                description: item.name,
+                brandOwner: nil,
+                brandName: nil,
+                servingSize: nil,
+                numberOfServings: Double(item.servings) ?? 1.0,
+                servingSizeUnit: nil,
+                householdServingFullText: item.servingText,
+                foodNutrients: item.foodNutrients ?? [],
+                foodMeasures: []
+            )
+
+            foodManager.logFood(
+                email: viewModel.email,
+                food: food,
+                meal: mealType,
+                servings: Double(item.servings) ?? 1.0,
+                date: now,
+                notes: "From recipe: \(activeRecipe.title)"
+            ) { result in
+                if case .success = result {
+                    successCount += 1
+                }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) {
+            self.isExploding = false
+            print("Logged \(successCount)/\(self.activeRecipe.recipeItems.count) ingredients")
+            // Refresh the day logs
+            self.dayLogsVM.loadLogs(for: now, force: true)
+        }
+    }
+
+    /// Determine the appropriate meal type based on the time of day
+    private func determineMealType(for date: Date) -> String {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 5..<11: return "Breakfast"
+        case 11..<14: return "Lunch"
+        case 14..<17: return "Snack"
+        default: return "Dinner"
         }
     }
 

@@ -32,6 +32,7 @@ struct FoodLogAgentView: View {
     @State private var streamingText: String = ""
     @State private var streamingMessageId: UUID?
     @State private var streamingToken: UUID?
+    @State private var currentStreamTask: URLSessionDataTask?
 @State private var shimmerActive = false
 @FocusState private var isInputFocused: Bool
 @FocusState private var isUserMessageEditorFocused: Bool
@@ -387,7 +388,7 @@ struct FoodLogAgentView: View {
 
         // Use the streaming orchestrator endpoint - AI decides when to call log_food tool
         // Text streams in token by token like voice mode
-        foodManager.foodChatWithOrchestratorStream(
+        currentStreamTask = foodManager.foodChatWithOrchestratorStream(
             message: prompt,
             history: conversationHistory,
             onDelta: { delta in
@@ -408,6 +409,7 @@ struct FoodLogAgentView: View {
             },
             onComplete: { result in
                 isLoading = false
+                currentStreamTask = nil
                 // Remove status message if still present
                 messages.removeAll { $0.id == statusMessageId }
                 if activeStatusMessageId == statusMessageId {
@@ -425,6 +427,16 @@ struct FoodLogAgentView: View {
                     // The streaming message already has the text, just needs action icons (handled by clearing streamingMessageId)
                     handleOrchestratorResponse(response, existingMessageId: completedMessageId)
                 case .failure(let error):
+                    // Check if this was a cancellation - if so, silently ignore
+                    let nsError = error as NSError
+                    if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                        // User cancelled - no error message needed
+                        if let msgId = completedMessageId {
+                            messages.removeAll { $0.id == msgId }
+                        }
+                        return
+                    }
+
                     pendingClarificationQuestion = nil
                     // Remove streaming message on error and show error
                     if let msgId = completedMessageId {
@@ -852,6 +864,10 @@ struct FoodLogAgentView: View {
     }
 
     private func stopStreamingResponse() {
+        // Cancel the network task first
+        currentStreamTask?.cancel()
+        currentStreamTask = nil
+
         if let token = streamingToken {
             foodManager.cancelStream(token: token)
         }

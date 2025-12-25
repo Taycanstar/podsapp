@@ -22,25 +22,38 @@ struct DashboardContainer: View {
     @State private var showDashboard = true
 
     // User Info for ChatsView
-    @State private var userInitial: String = ""
     @State private var userDisplayName: String = ""
-    @State private var shouldShowProfileBorder: Bool = false
+
+    // Conversation selection state
+    // Note: Using String? instead of AgentConversation? to avoid SwiftUI type complexity
+    // that causes stack overflow during type metadata resolution
+    @State private var selectedConversationId: String?
+    @State private var showAgentChat = false
+
+    // New conversation info for immediate UI update (id, title)
+    @State private var newConversationId: String?
+    @State private var newConversationTitle: String?
 
     // Environment objects
     @EnvironmentObject var onboarding: OnboardingViewModel
     @EnvironmentObject var subscriptionManager: SubscriptionManager
+    @EnvironmentObject var dayLogsVM: DayLogsViewModel
+    @EnvironmentObject var foodManager: FoodManager
 
     var body: some View {
         NavigationView {
             ChatsView(
-                initial: userInitial,
                 name: userDisplayName,
-                showsBorder: shouldShowProfileBorder,
                 onNavigateToDashboard: {
                     showDashboard = true
-                }
+                },
+                onSelectConversationId: { conversationId in
+                    selectedConversationId = conversationId
+                    showAgentChat = true
+                },
+                newConversationId: $newConversationId,
+                newConversationTitle: $newConversationTitle
             )
-            .navigationBarHidden(true)
             .background(
                 NavigationLink(
                     destination: NewHomeView(
@@ -78,6 +91,18 @@ struct DashboardContainer: View {
         .onChange(of: subscriptionManager.subscriptionInfo?.status) { _, _ in
             setupUserInfo()
         }
+        .sheet(isPresented: $showAgentChat) {
+            AgentChatView(
+                conversationIdToLoad: selectedConversationId,
+                onNewConversationCreated: { id, title in
+                    newConversationId = id
+                    newConversationTitle = title
+                }
+            )
+            .environmentObject(dayLogsVM)
+            .environmentObject(foodManager)
+            .environmentObject(onboarding)
+        }
     }
 
     private func setupUserInfo() {
@@ -87,15 +112,5 @@ struct DashboardContainer: View {
         } else {
             userDisplayName = UserDefaults.standard.string(forKey: "userName") ?? "User"
         }
-
-        // Get user initial from UserDefaults or derive from name
-        if let storedInitial = UserDefaults.standard.string(forKey: "profileInitial"), !storedInitial.isEmpty {
-            userInitial = String(storedInitial.prefix(1)).uppercased()
-        } else {
-            userInitial = String(userDisplayName.prefix(1)).uppercased()
-        }
-
-        // Check if user has active subscription from SubscriptionManager
-        shouldShowProfileBorder = subscriptionManager.subscriptionInfo?.status == "active"
     }
 }

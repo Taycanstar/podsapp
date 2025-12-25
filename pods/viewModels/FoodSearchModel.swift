@@ -890,6 +890,13 @@ struct UpdateMealLogResponse: Codable {
     var meal_log: UpdatedMealLog
 }
 
+/// Response from exploding a recipe log into individual food logs
+struct ExplodeRecipeLogResponse: Codable {
+    let success: Bool
+    let createdLogs: [CombinedLog]
+    let deletedRecipeLogId: Int
+}
+
 // Add this struct to your models
 struct FoodLogsResponse: Codable {
     let foodLogs: [LoggedFood]
@@ -1623,14 +1630,6 @@ struct RecipeFoodItem: Codable, Identifiable {
     let foodNutrients: [Nutrient]?
 
     var id: Int { foodId }
-
-    enum CodingKeys: String, CodingKey {
-        case foodId = "food_id"
-        case externalId = "external_id"
-        case name, servings, notes, calories, protein, carbs, fat
-        case servingText = "serving_text"
-        case foodNutrients  // Backend sends camelCase "foodNutrients"
-    }
 }
 
 // Full Recipe struct (similar to Meal)
@@ -1662,20 +1661,6 @@ struct Recipe: Codable, Identifiable, Hashable {
     let totalFat: Double?
     let scheduledAt: Date?
 
-    enum CodingKeys: String, CodingKey {
-        case id, title, description, instructions, link, privacy, servings, image
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-        case recipeItems = "recipe_items"
-        case prepTime = "prep_time"
-        case cookTime = "cook_time"
-        case totalCalories = "total_calories"
-        case totalProtein = "total_protein"
-        case totalCarbs = "total_carbs"
-        case totalFat = "total_fat"
-        case scheduledAt = "scheduled_at"
-    }
-    
     // Add computed properties to provide default values when the fields are nil
     var calories: Double {
         // If totalCalories has a valid value > 0, use it
@@ -2283,12 +2268,6 @@ struct SavedRecipe: Codable, Identifiable {
     let id: Int
     let savedAt: String
     let recipe: Recipe
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case savedAt = "saved_at"
-        case recipe
-    }
 }
 
 struct SavedRecipesResponse: Codable {
@@ -2297,26 +2276,12 @@ struct SavedRecipesResponse: Codable {
     let totalPages: Int
     let currentPage: Int
     let totalCount: Int
-
-    enum CodingKeys: String, CodingKey {
-        case savedRecipes = "saved_recipes"
-        case hasMore = "has_more"
-        case totalPages = "total_pages"
-        case currentPage = "current_page"
-        case totalCount = "total_count"
-    }
 }
 
 struct SaveRecipeResponse: Codable {
     let success: Bool
     let message: String
     let savedRecipe: SavedRecipe?
-
-    enum CodingKeys: String, CodingKey {
-        case success
-        case message
-        case savedRecipe = "saved_recipe"
-    }
 }
 
 struct UnsaveRecipeResponse: Codable {
@@ -2327,11 +2292,6 @@ struct UnsaveRecipeResponse: Codable {
 struct IsRecipeSavedResponse: Codable {
     let isSaved: Bool
     let savedRecipeId: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case isSaved = "is_saved"
-        case savedRecipeId = "saved_recipe_id"
-    }
 }
 
 // MARK: - OCR Label Scanning Support

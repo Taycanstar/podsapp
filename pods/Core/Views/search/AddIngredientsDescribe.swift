@@ -42,6 +42,7 @@ struct AddIngredientsDescribe: View {
     @State private var conversationHistory: [[String: String]] = []
     @State private var streamingText: String = ""
     @State private var streamingMessageId: UUID?
+    @State private var currentStreamTask: URLSessionDataTask?
     @FocusState private var isInputFocused: Bool
     @State private var statusPhraseIndex = 0
     @State private var thinkingTimer = Timer.publish(every: 2.5, on: .main, in: .common).autoconnect()
@@ -457,7 +458,7 @@ struct AddIngredientsDescribe: View {
 
         // Use the food chat orchestrator endpoint with "ingredient" context
         // This tells the backend to use "Found" instead of "Logged" in responses
-        foodManager.foodChatWithOrchestratorStream(
+        currentStreamTask = foodManager.foodChatWithOrchestratorStream(
             message: prompt,
             history: conversationHistory,
             context: "ingredient",
@@ -478,6 +479,7 @@ struct AddIngredientsDescribe: View {
             },
             onComplete: { result in
                 isLoading = false
+                currentStreamTask = nil
                 messages.removeAll { $0.id == statusMessageId }
                 if activeStatusMessageId == statusMessageId {
                     activeStatusMessageId = nil
@@ -491,6 +493,16 @@ struct AddIngredientsDescribe: View {
                 case .success(let response):
                     handleOrchestratorResponse(response, existingMessageId: completedMessageId)
                 case .failure(let error):
+                    // Check if this was a cancellation - if so, silently ignore
+                    let nsError = error as NSError
+                    if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                        // User cancelled - no error message needed
+                        if let msgId = completedMessageId {
+                            messages.removeAll { $0.id == msgId }
+                        }
+                        return
+                    }
+
                     if let msgId = completedMessageId {
                         messages.removeAll { $0.id == msgId }
                     }
@@ -501,6 +513,10 @@ struct AddIngredientsDescribe: View {
     }
 
     private func stopStreaming() {
+        // Cancel the network task first
+        currentStreamTask?.cancel()
+        currentStreamTask = nil
+
         isLoading = false
         if let statusId = activeStatusMessageId {
             messages.removeAll { $0.id == statusId }

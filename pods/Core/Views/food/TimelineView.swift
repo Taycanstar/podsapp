@@ -13,6 +13,7 @@ struct AppTimelineView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
 
     @State private var selectedDate: Date = Date()
     @State private var showDatePicker = false
@@ -511,7 +512,15 @@ private struct TimelineLogGroupRow: View {
                 ForEach(group.logs, id: \.id) { log in
                     HStack(alignment: .top, spacing: 12) {
                         TimelineConnectorSpacer()
-                        TimelineLogCard(log: log)
+                        // Only food, meal, and recipe logs navigate to LogDetails
+                        if log.type == .food || log.type == .meal || log.type == .recipe {
+                            NavigationLink(destination: LogDetails(log: log)) {
+                                TimelineLogCard(log: log)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            TimelineLogCard(log: log)
+                        }
                     }
                 }
 

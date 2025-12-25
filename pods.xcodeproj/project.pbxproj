@@ -189,6 +189,10 @@
 		36667E042EFBA6490017E9D7 /* EditRecipeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E032EFBA6440017E9D7 /* EditRecipeSheet.swift */; };
 		36667E062EFBA6890017E9D7 /* DuplicateRecipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E052EFBA6830017E9D7 /* DuplicateRecipeView.swift */; };
 		36667E082EFBAEEB0017E9D7 /* SavedRecipesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E072EFBAEEB0017E9D7 /* SavedRecipesRepository.swift */; };
+		36667E0A2EFC4BD60017E9D7 /* EditLogSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E092EFC4BD00017E9D7 /* EditLogSheet.swift */; };
+		36667E0C2EFC4BE50017E9D7 /* LogDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E0B2EFC4BDB0017E9D7 /* LogDetails.swift */; };
+		36667E0E2EFC55EE0017E9D7 /* ConversationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E0D2EFC55EE0017E9D7 /* ConversationModels.swift */; };
+		36667E102EFC5B690017E9D7 /* ConversationHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E0F2EFC5B690017E9D7 /* ConversationHistoryViewModel.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -647,6 +651,10 @@
 		36667E032EFBA6440017E9D7 /* EditRecipeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRecipeSheet.swift; sourceTree = "<group>"; };
 		36667E052EFBA6830017E9D7 /* DuplicateRecipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicateRecipeView.swift; sourceTree = "<group>"; };
 		36667E072EFBAEEB0017E9D7 /* SavedRecipesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedRecipesRepository.swift; sourceTree = "<group>"; };
+		36667E092EFC4BD00017E9D7 /* EditLogSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditLogSheet.swift; sourceTree = "<group>"; };
+		36667E0B2EFC4BDB0017E9D7 /* LogDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogDetails.swift; sourceTree = "<group>"; };
+		36667E0D2EFC55EE0017E9D7 /* ConversationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationModels.swift; sourceTree = "<group>"; };
+		36667E0F2EFC5B690017E9D7 /* ConversationHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationHistoryViewModel.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -1009,6 +1017,7 @@
 		361FF31B2E20617800B7F68E /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				36667E0D2EFC55EE0017E9D7 /* ConversationModels.swift */,
 				36667DF52EF904740017E9D7 /* NutrientDescriptors.swift */,
 				36667DC02EF1E1FF0017E9D7 /* HealthCoachModels.swift */,
 				36667DBE2EF11FE20017E9D7 /* NutritionLabelData.swift */,
@@ -1104,6 +1113,7 @@
 		3642C2252B9D3BF100D059B9 /* viewModels */ = {
 			isa = PBXGroup;
 			children = (
+				36667E0F2EFC5B690017E9D7 /* ConversationHistoryViewModel.swift */,
 				36667DC22EF1E3F90017E9D7 /* HealthCoachChatViewModel.swift */,
 				361507272B7DBA270060974A /* CameraViewModel.swift */,
 				3696B9602B99939600D211D7 /* OnboardingViewModel.swift */,
@@ -1192,6 +1202,8 @@
 		36667DCF2EF3A2120017E9D7 /* search */ = {
 			isa = PBXGroup;
 			children = (
+				36667E0B2EFC4BDB0017E9D7 /* LogDetails.swift */,
+				36667E092EFC4BD00017E9D7 /* EditLogSheet.swift */,
 				36667E052EFBA6830017E9D7 /* DuplicateRecipeView.swift */,
 				36667E032EFBA6440017E9D7 /* EditRecipeSheet.swift */,
 				36667E012EFBA5C10017E9D7 /* RecipeDetails.swift */,
@@ -1969,6 +1981,7 @@
 				363AFA0B2D345D2400C91A14 /* FullActivitySummaryView.swift in Sources */,
 				368A27392B9818330001BBCA /* InfoView.swift in Sources */,
 				36CB033F2D659B11006A74E9 /* VersionManager.swift in Sources */,
+				36667E0A2EFC4BD60017E9D7 /* EditLogSheet.swift in Sources */,
 				3682F09D2B8403D400ABF344 /* CameraContainerView.swift in Sources */,
 				3696B9632B99990E00D211D7 /* MainOnboardingView.swift in Sources */,
 				36DB82D22EBA99FD004BA082 /* WorkoutContextV1.swift in Sources */,
@@ -2039,6 +2052,7 @@
 				36D3A4F92E7F4E5400AD6B94 /* WorkoutSummarySheet.swift in Sources */,
 				36667DCA2EF35B590017E9D7 /* TrustedDomains.swift in Sources */,
 				3625329D2E629512003C3B8D /* DurationExerciseTimerSheet.swift in Sources */,
+				36667E0C2EFC4BE50017E9D7 /* LogDetails.swift in Sources */,
 				36A851A32E5AC0AE004E5CED /* CollapsibleSection.swift in Sources */,
 				36A8519F2E5ABF53004E5CED /* FlexibilityPreferences.swift in Sources */,
 				361FF3412E288D9D00B7F68E /* MuscleRecoveryService.swift in Sources */,
@@ -2105,6 +2119,7 @@
 				36ED35EF2DDE534A00D174FB /* FindFoodsView.swift in Sources */,
 				3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */,
 				3662A5572DFE430D00847487 /* AddExerciseView.swift in Sources */,
+				36667E102EFC5B690017E9D7 /* ConversationHistoryViewModel.swift in Sources */,
 				36881DF32E71E65D00262045 /* FitnessGoalMigrationService.swift in Sources */,
 				36ED35B82DD92FF000D174FB /* UserDataModel.swift in Sources */,
 				367979A32C67EF5E00F89435 /* DefaultProfilePicture.swift in Sources */,
@@ -2311,6 +2326,7 @@
 				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,
 				36DB82CE2EB924BC004BA082 /* ExercisesDb.swift in Sources */,
 				36ED35D22DDBD4EC00D174FB /* ManageGoalsView.swift in Sources */,
+				36667E0E2EFC55EE0017E9D7 /* ConversationModels.swift in Sources */,
 				3638CCA82C93EEFF00CCA675 /* TeamOptionsView.swift in Sources */,
 				36D3A5242E95F27300AD6B94 /* HumuliProUpgradeSheet.swift in Sources */,
 				3698E4F82C248EBB0040AF60 /* RegionManager.swift in Sources */,

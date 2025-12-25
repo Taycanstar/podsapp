@@ -8226,13 +8226,17 @@ class NetworkManager {
     /// Streaming food chat with orchestrator - streams AI response token by token
     /// Uses Server-Sent Events (SSE) to stream the response
     /// - Parameter context: Optional context string. Pass "ingredient" for recipe ingredient mode (uses "Found" instead of "Logged")
+    /// Streaming food chat - streams AI response token by token
+    /// Uses Server-Sent Events (SSE) to stream the response
+    /// Returns the URLSessionDataTask so it can be cancelled
+    @discardableResult
     func foodChatWithOrchestratorStream(
         message: String,
         history: [[String: String]] = [],
         context: String? = nil,
         onDelta: @escaping (String) -> Void,
         onComplete: @escaping (Result<FoodChatResponse, Error>) -> Void
-    ) {
+    ) -> URLSessionDataTask? {
         var parameters: [String: Any] = [
             "user_email": UserDefaults.standard.string(forKey: "userEmail") ?? "",
             "message": message,
@@ -8245,7 +8249,7 @@ class NetworkManager {
         let urlString = "\(baseUrl)/agent/food-chat/stream/"
         guard let url = URL(string: urlString) else {
             onComplete(.failure(NetworkError.invalidURL))
-            return
+            return nil
         }
 
         var request = URLRequest(url: url)
@@ -8262,7 +8266,7 @@ class NetworkManager {
         } catch {
             print("JSON Serialization Error: \(error)")
             onComplete(.failure(NetworkError.encodingError))
-            return
+            return nil
         }
 
         // Use URLSession with delegate for streaming
@@ -8270,18 +8274,22 @@ class NetworkManager {
         let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         let task = session.dataTask(with: request)
         task.resume()
+        return task
     }
 
     /// Streaming health coach chat - streams AI response token by token
     /// Uses Server-Sent Events (SSE) to stream the response
+    /// Returns the URLSessionDataTask so it can be cancelled
+    @discardableResult
     func healthCoachStream(
         message: String,
         history: [[String: String]] = [],
         context: HealthCoachContextPayload? = nil,
         targetDate: Date = Date(),
+        conversationId: String? = nil,
         onDelta: @escaping (String) -> Void,
         onComplete: @escaping (Result<HealthCoachResponse, Error>) -> Void
-    ) {
+    ) -> URLSessionDataTask? {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let targetDateString = dateFormatter.string(from: targetDate)
@@ -8294,6 +8302,11 @@ class NetworkManager {
             "target_date": targetDateString,
             "timezone_offset_minutes": tzOffsetMinutes
         ]
+
+        // Add conversation_id if provided (for message persistence)
+        if let conversationId = conversationId {
+            parameters["conversation_id"] = conversationId
+        }
 
         // Add context if provided
         if let context = context {
@@ -8308,7 +8321,7 @@ class NetworkManager {
         let urlString = "\(baseUrl)/agent/health-coach/stream/"
         guard let url = URL(string: urlString) else {
             onComplete(.failure(NetworkError.invalidURL))
-            return
+            return nil
         }
 
         var request = URLRequest(url: url)
@@ -8325,7 +8338,7 @@ class NetworkManager {
         } catch {
             print("JSON Serialization Error: \(error)")
             onComplete(.failure(NetworkError.encodingError))
-            return
+            return nil
         }
 
         // Use URLSession with delegate for streaming
@@ -8333,6 +8346,7 @@ class NetworkManager {
         let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         let task = session.dataTask(with: request)
         task.resume()
+        return task
     }
 
     // Add the createManualFood function to the NetworkManager class
@@ -9701,6 +9715,181 @@ class NetworkManager {
             session.invalidateAndCancel()
         }
     }
+
+    // MARK: - Conversation History APIs
+
+    func getConversations(
+        userEmail: String,
+        limit: Int = 50,
+        offset: Int = 0
+    ) async throws -> ConversationsResponse {
+        var components = URLComponents(string: "\(baseUrl)/agent/conversations/")!
+        components.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "offset", value: String(offset)),
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        addTrackingHeaders(to: &request)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+
+        return try JSONDecoder().decode(ConversationsResponse.self, from: data)
+    }
+
+    func createConversation(userEmail: String, title: String? = nil) async throws -> AgentConversation {
+        guard let url = URL(string: "\(baseUrl)/agent/conversations/create/") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addTrackingHeaders(to: &request)
+
+        var body: [String: Any] = ["user_email": userEmail]
+        if let title = title {
+            body["title"] = title
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+
+        return try JSONDecoder().decode(AgentConversation.self, from: data)
+    }
+
+    func getConversationMessages(
+        conversationId: String,
+        userEmail: String,
+        limit: Int = 100
+    ) async throws -> ConversationMessagesResponse {
+        var components = URLComponents(string: "\(baseUrl)/agent/conversations/\(conversationId)/")!
+        components.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+            URLQueryItem(name: "limit", value: String(limit)),
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        addTrackingHeaders(to: &request)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+
+        return try JSONDecoder().decode(ConversationMessagesResponse.self, from: data)
+    }
+
+    func updateConversation(
+        conversationId: String,
+        userEmail: String,
+        title: String? = nil,
+        isPinned: Bool? = nil
+    ) async throws -> AgentConversation {
+        guard let url = URL(string: "\(baseUrl)/agent/conversations/\(conversationId)/update/") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addTrackingHeaders(to: &request)
+
+        var body: [String: Any] = ["user_email": userEmail]
+        if let title = title { body["title"] = title }
+        if let isPinned = isPinned { body["is_pinned"] = isPinned }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+
+        return try JSONDecoder().decode(AgentConversation.self, from: data)
+    }
+
+    func deleteConversation(conversationId: String, userEmail: String) async throws {
+        var components = URLComponents(string: "\(baseUrl)/agent/conversations/\(conversationId)/delete/")!
+        components.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail),
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        addTrackingHeaders(to: &request)
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+    }
+
+    func addConversationMessage(
+        conversationId: String,
+        userEmail: String,
+        role: String,
+        content: String,
+        responseType: String? = nil,
+        responseData: [String: Any]? = nil
+    ) async throws -> AddMessageResponse {
+        guard let url = URL(string: "\(baseUrl)/agent/conversations/\(conversationId)/messages/") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addTrackingHeaders(to: &request)
+
+        var body: [String: Any] = [
+            "user_email": userEmail,
+            "role": role,
+            "content": content
+        ]
+        if let responseType = responseType { body["response_type"] = responseType }
+        if let responseData = responseData { body["response_data"] = responseData }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+
+        return try JSONDecoder().decode(AddMessageResponse.self, from: data)
+    }
 }
 
 // MARK: - Streaming URLSession Delegate
@@ -9925,13 +10114,14 @@ private final class HealthCoachStreamingDelegate: NSObject, URLSessionDataDelega
 
             // Check if this is the final message with "done: true"
             if let done = obj["done"] as? Bool, done {
-                print("[HEALTH_COACH_STREAM] done received with response data")
+                print("[HEALTH_COACH_STREAM] done received with response data: \(trimmed)")
                 hasCompleted = true
                 // Parse the full HealthCoachResponse from this final message
                 if let responseData = trimmed.data(using: .utf8) {
                     do {
                         let decoder = JSONDecoder()
                         let response = try decoder.decode(HealthCoachResponse.self, from: responseData)
+                        print("[HEALTH_COACH_STREAM] decoded response.conversationId: \(response.conversationId ?? "nil")")
                         DispatchQueue.main.async { self.onComplete(.success(response)) }
                     } catch {
                         print("[HEALTH_COACH_STREAM] failed to decode HealthCoachResponse:", error)

@@ -3218,6 +3218,76 @@ class NetworkManagerTwo {
         }.resume()
     }
 
+    /// Explode a recipe log into individual food logs for each ingredient
+    /// - Parameters:
+    ///   - userEmail: User's email address
+    ///   - recipeLogId: ID of the recipe log to explode
+    ///   - completion: Result callback with created food logs or error
+    func explodeRecipeLog(
+        userEmail: String,
+        recipeLogId: Int,
+        completion: @escaping (Result<ExplodeRecipeLogResponse, Error>) -> Void
+    ) {
+        let urlString = "\(baseUrl)/explode-recipe-log/"
+
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NetworkError.invalidURL))
+            return
+        }
+
+        let parameters: [String: Any] = [
+            "user_email": userEmail,
+            "recipe_log_id": recipeLogId
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+
+            if (200...299).contains(httpResponse.statusCode) {
+                do {
+                    let decoder = JSONDecoder()
+                    decoder.keyDecodingStrategy = .convertFromSnakeCase
+                    decoder.dateDecodingStrategy = .iso8601
+                    let response = try decoder.decode(ExplodeRecipeLogResponse.self, from: data)
+                    completion(.success(response))
+                } catch {
+                    print("❌ Failed to decode ExplodeRecipeLogResponse: \(error)")
+                    completion(.failure(error))
+                }
+            } else {
+                if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                    completion(.failure(NetworkError.serverError(message: errorResponse.error)))
+                } else {
+                    completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
+                }
+            }
+        }.resume()
+    }
+
     /// Update a food log entry
     /// - Parameters:
     ///   - userEmail: User's email address
@@ -4096,6 +4166,7 @@ class NetworkManagerTwo {
 
             do {
                 let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
                 decoder.dateDecodingStrategy = .custom { decoder -> Date in
                     let value = try decoder.singleValueContainer().decode(String.self)
                     if let date = self.iso8601FractionalFormatter.date(from: value) ?? self.iso8601BasicFormatter.date(from: value) {
@@ -4162,6 +4233,7 @@ class NetworkManagerTwo {
 
             do {
                 let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
                 decoder.dateDecodingStrategy = .custom { decoder -> Date in
                     let value = try decoder.singleValueContainer().decode(String.self)
                     if let date = self.iso8601FractionalFormatter.date(from: value) ?? self.iso8601BasicFormatter.date(from: value) {
@@ -4280,6 +4352,7 @@ class NetworkManagerTwo {
 
             do {
                 let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
                 let response = try decoder.decode(IsRecipeSavedResponse.self, from: data)
                 DispatchQueue.main.async {
                     completion(.success(response))

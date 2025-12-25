@@ -105,10 +105,12 @@ struct HealthCoachResponse: Codable {
     let question: String?
     let error: String?
     let citations: [HealthCoachCitation]?
+    let conversationId: String?
 
     enum CodingKeys: String, CodingKey {
         case type, message, food, activity, data, goals, weight, options, question, error, citations
         case mealItems = "meal_items"
+        case conversationId = "conversation_id"
     }
 
     init(
@@ -123,7 +125,8 @@ struct HealthCoachResponse: Codable {
         options: [ClarificationOption]? = nil,
         question: String? = nil,
         error: String? = nil,
-        citations: [HealthCoachCitation]? = nil
+        citations: [HealthCoachCitation]? = nil,
+        conversationId: String? = nil
     ) {
         self.type = type
         self.message = message
@@ -137,6 +140,7 @@ struct HealthCoachResponse: Codable {
         self.question = question
         self.error = error
         self.citations = citations
+        self.conversationId = conversationId
     }
 }
 

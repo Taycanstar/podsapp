@@ -29,11 +29,14 @@ final class HealthCoachChatViewModel: ObservableObject {
     @Published var statusHint: HealthCoachStatusHint = .thinking
     @Published var pendingOptions: [ClarificationOption]?
     @Published var pendingClarificationQuestion: String?
+    @Published var currentConversationId: String?
 
     // MARK: - Private Properties
 
     private var conversationHistory: [[String: String]] = []
     private let healthCoachService = HealthCoachService.shared
+    private let networkManager = NetworkManager()
+    private var currentStreamTask: URLSessionDataTask?
 
     // Context providers (optional - set by view)
     var contextProvider: HealthCoachContextProvider?
@@ -45,10 +48,15 @@ final class HealthCoachChatViewModel: ObservableObject {
     var onActivityLogged: ((HealthCoachActivity) -> Void)?
     var onGoalsUpdated: ((UpdatedGoalsPayload) -> Void)?
     var onWeightLogged: ((HealthCoachWeightPayload) -> Void)?
+    var onConversationIdUpdated: ((String) -> Void)?
 
     // MARK: - Initialization
 
     init() {}
+
+    init(conversationId: String?) {
+        self.currentConversationId = conversationId
+    }
 
     // MARK: - Public Methods
 
@@ -90,12 +98,13 @@ final class HealthCoachChatViewModel: ObservableObject {
         // Build context if provider is available
         let context = contextProvider?.buildContext()
 
-        // Call the health coach service
-        healthCoachService.chatStream(
+        // Call the health coach service with conversation ID for persistence
+        currentStreamTask = healthCoachService.chatStream(
             message: trimmed,
             history: conversationHistory,
             context: context,
             targetDate: Date(),
+            conversationId: currentConversationId,
             onDelta: { [weak self] delta in
                 guard let self = self else { return }
 
@@ -119,6 +128,7 @@ final class HealthCoachChatViewModel: ObservableObject {
                 guard let self = self else { return }
 
                 self.isLoading = false
+                self.currentStreamTask = nil
                 self.messages.removeAll { $0.id == statusMessageId }
 
                 let completedMessageId = self.streamingMessageId
@@ -129,6 +139,16 @@ final class HealthCoachChatViewModel: ObservableObject {
                 case .success(let response):
                     self.handleResponse(response, existingMessageId: completedMessageId)
                 case .failure(let error):
+                    // Check if this was a cancellation - if so, silently ignore
+                    let nsError = error as NSError
+                    if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                        // User cancelled - no error message needed
+                        if let msgId = completedMessageId {
+                            self.messages.removeAll { $0.id == msgId }
+                        }
+                        return
+                    }
+
                     self.pendingClarificationQuestion = nil
                     if let msgId = completedMessageId {
                         self.messages.removeAll { $0.id == msgId }
@@ -151,6 +171,18 @@ final class HealthCoachChatViewModel: ObservableObject {
         pendingClarificationQuestion = nil
     }
 
+    /// Cancel the current streaming request
+    func cancelStream() {
+        print("🤖 HealthCoachChatViewModel.cancelStream: Cancelling stream")
+        currentStreamTask?.cancel()
+        currentStreamTask = nil
+        isLoading = false
+        streamingMessageId = nil
+        streamingText = ""
+        // Remove any status messages that might be showing
+        messages.removeAll { $0.sender == .status }
+    }
+
     /// Clear conversation and reset state
     func clearConversation() {
         messages.removeAll()
@@ -160,11 +192,53 @@ final class HealthCoachChatViewModel: ObservableObject {
         pendingOptions = nil
         pendingClarificationQuestion = nil
         isLoading = false
+        currentConversationId = nil
+    }
+
+    /// Load an existing conversation from the server
+    /// - Parameters:
+    ///   - conversationId: The conversation ID to load
+    ///   - messagesResponse: The messages from the server
+    func loadConversation(id: String, messages messagesResponse: [AgentMessageResponse]) {
+        currentConversationId = id
+
+        // Convert AgentMessageResponse to HealthCoachMessage
+        messages = messagesResponse.map { msg in
+            let sender: HealthCoachMessage.Sender = msg.role == "user" ? .user : .coach
+            let responseType = msg.responseType.flatMap { HealthCoachResponseType(rawValue: $0) }
+
+            return HealthCoachMessage(
+                id: UUID(uuidString: msg.id) ?? UUID(),
+                sender: sender,
+                text: msg.content,
+                timestamp: msg.createdAt,
+                responseType: responseType,
+                food: msg.responseData?.food,
+                mealItems: msg.responseData?.mealItems,
+                activity: msg.responseData?.activity,
+                citations: msg.responseData?.citations
+            )
+        }
+
+        // Rebuild conversation history for API calls
+        conversationHistory = messagesResponse.map { msg in
+            ["role": msg.role, "content": msg.content]
+        }
     }
 
     // MARK: - Response Handling
 
     private func handleResponse(_ response: HealthCoachResponse, existingMessageId: UUID?) {
+        // Update conversation ID from response (server creates/uses conversation)
+        print("🤖 HealthCoachChatViewModel.handleResponse - response.conversationId: \(response.conversationId ?? "nil"), currentConversationId: \(currentConversationId ?? "nil")")
+        if let newConversationId = response.conversationId {
+            if currentConversationId == nil || currentConversationId != newConversationId {
+                print("🤖 HealthCoachChatViewModel.handleResponse - Updating conversationId to: \(newConversationId)")
+                currentConversationId = newConversationId
+                onConversationIdUpdated?(newConversationId)
+            }
+        }
+
         // Only add message if it wasn't already streamed
         if existingMessageId == nil {
             messages.append(HealthCoachMessage(

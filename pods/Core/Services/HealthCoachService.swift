@@ -32,21 +32,26 @@ final class HealthCoachService {
     ///   - history: Conversation history for context
     ///   - context: Optional client-side context (macros, workout, health metrics)
     ///   - targetDate: The date context for logging (defaults to today)
+    ///   - conversationId: Optional conversation ID for message persistence
     ///   - onDelta: Called for each streamed text token
     ///   - onComplete: Called when streaming is complete with the full response
+    /// - Returns: The URLSessionDataTask that can be cancelled
+    @discardableResult
     func chatStream(
         message: String,
         history: [[String: String]] = [],
         context: HealthCoachContextPayload? = nil,
         targetDate: Date = Date(),
+        conversationId: String? = nil,
         onDelta: @escaping (String) -> Void,
         onComplete: @escaping (Result<HealthCoachResponse, Error>) -> Void
-    ) {
-        networkManager.healthCoachStream(
+    ) -> URLSessionDataTask? {
+        return networkManager.healthCoachStream(
             message: message,
             history: history,
             context: context,
             targetDate: targetDate,
+            conversationId: conversationId,
             onDelta: onDelta,
             onComplete: onComplete
         )

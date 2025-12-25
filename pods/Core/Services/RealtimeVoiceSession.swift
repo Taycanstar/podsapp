@@ -59,14 +59,27 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
     @Published var currentAssistantText: String = ""
     @Published var isProcessing: Bool = false
 
+    // Conversation persistence
+    @Published var currentConversationId: String?
+    var onConversationIdUpdated: ((String) -> Void)?
+
     private var peerConnection: RTCPeerConnection?
     private var dataChannel: RTCDataChannel?
     private var audioTrack: RTCAudioTrack?
     private var ephemeralKey: String?
     private var factory: RTCPeerConnectionFactory?
+    private let networkManager = NetworkManager()
 
     override init() {
         super.init()
+        RTCInitializeSSL()
+        factory = RTCPeerConnectionFactory()
+    }
+
+    /// Initialize with an existing conversation ID (for resuming conversations)
+    init(conversationId: String?) {
+        super.init()
+        self.currentConversationId = conversationId
         RTCInitializeSSL()
         factory = RTCPeerConnectionFactory()
     }
@@ -508,6 +521,8 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
                         self.messages.append(RealtimeMessage(isUser: true, text: finalText))
                         print("✅ [MESSAGES] Added user message, count now: \(self.messages.count)")
                         self.transcribedText = finalText
+                        // Persist user message to conversation
+                        self.persistVoiceMessage(role: "user", content: finalText)
                     }
                     self.currentUserText = ""
                 }
@@ -530,6 +545,8 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
                 let finalText = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !finalText.isEmpty {
                     self.messages.append(RealtimeMessage(isUser: false, text: finalText))
+                    // Persist assistant message to conversation
+                    self.persistVoiceMessage(role: "assistant", content: finalText)
                 }
                 self.currentAssistantText = ""
             }
@@ -550,6 +567,8 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
                 let finalText = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !finalText.isEmpty {
                     self.messages.append(RealtimeMessage(isUser: false, text: finalText))
+                    // Persist assistant message to conversation
+                    self.persistVoiceMessage(role: "assistant", content: finalText)
                 }
                 self.currentAssistantText = ""
             }
@@ -806,6 +825,49 @@ private extension RealtimeVoiceSession {
             }
         }
         return parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Conversation Persistence
+
+    /// Persist a voice message to the backend conversation
+    /// Creates a new conversation if none exists
+    func persistVoiceMessage(role: String, content: String, responseType: String? = nil) {
+        let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedContent.isEmpty else { return }
+
+        guard let email = UserDefaults.standard.string(forKey: "userEmail"), !email.isEmpty else {
+            print("⚠️ [VOICE] Cannot persist message: No user email")
+            return
+        }
+
+        Task {
+            do {
+                // If no conversation exists, create one first
+                if currentConversationId == nil {
+                    let newConversation = try await networkManager.createConversation(
+                        userEmail: email,
+                        title: nil // Will be auto-generated from first message
+                    )
+                    currentConversationId = newConversation.id
+                    onConversationIdUpdated?(newConversation.id)
+                    print("✅ [VOICE] Created new conversation: \(newConversation.id)")
+                }
+
+                // Now save the message
+                guard let conversationId = currentConversationId else { return }
+
+                _ = try await networkManager.addConversationMessage(
+                    conversationId: conversationId,
+                    userEmail: email,
+                    role: role,
+                    content: trimmedContent,
+                    responseType: responseType
+                )
+                print("✅ [VOICE] Persisted \(role) message to conversation \(conversationId)")
+            } catch {
+                print("❌ [VOICE] Failed to persist message: \(error)")
+            }
+        }
     }
 }
 

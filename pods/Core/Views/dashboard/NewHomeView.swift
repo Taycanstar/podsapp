@@ -85,6 +85,8 @@ struct NewHomeView: View {
     @State private var showingWeightLogSheet = false
     @State private var showingBodyFatLogSheet = false
     @State private var showTimelineSheet = false
+    @State private var showLogDetails = false
+    @State private var selectedLogForDetails: CombinedLog?
     @State private var showAddActivitySheet = false
     @State private var recentQuickActivities: [String] = []
     @State private var showQuickActivityToast = false
@@ -264,6 +266,10 @@ private var remainingCal: Double { vm.remainingCalories }
                     default:
                         return false
                     }
+                },
+                onLogTap: { log in
+                    selectedLogForDetails = log
+                    showLogDetails = true
                 }
             )
         }
@@ -481,6 +487,11 @@ private var remainingCal: Double { vm.remainingCalories }
             .navigationDestination(isPresented: $showTimelineSheet) {
                 AppTimelineView()
                     .environmentObject(vm)
+            }
+            .navigationDestination(isPresented: $showLogDetails) {
+                if let log = selectedLogForDetails {
+                    LogDetails(log: log)
+                }
             }
             .navigationDestination(isPresented: $showSearchView) {
                 SearchView()
@@ -1094,28 +1105,14 @@ private extension NewHomeView {
 
 
     private var dashboardList: some View {
-        ScrollView {
-            // padding 10
-            VStack(spacing: 10) {
-                dashboardHeaderCards
-                dashboardMainContent
-                Spacer(minLength: 110) // Leave room for tab bar
-            }
-        }
-        .scrollIndicators(.hidden)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            isAgentInputFocused = false
-        }
-        .onAppear {
-            refreshTrainingInsights()
-        }
-        .onChange(of: workoutManager.todayWorkout) { _ in
-            refreshTrainingInsights()
-        }
-        .onChange(of: workoutManager.hasCompletedWorkoutToday) { _ in
-            refreshTrainingInsights()
-        }
+        DashboardListContainer(
+            header: AnyView(dashboardHeaderCards),
+            mainContent: AnyView(dashboardMainContent),
+            onTap: { isAgentInputFocused = false },
+            onAppear: { refreshTrainingInsights() },
+            workoutManager: workoutManager,
+            refreshTrainingInsights: { refreshTrainingInsights() }
+        )
     }
 
     @ViewBuilder
@@ -1228,42 +1225,98 @@ private extension NewHomeView {
         }
     }
     private var dashboardContent: some View {
-        ZStack(alignment: .bottom) {
-            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+        DashboardContentContainer(
+            backgroundColor: Color(UIColor.systemGroupedBackground),
+            healthSyncFlashBar: AnyView(healthSyncFlashBar),
+            dashboardList: AnyView(dashboardList),
+            toastOverlay: resolvedToastOverlay,
+            floatingLoader: AnyView(FloatingFoodLoader(state: foodMgr.foodScanningState)),
+            showFloatingLoader: foodMgr.foodScanningState.isActive,
+            isTabBarVisible: isTabBarVisible.wrappedValue,
+            agentTabBar: AnyView(
+                AgentTabBar(
+                    text: $agentText,
+                    isPromptFocused: $isAgentInputFocused,
+                    onPlusTapped: onPlusTapped,
+                    onBarcodeTapped: onBarcodeTapped,
+                    onMicrophoneTapped: onMicrophoneTapped,
+                    onWaveformTapped: onWaveformTapped,
+                    onSubmit: onSubmit,
+                    onRealtimeStart: onRealtimeStart
+                )
+                .ignoresSafeArea(edges: [.horizontal])
+            )
+        )
+    }
+    // MARK: - Type-erased containers to cap view type depth
+    // These wrappers keep the NavigationLink/NewHomeView type metadata shallow enough to avoid
+    // stack overflows during SwiftUI's type resolution.
+    private struct DashboardContentContainer: View {
+        let backgroundColor: Color
+        let healthSyncFlashBar: AnyView
+        let dashboardList: AnyView
+        let toastOverlay: AnyView
+        let floatingLoader: AnyView
+        let showFloatingLoader: Bool
+        let isTabBarVisible: Bool
+        let agentTabBar: AnyView
 
-            VStack(spacing: 0) {
-                healthSyncFlashBar
+        var body: some View {
+            ZStack(alignment: .bottom) {
+                backgroundColor.ignoresSafeArea()
 
-                dashboardList
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-
-            toastOverlay
-
-            VStack(spacing: 8) {
-                // Floating food loader above AgentTabBar
-                if foodMgr.foodScanningState.isActive {
-                    FloatingFoodLoader(state: foodMgr.foodScanningState)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: foodMgr.foodScanningState.isActive)
+                VStack(spacing: 0) {
+                    healthSyncFlashBar
+                    dashboardList
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
 
-                if isTabBarVisible.wrappedValue {
-                    AgentTabBar(
-                        text: $agentText,
-                        isPromptFocused: $isAgentInputFocused,
-                        onPlusTapped: onPlusTapped,
-                        onBarcodeTapped: onBarcodeTapped,
-                        onMicrophoneTapped: onMicrophoneTapped,
-                        onWaveformTapped: onWaveformTapped,
-                        onSubmit: onSubmit,
-                        onRealtimeStart: onRealtimeStart
-                    )
-                    .ignoresSafeArea(edges: [.horizontal])
+                toastOverlay
+
+                VStack(spacing: 8) {
+                    if showFloatingLoader {
+                        floatingLoader
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showFloatingLoader)
+                    }
+
+                    if isTabBarVisible {
+                        agentTabBar
+                    }
                 }
             }
         }
     }
+
+    private struct DashboardListContainer: View {
+        let header: AnyView
+        let mainContent: AnyView
+        let onTap: () -> Void
+        let onAppear: () -> Void
+        @ObservedObject var workoutManager: WorkoutManager
+        let refreshTrainingInsights: () -> Void
+
+        var body: some View {
+            ScrollView {
+                VStack(spacing: 10) {
+                    header
+                    mainContent
+                    Spacer(minLength: 110) // Leave room for tab bar
+                }
+            }
+            .scrollIndicators(.hidden)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onTap)
+            .onAppear(perform: onAppear)
+            .onChange(of: workoutManager.todayWorkout) { _ in
+                refreshTrainingInsights()
+            }
+            .onChange(of: workoutManager.hasCompletedWorkoutToday) { _ in
+                refreshTrainingInsights()
+            }
+        }
+    }
+
     // ① Nutrition summary ----------------------------------------------------
     private var resolvedIntakeCardHeight: CGFloat { 290 }
     private var nutritionCardHeight: CGFloat { resolvedIntakeCardHeight }
@@ -4880,6 +4933,7 @@ private struct TimelineSectionView: View {
     var onSaveLog: ((CombinedLog) -> Void)? = nil
     var onUnsaveLog: ((CombinedLog) -> Void)? = nil
     var isLogSaved: ((CombinedLog) -> Bool)? = nil
+    var onLogTap: ((CombinedLog) -> Void)? = nil
 
     var body: some View {
         let rowSpacing: CGFloat = 20
@@ -4924,7 +4978,8 @@ private struct TimelineSectionView: View {
                                 onDelete: onDeleteLog,
                                 onSave: onSaveLog,
                                 onUnsave: onUnsaveLog,
-                                isLogSaved: isLogSaved
+                                isLogSaved: isLogSaved,
+                                onLogTap: onLogTap
                             )
                         }
                     }
@@ -5051,6 +5106,7 @@ private struct TimelineEventRow: View {
     var onSave: ((CombinedLog) -> Void)? = nil
     var onUnsave: ((CombinedLog) -> Void)? = nil
     var isLogSaved: ((CombinedLog) -> Bool)? = nil
+    var onLogTap: ((CombinedLog) -> Void)? = nil
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -5109,6 +5165,12 @@ private struct TimelineEventRow: View {
         // Create a proper TimelineEvent for this individual log to use the full card
         let individualEvent = makeTimelineEvent(from: log)
         let cardView = TimelineEventCard(event: individualEvent)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if log.type == .food || log.type == .meal || log.type == .recipe {
+                    onLogTap?(log)
+                }
+            }
         if canDelete || canToggleSave {
             cardView
                 .modifier(SwipeableCardModifier(
@@ -5168,6 +5230,12 @@ private struct TimelineEventRow: View {
     private var swipeableCard: some View {
         if let log = event.log, (canDelete || canToggleSave) {
             TimelineEventCard(event: event)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if log.type == .food || log.type == .meal || log.type == .recipe {
+                        onLogTap?(log)
+                    }
+                }
                 .modifier(SwipeableCardModifier(
                     canDelete: canDelete,
                     canSave: canToggleSave,
@@ -5176,6 +5244,14 @@ private struct TimelineEventRow: View {
                     onSave: { onSave?(log) },
                     onUnsave: { onUnsave?(log) }
                 ))
+        } else if let log = event.log {
+            TimelineEventCard(event: event)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if log.type == .food || log.type == .meal || log.type == .recipe {
+                        onLogTap?(log)
+                    }
+                }
         } else {
             TimelineEventCard(event: event)
         }

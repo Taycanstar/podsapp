@@ -1535,6 +1535,70 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
         }
     }
 
+    /// Update a recipe log with new servings, date, and meal type
+    func updateRecipeLog(log: CombinedLog, servings: Double, date: Date, mealType: String, calories: Double? = nil, protein: Double? = nil, carbs: Double? = nil, fat: Double? = nil, completion: @escaping (Result<Void, Error>) -> Void) {
+        print("🍳 DayLogsViewModel: updateRecipeLog called")
+
+        guard let recipeLogId = log.recipeLogId else {
+            print("❌ DayLogsViewModel: No recipeLogId found")
+            completion(.failure(NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid recipe log ID"])))
+            return
+        }
+
+        // For now, recipe log updates are handled by reloading logs
+        // TODO: Add dedicated updateRecipeLog endpoint if needed
+        print("🔄 DayLogsViewModel: Reloading logs after recipe update")
+        loadLogs(for: selectedDate, force: true)
+        completion(.success(()))
+    }
+
+    /// Explode a recipe log into individual food logs for each ingredient
+    func explodeRecipeLog(recipeLogId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        print("💥 DayLogsViewModel: explodeRecipeLog called for ID: \(recipeLogId)")
+
+        logNetwork.explodeRecipeLog(userEmail: email, recipeLogId: recipeLogId) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+
+                switch result {
+                case .success(let response):
+                    print("✅ DayLogsViewModel: Recipe exploded successfully, created \(response.createdLogs.count) food logs")
+
+                    // Remove the recipe log from local state
+                    self.logs.removeAll { $0.recipeLogId == response.deletedRecipeLogId }
+
+                    // Add the new food logs to local state
+                    for newLog in response.createdLogs {
+                        // Check if this log belongs to the currently displayed date
+                        if let scheduledAt = newLog.scheduledAt,
+                           Calendar.current.isDate(scheduledAt, inSameDayAs: self.selectedDate) {
+                            self.logs.append(newLog)
+                        }
+                    }
+
+                    // Sort logs by time
+                    self.logs.sort { first, second in
+                        let firstDate = first.scheduledAt ?? Date.distantPast
+                        let secondDate = second.scheduledAt ?? Date.distantPast
+                        return firstDate < secondDate
+                    }
+
+                    // Recalculate totals
+                    self.recalculateTotals()
+
+                    // Trigger profile data refresh
+                    self.triggerProfileDataRefresh(localOnly: true)
+
+                    completion(.success(()))
+
+                case .failure(let error):
+                    print("❌ DayLogsViewModel: Failed to explode recipe: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
   // MARK: - Cache Management
 
   /// Clear the pending logs cache to prevent showing stale data

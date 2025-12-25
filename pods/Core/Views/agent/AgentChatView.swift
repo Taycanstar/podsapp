@@ -9,8 +9,12 @@ struct AgentChatView: View {
     @EnvironmentObject private var foodManager: FoodManager
     @EnvironmentObject private var onboardingViewModel: OnboardingViewModel
 
-    // New streaming ViewModel
-    @StateObject private var viewModel = HealthCoachChatViewModel()
+    // New streaming ViewModel - initialized with conversation ID if loading existing
+    @StateObject private var viewModel: HealthCoachChatViewModel
+
+    // Conversation ID to load (passed from ChatsView)
+    // Using String? instead of AgentConversation? to avoid SwiftUI type complexity
+    private let conversationIdToLoad: String?
 
     @State private var inputText: String = ""
     @State private var showToast = false
@@ -59,6 +63,7 @@ struct AgentChatView: View {
     var onBarcodeTapped: () -> Void = {}
     var onFoodReady: ((Food) -> Void)?
     var onMealLogged: (([Food]) -> Void)?
+    var onNewConversationCreated: ((String, String) -> Void)?
 
     // Initial message binding to send on appear (for AgentTabBar integration)
     // Using Binding so SwiftUI reads current value when view appears, not when closure is captured
@@ -69,15 +74,21 @@ struct AgentChatView: View {
     @Binding private var startWithVoiceMode: Bool
 
     init(
+        conversationIdToLoad: String? = nil,
         initialMessage: Binding<String?> = .constant(nil),
         startWithVoiceMode: Binding<Bool> = .constant(false),
         onPlusTapped: @escaping () -> Void = {},
-        onBarcodeTapped: @escaping () -> Void = {}
+        onBarcodeTapped: @escaping () -> Void = {},
+        onNewConversationCreated: ((String, String) -> Void)? = nil
     ) {
+        self.conversationIdToLoad = conversationIdToLoad
         self._initialMessage = initialMessage
         self._startWithVoiceMode = startWithVoiceMode
         self.onPlusTapped = onPlusTapped
         self.onBarcodeTapped = onBarcodeTapped
+        self.onNewConversationCreated = onNewConversationCreated
+        // Initialize viewModel with conversation ID if loading existing conversation
+        self._viewModel = StateObject(wrappedValue: HealthCoachChatViewModel(conversationId: conversationIdToLoad))
     }
 
     var body: some View {
@@ -155,6 +166,14 @@ struct AgentChatView: View {
             isInputFocused = true
             setupCallbacks()
             realtimeSession.delegate = self
+
+            // Load existing conversation if provided
+            if let conversationId = conversationIdToLoad {
+                print("🤖 AgentChatView.onAppear - Loading conversation: \(conversationId)")
+                Task {
+                    await loadConversation(conversationId)
+                }
+            }
 
             // Send initial message if provided (from AgentTabBar)
             print("🤖 AgentChatView.onAppear - initialMessage: \(initialMessage ?? "nil"), startWithVoiceMode: \(startWithVoiceMode)")
@@ -273,6 +292,40 @@ struct AgentChatView: View {
         viewModel.onActivityLogged = { activity in
             dayLogsVM.loadLogs(for: dayLogsVM.selectedDate, force: true)
             showToast(with: "Logged \(activity.activityName)")
+        }
+
+        // Sync conversation ID from text chat to voice session
+        // Also notify parent when a new conversation is created
+        // Capture values directly since self is a struct (value type) and can't be weakly referenced
+        let isNewConversation = conversationIdToLoad == nil
+        let callback = onNewConversationCreated
+        viewModel.onConversationIdUpdated = { [weak realtimeSession, weak viewModel] conversationId in
+            realtimeSession?.currentConversationId = conversationId
+
+            // Only notify parent for NEW conversations (when we started with nil conversationIdToLoad)
+            // This prevents notifying when loading an existing conversation
+            guard isNewConversation,
+                  let firstUserMessage = viewModel?.messages.first(where: { $0.sender == .user }) else {
+                return
+            }
+
+            // Generate title from first 6-8 words of user message
+            let words = firstUserMessage.text.split(separator: " ").prefix(8)
+            var title = words.joined(separator: " ")
+            if title.count > 50 {
+                title = String(title.prefix(47)) + "..."
+            }
+            callback?(conversationId, title)
+        }
+
+        // Sync conversation ID from voice session to text chat
+        realtimeSession.onConversationIdUpdated = { [weak viewModel] conversationId in
+            viewModel?.currentConversationId = conversationId
+        }
+
+        // Initialize voice session with current conversation ID if exists
+        if let conversationId = viewModel.currentConversationId {
+            realtimeSession.currentConversationId = conversationId
         }
     }
 
@@ -857,7 +910,7 @@ struct AgentChatView: View {
             )
             .padding(.horizontal, 16)
             .padding(.top, -12)
-            .padding(.bottom, isInputFocused ? 0 : 10)
+            .padding(.bottom, 0)
         }
         .background(
             ChatTransparentBlurView(removeAllFilters: true)
@@ -978,7 +1031,12 @@ struct AgentChatView: View {
                     ChatActionCircleButton(
                         systemName: viewModel.isLoading ? "square.fill" : (hasUserInput ? "arrow.up" : "waveform"),
                         action: {
-                            guard !viewModel.isLoading else { return }
+                            if viewModel.isLoading {
+                                // Cancel the current stream
+                                HapticFeedback.generate()
+                                viewModel.cancelStream()
+                                return
+                            }
                             if hasUserInput {
                                 submitAgentPrompt()
                             } else {
@@ -1037,6 +1095,29 @@ struct AgentChatView: View {
         guard !transcript.isEmpty else { return }
         shareText = transcript
         showShareSheet = true
+    }
+
+    /// Load an existing conversation's messages from the server
+    private func loadConversation(_ conversationId: String) async {
+        let email = onboardingViewModel.email.isEmpty
+            ? (UserDefaults.standard.string(forKey: "userEmail") ?? "")
+            : onboardingViewModel.email
+
+        guard !email.isEmpty else {
+            print("❌ AgentChatView.loadConversation: No email found")
+            return
+        }
+
+        do {
+            let response = try await NetworkManager().getConversationMessages(
+                conversationId: conversationId,
+                userEmail: email
+            )
+            viewModel.loadConversation(id: response.conversationId, messages: response.messages)
+            print("✅ AgentChatView: Loaded \(response.messages.count) messages for conversation \(conversationId)")
+        } catch {
+            print("❌ AgentChatView.loadConversation error: \(error)")
+        }
     }
 
     private func showToast(with message: String) {
