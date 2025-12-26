@@ -19,10 +19,9 @@ struct AppTimelineView: View {
     @State private var showDatePicker = false
     @State private var showAgentChat = false
     @State private var isAtBottom = true
-    @State private var pendingCoachMessage: CoachMessage?
+    @State private var pendingCoachMessageText: String?
     @State private var showToast = false
     @State private var toastMessage = ""
-    @State private var pendingAgentMessage: String?
     @State private var didTriggerInitialFetch = false
 
     private let dateFormatter: DateFormatter = {
@@ -233,9 +232,9 @@ struct AppTimelineView: View {
             dayLogsVM.loadLogs(for: newValue, force: true)
         }
         .fullScreenCover(isPresented: $showAgentChat, onDismiss: {
-            pendingAgentMessage = nil
+            pendingCoachMessageText = nil
         }) {
-            AgentChatView(initialMessage: $pendingAgentMessage)
+            AgentChatView(initialCoachMessage: $pendingCoachMessageText)
                 .environmentObject(dayLogsVM)
         }
         .onChange(of: foodManager.showLogSuccess) { _, newValue in
@@ -247,8 +246,8 @@ struct AppTimelineView: View {
 
     /// Opens AgentChatView with the coach message seeded as the first assistant message
     private func openAgentChatWithCoachMessage(_ coachMessage: CoachMessage) {
-        // Pass the coach message text as the initial message to continue the conversation
-        pendingAgentMessage = coachMessage.fullText
+        // Seed the coach message as an assistant reply, not a user message.
+        pendingCoachMessageText = coachMessage.fullText
         showAgentChat = true
     }
 

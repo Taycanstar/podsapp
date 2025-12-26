@@ -162,6 +162,18 @@ final class HealthCoachChatViewModel: ObservableObject {
         )
     }
 
+    /// Seed a coach message without triggering a network request.
+    func seedCoachMessage(_ message: String) {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            print("🤖 HealthCoachChatViewModel.seedCoachMessage: Empty message, ignoring")
+            return
+        }
+
+        messages.append(HealthCoachMessage(sender: .coach, text: trimmed))
+        conversationHistory.append(["role": "assistant", "content": trimmed])
+    }
+
     /// Select a clarification option
     /// - Parameter option: The selected option
     func selectOption(_ option: ClarificationOption) {

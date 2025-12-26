@@ -12,11 +12,7 @@ import SwiftUI
 struct LogDetails: View {
     let log: CombinedLog
 
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.isTabBarVisible) private var isTabBarVisible
-    @EnvironmentObject var dayLogsVM: DayLogsViewModel
-    @EnvironmentObject var foodManager: FoodManager
 
     var body: some View {
         Group {
@@ -46,7 +42,6 @@ private struct FoodLogDetailsContent: View {
     let log: CombinedLog
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     @EnvironmentObject var foodManager: FoodManager
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
@@ -57,12 +52,16 @@ private struct FoodLogDetailsContent: View {
     @State private var showDeleteConfirmation = false
     @State private var isDeleting = false
 
+    private var resolvedLog: CombinedLog {
+        dayLogsVM.logs.first(where: { $0.id == log.id }) ?? log
+    }
+
     private var food: Food {
-        log.food?.asFood ?? Food(fdcId: 0, description: "Unknown", brandOwner: nil, brandName: nil, servingSize: nil, numberOfServings: nil, servingSizeUnit: nil, householdServingFullText: nil, foodNutrients: [], foodMeasures: [])
+        resolvedLog.food?.asFood ?? Food(fdcId: 0, description: "Unknown", brandOwner: nil, brandName: nil, servingSize: nil, numberOfServings: nil, servingSizeUnit: nil, householdServingFullText: nil, foodNutrients: [], foodMeasures: [])
     }
 
     private var servings: Double {
-        log.food?.numberOfServings ?? 1.0
+        resolvedLog.food?.numberOfServings ?? 1.0
     }
 
     // MARK: - Colors
@@ -78,25 +77,21 @@ private struct FoodLogDetailsContent: View {
         Color("sheetcard")
     }
 
-    private var chipColor: Color {
-        colorScheme == .dark ? Color(.tertiarySystemFill) : Color(.secondarySystemFill)
-    }
-
     // MARK: - Computed Nutrition Values (scaled by servings)
     private var calories: Double {
-        (log.food?.calories ?? 0) * servings
+        (resolvedLog.food?.calories ?? 0) * servings
     }
 
     private var protein: Double {
-        (log.food?.protein ?? 0) * servings
+        (resolvedLog.food?.protein ?? 0) * servings
     }
 
     private var carbs: Double {
-        (log.food?.carbs ?? 0) * servings
+        (resolvedLog.food?.carbs ?? 0) * servings
     }
 
     private var fat: Double {
-        (log.food?.fat ?? 0) * servings
+        (resolvedLog.food?.fat ?? 0) * servings
     }
 
     // MARK: - Macro Arcs
@@ -140,6 +135,7 @@ private struct FoodLogDetailsContent: View {
                 foodInfoCard
                 macroSummaryCard
                 dailyGoalShareCard
+                nutritionFactsCard
                 Spacer(minLength: 20)
             }
             .padding(.top, 16)
@@ -188,7 +184,7 @@ private struct FoodLogDetailsContent: View {
             Text("This will remove this entry from your timeline.")
         }
         .sheet(isPresented: $showEditSheet) {
-            EditLogSheet(log: log) {
+            EditLogSheet(log: resolvedLog) {
             }
             .environmentObject(dayLogsVM)
             .environmentObject(foodManager)
@@ -253,16 +249,13 @@ private struct FoodLogDetailsContent: View {
                     .font(.system(size: 15))
                     .foregroundColor(.primary)
                 Spacer()
-                Text(String(format: "%.1f", servings))
+                Text(servings.logDetailFormatted)
                     .font(.system(size: 15))
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(chipColor))
+                    .foregroundColor(.secondary)
             }
             .padding(.vertical, 12)
 
-            if let mealType = log.mealType {
+            if let mealType = resolvedLog.mealType {
                 Divider()
                 HStack {
                     Text("Meal")
@@ -276,7 +269,7 @@ private struct FoodLogDetailsContent: View {
                 .padding(.vertical, 12)
             }
 
-            if let scheduledAt = log.scheduledAt {
+            if let scheduledAt = resolvedLog.scheduledAt {
                 Divider()
                 HStack {
                     Text("Logged")
@@ -376,13 +369,59 @@ private struct FoodLogDetailsContent: View {
         .padding(.horizontal)
     }
 
+    private var nutritionFactsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Nutrition Facts")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            if food.foodNutrients.isEmpty {
+                Text("Nutrition data unavailable")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 14)
+                    .padding(.horizontal, 20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(cardColor)
+                    )
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(food.foodNutrients.enumerated()), id: \.offset) { index, nutrient in
+                        HStack {
+                            Text(nutrient.nutrientName)
+                                .font(.system(size: 15))
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(formattedNutrientValue(nutrient))
+                                .font(.system(size: 15))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 12)
+
+                        if index < food.foodNutrients.count - 1 {
+                            Divider()
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .background(
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(cardColor)
+                )
+            }
+        }
+        .padding(.horizontal)
+    }
+
     // MARK: - Actions
     private func reloadStoredNutrientTargets() {
         nutrientTargets = NutritionGoalsStore.shared.currentTargets
     }
 
     private func toggleSave() {
-        guard let fdcId = log.food?.fdcId else { return }
+        guard let fdcId = resolvedLog.food?.fdcId else { return }
 
         if isSaved {
             foodManager.unsaveFoodByFoodId(foodId: fdcId) { result in
@@ -400,19 +439,26 @@ private struct FoodLogDetailsContent: View {
     }
 
     private func checkIfSaved() {
-        guard let fdcId = log.food?.fdcId else { return }
+        guard let fdcId = resolvedLog.food?.fdcId else { return }
         isSaved = foodManager.isFoodSaved(foodId: fdcId)
     }
 
     private func deleteLog() {
         isDeleting = true
         Task {
-            await dayLogsVM.removeLog(log)
+            await dayLogsVM.removeLog(resolvedLog)
             await MainActor.run {
                 isDeleting = false
                 dismiss()
             }
         }
+    }
+
+    private func formattedNutrientValue(_ nutrient: Nutrient) -> String {
+        let value = (nutrient.value ?? 0) * servings
+        let unit = nutrient.unitName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let formattedValue = value.logDetailFormatted
+        return unit.isEmpty ? formattedValue : "\(formattedValue) \(unit)"
     }
 }
 
@@ -422,7 +468,6 @@ private struct RecipeLogDetailsContent: View {
     let log: CombinedLog
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     @EnvironmentObject var foodManager: FoodManager
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
@@ -438,12 +483,16 @@ private struct RecipeLogDetailsContent: View {
     @State private var isExploding = false
     @State private var isDuplicating = false
 
+    private var resolvedLog: CombinedLog {
+        dayLogsVM.logs.first(where: { $0.id == log.id }) ?? log
+    }
+
     private var recipe: RecipeSummary? {
-        log.recipe
+        resolvedLog.recipe
     }
 
     private var servings: Double {
-        Double(log.servingsConsumed ?? 1)
+        Double(resolvedLog.servingsConsumed ?? 1)
     }
 
     // MARK: - Colors
@@ -457,10 +506,6 @@ private struct RecipeLogDetailsContent: View {
 
     private var cardColor: Color {
         Color("sheetcard")
-    }
-
-    private var chipColor: Color {
-        colorScheme == .dark ? Color(.tertiarySystemFill) : Color(.secondarySystemFill)
     }
 
     // MARK: - Computed Nutrition Values (scaled by servings)
@@ -596,7 +641,7 @@ private struct RecipeLogDetailsContent: View {
             Text("This will replace this recipe with individual entries for each ingredient. The original recipe in your library will not be affected.")
         }
         .sheet(isPresented: $showEditSheet) {
-            EditLogSheet(log: log) {
+            EditLogSheet(log: resolvedLog) {
             }
             .environmentObject(dayLogsVM)
             .environmentObject(foodManager)
@@ -648,12 +693,9 @@ private struct RecipeLogDetailsContent: View {
                     .font(.system(size: 15))
                     .foregroundColor(.primary)
                 Spacer()
-                Text(String(format: "%.1f", servings))
+                Text(servings.logDetailFormatted)
                     .font(.system(size: 15))
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(chipColor))
+                    .foregroundColor(.secondary)
             }
             .padding(.vertical, 12)
 
@@ -685,7 +727,7 @@ private struct RecipeLogDetailsContent: View {
                 .padding(.vertical, 12)
             }
 
-            if let mealType = log.mealType {
+            if let mealType = resolvedLog.mealType {
                 Divider()
                 HStack {
                     Text("Meal")
@@ -699,7 +741,7 @@ private struct RecipeLogDetailsContent: View {
                 .padding(.vertical, 12)
             }
 
-            if let scheduledAt = log.scheduledAt {
+            if let scheduledAt = resolvedLog.scheduledAt {
                 Divider()
                 HStack {
                     Text("Logged")
@@ -925,7 +967,7 @@ private struct RecipeLogDetailsContent: View {
     private func deleteLog() {
         isDeleting = true
         Task {
-            await dayLogsVM.removeLog(log)
+            await dayLogsVM.removeLog(resolvedLog)
             await MainActor.run {
                 isDeleting = false
                 dismiss()
@@ -957,7 +999,7 @@ private struct RecipeLogDetailsContent: View {
     }
 
     private func explodeRecipe() {
-        guard let recipeLogId = log.recipeLogId else { return }
+        guard let recipeLogId = resolvedLog.recipeLogId else { return }
 
         isExploding = true
 

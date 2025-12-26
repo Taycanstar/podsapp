@@ -93,7 +93,7 @@ struct NewHomeView: View {
     @State private var showLogDetails = false
     @State private var selectedLogForDetails: CombinedLog?
     @State private var showAgentChat = false
-    @State private var pendingAgentMessage: String?
+    @State private var pendingCoachMessageText: String?
     @State private var showCoachCopyToast = false
     @State private var showAddActivitySheet = false
     @State private var recentQuickActivities: [String] = []
@@ -521,9 +521,9 @@ private var remainingCal: Double { vm.remainingCalories }
             }
         }
         .fullScreenCover(isPresented: $showAgentChat, onDismiss: {
-            pendingAgentMessage = nil
+            pendingCoachMessageText = nil
         }) {
-            AgentChatView(initialMessage: $pendingAgentMessage)
+            AgentChatView(initialCoachMessage: $pendingCoachMessageText)
                 .environmentObject(vm)
         }
         .task {
@@ -1644,6 +1644,7 @@ private extension NewHomeView {
             onShowAll: showAllHealthMetrics
         )
         .padding(.top, 10)
+        .padding(.bottom, 16)
     }
 
     private var healthMetricTiles: [HealthMetricTileModel] {
@@ -3416,7 +3417,7 @@ private struct RecoveryRingView: View {
     }
 
     private func openAgentChat(with coachMessage: CoachMessage) {
-        pendingAgentMessage = coachMessage.fullText
+        pendingCoachMessageText = coachMessage.fullText
         showAgentChat = true
     }
 

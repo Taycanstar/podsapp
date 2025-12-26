@@ -69,6 +69,9 @@ struct AgentChatView: View {
     // Using Binding so SwiftUI reads current value when view appears, not when closure is captured
     @Binding private var initialMessage: String?
 
+    // Initial coach message to seed as an assistant reply (for Timeline/NewHome)
+    @Binding private var initialCoachMessage: String?
+
     // Whether to auto-start voice mode when view appears
     // Using Binding so SwiftUI reads current value when view appears, not when closure is captured
     @Binding private var startWithVoiceMode: Bool
@@ -76,6 +79,7 @@ struct AgentChatView: View {
     init(
         conversationIdToLoad: String? = nil,
         initialMessage: Binding<String?> = .constant(nil),
+        initialCoachMessage: Binding<String?> = .constant(nil),
         startWithVoiceMode: Binding<Bool> = .constant(false),
         onPlusTapped: @escaping () -> Void = {},
         onBarcodeTapped: @escaping () -> Void = {},
@@ -83,6 +87,7 @@ struct AgentChatView: View {
     ) {
         self.conversationIdToLoad = conversationIdToLoad
         self._initialMessage = initialMessage
+        self._initialCoachMessage = initialCoachMessage
         self._startWithVoiceMode = startWithVoiceMode
         self.onPlusTapped = onPlusTapped
         self.onBarcodeTapped = onBarcodeTapped
@@ -176,7 +181,12 @@ struct AgentChatView: View {
             }
 
             // Send initial message if provided (from AgentTabBar)
-            print("🤖 AgentChatView.onAppear - initialMessage: \(initialMessage ?? "nil"), startWithVoiceMode: \(startWithVoiceMode)")
+            print("🤖 AgentChatView.onAppear - initialMessage: \(initialMessage ?? "nil"), initialCoachMessage: \(initialCoachMessage ?? "nil"), startWithVoiceMode: \(startWithVoiceMode)")
+            if conversationIdToLoad == nil, let coachMessage = initialCoachMessage, !coachMessage.isEmpty {
+                print("🤖 AgentChatView: Seeding initial coach message: \(coachMessage)")
+                viewModel.seedCoachMessage(coachMessage)
+                initialCoachMessage = nil
+            }
             if let message = initialMessage, !message.isEmpty {
                 print("🤖 AgentChatView: Sending initial message: \(message)")
                 viewModel.send(message: message)
