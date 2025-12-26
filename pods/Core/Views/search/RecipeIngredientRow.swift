@@ -139,32 +139,19 @@ struct RecipeIngredientEditableRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
                 Text(food.description)
                     .font(.system(size: 15))
                     .foregroundColor(.primary)
                     .lineLimit(1)
 
-                HStack(spacing: 12) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                        Text("\(scaledCalories) cal")
-                    }
+                Spacer(minLength: 8)
 
-                    macroLabel(prefix: "P", value: scaledProtein)
-                    macroLabel(prefix: "F", value: scaledFat)
-                    macroLabel(prefix: "C", value: scaledCarbs)
-                }
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
+                servingControls
             }
 
-            Spacer(minLength: 8)
-
-            servingControls
+            macroRow
         }
         .onChange(of: editableItem.servingAmount) { newValue in
             if food.numberOfServings != newValue {
@@ -179,7 +166,7 @@ struct RecipeIngredientEditableRow: View {
                 .keyboardType(.numbersAndPunctuation)
                 .multilineTextAlignment(.center)
                 .padding(.vertical, 6)
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 2)
                 .frame(width: 50)
                 .background(
                     Capsule().fill(chipColor)
@@ -200,6 +187,25 @@ struct RecipeIngredientEditableRow: View {
             }
         }
         .fixedSize()
+    }
+
+    private var macroRow: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 4) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                Text("\(scaledCalories) cal")
+            }
+
+            macroLabel(prefix: "P", value: scaledProtein)
+            macroLabel(prefix: "F", value: scaledFat)
+            macroLabel(prefix: "C", value: scaledCarbs)
+
+            Spacer()
+        }
+        .font(.system(size: 13))
+        .foregroundColor(.secondary)
     }
 
     private var measureMenu: some View {
@@ -318,50 +324,37 @@ struct RecipeIngredientReadOnlyRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
                 Text(item.name)
                     .font(.system(size: 15))
                     .foregroundColor(.primary)
                     .lineLimit(1)
 
-                HStack(spacing: 12) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                        Text("\(scaledCalories) cal")
-                    }
+                Spacer(minLength: 8)
 
-                    macroLabel(prefix: "P", value: scaledProtein)
-                    macroLabel(prefix: "F", value: scaledFat)
-                    macroLabel(prefix: "C", value: scaledCarbs)
+                HStack(spacing: 6) {
+                    Text(amountText)
+                        .font(.system(size: 15))
+                        .foregroundColor(.primary)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 2)
+                        .background(
+                            Capsule().fill(chipColor)
+                        )
+                    Text(unitText)
+                        .font(.system(size: 15))
+                        .foregroundColor(.primary)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(
+                            Capsule().fill(chipColor)
+                        )
                 }
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
+                .fixedSize()
             }
 
-            Spacer(minLength: 8)
-
-            HStack(spacing: 6) {
-                Text(amountText)
-                    .font(.system(size: 15))
-                    .foregroundColor(.primary)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 8)
-                    .background(
-                        Capsule().fill(chipColor)
-                    )
-                Text(unitText)
-                    .font(.system(size: 15))
-                    .foregroundColor(.primary)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(
-                        Capsule().fill(chipColor)
-                    )
-            }
-            .fixedSize()
+            macroRow
         }
     }
 
@@ -371,5 +364,24 @@ struct RecipeIngredientReadOnlyRow: View {
                 .foregroundColor(.secondary)
             Text("\(value)g")
         }
+    }
+
+    private var macroRow: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 4) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                Text("\(scaledCalories) cal")
+            }
+
+            macroLabel(prefix: "P", value: scaledProtein)
+            macroLabel(prefix: "F", value: scaledFat)
+            macroLabel(prefix: "C", value: scaledCarbs)
+
+            Spacer()
+        }
+        .font(.system(size: 13))
+        .foregroundColor(.secondary)
     }
 }

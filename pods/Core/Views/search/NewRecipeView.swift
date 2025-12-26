@@ -184,6 +184,7 @@ struct NewRecipeView: View {
                                     editableItem: $editableItems[index],
                                     chipColor: chipColor
                                 )
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 Spacer()
                                 Button {
                                     deleteIngredient(at: IndexSet(integer: index))

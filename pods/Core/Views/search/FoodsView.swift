@@ -102,7 +102,7 @@ struct FoodsView: View {
                             food: food,
                             onLogTapped: {
                                 closeSearchIfNeeded()
-                                selectedFood = food
+                                logFoodDirectly(food)
                             },
                             onAddToPlateTapped: {
                                 closeSearchIfNeeded()
@@ -244,6 +244,33 @@ struct FoodsView: View {
         case 11..<15: return .lunch
         case 15..<18: return .snack
         default: return .dinner
+        }
+    }
+
+    // MARK: - Log Food
+    private func logFoodDirectly(_ food: Food) {
+        let email = foodManager.userEmail ?? viewModel.email
+        guard !email.isEmpty else { return }
+
+        let mealDate = Date()
+        let mealLabel = suggestedMealPeriod(for: mealDate).title
+        let servings = max(food.numberOfServings ?? 1, 0.0001)
+
+        foodManager.logFood(
+            email: email,
+            food: food,
+            meal: mealLabel,
+            servings: servings,
+            date: mealDate,
+            notes: nil
+        ) { result in
+            switch result {
+            case .success:
+                dayLogsVM.loadLogs(for: mealDate, force: true)
+                NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
+            case .failure(let error):
+                print("Failed to log food: \(error.localizedDescription)")
+            }
         }
     }
 }

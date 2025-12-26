@@ -1116,11 +1116,6 @@ enum LogType: String, Codable {
 }
 
 // MARK: - Coach Message (AI-generated coaching after food/recipe log)
-// NOTE: Do NOT use explicit CodingKeys with snake_case mappings here!
-// The decoder uses .convertFromSnakeCase which auto-converts keys.
-// Adding explicit mappings like `case foodLogId = "food_log_id"` causes a CONFLICT
-// because the decoder looks for "foodLogId" (already converted) but CodingKeys
-// says look for "food_log_id" - resulting in nil values.
 struct CoachMessage: Codable, Equatable {
     let foodLogId: Int?  // Optional - present for food logs
     let recipeLogId: Int?  // Optional - present for recipe logs
@@ -1135,6 +1130,46 @@ struct CoachMessage: Codable, Equatable {
 
     /// Convenience to get the associated log ID (food or recipe)
     var logId: Int? { foodLogId ?? recipeLogId }
+
+    enum CodingKeys: String, CodingKey {
+        case foodLogId
+        case food_log_id
+        case recipeLogId
+        case recipe_log_id
+        case message
+        case scanMode
+        case scan_mode
+        case todayTotals
+        case today_totals
+        case calorieTarget
+        case calorie_target
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        message = try container.decode(String.self, forKey: .message)
+        foodLogId = try container.decodeIfPresent(Int.self, forKey: .foodLogId)
+            ?? container.decodeIfPresent(Int.self, forKey: .food_log_id)
+        recipeLogId = try container.decodeIfPresent(Int.self, forKey: .recipeLogId)
+            ?? container.decodeIfPresent(Int.self, forKey: .recipe_log_id)
+        scanMode = try container.decodeIfPresent(String.self, forKey: .scanMode)
+            ?? container.decodeIfPresent(String.self, forKey: .scan_mode)
+        todayTotals = try container.decodeIfPresent(CoachTodayTotals.self, forKey: .todayTotals)
+            ?? container.decodeIfPresent(CoachTodayTotals.self, forKey: .today_totals)
+        calorieTarget = try container.decodeIfPresent(Int.self, forKey: .calorieTarget)
+            ?? container.decodeIfPresent(Int.self, forKey: .calorie_target)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(foodLogId, forKey: .foodLogId)
+        try container.encodeIfPresent(recipeLogId, forKey: .recipeLogId)
+        try container.encode(message, forKey: .message)
+        try container.encodeIfPresent(scanMode, forKey: .scanMode)
+        try container.encodeIfPresent(todayTotals, forKey: .todayTotals)
+        try container.encodeIfPresent(calorieTarget, forKey: .calorieTarget)
+    }
 }
 
 /// Today's totals context from coach message

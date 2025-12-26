@@ -510,7 +510,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             enableLogging = false
             #endif
 
-            let config = MPSessionReplayConfig(wifiOnly: true, enableLogging: enableLogging)
+            var config = MPSessionReplayConfig(
+                wifiOnly: true,
+                autoMaskedViews: [],
+                enableLogging: enableLogging
+            )
+            config.enableSessionReplayOniOS26AndLater = true
             MPSessionReplay.initialize(
                 token: mixpanelToken,
                 distinctId: Mixpanel.mainInstance().distinctId,
