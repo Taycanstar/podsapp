@@ -1008,11 +1008,15 @@ struct MultiFoodLogView: View {
         // Use scaled values from editable items (excludes deleted)
         var totalCalories: Double = 0
         var totalProtein: Double = 0
+        var totalCarbs: Double = 0
+        var totalFat: Double = 0
 
         for item in displayFoodsWithIndices {
             let scalingFactor = editableItems[item.index]?.scalingFactor ?? 1.0
             totalCalories += (item.food.calories ?? 0) * scalingFactor
             totalProtein += (item.food.protein ?? 0) * scalingFactor
+            totalCarbs += (item.food.carbs ?? 0) * scalingFactor
+            totalFat += (item.food.fat ?? 0) * scalingFactor
         }
 
         let foodNames = displayFoodsWithIndices.map { $0.food.displayName }
@@ -1020,6 +1024,8 @@ struct MultiFoodLogView: View {
         return [
             "total_calories": totalCalories,
             "total_protein": totalProtein,
+            "total_carbs": totalCarbs,
+            "total_fat": totalFat,
             "item_count": displayFoodsWithIndices.count,
             "food_names": foodNames
         ]

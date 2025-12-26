@@ -7,6 +7,9 @@
 import GoogleSignIn
 import SwiftUI
 import Mixpanel
+#if canImport(MixpanelSessionReplay)
+import MixpanelSessionReplay
+#endif
 import SwiftData
 import os.log
 
@@ -498,7 +501,22 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         if let mixpanelToken = ConfigurationManager.shared.getValue(forKey: "MP_TOKEN") as? String {
             Mixpanel.initialize(token: mixpanelToken, trackAutomaticEvents: false)
             print("Mixpanel set!")
-            
+
+            #if canImport(MixpanelSessionReplay)
+            let enableLogging: Bool
+            #if DEBUG
+            enableLogging = true
+            #else
+            enableLogging = false
+            #endif
+
+            let config = MPSessionReplayConfig(wifiOnly: true, enableLogging: enableLogging)
+            MPSessionReplay.initialize(
+                token: mixpanelToken,
+                distinctId: Mixpanel.mainInstance().distinctId,
+                config: config
+            )
+            #endif
         } else {
             print("Error: MP_TOKEN is missing or not a valid String.")
         }

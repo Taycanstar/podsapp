@@ -3883,17 +3883,23 @@ struct PlateView: View {
     private func buildBatchContext(from entries: [PlateEntry]) -> [String: Any] {
         var totalCalories: Double = 0
         var totalProtein: Double = 0
+        var totalCarbs: Double = 0
+        var totalFat: Double = 0
 
         for entry in entries {
             let totals = entry.macroTotals
             totalCalories += totals.calories
             totalProtein += totals.protein
+            totalCarbs += totals.carbs
+            totalFat += totals.fat
         }
 
         let foodNames = entries.map { $0.title }
         return [
             "total_calories": totalCalories,
             "total_protein": totalProtein,
+            "total_carbs": totalCarbs,
+            "total_fat": totalFat,
             "item_count": entries.count,
             "food_names": foodNames
         ]

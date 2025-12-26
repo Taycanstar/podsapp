@@ -153,7 +153,7 @@ struct RecipeDetails: View {
                     macroSummaryCard
                     dailyGoalShareCard
 
-                    if !activeRecipe.recipeItems.isEmpty {
+                    if !activeRecipeItems.isEmpty {
                         ingredientsSection
                     }
 
@@ -810,34 +810,11 @@ struct RecipeDetails: View {
                 .fontWeight(.semibold)
 
             VStack(spacing: 0) {
-                ForEach(Array(activeRecipe.recipeItems.enumerated()), id: \.offset) { index, item in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(item.name)
-                                .font(.system(size: 15))
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
+                ForEach(Array(activeRecipeItems.enumerated()), id: \.offset) { index, item in
+                    RecipeIngredientReadOnlyRow(item: item, chipColor: chipColor)
+                        .padding(.vertical, 12)
 
-                            HStack(spacing: 4) {
-                                Text(item.servingText ?? "1 serving")
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                if item.servings != "1" {
-                                    Text("x\(item.servings)")
-                                }
-                            }
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                        }
-                        Spacer()
-
-                        Text("\(Int(item.calories)) cal")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.vertical, 12)
-
-                    if index < activeRecipe.recipeItems.count - 1 {
+                    if index < activeRecipeItems.count - 1 {
                         Divider()
                     }
                 }

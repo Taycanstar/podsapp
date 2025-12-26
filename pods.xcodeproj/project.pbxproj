@@ -193,6 +193,7 @@
 		36667E0C2EFC4BE50017E9D7 /* LogDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E0B2EFC4BDB0017E9D7 /* LogDetails.swift */; };
 		36667E0E2EFC55EE0017E9D7 /* ConversationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E0D2EFC55EE0017E9D7 /* ConversationModels.swift */; };
 		36667E102EFC5B690017E9D7 /* ConversationHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E0F2EFC5B690017E9D7 /* ConversationHistoryViewModel.swift */; };
+		36667E122EFE10C70017E9D7 /* RecipeIngredientRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E112EFE10C70017E9D7 /* RecipeIngredientRow.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -445,6 +446,7 @@
 		BDD49A027514746E61E076C3 /* Pods_Metryc_podsUITests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BC307CDC06DF3A480E3EDF16 /* Pods_Metryc_podsUITests.framework */; };
 		C5815F6130304BA3D7590704 /* BodyFatLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89423DE3210EFC3F0A14CEE2 /* BodyFatLogView.swift */; };
 		C883DC9A9122407453C28742 /* Pods_Metryc.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB3DF34AD6BD6C86FFC91F25 /* Pods_Metryc.framework */; };
+		CBF7233285884A05852E6AC2 /* MixpanelSessionReplay in Frameworks */ = {isa = PBXBuildFile; productRef = 495BD8D493254E64BCB8C542 /* MixpanelSessionReplay */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -655,6 +657,7 @@
 		36667E0B2EFC4BDB0017E9D7 /* LogDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogDetails.swift; sourceTree = "<group>"; };
 		36667E0D2EFC55EE0017E9D7 /* ConversationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationModels.swift; sourceTree = "<group>"; };
 		36667E0F2EFC5B690017E9D7 /* ConversationHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationHistoryViewModel.swift; sourceTree = "<group>"; };
+		36667E112EFE10C70017E9D7 /* RecipeIngredientRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeIngredientRow.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -924,6 +927,7 @@
 			files = (
 				36CB03372D5C6D68006A74E9 /* Mixpanel in Frameworks */,
 				369474612CCA97F800CD197F /* Mixpanel in Frameworks */,
+				CBF7233285884A05852E6AC2 /* MixpanelSessionReplay in Frameworks */,
 				3694BE352CDFCEF400E45F48 /* Mixpanel in Frameworks */,
 				3694BE332CDFCEC400E45F48 /* Mixpanel in Frameworks */,
 				3694745E2CBC619200CD197F /* StoreKit.framework in Frameworks */,
@@ -1202,6 +1206,7 @@
 		36667DCF2EF3A2120017E9D7 /* search */ = {
 			isa = PBXGroup;
 			children = (
+				36667E112EFE10C70017E9D7 /* RecipeIngredientRow.swift */,
 				36667E0B2EFC4BDB0017E9D7 /* LogDetails.swift */,
 				36667E092EFC4BD00017E9D7 /* EditLogSheet.swift */,
 				36667E052EFBA6830017E9D7 /* DuplicateRecipeView.swift */,
@@ -1806,6 +1811,7 @@
 			mainGroup = 36C458AD2B7421100060355F;
 			packageReferences = (
 				3694745F2CCA97F800CD197F /* XCRemoteSwiftPackageReference "mixpanel-swift" */,
+				E0389C0745D043AFB4E97FF7 /* XCRemoteSwiftPackageReference "mixpanel-ios-session-replay-package" */,
 			);
 			productRefGroup = 36C458B72B7421100060355F /* Products */;
 			projectDirPath = "";
@@ -2118,6 +2124,7 @@
 				363068CF2E0CA7A100F2D4EC /* CompareWeightLogsView.swift in Sources */,
 				36ED35EF2DDE534A00D174FB /* FindFoodsView.swift in Sources */,
 				3617B93E2C58AB7C008FB5FA /* QuickPodView.swift in Sources */,
+				36667E122EFE10C70017E9D7 /* RecipeIngredientRow.swift in Sources */,
 				3662A5572DFE430D00847487 /* AddExerciseView.swift in Sources */,
 				36667E102EFC5B690017E9D7 /* ConversationHistoryViewModel.swift in Sources */,
 				36881DF32E71E65D00262045 /* FitnessGoalMigrationService.swift in Sources */,
@@ -2802,6 +2809,14 @@
 				kind = branch;
 			};
 		};
+		E0389C0745D043AFB4E97FF7 /* XCRemoteSwiftPackageReference "mixpanel-ios-session-replay-package" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mixpanel/mixpanel-ios-session-replay-package";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -2824,6 +2839,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3694745F2CCA97F800CD197F /* XCRemoteSwiftPackageReference "mixpanel-swift" */;
 			productName = Mixpanel;
+		};
+		495BD8D493254E64BCB8C542 /* MixpanelSessionReplay */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E0389C0745D043AFB4E97FF7 /* XCRemoteSwiftPackageReference "mixpanel-ios-session-replay-package" */;
+			productName = MixpanelSessionReplay;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

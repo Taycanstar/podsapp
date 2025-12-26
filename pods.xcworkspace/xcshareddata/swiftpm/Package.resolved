@@ -1,6 +1,15 @@
 {
-  "originHash" : "652a3e5623b2e6c8c6e0e0b946c185247190377f8f46737da6c1d9062f42423e",
+  "originHash" : "0239bea152689b72771c421b59247e5adacd182549b48d6b7aa53ae8bdbe9a68",
   "pins" : [
+    {
+      "identity" : "mixpanel-ios-session-replay-package",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mixpanel/mixpanel-ios-session-replay-package",
+      "state" : {
+        "revision" : "72b8af431dd6d4bfd47fa8238da657855c123b1c",
+        "version" : "1.2.0"
+      }
+    },
     {
       "identity" : "mixpanel-swift",
       "kind" : "remoteSourceControl",

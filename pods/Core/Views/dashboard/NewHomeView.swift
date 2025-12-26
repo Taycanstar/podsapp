@@ -2,6 +2,7 @@ import SwiftUI
 import HealthKit
 import Combine
 import Charts
+import UIKit
 
 struct NewHomeView: View {
     @Binding var agentText: String
@@ -91,6 +92,9 @@ struct NewHomeView: View {
     @State private var showTimelineSheet = false
     @State private var showLogDetails = false
     @State private var selectedLogForDetails: CombinedLog?
+    @State private var showAgentChat = false
+    @State private var pendingAgentMessage: String?
+    @State private var showCoachCopyToast = false
     @State private var showAddActivitySheet = false
     @State private var recentQuickActivities: [String] = []
     @State private var showQuickActivityToast = false
@@ -256,6 +260,12 @@ private var remainingCal: Double { vm.remainingCalories }
                 onShowAll: timelineEvents.count > timelinePreviewEvents.count ? { showTimelineSheet = true } : nil,
                 onAddActivity: { showAddActivitySheet = true },
                 onScanMeal: onBarcodeTapped,
+                onCoachEditTap: { coachMessage in
+                    openAgentChat(with: coachMessage)
+                },
+                onCoachCopyTap: {
+                    showCoachCopyToastMessage()
+                },
                 onDeleteLog: { deleteLogItem(log: $0) },
                 onSaveLog: { saveMealAction(log: $0) },
                 onUnsaveLog: { unsaveMealAction(log: $0) },
@@ -509,6 +519,12 @@ private var remainingCal: Double { vm.remainingCalories }
                 SearchView()
                     .environmentObject(vm)
             }
+        }
+        .fullScreenCover(isPresented: $showAgentChat, onDismiss: {
+            pendingAgentMessage = nil
+        }) {
+            AgentChatView(initialMessage: $pendingAgentMessage)
+                .environmentObject(vm)
         }
         .task {
             refreshWeightTrendEntries()
@@ -1174,7 +1190,18 @@ private extension NewHomeView {
     }
 
     private var resolvedToastOverlay: AnyView {
-        if foodMgr.showAIGenerationSuccess, foodMgr.aiGeneratedFood != nil {
+        if showCoachCopyToast {
+            return AnyView(
+                VStack {
+                    Spacer()
+                    BottomPopup(message: "Message copied")
+                        .padding(.bottom, 90)
+                }
+                .zIndex(3)
+                .transition(.opacity)
+                .animation(.spring(), value: showCoachCopyToast)
+            )
+        } else if foodMgr.showAIGenerationSuccess, foodMgr.aiGeneratedFood != nil {
             return AnyView(
                 VStack {
                     Spacer()
@@ -3388,6 +3415,22 @@ private struct RecoveryRingView: View {
         return (foodEvents + otherEvents).sorted { $0.date < $1.date }
     }
 
+    private func openAgentChat(with coachMessage: CoachMessage) {
+        pendingAgentMessage = coachMessage.fullText
+        showAgentChat = true
+    }
+
+    private func showCoachCopyToastMessage() {
+        withAnimation {
+            showCoachCopyToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showCoachCopyToast = false
+            }
+        }
+    }
+
     private func logQuickActivity(_ input: QuickActivityInput, completion: @escaping (Result<Void, Error>) -> Void) {
         let isoDate = iso8601WithFractionalFormatter.string(from: input.startTime)
         let timeFormatter = DateFormatter()
@@ -4994,6 +5037,8 @@ private struct TimelineSectionView: View {
     var onShowAll: (() -> Void)? = nil
     var onAddActivity: (() -> Void)? = nil
     var onScanMeal: (() -> Void)? = nil
+    var onCoachEditTap: ((CoachMessage) -> Void)? = nil
+    var onCoachCopyTap: (() -> Void)? = nil
     var onDeleteLog: ((CombinedLog) -> Void)? = nil
     var onSaveLog: ((CombinedLog) -> Void)? = nil
     var onUnsaveLog: ((CombinedLog) -> Void)? = nil
@@ -5040,6 +5085,8 @@ private struct TimelineSectionView: View {
                                 event: event,
                                 selectedDate: selectedDate,
                                 coachMessage: coachMessageForEvent(event),
+                                onCoachEditTap: onCoachEditTap,
+                                onCoachCopyTap: onCoachCopyTap,
                                 canDelete: event.log.map { canDelete(log: $0) } ?? false,
                                 canToggleSave: event.log.map { canSave(log: $0) } ?? false,
                                 onDelete: onDeleteLog,
@@ -5186,6 +5233,8 @@ private struct TimelineEventRow: View {
     let event: TimelineEvent
     let selectedDate: Date
     var coachMessage: CoachMessage? = nil
+    var onCoachEditTap: ((CoachMessage) -> Void)? = nil
+    var onCoachCopyTap: (() -> Void)? = nil
     var canDelete: Bool = false
     var canToggleSave: Bool = false
     var onDelete: ((CombinedLog) -> Void)? = nil
@@ -5239,7 +5288,11 @@ private struct TimelineEventRow: View {
             if let coachMessage {
                 HStack(alignment: .top, spacing: 12) {
                     TimelineConnectorSpacer()
-                    TimelineCoachMessageText(message: coachMessage)
+                    TimelineCoachMessageText(
+                        message: coachMessage,
+                        onEditTap: onCoachEditTap,
+                        onCopyTap: onCoachCopyTap
+                    )
                         .padding(.bottom, 16)
                 }
             }
@@ -5354,12 +5407,82 @@ private struct TimelineEventRow: View {
 
 private struct TimelineCoachMessageText: View {
     let message: CoachMessage
+    var onEditTap: ((CoachMessage) -> Void)?
+    var onCopyTap: (() -> Void)?
+
+    @State private var displayedText: String = ""
+    @State private var isAnimating: Bool = false
+    @State private var streamingComplete: Bool = false
+
+    private var fullText: String {
+        message.fullText
+    }
 
     var body: some View {
-        Text(message.fullText)
-            .font(.system(size: 15))
-            .foregroundColor(.primary)
-            .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 8) {
+            Text(displayedText)
+                .font(.system(size: 15))
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if streamingComplete {
+                HStack(spacing: 16) {
+                    Button {
+                        UIPasteboard.general.string = fullText
+                        onCopyTap?()
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        onEditTap?(message)
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer()
+                }
+                .padding(.top, 14)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .onAppear {
+            startStreamingAnimation()
+        }
+        .onChange(of: message.logId) { _, _ in
+            displayedText = ""
+            streamingComplete = false
+            startStreamingAnimation()
+        }
+    }
+
+    private func startStreamingAnimation() {
+        guard !isAnimating else { return }
+        isAnimating = true
+        streamingComplete = false
+        displayedText = ""
+
+        let characters = Array(fullText)
+        var currentIndex = 0
+
+        Timer.scheduledTimer(withTimeInterval: 0.025, repeats: true) { timer in
+            if currentIndex < characters.count {
+                displayedText.append(characters[currentIndex])
+                currentIndex += 1
+            } else {
+                timer.invalidate()
+                isAnimating = false
+                withAnimation(.easeIn(duration: 0.3)) {
+                    streamingComplete = true
+                }
+            }
+        }
     }
 }
 

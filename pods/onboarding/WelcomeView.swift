@@ -1,5 +1,4 @@
 import SwiftUI
-import Mixpanel
 
 struct WelcomeView: View {
     @State private var password: String = ""
@@ -183,11 +182,11 @@ struct WelcomeView: View {
                             canCreateNewTeam: nil  // Removed canCreateNewTeam parameter
                         )
                         
-                        Mixpanel.mainInstance().identify(distinctId: userIdString)
-                        Mixpanel.mainInstance().people.set(properties: [
-                            "$email": viewModel.email,
-                            "$name": viewModel.username
-                        ])
+                        AnalyticsManager.shared.identify(
+                            userId: userIdString,
+                            email: viewModel.email,
+                            name: viewModel.username
+                        )
 
                         self.viewModel.password = ""
                         viewModel.currentStep = .landing

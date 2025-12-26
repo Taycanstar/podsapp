@@ -21,6 +21,7 @@ struct EditRecipeSheet: View {
     @State private var name: String
     @State private var servings: Int
     @State private var ingredients: [Food]
+    @State private var editableItems: [RecipeIngredientEditableItem]
 
     // State
     @State private var isUpdating = false
@@ -62,6 +63,7 @@ struct EditRecipeSheet: View {
             )
         }
         _ingredients = State(initialValue: foods)
+        _editableItems = State(initialValue: foods.map { RecipeIngredientEditableItem(from: $0) })
     }
 
     private var chipColor: Color {
@@ -79,11 +81,12 @@ struct EditRecipeSheet: View {
         var carbs: Double = 0
         var fat: Double = 0
 
-        for food in ingredients {
-            cals += food.calories ?? 0
-            protein += food.protein ?? 0
-            carbs += food.carbs ?? 0
-            fat += food.fat ?? 0
+        for (index, food) in ingredients.enumerated() {
+            let scale = editableItems.indices.contains(index) ? editableItems[index].scalingFactor : (food.numberOfServings ?? 1)
+            cals += (food.calories ?? 0) * scale
+            protein += (food.protein ?? 0) * scale
+            carbs += (food.carbs ?? 0) * scale
+            fat += (food.fat ?? 0) * scale
         }
 
         return (cals, protein, carbs, fat)
@@ -124,10 +127,11 @@ struct EditRecipeSheet: View {
 
     private var aggregatedNutrients: [String: EditRecipeRawNutrientValue] {
         var result: [String: EditRecipeRawNutrientValue] = [:]
-        for food in ingredients {
+        for (index, food) in ingredients.enumerated() {
+            let scale = editableItems.indices.contains(index) ? editableItems[index].scalingFactor : (food.numberOfServings ?? 1)
             for nutrient in food.foodNutrients {
                 let key = normalizedNutrientKey(nutrient.nutrientName)
-                let value = nutrient.value ?? 0
+                let value = (nutrient.value ?? 0) * scale
                 if let existing = result[key] {
                     result[key] = EditRecipeRawNutrientValue(value: existing.value + value, unit: existing.unit)
                 } else {
@@ -205,7 +209,11 @@ struct EditRecipeSheet: View {
                     Section {
                         ForEach(ingredients.indices, id: \.self) { index in
                             HStack {
-                                EditRecipeIngredientRow(food: ingredients[index])
+                                RecipeIngredientEditableRow(
+                                    food: $ingredients[index],
+                                    editableItem: $editableItems[index],
+                                    chipColor: chipColor
+                                )
                                 Spacer()
                                 Button {
                                     deleteIngredient(at: IndexSet(integer: index))
@@ -276,6 +284,7 @@ struct EditRecipeSheet: View {
             .sheet(isPresented: $showAddIngredients) {
                 AddIngredients(onIngredientAdded: { food in
                     ingredients.append(food)
+                    editableItems.append(RecipeIngredientEditableItem(from: food))
                 })
                 .environmentObject(foodManager)
                 .environmentObject(viewModel)
@@ -509,6 +518,7 @@ struct EditRecipeSheet: View {
 
     private func deleteIngredient(at offsets: IndexSet) {
         ingredients.remove(atOffsets: offsets)
+        editableItems.remove(atOffsets: offsets)
     }
 
     private func updateRecipe() {
@@ -696,64 +706,6 @@ struct EditRecipeSheet: View {
             return "\(valueText)/\(goalText)"
         } else {
             return "\(valueText)/\(goalText) \(trimmedUnit)"
-        }
-    }
-}
-
-// MARK: - Ingredient Row
-
-private struct EditRecipeIngredientRow: View {
-    let food: Food
-
-    private var caloriesValue: Int {
-        Int((food.calories ?? 0).rounded())
-    }
-
-    private var proteinValue: Int {
-        Int((food.protein ?? 0).rounded())
-    }
-
-    private var fatValue: Int {
-        Int((food.fat ?? 0).rounded())
-    }
-
-    private var carbsValue: Int {
-        Int((food.carbs ?? 0).rounded())
-    }
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(food.description)
-                    .font(.system(size: 15))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-
-                HStack(spacing: 12) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                        Text("\(caloriesValue) cal")
-                    }
-
-                    macroLabel(prefix: "P", value: proteinValue)
-                    macroLabel(prefix: "F", value: fatValue)
-                    macroLabel(prefix: "C", value: carbsValue)
-                }
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
-            }
-
-            Spacer()
-        }
-    }
-
-    private func macroLabel(prefix: String, value: Int) -> some View {
-        HStack(spacing: 2) {
-            Text(prefix)
-                .foregroundColor(.secondary)
-            Text("\(value)g")
         }
     }
 }

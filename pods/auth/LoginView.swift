@@ -1,6 +1,5 @@
 import SwiftUI
 import Combine
-import Mixpanel
 
 struct LoginView: View {
     @EnvironmentObject var viewModel: OnboardingViewModel
@@ -213,11 +212,11 @@ struct LoginView: View {
                     // Notify the app that authentication has completed
                     NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
                     
-                    Mixpanel.mainInstance().identify(distinctId: userIdString)
-                    Mixpanel.mainInstance().people.set(properties: [
-                        "$email": viewModel.email,
-                        "$name": viewModel.username
-                    ])
+                    AnalyticsManager.shared.identify(
+                        userId: userIdString,
+                        email: viewModel.email,
+                        name: viewModel.username
+                    )
                 } else {
                     self.errorMessage = error ?? "Invalid credentials"
                 }

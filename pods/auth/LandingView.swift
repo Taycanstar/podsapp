@@ -2,7 +2,6 @@ import SwiftUI
 import AuthenticationServices  // For Apple Sign In
 import GoogleSignIn
 import CryptoKit
-import Mixpanel
 
 struct LandingView: View {
     // Background color changed to black
@@ -237,12 +236,11 @@ struct LandingView: View {
 
                         // Keep UI in sync across the tree by using AppStorage in ContentView
 
-                        // Mixpanel tracking
-                        Mixpanel.mainInstance().identify(distinctId: userIdString)
-                        Mixpanel.mainInstance().people.set(properties: [
-                            "$email": viewModel.email,
-                            "$name": viewModel.username
-                        ])
+                        AnalyticsManager.shared.identify(
+                            userId: userIdString,
+                            email: viewModel.email,
+                            name: viewModel.username
+                        )
 
                         // Always set authentication to true - let ContentView handle onboarding flow
                         print("🔑 Google Auth - Setting isAuthenticated = true, onboarding status: \(isOnboardingComplete)")
@@ -386,12 +384,11 @@ struct LandingView: View {
                         // Force synchronize to ensure all changes are written immediately
                         UserDefaults.standard.synchronize()
 
-                        // Mixpanel tracking
-                        Mixpanel.mainInstance().identify(distinctId: userIdString)
-                        Mixpanel.mainInstance().people.set(properties: [
-                            "$email": viewModel.email,
-                            "$name": viewModel.username
-                        ])
+                        AnalyticsManager.shared.identify(
+                            userId: userIdString,
+                            email: viewModel.email,
+                            name: viewModel.username
+                        )
 
                         // Always set authentication to true - let ContentView handle onboarding flow
                         print("🔑 Apple Auth - Setting isAuthenticated = true, onboarding status: \(isOnboardingComplete)")

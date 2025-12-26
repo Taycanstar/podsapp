@@ -9,6 +9,9 @@
 import Foundation
 import Mixpanel
 import UIKit
+#if canImport(MixpanelSessionReplay)
+import MixpanelSessionReplay
+#endif
 
 /// Centralized analytics manager for standardized event tracking.
 /// Provides consistent event naming, property enrichment, and request ID correlation
@@ -85,6 +88,10 @@ final class AnalyticsManager {
         if !properties.isEmpty {
             Mixpanel.mainInstance().people.set(properties: properties)
         }
+
+        #if canImport(MixpanelSessionReplay)
+        MPSessionReplay.getInstance()?.identify(distinctId: userId)
+        #endif
     }
 
     /// Resets identity on logout.
@@ -92,6 +99,11 @@ final class AnalyticsManager {
         userId = nil
         currentRequestId = nil
         Mixpanel.mainInstance().reset()
+
+        #if canImport(MixpanelSessionReplay)
+        let newDistinctId = Mixpanel.mainInstance().distinctId
+        MPSessionReplay.getInstance()?.identify(distinctId: newDistinctId)
+        #endif
     }
 
     // MARK: - Base Properties
