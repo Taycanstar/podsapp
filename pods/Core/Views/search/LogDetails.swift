@@ -470,18 +470,21 @@ private struct RecipeLogDetailsContent: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var dayLogsVM: DayLogsViewModel
     @EnvironmentObject var foodManager: FoodManager
+    @EnvironmentObject var onboardingViewModel: OnboardingViewModel
     @ObservedObject private var goalsStore = NutritionGoalsStore.shared
 
     @State private var nutrientTargets: [String: NutrientTargetDetails] = NutritionGoalsStore.shared.currentTargets
     @State private var fullRecipe: Recipe?
     @State private var isLoadingRecipe = false
+    @State private var isLoadingNutrients = false
+    @State private var enrichedRecipeItems: [RecipeFoodItem] = []
     @State private var isSaved = false
     @State private var showEditSheet = false
     @State private var showDeleteConfirmation = false
-    @State private var showExplodeConfirmation = false
     @State private var isDeleting = false
-    @State private var isExploding = false
     @State private var isDuplicating = false
+    @StateObject private var plateViewModel = PlateViewModel()
+    @State private var showPlateView = false
 
     private var resolvedLog: CombinedLog {
         dayLogsVM.logs.first(where: { $0.id == log.id }) ?? log
@@ -489,6 +492,13 @@ private struct RecipeLogDetailsContent: View {
 
     private var recipe: RecipeSummary? {
         resolvedLog.recipe
+    }
+
+    private var activeRecipeItems: [RecipeFoodItem] {
+        if !enrichedRecipeItems.isEmpty {
+            return enrichedRecipeItems
+        }
+        return fullRecipe?.recipeItems ?? []
     }
 
     private var servings: Double {
@@ -567,10 +577,10 @@ private struct RecipeLogDetailsContent: View {
                 macroSummaryCard
                 dailyGoalShareCard
 
-                if isLoadingRecipe {
+                if isLoadingRecipe || isLoadingNutrients {
                     ingredientsLoadingView
-                } else if let fullRecipe = fullRecipe, !fullRecipe.recipeItems.isEmpty {
-                    ingredientsSection(items: fullRecipe.recipeItems)
+                } else if !activeRecipeItems.isEmpty {
+                    ingredientsSection(items: activeRecipeItems)
                 }
 
                 Spacer(minLength: 20)
@@ -606,9 +616,9 @@ private struct RecipeLogDetailsContent: View {
                         }
 
                         Button {
-                            showExplodeConfirmation = true
+                            explodeToPlate()
                         } label: {
-                            Label("Explode into Ingredients", systemImage: "arrow.up.right.and.arrow.down.left.rectangle")
+                            Label("Explode", systemImage: "arrow.up.right.and.arrow.down.left.rectangle")
                         }
 
                         Button(role: .destructive) {
@@ -632,26 +642,34 @@ private struct RecipeLogDetailsContent: View {
         } message: {
             Text("This will remove this entry from your timeline.")
         }
-        .confirmationDialog("Explode Recipe?", isPresented: $showExplodeConfirmation) {
-            Button("Explode") {
-                explodeRecipe()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This will replace this recipe with individual entries for each ingredient. The original recipe in your library will not be affected.")
-        }
         .sheet(isPresented: $showEditSheet) {
             EditLogSheet(log: resolvedLog) {
             }
             .environmentObject(dayLogsVM)
             .environmentObject(foodManager)
         }
+        .sheet(isPresented: $showPlateView) {
+            NavigationStack {
+                PlateView(
+                    viewModel: plateViewModel,
+                    selectedMealPeriod: suggestedMealPeriod(for: Date()),
+                    mealTime: Date(),
+                    onFinished: {
+                        showPlateView = false
+                        plateViewModel.clear()
+                    }
+                )
+                .environmentObject(foodManager)
+                .environmentObject(dayLogsVM)
+                .environmentObject(onboardingViewModel)
+            }
+        }
         .overlay {
-            if isDeleting || isExploding || isDuplicating {
+            if isDeleting || isDuplicating {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
                     .overlay {
-                        ProgressView(isExploding ? "Exploding recipe..." : (isDuplicating ? "Duplicating..." : "Deleting..."))
+                        ProgressView(isDuplicating ? "Duplicating..." : "Deleting...")
                             .padding()
                             .background(Color("iosnp"))
                             .cornerRadius(12)
@@ -662,6 +680,7 @@ private struct RecipeLogDetailsContent: View {
             reloadStoredNutrientTargets()
             checkIfSaved()
             await loadFullRecipe()
+            await loadFullNutrientsForIngredients()
         }
         .onReceive(goalsStore.$state) { _ in
             reloadStoredNutrientTargets()
@@ -932,6 +951,59 @@ private struct RecipeLogDetailsContent: View {
         // If not in cache, could fetch from server here
     }
 
+    private func loadFullNutrientsForIngredients() async {
+        guard enrichedRecipeItems.isEmpty else { return }
+        guard let fullRecipe = fullRecipe else { return }
+
+        let needsFullNutrients = fullRecipe.recipeItems.contains { item in
+            (item.foodNutrients?.count ?? 0) <= 10
+        }
+        guard needsFullNutrients else { return }
+
+        guard let email = foodManager.userEmail else { return }
+
+        isLoadingNutrients = true
+        defer { isLoadingNutrients = false }
+
+        var enriched: [RecipeFoodItem] = []
+
+        for item in fullRecipe.recipeItems {
+            if (item.foodNutrients?.count ?? 0) > 10 {
+                enriched.append(item)
+                continue
+            }
+
+            do {
+                let fullResult = try await FoodService.shared.fullFoodLookup(
+                    nixItemId: nil,
+                    foodName: item.name,
+                    userEmail: email
+                )
+                let fullFood = fullResult.toFood()
+
+                let enrichedItem = RecipeFoodItem(
+                    foodId: item.foodId,
+                    externalId: item.externalId,
+                    name: item.name,
+                    servings: item.servings,
+                    servingText: item.servingText,
+                    notes: item.notes,
+                    calories: item.calories,
+                    protein: item.protein,
+                    carbs: item.carbs,
+                    fat: item.fat,
+                    foodNutrients: fullFood.foodNutrients
+                )
+                enriched.append(enrichedItem)
+            } catch {
+                print("[RecipeLogDetails] Failed to load full nutrients for \(item.name): \(error)")
+                enriched.append(item)
+            }
+        }
+
+        enrichedRecipeItems = enriched
+    }
+
     private func toggleSave() {
         guard let recipeId = recipe?.recipeId else { return }
 
@@ -998,20 +1070,82 @@ private struct RecipeLogDetailsContent: View {
         }
     }
 
-    private func explodeRecipe() {
-        guard let recipeLogId = resolvedLog.recipeLogId else { return }
+    private func explodeToPlate() {
+        let items = activeRecipeItems
+        guard !items.isEmpty else {
+            print("No ingredients to explode")
+            return
+        }
 
-        isExploding = true
+        plateViewModel.clear()
+        let mealPeriod = suggestedMealPeriod(for: Date())
 
-        dayLogsVM.explodeRecipeLog(recipeLogId: recipeLogId) { result in
-            isExploding = false
+        print("[RecipeLogDetails] Exploding \(items.count) items to PlateView (VM id: \(plateViewModel.instanceId))")
+        for item in items {
+            let entry = buildPlateEntry(from: item, mealPeriod: mealPeriod)
+            plateViewModel.add(entry)
+            print("[RecipeLogDetails] Added entry: \(item.name)")
+        }
+        print("[RecipeLogDetails] PlateViewModel \(plateViewModel.instanceId) now has \(plateViewModel.entries.count) entries")
 
-            switch result {
-            case .success:
-                dismiss()
-            case .failure(let error):
-                print("Failed to explode recipe: \(error.localizedDescription)")
+        showPlateView = true
+    }
+
+    private func buildPlateEntry(from item: RecipeFoodItem, mealPeriod: MealPeriod) -> PlateEntry {
+        let servings = Double(item.servings) ?? 1.0
+
+        let baseMacros = MacroTotals(
+            calories: item.calories / servings,
+            protein: item.protein / servings,
+            carbs: item.carbs / servings,
+            fat: item.fat / servings
+        )
+
+        var baseNutrients: [String: RawNutrientValue] = [:]
+        if let nutrients = item.foodNutrients {
+            for nutrient in nutrients {
+                let key = nutrient.nutrientName.lowercased()
+                let perServingValue = (nutrient.value ?? 0) / servings
+                baseNutrients[key] = RawNutrientValue(value: perServingValue, unit: nutrient.unitName)
             }
+        }
+
+        let food = Food(
+            fdcId: item.foodId,
+            description: item.name,
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: nil,
+            numberOfServings: servings,
+            servingSizeUnit: nil,
+            householdServingFullText: item.servingText,
+            foodNutrients: item.foodNutrients ?? [],
+            foodMeasures: []
+        )
+
+        return PlateEntry(
+            food: food,
+            servings: servings,
+            selectedMeasureId: nil,
+            availableMeasures: [],
+            baselineGramWeight: 100,
+            baseNutrientValues: baseNutrients,
+            baseMacroTotals: baseMacros,
+            servingDescription: item.servingText ?? "1 serving",
+            mealItems: [],
+            mealPeriod: mealPeriod,
+            mealTime: Date(),
+            recipeItems: []
+        )
+    }
+
+    private func suggestedMealPeriod(for date: Date) -> MealPeriod {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 5..<11: return .breakfast
+        case 11..<14: return .lunch
+        case 14..<17: return .snack
+        default: return .dinner
         }
     }
 }
