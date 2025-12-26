@@ -68,14 +68,11 @@ struct EnableNotificationsView: View {
 
     private var notificationPreviews: some View {
         VStack(spacing: 16) {
-            Image("foodnoti")
+            Image("notiphoto")
                 .resizable()
                 .scaledToFit()
                 .frame(maxWidth: .infinity)
-            Image("wknoti")
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: .infinity)
+           
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 24)
@@ -282,7 +279,7 @@ struct EnableNotificationsView: View {
             }
         }
 
-        return (title, "Your personalized workout is ready. Open Humuli to preview today's plan.")
+        return (title, "Your personalized workout is ready. Open Metryc to preview today's plan.")
     }
 
     private static let notificationIdentifier = "daily_workout_preview"

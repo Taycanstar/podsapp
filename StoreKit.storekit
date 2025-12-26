@@ -24,7 +24,7 @@
     "_developerTeamID" : "TN4N9K5B77",
     "_disableDialogs" : false,
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 782954759.90880406,
+    "_lastSynchronizedDate" : 788457803.594926,
     "_locale" : "en_US",
     "_renewalBillingIssuesEnabled" : false,
     "_storefront" : "USA",
@@ -39,21 +39,32 @@
       "localizations" : [
 
       ],
-      "name" : "Humuli Pro",
+      "name" : "Metryc Pro",
       "subscriptions" : [
         {
           "adHocOffers" : [
 
           ],
           "codeOffers" : [
-
+            {
+              "eligibility" : [
+                "new",
+                "existing"
+              ],
+              "internalID" : "F05973AD",
+              "isStackable" : true,
+              "numberOfPeriods" : 1,
+              "paymentMode" : "free",
+              "referenceName" : "staff",
+              "subscriptionPeriod" : "P1M"
+            }
           ],
-          "displayPrice" : "19.99",
+          "displayPrice" : "9.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "6753729190",
           "introductoryOffer" : {
-            "internalID" : "41AE85AE",
+            "internalID" : "C3962C3D",
             "numberOfPeriods" : 1,
             "paymentMode" : "free",
             "subscriptionPeriod" : "P1W"
@@ -63,11 +74,16 @@
               "description" : "Calorie and workout tracker",
               "displayName" : "Humuli",
               "locale" : "en_US"
+            },
+            {
+              "description" : "Nutrition and Fitness AI Coach",
+              "displayName" : "Metryc",
+              "locale" : "ar"
             }
           ],
           "productID" : "humuli_pro_monthly",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Humuli Pro Monthly",
+          "referenceName" : "Metryc Pro Monthly",
           "subscriptionGroupID" : "21800282",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
@@ -79,14 +95,25 @@
 
           ],
           "codeOffers" : [
-
+            {
+              "eligibility" : [
+                "existing",
+                "new"
+              ],
+              "internalID" : "53D907F2",
+              "isStackable" : true,
+              "numberOfPeriods" : 1,
+              "paymentMode" : "free",
+              "referenceName" : "staff_yearly",
+              "subscriptionPeriod" : "P1Y"
+            }
           ],
-          "displayPrice" : "95.99",
+          "displayPrice" : "79.99",
           "familyShareable" : false,
           "groupNumber" : 2,
           "internalID" : "6753738923",
           "introductoryOffer" : {
-            "internalID" : "7B8B84AA",
+            "internalID" : "E1B891A9",
             "numberOfPeriods" : 1,
             "paymentMode" : "free",
             "subscriptionPeriod" : "P1W"
@@ -96,11 +123,16 @@
               "description" : "Calorie and workout tracker",
               "displayName" : "Humuli",
               "locale" : "en_US"
+            },
+            {
+              "description" : "Nutrition and Fitness AI Coach",
+              "displayName" : "Metryc",
+              "locale" : "ar"
             }
           ],
           "productID" : "humuli_pro_yearly",
           "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "Humuli Pro Yearly",
+          "referenceName" : "Metryc Pro Yearly",
           "subscriptionGroupID" : "21800282",
           "type" : "RecurringSubscription",
           "winbackOffers" : [

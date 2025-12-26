@@ -191,7 +191,7 @@ final class AgentChatViewModel: ObservableObject {
 
     func transcriptText() -> String {
         messages
-            .map { "\($0.sender == .user ? "You" : "Humuli"): \($0.text)" }
+            .map { "\($0.sender == .user ? "You" : "Metryc"): \($0.text)" }
             .joined(separator: "\n")
     }
 

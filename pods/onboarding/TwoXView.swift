@@ -56,7 +56,7 @@ struct TwoXView: View {
             .padding(.vertical)
             
             // Generic title text that works for any goal
-            Text("Reach your goals twice as fast with Humuli")
+            Text("Reach your goals twice as fast with Metryc")
                 .font(.system(size: 32, weight: .bold))
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.leading)
@@ -75,11 +75,11 @@ struct TwoXView: View {
                 VStack(spacing: 50) {
                     // Cards container
                     HStack(spacing: 20) {
-                        // Without Humuli card
+                        // Without Metryc card
                         ZStack(alignment: .bottom) {
                             // Top white part (fills more space)
                             VStack {
-                                Text("Without\nHumuli")
+                                Text("Without\nMetryc")
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(colorScheme == .dark ? .black : .white)
                                     .multilineTextAlignment(.center)
@@ -110,11 +110,11 @@ struct TwoXView: View {
                         }
                         .frame(maxWidth: .infinity)
                         
-                        // With Humuli card
+                        // With Metryc card
                         ZStack(alignment: .bottom) {
                             // Top white part (fills more space)
                             VStack {
-                                Text("With\nHumuli")
+                                Text("With\nMetryc")
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(colorScheme == .dark ? .black : .white)
                                     .multilineTextAlignment(.center)
@@ -149,7 +149,7 @@ struct TwoXView: View {
                     .padding(.top, 50)
                     
                     // Tagline
-                    Text("Humuli makes it easy and holds you accountable.")
+                    Text("Metryc makes it easy and holds you accountable.")
                         .font(.system(size: 15))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)

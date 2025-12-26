@@ -63,6 +63,16 @@ struct NewSheetView: View {
                     .onTapGesture {
                         // Handle tap
                         switch option.0 {
+                          case "Search":
+                            HapticFeedback.generate()
+                            isPresented = false
+                            selectedTab = 0
+                            DispatchQueue.main.async {
+                                NotificationCenter.default.post(
+                                    name: NSNotification.Name("ShowSearchView"),
+                                    object: nil
+                                )
+                            }
                           case "Food":
                             HapticFeedback.generate()
                             isPresented = false
@@ -71,15 +81,26 @@ struct NewSheetView: View {
                             HapticFeedback.generate()
                             print("🍽️ NewSheetView: Tapping Voice Log with selectedMeal: \(selectedMeal)")
                             isPresented = false
-                            showVoiceLog = true
+                            DispatchQueue.main.async {
+                                NotificationCenter.default.post(
+                                    name: NSNotification.Name("ShowAgentChatVoice"),
+                                    object: nil
+                                )
+                            }
                           case "Scan Food":
                             HapticFeedback.generate()
                             isPresented = false
                             showFoodScanner = true
-                          case "Saved Meals":
+                          case "Saved", "Saved Meals":
                             HapticFeedback.generate()
                             isPresented = false
-                            viewModel.showFoodContainer(selectedMeal: selectedMeal, initialTab: "savedMeals")
+                            selectedTab = 0
+                            DispatchQueue.main.async {
+                                NotificationCenter.default.post(
+                                    name: NSNotification.Name("ShowSavedView"),
+                                    object: nil
+                                )
+                            }
                           case "Workout":
                             HapticFeedback.generate()
                             isPresented = false

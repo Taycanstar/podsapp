@@ -149,7 +149,7 @@ struct ContentView: View {
             }
             .tint(.accentColor)
         } message: {
-            Text("An update to Humuli is required to continue.")
+            Text("An update to Metryc is required to continue.")
         }
         // Removed deprecated onboarding resume task
                     

@@ -5396,7 +5396,7 @@ class NetworkManagerTwo {
                    let errorMessage = json["error"] as? String {
                     message = errorMessage
                 } else {
-                    message = "You’ve reached today’s free food scan limit. Upgrade to Humuli Pro for unlimited scans."
+                    message = "You’ve reached today’s free food scan limit. Upgrade to Metryc Pro for unlimited scans."
                 }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.featureLimitExceeded(message: message)))

@@ -28,7 +28,7 @@ struct AllowHealthView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
 
-                        Text("Your health data helps Humuli design your workouts, give accurate insights, and record your activity.")
+                        Text("Your health data helps Metryc design your workouts, give accurate insights, and record your activity.")
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)

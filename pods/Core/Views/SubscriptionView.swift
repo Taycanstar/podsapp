@@ -109,7 +109,7 @@ struct SubscriptionView: View {
     private func activeSection() -> some View {
         VStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 12) {
-                Text(subscriptionManager.subscriptionInfo?.plan ?? "Humuli Pro")
+                Text(subscriptionManager.subscriptionInfo?.plan ?? "Metryc Pro")
                     .font(.title2)
                     .fontWeight(.bold)
 

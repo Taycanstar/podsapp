@@ -127,7 +127,7 @@ struct ProfileView: View {
                     showUpgradeSheet = true
                 } label: {
                     HStack {
-                        Label("Upgrade to Humuli Pro", systemImage: "arrow.up.circle")
+                        Label("Upgrade to Metryc Pro", systemImage: "arrow.up.circle")
                             .foregroundColor(iconColor)
                         Spacer()
                     }
@@ -334,7 +334,7 @@ struct ProfileView: View {
     }
     
     private var subscriptionLabelText: String {
-        isUserSubscribed ? "Humuli Pro" : "Free"
+        isUserSubscribed ? "Metryc Pro" : "Free"
     }
 
     private var isUserSubscribed: Bool {
@@ -578,7 +578,7 @@ struct MailView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> MFMailComposeViewController {
         let mail = MFMailComposeViewController()
         mail.setToRecipients(["support@humuli.com"])
-        mail.setSubject("Humuli Feedback")
+        mail.setSubject("Metryc Feedback")
         mail.setMessageBody("", isHTML: true)
         mail.mailComposeDelegate = context.coordinator
         return mail

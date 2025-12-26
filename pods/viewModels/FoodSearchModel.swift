@@ -557,7 +557,7 @@ class FoodService {
         let caloriesValue = proResult.calories
         let macros = proResult.macros
         let trimmedBrand = proResult.brand?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedBrand = trimmedBrand?.isEmpty == false ? trimmedBrand! : "Humuli Intelligence"
+        let resolvedBrand = trimmedBrand?.isEmpty == false ? trimmedBrand! : "Metryc Intelligence"
         
         var nutrients: [Nutrient] = []
         nutrients.append(Nutrient(nutrientName: "Energy",

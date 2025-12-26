@@ -44,6 +44,7 @@ struct NewHomeView: View {
     @State private var scheduleSheetLog: CombinedLog?
     @State private var scheduleAlert: ScheduleAlert?
     @State private var showSearchView = false
+    @State private var showSavedView = false
     
     // ─── Nutrition label name input ────────────────────────────────────────
     @State private var nutritionProductName = ""
@@ -519,6 +520,11 @@ private var remainingCal: Double { vm.remainingCalories }
                 SearchView()
                     .environmentObject(vm)
             }
+            .navigationDestination(isPresented: $showSavedView) {
+                SavedView()
+                    .environmentObject(foodMgr)
+                    .environmentObject(vm)
+            }
         }
         .fullScreenCover(isPresented: $showAgentChat, onDismiss: {
             pendingCoachMessageText = nil
@@ -647,6 +653,12 @@ private var remainingCal: Double { vm.remainingCalories }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToTimeline")).receive(on: RunLoop.main)) { _ in
             showTimelineSheet = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowSearchView")).receive(on: RunLoop.main)) { _ in
+            showSearchView = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowSavedView")).receive(on: RunLoop.main)) { _ in
+            showSavedView = true
         }
         .alert(item: $scheduleAlert) { alert in
             switch alert {
@@ -1383,15 +1395,20 @@ private extension NewHomeView {
     private var dailyIntakePage: AnyView {
         AnyView(
             VStack(spacing: 0) {
-                DailyIntakeCardView(
-                    calories: vm.totalCalories,
-                    calorieGoal: calorieGoal,
-                    macros: [
-                        DailyIntakeCardView.Macro(label: "Protein", value: vm.totalProtein, goal: proteinGoal, color: IntakeColors.protein),
-                        DailyIntakeCardView.Macro(label: "Fat", value: vm.totalFat, goal: fatGoal, color: IntakeColors.fat),
-                        DailyIntakeCardView.Macro(label: "Carbs", value: vm.totalCarbs, goal: carbsGoal, color: IntakeColors.carbs)
-                    ]
-                )
+                NavigationLink {
+                    GoalProgress()
+                } label: {
+                    DailyIntakeCardView(
+                        calories: vm.totalCalories,
+                        calorieGoal: calorieGoal,
+                        macros: [
+                            DailyIntakeCardView.Macro(label: "Protein", value: vm.totalProtein, goal: proteinGoal, color: IntakeColors.protein),
+                            DailyIntakeCardView.Macro(label: "Fat", value: vm.totalFat, goal: fatGoal, color: IntakeColors.fat),
+                            DailyIntakeCardView.Macro(label: "Carbs", value: vm.totalCarbs, goal: carbsGoal, color: IntakeColors.carbs)
+                        ]
+                    )
+                }
+                .buttonStyle(.plain)
                 .padding(.top, 4)
                 .background(IntakeCardHeightReader())
                 .frame(maxWidth: .infinity)

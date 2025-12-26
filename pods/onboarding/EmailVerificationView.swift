@@ -39,7 +39,7 @@ struct EmailVerificationView: View {
            
 
             VStack(alignment: .leading, spacing: 20) {
-                Text("Finish creating your Humuli account")
+                Text("Finish creating your Metryc account")
                     .font(.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.black)

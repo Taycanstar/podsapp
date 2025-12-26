@@ -60,7 +60,7 @@ struct ProOnboardingView: View {
 
     private var subscribeButtonTitle: String {
         if isSubscribed {
-            return "Continue to Humuli"
+            return "Continue to Metryc"
         }
         switch selectedPlan {
         case .monthly:
@@ -147,7 +147,7 @@ struct ProOnboardingView: View {
                 .foregroundColor(.blue)
 
             VStack(spacing: 8) {
-                Text("Welcome to Humuli Pro")
+                Text("Welcome to Metryc Pro")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.black)
                     .multilineTextAlignment(.center)

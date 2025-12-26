@@ -67,7 +67,7 @@ struct SignupView: View {
 
     private var formSection: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Create your Humuli account")
+            Text("Create your Metryc account")
                 .font(.title2)
                 .fontWeight(.semibold)
                 .foregroundColor(.black)

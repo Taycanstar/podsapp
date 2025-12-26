@@ -354,6 +354,21 @@ final class HealthCoachChatViewModel: ObservableObject {
         case .error:
             pendingClarificationQuestion = nil
             pendingOptions = nil
+
+        case .recoveryContext:
+            // Shame-spiral recovery: contextual reframe response
+            pendingClarificationQuestion = nil
+            pendingOptions = nil
+
+        case .recoveryMealSuggestion:
+            // Shame-spiral recovery: meal suggestion response
+            pendingClarificationQuestion = nil
+            pendingOptions = nil
+
+        case .gentleModeToggled:
+            // Gentle mode toggled - numbers hidden for emotional support
+            pendingClarificationQuestion = nil
+            pendingOptions = nil
         }
     }
 

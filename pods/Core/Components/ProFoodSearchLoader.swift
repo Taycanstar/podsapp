@@ -29,7 +29,7 @@ struct ProFoodSearchLoader: View {
                         .stroke(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
                 )
         )
-        .accessibilityLabel("Humuli Pro Search is finishing up.")
+        .accessibilityLabel("Metryc Pro Search is finishing up.")
     }
     
     private var header: some View {
@@ -39,7 +39,7 @@ struct ProFoodSearchLoader: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 24, height: 24)
             
-            Text("Humuli Pro Search")
+            Text("Metryc Pro Search")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.primary)
             

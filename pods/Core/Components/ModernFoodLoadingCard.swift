@@ -31,7 +31,7 @@ struct ModernFoodLoadingCard: View {
         
         // Perplexity-style loading panel
         VStack(spacing: 16) {
-            // Header with Humuli logo and title
+            // Header with Metryc logo and title
             HStack(spacing: 12) {
                 Image("logx")
                     .resizable()
@@ -115,7 +115,7 @@ struct ModernFoodLoadingCard: View {
                         .stroke(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4), lineWidth: 0.5)
                 )
         )
-        .accessibilityLabel("Humuli analysis in progress. Finishing up...")
+        .accessibilityLabel("Metryc analysis in progress. Finishing up...")
     }
     
     private func shimmerGradient(shimmerColor: Color) -> LinearGradient {

@@ -134,7 +134,6 @@ struct SearchView: View {
                 } label: {
                     SearchCategoryRow(icon: "bookmark", title: "Saved", iconColor: .primary, showChevron: false)
                 }
-                SearchCategoryRow(icon: "dumbbell", title: "Workouts", iconColor: .primary)
 
                 QuickAddRow {
                     showQuickAddSheet = true

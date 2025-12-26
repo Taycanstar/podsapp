@@ -36,7 +36,7 @@ struct GreetingView: View {
                             .foregroundColor(.primary)
                             .padding(.horizontal, 32)
 
-                        Text("Humuli puts your wellness on autopilot with nutrition, workouts, and insights planned for you.")
+                        Text("Metryc puts your wellness on autopilot with nutrition, workouts, and insights planned for you.")
                             .font(.body)
                             .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)

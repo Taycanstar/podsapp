@@ -877,8 +877,8 @@ enum SubscriptionError: Error {
 
 enum SubscriptionTier: String, CaseIterable {
     case none = "None"
-    case humuliProMonthly = "Humuli Pro Monthly"
-    case humuliProYearly = "Humuli Pro Yearly"
+    case humuliProMonthly = "Metryc Pro Monthly"
+    case humuliProYearly = "Metryc Pro Yearly"
     case teamMonthly = "Pods Team Monthly"
     case teamYearly = "Pods Team Yearly"
 
@@ -900,7 +900,7 @@ enum SubscriptionTier: String, CaseIterable {
         case .none:
             return "Free"
         case .humuliProMonthly, .humuliProYearly:
-            return "Humuli Pro"
+            return "Metryc Pro"
         case .teamMonthly, .teamYearly:
             return "Pods Team"
         }
@@ -918,9 +918,9 @@ enum SubscriptionTier: String, CaseIterable {
     func fallbackPrice(for duration: SubscriptionDuration) -> String? {
         switch (self, duration) {
         case (.humuliProMonthly, .monthly), (.humuliProYearly, .monthly):
-            return "$19.99"
+            return "$9.99"
         case (.humuliProMonthly, .yearly), (.humuliProYearly, .yearly):
-            return "$95.99"
+            return "$79.99"
         case (.teamMonthly, .monthly), (.teamYearly, .monthly):
             return "$44.99"
         case (.teamMonthly, .yearly), (.teamYearly, .yearly):

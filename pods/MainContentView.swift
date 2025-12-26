@@ -238,6 +238,13 @@ struct MainContentView: View {
             }
             showLogWorkoutView = true
         }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: NSNotification.Name("ShowAgentChatVoice"))
+                .receive(on: RunLoop.main)
+        ) { _ in
+            handleRealtimeStart()
+        }
 
         // Listen for explicit authentication completion
         .onReceive(
@@ -344,7 +351,7 @@ struct MainContentView: View {
             }
             .tint(.accentColor)
         } message: {
-            Text("An update to Humuli is required to continue.")
+            Text("An update to Metryc is required to continue.")
         }
         .fullScreenCover(isPresented: $showingVideoCreationScreen) {
             CameraContainerView(showingVideoCreationScreen: $showingVideoCreationScreen, selectedTab: $selectedTab)

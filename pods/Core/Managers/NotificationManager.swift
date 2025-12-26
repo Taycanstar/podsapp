@@ -107,7 +107,7 @@ static let dinner: [(title: String, body: String)] = [
 
 }
 
-/// Manages all notification functionality for Humuli
+/// Manages all notification functionality for Metryc
 class NotificationManager: NSObject, ObservableObject {
     static let shared = NotificationManager()
     

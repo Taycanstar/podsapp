@@ -63,7 +63,6 @@ struct HumuliProUpgradeSheet: View {
     }
 }
 
-// MARK: - Humuli Pro Management
 
 enum HumuliProPlanOption: String, CaseIterable, Identifiable {
     case monthly
@@ -281,7 +280,7 @@ struct ManageSubscriptionSheet: View {
     }
 
     private var planName: String {
-        viewModel.subscriptionPlan ?? subscriptionManager.subscriptionInfo?.plan ?? "Humuli Pro"
+        viewModel.subscriptionPlan ?? subscriptionManager.subscriptionInfo?.plan ?? "Metryc Pro"
     }
 
     private var currentOption: HumuliProPlanOption {
@@ -816,28 +815,15 @@ extension HumuliProUpgradeSheet {
 
     var featureComparisonView: some View {
         VStack(spacing: 0) {
-            // Header row
-            HStack {
-                Text("Features")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.black)
-                Spacer()
-                Text("Pro")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.blue)
-                    .frame(width: 60)
-            }
-            .padding(.vertical, 12)
-
             // Feature rows - all included in Pro
-            FeatureRow(name: "Personalized Workout Program", pro: true)
-
-            FeatureRow(name: "Unlimited Food Scans", pro: true)
-            FeatureRow(name: "Unlimited Workout Sessions", pro: true)
-            FeatureRow(name: "Pro Food Search", pro: true)
-            FeatureRow(name: "Advanced Analytics", pro: true)
-            FeatureRow(name: "Scheduled Meal Logging", pro: true)
-            FeatureRow(name: "Bulk Photo Logging", pro: true)
+            FeatureRow(name: "Slip-Up Recovery Mode", pro: true)
+            FeatureRow(name: "24/7 Hands-Free Voice Coach", pro: true)
+            FeatureRow(name: "1M+ Foods & Barcode Database", pro: true)
+            FeatureRow(name: "Autopilot Plan Repair", pro: true)
+             FeatureRow(name: "Log with Voice, Text, Photo", pro: true)
+            FeatureRow(name: "Context-Aware Check-Ins", pro: true)
+             FeatureRow(name: "Shame-Safe Tracking", pro: true)
+             FeatureRow(name: "Personalized Workout Program", pro: true)
         }
         .padding(16)
         .background(

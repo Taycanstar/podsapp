@@ -14,7 +14,7 @@ struct ProFoodSearchView: View {
         NavigationStack {
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Ask Humuli Intelligence")
+                    Text("Ask Metryc Intelligence")
                         .font(.title2.weight(.bold))
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Text("Describe any meal to get nutrition with sources.")

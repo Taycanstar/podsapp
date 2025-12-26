@@ -11,7 +11,6 @@ struct SavedView: View {
     enum SavedTab: String, CaseIterable {
         case foods = "Foods"
         case recipes = "Recipes"
-        case workouts = "Workouts"
     }
 
     @State private var selectedTab: SavedTab = .foods
@@ -44,8 +43,6 @@ struct SavedView: View {
                 savedFoodsSection
             case .recipes:
                 savedRecipesSection
-            case .workouts:
-                savedWorkoutsSection
             }
         }
         .listStyle(.insetGrouped)
@@ -71,8 +68,6 @@ struct SavedView: View {
                 await savedFoodsRepo.refresh(force: true)
             case .recipes:
                 await savedRecipesRepo.refresh(force: true)
-            case .workouts:
-                break
             }
         }
         .task {
@@ -171,20 +166,6 @@ struct SavedView: View {
             }
             .listRowBackground(Color("sheetcard"))
         }
-    }
-
-    // MARK: - Saved Workouts Section
-
-    @ViewBuilder
-    private var savedWorkoutsSection: some View {
-        Section {
-            emptyStateContent(
-                icon: "dumbbell",
-                title: "No Saved Workouts",
-                message: "Saved workouts will appear here."
-            )
-        }
-        .listRowBackground(Color.clear)
     }
 
     // MARK: - Helper Views

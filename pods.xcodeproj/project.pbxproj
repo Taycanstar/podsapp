@@ -194,6 +194,8 @@
 		36667E0E2EFC55EE0017E9D7 /* ConversationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E0D2EFC55EE0017E9D7 /* ConversationModels.swift */; };
 		36667E102EFC5B690017E9D7 /* ConversationHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E0F2EFC5B690017E9D7 /* ConversationHistoryViewModel.swift */; };
 		36667E122EFE10C70017E9D7 /* RecipeIngredientRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E112EFE10C70017E9D7 /* RecipeIngredientRow.swift */; };
+		36667E162EFF12270017E9D7 /* ChangeNutritionGoals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E152EFF12200017E9D7 /* ChangeNutritionGoals.swift */; };
+		36667E182EFF2B370017E9D7 /* DemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E172EFF2B330017E9D7 /* DemoView.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -658,6 +660,8 @@
 		36667E0D2EFC55EE0017E9D7 /* ConversationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationModels.swift; sourceTree = "<group>"; };
 		36667E0F2EFC5B690017E9D7 /* ConversationHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationHistoryViewModel.swift; sourceTree = "<group>"; };
 		36667E112EFE10C70017E9D7 /* RecipeIngredientRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeIngredientRow.swift; sourceTree = "<group>"; };
+		36667E152EFF12200017E9D7 /* ChangeNutritionGoals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeNutritionGoals.swift; sourceTree = "<group>"; };
+		36667E172EFF2B330017E9D7 /* DemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoView.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -1369,6 +1373,7 @@
 		368A27352B977F320001BBCA /* onboarding */ = {
 			isa = PBXGroup;
 			children = (
+				36667E172EFF2B330017E9D7 /* DemoView.swift */,
 				368A27382B9818330001BBCA /* InfoView.swift */,
 				3696B95A2B9836F000D211D7 /* EmailVerificationView.swift */,
 				3696B9622B99990E00D211D7 /* MainOnboardingView.swift */,
@@ -1537,6 +1542,7 @@
 		36CB032A2D5AAD4A006A74E9 /* food */ = {
 			isa = PBXGroup;
 			children = (
+				36667E152EFF12200017E9D7 /* ChangeNutritionGoals.swift */,
 				3650A17D2EEF84130068ACE6 /* TimelineView.swift */,
 				3650A17B2EEF83FA0068ACE6 /* MultiFoodLogView.swift */,
 				3650A1712EEA8C9E0068ACE6 /* MealPlateSummaryView.swift */,
@@ -2260,6 +2266,7 @@
 				36667DBF2EF11FE20017E9D7 /* NutritionLabelData.swift in Sources */,
 				36881DF12E6E04F900262045 /* WorkoutScheduleSettingsView.swift in Sources */,
 				36D3A50A2E8CCB2700AD6B94 /* ScheduleSelectionView.swift in Sources */,
+				36667E162EFF12270017E9D7 /* ChangeNutritionGoals.swift in Sources */,
 				36ED35D62DDBD5ED00D174FB /* UpdateDesiredWeight.swift in Sources */,
 				36D044102C71196900B01998 /* InvitationView.swift in Sources */,
 				36CB03412D66CDD3006A74E9 /* CreateMealView.swift in Sources */,
@@ -2323,6 +2330,7 @@
 				361919202EA7DE81007CAA0D /* AnalyticsProUpgradeSheet.swift in Sources */,
 				36F5A0172F9C1AAB00A1B234 /* RecipesRepository.swift in Sources */,
 				36D3A5022E8C3F8400AD6B94 /* StrengthExperienceView.swift in Sources */,
+				36667E182EFF2B370017E9D7 /* DemoView.swift in Sources */,
 				36F5A0192F9C1AAB00A1B234 /* SavedMealsRepository.swift in Sources */,
 				36F5A01B2F9C1AAB00A1B234 /* UserFoodsRepository.swift in Sources */,
 				3662A55B2DFE5FDA00847487 /* ExerciseDatabase.swift in Sources */,

@@ -144,7 +144,7 @@ struct GoalInfoView: View {
                             }
                             
                             // Motivational text
-                            Text("85% of Humuli users report significant changes following their personalized plan and maintaining results long-term.")
+                            Text("85% of Metryc users report significant changes following their personalized plan and maintaining results long-term.")
                                 .font(.system(size: 15))
                                 .multilineTextAlignment(.center)
                                 .foregroundColor(.secondary)

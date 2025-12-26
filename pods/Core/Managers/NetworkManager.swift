@@ -9388,7 +9388,7 @@ class NetworkManager {
             
             if httpResponse.statusCode == 403 {
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.serverError("Humuli Pro subscription required")))
+                    completion(.failure(NetworkError.serverError("Metryc Pro subscription required")))
                 }
                 return
             }
@@ -9639,7 +9639,7 @@ class NetworkManager {
             
             if httpResponse.statusCode == 403 {
                 DispatchQueue.main.async {
-                    completion(.failure(NetworkError.serverError("Humuli Pro subscription required")))
+                    completion(.failure(NetworkError.serverError("Metryc Pro subscription required")))
                 }
                 return
             }

@@ -26,6 +26,10 @@ enum HealthCoachResponseType: String, Codable {
     case dataResponse = "data_response"
     case needsClarification = "needs_clarification"
     case error
+    // Shame-spiral recovery response types
+    case recoveryContext = "recovery_context"
+    case recoveryMealSuggestion = "recovery_meal_suggestion"
+    case gentleModeToggled = "gentle_mode_toggled"
 }
 
 // MARK: - Updated Goals Payload
@@ -107,10 +111,20 @@ struct HealthCoachResponse: Codable {
     let citations: [HealthCoachCitation]?
     let conversationId: String?
 
+    // Shame-spiral recovery flags
+    let repairModeActive: Bool?
+    let gentleModeActive: Bool?
+    let recoveryContext: RecoveryContextPayload?
+    let recoveryMeal: RecoveryMealPayload?
+
     enum CodingKeys: String, CodingKey {
         case type, message, food, activity, data, goals, weight, options, question, error, citations
         case mealItems = "meal_items"
         case conversationId = "conversation_id"
+        case repairModeActive = "repair_mode_active"
+        case gentleModeActive = "gentle_mode_active"
+        case recoveryContext = "recovery_context"
+        case recoveryMeal = "recovery_meal"
     }
 
     init(
@@ -126,7 +140,11 @@ struct HealthCoachResponse: Codable {
         question: String? = nil,
         error: String? = nil,
         citations: [HealthCoachCitation]? = nil,
-        conversationId: String? = nil
+        conversationId: String? = nil,
+        repairModeActive: Bool? = nil,
+        gentleModeActive: Bool? = nil,
+        recoveryContext: RecoveryContextPayload? = nil,
+        recoveryMeal: RecoveryMealPayload? = nil
     ) {
         self.type = type
         self.message = message
@@ -141,6 +159,49 @@ struct HealthCoachResponse: Codable {
         self.error = error
         self.citations = citations
         self.conversationId = conversationId
+        self.repairModeActive = repairModeActive
+        self.gentleModeActive = gentleModeActive
+        self.recoveryContext = recoveryContext
+        self.recoveryMeal = recoveryMeal
+    }
+}
+
+// MARK: - Shame-Spiral Recovery Payloads
+
+/// Payload for recovery context - explains why a slip-up may have occurred
+struct RecoveryContextPayload: Codable {
+    let factors: [RecoveryFactor]?
+    let summary: String?
+}
+
+/// Individual recovery factor with context about why overeating occurred
+struct RecoveryFactor: Codable {
+    let factor: String
+    let message: String
+    let severity: String?
+}
+
+/// Payload for recovery meal suggestions
+struct RecoveryMealPayload: Codable {
+    let mealType: String?
+    let suggestions: [RecoveryMealSuggestion]?
+
+    enum CodingKeys: String, CodingKey {
+        case mealType = "meal_type"
+        case suggestions
+    }
+}
+
+/// Individual meal suggestion for recovery
+struct RecoveryMealSuggestion: Codable {
+    let name: String
+    let proteinG: Int?
+    let note: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case proteinG = "protein_g"
+        case note
     }
 }
 

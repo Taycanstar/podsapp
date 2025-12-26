@@ -8,10 +8,12 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Ring Segment
+
 struct RingSegment: View {
     let start, percent: Double
     let color: Color
-    
+
     var body: some View {
         Circle()
             .trim(from: start, to: start + percent)
@@ -21,6 +23,7 @@ struct RingSegment: View {
 }
 
 // MARK: - Macro Type and Input Mode
+
 fileprivate enum MacroType: String, CaseIterable, Identifiable {
     case protein, carbs, fat
     var id: String { rawValue }
@@ -32,205 +35,56 @@ fileprivate enum MacroInputMode: String, CaseIterable, Identifiable {
     var label: String { self == .grams ? "Grams" : "%" }
 }
 
-// Remove the complex MacroInputTextField and replace with simpler approach
-// Add state for inline picker
+// MARK: - Nutrient Item for Advanced Section
 
-/// TextField that can switch between number pad and wheel picker without dismissing keyboard
-struct MacroInputTextField: UIViewRepresentable {
-    @Binding var text: String
-    @Binding var percent: Double
-    @Binding fileprivate var inputMode: MacroInputMode
-    fileprivate let macro: MacroType
-    let placeholder: String = "0"
-    var onEditingChanged: (Bool) -> Void = { _ in }
-    var onPercentChange: (Double) -> Void = { _ in }
+private struct NutrientItem: Identifiable {
+    let slug: String
+    let label: String
+    let unit: String
+    let defaultTarget: Double?
+    let note: String?
 
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
+    var id: String { slug }
 
-    func makeUIView(context: Context) -> UITextField {
-        let tf = UITextField()
-        tf.textAlignment = .right
-        tf.placeholder = placeholder
-        tf.keyboardType = .numberPad
-        tf.delegate = context.coordinator
-
-        // Create toolbar with Grams/% segmented control and Done button
-        let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
-        
-        let segmentedControl = UISegmentedControl(items: ["Grams", "%"])
-        segmentedControl.selectedSegmentIndex = inputMode == .grams ? 0 : 1
-        segmentedControl.addTarget(context.coordinator, action: #selector(context.coordinator.segmentChanged(_:)), for: .valueChanged)
-        
-        let segmentItem = UIBarButtonItem(customView: segmentedControl)
-        let flexSpace1 = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let flexSpace2 = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let doneButton = UIBarButtonItem(title: "Done", style: .done, target: context.coordinator, action: #selector(context.coordinator.donePressed))
-        
-        toolbar.items = [flexSpace1, segmentItem, flexSpace2, doneButton]
-        tf.inputAccessoryView = toolbar
-        
-        // Store references
-        context.coordinator.textField = tf
-        context.coordinator.segmentedControl = segmentedControl
-        
-        // Set initial input view
-        context.coordinator.updateInputView()
-        
-        return tf
-    }
-
-    func updateUIView(_ uiView: UITextField, context: Context) {
-        // Update text based on current mode
-        if inputMode == .percent {
-            uiView.text = String(format: "%.0f", percent)
-        } else {
-            uiView.text = text
-        }
-        
-        // Update segmented control
-        context.coordinator.segmentedControl?.selectedSegmentIndex = inputMode == .grams ? 0 : 1
-        
-        // Update input view if mode changed
-        context.coordinator.updateInputView()
-    }
-
-    class Coordinator: NSObject, UITextFieldDelegate, UIPickerViewDelegate, UIPickerViewDataSource {
-        let parent: MacroInputTextField
-        weak var textField: UITextField?
-        weak var segmentedControl: UISegmentedControl?
-        private var pickerView: UIPickerView?
-        
-        init(_ parent: MacroInputTextField) { self.parent = parent }
-        
-        @objc func donePressed() {
-            textField?.resignFirstResponder()
-        }
-        
-        @objc func segmentChanged(_ sender: UISegmentedControl) {
-            let newMode: MacroInputMode = sender.selectedSegmentIndex == 0 ? .grams : .percent
-            print("🔄 Segment changed to: \(newMode)")
-            parent.inputMode = newMode
-            
-            // Update text field content immediately
-            if newMode == .percent {
-                let currentPercent = parent.percent
-                textField?.text = String(format: "%.0f", currentPercent)
-                print("📱 Set text to percentage: \(currentPercent)%")
-            } else {
-                textField?.text = parent.text
-                print("📱 Set text to grams: \(parent.text)")
-            }
-            
-            // Force update input view
-            updateInputView()
-        }
-        
-        func updateInputView() {
-            guard let tf = textField else { 
-                print("❌ No textField reference")
-                return 
-            }
-            
-            print("🔄 Updating input view for mode: \(parent.inputMode)")
-            
-            if parent.inputMode == .percent {
-                // Create picker if needed
-                if pickerView == nil {
-                    print("📱 Creating new picker view")
-                    pickerView = UIPickerView()
-                    pickerView?.delegate = self
-                    pickerView?.dataSource = self
-                } else {
-                    print("📱 Reusing existing picker view")
-                }
-                
-                tf.inputView = pickerView
-                pickerView?.selectRow(Int(parent.percent), inComponent: 0, animated: false)
-                print("📱 Set input view to picker, selected row: \(Int(parent.percent))")
-            } else {
-                print("📱 Setting input view to nil (number pad)")
-                tf.inputView = nil
-                tf.keyboardType = .numberPad
-            }
-            
-            // Reload input view without dismissing keyboard
-            if tf.isFirstResponder {
-                print("📱 Reloading input views (keyboard is active)")
-                tf.reloadInputViews()
-            } else {
-                print("📱 TextField not first responder, input view will change on next focus")
-            }
-        }
-        
-        // UITextFieldDelegate
-        func textFieldDidBeginEditing(_ textField: UITextField) {
-            parent.onEditingChanged(true)
-        }
-        
-        func textFieldDidEndEditing(_ textField: UITextField) {
-            parent.onEditingChanged(false)
-        }
-        
-        func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-            if parent.inputMode == .grams {
-                let newText = (textField.text as NSString?)?.replacingCharacters(in: range, with: string) ?? string
-                parent.text = newText
-                
-                // Update percentage when grams change
-                if let grams = Double(newText), grams > 0 {
-                    let totalCals = max(Double(parent.text) ?? 1, 1) // This should be total calorie goal, need to pass it
-                    let calsPerGram: Double
-                    switch parent.macro {
-                    case .protein, .carbs: calsPerGram = 4.0
-                    case .fat: calsPerGram = 9.0
-                    }
-                    // Calculate percentage of total calories
-                    let caloriesFromMacro = grams * calsPerGram
-                    parent.percent = (caloriesFromMacro / totalCals) * 100
-                }
-            }
-            return parent.inputMode == .grams
-        }
-        
-        // UIPickerViewDelegate & DataSource
-        func numberOfComponents(in pickerView: UIPickerView) -> Int { 1 }
-        func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent c: Int) -> Int { 101 }
-        func pickerView(_ picker: UIPickerView, titleForRow row: Int, forComponent c: Int) -> String? { "\(row)%" }
-        func pickerView(_ picker: UIPickerView, didSelectRow row: Int, inComponent c: Int) {
-            parent.percent = Double(row)
-            parent.onPercentChange(Double(row))
-            textField?.text = String(format: "%.0f", parent.percent)
-        }
+    init(slug: String, label: String, unit: String, defaultTarget: Double? = nil, note: String? = nil) {
+        self.slug = slug
+        self.label = label
+        self.unit = unit
+        self.defaultTarget = defaultTarget
+        self.note = note
     }
 }
+
+// MARK: - GoalProgress View
 
 struct GoalProgress: View {
     @EnvironmentObject var vm: DayLogsViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.isTabBarVisible) private var isTabBarVisible
-    
+
+    // Macro colors from asset catalog
+    private let proteinColor = Color("protein")
+    private let carbsColor = Color("carbs")
+    private let fatColor = Color("fat")
+
     // State to hold temporary values while editing
     @State private var calorieGoal: String = ""
     @State private var proteinGoal: String = ""
     @State private var carbsGoal: String = ""
     @State private var fatGoal: String = ""
     @State private var currentGoals: NutritionGoals?
-    
+
+    // Advanced nutrient editing state
+    @State private var showAdvancedNutrients = false
+    @State private var editingValues: [String: String] = [:]
+    @State private var removedOverrides: Set<String> = []
+
     @State private var isSubmitting = false
     @State private var isGenerating = false
     @State private var showError = false
     @State private var errorMessage = ""
-    
-    @State private var editingMacro: MacroType? = nil
-    @State private var macroInputMode: [MacroType: MacroInputMode] = [
-        .protein: .grams,
-        .carbs: .grams,
-        .fat: .grams
-    ]
-    @State private var proteinPercentValue: Double = 0
-    @State private var carbsPercentValue: Double = 0
-    @State private var fatPercentValue: Double = 0
-    
+    @State private var showResetConfirmation = false
+
     // State for macro picker sheet
     @State private var showMacroPickerSheet = false
 
@@ -238,60 +92,52 @@ struct GoalProgress: View {
     private var proteinCals: Double {
         (Double(proteinGoal) ?? vm.proteinGoal) * 4
     }
-    
+
     private var carbCals: Double {
         (Double(carbsGoal) ?? vm.carbsGoal) * 4
     }
-    
+
     private var fatCals: Double {
         (Double(fatGoal) ?? vm.fatGoal) * 9
     }
-    
+
     private var macroCals: Double {
         proteinCals + carbCals + fatCals
     }
-    
+
     // Calculate percentages for ring segments based on goal calories
     private var totalGoalCalories: Double {
         max(Double(calorieGoal) ?? vm.calorieGoal, 1)
     }
-    
+
     // Helper function to ensure percentages add up to exactly 100%
     private func adjustedPercentages() -> (protein: Double, carbs: Double, fat: Double) {
-        // Calculate exact percentages first
         let exactProtein = proteinCals / totalGoalCalories
         let exactCarbs = carbCals / totalGoalCalories
         let exactFat = fatCals / totalGoalCalories
-        
-        // Round to integers for display
+
         var roundedProtein = round(exactProtein * 100)
         var roundedCarbs = round(exactCarbs * 100)
         var roundedFat = round(exactFat * 100)
-        
-        // Calculate total and difference from 100
+
         let total = roundedProtein + roundedCarbs + roundedFat
         let difference = 100 - total
-        
-        // Apply largest remainder method to distribute the difference
+
         if difference != 0 {
-            // Calculate remainders after rounding
             let proteinRemainder = (exactProtein * 100) - roundedProtein
             let carbsRemainder = (exactCarbs * 100) - roundedCarbs
             let fatRemainder = (exactFat * 100) - roundedFat
-            
-            // Create array of (remainder, index) pairs and sort by remainder descending
+
             var remainders = [
-                (proteinRemainder, 0), // 0 = protein
-                (carbsRemainder, 1),   // 1 = carbs
-                (fatRemainder, 2)      // 2 = fat
+                (proteinRemainder, 0),
+                (carbsRemainder, 1),
+                (fatRemainder, 2)
             ]
             remainders.sort { $0.0 > $1.0 }
-            
-            // Distribute the difference to macros with largest remainders
+
             for i in 0..<abs(Int(difference)) {
                 let macroIndex = remainders[i % 3].1
                 if difference > 0 {
-                    // Add 1% to largest remainders
                     switch macroIndex {
                     case 0: roundedProtein += 1
                     case 1: roundedCarbs += 1
@@ -299,7 +145,6 @@ struct GoalProgress: View {
                     default: break
                     }
                 } else {
-                    // Subtract 1% from largest remainders
                     switch macroIndex {
                     case 0: roundedProtein -= 1
                     case 1: roundedCarbs -= 1
@@ -309,283 +154,118 @@ struct GoalProgress: View {
                 }
             }
         }
-        
-        // Return as decimals (0.0 to 1.0) for ring segments
+
         return (
             protein: roundedProtein / 100.0,
             carbs: roundedCarbs / 100.0,
             fat: roundedFat / 100.0
         )
     }
-    
+
     private var proteinPercent: Double {
         adjustedPercentages().protein
     }
-    
+
     private var carbPercent: Double {
         adjustedPercentages().carbs
     }
-    
+
     private var fatPercent: Double {
         adjustedPercentages().fat
     }
 
+    // MARK: - Grouped Nutrients for Advanced Section
+
+    private var groupedNutrients: [(key: String, label: String, rows: [NutrientItem])] {
+        guard let nutrientDict = currentGoals?.nutrients else { return [] }
+
+        // Exclude macros category since calories, protein, carbs, fat are handled in general content
+        let categoryOrder = ["carbohydrates", "fats", "amino_acids", "vitamins", "minerals", "hydration", "lifestyle", "other"]
+
+        var grouped: [String: [NutrientItem]] = [:]
+        for (slug, details) in nutrientDict {
+            let category = details.category ?? "other"
+            // Skip macros category - already handled in general content
+            guard category != "macros" else { continue }
+            let item = NutrientItem(
+                slug: slug,
+                label: details.label ?? slug.replacingOccurrences(of: "_", with: " ").capitalized,
+                unit: details.unit ?? "",
+                defaultTarget: details.defaultTarget,
+                note: details.note
+            )
+            grouped[category, default: []].append(item)
+        }
+
+        // Sort items within each category by display order
+        for (category, _) in grouped {
+            grouped[category]?.sort { a, b in
+                let aOrder = nutrientDict[a.slug]?.displayOrder ?? Int.max
+                let bOrder = nutrientDict[b.slug]?.displayOrder ?? Int.max
+                return aOrder < bOrder
+            }
+        }
+
+        // Build result with category labels
+        return grouped
+            .map { key, rows -> (String, String, [NutrientItem]) in
+                let label = nutrientDict.values.first { $0.category == key }?.categoryLabel ?? key.replacingOccurrences(of: "_", with: " ").capitalized
+                return (key, label, rows)
+            }
+            .sorted { lhs, rhs in
+                let lhsIndex = categoryOrder.firstIndex(of: lhs.0) ?? categoryOrder.count
+                let rhsIndex = categoryOrder.firstIndex(of: rhs.0) ?? categoryOrder.count
+                return lhsIndex < rhsIndex
+            }
+    }
+
+    private var hasAdvancedNutrients: Bool {
+        !groupedNutrients.isEmpty
+    }
+
+    // MARK: - Body
+
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 20) {
-                // Calories section
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Calories")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
-                    ZStack(alignment: .top) {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color("iosnp"))
-                        
-                        HStack {
-                            TextField("Daily target", text: $calorieGoal)
-                                .keyboardType(.numberPad)
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical)
-                 
-                    }
-                    .frame(height: 56)
-                }
-                .padding(.horizontal)
-                
-                // Macronutrients section
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Macronutrients")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
-                    ZStack(alignment: .top) {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color("iosnp"))
-                        
-                        VStack(spacing: 0) {
-                            HStack {
-                                Text("Protein")
-                                Text(String(format: "%d%%", Int(proteinPercent * 100)))
-                                    .foregroundColor(.blue)
-                                    .font(.system(size: 15, weight: .semibold))
-                                Spacer()
-                                Text("\(proteinGoal)g")
-                                    .foregroundColor(.primary)
-                                    .multilineTextAlignment(.trailing)
-                                    .background(Color.clear)
-                                    .onTapGesture {
-                                        showMacroPickerSheet = true
-                                    }
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 14)
-                            .onTapGesture {
-                                showMacroPickerSheet = true
-                            }
-                            
-                            Divider()
-                                .padding(.leading)
-                            
-                            HStack {
-                                Text("Carbs")
-                                Text(String(format: "%d%%", Int(carbPercent * 100)))
-                                    .foregroundColor(Color("darkYellow"))
-                                    .font(.system(size: 15, weight: .semibold))
-                                Spacer()
-                                Text("\(carbsGoal)g")
-                                    .foregroundColor(.primary)
-                                    .multilineTextAlignment(.trailing)
-                                    .background(Color.clear)
-                                    .onTapGesture {
-                                        showMacroPickerSheet = true
-                                    }
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 14)
-                            .onTapGesture {
-                                showMacroPickerSheet = true
-                            }
-                            
-                            Divider()
-                                .padding(.leading)
-                            
-                            HStack {
-                                Text("Fat")
-                                Text(String(format: "%d%%", Int(fatPercent * 100)))
-                                    .foregroundColor(.pink)
-                                    .font(.system(size: 15, weight: .semibold))
-                                Spacer()
-                                Text("\(fatGoal)g")
-                                    .foregroundColor(.primary)
-                                    .multilineTextAlignment(.trailing)
-                                    .background(Color.clear)
-                                    .onTapGesture {
-                                        showMacroPickerSheet = true
-                                    }
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 14)
-                            .onTapGesture {
-                                showMacroPickerSheet = true
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                .sheet(isPresented: $showMacroPickerSheet) {
-                    MacroPickerSheet(
-                        proteinGoal: $proteinGoal,
-                        carbsGoal: $carbsGoal,
-                        fatGoal: $fatGoal,
-                        calorieGoal: $calorieGoal,
-                        isPresented: $showMacroPickerSheet,
-                        vmCalorieGoal: vm.calorieGoal,
-                        vm: vm
-                    )
-                    .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.fraction(0.45)])
-                    .presentationDragIndicator(.visible)
-                }
-                
-                // Goal breakdown donut ring
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Goal Breakdown")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    
-                    VStack(spacing: 20) {
-                        ZStack {
-                            // Background track (light gray for unfilled portion)
-                            Circle()
-                                .stroke(Color.gray.opacity(0.2), lineWidth: 12)
-                            
-                            // Protein segment (starts at 0)
-                            RingSegment(
-                                start: 0,
-                                percent: proteinPercent,
-                                color: .blue
-                            )
-                            
-                            // Carbs segment (starts after protein)
-                            RingSegment(
-                                start: proteinPercent,
-                                percent: carbPercent,
-                                color: Color("darkYellow")
-                            )
-                            
-                            // Fat segment (starts after protein + carbs)
-                            RingSegment(
-                                start: proteinPercent + carbPercent,
-                                percent: fatPercent,
-                                color: .pink
-                            )
-                            
-                            // Center label
-                            VStack(spacing: 0) {
-                                Text("\(Int(macroCals))/\(Int(vm.calorieGoal))")
-                                    .font(.system(size: 14, weight: .regular))
-                                    .foregroundColor(.primary)
-                                
-                                Text("cals")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .frame(width: 120, height: 120)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        
-                        // Macro legend
-                        HStack(spacing: 30) {
-                            // Protein
-                            VStack(spacing: 8) {
-                                HStack(spacing: 8) {
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(.blue)
-                                        .frame(width: 14, height: 14)
-                                    Text("Protein")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.primary)
-                                }
-                                Text("\(Int(proteinCals)) cals")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            // Carbs
-                            VStack(spacing: 8) {
-                                HStack(spacing: 8) {
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(Color("darkYellow"))
-                                        .frame(width: 14, height: 14)
-                                    Text("Carbs")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.primary)
-                                }
-                                Text("\(Int(carbCals)) cals")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            // Fat
-                            VStack(spacing: 8) {
-                                HStack(spacing: 8) {
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(.pink)
-                                        .frame(width: 14, height: 14)
-                                    Text("Fat")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.primary)
-                                }
-                                Text("\(Int(fatCals)) cals")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal)
+            List {
+                // General Content (always shown)
+                generalContent
 
-                if let plan = currentGoals, let nutrients = plan.nutrients, !nutrients.isEmpty {
-                    NavigationLink {
-                    NutrientGoalEditorView(userEmail: vm.email, goals: plan) { updated in
-                        persist(goals: updated)
-                    }
-                    } label: {
-                        HStack {
-                            Image(systemName: "slider.horizontal.3")
-                                .foregroundColor(.blue)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Advanced Nutrient Targets")
-                                    .font(.headline)
-                                Text("Dial-in vitamins, minerals, amino acids, and more.")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                // Show More Nutrients Button
+                if hasAdvancedNutrients {
+                    Section {
+                        Button {
+                            withAnimation {
+                                showAdvancedNutrients.toggle()
                             }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.secondary)
+                        } label: {
+                            HStack {
+                                Image(systemName: showAdvancedNutrients ? "chevron.up" : "chevron.down")
+                                    .font(.system(size: 14, weight: .semibold))
+                                Text(showAdvancedNutrients ? "Hide Advanced Nutrients" : "Show More Nutrients")
+                                    .font(.system(size: 15, weight: .medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .foregroundColor(.blue)
                         }
-                        .padding()
-                        .background(Color("cardbg"))
-                        .cornerRadius(16)
-                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
                     }
-                    .padding(.horizontal)
                 }
 
-                Spacer(minLength: 120)
+                // Advanced Nutrients (shown when expanded)
+                if showAdvancedNutrients {
+                    advancedContent
+                }
             }
-            .padding(.top, 16)
-        }
-        
-        generateGoalsButton
-            .background(
-                Color("iosbg")
-                    .ignoresSafeArea(edges: .bottom)
-            )
+            .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
+            .scrollDismissesKeyboard(.interactively)
+
+            // Bottom button
+            generateGoalsButton
+                .background(
+                    Color("iosbg")
+                        .ignoresSafeArea(edges: .bottom)
+                )
         }
         .background(Color("iosbg").ignoresSafeArea())
         .alert(isPresented: $showError) {
@@ -595,45 +275,267 @@ struct GoalProgress: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .confirmationDialog("Reset all overrides and return to defaults?", isPresented: $showResetConfirmation) {
+            Button("Reset All Targets", role: .destructive) {
+                saveGoals(clearAll: true)
+            }
+            Button("Cancel", role: .cancel) {}
+        }
         .navigationTitle("Update Goals")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if showAdvancedNutrients && hasAdvancedNutrients {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Reset All") {
+                        showResetConfirmation = true
+                    }
+                    .disabled(isSubmitting)
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
+                Button {
                     if !isSubmitting {
                         saveGoals()
                     }
-                }) {
+                } label: {
                     if isSubmitting {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle())
                     } else {
-                        Text("Done")
+                        Image(systemName: "checkmark")
                             .fontWeight(.semibold)
                     }
                 }
+                .buttonStyle(.borderedProminent)
                 .disabled(isSubmitting)
             }
         }
+        .sheet(isPresented: $showMacroPickerSheet) {
+            MacroPickerSheet(
+                proteinGoal: $proteinGoal,
+                carbsGoal: $carbsGoal,
+                fatGoal: $fatGoal,
+                calorieGoal: $calorieGoal,
+                isPresented: $showMacroPickerSheet,
+                vmCalorieGoal: vm.calorieGoal,
+                vm: vm
+            )
+            .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.fraction(0.45)])
+            .presentationDragIndicator(.visible)
+        }
         .onAppear {
-            // Hide tab bar when this view appears
             isTabBarVisible.wrappedValue = false
-            
-            // Load values directly from UserDefaults to ensure we get the most up-to-date saved values
-            // This prevents showing default values after app restart
             loadGoalsFromUserDefaults()
-            
-            // Initialize percentage values based on current goals
-            proteinPercentValue = proteinPercent * 100
-            carbsPercentValue = carbPercent * 100
-            fatPercentValue = fatPercent * 100
+            initializeAdvancedValues()
         }
         .onDisappear {
-            // Show tab bar when this view disappears
             isTabBarVisible.wrappedValue = true
         }
     }
-    
+
+    // MARK: - General Content
+
+    @ViewBuilder
+    private var generalContent: some View {
+        // Calories Section
+        Section {
+            HStack {
+                Text("Daily Calories")
+                Spacer()
+                TextField("2000", text: $calorieGoal)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                Text("kcal")
+                    .foregroundColor(.secondary)
+            }
+        }
+
+        // Macro Ring Section
+        Section {
+            VStack(spacing: 20) {
+                ZStack {
+                    Circle()
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 12)
+
+                    RingSegment(
+                        start: 0,
+                        percent: proteinPercent,
+                        color: proteinColor
+                    )
+
+                    RingSegment(
+                        start: proteinPercent,
+                        percent: carbPercent,
+                        color: carbsColor
+                    )
+
+                    RingSegment(
+                        start: proteinPercent + carbPercent,
+                        percent: fatPercent,
+                        color: fatColor
+                    )
+
+                    VStack(spacing: 0) {
+                        Text("\(Int(macroCals))")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.primary)
+
+                        Text("cals")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(width: 120, height: 120)
+                .frame(maxWidth: .infinity, alignment: .center)
+
+                // Macro legend
+                HStack(spacing: 24) {
+                    VStack(spacing: 4) {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(proteinColor)
+                                .frame(width: 10, height: 10)
+                            Text("Protein")
+                                .font(.system(size: 13))
+                        }
+                        Text("\(Int(proteinCals)) cal")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+
+                    VStack(spacing: 4) {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(carbsColor)
+                                .frame(width: 10, height: 10)
+                            Text("Carbs")
+                                .font(.system(size: 13))
+                        }
+                        Text("\(Int(carbCals)) cal")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+
+                    VStack(spacing: 4) {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(fatColor)
+                                .frame(width: 10, height: 10)
+                            Text("Fat")
+                                .font(.system(size: 13))
+                        }
+                        Text("\(Int(fatCals)) cal")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(.vertical, 8)
+        }
+
+        // Macronutrients Section
+        Section {
+            Button {
+                showMacroPickerSheet = true
+            } label: {
+                HStack {
+                    Text("Protein")
+                        .foregroundColor(.primary)
+                    Text(String(format: "%d%%", Int(proteinPercent * 100)))
+                        .foregroundColor(proteinColor)
+                        .font(.system(size: 14, weight: .semibold))
+                    Spacer()
+                    Text("\(proteinGoal)g")
+                        .foregroundColor(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Button {
+                showMacroPickerSheet = true
+            } label: {
+                HStack {
+                    Text("Carbs")
+                        .foregroundColor(.primary)
+                    Text(String(format: "%d%%", Int(carbPercent * 100)))
+                        .foregroundColor(carbsColor)
+                        .font(.system(size: 14, weight: .semibold))
+                    Spacer()
+                    Text("\(carbsGoal)g")
+                        .foregroundColor(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Button {
+                showMacroPickerSheet = true
+            } label: {
+                HStack {
+                    Text("Fat")
+                        .foregroundColor(.primary)
+                    Text(String(format: "%d%%", Int(fatPercent * 100)))
+                        .foregroundColor(fatColor)
+                        .font(.system(size: 14, weight: .semibold))
+                    Spacer()
+                    Text("\(fatGoal)g")
+                        .foregroundColor(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+            }
+        } header: {
+            Text("Macronutrients")
+        } footer: {
+            Text("Tap to adjust macro distribution")
+        }
+    }
+
+    // MARK: - Advanced Content
+
+    @ViewBuilder
+    private var advancedContent: some View {
+        ForEach(groupedNutrients, id: \.key) { group in
+            Section(header: Text(group.label)) {
+                ForEach(group.rows) { item in
+                    nutrientRow(for: item)
+                }
+            }
+        }
+    }
+
+    // MARK: - Nutrient Row (NutritionFactsView style)
+
+    private func nutrientRow(for item: NutrientItem) -> some View {
+        let binding = Binding<String>(
+            get: { editingValues[item.slug] ?? "" },
+            set: { newValue in
+                editingValues[item.slug] = newValue
+                if newValue.trimmingCharacters(in: .whitespaces).isEmpty {
+                    removedOverrides.insert(item.slug)
+                } else {
+                    removedOverrides.remove(item.slug)
+                }
+            }
+        )
+
+        return HStack {
+            Text(item.label)
+            Spacer()
+            TextField("0", text: binding)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+            Text(item.unit)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    // MARK: - Generate Goals Button
+
     private var generateGoalsButton: some View {
         Button(action: {
             guard !isGenerating else { return }
@@ -659,27 +561,36 @@ struct GoalProgress: View {
         .padding(.top, 12)
         .padding(.bottom, 24)
     }
-    
-    // Update goals from input fields and refresh the ring
-    private func updateGoalsFromInputs() {
-        if let protein = Double(proteinGoal) {
-            vm.proteinGoal = protein
+
+    // MARK: - Helper Functions
+
+    private func formatValue(_ value: Double) -> String {
+        if abs(value.rounded() - value) < 0.01 {
+            return String(Int(value.rounded()))
         }
-        if let carbs = Double(carbsGoal) {
-            vm.carbsGoal = carbs
-        }
-        if let fat = Double(fatGoal) {
-            vm.fatGoal = fat
-        }
-        
-        // Force UI refresh by triggering a state update
-        // The computed properties will automatically recalculate
-        print("🔄 Updated goals from inputs - Protein: \(vm.proteinGoal)g, Carbs: \(vm.carbsGoal)g, Fat: \(vm.fatGoal)g")
+        return String(format: "%.1f", value)
     }
-    
-    // Hide keyboard helper
+
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
+    private func initializeAdvancedValues() {
+        guard let goals = currentGoals else { return }
+
+        // Start with default targets from nutrients
+        var values: [String: String] = [:]
+        if let nutrients = goals.nutrients {
+            for (slug, details) in nutrients {
+                // Use override target if present, otherwise use default target
+                if let overrideTarget = goals.overrides?[slug]?.target {
+                    values[slug] = formatValue(overrideTarget)
+                } else if let defaultTarget = details.target ?? details.defaultTarget {
+                    values[slug] = formatValue(defaultTarget)
+                }
+            }
+        }
+        editingValues = values
     }
 
     private func persist(goals: NutritionGoals) {
@@ -703,58 +614,50 @@ struct GoalProgress: View {
             fat: Int(goals.fat)
         )
         NotificationCenter.default.post(name: NSNotification.Name("LogsChangedNotification"), object: nil)
-        print("🔄 Posted LogsChangedNotification after goal update")
+
+        // Reinitialize advanced values after persist
+        initializeAdvancedValues()
     }
-    
-    // Load goals directly from UserDefaults instead of relying on ViewModel
+
     private func loadGoalsFromUserDefaults() {
-        // Try to load from the shared store first (keeps UI in sync across the app)
         if let goals = NutritionGoalsStore.shared.cachedGoals ??
             {
                 guard let data = UserDefaults.standard.data(forKey: "nutritionGoalsData") else { return nil }
                 return try? JSONDecoder().decode(NutritionGoals.self, from: data)
             }() {
-            
-            print("✅ GoalProgress: Loaded goals from cached nutrition goals")
+
             currentGoals = goals
             calorieGoal = String(Int(round(goals.calories)))
             proteinGoal = String(Int(round(goals.protein)))
             carbsGoal = String(Int(round(goals.carbs)))
             fatGoal = String(Int(round(goals.fat)))
-            
-            // Also update the ViewModel to ensure consistency
+
             vm.calorieGoal = goals.calories
             vm.proteinGoal = goals.protein
             vm.carbsGoal = goals.carbs
             vm.fatGoal = goals.fat
-            
+
         } else {
-            // Fallback to UserGoalsManager if nutritionGoalsData is not available
             let userGoals = UserGoalsManager.shared.dailyGoals
-            print("⚠️ GoalProgress: Fallback to UserGoalsManager defaults")
-            
+
             calorieGoal = String(userGoals.calories)
             proteinGoal = String(userGoals.protein)
             carbsGoal = String(userGoals.carbs)
             fatGoal = String(userGoals.fat)
-            
-            // Also update the ViewModel to ensure consistency
+
             vm.calorieGoal = Double(userGoals.calories)
             vm.proteinGoal = Double(userGoals.protein)
             vm.carbsGoal = Double(userGoals.carbs)
             vm.fatGoal = Double(userGoals.fat)
             currentGoals = nil
         }
-        
-        // Recalculate remaining calories to ensure UI consistency
+
         vm.remainingCalories = max(0, vm.calorieGoal - vm.totalCalories)
-        
-        print("📊 GoalProgress: Loaded values - Calories: \(calorieGoal), Protein: \(proteinGoal)g, Carbs: \(carbsGoal)g, Fat: \(fatGoal)g")
-        print("📊 GoalProgress: VM values - Calories: \(vm.calorieGoal), Protein: \(vm.proteinGoal)g, Carbs: \(vm.carbsGoal)g, Fat: \(vm.fatGoal)g")
     }
-    
-    // Save goals to backend
-    private func saveGoals() {
+
+    // MARK: - Save Goals
+
+    private func saveGoals(clearAll: Bool = false) {
         guard let calories = Double(calorieGoal),
               let protein = Double(proteinGoal),
               let carbs = Double(carbsGoal),
@@ -764,26 +667,49 @@ struct GoalProgress: View {
             showError = true
             return
         }
-        
+
         isSubmitting = true
-        let overridesPayload: [String: GoalOverridePayload] = [
-            "calories": GoalOverridePayload(min: nil, target: calories, max: nil),
-            "protein": GoalOverridePayload(min: nil, target: protein, max: nil),
-            "carbs": GoalOverridePayload(min: nil, target: carbs, max: nil),
-            "fat": GoalOverridePayload(min: nil, target: fat, max: nil)
-        ]
-        
+
+        var overridesPayload: [String: GoalOverridePayload] = [:]
+
+        if !clearAll {
+            // Always include main macros
+            overridesPayload["calories"] = GoalOverridePayload(min: nil, target: calories, max: nil)
+            overridesPayload["protein"] = GoalOverridePayload(min: nil, target: protein, max: nil)
+            overridesPayload["carbs"] = GoalOverridePayload(min: nil, target: carbs, max: nil)
+            overridesPayload["fat"] = GoalOverridePayload(min: nil, target: fat, max: nil)
+
+            // Include any advanced nutrient overrides
+            for (slug, value) in editingValues {
+                let trimmed = value.trimmingCharacters(in: .whitespaces)
+                guard !trimmed.isEmpty else { continue }
+                if let number = Double(trimmed) {
+                    overridesPayload[slug] = GoalOverridePayload(min: nil, target: number, max: nil)
+                }
+            }
+        }
+
+        let removals = clearAll ? [] : Array(removedOverrides)
+
         NetworkManagerTwo.shared.updateNutritionGoals(
             userEmail: vm.email,
-            overrides: overridesPayload
+            overrides: overridesPayload,
+            removeOverrides: removals,
+            clearAll: clearAll
         ) { result in
             isSubmitting = false
-            
+
             switch result {
             case .success(let response):
+                if clearAll {
+                    editingValues = [:]
+                    removedOverrides.removeAll()
+                }
                 persist(goals: response.goals)
-                dismiss()
-                
+                if !clearAll {
+                    dismiss()
+                }
+
             case .failure(let error):
                 if let networkError = error as? NetworkManagerTwo.NetworkError {
                     errorMessage = networkError.localizedDescription
@@ -794,20 +720,21 @@ struct GoalProgress: View {
             }
         }
     }
-    
-    // Generate goals using AI
+
+    // MARK: - Generate Goals
+
     private func generateGoals() {
         isGenerating = true
-        
+
         NetworkManagerTwo.shared.generateNutritionGoals(
             userEmail: vm.email
         ) { result in
             isGenerating = false
-            
+
             switch result {
             case .success(let response):
                 persist(goals: response.goals)
-                
+
             case .failure(let error):
                 if let networkError = error as? NetworkManagerTwo.NetworkError {
                     errorMessage = networkError.localizedDescription
@@ -820,7 +747,8 @@ struct GoalProgress: View {
     }
 }
 
-// MyFitnessPal-style MacroPickerSheet
+// MARK: - MacroPickerSheet
+
 struct MacroPickerSheet: View {
     @Binding var proteinGoal: String
     @Binding var carbsGoal: String
@@ -829,55 +757,50 @@ struct MacroPickerSheet: View {
     @Binding var isPresented: Bool
     let vmCalorieGoal: Double
     @ObservedObject var vm: DayLogsViewModel
-    
+
+    // Macro colors from asset catalog
+    private let proteinColor = Color("protein")
+    private let carbsColor = Color("carbs")
+    private let fatColor = Color("fat")
+
     @State private var inputMode: MacroInputMode = .grams
     @State private var proteinValue: Double = 0
     @State private var carbsValue: Double = 0
     @State private var fatValue: Double = 0
-    
+
     private var totalCalories: Double {
         let parsedCalories = Double(calorieGoal) ?? 0
         let actualCalories = parsedCalories > 0 ? parsedCalories : vmCalorieGoal
-        let fallbackCalories = max(actualCalories, 1)
-        return fallbackCalories
+        return max(actualCalories, 1)
     }
-    
-    // Helper function to ensure percentages add up to exactly 100% in picker
+
     private func adjustedPickerPercentages() -> (protein: Double, carbs: Double, fat: Double) {
-        // Calculate exact percentages first
         let exactProtein = (proteinValue * 4) / totalCalories * 100
         let exactCarbs = (carbsValue * 4) / totalCalories * 100
         let exactFat = (fatValue * 9) / totalCalories * 100
-        
-        // Round to integers for display
+
         var roundedProtein = round(exactProtein)
         var roundedCarbs = round(exactCarbs)
         var roundedFat = round(exactFat)
-        
-        // Calculate total and difference from 100
+
         let total = roundedProtein + roundedCarbs + roundedFat
         let difference = 100 - total
-        
-        // Apply largest remainder method to distribute the difference
+
         if difference != 0 {
-            // Calculate remainders after rounding
             let proteinRemainder = exactProtein - roundedProtein
             let carbsRemainder = exactCarbs - roundedCarbs
             let fatRemainder = exactFat - roundedFat
-            
-            // Create array of (remainder, index) pairs and sort by remainder descending
+
             var remainders = [
-                (proteinRemainder, 0), // 0 = protein
-                (carbsRemainder, 1),   // 1 = carbs
-                (fatRemainder, 2)      // 2 = fat
+                (proteinRemainder, 0),
+                (carbsRemainder, 1),
+                (fatRemainder, 2)
             ]
             remainders.sort { $0.0 > $1.0 }
-            
-            // Distribute the difference to macros with largest remainders
+
             for i in 0..<abs(Int(difference)) {
                 let macroIndex = remainders[i % 3].1
                 if difference > 0 {
-                    // Add 1% to largest remainders
                     switch macroIndex {
                     case 0: roundedProtein += 1
                     case 1: roundedCarbs += 1
@@ -885,7 +808,6 @@ struct MacroPickerSheet: View {
                     default: break
                     }
                 } else {
-                    // Subtract 1% from largest remainders
                     switch macroIndex {
                     case 0: roundedProtein -= 1
                     case 1: roundedCarbs -= 1
@@ -895,94 +817,46 @@ struct MacroPickerSheet: View {
                 }
             }
         }
-        
+
         return (protein: roundedProtein, carbs: roundedCarbs, fat: roundedFat)
     }
-    
+
     private var proteinPercent: Double {
         adjustedPickerPercentages().protein
     }
-    
+
     private var carbsPercent: Double {
         adjustedPickerPercentages().carbs
     }
-    
+
     private var fatPercent: Double {
         adjustedPickerPercentages().fat
     }
-    
+
     private var totalMacroCalories: Double {
-        let calculated = (proteinValue * 4) + (carbsValue * 4) + (fatValue * 9)
-        return calculated
+        (proteinValue * 4) + (carbsValue * 4) + (fatValue * 9)
     }
-    
-    private var calorieDiscrepancy: Double {
-        totalMacroCalories - totalCalories
-    }
-    
-    /// Nudge gram values until (P·4 + C·4 + F·9) matches the calorie goal.
-    /// Runs only while we're in `.grams` mode.
-    private func balanceCalories() {
-        guard inputMode == .grams else { return }
 
-        let target = Int(totalCalories.rounded())
-        var diff   = target - Int(totalMacroCalories.rounded())
-        var guardRail = 32               // safety so we don't loop forever
-
-        while diff != 0 && guardRail > 0 {
-            guardRail -= 1
-
-            if diff > 0 {                // need more calories
-                if diff >= 9 {
-                    fatValue    += 1     // +1 g fat = +9 kcal
-                    diff        -= 9
-                } else if diff >= 4 {    // diff is exactly 4-8 kcal
-                    carbsValue  += 1     // +1 g carbs/pro = +4 kcal
-                    diff        -= 4
-                } else {                 // diff is 1-3 kcal, can't fix exactly
-                    break
-                }
-            } else {                     // need fewer calories
-                if diff <= -9 && fatValue >= 1 {
-                    fatValue    -= 1
-                    diff        += 9
-                } else if diff <= -4 && carbsValue >= 1 {
-                    carbsValue  -= 1
-                    diff        += 4
-                } else if diff <= -4 && proteinValue >= 1 {
-                    proteinValue -= 1
-                    diff         += 4
-                } else {
-                    break               // nothing left to trim or diff too small
-                }
-            }
-        }
-    }
-    
-    // Validation for % mode
     private var percentagesValid: Bool {
         if inputMode == .percent {
             let total = proteinPercent + carbsPercent + fatPercent
-            return abs(total - 100) < 1.0 // Allow 1% tolerance for rounding
+            return abs(total - 100) < 1.0
         }
-        return true // Grams mode is always valid
+        return true
     }
-    
-    // Helper function for percent row labels - only selected row shows %
+
     private func percentLabel(_ value: Int, selected: Int) -> String {
         if inputMode == .percent {
-            // Always reserve space for "%" but only show it on selected row
-            return value == selected ? "\(value) %" : "\(value)  " // Extra space to match "%" width
+            return value == selected ? "\(value) %" : "\(value)  "
         } else {
             return "\(value)"
         }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
-            // Custom header bar (no NavigationView)
+            // Header bar
             HStack {
-                // Left: X button
                 Button(action: {
                     isPresented = false
                 }) {
@@ -990,32 +864,28 @@ struct MacroPickerSheet: View {
                         .font(.title2)
                         .foregroundColor(.primary)
                 }
-                
+
                 Spacer()
-                
-                // Center: Segmented control
+
                 Picker("Input Mode", selection: $inputMode) {
                     Text("%").tag(MacroInputMode.percent)
                     Text("Grams").tag(MacroInputMode.grams)
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .frame(width: 150)
-                
+
                 Spacer()
-                
-                // Right: Checkmark button
+
                 Button(action: {
-                    // Update the main view values
                     proteinGoal = String(Int(proteinValue))
                     carbsGoal = String(Int(carbsValue))
                     fatGoal = String(Int(fatValue))
-                    
-                    // Also update calorie goal if we're in grams mode
+
                     if inputMode == .grams {
                         let newCalories = Int(totalMacroCalories)
                         calorieGoal = String(newCalories)
                     }
-                    
+
                     isPresented = false
                 }) {
                     Image(systemName: "checkmark")
@@ -1025,15 +895,14 @@ struct MacroPickerSheet: View {
                 .disabled(!percentagesValid)
             }
             .padding()
-            
-            // Macro labels (showing opposite of current mode)
+
+            // Macro labels
             HStack(spacing: 0) {
-                // Carbs
                 VStack(spacing: 4) {
                     Text("Carbs")
                         .font(.system(size: 14))
-                        .foregroundColor(Color("darkYellow"))
-                    
+                        .foregroundColor(carbsColor)
+
                     if inputMode == .percent {
                         Text("\(Int(carbsValue))g")
                             .font(.headline)
@@ -1047,13 +916,12 @@ struct MacroPickerSheet: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                
-                // Protein
+
                 VStack(spacing: 4) {
                     Text("Protein")
                         .font(.system(size: 14))
-                        .foregroundColor(.blue)
-                    
+                        .foregroundColor(proteinColor)
+
                     if inputMode == .percent {
                         Text("\(Int(proteinValue))g")
                             .font(.headline)
@@ -1067,13 +935,12 @@ struct MacroPickerSheet: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                
-                // Fat
+
                 VStack(spacing: 4) {
                     Text("Fat")
                         .font(.system(size: 14))
-                        .foregroundColor(.pink)
-                    
+                        .foregroundColor(fatColor)
+
                     if inputMode == .percent {
                         Text("\(Int(fatValue))g")
                             .font(.headline)
@@ -1090,7 +957,7 @@ struct MacroPickerSheet: View {
             }
             .padding(.horizontal)
             .padding(.bottom)
-            
+
             // Three column wheel layout
             HStack(spacing: 0) {
                 // Carbs Column
@@ -1101,19 +968,17 @@ struct MacroPickerSheet: View {
                             if inputMode == .grams {
                                 carbsValue = Double(newValue)
                             } else {
-                                // % mode: keep total calories constant, redistribute percentages
                                 let newCarbsPercent = Double(newValue)
                                 let remainingPercent = 100 - newCarbsPercent
                                 let currentProteinAndFat = proteinPercent + fatPercent
-                                
+
                                 if currentProteinAndFat > 0 && remainingPercent > 0 {
                                     let proteinRatio = proteinPercent / currentProteinAndFat
                                     let fatRatio = fatPercent / currentProteinAndFat
-                                    
+
                                     let newProteinPercent = remainingPercent * proteinRatio
                                     let newFatPercent = remainingPercent * fatRatio
-                                    
-                                    // Update gram values based on new percentages (keeping total calories same)
+
                                     proteinValue = (newProteinPercent * totalCalories) / 4.0 / 100
                                     fatValue = (newFatPercent * totalCalories) / 9.0 / 100
                                 }
@@ -1132,8 +997,8 @@ struct MacroPickerSheet: View {
                     .frame(height: 150)
                 }
                 .frame(maxWidth: .infinity)
-                
-                // Protein Column  
+
+                // Protein Column
                 VStack {
                     Picker("Protein", selection: Binding(
                         get: { inputMode == .grams ? Int(proteinValue) : Int(proteinPercent) },
@@ -1141,19 +1006,17 @@ struct MacroPickerSheet: View {
                             if inputMode == .grams {
                                 proteinValue = Double(newValue)
                             } else {
-                                // % mode: keep total calories constant, redistribute percentages
                                 let newProteinPercent = Double(newValue)
                                 let remainingPercent = 100 - newProteinPercent
                                 let currentCarbsAndFat = carbsPercent + fatPercent
-                                
+
                                 if currentCarbsAndFat > 0 && remainingPercent > 0 {
                                     let carbsRatio = carbsPercent / currentCarbsAndFat
                                     let fatRatio = fatPercent / currentCarbsAndFat
-                                    
+
                                     let newCarbsPercent = remainingPercent * carbsRatio
                                     let newFatPercent = remainingPercent * fatRatio
-                                    
-                                    // Update gram values based on new percentages (keeping total calories same)
+
                                     carbsValue = (newCarbsPercent * totalCalories) / 4.0 / 100
                                     fatValue = (newFatPercent * totalCalories) / 9.0 / 100
                                 }
@@ -1172,7 +1035,7 @@ struct MacroPickerSheet: View {
                     .frame(height: 150)
                 }
                 .frame(maxWidth: .infinity)
-                
+
                 // Fat Column
                 VStack {
                     Picker("Fat", selection: Binding(
@@ -1181,19 +1044,17 @@ struct MacroPickerSheet: View {
                             if inputMode == .grams {
                                 fatValue = Double(newValue)
                             } else {
-                                // % mode: keep total calories constant, redistribute percentages
                                 let newFatPercent = Double(newValue)
                                 let remainingPercent = 100 - newFatPercent
                                 let currentProteinAndCarbs = proteinPercent + carbsPercent
-                                
+
                                 if currentProteinAndCarbs > 0 && remainingPercent > 0 {
                                     let proteinRatio = proteinPercent / currentProteinAndCarbs
                                     let carbsRatio = carbsPercent / currentProteinAndCarbs
-                                    
+
                                     let newProteinPercent = remainingPercent * proteinRatio
                                     let newCarbsPercent = remainingPercent * carbsRatio
-                                    
-                                    // Update gram values based on new percentages (keeping total calories same)
+
                                     proteinValue = (newProteinPercent * totalCalories) / 4.0 / 100
                                     carbsValue = (newCarbsPercent * totalCalories) / 4.0 / 100
                                 }
@@ -1214,21 +1075,18 @@ struct MacroPickerSheet: View {
                 .frame(maxWidth: .infinity)
             }
             .padding(.horizontal)
-            
+
             Spacer().frame(height: 12)
-            
-            // Validation message for % mode
+
             if inputMode == .percent && !percentagesValid {
                 Text("Macronutrients must equal 100 %")
                     .font(.caption)
                     .foregroundColor(.orange)
                     .padding(.top, 8)
             }
-            
-            // Show actual calorie goal instead of calculated macro calories
+
             VStack(spacing: 2) {
                 if inputMode == .grams {
-                    // In grams mode, show calculated calories from macro changes
                     Text("\(Int(totalMacroCalories)) cal")
                         .font(.system(size: 22))
                         .fontWeight(.semibold)
@@ -1236,35 +1094,30 @@ struct MacroPickerSheet: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 } else {
-                    // In percent mode, show the fixed calorie goal
                     Text("\(Int(totalCalories)) cal")
                         .font(.system(size: 22))
                         .fontWeight(.semibold)
                 }
             }
             .padding(.top, 8)
-            
+
             Spacer()
         }
         .onAppear {
-            // Initialize values from current goals (fix initialization issue)
             let vmProtein = vm.proteinGoal
-            let vmCarbs = vm.carbsGoal  
+            let vmCarbs = vm.carbsGoal
             let vmFat = vm.fatGoal
-            
+
             proteinValue = max(Double(proteinGoal) ?? vmProtein, 0)
-            carbsValue = max(Double(carbsGoal) ?? vmCarbs, 0) 
+            carbsValue = max(Double(carbsGoal) ?? vmCarbs, 0)
             fatValue = max(Double(fatGoal) ?? vmFat, 0)
-            
-            // If we're in grams mode, just initialize with the text field values
-            if inputMode == .grams {
-                print("🔄 MacroPickerSheet showing exact text field values: P=\(proteinValue)g, C=\(carbsValue)g, F=\(fatValue)g")
-            }
         }
     }
 }
 
 #Preview {
-    GoalProgress()
-        .environmentObject(DayLogsViewModel())
+    NavigationStack {
+        GoalProgress()
+            .environmentObject(DayLogsViewModel())
+    }
 }

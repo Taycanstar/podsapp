@@ -1,8 +1,7 @@
 //
 //  FeedbackView.swift
 //  Pods
-//
-//  Created for Humuli on 8/5/25.
+
 //
 
 import SwiftUI
@@ -65,7 +64,7 @@ struct FeedbackView: View {
                 } header: {
                     Text("Your Feedback")
                 } footer: {
-                    Text("Your feedback helps us improve Humuli. Thank you!")
+                    Text("Your feedback helps us improve Metryc. Thank you!")
                         .font(.caption)
                 }
             }
@@ -132,7 +131,7 @@ struct FeedbackView: View {
         // NetworkManagerTwo.shared.submitFeedback(...)
         
         // Show success message
-        alertMessage = "Thank you for your feedback! We appreciate you taking the time to help us improve Humuli."
+        alertMessage = "Thank you for your feedback! We appreciate you taking the time to help us improve Metryc."
         showingAlert = true
     }
 }
