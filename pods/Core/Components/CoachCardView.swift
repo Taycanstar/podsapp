@@ -10,74 +10,41 @@ import SwiftUI
 
 /// A home card component for coach interventions.
 /// Displayed on the home screen when the backend has a proactive message.
+/// Tapping anywhere opens the agent chat to continue the conversation.
 struct CoachCardView: View {
     let card: NetworkManager.CoachHomeCard
-    let onOpenChat: () -> Void
-    let onDismiss: () -> Void
+    let onTap: () -> Void
 
     @State private var hasLoggedImpression = false
-    @Environment(\.colorScheme) private var colorScheme
+
+    /// Extract body from JSON content or use raw content
+    private var bodyText: String {
+        if let data = card.content.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let body = json["body"] as? String {
+            return body
+        }
+        return card.content
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header with icon, title, and dismiss button
-            HStack {
-                // Coach icon
-                Image(systemName: "person.crop.circle.badge.checkmark")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.blue)
-
-                Text("Coach")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.primary)
-
-                Spacer()
-
-                // Dismiss button
-                Button {
-                    onDismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(.systemGray))
-                        .padding(6)
-                        .background(Color(.systemGray5))
-                        .clipShape(Circle())
-                }
-            }
-
-            // Message content (3 line limit)
-            Text(card.content)
-                .font(.system(size: 14, weight: .regular))
-                .foregroundColor(.secondary)
+        Button {
+            EventTracker.shared.trackHomeCardTap(interventionId: card.interventionId)
+            onTap()
+        } label: {
+            Text(bodyText)
+                .font(.system(size: 15, weight: .regular))
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.leading)
                 .lineLimit(3)
-                .fixedSize(horizontal: false, vertical: true)
-
-            // Open Chat button
-            Button {
-                // Track the tap event
-                EventTracker.shared.trackHomeCardTap(interventionId: card.interventionId)
-                onOpenChat()
-            } label: {
-                HStack {
-                    Image(systemName: "bubble.left.and.bubble.right")
-                        .font(.system(size: 13, weight: .medium))
-                    Text("Open Chat")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color.blue)
-                .cornerRadius(20)
-            }
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(Color("containerbg"))
+                .cornerRadius(28)
         }
-        .padding(16)
-        .background(Color("containerbg"))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 8, x: 0, y: 2)
+        .buttonStyle(.plain)
         .onAppear {
-            // Log impression event once when card appears
             if !hasLoggedImpression {
                 hasLoggedImpression = true
                 EventTracker.shared.trackHomeCardImpression(interventionId: card.interventionId)
@@ -87,19 +54,31 @@ struct CoachCardView: View {
 }
 
 #Preview {
-    VStack {
+    VStack(spacing: 16) {
         CoachCardView(
             card: NetworkManager.CoachHomeCard(
                 interventionId: "test-123",
-                content: "I noticed you've been making great progress lately! Would you like to chat about your goals for this week?",
+                content: "{\"headline\": \"This isn't failure\", \"body\": \"One meal doesn't undo your progress. Tap and I'll help you choose a low-stress next move.\"}",
                 action: "HOME_CARD_SUPPORT",
-                userState: "NEUTRAL",
+                userState: "POST_SLIPUP",
                 createdAt: "2025-01-15T10:00:00Z"
             ),
-            onOpenChat: { print("Open chat") },
-            onDismiss: { print("Dismissed") }
+            onTap: { print("Tapped") }
         )
-        .padding()
+        .padding(.horizontal)
+
+        CoachCardView(
+            card: NetworkManager.CoachHomeCard(
+                interventionId: "test-456",
+                content: "You've been away for a few days. No pressure—just tap if you want to ease back in.",
+                action: "HOME_CARD_MINIMAL",
+                userState: "AT_RISK",
+                createdAt: "2025-01-15T10:00:00Z"
+            ),
+            onTap: { print("Tapped") }
+        )
+        .padding(.horizontal)
     }
+    .padding(.vertical)
     .background(Color(.systemGroupedBackground))
 }

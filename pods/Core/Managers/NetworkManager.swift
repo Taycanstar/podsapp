@@ -9945,8 +9945,18 @@ class NetworkManager {
             throw NetworkError.invalidResponse
         }
 
+        // Backend returns {"home_card": {...}} or {"home_card": null}
+        struct HomeCardResponse: Codable {
+            let homeCard: CoachHomeCard?
+
+            enum CodingKeys: String, CodingKey {
+                case homeCard = "home_card"
+            }
+        }
+
         let decoder = JSONDecoder()
-        return try decoder.decode(CoachHomeCard.self, from: data)
+        let decodedResponse = try decoder.decode(HomeCardResponse.self, from: data)
+        return decodedResponse.homeCard
     }
 
     /// Marks a home card as tapped/consumed

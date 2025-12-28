@@ -116,7 +116,6 @@ struct NewHomeView: View {
 
     // ─── Coach home card state ──────────────────────────────────────────────
     @State private var activeCoachCard: NetworkManager.CoachHomeCard?
-    @State private var isCoachCardDismissed = false
 
     private enum ScheduleAlert: Identifiable {
         case success(String)
@@ -1314,26 +1313,28 @@ private extension NewHomeView {
         )
     }
 
-    /// Returns the coach card view if there's an active card and user hasn't dismissed it
+    /// Returns the coach card view if there's an active card
     private var coachCardView: AnyView? {
-        guard let card = activeCoachCard, !isCoachCardDismissed else { return nil }
+        guard let card = activeCoachCard else { return nil }
         return AnyView(
             CoachCardView(
                 card: card,
-                onOpenChat: {
+                onTap: {
                     // Mark card as consumed on backend
                     Task {
                         guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else { return }
                         try? await NetworkManager().tapHomeCard(interventionId: card.interventionId, userEmail: userEmail)
                     }
-                    // Set pending message for agent chat
-                    pendingCoachMessageText = card.content
+                    // Set pending message for agent chat (extract body from JSON if present)
+                    if let data = card.content.data(using: .utf8),
+                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let body = json["body"] as? String {
+                        pendingCoachMessageText = body
+                    } else {
+                        pendingCoachMessageText = card.content
+                    }
                     showAgentChat = true
                     // Clear the card
-                    activeCoachCard = nil
-                },
-                onDismiss: {
-                    isCoachCardDismissed = true
                     activeCoachCard = nil
                 }
             )
@@ -7646,9 +7647,6 @@ extension NewHomeView {
         guard let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty else {
             return
         }
-
-        // Reset dismissed state when fetching new card
-        isCoachCardDismissed = false
 
         Task {
             do {

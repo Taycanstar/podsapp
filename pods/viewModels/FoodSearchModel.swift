@@ -1124,6 +1124,8 @@ struct CoachMessage: Codable, Equatable {
     let scanMode: String?
     let todayTotals: CoachTodayTotals?
     let calorieTarget: Int?
+    // Coach intervention ID for thumbs feedback
+    let interventionId: String?
 
     /// Full text of the coach message (for UI compatibility)
     var fullText: String { message }
@@ -1143,6 +1145,8 @@ struct CoachMessage: Codable, Equatable {
         case today_totals
         case calorieTarget
         case calorie_target
+        case interventionId
+        case intervention_id
     }
 
     init(from decoder: Decoder) throws {
@@ -1159,6 +1163,8 @@ struct CoachMessage: Codable, Equatable {
             ?? container.decodeIfPresent(CoachTodayTotals.self, forKey: .today_totals)
         calorieTarget = try container.decodeIfPresent(Int.self, forKey: .calorieTarget)
             ?? container.decodeIfPresent(Int.self, forKey: .calorie_target)
+        interventionId = try container.decodeIfPresent(String.self, forKey: .interventionId)
+            ?? container.decodeIfPresent(String.self, forKey: .intervention_id)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1169,6 +1175,7 @@ struct CoachMessage: Codable, Equatable {
         try container.encodeIfPresent(scanMode, forKey: .scanMode)
         try container.encodeIfPresent(todayTotals, forKey: .todayTotals)
         try container.encodeIfPresent(calorieTarget, forKey: .calorieTarget)
+        try container.encodeIfPresent(interventionId, forKey: .interventionId)
     }
 }
 

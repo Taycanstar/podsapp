@@ -106,6 +106,9 @@ struct AppTimelineView: View {
                                                         },
                                                         onCopyTap: {
                                                             showToast(message: "Message copied")
+                                                        },
+                                                        onFeedbackSubmitted: {
+                                                            showToast(message: "Thank you for your feedback!")
                                                         }
                                                     )
                                                 }
@@ -490,6 +493,7 @@ private struct TimelineLogGroupRow: View {
     var isThinking: Bool = false
     var onCoachEditTap: ((CoachMessage) -> Void)?
     var onCopyTap: (() -> Void)?
+    var onFeedbackSubmitted: (() -> Void)?
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -544,7 +548,7 @@ private struct TimelineLogGroupRow: View {
                 } else if let coach = coachMessage {
                     HStack(alignment: .top, spacing: 12) {
                         TimelineConnectorSpacer()
-                        CoachMessageText(message: coach, onEditTap: onCoachEditTap, onCopyTap: onCopyTap)
+                        CoachMessageText(message: coach, onEditTap: onCoachEditTap, onCopyTap: onCopyTap, onFeedbackSubmitted: onFeedbackSubmitted)
                             .padding(.bottom, 16)
                     }
                 }
@@ -831,6 +835,7 @@ private struct CoachMessageText: View {
     let message: CoachMessage
     var onEditTap: ((CoachMessage) -> Void)?
     var onCopyTap: (() -> Void)?
+    var onFeedbackSubmitted: (() -> Void)?
 
     @State private var displayedText: String = ""
     @State private var isAnimating: Bool = false
@@ -860,6 +865,16 @@ private struct CoachMessageText: View {
                             .foregroundColor(.primary)
                     }
                     .buttonStyle(.plain)
+
+                    // Thumbs up/down for coach messages with intervention_id
+                    if let interventionId = message.interventionId {
+                        ThumbsFeedbackInlineView(
+                            interventionId: interventionId,
+                            initialRating: nil,
+                            onFeedbackSubmitted: onFeedbackSubmitted
+                        )
+                        .id("thumbs-\(interventionId)")
+                    }
 
                     // Edit/Chat button
                     Button {
