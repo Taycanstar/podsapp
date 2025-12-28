@@ -37,6 +37,7 @@ struct AgentChatView: View {
     @State private var showShareSheet = false
     @State private var speechSynth = AVSpeechSynthesizer()
     @State private var showCopyToast = false
+    @State private var showFeedbackToast = false
     @State private var showUserMessageSheet = false
     @State private var userMessageSheetText = ""
     @State private var userMessageDraft = ""
@@ -261,6 +262,18 @@ struct AgentChatView: View {
         .overlay(alignment: .top) {
             if showCopyToast {
                 Text("Message copied")
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 60)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .overlay(alignment: .top) {
+            if showFeedbackToast {
+                Text("Thank you for your feedback!")
                     .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
@@ -666,6 +679,21 @@ struct AgentChatView: View {
                 Image(systemName: "doc.on.doc")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(Color(.systemGray))
+            }
+
+            // Thumbs up/down for coach messages with intervention_id
+            if message.sender == .coach, let interventionId = message.interventionId {
+                ThumbsFeedbackInlineView(
+                    interventionId: interventionId,
+                    initialRating: message.userRating,
+                    onFeedbackSubmitted: {
+                        withAnimation { showFeedbackToast = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            withAnimation { showFeedbackToast = false }
+                        }
+                    }
+                )
+                .id("thumbs-\(interventionId)")
             }
 
             // Speak

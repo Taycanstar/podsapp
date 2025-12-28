@@ -136,6 +136,9 @@ struct podsApp: App {
                             Task.detached {
                                 await WeightSyncService.shared.syncAppleHealthWeights()
                             }
+
+                            // Track app open event for coach intervention policy learning
+                            EventTracker.shared.trackAppOpen()
                         } else {
                             print("⏭️  User not authenticated - skipping weight sync")
                         }

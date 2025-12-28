@@ -111,6 +111,9 @@ struct HealthCoachResponse: Codable {
     let citations: [HealthCoachCitation]?
     let conversationId: String?
 
+    // Coach intervention tracking for thumbs feedback
+    let interventionId: String?
+
     // Shame-spiral recovery flags
     let repairModeActive: Bool?
     let gentleModeActive: Bool?
@@ -121,6 +124,7 @@ struct HealthCoachResponse: Codable {
         case type, message, food, activity, data, goals, weight, options, question, error, citations
         case mealItems = "meal_items"
         case conversationId = "conversation_id"
+        case interventionId = "intervention_id"
         case repairModeActive = "repair_mode_active"
         case gentleModeActive = "gentle_mode_active"
         case recoveryContext = "recovery_context"
@@ -141,6 +145,7 @@ struct HealthCoachResponse: Codable {
         error: String? = nil,
         citations: [HealthCoachCitation]? = nil,
         conversationId: String? = nil,
+        interventionId: String? = nil,
         repairModeActive: Bool? = nil,
         gentleModeActive: Bool? = nil,
         recoveryContext: RecoveryContextPayload? = nil,
@@ -159,6 +164,7 @@ struct HealthCoachResponse: Codable {
         self.error = error
         self.citations = citations
         self.conversationId = conversationId
+        self.interventionId = interventionId
         self.repairModeActive = repairModeActive
         self.gentleModeActive = gentleModeActive
         self.recoveryContext = recoveryContext
@@ -515,6 +521,10 @@ struct HealthCoachMessage: Identifiable, Equatable {
     let options: [ClarificationOption]?
     let citations: [HealthCoachCitation]?
 
+    // Coach intervention tracking for thumbs feedback
+    var interventionId: String?
+    var userRating: Int?  // +1 for thumbs up, -1 for thumbs down, nil for no rating
+
     init(
         id: UUID = UUID(),
         sender: Sender,
@@ -526,7 +536,9 @@ struct HealthCoachMessage: Identifiable, Equatable {
         activity: HealthCoachActivity? = nil,
         data: HealthCoachDataPayload? = nil,
         options: [ClarificationOption]? = nil,
-        citations: [HealthCoachCitation]? = nil
+        citations: [HealthCoachCitation]? = nil,
+        interventionId: String? = nil,
+        userRating: Int? = nil
     ) {
         self.id = id
         self.sender = sender
@@ -539,6 +551,8 @@ struct HealthCoachMessage: Identifiable, Equatable {
         self.data = data
         self.options = options
         self.citations = citations
+        self.interventionId = interventionId
+        self.userRating = userRating
     }
 
     static func == (lhs: HealthCoachMessage, rhs: HealthCoachMessage) -> Bool {

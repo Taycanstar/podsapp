@@ -137,13 +137,15 @@ struct FoodChatResponse: Codable {
     let options: [ClarificationOption]?
     let question: String?
     let error: String?
+    let interventionId: String?  // Coach intervention ID for thumbs feedback
 
     enum CodingKeys: String, CodingKey {
         case type, message, food, options, question, error
         case mealItems = "meal_items"
+        case interventionId = "intervention_id"
     }
 
-    init(type: ResponseType, message: String, food: FoodChatFood? = nil, mealItems: [FoodChatMealItem]? = nil, options: [ClarificationOption]? = nil, question: String? = nil, error: String? = nil) {
+    init(type: ResponseType, message: String, food: FoodChatFood? = nil, mealItems: [FoodChatMealItem]? = nil, options: [ClarificationOption]? = nil, question: String? = nil, error: String? = nil, interventionId: String? = nil) {
         self.type = type
         self.message = message
         self.food = food
@@ -151,6 +153,7 @@ struct FoodChatResponse: Codable {
         self.options = options
         self.question = question
         self.error = error
+        self.interventionId = interventionId
     }
 }
 
@@ -260,10 +263,16 @@ extension Date {
 }
 
 class NetworkManager {
-    
+
     //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
       let baseUrl = "http://192.168.1.92:8000"
     // let baseUrl = "http://172.20.10.4:8000"
+
+    /// Static accessor for base URL, used by EventTracker and other singleton services
+    static var baseURL: String {
+        return "http://192.168.1.92:8000"
+        // Production: return "https://humuli-2b3070583cda.herokuapp.com"
+    }
     
     private let iso8601FractionalFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -9889,6 +9898,103 @@ class NetworkManager {
         }
 
         return try JSONDecoder().decode(AddMessageResponse.self, from: data)
+    }
+
+    // MARK: - Coach Intervention API
+
+    /// Home card data returned from the backend
+    struct CoachHomeCard: Codable {
+        let interventionId: String
+        let content: String
+        let action: String
+        let userState: String
+        let createdAt: String
+
+        enum CodingKeys: String, CodingKey {
+            case interventionId = "intervention_id"
+            case content
+            case action
+            case userState = "user_state"
+            case createdAt = "created_at"
+        }
+    }
+
+    /// Fetches the active home card for the current user, if any
+    func getActiveHomeCard(userEmail: String) async throws -> CoachHomeCard? {
+        guard let url = URL(string: "\(baseUrl)/api/v1/coach/home-card?user_email=\(userEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addTrackingHeaders(to: &request)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        // 204 means no active card
+        if httpResponse.statusCode == 204 {
+            return nil
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+
+        let decoder = JSONDecoder()
+        return try decoder.decode(CoachHomeCard.self, from: data)
+    }
+
+    /// Marks a home card as tapped/consumed
+    func tapHomeCard(interventionId: String, userEmail: String) async throws {
+        guard let url = URL(string: "\(baseUrl)/api/v1/coach/home-card/\(interventionId)/tap") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addTrackingHeaders(to: &request)
+
+        let body: [String: Any] = ["user_email": userEmail]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+    }
+
+    /// Rate a coach intervention (thumbs up/down)
+    func rateCoachIntervention(interventionId: String, userEmail: String, rating: Int, source: String = "ios_chat") async throws {
+        guard let url = URL(string: "\(baseUrl)/api/v1/coach/interventions/\(interventionId)/rate") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addTrackingHeaders(to: &request)
+
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "rating": rating,
+            "source": source
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
     }
 }
 

@@ -201,6 +201,9 @@
 		36667E1E2F00CAF30017E9D7 /* DemoFoodManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E1D2F00CAF30017E9D7 /* DemoFoodManager.swift */; };
 		36667E202F00CB080017E9D7 /* DemoFlowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E1F2F00CB080017E9D7 /* DemoFlowController.swift */; };
 		36667E222F00CB440017E9D7 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E212F00CB440017E9D7 /* DemoData.swift */; };
+		36667E242F0194540017E9D7 /* CoachCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E232F0194540017E9D7 /* CoachCardView.swift */; };
+		36667E262F0194720017E9D7 /* ThumbsFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E252F0194720017E9D7 /* ThumbsFeedbackView.swift */; };
+		36667E282F01948D0017E9D7 /* EventTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E272F01948D0017E9D7 /* EventTracker.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -672,6 +675,9 @@
 		36667E1D2F00CAF30017E9D7 /* DemoFoodManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoFoodManager.swift; sourceTree = "<group>"; };
 		36667E1F2F00CB080017E9D7 /* DemoFlowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoFlowController.swift; sourceTree = "<group>"; };
 		36667E212F00CB440017E9D7 /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
+		36667E232F0194540017E9D7 /* CoachCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachCardView.swift; sourceTree = "<group>"; };
+		36667E252F0194720017E9D7 /* ThumbsFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbsFeedbackView.swift; sourceTree = "<group>"; };
+		36667E272F01948D0017E9D7 /* EventTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTracker.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -995,6 +1001,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				36667E272F01948D0017E9D7 /* EventTracker.swift */,
 				36667DD42EF4552D0017E9D7 /* VoiceToolService.swift */,
 				36667DC42EF1E5040017E9D7 /* HealthCoachService.swift */,
 				36667DBC2EF11FC30017E9D7 /* NutritionLabelOCRService.swift */,
@@ -1290,6 +1297,8 @@
 		3682C86A2BBAED5B00B350E2 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				36667E252F0194720017E9D7 /* ThumbsFeedbackView.swift */,
+				36667E232F0194540017E9D7 /* CoachCardView.swift */,
 				36667DCD2EF35C7C0017E9D7 /* MarkdownParser.swift */,
 				36667DCB2EF35C600017E9D7 /* MarkdownMessageView.swift */,
 				36667DBA2EF06C740017E9D7 /* FloatingFoodLoader.swift */,
@@ -2088,6 +2097,7 @@
 				36D3A5142E8EDC6F00AD6B94 /* AllowHealthView.swift in Sources */,
 				3650A17E2EEF84180068ACE6 /* TimelineView.swift in Sources */,
 				3615D1152EB005EC0063EB8B /* MainContentView.swift in Sources */,
+				36667E282F01948D0017E9D7 /* EventTracker.swift in Sources */,
 				36D3A5222E942B7300AD6B94 /* RegisterView.swift in Sources */,
 				36667DC82EF35B490017E9D7 /* SafeLinkHandler.swift in Sources */,
 				3650A17C2EEF840E0068ACE6 /* MultiFoodLogView.swift in Sources */,
@@ -2294,6 +2304,7 @@
 				367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */,
 				36F722882DE52E53009C1CA0 /* BarcodeHelper.swift in Sources */,
 				36DBFBDF2C8E454500958BF4 /* CreateTeamView.swift in Sources */,
+				36667E262F0194720017E9D7 /* ThumbsFeedbackView.swift in Sources */,
 				363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */,
 				3696B95B2B9836F000D211D7 /* EmailVerificationView.swift in Sources */,
 				363068CB2E0B571000F2D4EC /* CameraProgressView.swift in Sources */,
@@ -2307,6 +2318,7 @@
 				361FF3132E1D999C00B7F68E /* CardioExercisesView.swift in Sources */,
 				367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */,
 				36667DCC2EF35C600017E9D7 /* MarkdownMessageView.swift in Sources */,
+				36667E242F0194540017E9D7 /* CoachCardView.swift in Sources */,
 				36A8518F2E56708C004E5CED /* ExerciseChart.swift in Sources */,
 				362170AF2B90EF0C00DA93EE /* ItemView.swift in Sources */,
 				361FF3232E2065B900B7F68E /* UserProfile.swift in Sources */,

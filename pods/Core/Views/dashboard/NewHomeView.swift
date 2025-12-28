@@ -114,6 +114,10 @@ struct NewHomeView: View {
     @State private var activityNavigationEmail: String?
     @State private var showActivityDetail = false
 
+    // ─── Coach home card state ──────────────────────────────────────────────
+    @State private var activeCoachCard: NetworkManager.CoachHomeCard?
+    @State private var isCoachCardDismissed = false
+
     private enum ScheduleAlert: Identifiable {
         case success(String)
         case failure(String)
@@ -1305,6 +1309,33 @@ private extension NewHomeView {
                     onRealtimeStart: onRealtimeStart
                 )
                 .ignoresSafeArea(edges: [.horizontal])
+            ),
+            coachCard: coachCardView
+        )
+    }
+
+    /// Returns the coach card view if there's an active card and user hasn't dismissed it
+    private var coachCardView: AnyView? {
+        guard let card = activeCoachCard, !isCoachCardDismissed else { return nil }
+        return AnyView(
+            CoachCardView(
+                card: card,
+                onOpenChat: {
+                    // Mark card as consumed on backend
+                    Task {
+                        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else { return }
+                        try? await NetworkManager().tapHomeCard(interventionId: card.interventionId, userEmail: userEmail)
+                    }
+                    // Set pending message for agent chat
+                    pendingCoachMessageText = card.content
+                    showAgentChat = true
+                    // Clear the card
+                    activeCoachCard = nil
+                },
+                onDismiss: {
+                    isCoachCardDismissed = true
+                    activeCoachCard = nil
+                }
             )
         )
     }
@@ -1320,6 +1351,7 @@ private extension NewHomeView {
         let showFloatingLoader: Bool
         let isTabBarVisible: Bool
         let agentTabBar: AnyView
+        let coachCard: AnyView?
 
         var body: some View {
             ZStack(alignment: .bottom) {
@@ -1338,6 +1370,14 @@ private extension NewHomeView {
                         floatingLoader
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showFloatingLoader)
+                    }
+
+                    // Coach home card (above tab bar)
+                    if let coachCard = coachCard {
+                        coachCard
+                            .padding(.horizontal, 16)
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: coachCard != nil)
                     }
 
                     if isTabBarVisible {
@@ -7596,6 +7636,30 @@ extension NewHomeView {
         vm.refreshWeeklyNutritionSummaries(endingAt: vm.selectedDate, force: force)
         vm.refreshExpenditureData(force: false, historyDays: 30)
         healthViewModel.reloadHealthData(for: vm.selectedDate)
+
+        // Fetch active coach home card
+        fetchActiveCoachCard()
+    }
+
+    /// Fetches the active coach home card from the backend
+    fileprivate func fetchActiveCoachCard() {
+        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail"), !userEmail.isEmpty else {
+            return
+        }
+
+        // Reset dismissed state when fetching new card
+        isCoachCardDismissed = false
+
+        Task {
+            do {
+                let card = try await NetworkManager().getActiveHomeCard(userEmail: userEmail)
+                await MainActor.run {
+                    activeCoachCard = card
+                }
+            } catch {
+                print("[CoachCard] Failed to fetch active home card: \(error)")
+            }
+        }
     }
 
     fileprivate func triggerForegroundRefreshIfNeeded() {
