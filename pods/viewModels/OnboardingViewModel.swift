@@ -39,6 +39,7 @@ class OnboardingViewModel: ObservableObject {
         case workoutSchedule
         case dietPreferences
         case enableNotifications
+        case demo              // Demo appears before allowHealth
         case allowHealth
         case aboutYou
         case signup
@@ -334,7 +335,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var notificationPreviewTimeISO8601: String = ""
     @Published var newOnboardingStepIndex: Int = 1
 
-    let newOnboardingTotalSteps: Int = 13
+    let newOnboardingTotalSteps: Int = 14
     private let notificationTimeDefaultsKey = "notificationPreviewTimeISO8601"
     private let nutritionPreviewDefaultsKey = "nutritionGoalsPreviewData"
     private lazy var dobFormatter: ISO8601DateFormatter = {
@@ -1643,10 +1644,11 @@ class OnboardingViewModel: ObservableObject {
         case .workoutSchedule: return 7
         case .dietPreferences: return 8
         case .enableNotifications: return 9
-        case .allowHealth: return 10
-        case .aboutYou: return 11
-        case .desiredWeight: return 12
-        case .programOverview, .signup: return 13
+        case .demo: return 10
+        case .allowHealth: return 11
+        case .aboutYou: return 12
+        case .desiredWeight: return 13
+        case .programOverview, .signup: return 14
         default: return 1
         }
     }

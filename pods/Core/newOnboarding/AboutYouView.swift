@@ -95,7 +95,7 @@ struct AboutYouView: View {
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
             setupInitialState()
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 11)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 12)
             saveProgressMarker()
             prefillFromHealthKitIfNeeded()
         }

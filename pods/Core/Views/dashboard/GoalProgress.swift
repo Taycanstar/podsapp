@@ -180,7 +180,7 @@ struct GoalProgress: View {
         guard let nutrientDict = currentGoals?.nutrients else { return [] }
 
         // Exclude macros category since calories, protein, carbs, fat are handled in general content
-        let categoryOrder = ["carbohydrates", "fats", "amino_acids", "vitamins", "minerals", "hydration", "lifestyle", "other"]
+        let categoryOrder = ["carbohydrates", "fats", "amino_acids", "vitamins", "minerals", "hydration", "other"]
 
         var grouped: [String: [NutrientItem]] = [:]
         for (slug, details) in nutrientDict {

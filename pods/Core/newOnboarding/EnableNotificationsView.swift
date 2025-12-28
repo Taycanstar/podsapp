@@ -136,7 +136,7 @@ struct EnableNotificationsView: View {
                 UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.notificationIdentifier])
                 viewModel.setNotificationTime(viewModel.notificationPreviewTime)
                 viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 10)
-                viewModel.currentStep = .allowHealth
+                viewModel.currentStep = .demo
             }
             .foregroundColor(.primary)
 
@@ -198,7 +198,7 @@ struct EnableNotificationsView: View {
             schedulePreviewNotification()
             HapticFeedback.generate()
             viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 10)
-            viewModel.currentStep = .allowHealth
+            viewModel.currentStep = .demo
             return
         }
 
@@ -214,7 +214,7 @@ struct EnableNotificationsView: View {
                 }
                 HapticFeedback.generate()
                 viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 10)
-                viewModel.currentStep = .allowHealth
+                viewModel.currentStep = .demo
             }
         }
     }

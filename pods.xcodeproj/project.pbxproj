@@ -196,6 +196,11 @@
 		36667E122EFE10C70017E9D7 /* RecipeIngredientRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E112EFE10C70017E9D7 /* RecipeIngredientRow.swift */; };
 		36667E162EFF12270017E9D7 /* ChangeNutritionGoals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E152EFF12200017E9D7 /* ChangeNutritionGoals.swift */; };
 		36667E182EFF2B370017E9D7 /* DemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E172EFF2B330017E9D7 /* DemoView.swift */; };
+		36667E1A2F00CA700017E9D7 /* DemoChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E192F00CA700017E9D7 /* DemoChatView.swift */; };
+		36667E1C2F00CA8C0017E9D7 /* DemoTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E1B2F00CA8C0017E9D7 /* DemoTimelineView.swift */; };
+		36667E1E2F00CAF30017E9D7 /* DemoFoodManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E1D2F00CAF30017E9D7 /* DemoFoodManager.swift */; };
+		36667E202F00CB080017E9D7 /* DemoFlowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E1F2F00CB080017E9D7 /* DemoFlowController.swift */; };
+		36667E222F00CB440017E9D7 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E212F00CB440017E9D7 /* DemoData.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -662,6 +667,11 @@
 		36667E112EFE10C70017E9D7 /* RecipeIngredientRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeIngredientRow.swift; sourceTree = "<group>"; };
 		36667E152EFF12200017E9D7 /* ChangeNutritionGoals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeNutritionGoals.swift; sourceTree = "<group>"; };
 		36667E172EFF2B330017E9D7 /* DemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoView.swift; sourceTree = "<group>"; };
+		36667E192F00CA700017E9D7 /* DemoChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoChatView.swift; sourceTree = "<group>"; };
+		36667E1B2F00CA8C0017E9D7 /* DemoTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoTimelineView.swift; sourceTree = "<group>"; };
+		36667E1D2F00CAF30017E9D7 /* DemoFoodManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoFoodManager.swift; sourceTree = "<group>"; };
+		36667E1F2F00CB080017E9D7 /* DemoFlowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoFlowController.swift; sourceTree = "<group>"; };
+		36667E212F00CB440017E9D7 /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -1373,7 +1383,6 @@
 		368A27352B977F320001BBCA /* onboarding */ = {
 			isa = PBXGroup;
 			children = (
-				36667E172EFF2B330017E9D7 /* DemoView.swift */,
 				368A27382B9818330001BBCA /* InfoView.swift */,
 				3696B95A2B9836F000D211D7 /* EmailVerificationView.swift */,
 				3696B9622B99990E00D211D7 /* MainOnboardingView.swift */,
@@ -1581,8 +1590,14 @@
 		36D3A4FC2E8C2C7500AD6B94 /* newOnboarding */ = {
 			isa = PBXGroup;
 			children = (
+				36667E212F00CB440017E9D7 /* DemoData.swift */,
+				36667E1F2F00CB080017E9D7 /* DemoFlowController.swift */,
+				36667E1D2F00CAF30017E9D7 /* DemoFoodManager.swift */,
+				36667E1B2F00CA8C0017E9D7 /* DemoTimelineView.swift */,
+				36667E192F00CA700017E9D7 /* DemoChatView.swift */,
 				36D3A5292E986BF000AD6B94 /* ProOnboardingView.swift */,
 				36D3A5212E942B6400AD6B94 /* RegisterView.swift */,
+				36667E172EFF2B330017E9D7 /* DemoView.swift */,
 				36D3A51B2E91A18E00AD6B94 /* YourProgramView.swift */,
 				36D3A5192E90E5E100AD6B94 /* GreetingView.swift */,
 				36D3A5172E90E5C000AD6B94 /* EnterNameView.swift */,
@@ -2082,6 +2097,7 @@
 				36667DD52EF4552D0017E9D7 /* VoiceToolService.swift in Sources */,
 				36ED35DD2DDE52A200D174FB /* DescribeLogView.swift in Sources */,
 				36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */,
+				36667E222F00CB440017E9D7 /* DemoData.swift in Sources */,
 				3650A1782EED12B30068ACE6 /* VitalMetricType.swift in Sources */,
 				36DB82DE2EBAA8B1004BA082 /* LLMWorkoutService.swift in Sources */,
 				36A85CF92DB49A7900DD4266 /* CreatingPlanView.swift in Sources */,
@@ -2282,6 +2298,7 @@
 				3696B95B2B9836F000D211D7 /* EmailVerificationView.swift in Sources */,
 				363068CB2E0B571000F2D4EC /* CameraProgressView.swift in Sources */,
 				36DB82E22EBE7364004BA082 /* SetScheme.swift in Sources */,
+				36667E1A2F00CA700017E9D7 /* DemoChatView.swift in Sources */,
 				36E97C772BB3BC0C003CDAB9 /* PhotoEditorRepresentable.swift in Sources */,
 				36963A232C1E17D800E53EF5 /* DataControlsView.swift in Sources */,
 				36D3A51C2E91A19600AD6B94 /* YourProgramView.swift in Sources */,
@@ -2324,6 +2341,7 @@
 				36F5A0072F9C1AAB00A1B234 /* SubscriptionRepository.swift in Sources */,
 				36667DF22EF77E840017E9D7 /* IngredientSummaryView.swift in Sources */,
 				36F5A00B2F9C1AAB00A1B234 /* FoodFeedRepository.swift in Sources */,
+				36667E1E2F00CAF30017E9D7 /* DemoFoodManager.swift in Sources */,
 				36F5A0092F9C1AAB00A1B234 /* DayLogsRepository.swift in Sources */,
 				36F5A0132F9C1AAB00A1B234 /* CombinedLogsRepository.swift in Sources */,
 				36F5A0152F9C1AAB00A1B234 /* MealsRepository.swift in Sources */,
@@ -2338,6 +2356,7 @@
 				36ED35F92DDE57C400D174FB /* HelperViewsFlow.swift in Sources */,
 				36D3A5082E8C6F7E00AD6B94 /* ReviewEquipmentView.swift in Sources */,
 				364A83B82D8CBE10009D2620 /* ButtonWithIcon.swift in Sources */,
+				36667E1C2F00CA8C0017E9D7 /* DemoTimelineView.swift in Sources */,
 				36004B422B9000DF00423AB1 /* PodView.swift in Sources */,
 				36DB82CE2EB924BC004BA082 /* ExercisesDb.swift in Sources */,
 				36ED35D22DDBD4EC00D174FB /* ManageGoalsView.swift in Sources */,
@@ -2350,6 +2369,7 @@
 				364A83CA2DAB0F82009D2620 /* FoodScannerView.swift in Sources */,
 				364A83CE2DAEC017009D2620 /* VoiceLogView.swift in Sources */,
 				36A85CDF2DB2BFEB00DD4266 /* OnboardingGoal.swift in Sources */,
+				36667E202F00CB080017E9D7 /* DemoFlowController.swift in Sources */,
 				36667DFC2EFB05190017E9D7 /* EditFoodSheet.swift in Sources */,
 				362532A12E63805D003C3B8D /* ModernFoodLoadingCard.swift in Sources */,
 				50FB9842CD464A8F9D9E63AB /* ProFoodSearchLoader.swift in Sources */,

@@ -48,7 +48,7 @@ struct AllowHealthView: View {
         }
         .background(backgroundColor.ignoresSafeArea())
         .onAppear {
-            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 10)
+            viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 11)
             UserDefaults.standard.set("AllowHealthView", forKey: "currentOnboardingStep")
             UserDefaults.standard.set(true, forKey: "onboardingInProgress")
             UserDefaults.standard.synchronize()
@@ -119,8 +119,8 @@ struct AllowHealthView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 9)
-                viewModel.currentStep = .enableNotifications
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 10)
+                viewModel.currentStep = .demo
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.headline)
@@ -182,7 +182,7 @@ private extension AllowHealthView {
 
     func advanceToAboutYou() {
         isRequestingPermission = false
-        viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 11)
+        viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 12)
         viewModel.currentStep = .aboutYou
     }
 

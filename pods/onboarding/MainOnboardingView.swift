@@ -33,6 +33,8 @@ struct MainOnboardingView: View {
                 DietPreferencesView()
             case .enableNotifications:
                 EnableNotificationsView()
+            case .demo:
+                DemoView()
             case .allowHealth:
                 AllowHealthView()
             case .aboutYou:

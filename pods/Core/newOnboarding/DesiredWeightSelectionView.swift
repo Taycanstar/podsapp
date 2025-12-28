@@ -235,7 +235,7 @@ struct DesiredWeightSelectionView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 11)
+                viewModel.newOnboardingStepIndex = min(viewModel.newOnboardingTotalSteps, 12)
                 viewModel.currentStep = .aboutYou
             } label: {
                 Image(systemName: "chevron.left")
