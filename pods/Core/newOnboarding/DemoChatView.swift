@@ -2,16 +2,9 @@
 //  DemoChatView.swift
 //  pods
 //
-//  Created by Dimi Nunez on 12/27/25.
-//
-
-
-//
-//  DemoChatView.swift
-//  pods
-//
 //  Chat view for the onboarding demo.
 //  Mimics AgentChatView styling with demo-specific data and animations.
+//  Shows typing animation in the AgentTabBar-style input field.
 //
 
 import SwiftUI
@@ -30,7 +23,7 @@ struct DemoChatView: View {
             chatScrollView
 
             // Input bar (non-interactive, shows typing animation)
-            demoInputBar
+            demoAgentTabBar
         }
         .navigationTitle("Metryc")
         .navigationBarTitleDisplayMode(.inline)
@@ -48,12 +41,6 @@ struct DemoChatView: View {
                             .id(message.id)
                     }
 
-                    // Currently typing user message
-                    if flow.isTyping && !flow.currentTypingText.isEmpty {
-                        typingUserMessageRow
-                            .id("typingUser")
-                    }
-
                     // Typing indicator for coach
                     if flow.showTypingIndicator {
                         coachTypingIndicator
@@ -67,16 +54,11 @@ struct DemoChatView: View {
 
                     // Extra space for input bar
                     Spacer()
-                        .frame(height: 120)
+                        .frame(height: 160)
                 }
                 .padding()
             }
             .onChange(of: flow.demoChatMessages.count) { _, _ in
-                withAnimation {
-                    proxy.scrollTo("bottomAnchor", anchor: .bottom)
-                }
-            }
-            .onChange(of: flow.currentTypingText) { _, _ in
                 withAnimation {
                     proxy.scrollTo("bottomAnchor", anchor: .bottom)
                 }
@@ -116,30 +98,6 @@ struct DemoChatView: View {
         }
     }
 
-    private var typingUserMessageRow: some View {
-        HStack {
-            Spacer()
-            HStack(spacing: 0) {
-                Text(flow.currentTypingText)
-                // Blinking cursor
-                Rectangle()
-                    .fill(Color.primary)
-                    .frame(width: 2, height: 16)
-                    .opacity(cursorOpacity)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(.systemGray5))
-            .foregroundColor(.primary)
-            .cornerRadius(16)
-        }
-    }
-
-    @State private var cursorVisible = true
-    private var cursorOpacity: Double {
-        cursorVisible ? 1.0 : 0.0
-    }
-
     private var coachTypingIndicator: some View {
         HStack(spacing: 4) {
             ForEach(0..<3, id: \.self) { index in
@@ -166,63 +124,128 @@ struct DemoChatView: View {
         }
     }
 
-    // MARK: - Demo Input Bar
+    // MARK: - Demo Agent Tab Bar (matches AgentTabBar styling)
 
-    private var demoInputBar: some View {
+    @State private var cursorVisible = true
+
+    private var demoAgentTabBar: some View {
         VStack(spacing: 0) {
             // Top blur for fade effect
-            LinearGradient(
-                colors: [
-                    Color(UIColor.systemBackground).opacity(0),
-                    Color(UIColor.systemBackground)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 20)
-            .allowsHitTesting(false)
+            DemoTransparentBlurView(removeAllFilters: true)
+                .blur(radius: 14)
+                .frame(height: 10)
+                .frame(maxWidth: .infinity)
+                .allowsHitTesting(false)
 
-            // Input field area
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    // Search/input field
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
-
-                        if flow.step == .foodTyping && !flow.demoSearchQuery.isEmpty {
-                            HStack(spacing: 0) {
-                                Text(flow.demoSearchQuery)
-                                    .foregroundColor(.primary)
-                                // Blinking cursor
-                                Rectangle()
-                                    .fill(Color.primary)
-                                    .frame(width: 2, height: 16)
-                                    .opacity(cursorOpacity)
-                            }
-                        } else {
-                            Text("Log or ask anything...")
-                                .foregroundColor(.secondary)
-                        }
-
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(Color(.systemGray6))
-                    )
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color(UIColor.systemBackground))
+            tabBarContent
         }
+        .background(
+            DemoTransparentBlurView(removeAllFilters: true)
+                .blur(radius: 14)
+                .ignoresSafeArea(edges: [.horizontal, .bottom])
+        )
         .onAppear {
             startCursorBlink()
             startDotAnimation()
         }
+    }
+
+    private var tabBarContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Text input area with typing animation
+            ZStack(alignment: .topLeading) {
+                // Placeholder or typing text
+                if flow.step == .foodTyping && !flow.demoSearchQuery.isEmpty {
+                    // Typing animation in the input field
+                    HStack(spacing: 0) {
+                        Text(flow.demoSearchQuery)
+                            .font(.system(size: 15))
+                            .foregroundColor(.primary)
+                        // Blinking cursor
+                        Rectangle()
+                            .fill(Color.primary)
+                            .frame(width: 2, height: 16)
+                            .opacity(cursorVisible ? 1.0 : 0.0)
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 8)
+                } else if flow.isTyping && !flow.currentTypingText.isEmpty {
+                    // Typing the initial slip-up message
+                    HStack(spacing: 0) {
+                        Text(flow.currentTypingText)
+                            .font(.system(size: 15))
+                            .foregroundColor(.primary)
+                        // Blinking cursor
+                        Rectangle()
+                            .fill(Color.primary)
+                            .frame(width: 2, height: 16)
+                            .opacity(cursorVisible ? 1.0 : 0.0)
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 8)
+                } else {
+                    // Placeholder
+                    Text("Log or ask anything...")
+                        .font(.system(size: 15))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 8)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+
+            // Bottom row with action buttons
+            HStack {
+                HStack(spacing: 10) {
+                    // Plus button
+                    demoActionCircle(systemName: "plus", isPrimary: true)
+                    // Barcode button
+                    demoActionCircle(systemName: "barcode.viewfinder", isPrimary: false)
+                }
+
+                Spacer()
+
+                // Mic/Send button
+                if flow.isTyping || (flow.step == .foodTyping && !flow.demoSearchQuery.isEmpty) {
+                    // Show send button when typing
+                    demoActionCircle(systemName: "arrow.up", isPrimary: true)
+                } else {
+                    // Show mic button when not typing
+                    demoActionCircle(systemName: "mic.fill", isPrimary: false)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color("chat"))
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(borderColor, lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, -12)
+    }
+
+    private func demoActionCircle(systemName: String, isPrimary: Bool) -> some View {
+        ZStack {
+            Circle()
+                .fill(isPrimary ? Color.accentColor : Color("chaticon"))
+                .frame(width: 36, height: 36)
+            Image(systemName: systemName)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(isPrimary ? .white : .primary)
+        }
+    }
+
+    private var borderColor: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.1)
+            : Color.black.opacity(0.06)
     }
 
     // MARK: - Animations
@@ -239,6 +262,30 @@ struct DemoChatView: View {
         Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
             withAnimation {
                 dotAnimationPhase = (dotAnimationPhase + 1) % 3
+            }
+        }
+    }
+}
+
+// MARK: - Demo Transparent Blur View
+
+private struct DemoTransparentBlurView: UIViewRepresentable {
+    var removeAllFilters: Bool = false
+
+    func makeUIView(context: Context) -> UIVisualEffectView {
+        UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+    }
+
+    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
+        DispatchQueue.main.async {
+            guard let backdropLayer = uiView.layer.sublayers?.first else { return }
+
+            if removeAllFilters {
+                backdropLayer.filters = []
+            } else {
+                backdropLayer.filters?.removeAll { filter in
+                    String(describing: filter) != "gaussianBlur"
+                }
             }
         }
     }

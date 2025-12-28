@@ -72,7 +72,7 @@ struct EnableNotificationsView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(maxWidth: .infinity)
-           
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 24)

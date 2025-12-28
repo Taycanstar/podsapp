@@ -2,16 +2,8 @@
 //  DemoTimelineView.swift
 //  pods
 //
-//  Created by Dimi Nunez on 12/27/25.
-//
-
-
-//
-//  DemoTimelineView.swift
-//  pods
-//
 //  Timeline view for the onboarding demo.
-//  Shows the logged food item with a supportive coach message.
+//  Matches the actual TimelineView structure with spine, connectors, and cards.
 //
 
 import SwiftUI
@@ -21,132 +13,160 @@ struct DemoTimelineView: View {
     @EnvironmentObject var onboardingViewModel: OnboardingViewModel
     @Environment(\.colorScheme) private var colorScheme
 
-    private let backgroundColor = Color.onboardingBackground
+    private var dateSubtitle: String {
+        let monthDayFormatter = DateFormatter()
+        monthDayFormatter.dateFormat = "MMMM d"
+        let monthDay = monthDayFormatter.string(from: Date())
+        return "Today, \(monthDay)"
+    }
+
+    private var timeLabel: String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: Date())
+    }
 
     var body: some View {
         ZStack {
-            backgroundColor.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Spacer()
-                    .frame(height: 40)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Date subtitle above the timeline section
+                        Text(dateSubtitle)
+                            .font(.system(size: 15))
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                            .padding(.bottom, 16)
 
-                // "Logged" header
-                VStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 48))
-                        .foregroundColor(.green)
+                        ZStack(alignment: .leading) {
+                            // Timeline spine
+                            DemoTimelineSpine()
 
-                    Text("Logged")
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                            VStack(spacing: 20) {
+                                // Quick actions row
+                                DemoQuickActionsRow()
+
+                                // Logged food entry
+                                if let food = flow.demoLoggedFood {
+                                    demoFoodLogRow(food)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 16)
+                    }
                 }
-                .padding(.bottom, 32)
-
-                // Logged food card
-                if let food = flow.demoLoggedFood {
-                    loggedFoodCard(food)
-                        .padding(.horizontal, 24)
-                }
-
-                Spacer()
-                    .frame(height: 24)
-
-                // Coach follow-up message
-                if !flow.demoCoachFollowUpMessage.isEmpty {
-                    coachMessageCard
-                        .padding(.horizontal, 24)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
 
                 Spacer()
 
-                // Action buttons
+                // Action buttons at bottom
                 actionButtons
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("Timeline")
-                    .font(.headline)
-            }
-        }
+        .navigationTitle("Timeline")
+        .navigationBarTitleDisplayMode(.large)
     }
 
-    // MARK: - Logged Food Card
+    // MARK: - Demo Food Log Row
 
-    private func loggedFoodCard(_ food: Food) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Food title
-            Text(food.description)
-                .font(.headline)
-                .foregroundColor(.primary)
-                .lineLimit(2)
+    private func demoFoodLogRow(_ food: Food) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Top: Connector + time label
+            HStack(alignment: .center, spacing: 12) {
+                DemoTimelineConnector(iconName: "fork.knife")
+                    .frame(height: DemoTimelineConnector.iconSize)
 
-            // Brand if available
-            if let brand = food.brandText, !brand.isEmpty {
-                Text(brand)
-                    .font(.subheadline)
+                Text(timeLabel)
+                    .font(.system(size: 13))
                     .foregroundColor(.secondary)
             }
 
-            Divider()
-
-            // Macro summary
-            HStack(spacing: 16) {
-                macroItem(value: food.calories ?? 0, label: "cal", color: .orange)
-                macroItem(value: food.protein ?? 0, label: "protein", color: .blue)
-                macroItem(value: food.carbs ?? 0, label: "carbs", color: .green)
-                macroItem(value: food.fat ?? 0, label: "fat", color: .purple)
+            // Food card
+            HStack(alignment: .top, spacing: 12) {
+                DemoTimelineConnectorSpacer()
+                demoFoodCard(food)
             }
 
-            // Serving info
-            Text(food.servingSizeText)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            // Coach message (if available)
+            if !flow.demoCoachFollowUpMessage.isEmpty {
+                HStack(alignment: .top, spacing: 12) {
+                    DemoTimelineConnectorSpacer()
+                    demoCoachMessageCard
+                        .padding(.bottom, 16)
+                }
+            }
+        }
+    }
+
+    // MARK: - Food Card (matching TimelineLogCard)
+
+    private func demoFoodCard(_ food: Food) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(food.description)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+
+            // Macro details
+            HStack(spacing: 12) {
+                demoLabel(icon: "flame.fill", text: "\(Int(food.calories ?? 0)) cal", color: Color("brightOrange"))
+                demoMacroLabel(prefix: "P", value: Int(food.protein ?? 0))
+                demoMacroLabel(prefix: "F", value: Int(food.fat ?? 0))
+                demoMacroLabel(prefix: "C", value: Int(food.carbs ?? 0))
+            }
+            .font(.system(size: 13))
+            .foregroundColor(.secondary)
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(UIColor.secondarySystemGroupedBackground))
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color("sheetcard"))
         )
     }
 
-    private func macroItem(value: Double, label: String, color: Color) -> some View {
-        VStack(spacing: 4) {
-            Text("\(Int(value))")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
+    private func demoLabel(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
                 .foregroundColor(color)
-            Text(label)
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            Text(text)
         }
-        .frame(maxWidth: .infinity)
+    }
+
+    private func demoMacroLabel(prefix: String, value: Int) -> some View {
+        Text("\(prefix) \(value)g")
     }
 
     // MARK: - Coach Message Card
 
-    private var coachMessageCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
+    private var demoCoachMessageCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 14))
+                    .font(.system(size: 12))
                     .foregroundColor(.secondary)
                 Text("Coach")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
             }
 
             Text(flow.demoCoachFollowUpMessage)
-                .font(.body)
+                .font(.system(size: 14))
                 .foregroundColor(.primary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(16)
+        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(UIColor.tertiarySystemGroupedBackground))
         )
     }
@@ -186,6 +206,105 @@ struct DemoTimelineView: View {
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 32)
+    }
+}
+
+// MARK: - Demo Timeline Spine
+
+private struct DemoTimelineSpine: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        GeometryReader { geometry in
+            let color = colorScheme == .dark ? Color(.systemGray3) : Color(.systemGray4)
+            ZStack(alignment: .center) {
+                Rectangle()
+                    .fill(color)
+                    .frame(width: 2, height: geometry.size.height)
+                    .position(x: DemoTimelineConnector.iconSize / 2, y: geometry.size.height / 2)
+
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
+                    .position(x: DemoTimelineConnector.iconSize / 2, y: geometry.size.height - 4)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Demo Timeline Connector
+
+private struct DemoTimelineConnector: View {
+    @Environment(\.colorScheme) private var colorScheme
+    let iconName: String
+    var overrideColor: Color? = nil
+
+    static let iconSize: CGFloat = 34
+
+    var body: some View {
+        let circleColor = overrideColor ?? (colorScheme == .dark ? Color(.systemGray2) : Color.black.opacity(0.9))
+
+        ZStack {
+            Circle()
+                .fill(circleColor)
+                .frame(width: Self.iconSize, height: Self.iconSize)
+            Image(systemName: iconName)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white)
+        }
+        .frame(width: Self.iconSize, height: Self.iconSize)
+    }
+}
+
+// MARK: - Demo Timeline Connector Spacer
+
+private struct DemoTimelineConnectorSpacer: View {
+    var body: some View {
+        Color.clear
+            .frame(width: DemoTimelineConnector.iconSize)
+    }
+}
+
+// MARK: - Demo Quick Actions Row
+
+private struct DemoQuickActionsRow: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    private let foregroundColor = Color("text")
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            DemoTimelineConnector(
+                iconName: "plus",
+                overrideColor: plusColor
+            )
+
+            HStack(spacing: 12) {
+                quickActionChip(title: "Add Activity", systemImage: "flame.fill")
+                quickActionChip(title: "Scan Meal", systemImage: "fork.knife")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func quickActionChip(title: String, systemImage: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .regular))
+            Text(title)
+                .font(.system(size: 13, weight: .regular))
+        }
+        .foregroundColor(foregroundColor)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color("background"))
+        .clipShape(Capsule())
+        .opacity(0.5) // Disabled appearance for demo
+    }
+
+    private var plusColor: Color {
+        colorScheme == .dark ? Color(.systemGray2) : Color.black.opacity(0.9)
     }
 }
 

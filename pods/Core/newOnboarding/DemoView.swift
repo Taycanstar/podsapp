@@ -17,6 +17,16 @@ struct DemoView: View {
 
     private let backgroundColor = Color.onboardingBackground
 
+    /// Whether the demo is actively playing (not yet at timeline/done)
+    private var isDemoPlaying: Bool {
+        switch flow.step {
+        case .chatSlipUp, .coachResponse1, .coachResponse2, .coachPromptFood, .foodTyping, .presentConfirmSheet, .logging:
+            return true
+        default:
+            return false
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -25,9 +35,6 @@ struct DemoView: View {
                 // Show appropriate view based on demo step
                 Group {
                     switch flow.step {
-                    case .intro:
-                        introView
-
                     case .chatSlipUp, .coachResponse1, .coachResponse2, .coachPromptFood, .foodTyping, .presentConfirmSheet, .logging:
                         DemoChatView(flow: flow)
 
@@ -51,13 +58,14 @@ struct DemoView: View {
                 }
             }
             .toolbar {
-                if flow.step == .intro {
+                // Show skip button while demo is playing
+                if isDemoPlaying {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Skip") {
                             skipDemo()
                         }
-                        .font(.headline)
-                        .foregroundColor(.primary)
+                        .font(.body)
+                        .foregroundColor(.secondary)
                     }
                 }
             }
@@ -67,63 +75,10 @@ struct DemoView: View {
             demoFoodManager.onFoodLogged = { food in
                 // Food was "logged" in the sheet - the flow controller handles timing
             }
+
+            // Auto-start the demo immediately
+            flow.startDemo()
         }
-    }
-
-    // MARK: - Intro View
-
-    private var introView: some View {
-        VStack {
-            Spacer()
-
-            VStack(spacing: 24) {
-                // Icon
-                Image(systemName: "fork.knife.circle.fill")
-                    .font(.system(size: 56))
-                    .foregroundColor(.primary)
-
-                // Title
-                VStack(spacing: 12) {
-                    Text("See how it works")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .multilineTextAlignment(.center)
-
-                    Text("Watch a quick demo of how to log food with your personal coach.")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
-            }
-
-            Spacer()
-
-            // Start button
-            VStack(spacing: 16) {
-                Button {
-                    flow.startDemo()
-                } label: {
-                    Text("Start Demo")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.primary)
-                        .foregroundColor(Color(.systemBackground))
-                        .cornerRadius(36)
-                }
-
-                Button("Skip demo") {
-                    skipDemo()
-                }
-                .foregroundColor(.secondary)
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
-        }
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
     // MARK: - Skip Demo

@@ -21,7 +21,6 @@ import SwiftUI
 // MARK: - Demo Step Enum
 
 enum DemoStep: Equatable {
-    case intro
     case chatSlipUp         // User message appears with typing animation
     case coachResponse1     // First coach bubble
     case coachResponse2     // Second coach bubble
@@ -39,7 +38,7 @@ enum DemoStep: Equatable {
 final class DemoFlowController: ObservableObject {
     // MARK: - Published State
 
-    @Published var step: DemoStep = .intro
+    @Published var step: DemoStep = .chatSlipUp
     @Published var demoChatMessages: [HealthCoachMessage] = []
     @Published var currentTypingText: String = ""
     @Published var isTyping: Bool = false
@@ -85,7 +84,7 @@ final class DemoFlowController: ObservableObject {
     // MARK: - Private Methods
 
     private func resetState() {
-        step = .intro
+        step = .chatSlipUp
         demoChatMessages = []
         currentTypingText = ""
         isTyping = false
@@ -99,9 +98,8 @@ final class DemoFlowController: ObservableObject {
     }
 
     private func runDemoSequence() async {
-        // Wait for intro display
-        step = .intro
-        await delay(seconds: DemoTiming.introDisplayDuration)
+        // Small initial delay before typing starts
+        await delay(seconds: 0.5)
 
         guard !Task.isCancelled else { return }
 
