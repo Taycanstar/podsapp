@@ -118,10 +118,10 @@ struct ProgramOverviewView: View {
 
             if let goals = nutritionGoals {
                 VStack(spacing: 16) {
-                    MacroRow(title: "Calories", value: Int(goals.calories), unit: "cal", color: Color("brightOrange"), icon: "flame.fill")
-                    MacroRow(title: "Protein", value: Int(goals.protein), unit: "g", color: .blue, icon: "fish")
-                    MacroRow(title: "Carbs", value: Int(goals.carbs), unit: "g", color: Color("darkYellow"), icon: "laurel.leading")
-                    MacroRow(title: "Fat", value: Int(goals.fat), unit: "g", color: .pink, icon: "drop.fill")
+                    MacroRow(title: "Calories", value: Int(goals.calories), unit: "cal", color: Color(red: 1.0, green: 0.176, blue: 0.333))
+                    MacroRow(title: "Protein", value: Int(goals.protein), unit: "g", color: Color(red: 0.0, green: 0.478, blue: 1.0))
+                    MacroRow(title: "Carbs", value: Int(goals.carbs), unit: "g", color: Color(red: 0.188, green: 0.82, blue: 0.345))
+                    MacroRow(title: "Fat", value: Int(goals.fat), unit: "g", color: Color(red: 1.0, green: 0.839, blue: 0.039))
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -348,14 +348,22 @@ private struct MacroRow: View {
     let value: Int
     let unit: String
     let color: Color
-    let icon: String
 
     var body: some View {
         HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(color)
-                .frame(width: 32, height: 32, alignment: .center)
+            // Activity ring style circle (filled ring matching DailyIntakeCardView)
+            ZStack {
+                Circle()
+                    .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .foregroundColor(color.opacity(0.15))
+
+                Circle()
+                    .trim(from: 0, to: 1)
+                    .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .foregroundColor(color)
+                    .rotationEffect(.degrees(-90))
+            }
+            .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
