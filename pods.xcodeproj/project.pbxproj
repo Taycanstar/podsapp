@@ -204,6 +204,7 @@
 		36667E242F0194540017E9D7 /* CoachCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E232F0194540017E9D7 /* CoachCardView.swift */; };
 		36667E262F0194720017E9D7 /* ThumbsFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E252F0194720017E9D7 /* ThumbsFeedbackView.swift */; };
 		36667E282F01948D0017E9D7 /* EventTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E272F01948D0017E9D7 /* EventTracker.swift */; };
+		36667E2A2F02073E0017E9D7 /* ScaleWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E292F0207380017E9D7 /* ScaleWeightView.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -678,6 +679,7 @@
 		36667E232F0194540017E9D7 /* CoachCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachCardView.swift; sourceTree = "<group>"; };
 		36667E252F0194720017E9D7 /* ThumbsFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbsFeedbackView.swift; sourceTree = "<group>"; };
 		36667E272F01948D0017E9D7 /* EventTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTracker.swift; sourceTree = "<group>"; };
+		36667E292F0207380017E9D7 /* ScaleWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleWeightView.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -1629,6 +1631,7 @@
 		36ED35AC2DD53B5C00D174FB /* dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				36667E292F0207380017E9D7 /* ScaleWeightView.swift */,
 				3650A1772EED12B30068ACE6 /* VitalMetricType.swift */,
 				3650A1732EEB4B000068ACE6 /* ActivityRingView.swift */,
 				3650A16F2EEA030A0068ACE6 /* StressView.swift */,
@@ -2104,6 +2107,7 @@
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
 				3696B9592B98306C00D211D7 /* SignupView.swift in Sources */,
+				36667E2A2F02073E0017E9D7 /* ScaleWeightView.swift in Sources */,
 				36667DD52EF4552D0017E9D7 /* VoiceToolService.swift in Sources */,
 				36ED35DD2DDE52A200D174FB /* DescribeLogView.swift in Sources */,
 				36B3CF8B2C86C46600265F91 /* SubscriptionView.swift in Sources */,
