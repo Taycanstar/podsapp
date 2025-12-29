@@ -837,7 +837,7 @@ private var remainingCal: Double { vm.remainingCalories }
 
             .background(
                 NavigationLink(
-                    destination: WeightDataView(),
+                    destination: ScaleWeightView(),
                     isActive: $vm.navigateToWeightData,
                     label: { EmptyView() }
                 )
@@ -1559,7 +1559,8 @@ private extension NewHomeView {
                     steps: stepsMetric,
                     water: waterMetric,
                     onLogWeight: { showingWeightLogSheet = true },
-                    onLogWater: { showWaterLogSheet = true }
+                    onLogWater: { showWaterLogSheet = true },
+                    onTapWeight: { vm.navigateToWeightData = true }
                 )
                 .padding(.top, 0)
             }
@@ -4055,15 +4056,7 @@ private struct RecoveryRingView: View {
     // Weight card for page 3
     var weightCard: some View {
         HStack(spacing: 16) {
-            NavigationLink(destination: {
-                // Retrieve preloaded weight logs if available
-                if let preloadedData = UserDefaults.standard.data(forKey: "preloadedWeightLogs"),
-                   let response = try? JSONDecoder().decode(WeightLogsResponse.self, from: preloadedData) {
-                    WeightDataView(initialAllLogs: response.logs)
-                } else {
-                    WeightDataView(initialAllLogs: [])
-                }
-            }) {
+            NavigationLink(destination: ScaleWeightView()) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 4) {
                         Image(systemName: "scalemass")
@@ -4094,7 +4087,7 @@ private struct RecoveryRingView: View {
             }
             .sheet(isPresented: $vm.navigateToEditWeight) {
                 EditWeightView(onWeightSaved: {
-                    // Navigate to WeightDataView after saving weight
+                    // Navigate to ScaleWeightView after saving weight
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         vm.navigateToWeightData = true
                     }
@@ -4591,6 +4584,7 @@ private struct DailySleepMetric {
         let water: DailyWaterMetric?
         var onLogWeight: () -> Void
         var onLogWater: () -> Void
+        var onTapWeight: () -> Void
 
     private let columns = [
         GridItem(.flexible(), spacing: 10),
@@ -4602,7 +4596,7 @@ private struct DailySleepMetric {
         // No section header
         LazyVGrid(columns: columns, spacing: 8) {
             // Row 1
-            DailyWeightCard(metric: weight, onLogWeight: onLogWeight)
+            DailyWeightCard(metric: weight, onLogWeight: onLogWeight, onTapCard: onTapWeight)
             DailySleepCard(metric: sleep)
 
             // Row 2
@@ -4755,6 +4749,7 @@ private struct DailyWaterCard: View {
 private struct DailyWeightCard: View {
     let metric: DailyWeightMetric?
     let onLogWeight: () -> Void
+    let onTapCard: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -4807,6 +4802,10 @@ private struct DailyWeightCard: View {
                 .fill(Color("sheetcard"))
         )
         .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTapCard()
+        }
     }
 
     private func cardHeader(title: String) -> some View {
