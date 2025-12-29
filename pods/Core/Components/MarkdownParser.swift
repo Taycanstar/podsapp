@@ -131,11 +131,37 @@ final class MarkdownParser {
     // MARK: - Inline Markdown Parsing
 
     /// Parse inline markdown (bold, italic, code, links, strikethrough)
+    /// Note: SwiftUI's Text doesn't automatically render NSInlinePresentationIntent as font styles,
+    /// so we must transform these intents into actual SwiftUI font attributes.
     static func parseInlineMarkdown(_ text: String) -> AttributedString {
         do {
             var options = AttributedString.MarkdownParsingOptions()
             options.interpretedSyntax = .inlineOnlyPreservingWhitespace
-            return try AttributedString(markdown: text, options: options)
+            let attributedString = try AttributedString(markdown: text, options: options)
+
+            // Transform presentation intents into actual SwiftUI font attributes
+            // NSInlinePresentationIntent bit flags: 1 = emphasized (*italic*), 2 = stronglyEmphasized (**bold**)
+            var result = AttributedString()
+            for run in attributedString.runs {
+                var segment = AttributedString(attributedString[run.range])
+
+                if let intent = run.inlinePresentationIntent {
+                    let isBold = intent.contains(.stronglyEmphasized)
+                    let isItalic = intent.contains(.emphasized)
+
+                    if isBold && isItalic {
+                        segment.font = .body.bold().italic()
+                    } else if isBold {
+                        segment.font = .body.bold()
+                    } else if isItalic {
+                        segment.font = .body.italic()
+                    }
+                }
+
+                result.append(segment)
+            }
+
+            return result
         } catch {
             // Fallback to plain text if parsing fails
             return AttributedString(text)

@@ -453,12 +453,11 @@ struct ScaleWeightView: View {
                 if let delta = viewModel.deltaWeight {
                     let displayDelta = getDisplayWeight(delta)
                     let sign = displayDelta >= 0 ? "+" : ""
-                    let color: Color = displayDelta > 0 ? .red : (displayDelta < 0 ? .green : .primary)
 
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("\(sign)\(String(format: "%.1f", displayDelta))")
                             .font(.system(size: 24, weight: .semibold, design: .rounded))
-                            .foregroundColor(color)
+                            .foregroundColor(.primary)
                         Text(weightUnit)
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
@@ -508,7 +507,7 @@ struct ScaleWeightView: View {
                     y: .value("Weight", dataPoint.displayWeight)
                 )
                 .lineStyle(StrokeStyle(lineWidth: 2))
-                .foregroundStyle(Color.purple)
+                .foregroundStyle(Color.indigo)
 
                 // Background point to mask line
                 PointMark(
@@ -526,7 +525,7 @@ struct ScaleWeightView: View {
                 )
                 .symbol(.circle.strokeBorder(lineWidth: 2))
                 .symbolSize(CGSize(width: 10, height: 10))
-                .foregroundStyle(Color.purple)
+                .foregroundStyle(Color.indigo)
             }
 
             // Selected point annotation
@@ -540,7 +539,7 @@ struct ScaleWeightView: View {
                     y: .value("Selected Weight", selectedPoint.displayWeight)
                 )
                 .symbolSize(CGSize(width: 14, height: 14))
-                .foregroundStyle(Color.purple)
+                .foregroundStyle(Color.indigo)
                 .annotation(position: .top) {
                     VStack(alignment: .center, spacing: 4) {
                         Text("\(String(format: "%.1f", selectedPoint.displayWeight)) \(weightUnit)")
@@ -598,8 +597,8 @@ struct ScaleWeightView: View {
         var result: [ScaleChartDataPoint] = []
 
         switch viewModel.selectedRange {
-        case .day, .week:
-            // Show individual data points
+        case .day, .week, .month:
+            // Show individual data points (actual values, not averages)
             for log in viewModel.filteredLogs {
                 if let date = viewModel.parseDate(log.dateLogged) {
                     result.append(ScaleChartDataPoint(
@@ -608,30 +607,6 @@ struct ScaleWeightView: View {
                         displayWeight: getDisplayWeight(log.weightKg)
                     ))
                 }
-            }
-
-        case .month:
-            // Group by day
-            let calendar = Calendar.current
-            var dayGroups: [Date: [Double]] = [:]
-
-            for log in viewModel.filteredLogs {
-                if let date = viewModel.parseDate(log.dateLogged) {
-                    let day = calendar.startOfDay(for: date)
-                    if dayGroups[day] == nil {
-                        dayGroups[day] = []
-                    }
-                    dayGroups[day]?.append(log.weightKg)
-                }
-            }
-
-            for (day, weights) in dayGroups {
-                let avgWeight = weights.reduce(0, +) / Double(weights.count)
-                result.append(ScaleChartDataPoint(
-                    date: day,
-                    weightKg: avgWeight,
-                    displayWeight: getDisplayWeight(avgWeight)
-                ))
             }
 
         case .sixMonths:

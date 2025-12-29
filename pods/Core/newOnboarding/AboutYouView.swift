@@ -81,6 +81,10 @@ struct AboutYouView: View {
                         }
                         .padding(.horizontal, 24)
 
+                        termsAndPrivacyText
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+
                         Spacer(minLength: 140)
                     }
                     .padding(.top, 48)
@@ -303,6 +307,40 @@ struct AboutYouView: View {
         .onChange(of: viewModel.unitsSystem) { _ in
             HapticFeedback.generate()
             UserDefaults.standard.set(true, forKey: "hasSelectedUnits")
+        }
+    }
+
+    private var termsAndPrivacyText: some View {
+        HStack(spacing: 0) {
+            Text("By continuing, you agree to our ")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Button {
+                if let url = URL(string: "https://www.humuli.com/policies/terms") {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Text("Terms")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .underline()
+            }
+
+            Text(" and ")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Button {
+                if let url = URL(string: "https://www.humuli.com/policies/privacy-policy") {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Text("Privacy Policy")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .underline()
+            }
         }
     }
 

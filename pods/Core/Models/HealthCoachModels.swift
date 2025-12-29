@@ -30,6 +30,10 @@ enum HealthCoachResponseType: String, Codable {
     case recoveryContext = "recovery_context"
     case recoveryMealSuggestion = "recovery_meal_suggestion"
     case gentleModeToggled = "gentle_mode_toggled"
+    // Weekly check-in response types
+    case weeklyCheckinPrompt = "weekly_checkin_prompt"
+    case weeklyCheckinRecommendation = "weekly_checkin_recommendation"
+    case weeklyCheckinConfirmation = "weekly_checkin_confirmation"
 }
 
 // MARK: - Updated Goals Payload

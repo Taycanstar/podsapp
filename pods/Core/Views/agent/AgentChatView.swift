@@ -77,11 +77,18 @@ struct AgentChatView: View {
     // Using Binding so SwiftUI reads current value when view appears, not when closure is captured
     @Binding private var startWithVoiceMode: Bool
 
+    // Weekly check-in flow state
+    private let isCheckinFlow: Bool
+    @State private var checkinPendingActionId: String?
+    @State private var checkinRecommendation: NetworkManager.CheckinRecommendation?
+    @State private var isProcessingCheckinDecision = false
+
     init(
         conversationIdToLoad: String? = nil,
         initialMessage: Binding<String?> = .constant(nil),
         initialCoachMessage: Binding<String?> = .constant(nil),
         startWithVoiceMode: Binding<Bool> = .constant(false),
+        isCheckinFlow: Bool = false,
         onPlusTapped: @escaping () -> Void = {},
         onBarcodeTapped: @escaping () -> Void = {},
         onNewConversationCreated: ((String, String) -> Void)? = nil
@@ -90,6 +97,7 @@ struct AgentChatView: View {
         self._initialMessage = initialMessage
         self._initialCoachMessage = initialCoachMessage
         self._startWithVoiceMode = startWithVoiceMode
+        self.isCheckinFlow = isCheckinFlow
         self.onPlusTapped = onPlusTapped
         self.onBarcodeTapped = onBarcodeTapped
         self.onNewConversationCreated = onNewConversationCreated
@@ -182,8 +190,18 @@ struct AgentChatView: View {
             }
 
             // Send initial message if provided (from AgentTabBar)
-            print("🤖 AgentChatView.onAppear - initialMessage: \(initialMessage ?? "nil"), initialCoachMessage: \(initialCoachMessage ?? "nil"), startWithVoiceMode: \(startWithVoiceMode)")
-            if conversationIdToLoad == nil, let coachMessage = initialCoachMessage, !coachMessage.isEmpty {
+            print("🤖 AgentChatView.onAppear - initialMessage: \(initialMessage ?? "nil"), initialCoachMessage: \(initialCoachMessage ?? "nil"), startWithVoiceMode: \(startWithVoiceMode), isCheckinFlow: \(isCheckinFlow)")
+
+            // For check-in flow, seed the initial coach message with proper response type
+            if isCheckinFlow, let coachMessage = initialCoachMessage, !coachMessage.isEmpty {
+                print("🤖 AgentChatView: Seeding check-in initial coach message: \(coachMessage)")
+                viewModel.messages.append(HealthCoachMessage(
+                    sender: .coach,
+                    text: coachMessage,
+                    responseType: .weeklyCheckinPrompt
+                ))
+                initialCoachMessage = nil
+            } else if conversationIdToLoad == nil, let coachMessage = initialCoachMessage, !coachMessage.isEmpty {
                 print("🤖 AgentChatView: Seeding initial coach message: \(coachMessage)")
                 viewModel.seedCoachMessage(coachMessage)
                 initialCoachMessage = nil
@@ -519,6 +537,11 @@ struct AgentChatView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
+                // Show Accept/Decline buttons for weekly check-in recommendation
+                if !isStreaming && message.responseType == .weeklyCheckinRecommendation && checkinPendingActionId != nil {
+                    checkinDecisionButtons
+                }
+
                 // Show action icons only when not streaming
                 if !isStreaming {
                     messageActions(for: message)
@@ -667,6 +690,54 @@ struct AgentChatView: View {
             }
         }
         .padding(.top, 8)
+    }
+
+    /// Accept/Decline buttons for weekly check-in recommendation
+    private var checkinDecisionButtons: some View {
+        HStack(spacing: 12) {
+            // Accept button
+            Button {
+                HapticFeedback.generate()
+                sendCheckinDecision("accept")
+            } label: {
+                HStack {
+                    if isProcessingCheckinDecision {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "checkmark")
+                    }
+                    Text("Accept")
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.accentColor)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+            }
+            .disabled(isProcessingCheckinDecision)
+
+            // Decline button
+            Button {
+                HapticFeedback.generate()
+                sendCheckinDecision("decline")
+            } label: {
+                HStack {
+                    Image(systemName: "xmark")
+                    Text("Decline")
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color(.secondarySystemBackground))
+                .foregroundColor(.primary)
+                .cornerRadius(12)
+            }
+            .disabled(isProcessingCheckinDecision)
+        }
+        .padding(.top, 12)
     }
 
     @ViewBuilder
@@ -1101,9 +1172,72 @@ struct AgentChatView: View {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         HapticFeedback.generate()
-        viewModel.send(message: trimmed)
-        inputText = ""
-        isInputFocused = false
+
+        // Route to check-in endpoint if in check-in flow
+        if isCheckinFlow, let conversationId = viewModel.currentConversationId {
+            inputText = ""
+            isInputFocused = false
+            sendCheckinMessage(text: trimmed, conversationId: conversationId)
+        } else {
+            viewModel.send(message: trimmed)
+            inputText = ""
+            isInputFocused = false
+        }
+    }
+
+    /// Send a message in the weekly check-in flow
+    private func sendCheckinMessage(text: String, conversationId: String) {
+        let email = onboardingViewModel.email.isEmpty
+            ? (UserDefaults.standard.string(forKey: "userEmail") ?? "")
+            : onboardingViewModel.email
+
+        guard !email.isEmpty else {
+            print("[CHECKIN] No email found")
+            return
+        }
+
+        // Add user message to UI
+        viewModel.messages.append(HealthCoachMessage(sender: .user, text: text))
+        viewModel.isLoading = true
+
+        Task {
+            do {
+                let response = try await NetworkManager().sendCheckinMessage(
+                    conversationId: conversationId,
+                    text: text,
+                    userEmail: email
+                )
+
+                await MainActor.run {
+                    viewModel.isLoading = false
+
+                    // Determine response type
+                    let responseType = HealthCoachResponseType(rawValue: response.responseType)
+
+                    // Add assistant message
+                    viewModel.messages.append(HealthCoachMessage(
+                        sender: .coach,
+                        text: response.assistantMessage,
+                        responseType: responseType
+                    ))
+
+                    // Store pending action info if this is a recommendation
+                    if responseType == .weeklyCheckinRecommendation,
+                       let data = response.responseData {
+                        checkinPendingActionId = data.pendingActionId
+                        checkinRecommendation = data.recommendation
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    viewModel.isLoading = false
+                    viewModel.messages.append(HealthCoachMessage(
+                        sender: .system,
+                        text: "Error: \(error.localizedDescription)"
+                    ))
+                }
+            }
+        }
     }
 
     private var inputBarBorderColor: Color {
@@ -1114,11 +1248,75 @@ struct AgentChatView: View {
         })
     }
 
+    /// Send a check-in decision (accept or decline)
+    private func sendCheckinDecision(_ decision: String) {
+        guard let conversationId = viewModel.currentConversationId,
+              let pendingActionId = checkinPendingActionId else {
+            print("[CHECKIN] Missing conversation or pending action ID")
+            return
+        }
+
+        let email = onboardingViewModel.email.isEmpty
+            ? (UserDefaults.standard.string(forKey: "userEmail") ?? "")
+            : onboardingViewModel.email
+
+        guard !email.isEmpty else {
+            print("[CHECKIN] No email found")
+            return
+        }
+
+        isProcessingCheckinDecision = true
+
+        Task {
+            do {
+                let response = try await NetworkManager().sendCheckinDecision(
+                    conversationId: conversationId,
+                    pendingActionId: pendingActionId,
+                    decision: decision,
+                    userEmail: email
+                )
+
+                await MainActor.run {
+                    isProcessingCheckinDecision = false
+
+                    // Clear pending action state
+                    checkinPendingActionId = nil
+                    checkinRecommendation = nil
+
+                    // Add confirmation message
+                    viewModel.messages.append(HealthCoachMessage(
+                        sender: .coach,
+                        text: response.assistantMessage,
+                        responseType: .weeklyCheckinConfirmation
+                    ))
+
+                    // Refresh nutrition goals if accepted
+                    if decision == "accept" {
+                        NotificationCenter.default.post(
+                            name: Notification.Name("NutritionGoalsUpdatedNotification"),
+                            object: nil
+                        )
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isProcessingCheckinDecision = false
+                    viewModel.messages.append(HealthCoachMessage(
+                        sender: .system,
+                        text: "Error: \(error.localizedDescription)"
+                    ))
+                }
+            }
+        }
+    }
+
     // MARK: - Actions
 
     private func startNewChat() {
         viewModel.clearConversation()
         inputText = ""
+        checkinPendingActionId = nil
+        checkinRecommendation = nil
     }
 
     private func shareConversation() {

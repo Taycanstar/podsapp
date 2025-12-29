@@ -17,6 +17,21 @@ struct CoachCardView: View {
 
     @State private var hasLoggedImpression = false
 
+    /// Check if this is a weekly check-in card
+    private var isCheckinCard: Bool {
+        card.action == "HOME_CARD_CHECKIN"
+    }
+
+    /// Extract headline from JSON content
+    private var headlineText: String? {
+        if let data = card.content.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let headline = json["headline"] as? String {
+            return headline
+        }
+        return nil
+    }
+
     /// Extract body from JSON content or use raw content
     private var bodyText: String {
         if let data = card.content.data(using: .utf8),
@@ -32,16 +47,11 @@ struct CoachCardView: View {
             EventTracker.shared.trackHomeCardTap(interventionId: card.interventionId)
             onTap()
         } label: {
-            Text(bodyText)
-                .font(.system(size: 15, weight: .regular))
-                .foregroundColor(.primary)
-                .multilineTextAlignment(.leading)
-                .lineLimit(3)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
-                .background(Color("containerbg"))
-                .cornerRadius(28)
+            if isCheckinCard {
+                checkinCardContent
+            } else {
+                standardCardContent
+            }
         }
         .buttonStyle(.plain)
         .onAppear {
@@ -50,6 +60,48 @@ struct CoachCardView: View {
                 EventTracker.shared.trackHomeCardImpression(interventionId: card.interventionId)
             }
         }
+    }
+
+    /// Standard coach card layout (for behavioral interventions)
+    private var standardCardContent: some View {
+        Text(bodyText)
+            .font(.system(size: 15, weight: .regular))
+            .foregroundColor(.primary)
+            .multilineTextAlignment(.leading)
+            .lineLimit(3)
+            .truncationMode(.tail)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(Color("containerbg"))
+            .cornerRadius(28)
+    }
+
+    /// Check-in card layout with headline, body, and CTA
+    private var checkinCardContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let headline = headlineText {
+                Text(headline)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+
+            Text(bodyText)
+                .font(.system(size: 15, weight: .regular))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(2)
+
+            HStack {
+                Spacer()
+                Text("Check in")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.blue)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color("containerbg"))
+        .cornerRadius(28)
     }
 }
 
@@ -76,6 +128,19 @@ struct CoachCardView: View {
                 createdAt: "2025-01-15T10:00:00Z"
             ),
             onTap: { print("Tapped") }
+        )
+        .padding(.horizontal)
+
+        // Weekly check-in card preview
+        CoachCardView(
+            card: NetworkManager.CoachHomeCard(
+                interventionId: "test-789",
+                content: "{\"headline\": \"Weekly Check-In\", \"body\": \"Update your weight and adjust your calorie targets for next week.\"}",
+                action: "HOME_CARD_CHECKIN",
+                userState: "NEUTRAL",
+                createdAt: "2025-01-15T10:00:00Z"
+            ),
+            onTap: { print("Check-in tapped") }
         )
         .padding(.horizontal)
     }

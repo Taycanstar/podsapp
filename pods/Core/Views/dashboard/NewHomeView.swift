@@ -116,6 +116,8 @@ struct NewHomeView: View {
 
     // ─── Coach home card state ──────────────────────────────────────────────
     @State private var activeCoachCard: NetworkManager.CoachHomeCard?
+    @State private var checkinConversationId: String?
+    @State private var checkinInitialMessage: String?
 
     private enum ScheduleAlert: Identifiable {
         case success(String)
@@ -531,8 +533,14 @@ private var remainingCal: Double { vm.remainingCalories }
         }
         .fullScreenCover(isPresented: $showAgentChat, onDismiss: {
             pendingCoachMessageText = nil
+            checkinConversationId = nil
+            checkinInitialMessage = nil
         }) {
-            AgentChatView(initialCoachMessage: $pendingCoachMessageText)
+            AgentChatView(
+                conversationIdToLoad: checkinConversationId,
+                initialCoachMessage: $pendingCoachMessageText,
+                isCheckinFlow: checkinConversationId != nil
+            )
                 .environmentObject(vm)
         }
         .task {
@@ -1320,25 +1328,69 @@ private extension NewHomeView {
             CoachCardView(
                 card: card,
                 onTap: {
-                    // Mark card as consumed on backend
-                    Task {
-                        guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else { return }
-                        try? await NetworkManager().tapHomeCard(interventionId: card.interventionId, userEmail: userEmail)
-                    }
-                    // Set pending message for agent chat (extract body from JSON if present)
-                    if let data = card.content.data(using: .utf8),
-                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                       let body = json["body"] as? String {
-                        pendingCoachMessageText = body
+                    // Check if this is a weekly check-in card
+                    if card.action == "HOME_CARD_CHECKIN" {
+                        handleCheckinCardTap(card: card)
                     } else {
-                        pendingCoachMessageText = card.content
+                        handleStandardCardTap(card: card)
                     }
-                    showAgentChat = true
-                    // Clear the card
-                    activeCoachCard = nil
                 }
             )
         )
+    }
+
+    /// Handle tap on a standard coach card (behavioral interventions)
+    private func handleStandardCardTap(card: NetworkManager.CoachHomeCard) {
+        // Mark card as consumed on backend
+        Task {
+            guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else { return }
+            try? await NetworkManager().tapHomeCard(interventionId: card.interventionId, userEmail: userEmail)
+        }
+        // Set pending message for agent chat (extract body from JSON if present)
+        if let data = card.content.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let body = json["body"] as? String {
+            pendingCoachMessageText = body
+        } else {
+            pendingCoachMessageText = card.content
+        }
+        showAgentChat = true
+        // Clear the card
+        activeCoachCard = nil
+    }
+
+    /// Handle tap on a weekly check-in card
+    private func handleCheckinCardTap(card: NetworkManager.CoachHomeCard) {
+        Task {
+            guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else { return }
+
+            do {
+                // Call start_checkin endpoint
+                let response = try await NetworkManager().startCheckin(
+                    interventionId: card.interventionId,
+                    userEmail: userEmail
+                )
+
+                await MainActor.run {
+                    // Store check-in context
+                    checkinConversationId = response.conversationId
+                    checkinInitialMessage = response.assistantMessage
+
+                    // Navigate to agent chat with the check-in context
+                    pendingCoachMessageText = response.assistantMessage
+                    showAgentChat = true
+
+                    // Clear the card
+                    activeCoachCard = nil
+                }
+            } catch {
+                print("[CHECKIN] Failed to start check-in: \(error)")
+                // Fall back to standard card behavior
+                await MainActor.run {
+                    handleStandardCardTap(card: card)
+                }
+            }
+        }
     }
     // MARK: - Type-erased containers to cap view type depth
     // These wrappers keep the NavigationLink/NewHomeView type metadata shallow enough to avoid
@@ -4669,9 +4721,6 @@ private struct DailyStepsCard: View {
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundColor(.primary)
             Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.secondary)
         }
     }
 }
@@ -4739,9 +4788,6 @@ private struct DailyWaterCard: View {
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.secondary)
             }
         }
     }
@@ -4869,9 +4915,6 @@ private struct DailySleepCard: View {
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundColor(.primary)
             Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.secondary)
         }
     }
 }

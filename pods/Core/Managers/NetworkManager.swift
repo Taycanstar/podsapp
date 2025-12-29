@@ -10006,6 +10006,182 @@ class NetworkManager {
             throw NetworkError.invalidResponse
         }
     }
+
+    // MARK: - Weekly Check-In
+
+    /// Response from starting a check-in
+    struct CheckinStartResponse: Codable {
+        let conversationId: String
+        let assistantMessage: String
+        let responseType: String?
+
+        enum CodingKeys: String, CodingKey {
+            case conversationId = "conversation_id"
+            case assistantMessage = "assistant_message"
+            case responseType = "response_type"
+        }
+    }
+
+    /// Response from sending a check-in message
+    struct CheckinMessageResponse: Codable {
+        let assistantMessage: String
+        let responseType: String
+        let responseData: CheckinResponseData?
+
+        enum CodingKeys: String, CodingKey {
+            case assistantMessage = "assistant_message"
+            case responseType = "response_type"
+            case responseData = "response_data"
+        }
+    }
+
+    struct CheckinResponseData: Codable {
+        let pendingActionId: String?
+        let recommendation: CheckinRecommendation?
+
+        enum CodingKeys: String, CodingKey {
+            case pendingActionId = "pending_action_id"
+            case recommendation
+        }
+    }
+
+    struct CheckinRecommendation: Codable {
+        let tdeeEstimate: Double?
+        let currentTargets: CheckinTargets?
+        let recommendedTargets: CheckinTargets?
+        let delta: CheckinTargets?
+        let dataQuality: CheckinDataQuality?
+        let explanationBullets: [String]?
+
+        enum CodingKeys: String, CodingKey {
+            case tdeeEstimate = "tdee_estimate"
+            case currentTargets = "current_targets"
+            case recommendedTargets = "recommended_targets"
+            case delta
+            case dataQuality = "data_quality"
+            case explanationBullets = "explanation_bullets"
+        }
+    }
+
+    struct CheckinTargets: Codable {
+        let cal: Int?
+        let p: Int?
+        let c: Int?
+        let f: Int?
+    }
+
+    struct CheckinDataQuality: Codable {
+        let loggingQuality7d: Double?
+        let daysLogged7d: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case loggingQuality7d = "logging_quality_7d"
+            case daysLogged7d = "days_logged_7d"
+        }
+    }
+
+    /// Response from check-in decision
+    struct CheckinDecisionResponse: Codable {
+        let assistantMessage: String
+        let responseType: String
+
+        enum CodingKeys: String, CodingKey {
+            case assistantMessage = "assistant_message"
+            case responseType = "response_type"
+        }
+    }
+
+    /// Start a weekly check-in flow
+    func startCheckin(interventionId: String, userEmail: String) async throws -> CheckinStartResponse {
+        guard let url = URL(string: "\(baseUrl)/api/v1/coach/checkin/start") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addTrackingHeaders(to: &request)
+
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "intervention_id": interventionId
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+
+        let decoder = JSONDecoder()
+        return try decoder.decode(CheckinStartResponse.self, from: data)
+    }
+
+    /// Send a message in the check-in flow (e.g., weight input)
+    func sendCheckinMessage(conversationId: String, text: String, userEmail: String) async throws -> CheckinMessageResponse {
+        guard let url = URL(string: "\(baseUrl)/api/v1/coach/checkin/message") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addTrackingHeaders(to: &request)
+
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "conversation_id": conversationId,
+            "text": text
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+
+        let decoder = JSONDecoder()
+        return try decoder.decode(CheckinMessageResponse.self, from: data)
+    }
+
+    /// Accept or decline the check-in recommendation
+    func sendCheckinDecision(
+        conversationId: String,
+        pendingActionId: String,
+        decision: String,
+        userEmail: String
+    ) async throws -> CheckinDecisionResponse {
+        guard let url = URL(string: "\(baseUrl)/api/v1/coach/checkin/decision") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addTrackingHeaders(to: &request)
+
+        let body: [String: Any] = [
+            "user_email": userEmail,
+            "conversation_id": conversationId,
+            "pending_action_id": pendingActionId,
+            "decision": decision
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidResponse
+        }
+
+        let decoder = JSONDecoder()
+        return try decoder.decode(CheckinDecisionResponse.self, from: data)
+    }
 }
 
 // MARK: - Streaming URLSession Delegate

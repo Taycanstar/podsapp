@@ -371,6 +371,11 @@ final class HealthCoachChatViewModel: ObservableObject {
             // Gentle mode toggled - numbers hidden for emotional support
             pendingClarificationQuestion = nil
             pendingOptions = nil
+
+        case .weeklyCheckinPrompt, .weeklyCheckinRecommendation, .weeklyCheckinConfirmation:
+            // Weekly check-in flow - handled by AgentChatView directly
+            pendingClarificationQuestion = nil
+            pendingOptions = nil
         }
     }
 
