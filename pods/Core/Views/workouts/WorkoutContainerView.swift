@@ -74,27 +74,7 @@ struct WorkoutContainerView: View {
                     )
                 }
         }
-        .sheet(isPresented: Binding(
-            get: { proFeatureGate.showUpgradeSheet },
-            set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
-        )) {
-            switch proFeatureGate.blockedFeature {
-            case .workouts:
-                WorkoutUpgradeSheet(usageSummary: proFeatureGate.usageSummary) {
-                    proFeatureGate.dismissUpgradeSheet()
-                }
-            case .analytics:
-                AnalyticsProUpgradeSheet(usageSummary: proFeatureGate.usageSummary) {
-                    proFeatureGate.dismissUpgradeSheet()
-                }
-            default:
-                HumuliProUpgradeSheet(
-                    feature: proFeatureGate.blockedFeature,
-                    usageSummary: proFeatureGate.usageSummary,
-                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
-                )
-            }
-        }
+        // Note: Upgrade sheet is presented from MainContentView to avoid conflicts
     }
 }
 

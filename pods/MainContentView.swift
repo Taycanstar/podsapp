@@ -299,26 +299,38 @@ struct MainContentView: View {
                             agentText: $agentInputText,
                             onPlusTapped: {
                                 HapticFeedback.generate()
-                                showNewSheet = true
+                                gateProAction(for: .agentFeatures) {
+                                    showNewSheet = true
+                                }
                             },
                             onBarcodeTapped: {
                                 HapticFeedback.generate()
-                                showFoodScanner = true
+                                gateProAction(for: .foodScans) {
+                                    showFoodScanner = true
+                                }
                             },
                             onMicrophoneTapped: {
                                 HapticFeedback.generate()
-                                showVoiceLog = true
+                                gateProAction(for: .agentFeatures) {
+                                    showVoiceLog = true
+                                }
                             },
                             onWaveformTapped: {
                                 HapticFeedback.generate()
-                                handleAgentSubmit()
+                                gateProAction(for: .agentFeatures) {
+                                    handleAgentSubmit()
+                                }
                             },
                             onSubmit: {
-                                handleAgentSubmit()
+                                gateProAction(for: .agentFeatures) {
+                                    handleAgentSubmit()
+                                }
                             },
                             onRealtimeStart: {
                                 HapticFeedback.generate()
-                                handleRealtimeStart()
+                                gateProAction(for: .agentFeatures) {
+                                    handleRealtimeStart()
+                                }
                             }
                         )
                     case 2:
@@ -409,6 +421,20 @@ struct MainContentView: View {
         }
         .fullScreenCover(isPresented: proOnboardingBinding) {
             ProOnboardingView(isPresented: proOnboardingBinding)
+                .interactiveDismissDisabled(true)
+        }
+        // Upgrade sheet for non-subscribers trying to use pro features
+        .sheet(isPresented: Binding(
+            get: { proFeatureGate.showUpgradeSheet },
+            set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
+        )) {
+            HumuliProUpgradeSheet(
+                feature: proFeatureGate.blockedFeature,
+                usageSummary: proFeatureGate.usageSummary,
+                onDismiss: { proFeatureGate.dismissUpgradeSheet() },
+                allowDismiss: false
+            )
+            .interactiveDismissDisabled(true)
         }
         .sheet(isPresented: $showConfirmFoodView, onDismiss: {
             scannedFood = nil
@@ -437,6 +463,16 @@ struct MainContentView: View {
     }
     // AppStorage keeps isAuthenticated synchronized; no manual persistence needed here
     
+    private var currentUserEmail: String {
+        viewModel.email.isEmpty
+            ? (UserDefaults.standard.string(forKey: "userEmail") ?? "")
+            : viewModel.email
+    }
+
+    private func gateProAction(for feature: ProFeatureGate.ProFeature = .agentFeatures, action: @escaping () -> Void) {
+        proFeatureGate.requirePro(for: feature, userEmail: currentUserEmail, action: action)
+    }
+
     private func handleAgentSubmit() {
         let trimmedText = agentInputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }

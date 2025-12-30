@@ -104,6 +104,7 @@ struct SearchView: View {
                 await recentFoodsRepo.refresh()
             }
         }
+        // Note: Upgrade sheet is presented from MainContentView to avoid conflicts
     }
 
     // MARK: - Unfocused List (with cards)
@@ -149,7 +150,7 @@ struct SearchView: View {
                             log: log,
                             onLogTapped: {
                                 if let food = log.food?.asFood {
-                                    logFoodDirectly(food)
+                                    logFoodDirectlyGated(food)
                                 }
                             },
                             onAddToPlateTapped: {
@@ -304,7 +305,7 @@ struct SearchView: View {
                                 log: log,
                                 onLogTapped: {
                                     if let food = log.food?.asFood {
-                                        logFoodDirectly(food)
+                                        logFoodDirectlyGated(food)
                                     }
                                 },
                                 onAddToPlateTapped: {
@@ -415,14 +416,14 @@ struct SearchView: View {
         // Check if item already has full nutrients (history/custom items)
         if let nutrients = item.foodNutrients, nutrients.count > 10 {
             let food = item.toFood()
-            logFoodDirectly(food)
+            logFoodDirectlyGated(food)
             return
         }
 
         // For common/branded, fetch full nutrients from Nutritionix
         guard let email = foodManager.userEmail else {
             let food = item.toFood()
-            logFoodDirectly(food)
+            logFoodDirectlyGated(food)
             return
         }
 
@@ -437,14 +438,14 @@ struct SearchView: View {
                 await MainActor.run {
                     loadingItemId = nil
                     let food = fullResult.toFood()
-                    logFoodDirectly(food)
+                    logFoodDirectlyGated(food)
                 }
             } catch {
                 print("[SearchView] Full lookup failed: \(error), using instant search data")
                 await MainActor.run {
                     loadingItemId = nil
                     let food = item.toFood()
-                    logFoodDirectly(food)
+                    logFoodDirectlyGated(food)
                 }
             }
         }
@@ -539,6 +540,14 @@ struct SearchView: View {
                     await recentFoodsRepo.refresh(force: true)
                 }
             }
+        }
+    }
+
+    // MARK: - Gated Food Logging
+    private func logFoodDirectlyGated(_ food: Food) {
+        let email = foodManager.userEmail ?? viewModel.email
+        proFeatureGate.requirePro(for: .foodScans, userEmail: email) {
+            logFoodDirectly(food)
         }
     }
 

@@ -212,16 +212,7 @@ struct TextLogView: View {
                 }
             }
         }
-        .sheet(isPresented: Binding(
-            get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature == .foodScans },
-            set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
-        )) {
-            LogProUpgradeSheet(
-                usageSummary: proFeatureGate.usageSummary,
-                onDismiss: { proFeatureGate.dismissUpgradeSheet() }
-            )
-            .presentationDetents([.medium, .large])
-        }
+        // Note: Upgrade sheet is presented from MainContentView to avoid conflicts
         .onChange(of: proFeatureGate.showUpgradeSheet) { _, newValue in
             if !newValue {
                 if let pendingDescription = pendingRetryDescription,

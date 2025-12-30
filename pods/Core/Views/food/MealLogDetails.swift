@@ -317,23 +317,7 @@ struct MealLogDetails: View {
             }
             .padding(.top, 16)
         }
-        .sheet(isPresented: Binding(
-            get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts && proFeatureGate.blockedFeature != .analytics },
-            set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
-        )) {
-            if proFeatureGate.blockedFeature == .foodScans {
-                LogProUpgradeSheet(
-                    usageSummary: proFeatureGate.usageSummary,
-                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
-                )
-            } else {
-                HumuliProUpgradeSheet(
-                    feature: proFeatureGate.blockedFeature,
-                    usageSummary: proFeatureGate.usageSummary,
-                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
-                )
-            }
-        }
+        // Note: Upgrade sheet is presented from MainContentView to avoid conflicts
         .background(Color("iosbg"))
         .onAppear {
             // Hide tab bar when meal log details appears

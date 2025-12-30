@@ -14,33 +14,7 @@ enum NutritionTab: String, CaseIterable {
     case advanced = "Advanced"
 }
 
-enum VitaminUnit: String, CaseIterable {
-    case mcg = "mcg"
-    case iu = "IU"
-}
-
-enum VitaminType {
-    case vitaminA
-    case vitaminD
-    case vitaminE
-
-    /// Converts to mcg/mg based on vitamin type
-    /// Vitamin A: 1 mcg = 3.33 IU
-    /// Vitamin D: 1 mcg = 40 IU
-    /// Vitamin E: 1 mg = 1.49 IU
-    func toBaseUnit(_ value: Double, from unit: VitaminUnit) -> Double {
-        switch unit {
-        case .mcg:
-            return value
-        case .iu:
-            switch self {
-            case .vitaminA: return value / 3.33
-            case .vitaminD: return value / 40
-            case .vitaminE: return value / 1.49
-            }
-        }
-    }
-}
+// VitaminUnit and VitaminType are defined in Models/VitaminUnit.swift
 
 // MARK: - Create Food Action
 

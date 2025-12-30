@@ -88,6 +88,12 @@ struct GoalProgress: View {
     // State for macro picker sheet
     @State private var showMacroPickerSheet = false
 
+    // Unit preferences for water and vitamins
+    @State private var waterUnit: WaterUnit = .milliliters
+    @State private var vitaminAUnit: VitaminUnit = .mcg
+    @State private var vitaminDUnit: VitaminUnit = .mcg
+    @State private var vitaminEUnit: VitaminUnit = .mcg
+
     // Computed properties for goal macro calories
     private var proteinCals: Double {
         (Double(proteinGoal) ?? vm.proteinGoal) * 4
@@ -284,14 +290,6 @@ struct GoalProgress: View {
         .navigationTitle("Update Goals")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if showAdvancedNutrients && hasAdvancedNutrients {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Reset All") {
-                        showResetConfirmation = true
-                    }
-                    .disabled(isSubmitting)
-                }
-            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     if !isSubmitting {
@@ -506,6 +504,21 @@ struct GoalProgress: View {
                 }
             }
         }
+
+        // Reset All button at bottom of advanced section
+        Section {
+            Button(role: .destructive) {
+                showResetConfirmation = true
+            } label: {
+                HStack {
+                    Spacer()
+                    Text("Reset All to Defaults")
+                        .font(.system(size: 15, weight: .medium))
+                    Spacer()
+                }
+            }
+            .disabled(isSubmitting)
+        }
     }
 
     // MARK: - Nutrient Row (NutritionFactsView style)
@@ -523,14 +536,101 @@ struct GoalProgress: View {
             }
         )
 
-        return HStack {
-            Text(item.label)
+        // Handle special cases for water and vitamins with unit pickers
+        switch item.slug {
+        case "water":
+            return AnyView(waterRowWithUnitPicker(text: binding))
+        case "vitamin_a":
+            return AnyView(vitaminRowWithUnitPicker(label: item.label, text: binding, unit: $vitaminAUnit, vitaminType: .vitaminA))
+        case "vitamin_d":
+            return AnyView(vitaminRowWithUnitPicker(label: item.label, text: binding, unit: $vitaminDUnit, vitaminType: .vitaminD))
+        case "vitamin_e":
+            return AnyView(vitaminRowWithUnitPicker(label: item.label, text: binding, unit: $vitaminEUnit, vitaminType: .vitaminE))
+        default:
+            return AnyView(
+                HStack {
+                    Text(item.label)
+                    Spacer()
+                    TextField("0", text: binding)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                    Text(item.unit)
+                        .foregroundColor(.secondary)
+                }
+            )
+        }
+    }
+
+    // MARK: - Water Row with Unit Picker
+
+    private func waterRowWithUnitPicker(text: Binding<String>) -> some View {
+        HStack {
+            Text("Water")
             Spacer()
-            TextField("0", text: binding)
+            TextField("0", text: text)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
-            Text(item.unit)
-                .foregroundColor(.secondary)
+            Menu {
+                ForEach(WaterUnit.allCases) { unitOption in
+                    Button(unitOption.displayName) {
+                        // Convert value when unit changes
+                        if let currentValue = Double(text.wrappedValue.replacingOccurrences(of: ",", with: ".")) {
+                            // Convert current unit to US fl oz, then to new unit
+                            let usOz = waterUnit.convertToUSFluidOunces(currentValue)
+                            let newValue = unitOption.convertFromUSFluidOunces(usOz)
+                            text.wrappedValue = unitOption.format(newValue)
+                        }
+                        waterUnit = unitOption
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(waterUnit.abbreviation)
+                        .foregroundColor(.secondary)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+
+    // MARK: - Vitamin Row with Unit Picker
+
+    private func vitaminRowWithUnitPicker(
+        label: String,
+        text: Binding<String>,
+        unit: Binding<VitaminUnit>,
+        vitaminType: VitaminType
+    ) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            TextField("0", text: text)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+            Menu {
+                ForEach(VitaminUnit.allCases) { unitOption in
+                    Button(unitOption.rawValue) {
+                        // Convert value when unit changes
+                        if let currentValue = Double(text.wrappedValue.replacingOccurrences(of: ",", with: ".")) {
+                            // Convert current value to base unit, then to new unit
+                            let baseValue = vitaminType.toBaseUnit(currentValue, from: unit.wrappedValue)
+                            let newValue = vitaminType.fromBaseUnit(baseValue, to: unitOption)
+                            text.wrappedValue = String(format: "%.1f", newValue)
+                        }
+                        unit.wrappedValue = unitOption
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(unit.wrappedValue.rawValue)
+                        .foregroundColor(.secondary)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+            }
         }
     }
 
@@ -583,11 +683,33 @@ struct GoalProgress: View {
         if let nutrients = goals.nutrients {
             for (slug, details) in nutrients {
                 // Use override target if present, otherwise use default target
+                var baseValue: Double?
                 if let overrideTarget = goals.overrides?[slug]?.target {
-                    values[slug] = formatValue(overrideTarget)
+                    baseValue = overrideTarget
                 } else if let defaultTarget = details.target ?? details.defaultTarget {
-                    values[slug] = formatValue(defaultTarget)
+                    baseValue = defaultTarget
                 }
+
+                guard let value = baseValue else { continue }
+
+                // Convert from base unit to display unit for special cases
+                let displayValue: Double
+                switch slug {
+                case "vitamin_a":
+                    displayValue = VitaminType.vitaminA.fromBaseUnit(value, to: vitaminAUnit)
+                case "vitamin_d":
+                    displayValue = VitaminType.vitaminD.fromBaseUnit(value, to: vitaminDUnit)
+                case "vitamin_e":
+                    displayValue = VitaminType.vitaminE.fromBaseUnit(value, to: vitaminEUnit)
+                case "water":
+                    // Convert from ml to display unit
+                    let usOz = value / 29.5735295625 // Convert ml to US fl oz
+                    displayValue = waterUnit.convertFromUSFluidOunces(usOz)
+                default:
+                    displayValue = value
+                }
+
+                values[slug] = formatValue(displayValue)
             }
         }
         editingValues = values
@@ -683,8 +805,24 @@ struct GoalProgress: View {
             for (slug, value) in editingValues {
                 let trimmed = value.trimmingCharacters(in: .whitespaces)
                 guard !trimmed.isEmpty else { continue }
-                if let number = Double(trimmed) {
-                    overridesPayload[slug] = GoalOverridePayload(min: nil, target: number, max: nil)
+                if let number = Double(trimmed.replacingOccurrences(of: ",", with: ".")) {
+                    // Convert vitamins from display unit to base unit
+                    let convertedValue: Double
+                    switch slug {
+                    case "vitamin_a":
+                        convertedValue = VitaminType.vitaminA.toBaseUnit(number, from: vitaminAUnit)
+                    case "vitamin_d":
+                        convertedValue = VitaminType.vitaminD.toBaseUnit(number, from: vitaminDUnit)
+                    case "vitamin_e":
+                        convertedValue = VitaminType.vitaminE.toBaseUnit(number, from: vitaminEUnit)
+                    case "water":
+                        // Convert water to ml (base unit stored in backend)
+                        let usOz = waterUnit.convertToUSFluidOunces(number)
+                        convertedValue = usOz * 29.5735295625 // US fl oz to ml
+                    default:
+                        convertedValue = number
+                    }
+                    overridesPayload[slug] = GoalOverridePayload(min: nil, target: convertedValue, max: nil)
                 }
             }
         }

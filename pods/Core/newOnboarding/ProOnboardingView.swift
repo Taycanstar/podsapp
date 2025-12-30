@@ -129,15 +129,9 @@ struct ProOnboardingView: View {
     private var header: some View {
         HStack {
             Spacer()
-            Button {
-                isPresented = false
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.black)
-                    .padding(20)
-            }
+            // X button removed - subscription required to continue
         }
+        .frame(height: 58) // Maintain consistent header height
     }
 
     private var titleSection: some View {

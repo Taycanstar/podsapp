@@ -583,23 +583,7 @@ private var remainingCal: Double { vm.remainingCalories }
                 scheduleLog(selection: selection, for: log)
             }
         }
-        .sheet(isPresented: Binding(
-            get: { proFeatureGate.showUpgradeSheet && proFeatureGate.blockedFeature != .workouts && proFeatureGate.blockedFeature != .analytics },
-            set: { if !$0 { proFeatureGate.dismissUpgradeSheet() } }
-        )) {
-            if proFeatureGate.blockedFeature == .foodScans {
-                LogProUpgradeSheet(
-                    usageSummary: proFeatureGate.usageSummary,
-                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
-                )
-            } else {
-                HumuliProUpgradeSheet(
-                    feature: proFeatureGate.blockedFeature,
-                    usageSummary: proFeatureGate.usageSummary,
-                    onDismiss: { proFeatureGate.dismissUpgradeSheet() }
-                )
-            }
-        }
+        // Note: Upgrade sheet is presented from MainContentView to avoid conflicts
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(date: $vm.selectedDate,
                             isPresented: $showDatePicker)

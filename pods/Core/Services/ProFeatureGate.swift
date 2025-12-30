@@ -10,7 +10,8 @@ final class ProFeatureGate: ObservableObject {
         case analytics = "Advanced Analytics"
         case scheduledLogging = "Scheduled Meal Logging"
         case bulkLogging = "Bulk Photo Logging"
-        
+        case agentFeatures = "AI Coach Features"
+
         var apiKey: String {
             switch self {
             case .foodScans: return "food_scans"
@@ -19,6 +20,7 @@ final class ProFeatureGate: ObservableObject {
             case .analytics: return "analytics"
             case .scheduledLogging: return "scheduled_logging"
             case .bulkLogging: return "bulk_logging"
+            case .agentFeatures: return "agent_features"
             }
         }
     }
@@ -44,8 +46,17 @@ final class ProFeatureGate: ObservableObject {
                      increment: Bool = true,
                      onAllowed: @escaping () -> Void,
                      onBlocked: (() -> Void)? = nil) {
-        // Paywall active - all users have full access
-        onAllowed()
+        // Strict paywall - subscription required for all features
+        if hasActiveSubscription() {
+            onAllowed()
+        } else {
+            blockedFeature = feature
+            showUpgradeSheet = true
+            Task {
+                await refreshUsageSummary(for: userEmail)
+            }
+            onBlocked?()
+        }
     }
     
     func requirePro(for feature: ProFeature,

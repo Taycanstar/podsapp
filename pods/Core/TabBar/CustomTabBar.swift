@@ -8,7 +8,9 @@ struct CustomTabBar: View {
     @Binding var showQuickPodView: Bool
     @Binding var showNewSheet: Bool
     @EnvironmentObject var sharedViewModel: SharedViewModel
-    
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
+    @EnvironmentObject var onboarding: OnboardingViewModel
+
     // Add states for food scanning/voice input
     @State private var showFoodScanner = false
     @State private var showVoiceRecording = false
@@ -32,6 +34,16 @@ struct CustomTabBar: View {
         }
     }()
 
+    private var currentUserEmail: String {
+        onboarding.email.isEmpty
+            ? (UserDefaults.standard.string(forKey: "userEmail") ?? "")
+            : onboarding.email
+    }
+
+    private func gateProAction(for feature: ProFeatureGate.ProFeature, action: @escaping () -> Void) {
+        proFeatureGate.requirePro(for: feature, userEmail: currentUserEmail, action: action)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
@@ -49,31 +61,37 @@ struct CustomTabBar: View {
                             // Leading barcode icon
                             Button(action: {
                                 HapticFeedback.generate()
-                                showFoodScanner = true
+                                gateProAction(for: .foodScans) {
+                                    showFoodScanner = true
+                                }
                             }) {
                                 Image(systemName: "barcode.viewfinder")
                                     .font(.system(size: 18, weight: .medium))
                                     .foregroundColor(.primary)
                             }
-                            
+
                             Spacer()
-                            
+
                             // Center text - tappable
                             Button(action: {
                                 HapticFeedback.generate()
-                                showTextLog = true
+                                gateProAction(for: .agentFeatures) {
+                                    showTextLog = true
+                                }
                             }) {
                                 Text("Describe meal or activity")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.primary)
                             }
-                            
+
                             Spacer()
-                            
+
                             // Trailing waveform icon
                             Button(action: {
                                 HapticFeedback.generate()
-                                showVoiceRecording = true
+                                gateProAction(for: .agentFeatures) {
+                                    showVoiceRecording = true
+                                }
                             }) {
                                 Image(systemName: "waveform")
                                     .font(.system(size: 18, weight: .medium))
@@ -107,7 +125,9 @@ struct CustomTabBar: View {
 
                         TabBarButton(iconName: "plus.app", isSelected: selectedTab == 1, iconSize: 20) {
                             HapticFeedback.generate()
-                            showNewSheet = true
+                            gateProAction(for: .agentFeatures) {
+                                showNewSheet = true
+                            }
                         //    showQuickPodView = true
                         }
                         .foregroundColor(.primary)
@@ -164,6 +184,7 @@ struct CustomTabBar: View {
         .sheet(isPresented: $showTextLog) {
             TextLogView(isPresented: $showTextLog, selectedMeal: selectedMeal)
         }
+        // Note: Upgrade sheet is presented from MainContentView to avoid conflicts
     }
 
     // Updated the background color to adapt to light/dark mode

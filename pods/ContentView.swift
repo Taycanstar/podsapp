@@ -31,6 +31,7 @@ struct ContentView: View {
     @EnvironmentObject var deepLinkHandler: DeepLinkHandler
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @EnvironmentObject var notificationManager: NotificationManager
+    @EnvironmentObject var proFeatureGate: ProFeatureGate
     @State private var subscriptionStatus: String = "none"
     @State private var subscriptionPlan: String?
     @State private var subscriptionExpiresAt: Date?
@@ -97,22 +98,32 @@ struct ContentView: View {
                                     agentText: $agentInputText,
                                     onPlusTapped: {
                                         HapticFeedback.generate()
-                                        showNewSheet = true
+                                        gateProAction(for: .agentFeatures) {
+                                            showNewSheet = true
+                                        }
                                     },
                                     onBarcodeTapped: {
                                         HapticFeedback.generate()
-                                        showFoodScanner = true
+                                        gateProAction(for: .foodScans) {
+                                            showFoodScanner = true
+                                        }
                                     },
                                     onMicrophoneTapped: {
                                         HapticFeedback.generate()
-                                        showVoiceLog = true
+                                        gateProAction(for: .agentFeatures) {
+                                            showVoiceLog = true
+                                        }
                                     },
                                     onWaveformTapped: {
                                         HapticFeedback.generate()
-                                        handleAgentSubmit()
+                                        gateProAction(for: .agentFeatures) {
+                                            handleAgentSubmit()
+                                        }
                                     },
                                     onSubmit: {
-                                        handleAgentSubmit()
+                                        gateProAction(for: .agentFeatures) {
+                                            handleAgentSubmit()
+                                        }
                                     }
                                 )
                             // PodsContainerView()
@@ -233,8 +244,10 @@ struct ContentView: View {
 
                 .fullScreenCover(isPresented: proOnboardingBinding) {
                     ProOnboardingView(isPresented: proOnboardingBinding)
+                        .interactiveDismissDisabled(true)
                 }
-                
+                // Note: Upgrade sheet is presented from MainContentView to avoid conflicts
+
                 // Add presentation for ConfirmLogView when food is scanned
                 .sheet(isPresented: $showConfirmFoodView, onDismiss: {
                     // Reset scanned food data
@@ -537,6 +550,16 @@ struct ContentView: View {
         guard !trimmedText.isEmpty else { return }
         print("📝 Agent prompt submitted: \(trimmedText)")
         agentInputText = ""
+    }
+
+    private var currentUserEmail: String {
+        viewModel.email.isEmpty
+            ? (UserDefaults.standard.string(forKey: "userEmail") ?? "")
+            : viewModel.email
+    }
+
+    private func gateProAction(for feature: ProFeatureGate.ProFeature = .agentFeatures, action: @escaping () -> Void) {
+        proFeatureGate.requirePro(for: feature, userEmail: currentUserEmail, action: action)
     }
     
     // Deprecated onboarding checks removed. Auth + StartupCoordinator handle app state.

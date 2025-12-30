@@ -217,6 +217,7 @@
 		3682F0A32B84173100ABF344 /* Podfile in Resources */ = {isa = PBXBuildFile; fileRef = 3682F0A22B84173100ABF344 /* Podfile */; };
 		3683FDA92CB5A28F0031F149 /* product.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 3683FDA82CB5A28F0031F149 /* product.storekit */; };
 		368616651F83495CAC9300B4 /* WaterUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72915B93F931472588ADFD26 /* WaterUnit.swift */; };
+		36VITUNIT0001 /* VitaminUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36VITUNIT0002 /* VitaminUnit.swift */; };
 		36881DF12E6E04F900262045 /* WorkoutScheduleSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DF02E6E04ED00262045 /* WorkoutScheduleSettingsView.swift */; };
 		36881DF32E71E65D00262045 /* FitnessGoalMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DF22E71E64900262045 /* FitnessGoalMigrationService.swift */; };
 		36881DF52E736BBB00262045 /* BlockAssemblyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DF42E736BB400262045 /* BlockAssemblyService.swift */; };
@@ -927,6 +928,7 @@
 		63B50C70F2DA21A1E4B1519E /* Pods-pods.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pods.release.xcconfig"; path = "Target Support Files/Pods-pods/Pods-pods.release.xcconfig"; sourceTree = "<group>"; };
 		678276B9D0A646E8AD3315C6 /* ProFoodSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProFoodSearchView.swift; path = Pods/Core/Views/food/ProFoodSearchView.swift; sourceTree = SOURCE_ROOT; };
 		72915B93F931472588ADFD26 /* WaterUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterUnit.swift; sourceTree = "<group>"; };
+		36VITUNIT0002 /* VitaminUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitaminUnit.swift; sourceTree = "<group>"; };
 		7391444D455656A22B95182A /* Pods-Metryc.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Metryc.debug.xcconfig"; path = "../Pods/Target Support Files/Pods-Metryc/Pods-Metryc.debug.xcconfig"; sourceTree = "<group>"; };
 		78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFoodSearchLoader.swift; sourceTree = "<group>"; };
 		828AD9036235BA1CC3FDB722 /* Pods-Metryc-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Metryc-podsUITests.release.xcconfig"; path = "Target Support Files/Pods-Metryc-podsUITests/Pods-Metryc-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
@@ -1056,6 +1058,7 @@
 				36A8519C2E5A10A0004E5CED /* ExerciseNotesData.swift */,
 				361FF3322E2213DB00B7F68E /* WorkoutProfile.swift */,
 				72915B93F931472588ADFD26 /* WaterUnit.swift */,
+				36VITUNIT0002 /* VitaminUnit.swift */,
 				361FF32C2E21988600B7F68E /* Equipment.swift */,
 				361FF3242E2065E400B7F68E /* Exercise.swift */,
 				361FF3222E2065B600B7F68E /* UserProfile.swift */,
@@ -2329,6 +2332,7 @@
 				36F7228A2DE52E60009C1CA0 /* GalleryHelper.swift in Sources */,
 				361FF3332E2213E300B7F68E /* WorkoutProfile.swift in Sources */,
 				368616651F83495CAC9300B4 /* WaterUnit.swift in Sources */,
+				36VITUNIT0001 /* VitaminUnit.swift in Sources */,
 				364A83AE2D87D210009D2620 /* CreateRecipeView.swift in Sources */,
 				36ED35ED2DDE533F00D174FB /* NameMealView.swift in Sources */,
 				36ED35B42DD7F27900D174FB /* EditWeightView.swift in Sources */,

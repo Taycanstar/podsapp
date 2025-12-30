@@ -17,6 +17,7 @@ struct HumuliProUpgradeSheet: View {
     let titleOverride: String?
     let messageOverride: String?
     let showUsageDetail: Bool
+    let allowDismiss: Bool
     @State private var selectedPlan: SubscriptionPlan = .yearly
     @State private var isProcessing = false
     @State private var isRestoring = false
@@ -31,13 +32,15 @@ struct HumuliProUpgradeSheet: View {
          onDismiss: @escaping () -> Void,
          titleOverride: String? = nil,
          messageOverride: String? = nil,
-         showUsageDetail: Bool = true) {
+         showUsageDetail: Bool = true,
+         allowDismiss: Bool = true) {
         self.feature = feature
         self.usageSummary = usageSummary
         self.onDismiss = onDismiss
         self.titleOverride = titleOverride
         self.messageOverride = messageOverride
         self.showUsageDetail = showUsageDetail
+        self.allowDismiss = allowDismiss
     }
 
     enum SubscriptionPlan: String, CaseIterable, Identifiable {
@@ -524,17 +527,19 @@ extension HumuliProUpgradeSheet {
             Color.white.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Header with close button
+                // Header with close button (only shown if dismissible)
                 HStack {
                     Spacer()
-                    Button {
-                        onDismiss()
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.black)
-                            .padding(20)
+                    if allowDismiss {
+                        Button {
+                            onDismiss()
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.black)
+                                .padding(20)
+                        }
                     }
                 }
 
@@ -843,6 +848,9 @@ extension HumuliProUpgradeSheet {
             if let detail = summary.workouts {
                 return usageText(current: detail.current, limit: detail.limit, resetAt: detail.resetAt)
             }
+        case .agentFeatures:
+            // Agent features don't have specific usage tracking
+            return nil
         }
         return nil
     }
