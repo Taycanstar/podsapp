@@ -490,12 +490,20 @@ func fetchCalorieGoal() {
       switch result {
       case .success(let response):
         print("🔍 API returned \(response.days.count) days of expenditure history (requested \(fetchDays))")
-        for (index, day) in response.days.prefix(5).enumerated() {
-          let formatter = DateFormatter()
-          formatter.dateFormat = "MMM dd"
+
+        // DEBUG: Calculate and print average tdee_display from API response
+        let tdeeValues = response.days.compactMap { $0.tdeeDisplay }.filter { $0 > 0 }
+        let avgTdee = tdeeValues.isEmpty ? 0 : tdeeValues.reduce(0, +) / Double(tdeeValues.count)
+        print("[EXPENDITURE API DEBUG] tdee_display values count: \(tdeeValues.count), avg: \(Int(avgTdee))")
+
+        // Print first 10 days
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        for day in response.days.sorted(by: { ($0.dateValue ?? Date.distantPast) < ($1.dateValue ?? Date.distantPast) }).prefix(10) {
           let dateStr = day.dateValue.map { formatter.string(from: $0) } ?? "nil"
-          print("  Day \(index + 1) [\(dateStr)]: intake=\(day.caloriesLogged ?? 0), tdee=\(day.tdeeDisplay ?? 0)")
+          print("[EXPENDITURE API DEBUG] \(dateStr): tdeeDisplay=\(Int(day.tdeeDisplay ?? 0)) tdeeCore=\(Int(day.tdeeCore ?? 0))")
         }
+
         self.expenditureHistory = response.days.sorted {
           ($0.dateValue ?? Date.distantPast) < ($1.dateValue ?? Date.distantPast)
         }
@@ -1195,6 +1203,16 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
     }
 
     var points: [EnergyBalancePoint] = []
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "yyyy-MM-dd"
+
+    // DEBUG: Print all expenditure history snapshots
+    print("[ENERGY BALANCE DEBUG] expenditureHistory count: \(expenditureHistory.count)")
+    for snapshot in expenditureHistory.prefix(10) {
+      let dateStr = snapshot.dateValue.map { dateFormatter.string(from: $0) } ?? "nil"
+      print("[ENERGY BALANCE DEBUG] snapshot: date=\(dateStr) tdeeDisplay=\(snapshot.tdeeDisplay ?? 0) tdeeCore=\(snapshot.tdeeCore ?? 0)")
+    }
+
     for offset in 0..<days {
       guard let date = calendar.date(byAdding: .day, value: offset, to: start) else { continue }
       let day = calendar.startOfDay(for: date)
@@ -1203,6 +1221,18 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       let expenditure = snapshot?.tdeeDisplay ?? snapshot?.impliedExpenditure ?? snapshot?.tdeeCore ?? 0
       points.append(EnergyBalancePoint(date: day, intake: intake, expenditure: expenditure))
     }
+
+    // DEBUG: Print computed points and average
+    let realizedPoints = points.filter { $0.date <= Date() }
+    let avgExpenditure = realizedPoints.isEmpty ? 0 : realizedPoints.reduce(0) { $0 + $1.expenditure } / Double(realizedPoints.count)
+    print("[ENERGY BALANCE DEBUG] Month points count: \(points.count), realized: \(realizedPoints.count), avgExpenditure: \(Int(avgExpenditure))")
+
+    // DEBUG: Print last 5 realized points to check for zeros
+    for point in realizedPoints.suffix(5) {
+      let dateStr = dateFormatter.string(from: point.date)
+      print("[ENERGY BALANCE DEBUG] point: \(dateStr) expenditure=\(Int(point.expenditure))")
+    }
+
     return points
   }
 

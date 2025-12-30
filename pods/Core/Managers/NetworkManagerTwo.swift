@@ -241,10 +241,12 @@ class NetworkManagerTwo {
             return ExpenditureSnapshot.updatedFormatter.date(from: updatedAt)
         }
 
+        // Parse date as local timezone since the API returns dates in user's local context
+        // Using UTC would cause off-by-one errors for users behind UTC
         private static let dateFormatter: DateFormatter = {
             let formatter = DateFormatter()
             formatter.calendar = Calendar(identifier: .iso8601)
-            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            formatter.timeZone = .current  // Use local timezone, not UTC
             formatter.dateFormat = "yyyy-MM-dd"
             return formatter
         }()

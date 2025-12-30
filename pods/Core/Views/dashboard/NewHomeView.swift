@@ -1536,7 +1536,6 @@ private extension NewHomeView {
         AnyView(
             VStack(spacing: 0) {
                 EnergyBalanceCardView(
-                    weekData: vm.energyBalanceWeek,
                     monthData: vm.energyBalanceMonth
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -2694,11 +2693,7 @@ private struct RecoveryRingView: View {
     }
 
     private struct EnergyBalanceCardView: View {
-        enum Period: String, CaseIterable { case week = "W", month = "M" }
-
-        let weekData: [EnergyBalancePoint]
         let monthData: [EnergyBalancePoint]
-        @State private var period: Period = .week
 
         private let chartHeight: CGFloat = 110
 
@@ -2717,13 +2712,13 @@ private struct RecoveryRingView: View {
         }
 
         private var rawData: [EnergyBalancePoint] {
-            period == .week ? weekData : monthData
+            monthData
         }
 
         private var currentData: [EnergyBalancePoint] {
             let data = rawData
             if data.isEmpty {
-                return placeholderData(count: period == .week ? 7 : 30)
+                return placeholderData(count: 30)
             }
             return data
         }
@@ -2753,9 +2748,10 @@ private struct RecoveryRingView: View {
             HStack {
                 Text("Energy Balance")
                     .font(.system(size: 17, weight: .semibold))
-                    .padding(.bottom, 2)
                 Spacer()
-                SegmentedPicker(selection: $period)
+                Text("This Month")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(.secondary)
             }
         }
 
@@ -2765,7 +2761,7 @@ private struct RecoveryRingView: View {
                     gridLines
                     GeometryReader { geometry in
                         let width = geometry.size.width
-                        let spacing: CGFloat = period == .week ? 10 : 5
+                        let spacing: CGFloat = 5  // Month view spacing
                         let count = max(currentData.count, 1)
                         let barWidth = max(3, (width - CGFloat(count - 1) * spacing) / CGFloat(count))
                         let baseline = chartHeight / 2
@@ -2824,9 +2820,7 @@ private struct RecoveryRingView: View {
         }
 
         private func labelText(for date: Date) -> String {
-            if period == .week {
-                return shortWeekday(for: date)
-            }
+            // Show day number for month markers only
             let markers: Set<Int> = [1, 8, 15, 22, 29]
             let day = Calendar.current.component(.day, from: date)
             return markers.contains(day) ? "\(day)" : ""
@@ -2872,32 +2866,11 @@ private struct RecoveryRingView: View {
             return "\(rounded)"
         }
 
-        private func shortWeekday(for date: Date) -> String {
-            let formatter = DateFormatter()
-            formatter.locale = Locale.current
-            formatter.setLocalizedDateFormatFromTemplate("E")
-            return formatter.string(from: date).prefix(1).uppercased()
-        }
-
         private func placeholderData(count: Int) -> [EnergyBalancePoint] {
             let today = Date()
             return (0..<count).compactMap { index -> EnergyBalancePoint? in
                 guard let date = Calendar.current.date(byAdding: .day, value: -(count - 1 - index), to: today) else { return nil }
                 return EnergyBalancePoint(date: date, intake: 0, expenditure: 0)
-            }
-        }
-
-        private struct SegmentedPicker: View {
-            @Binding var selection: Period
-
-            var body: some View {
-                Picker("Period", selection: $selection) {
-                    ForEach(Period.allCases, id: \.self) { period in
-                        Text(period.rawValue).tag(period)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 140)
             }
         }
     }

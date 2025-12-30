@@ -77,7 +77,6 @@ struct AgentTabBar: View {
             .onTapGesture {
                 isPromptFocused.wrappedValue = true
             }
-            .padding(.horizontal, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
             
             HStack {
