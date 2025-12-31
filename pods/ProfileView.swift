@@ -13,6 +13,7 @@ import UIKit
 
 struct ProfileView: View {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var viewModel: OnboardingViewModel
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var subscriptionManager: SubscriptionManager
@@ -40,6 +41,17 @@ struct ProfileView: View {
             }
         }
         .navigationBarTitle("Settings and privacy", displayMode: .inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(iconColor)
+                }
+            }
+        }
         .sheet(isPresented: $showingMail) {
             MailView(isPresented: $showingMail)
         }

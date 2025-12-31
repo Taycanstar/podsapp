@@ -17,6 +17,15 @@ import Network
 import Combine
 import UIKit
 
+// Debug logging helper - only prints in DEBUG builds
+@inline(__always)
+private func debugLog(_ message: @autoclosure () -> String) {
+    #if DEBUG
+    // Uncomment below for verbose DataSyncService debugging
+    // print(message())
+    #endif
+}
+
 /// Comprehensive data sync service following industry best practices
 /// Provides offline-first capabilities with intelligent conflict resolution
 /// FIXED: Removed @MainActor - async functions update @Published from background threads
@@ -46,14 +55,14 @@ class DataSyncService: ObservableObject {
     // MARK: - Initialization
     private init() {
         setupNetworkMonitoring()
-        print("🔄 DataSyncService: Initialized with \(syncInterval) second sync interval")
+        debugLog("🔄 DataSyncService: Initialized with \(syncInterval) second sync interval")
     }
     
     // MARK: - Public Methods
     
     /// Initialize the sync service with user context
     func initialize(userEmail: String) async {
-        print("🚀 DataSyncService: Initializing for user: \(userEmail)")
+        debugLog("🚀 DataSyncService: Initializing for user: \(userEmail)")
         self.userEmail = userEmail
         
         // Load pending operations from disk
@@ -64,10 +73,10 @@ class DataSyncService: ObservableObject {
         
         // Perform initial sync if online
         if isOnline {
-            print("📶 DataSyncService: Online - performing initial sync")
+            debugLog("📶 DataSyncService: Online - performing initial sync")
             await performFullSync()
         } else {
-            print("📵 DataSyncService: Offline - sync will start when network is available")
+            debugLog("📵 DataSyncService: Offline - sync will start when network is available")
         }
         
        
@@ -90,7 +99,7 @@ class DataSyncService: ObservableObject {
 
             await performSync()
         } else {
-            print("⏳ DataSyncService: Will sync when conditions are met (online: \(isOnline), syncing: \(isSyncing))")
+            debugLog("⏳ DataSyncService: Will sync when conditions are met (online: \(isOnline), syncing: \(isSyncing))")
         }
     }
     
@@ -99,7 +108,7 @@ class DataSyncService: ObservableObject {
 
         
         guard let userEmail = userEmail else {
-            print("❌ DataSyncService: No user email - cannot perform full sync")
+            debugLog("❌ DataSyncService: No user email - cannot perform full sync")
             return
         }
         
@@ -115,7 +124,7 @@ class DataSyncService: ObservableObject {
 
                 await syncPendingOperations()
             } else {
-                print("✅ DataSyncService: No pending operations to sync")
+                debugLog("✅ DataSyncService: No pending operations to sync")
             }
             
             // 2. Fetch latest data from server
@@ -131,7 +140,7 @@ class DataSyncService: ObservableObject {
 
 
         } catch {
-            print("❌ DataSyncService: Full sync failed - \(error.localizedDescription)")
+            debugLog("❌ DataSyncService: Full sync failed - \(error.localizedDescription)")
             // CRITICAL FIX: Update @Published properties on main thread
             await MainActor.run {
                 syncStatus = .failed(error)
@@ -147,7 +156,7 @@ class DataSyncService: ObservableObject {
     // MARK: - Private Methods
     
     private func setupNetworkMonitoring() {
-        print("📡 DataSyncService: Setting up network monitoring")
+        debugLog("📡 DataSyncService: Setting up network monitoring")
         
         networkMonitor.pathUpdateHandler = { [weak self] path in
             DispatchQueue.main.async {
@@ -156,15 +165,15 @@ class DataSyncService: ObservableObject {
                 
                 if let isOnline = self?.isOnline {
                     if isOnline && !wasOnline {
-                        print("📶 DataSyncService: Network CONNECTED - will start syncing")
+                        debugLog("📶 DataSyncService: Network CONNECTED - will start syncing")
                         Task {
                             await self?.performSync()
                         }
                     } else if !isOnline && wasOnline {
-                        print("📵 DataSyncService: Network DISCONNECTED - switching to offline mode")
+                        debugLog("📵 DataSyncService: Network DISCONNECTED - switching to offline mode")
                     }
                     
-                    print("📡 DataSyncService: Network status - \(isOnline ? "ONLINE" : "OFFLINE")")
+                    debugLog("📡 DataSyncService: Network status - \(isOnline ? "ONLINE" : "OFFLINE")")
                 }
             }
         }
@@ -173,11 +182,11 @@ class DataSyncService: ObservableObject {
     }
     
     private func startPeriodicSync() {
-        print("⏰ DataSyncService: Starting periodic sync timer (\(syncInterval) seconds)")
+        debugLog("⏰ DataSyncService: Starting periodic sync timer (\(syncInterval) seconds)")
         
         syncTimer?.invalidate()
         syncTimer = Timer.scheduledTimer(withTimeInterval: syncInterval, repeats: true) { [weak self] _ in
-            print("⏰ DataSyncService: Periodic sync timer fired")
+            debugLog("⏰ DataSyncService: Periodic sync timer fired")
             Task {
                 await self?.performPeriodicSync()
             }
@@ -185,16 +194,16 @@ class DataSyncService: ObservableObject {
     }
     
     private func performPeriodicSync() async {
-        print("🔄 DataSyncService: Performing periodic sync")
-        print("   └── Online: \(isOnline)")
-        print("   └── Currently syncing: \(isSyncing)")
-        print("   └── Pending operations: \(pendingOperations.count)")
+        debugLog("🔄 DataSyncService: Performing periodic sync")
+        debugLog("   └── Online: \(isOnline)")
+        debugLog("   └── Currently syncing: \(isSyncing)")
+        debugLog("   └── Pending operations: \(pendingOperations.count)")
         
         guard isOnline && !isSyncing else {
             if !isOnline {
-                print("⏸️ DataSyncService: Skipping periodic sync - offline")
+                debugLog("⏸️ DataSyncService: Skipping periodic sync - offline")
             } else {
-                print("⏸️ DataSyncService: Skipping periodic sync - already syncing")
+                debugLog("⏸️ DataSyncService: Skipping periodic sync - already syncing")
             }
             return
         }
@@ -203,15 +212,15 @@ class DataSyncService: ObservableObject {
     }
     
     private func performSync() async {
-        print("🔄 DataSyncService: Starting sync operation")
+        debugLog("🔄 DataSyncService: Starting sync operation")
         
         guard !isSyncing else {
-            print("⏸️ DataSyncService: Already syncing - skipping")
+            debugLog("⏸️ DataSyncService: Already syncing - skipping")
             return
         }
         
         guard isOnline else {
-            print("📵 DataSyncService: Offline - queueing for later")
+            debugLog("📵 DataSyncService: Offline - queueing for later")
             return
         }
         
@@ -230,7 +239,7 @@ class DataSyncService: ObservableObject {
             
             // Fetch latest data if we have a user
             if let userEmail = userEmail {
-                print("📥 DataSyncService: Fetching latest data for user: \(userEmail)")
+                debugLog("📥 DataSyncService: Fetching latest data for user: \(userEmail)")
                 await fetchLatestDataFromServer(userEmail: userEmail)
             }
             
@@ -242,7 +251,7 @@ class DataSyncService: ObservableObject {
 
 
         } catch {
-            print("❌ DataSyncService: Sync failed - \(error.localizedDescription)")
+            debugLog("❌ DataSyncService: Sync failed - \(error.localizedDescription)")
             // CRITICAL FIX: Update @Published properties on main thread
             await MainActor.run {
                 syncStatus = .failed(error)
@@ -270,11 +279,11 @@ class DataSyncService: ObservableObject {
            
                     successfulOperations.append(operation)
                 } else {
-                    print("❌ DataSyncService: Operation \(index + 1) failed")
+                    debugLog("❌ DataSyncService: Operation \(index + 1) failed")
                     failedOperations.append(operation)
                 }
             } catch {
-                print("❌ DataSyncService: Operation \(index + 1) threw error: \(error.localizedDescription)")
+                debugLog("❌ DataSyncService: Operation \(index + 1) threw error: \(error.localizedDescription)")
                 failedOperations.append(operation)
             }
         }
@@ -285,17 +294,17 @@ class DataSyncService: ObservableObject {
             pendingOperations = failedOperations
         }
 
-        print("📊 DataSyncService: Sync results:")
-        print("   └── Successful: \(successfulOperations.count)")
-        print("   └── Failed: \(failedOperations.count)")
-        print("   └── Remaining in queue: \(pendingOperations.count)")
+        debugLog("📊 DataSyncService: Sync results:")
+        debugLog("   └── Successful: \(successfulOperations.count)")
+        debugLog("   └── Failed: \(failedOperations.count)")
+        debugLog("   └── Remaining in queue: \(pendingOperations.count)")
         
         // Save updated pending operations
         await savePendingOperations()
     }
     
     private func syncOperation(_ operation: SyncOperation) async throws -> Bool {
-        print("🔄 DataSyncService: Syncing operation - \(operation.type.rawValue)")
+        debugLog("🔄 DataSyncService: Syncing operation - \(operation.type.rawValue)")
         
         switch operation.type {
         case .onboardingData:
@@ -308,43 +317,43 @@ class DataSyncService: ObservableObject {
     }
     
     private func syncOnboardingData(_ operation: SyncOperation) async throws -> Bool {
-        print("👤 DataSyncService: Syncing onboarding data")
-        print("   └── Data keys: \(operation.data.keys.joined(separator: ", "))")
+        debugLog("👤 DataSyncService: Syncing onboarding data")
+        debugLog("   └── Data keys: \(operation.data.keys.joined(separator: ", "))")
         
         // Simulate API call with detailed logging
         try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
         
         // In real implementation, this would call the actual API
         // For demo, we'll simulate success
-        print("✅ DataSyncService: Onboarding data synced successfully")
+        debugLog("✅ DataSyncService: Onboarding data synced successfully")
         return true
     }
     
     private func syncProfileUpdate(_ operation: SyncOperation) async throws -> Bool {
-        print("📝 DataSyncService: Syncing profile update")
-        print("   └── Data keys: \(operation.data.keys.joined(separator: ", "))")
+        debugLog("📝 DataSyncService: Syncing profile update")
+        debugLog("   └── Data keys: \(operation.data.keys.joined(separator: ", "))")
         
         // Simulate API call
         try await Task.sleep(nanoseconds: 500_000_000) // 0.5 second delay
         
-        print("✅ DataSyncService: Profile update synced successfully")
+        debugLog("✅ DataSyncService: Profile update synced successfully")
         return true
     }
     
     private func syncUserPreferences(_ operation: SyncOperation) async throws -> Bool {
-        print("⚙️ DataSyncService: Syncing user preferences")
-        print("   └── Data keys: \(operation.data.keys.joined(separator: ", "))")
+        debugLog("⚙️ DataSyncService: Syncing user preferences")
+        debugLog("   └── Data keys: \(operation.data.keys.joined(separator: ", "))")
         
         // Simulate API call
         try await Task.sleep(nanoseconds: 300_000_000) // 0.3 second delay
         
-        print("✅ DataSyncService: User preferences synced successfully")
+        debugLog("✅ DataSyncService: User preferences synced successfully")
         return true
     }
     
     private func fetchLatestDataFromServer(userEmail: String) async {
-        print("📥 DataSyncService: Fetching latest data from server")
-        print("   └── User: \(userEmail)")
+        debugLog("📥 DataSyncService: Fetching latest data from server")
+        debugLog("   └── User: \(userEmail)")
 
         // CRITICAL FIX: Removed simulation code and notification posting
         // The .dataUpdated notification was causing SwiftUI to re-evaluate ALL @ObservedObject
@@ -354,14 +363,14 @@ class DataSyncService: ObservableObject {
         // Real implementation would fetch actual data here and only post notifications
         // when there's actual data to update, not during every sync cycle.
 
-        print("✅ DataSyncService: Fetch complete (no simulation notification posted)")
+        debugLog("✅ DataSyncService: Fetch complete (no simulation notification posted)")
     }
     
     private func loadPendingOperations() async {
-        print("📂 DataSyncService: Loading pending operations from disk")
+        debugLog("📂 DataSyncService: Loading pending operations from disk")
         
         guard let userEmail = userEmail else {
-            print("❌ DataSyncService: No user email - cannot load operations")
+            debugLog("❌ DataSyncService: No user email - cannot load operations")
             return
         }
         
@@ -373,13 +382,13 @@ class DataSyncService: ObservableObject {
             await MainActor.run {
                 pendingOperations = operations
             }
-            print("📂 DataSyncService: Loaded \(operations.count) pending operations")
+            debugLog("📂 DataSyncService: Loaded \(operations.count) pending operations")
             
             for (index, operation) in operations.enumerated() {
-                print("   └── \(index + 1). \(operation.type.rawValue) (created: \(formatTime(operation.createdAt)))")
+                debugLog("   └── \(index + 1). \(operation.type.rawValue) (created: \(formatTime(operation.createdAt)))")
             }
         } else {
-            print("📂 DataSyncService: No pending operations found")
+            debugLog("📂 DataSyncService: No pending operations found")
         }
     }
     
@@ -387,7 +396,7 @@ class DataSyncService: ObservableObject {
 
         
         guard let userEmail = userEmail else {
-            print("❌ DataSyncService: No user email - cannot save operations")
+            debugLog("❌ DataSyncService: No user email - cannot save operations")
             return
         }
         
@@ -398,7 +407,7 @@ class DataSyncService: ObservableObject {
             UserDefaults.standard.set(data, forKey: key)
 
         } catch {
-            print("❌ DataSyncService: Failed to save operations: \(error.localizedDescription)")
+            debugLog("❌ DataSyncService: Failed to save operations: \(error.localizedDescription)")
         }
     }
     
@@ -409,7 +418,7 @@ class DataSyncService: ObservableObject {
     }
     
     deinit {
-        print("🔄 DataSyncService: Deinitializing")
+        debugLog("🔄 DataSyncService: Deinitializing")
         syncTimer?.invalidate()
         networkMonitor.cancel()
     }

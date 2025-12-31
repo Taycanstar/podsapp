@@ -217,7 +217,6 @@
 		3682F0A32B84173100ABF344 /* Podfile in Resources */ = {isa = PBXBuildFile; fileRef = 3682F0A22B84173100ABF344 /* Podfile */; };
 		3683FDA92CB5A28F0031F149 /* product.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 3683FDA82CB5A28F0031F149 /* product.storekit */; };
 		368616651F83495CAC9300B4 /* WaterUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72915B93F931472588ADFD26 /* WaterUnit.swift */; };
-		36VITUNIT0001 /* VitaminUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36VITUNIT0002 /* VitaminUnit.swift */; };
 		36881DF12E6E04F900262045 /* WorkoutScheduleSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DF02E6E04ED00262045 /* WorkoutScheduleSettingsView.swift */; };
 		36881DF32E71E65D00262045 /* FitnessGoalMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DF22E71E64900262045 /* FitnessGoalMigrationService.swift */; };
 		36881DF52E736BBB00262045 /* BlockAssemblyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36881DF42E736BB400262045 /* BlockAssemblyService.swift */; };
@@ -450,6 +449,7 @@
 		36FFF1112FBEBE6000A1C0DE /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1102FBEBE6000A1C0DE /* AgentService.swift */; };
 		36FFF1212FBEBE6000A1C0DE /* AgentChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1202FBEBE6000A1C0DE /* AgentChatViewModel.swift */; };
 		36FFF1312FBEBE6000A1C0DE /* AgentChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1302FBEBE6000A1C0DE /* AgentChatView.swift */; };
+		36VITUNIT0001 /* VitaminUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36VITUNIT0002 /* VitaminUnit.swift */; };
 		492A0CD08D31DADDF32E3CFF /* NutritionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F13F3ECC08E9A4061384C6 /* NutritionModels.swift */; };
 		50FB9842CD464A8F9D9E63AB /* ProFoodSearchLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */; };
 		6DF1182C44BE49149F12E422 /* ProFoodSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678276B9D0A646E8AD3315C6 /* ProFoodSearchView.swift */; };
@@ -922,13 +922,13 @@
 		36FFF1102FBEBE6000A1C0DE /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentService.swift; path = Pods/Core/Services/AgentService.swift; sourceTree = SOURCE_ROOT; };
 		36FFF1202FBEBE6000A1C0DE /* AgentChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentChatViewModel.swift; sourceTree = "<group>"; };
 		36FFF1302FBEBE6000A1C0DE /* AgentChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentChatView.swift; path = Pods/Core/Views/agent/AgentChatView.swift; sourceTree = SOURCE_ROOT; };
+		36VITUNIT0002 /* VitaminUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitaminUnit.swift; sourceTree = "<group>"; };
 		4076D462C059EBED8E94C40D /* Pods-Metryc.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Metryc.release.xcconfig"; path = "Target Support Files/Pods-Metryc/Pods-Metryc.release.xcconfig"; sourceTree = "<group>"; };
 		4D4A42298ABB1B60EE88E302 /* Pods-Metryc-podsUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Metryc-podsUITests.debug.xcconfig"; path = "Target Support Files/Pods-Metryc-podsUITests/Pods-Metryc-podsUITests.debug.xcconfig"; sourceTree = "<group>"; };
 		5E2598AC8B354440B1EBC82A /* ProFeatureGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProFeatureGate.swift; path = Pods/Core/Services/ProFeatureGate.swift; sourceTree = SOURCE_ROOT; };
 		63B50C70F2DA21A1E4B1519E /* Pods-pods.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-pods.release.xcconfig"; path = "Target Support Files/Pods-pods/Pods-pods.release.xcconfig"; sourceTree = "<group>"; };
 		678276B9D0A646E8AD3315C6 /* ProFoodSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProFoodSearchView.swift; path = Pods/Core/Views/food/ProFoodSearchView.swift; sourceTree = SOURCE_ROOT; };
 		72915B93F931472588ADFD26 /* WaterUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterUnit.swift; sourceTree = "<group>"; };
-		36VITUNIT0002 /* VitaminUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitaminUnit.swift; sourceTree = "<group>"; };
 		7391444D455656A22B95182A /* Pods-Metryc.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Metryc.debug.xcconfig"; path = "../Pods/Target Support Files/Pods-Metryc/Pods-Metryc.debug.xcconfig"; sourceTree = "<group>"; };
 		78B0866B57EB40A6AD20953C /* ProFoodSearchLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFoodSearchLoader.swift; sourceTree = "<group>"; };
 		828AD9036235BA1CC3FDB722 /* Pods-Metryc-podsUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Metryc-podsUITests.release.xcconfig"; path = "Target Support Files/Pods-Metryc-podsUITests/Pods-Metryc-podsUITests.release.xcconfig"; sourceTree = "<group>"; };
@@ -2644,7 +2644,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.5;
+				MARKETING_VERSION = 1.5.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -2714,7 +2714,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.5;
+				MARKETING_VERSION = 1.5.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

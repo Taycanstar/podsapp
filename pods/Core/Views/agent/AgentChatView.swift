@@ -59,9 +59,16 @@ struct AgentChatView: View {
     // Realtime voice session
     @StateObject private var realtimeSession = RealtimeVoiceSession()
 
-    // Callbacks for actions (can be customized by parent)
-    var onPlusTapped: () -> Void = {}
-    var onBarcodeTapped: () -> Void = {}
+    // Action sheet states (for plus/barcode buttons)
+    @State private var showNewSheet = false
+    @State private var showFoodScanner = false
+    @State private var scannedFood: Food?
+    @State private var scannedFoodLogId: Int?
+    @State private var showConfirmScannedFood = false
+
+    // Callbacks for actions (can be customized by parent, but have internal defaults)
+    var onPlusTapped: (() -> Void)?
+    var onBarcodeTapped: (() -> Void)?
     var onFoodReady: ((Food) -> Void)?
     var onMealLogged: (([Food]) -> Void)?
     var onNewConversationCreated: ((String, String) -> Void)?
@@ -89,8 +96,8 @@ struct AgentChatView: View {
         initialCoachMessage: Binding<String?> = .constant(nil),
         startWithVoiceMode: Binding<Bool> = .constant(false),
         isCheckinFlow: Bool = false,
-        onPlusTapped: @escaping () -> Void = {},
-        onBarcodeTapped: @escaping () -> Void = {},
+        onPlusTapped: (() -> Void)? = nil,
+        onBarcodeTapped: (() -> Void)? = nil,
         onNewConversationCreated: ((String, String) -> Void)? = nil
     ) {
         self.conversationIdToLoad = conversationIdToLoad
@@ -311,6 +318,33 @@ struct AgentChatView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 60)
                     .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .sheet(isPresented: $showNewSheet) {
+            AgentChatNewSheet(
+                isPresented: $showNewSheet,
+                showFoodScanner: $showFoodScanner
+            )
+            .presentationDetents([.height(UIScreen.main.bounds.height / 3)])
+            .presentationCornerRadius(25)
+            .presentationBackground(Color("sheetbg"))
+        }
+        .fullScreenCover(isPresented: $showFoodScanner) {
+            FoodScannerView(isPresented: $showFoodScanner, selectedMeal: suggestedMealPeriod(for: Date()).rawValue) { food, foodLogId in
+                scannedFood = food
+                scannedFoodLogId = foodLogId
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    showConfirmScannedFood = true
+                }
+            }
+            .edgesIgnoringSafeArea(.all)
+        }
+        .sheet(isPresented: $showConfirmScannedFood) {
+            if let food = scannedFood {
+                FoodSummaryView(food: food, foodLogId: scannedFoodLogId)
+                    .environmentObject(foodManager)
+                    .environmentObject(onboardingViewModel)
+                    .environmentObject(dayLogsVM)
             }
         }
     }
@@ -542,8 +576,12 @@ struct AgentChatView: View {
                     checkinDecisionButtons
                 }
 
-                // Show action icons only when not streaming
-                if !isStreaming {
+                // Show action icons only on the last coach message (like Perplexity),
+                // and only when not streaming or loading
+                let shouldShowActions = !isStreaming &&
+                    !viewModel.isLoading &&
+                    isLastCoachMessage(message)
+                if shouldShowActions {
                     messageActions(for: message)
                 }
             }
@@ -557,6 +595,17 @@ struct AgentChatView: View {
         case .status:
             EmptyView()
         }
+    }
+
+    /// Check if this message is the last coach message in the text messages array
+    /// Action icons should only appear on the last coach message (like Perplexity)
+    private func isLastCoachMessage(_ message: HealthCoachMessage) -> Bool {
+        guard message.sender == .coach else { return false }
+        // Find the last coach message
+        if let lastCoach = viewModel.messages.last(where: { $0.sender == .coach }) {
+            return lastCoach.id == message.id
+        }
+        return false
     }
 
     /// Check if this message is the last assistant message in the voice messages array
@@ -990,14 +1039,28 @@ struct AgentChatView: View {
                     HStack(spacing: 10) {
                         ChatActionCircleButton(
                             systemName: "plus",
-                            action: onPlusTapped,
+                            action: {
+                                HapticFeedback.generate()
+                                if let callback = onPlusTapped {
+                                    callback()
+                                } else {
+                                    showNewSheet = true
+                                }
+                            },
                             backgroundColor: Color.accentColor,
                             foregroundColor: .white
                         )
 
                         ChatActionCircleButton(
                             systemName: "barcode.viewfinder",
-                            action: onBarcodeTapped
+                            action: {
+                                HapticFeedback.generate()
+                                if let callback = onBarcodeTapped {
+                                    callback()
+                                } else {
+                                    showFoodScanner = true
+                                }
+                            }
                         )
                     }
 
@@ -1781,5 +1844,97 @@ private struct ChatTransparentBlurView: UIViewRepresentable {
                 }
             }
         }
+    }
+}
+
+// MARK: - Agent Chat New Sheet (Plus Button Actions)
+
+private struct AgentChatNewSheet: View {
+    @Binding var isPresented: Bool
+    @Binding var showFoodScanner: Bool
+    @Environment(\.colorScheme) private var colorScheme
+
+    let options = [
+        ("Search", "magnifyingglass"),
+        ("Scan Food", "barcode.viewfinder"),
+        ("Saved", "bookmark")
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: 2.5)
+                .frame(width: 36, height: 2)
+                .foregroundColor(Color("grabber"))
+                .padding(.top, 12)
+                .padding(.bottom, 24)
+
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 20),
+                GridItem(.flexible(), spacing: 20),
+                GridItem(.flexible(), spacing: 20)
+            ], spacing: 32) {
+                ForEach(options, id: \.0) { option in
+                    VStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(circleBackgroundColor)
+                                .frame(width: 70, height: 70)
+
+                            Image(systemName: option.1)
+                                .font(.system(size: 28, weight: .medium))
+                                .foregroundColor(circleIconColor)
+                        }
+
+                        Text(option.0)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .onTapGesture {
+                        handleTap(option: option.0)
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
+
+            Spacer()
+        }
+    }
+
+    private func handleTap(option: String) {
+        HapticFeedback.generate()
+        isPresented = false
+
+        switch option {
+        case "Search":
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShowSearchView"),
+                    object: nil
+                )
+            }
+        case "Scan Food":
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                showFoodScanner = true
+            }
+        case "Saved":
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShowSavedView"),
+                    object: nil
+                )
+            }
+        default:
+            break
+        }
+    }
+
+    private var circleBackgroundColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.5) : Color(red: 222/255, green: 222/255, blue: 222/255)
+    }
+
+    private var circleIconColor: Color {
+        colorScheme == .dark ? .white : .primary
     }
 }

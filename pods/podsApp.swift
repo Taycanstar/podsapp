@@ -16,18 +16,6 @@ import os.log
 @main
 struct podsApp: App {
     init() {
-        // VERY LOUD LOG USING OS_LOG (guaranteed to appear in Console.app)
-        let logger = Logger(subsystem: "com.humuli.pods", category: "App")
-        logger.critical("🚀🚀🚀 APP STARTED WITH OS_LOG DIAGNOSTICS 🚀🚀🚀")
-        logger.critical("🚀🚀🚀 BUILD TIMESTAMP: \(Date().description) 🚀🚀🚀")
-
-        // Also try NSLog as backup
-        NSLog("🚀🚀🚀 APP STARTED - BUILD WITH NSLOG DIAGNOSTICS 🚀🚀🚀")
-        NSLog("🚀🚀🚀 BUILD TIMESTAMP: \(Date()) 🚀🚀🚀")
-
-        // And print as final backup
-        print("🚀🚀🚀 APP STARTED - BUILD WITH PRINT DIAGNOSTICS 🚀🚀🚀")
-
         // Warm exercise database synchronously so data is ready before UI usage
         ExerciseDatabase.warmCache()
     }
@@ -182,7 +170,7 @@ struct podsApp: App {
         }
     }
 
-    /// Fetch and log Oura connection status once per launch to verify backend data
+    /// Fetch Oura connection status once per launch and trigger sync if connected
     private func logOuraStatusOnStartup() {
         let resolvedEmail: String?
         if !onboardingViewModel.email.isEmpty {
@@ -193,62 +181,31 @@ struct podsApp: App {
             resolvedEmail = nil
         }
 
-        guard let email = resolvedEmail else {
-            print("ℹ️ OuraStatus: Skipping fetch because no authenticated user was found")
-            return
-        }
+        guard let email = resolvedEmail else { return }
 
-        print("🔍 OuraStatus: Fetching remote state for \(email)")
         NetworkManagerTwo.shared.fetchOuraStatus(email: email) { result in
             switch result {
             case .success(let status):
-                print("✅ OuraStatus: connected=\(status.connected) userId=\(status.ouraUserId ?? "nil")")
-                if let lastSynced = status.lastSyncedAt {
-                    print("   └── lastSyncedAt=\(lastSynced)")
-                } else {
-                    print("   └── lastSyncedAt=nil")
-                }
-                if let scopes = status.scopes, !scopes.isEmpty {
-                    print("   └── scopes=\(scopes)")
-                }
-                if let payload = prettyPrintedJSONString(from: status) {
-                    print("📦 OuraStatus Payload:\n\(payload)")
-                }
                 if status.connected && !hasSyncedOuraOnLaunch {
                     hasSyncedOuraOnLaunch = true
                     syncOuraData(for: email, reason: "startup_status")
                 }
-            case .failure(let error):
-                print("❌ OuraStatus: Failed to fetch status for \(email) - \(error.localizedDescription)")
+            case .failure:
+                break
             }
         }
     }
 
     private func syncOuraData(for email: String, reason: String) {
-        guard !isSyncingOuraData else {
-            print("⏱️ OuraSync[\(reason)]: Skipping because a sync is already running")
-            return
-        }
+        guard !isSyncingOuraData else { return }
 
         isSyncingOuraData = true
-        print("🔄 OuraSync[\(reason)]: Requesting latest data for \(email)")
         NetworkManagerTwo.shared.syncOura(email: email, days: 14) { result in
-            switch result {
-            case .success:
-                print("✅ OuraSync[\(reason)]: Completed successfully for \(email)")
+            if case .success = result {
                 NotificationCenter.default.post(name: .ouraSyncCompleted, object: nil)
-            case .failure(let error):
-                print("❌ OuraSync[\(reason)]: Failed for \(email) - \(error.localizedDescription)")
             }
             self.isSyncingOuraData = false
         }
-    }
-
-    private func prettyPrintedJSONString(from status: NetworkManagerTwo.OuraStatusResponse) -> String? {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard let data = try? encoder.encode(status) else { return nil }
-        return String(data: data, encoding: .utf8)
     }
     
     /// Create ModelContainer with migration error handling
