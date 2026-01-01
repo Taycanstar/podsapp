@@ -3247,7 +3247,6 @@ struct PlateView: View {
                 .font(.title3)
                 .fontWeight(.semibold)
                 .padding(.horizontal)
-                .padding(.top, 16)
                 .textCase(nil)
         }
     }
