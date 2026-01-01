@@ -234,10 +234,45 @@ struct HealthCoachFood: Codable {
 }
 
 /// Nutrient data from health coach food response
+/// Supports both camelCase (foodNutrients from Nutritionix) and snake_case (food_nutrients from some endpoints)
 struct HealthCoachNutrient: Codable {
     let nutrientName: String
     let value: Double?
     let unitName: String?
+
+    // Support both camelCase (from Nutritionix) and snake_case (from some endpoints)
+    private enum CamelCaseKeys: String, CodingKey {
+        case nutrientName, value, unitName
+    }
+
+    private enum SnakeCaseKeys: String, CodingKey {
+        case nutrientName = "nutrient_name"
+        case value
+        case unitName = "unit_name"
+    }
+
+    init(from decoder: Decoder) throws {
+        // Try camelCase first (Nutritionix format)
+        if let camelContainer = try? decoder.container(keyedBy: CamelCaseKeys.self),
+           let name = try? camelContainer.decode(String.self, forKey: .nutrientName) {
+            nutrientName = name
+            value = try camelContainer.decodeIfPresent(Double.self, forKey: .value)
+            unitName = try camelContainer.decodeIfPresent(String.self, forKey: .unitName)
+        } else {
+            // Fall back to snake_case
+            let snakeContainer = try decoder.container(keyedBy: SnakeCaseKeys.self)
+            nutrientName = try snakeContainer.decode(String.self, forKey: .nutrientName)
+            value = try snakeContainer.decodeIfPresent(Double.self, forKey: .value)
+            unitName = try snakeContainer.decodeIfPresent(String.self, forKey: .unitName)
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CamelCaseKeys.self)
+        try container.encode(nutrientName, forKey: .nutrientName)
+        try container.encodeIfPresent(value, forKey: .value)
+        try container.encodeIfPresent(unitName, forKey: .unitName)
+    }
 }
 
 struct HealthCoachMealItem: Codable {

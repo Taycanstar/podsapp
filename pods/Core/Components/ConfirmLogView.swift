@@ -2403,7 +2403,8 @@ Text("\(String(format: maxValue < 10 ? "%.1f" : "%.0f", maxValue)) \(unit)")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                         foodManager.showLogSuccess = false
                     }
-                    self.dayLogsVM.loadLogs(for: self.mealTime, force: true)
+                    // NOTE: No loadLogs call needed - optimistic log was already replaced with
+                    // server-confirmed data. Refetching would be redundant and can cause race conditions.
                     self.barcodeFoodLogId = logged.foodLogId
                 case .failure:
                     self.dayLogsVM.removeOptimisticLog(identifier: placeholderIdentifier)
@@ -3875,7 +3876,8 @@ struct PlateView: View {
 
             isLoggingPlate = false
             viewModel.clear()
-            dayLogsVM.loadLogs(for: logDate, force: true)
+            // NOTE: No loadLogs call needed - logs were just added with server-confirmed data.
+            // Refetching would be redundant and can cause race conditions.
             onFinished?()
         }
     }

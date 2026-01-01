@@ -205,6 +205,7 @@
 		36667E262F0194720017E9D7 /* ThumbsFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E252F0194720017E9D7 /* ThumbsFeedbackView.swift */; };
 		36667E282F01948D0017E9D7 /* EventTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E272F01948D0017E9D7 /* EventTracker.swift */; };
 		36667E2A2F02073E0017E9D7 /* ScaleWeightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E292F0207380017E9D7 /* ScaleWeightView.swift */; };
+		36667E2C2F05B2850017E9D7 /* TTSService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36667E2B2F05B2850017E9D7 /* TTSService.swift */; };
 		367242422E7A528300373C85 /* EditMuscleRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */; };
 		367540F12C76E99900B066A9 /* PodMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367540F02C76E99900B066A9 /* PodMembersView.swift */; };
 		367719FB2D75FDF3008EBB40 /* MealDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367719FA2D75FDF3008EBB40 /* MealDetailView.swift */; };
@@ -681,6 +682,7 @@
 		36667E252F0194720017E9D7 /* ThumbsFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbsFeedbackView.swift; sourceTree = "<group>"; };
 		36667E272F01948D0017E9D7 /* EventTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTracker.swift; sourceTree = "<group>"; };
 		36667E292F0207380017E9D7 /* ScaleWeightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleWeightView.swift; sourceTree = "<group>"; };
+		36667E2B2F05B2850017E9D7 /* TTSService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTSService.swift; sourceTree = "<group>"; };
 		367242412E7A527800373C85 /* EditMuscleRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMuscleRecoveryView.swift; sourceTree = "<group>"; };
 		367540F02C76E99900B066A9 /* PodMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodMembersView.swift; sourceTree = "<group>"; };
 		367719FA2D75FDF3008EBB40 /* MealDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealDetailView.swift; sourceTree = "<group>"; };
@@ -1005,6 +1007,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				36667E2B2F05B2850017E9D7 /* TTSService.swift */,
 				36667E272F01948D0017E9D7 /* EventTracker.swift */,
 				36667DD42EF4552D0017E9D7 /* VoiceToolService.swift */,
 				36667DC42EF1E5040017E9D7 /* HealthCoachService.swift */,
@@ -2410,6 +2413,7 @@
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,
 				36ED359D2DD0DE1600D174FB /* LogRepository.swift in Sources */,
 				36667DFA2EFB04740017E9D7 /* SavedView.swift in Sources */,
+				36667E2C2F05B2850017E9D7 /* TTSService.swift in Sources */,
 				36667DD32EF3B5B90017E9D7 /* QuickAddSheet.swift in Sources */,
 				36A85CDB2DB2BC0C00DD4266 /* HeightWeightView.swift in Sources */,
 				361FF3492E2B279400B7F68E /* TargetMusclesView.swift in Sources */,
@@ -2644,7 +2648,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.6;
+				MARKETING_VERSION = 1.5.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -2714,7 +2718,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.6;
+				MARKETING_VERSION = 1.5.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

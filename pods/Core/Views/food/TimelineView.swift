@@ -861,8 +861,8 @@ private struct CoachMessageText: View {
                         onCopyTap?()
                     } label: {
                         Image(systemName: "doc.on.doc")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(Color(.systemGray))
                     }
                     .buttonStyle(.plain)
 
@@ -881,8 +881,8 @@ private struct CoachMessageText: View {
                         onEditTap?(message)
                     } label: {
                         Image(systemName: "square.and.pencil")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(Color(.systemGray))
                     }
                     .buttonStyle(.plain)
 

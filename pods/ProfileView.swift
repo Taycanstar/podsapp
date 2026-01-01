@@ -246,12 +246,6 @@ struct ProfileView: View {
             }
             .listRowBackground(rowBackgroundColor)
 
-            NavigationLink(destination: ScanLogView()) {
-                Label("Scan and Log Preview", systemImage: "viewfinder")
-                    .foregroundColor(iconColor)
-            }
-            .listRowBackground(rowBackgroundColor)
-
             NavigationLink(destination: ManageExercisesView()) {
                 Label("Manage Exercises", systemImage: "figure.run.square.stack")
                     .foregroundColor(iconColor)

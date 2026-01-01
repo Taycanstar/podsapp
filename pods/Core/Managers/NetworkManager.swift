@@ -272,7 +272,7 @@ class NetworkManager {
     /// Static accessor for base URL, used by EventTracker and other singleton services
     static var baseURL: String {
         // return "http://192.168.1.92:8000"
-        // Production: return "https://humuli-2b3070583cda.herokuapp.com"
+        //  return "https://humuli-2b3070583cda.herokuapp.com"
         return "https://humuli-staging-b3e9cef208dd.herokuapp.com"
     }
     
@@ -10415,10 +10415,16 @@ private final class HealthCoachStreamingDelegate: NSObject, URLSessionDataDelega
                     do {
                         let decoder = JSONDecoder()
                         let response = try decoder.decode(HealthCoachResponse.self, from: responseData)
-                        print("[HEALTH_COACH_STREAM] decoded response.conversationId: \(response.conversationId ?? "nil")")
+                        print("[HEALTH_COACH_STREAM] ✅ decoded response - type: \(response.type), conversationId: \(response.conversationId ?? "nil"), hasFood: \(response.food != nil)")
                         DispatchQueue.main.async { self.onComplete(.success(response)) }
                     } catch {
-                        print("[HEALTH_COACH_STREAM] failed to decode HealthCoachResponse:", error)
+                        print("[HEALTH_COACH_STREAM] ❌ failed to decode HealthCoachResponse: \(error)")
+                        // Log the raw JSON for debugging
+                        if let prettyPrinted = try? JSONSerialization.jsonObject(with: responseData),
+                           let prettyData = try? JSONSerialization.data(withJSONObject: prettyPrinted, options: .prettyPrinted),
+                           let prettyString = String(data: prettyData, encoding: .utf8) {
+                            print("[HEALTH_COACH_STREAM] Raw JSON:\n\(prettyString.prefix(2000))")
+                        }
                         // Create a minimal response with the accumulated text
                         let fallbackResponse = HealthCoachResponse(
                             type: .text,

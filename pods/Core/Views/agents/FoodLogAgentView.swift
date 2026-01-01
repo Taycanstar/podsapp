@@ -45,7 +45,6 @@ struct FoodLogAgentView: View {
 @State private var dislikedMessageIDs: Set<UUID> = []
 @State private var shareText: String?
 @State private var showShareSheet = false
-@State private var speechSynth = AVSpeechSynthesizer()
 @State private var showCopyToast = false
 @State private var showUserMessageSheet = false
 @State private var userMessageSheetText = ""
@@ -737,12 +736,8 @@ struct FoodLogAgentView: View {
     }
 
     private func speak(_ text: String) {
-        speechSynth.stopSpeaking(at: .immediate)
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: AVSpeechSynthesisVoice.currentLanguageCode())
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
-        speechSynth.speak(utterance)
         HapticFeedback.generateLigth()
+        TTSService.shared.speak(text)
     }
 
     private func share(text: String) {

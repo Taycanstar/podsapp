@@ -699,10 +699,7 @@ struct AddIngredientsDescribe: View {
     }
 
     private func speak(_ text: String) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        let synthesizer = AVSpeechSynthesizer()
-        synthesizer.speak(utterance)
+        TTSService.shared.speak(text)
     }
 
     // MARK: - Toast

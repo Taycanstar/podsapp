@@ -36,7 +36,7 @@ struct GreetingView: View {
                             .foregroundColor(.primary)
                             .padding(.horizontal, 32)
 
-                        Text("Metryc puts your wellness on autopilot with nutrition, workouts, and insights planned for you.")
+                        Text("Metryc is the smartest, simplest way to stay on track.")
                             .font(.body)
                             .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)

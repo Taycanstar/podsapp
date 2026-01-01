@@ -35,7 +35,6 @@ struct AgentChatView: View {
     // Action sheet state
     @State private var shareText: String?
     @State private var showShareSheet = false
-    @State private var speechSynth = AVSpeechSynthesizer()
     @State private var showCopyToast = false
     @State private var showFeedbackToast = false
     @State private var showUserMessageSheet = false
@@ -46,6 +45,7 @@ struct AgentChatView: View {
     // Single food confirmation (uses FoodSummaryView)
     @State private var pendingFood: Food?
     @State private var showFoodConfirm = false
+    @State private var awaitingAgentFoodLog = false  // Track if we're waiting for a food log from agent flow
 
     // Meal summary for multi-food
     @State private var mealSummaryFoods: [Food] = []
@@ -182,6 +182,22 @@ struct AgentChatView: View {
             if oldValue == nil && newValue != nil {
                 HapticFeedback.generateBurstThenSingle(count: 3, interval: 0.08)
             }
+        }
+        .onChange(of: foodManager.lastCoachMessage) { _, newCoachMessage in
+            // When food is logged via agent and we get a coach message, add it to the chat
+            // Only add if we're awaiting a food log from the agent flow
+            guard awaitingAgentFoodLog, let coachMessage = newCoachMessage else { return }
+
+            // Reset the flag
+            awaitingAgentFoodLog = false
+
+            // Add the coach message to the chat as a new coach message
+            viewModel.seedCoachMessage(coachMessage.message, interventionId: coachMessage.interventionId)
+
+            // NOTE: Do NOT call loadLogs here - ConfirmLogView already handles refreshing
+            // the timeline after food is logged. Calling loadLogs here causes a race condition
+            // where the server cache may not be invalidated yet, resulting in 0 logs being
+            // returned and the food log disappearing momentarily.
         }
         .onAppear {
             isInputFocused = true
@@ -353,6 +369,7 @@ struct AgentChatView: View {
         // Set up food ready callback - show FoodSummaryView (ConfirmLogView) for single foods
         viewModel.onFoodReady = { food in
             pendingFood = food
+            awaitingAgentFoodLog = true  // Mark that we're expecting a food log from agent flow
             showFoodConfirm = true
         }
 
@@ -360,6 +377,7 @@ struct AgentChatView: View {
         viewModel.onMealItemsReady = { food, items in
             mealSummaryFoods = [food]
             mealSummaryItems = items
+            awaitingAgentFoodLog = true  // Mark that we're expecting a food log from agent flow
             showMealSummary = true
         }
 
@@ -960,10 +978,7 @@ struct AgentChatView: View {
     }
 
     private func speakMessage(_ text: String) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = 0.5
-        speechSynth.speak(utterance)
+        TTSService.shared.speak(text)
     }
 
     // MARK: - Link & Citation Handling
@@ -994,8 +1009,16 @@ struct AgentChatView: View {
 
     private var inputBar: some View {
         let hasUserInput = !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let showShortcuts = viewModel.messages.count <= 2 && realtimeSession.messages.isEmpty && !viewModel.isLoading
 
         return VStack(spacing: 0) {
+            // Shortcut chips - only show when conversation is empty
+            if showShortcuts {
+                shortcutChips
+                    .padding(.bottom, 12)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+
             // Top blur strip for liquid glass fade effect
             ChatTransparentBlurView(removeAllFilters: true)
                 .blur(radius: 14)
@@ -1311,6 +1334,37 @@ struct AgentChatView: View {
         })
     }
 
+    // MARK: - Shortcut Chips
+
+    private var shortcutChips: some View {
+        let shortcuts: [(String, String, String)] = [
+            ("Log weight", "scalemass", "Log my weight"),
+            ("Daily progress", "chart.bar", "How am I doing today?"),
+            ("My goals", "target", "What are my goals?"),
+                   ("Get weight trends", "chart.line.downtrend.xyaxis", "What is my weight trend?"),
+            ("Sleep & recovery", "bed.double", "How did I sleep?"),
+        ]
+
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(shortcuts, id: \.0) { shortcut in
+                    ShortcutChip(
+                        title: shortcut.0,
+                        icon: shortcut.1
+                    ) {
+                        HapticFeedback.generate()
+                        inputText = shortcut.2
+                        // Small delay to show the text before sending
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            submitAgentPrompt()
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+
     /// Send a check-in decision (accept or decline)
     private func sendCheckinDecision(_ decision: String) {
         guard let conversationId = viewModel.currentConversationId,
@@ -1477,11 +1531,25 @@ struct AgentChatView: View {
                     loggedCount += 1
 
                     switch result {
-                    case .success:
-                        // Refresh logs after all foods are logged
-                        if loggedCount == totalFoods {
-                            dayLogsVM?.loadLogs(for: batchTimestamp, force: true)
-                        }
+                    case .success(let logged):
+                        // Add the logged food directly to the view model
+                        let combined = CombinedLog(
+                            type: .food,
+                            status: logged.status,
+                            calories: Double(logged.food.calories),
+                            message: "\(logged.food.displayName) - \(mealType)",
+                            foodLogId: logged.foodLogId,
+                            food: logged.food,
+                            mealType: mealType,
+                            mealLogId: nil,
+                            meal: nil,
+                            mealTime: mealType,
+                            scheduledAt: batchTimestamp,
+                            recipeLogId: nil,
+                            recipe: nil,
+                            servingsConsumed: nil
+                        )
+                        dayLogsVM?.addPending(combined)
                     case .failure(let error):
                         print("❌ Failed to log food: \(error)")
                     }
@@ -1936,5 +2004,54 @@ private struct AgentChatNewSheet: View {
 
     private var circleIconColor: Color {
         colorScheme == .dark ? .white : .primary
+    }
+}
+
+// MARK: - Shortcut Chip Component
+
+private struct ShortcutChip: View {
+    let title: String
+    let icon: String
+    let action: () -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .medium))
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(chipBackground)
+            .foregroundColor(chipForeground)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(chipBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var chipBackground: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.08)
+            : Color.black.opacity(0.04)
+    }
+
+    private var chipForeground: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.9)
+            : Color.primary.opacity(0.8)
+    }
+
+    private var chipBorder: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.15)
+            : Color.black.opacity(0.08)
     }
 }
