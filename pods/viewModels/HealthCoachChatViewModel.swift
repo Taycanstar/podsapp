@@ -264,6 +264,13 @@ final class HealthCoachChatViewModel: ObservableObject {
             }
         }
 
+        // IMPORTANT: When type is needsClarification, we should NOT include food data
+        // even if the backend sends it. The food data is "preliminary" and the user
+        // needs to clarify first. Including it would trigger the food confirmation sheet.
+        let shouldIncludeFood = response.type != .needsClarification
+        let foodForMessage = shouldIncludeFood ? response.food : nil
+        let mealItemsForMessage = shouldIncludeFood ? response.mealItems : nil
+
         // Only add message if it wasn't already streamed
         if existingMessageId == nil {
             print("🤖 HealthCoachChatViewModel.handleResponse - No existingMessageId, appending new message")
@@ -271,8 +278,8 @@ final class HealthCoachChatViewModel: ObservableObject {
                 sender: .coach,
                 text: response.message,
                 responseType: response.type,
-                food: response.food,
-                mealItems: response.mealItems,
+                food: foodForMessage,
+                mealItems: mealItemsForMessage,
                 activity: response.activity,
                 data: response.data,
                 options: response.options,
@@ -289,8 +296,8 @@ final class HealthCoachChatViewModel: ObservableObject {
                 text: messages[index].text,
                 timestamp: messages[index].timestamp,
                 responseType: response.type,
-                food: response.food,
-                mealItems: response.mealItems,
+                food: foodForMessage,
+                mealItems: mealItemsForMessage,
                 activity: response.activity,
                 data: response.data,
                 options: response.options,
