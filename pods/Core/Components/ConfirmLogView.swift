@@ -467,7 +467,9 @@ struct ConfirmLogView: View {
                       selectedMealPeriod: selectedMealPeriod,
                       mealTime: mealTime,
                       onFinished: {
-                          navigateToPlate = false
+                          // Dismiss the entire sheet directly without popping navigation first.
+                          // Setting navigateToPlate = false would cause a visible pop animation
+                          // back to ConfirmLogView before the sheet dismisses.
                           dismiss()
                       })
         } else {
@@ -3080,7 +3082,15 @@ struct PlateView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
+                Button(action: {
+                    // Call onFinished to dismiss the entire sheet stack
+                    // instead of just popping back to ConfirmLogView
+                    if let onFinished = onFinished {
+                        onFinished()
+                    } else {
+                        dismiss()
+                    }
+                }) {
                     Image(systemName: "xmark")
                         .font(.headline.weight(.semibold))
                         .foregroundColor(.primary)
