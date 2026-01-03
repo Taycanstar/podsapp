@@ -95,15 +95,6 @@ final class NutritionixService {
             }
 
             do {
-// #if DEBUG
-                if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []),
-                   let pretty = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted]),
-                   let jsonString = String(data: pretty, encoding: .utf8) {
-                    print("📦 [Nutritionix] Raw response for barcode \(barcode):\n\(jsonString)")
-                } else if let rawString = String(data: data, encoding: .utf8) {
-                    print("📦 [Nutritionix] Raw response (fallback) for barcode \(barcode):\n\(rawString)")
-                }
-// #endif
                 let decoder = JSONDecoder()
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
                 let itemResponse = try decoder.decode(NutritionixItemResponse.self, from: data)
@@ -147,30 +138,6 @@ final class NutritionixService {
             if raw.contains("oz") { return qty * 28.3495 }
             return nil
         }
-
-#if DEBUG
-        print("🍽 [Nutritionix] Raw item for barcode \(barcode):")
-        print("  foodName: \(item.foodName ?? "<nil>")")
-        print("  brandName: \(item.brandName ?? "<nil>")")
-        print("  servingQty: \(item.servingQty.map(String.init) ?? "<nil>")")
-        print("  servingUnit: \(item.servingUnit ?? "<nil>")")
-        print("  servingWeightGrams: \(item.servingWeightGrams.map(String.init) ?? "<nil>")")
-        if let measures = item.altMeasures, !measures.isEmpty {
-            print("  altMeasures (\(measures.count)):")
-            for (idx, alt) in measures.enumerated() {
-                let qtyText = alt.qty.map(String.init) ?? "<nil>"
-                let weightText = alt.servingWeight.map(String.init) ?? "<nil>"
-                print("    [\(idx)] measure: \(alt.measure ?? "<nil>"), qty: \(qtyText), grams: \(weightText)")
-            }
-        } else {
-            print("  altMeasures: <none>")
-        }
-        if let nutrients = item.fullNutrients, !nutrients.isEmpty {
-            print("  fullNutrients count: \(nutrients.count)")
-        } else {
-            print("  fullNutrients: <none>")
-        }
-#endif
 
         let name = item.brandNameItemName ?? item.foodName ?? "Food"
         let brand = item.brandName ?? item.brandOwner
@@ -845,15 +812,11 @@ class FoodManager: ObservableObject {
             animatedProgress = 0.0
         }
         
-        print("🔍 DEBUG updateFoodScanningState - OLD: \(oldState) (\(oldState.progress)), NEW: \(newState) (\(newState.progress)), AnimatedProgress: \(animatedProgress)")
-        
         // Handle completed state with 100% visibility
         if case .completed = newState {
-            print("✅ Completed state reached - showing 100% for 1.5 seconds before auto-reset")
             // Use a cancellable work item so a new session doesn't get clobbered by a stale reset
             let work = DispatchWorkItem { [weak self] in
                 guard let self = self else { return }
-                print("⏰ Auto-resetting from completed state to inactive")
                 self.resetFoodScanningState()
             }
             stateAutoResetWorkItem?.cancel()
@@ -869,13 +832,11 @@ class FoodManager: ObservableObject {
     
     /// Start a new food scanning session with loader visible at 0%
     func startFoodScanning() {
-        print("🆕 Starting new food scanning session")
         updateFoodScanningState(.initializing)
     }
-    
+
     /// Complete food scanning with result and auto-reset
     func completeFoodScanning(result: CombinedLog) {
-        print("🏁 Completing food scanning with result")
         updateFoodScanningState(.completed(result: result))
         // Auto-reset is handled by updateFoodScanningState
     }
@@ -991,8 +952,6 @@ class FoodManager: ObservableObject {
         shouldLog: Bool = true,
         scanMode: String? = nil
     ) async throws -> CombinedLog {
-        print("🆕 Starting MODERN food image analysis with proper session flow, scanMode=\(scanMode ?? "nil")")
-        
         // Set image scanning flag and store image
         isImageScanning = true
         currentScanningImage = image
@@ -1087,7 +1046,6 @@ class FoodManager: ObservableObject {
                 self.lastCoachMessage = coachMessage
            
             } catch {
-                print("⚠️ [COACH] Failed to parse coach message: \(error)")
                 self.lastCoachMessage = nil
             }
         } else {
@@ -1211,14 +1169,14 @@ class FoodManager: ObservableObject {
                 let healthData = try JSONSerialization.data(withJSONObject: healthDict)
                 healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthData)
             } catch {
-                print("⚠️ Failed to decode health analysis: \(error)")
+                // Failed to decode health analysis
             }
         } else if let fallbackDict = fallbackHealthAnalysis {
             do {
                 let healthData = try JSONSerialization.data(withJSONObject: fallbackDict)
                 healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthData)
             } catch {
-                print("⚠️ Failed to decode fallback health analysis: \(error)")
+                // Failed to decode fallback health analysis
             }
         }
         
@@ -1304,7 +1262,6 @@ class FoodManager: ObservableObject {
             lastSavedMealsFetchDate = nil
         }
 
-        print("🏁 FoodManager: Initializing with email \(userEmail)")
         self.userEmail = userEmail
 
         configureFeedRepository(for: userEmail)
@@ -1314,8 +1271,6 @@ class FoodManager: ObservableObject {
         where key.hasPrefix("logs_by_date_\(userEmail)_") {
             UserDefaults.standard.removeObject(forKey: key)
         }
-
-        print("📋 FoodManager: Starting initialization sequence")
         resetAndFetchFoods(force: force)
         resetAndFetchMeals(force: force)
         resetAndFetchRecipes(force: force)
@@ -1513,7 +1468,6 @@ class FoodManager: ObservableObject {
     }
 
     private func resetAndFetchFoods(force: Bool = false) {
-        print("🍔 FoodManager: Reset and fetch foods called")
         Task { @MainActor [weak self] in
             guard let self else { return }
             await self.refreshFoods(force: force)
@@ -1616,11 +1570,8 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
 
     // New refresh function that ensures logs are loaded
     func refresh() {
-        print("🔄 FoodManager.refresh() called")
-        
         // Prevent refresh if loading, analyzing food, etc.
         if isLoadingLogs || isLoadingMoreLogs || isLoadingMeals || isScanningFood || isAnalyzingFood || isGeneratingMeal || isGeneratingFood {
-            print("⚠️ Skipping refresh because another operation is in progress")
             return
         }
 
@@ -1693,7 +1644,6 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
     
     // Method to reset user foods and fetch fresh
     func resetAndFetchUserFoods(force: Bool = false) {
-        print("🍎 FoodManager: Reset and fetch user foods called")
         guard !isFetchingUserFoods else { return }
         isFetchingUserFoods = true
 
@@ -1735,8 +1685,6 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
                 
                 switch result {
                 case .success(let updatedLog):
-                    print("✅ Successfully updated food log with ID: \(logId)")
-                    
                     // Update the existing log in combinedLogs
                     if let index = self.combinedLogs.firstIndex(where: { $0.foodLogId == logId }) {
                         var updatedCombinedLog = self.combinedLogs[index]
@@ -1762,7 +1710,6 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
                     completion(.success(updatedLog))
                     
                 case .failure(let error):
-                    print("❌ Failed to update food log: \(error)")
                     completion(.failure(error))
                 }
             }
@@ -1781,7 +1728,6 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
     batchContext: [String: Any]? = nil,
     completion: @escaping (Result<LoggedFood, Error>) -> Void
 ) {
-    print("⏳ Starting logFood operation...")
     isLoadingFood = true
 
     // First, mark this as the last logged food ID to update UI appearance
@@ -1811,8 +1757,6 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
             
             switch result {
             case .success(let loggedFood):
-                print("✅ Successfully logged food with foodLogId: \(loggedFood.foodLogId)")
-
                 // Store coach message if present and stop awaiting
                 self.isAwaitingCoachMessage = false
                 self.awaitingCoachForFoodLogId = loggedFood.foodLogId
@@ -1886,7 +1830,6 @@ private func performLoadMoreLogs(refresh: Bool) async -> Bool {
                 completion(.success(loggedFood))
                 
             case .failure(let error):
-                print("❌ Failed to log food: \(error)")
                 self.error = error
                 self.isAwaitingCoachMessage = false  // Stop awaiting on error
 
@@ -1915,7 +1858,6 @@ func loadMoreIfNeeded(log: CombinedLog) {
     // Try to find the log's index
     let index = combinedLogs.firstIndex(where: { $0.id == log.id })
     
-    // Debug output to track why loadMoreIfNeeded might not be triggering
     if let idx = index {
         // The problem with just checking if index is >= count - 10 is that
         // we might trigger loading on logs in the middle of the list if logs
@@ -1925,34 +1867,18 @@ func loadMoreIfNeeded(log: CombinedLog) {
         let isNearEndByNumber = idx >= combinedLogs.count - 10
         let isNearEndByPosition = (combinedLogs.count - idx) <= 10
         let shouldLoadMore = isNearEndByNumber || isNearEndByPosition
-        
-        print("🔍 FoodManager.loadMoreIfNeeded - Log at index \(idx) of \(combinedLogs.count)")
-        print("  - Near end by number: \(isNearEndByNumber)")
-        print("  - Near end by position: \(isNearEndByPosition)")
-        print("  - Should load more: \(shouldLoadMore)")
-        print("  - hasMore: \(hasMore)")
-        
+
         // Check if we're near the end AND there are more logs to load
         if shouldLoadMore && hasMore && !isLoadingLogs {
-            print("🎯 FoodManager.loadMoreIfNeeded - Triggering loadMoreLogs() at index \(idx)")
             loadMoreLogs()
-        } else if !hasMore {
-            print("⚠️ FoodManager.loadMoreIfNeeded - Not loading more because hasMore is false")
-        } else if isLoadingLogs {
-            print("⏳ FoodManager.loadMoreIfNeeded - Not loading more because already loading")
-        } else {
-            print("⏱️ FoodManager.loadMoreIfNeeded - Not near end yet (\(combinedLogs.count - idx) items remaining)")
         }
-    } else {
-        print("❓ FoodManager.loadMoreIfNeeded - Log not found in combinedLogs (id: \(log.id))")
     }
-    
+
     // Add a fallback check - if we're at least 2/3 through the list,
     // check if we should load more regardless of exact index
     if combinedLogs.count >= 9 && hasMore && !isLoadingLogs {
         // As a safety measure, trigger loading more logs if we're getting near the end
         // even if the specific index check didn't pass
-        print("🔄 FoodManager.loadMoreIfNeeded - Safety check: ensuring we have enough logs")
         loadMoreLogs()
     }
 }
@@ -2011,10 +1937,6 @@ func createMeal(
         DispatchQueue.main.async {
             switch result {
             case .success(let meal):
-                print("✅ Meal created successfully: \(meal.title)")
-                print("📊 Returned meal calories: \(meal.calories)")
-                print("📊 Meal has \(meal.mealItems.count) food items")
-                
                 self?.meals.insert(meal, at: 0)
                 Task { @MainActor [weak self] in
                     guard let self else { return }
@@ -2032,14 +1954,13 @@ func createMeal(
                         self?.showMealToast = false
                     }
                 }
-            case .failure(let error):
-                print("❌ Error creating meal: \(error)")
+            case .failure:
+                break
             }
         }
     }
 }
 private func resetAndFetchMeals(force: Bool = false) {
-    print("🍲 FoodManager: Reset and fetch meals called")
     guard !isFetchingMeals else { return }
     isFetchingMeals = true
 
@@ -2047,13 +1968,10 @@ private func resetAndFetchMeals(force: Bool = false) {
         guard let self else { return }
         let success = await self.mealsRepository.refresh(force: force)
         if success {
-            print("✅ FoodManager: Successfully loaded meals from server")
             self.prefetchMealImages()
             self.lastMealsFetchDate = Date()
             self.hasMoreMeals = self.mealsRepository.snapshot.hasMore
             self.currentMealPage = self.mealsRepository.snapshot.nextPage
-        } else {
-            print("❌ FoodManager: Failed to load meals from server")
         }
         self.isFetchingMeals = false
     }
@@ -2258,8 +2176,6 @@ func updateMeal(
         return 
     }
     
-    print("🔄 updateMeal called with meal ID: \(meal.id), title: \(meal.title), foods count: \(foods.count)")
-    
     // If foods array is not empty, use it to calculate macros
     // Otherwise use the meal's existing values
     let calculatedCalories: Double
@@ -2309,8 +2225,6 @@ func updateMeal(
             DispatchQueue.main.async {
                 switch result {
                 case .success(let updatedMeal):
-                    print("✅ Meal updated successfully: \(updatedMeal.title) (ID: \(updatedMeal.id))")
-                    
                     // Update the meals array if this meal exists in it
                     if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
                         self?.meals[index] = updatedMeal
@@ -2318,20 +2232,18 @@ func updateMeal(
                             guard let self else { return }
                             await self.mealsRepository.refresh(force: true)
                         }
-                    } else {
-                        print("ℹ️ Meal not found in meals array")
                     }
-                    
+
                     // Update combined logs if this meal exists there
-                    if let index = self?.combinedLogs.firstIndex(where: { 
-                        $0.type == .meal && $0.meal?.mealId == meal.id 
+                    if let index = self?.combinedLogs.firstIndex(where: {
+                        $0.type == .meal && $0.meal?.mealId == meal.id
                     }) {
-                
-                        if var log = self?.combinedLogs[index] {
+
+                        if let log = self?.combinedLogs[index] {
                             // Create a new meal summary from the updated meal
                             do {
                                 if let newLogWithUpdatedMeal = try self?.recreateLogWithUpdatedMeal(
-                                    originalLog: log, 
+                                    originalLog: log,
                                     updatedMeal: MealSummary(
                                         mealId: updatedMeal.id,
                                         title: updatedMeal.title,
@@ -2346,22 +2258,16 @@ func updateMeal(
                                     )
                                 ) {
                                     self?.combinedLogs[index] = newLogWithUpdatedMeal
-                                    print("✅ Successfully updated meal in combined logs")
-                                } else {
-                                    print("⚠️ Failed to create updated log entry")
                                 }
                             } catch {
-                                print("❌ Error recreating log with updated meal: \(error)")
+                                // Error recreating log with updated meal
                             }
                         }
-                    } else {
-                        print("ℹ️ Meal not found in combined logs")
                     }
-                    
+
                     completion?(.success(updatedMeal))
-                    
+
                 case .failure(let error):
-                    print("❌ Error updating meal with foods: \(error.localizedDescription)")
                     completion?(.failure(error))
                 }
             }
@@ -2403,8 +2309,6 @@ func updateMeal(
             DispatchQueue.main.async {
                 switch result {
                 case .success(let updatedMeal):
-                    print("✅ Meal updated successfully: \(updatedMeal.title)")
-                    
                     // Update the meals array if this meal exists in it
                     if let index = self?.meals.firstIndex(where: { $0.id == meal.id }) {
                         self?.meals[index] = updatedMeal
@@ -2441,7 +2345,6 @@ func updateMeal(
                     completion?(.success(updatedMeal))
                     
                 case .failure(let error):
-                    print("❌ Error updating meal: \(error)")
                     completion?(.failure(error))
                 }
             }
@@ -2469,7 +2372,6 @@ private func recreateLogWithUpdatedMeal(originalLog: CombinedLog, updatedMeal: M
 }
 // After the resetAndFetchRecipes method
 private func resetAndFetchRecipes(force: Bool = false) {
-    print("🍛 FoodManager: Reset and fetch recipes called")
     guard !isFetchingRecipes else { return }
     isFetchingRecipes = true
 
@@ -2606,7 +2508,6 @@ func createRecipe(
                 completion?(.success(recipe))
                 
             case .failure(let error):
-                print("❌ Error creating recipe: \(error.localizedDescription)")
                 completion?(.failure(error))
             }
         }
@@ -2641,13 +2542,10 @@ func logRecipe(
 
             switch result {
             case .success(let recipeLog):
-                print("✅ Successfully logged recipe with recipeLogId: \(recipeLog.recipeLogId)")
-
                 // Stop awaiting and store coach message if present
                 self.isAwaitingCoachMessage = false
                 if let coachMessage = recipeLog.coach {
                     self.lastCoachMessage = coachMessage
-                    print("📝 Coach message received for recipe log")
                 }
 
                 // Update last logged recipe ID for UI feedback
@@ -2665,7 +2563,6 @@ func logRecipe(
                 statusCompletion?(true)
 
             case .failure(let error):
-                print("❌ Error logging recipe: \(error.localizedDescription)")
                 self.isAwaitingCoachMessage = false  // Stop awaiting on error
                 completion?(.failure(error))
                 statusCompletion?(false)
@@ -2679,13 +2576,11 @@ func updateRecipe(
     foods: [Food] = [],
     completion: ((Result<Recipe, Error>) -> Void)? = nil
 ) {
-    guard let email = userEmail else { 
+    guard let email = userEmail else {
         completion?(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
-        return 
+        return
     }
-    
-    print("🔄 updateRecipe called with recipe ID: \(recipe.id), title: \(recipe.title), foods count: \(foods.count)")
-    
+
     // If foods array is not empty, use it to calculate macros
     // Otherwise use the recipe's existing values
     let calculatedCalories: Double
@@ -2752,7 +2647,6 @@ func updateRecipe(
                     completion?(.success(updatedRecipe))
                     
                 case .failure(let error):
-                    print("❌ Error updating recipe with foods: \(error.localizedDescription)")
                     completion?(.failure(error))
                 }
             }
@@ -2811,7 +2705,6 @@ func updateRecipe(
                     completion?(.success(updatedRecipe))
 
                 case .failure(let error):
-                    print("❌ Error updating recipe: \(error)")
                     completion?(.failure(error))
                 }
             }
@@ -2824,7 +2717,6 @@ func deleteRecipe(
     completion: ((Result<Void, Error>) -> Void)? = nil
 ) {
     guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
-        print("❌ No user email found for delete recipe")
         completion?(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No user email"])))
         return
     }
@@ -2841,11 +2733,9 @@ func deleteRecipe(
                     await self?.recipesRepository.refresh(force: true)
                 }
 
-                print("✅ Recipe deleted successfully")
                 completion?(.success(()))
 
             case .failure(let error):
-                print("❌ Error deleting recipe: \(error.localizedDescription)")
                 completion?(.failure(error))
             }
         }
@@ -2857,12 +2747,9 @@ func duplicateRecipe(
     completion: ((Result<Recipe, Error>) -> Void)? = nil
 ) {
     guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
-        print("❌ No user email found for duplicate recipe")
         completion?(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No user email"])))
         return
     }
-
-    print("📋 FoodManager: Duplicating recipe: \(recipe.title)")
 
     networkManager.duplicateRecipe(recipeId: recipe.id, userEmail: email) { [weak self] result in
         DispatchQueue.main.async {
@@ -2874,11 +2761,9 @@ func duplicateRecipe(
                 // Insert into repository optimistically
                 RecipesRepository.shared.insertOptimistically(newRecipe)
 
-                print("✅ Recipe duplicated successfully: \(newRecipe.title)")
                 completion?(.success(newRecipe))
 
             case .failure(let error):
-                print("❌ Error duplicating recipe: \(error.localizedDescription)")
                 completion?(.failure(error))
             }
         }
@@ -2890,12 +2775,9 @@ func importRecipe(
     completion: ((Result<Recipe, Error>) -> Void)? = nil
 ) {
     guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
-        print("❌ No user email found for import recipe")
         completion?(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No user email"])))
         return
     }
-
-    print("📥 FoodManager: Importing recipe from URL: \(url)")
 
     networkManager.importRecipe(url: url, userEmail: email) { [weak self] result in
         DispatchQueue.main.async {
@@ -2909,11 +2791,9 @@ func importRecipe(
                     await self?.recipesRepository.refresh(force: true)
                 }
 
-                print("✅ Recipe imported successfully: \(recipe.title)")
                 completion?(.success(recipe))
 
             case .failure(let error):
-                print("❌ Error importing recipe: \(error.localizedDescription)")
                 completion?(.failure(error))
             }
         }
@@ -2923,22 +2803,18 @@ func importRecipe(
 // Update the generateMacrosWithAI method
 @MainActor
 func generateMacrosWithAI(foodDescription: String, mealType: String, completion: @escaping (Result<LoggedFood, Error>) -> Void) {
-    print("🔍 DEBUG generateMacrosWithAI called - food: \(foodDescription), meal: \(mealType)")
-    
     // UNIFIED: Start with proper 0% progress, then animate with smooth transitions
     updateFoodScanningState(.initializing)  // Start at 0% with animation
     isGeneratingMacros = true
     isLoading = true  // THIS was missing - needed to show the loading card!
     macroGenerationStage = 0
-    
+
     // Animate to macro generation state after brief delay
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
         self.updateFoodScanningState(.generatingMacros)  // Smooth animate to 50%
     }
     macroLoadingMessage = "Analyzing food description..."
     showAIGenerationSuccess = false
-    
-    print("🔍 DEBUG generateMacrosWithAI - Starting with initializing state for proper session flow")
     // CRITICAL FIX: Start with initializing state for proper 0% progress visibility
     updateFoodScanningState(.initializing)
     
@@ -2980,8 +2856,6 @@ func generateMacrosWithAI(foodDescription: String, mealType: String, completion:
         
         switch result {
         case .success(let loggedFood):
-            print("✅ AI macros generated successfully: \(loggedFood.food.displayName)")
-
             // Mixpanel tracking removed - now handled by backend
 
             self.aiGeneratedFood = loggedFood.food
@@ -3358,7 +3232,6 @@ func createManualFood(food: Food, showPreview: Bool = true, completion: @escapin
                     }
                     completion(.success(updatedFood))
                 case .failure(let error):
-                    print("❌ Failed to update food: \(error.localizedDescription)")
                     completion(.failure(error))
                 }
             }
@@ -3391,37 +3264,31 @@ func createManualFood(food: Food, showPreview: Bool = true, completion: @escapin
     // Delete a food
     func deleteFood(id: Int, completion: @escaping (Result<Void, Error>) -> Void = { _ in }) {
         guard let email = userEmail else {
-            print("⚠️ Cannot delete food: User email not set")
             completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
             return
         }
-        
+
         // Find the food in userFoods
         if let index = userFoods.firstIndex(where: { $0.fdcId == id }) {
             // Remove from local array first for immediate UI update
             let removedFood = userFoods.remove(at: index)
-            
+
             // Call network manager to delete from server
             networkManager.deleteFood(foodId: id, userEmail: email) { [weak self] result in
                 guard let self = self else { return }
-                
+
                 switch result {
                 case .success:
-                    print("✅ Successfully deleted food with ID: \(id)")
-                    
                     // Nothing more to do as we've already removed it locally
                     completion(.success(()))
-                    
+
                 case .failure(let error):
-                    print("❌ Failed to delete food: \(error)")
-                    
                     // Add the food back to the array since deletion failed
                     self.userFoods.insert(removedFood, at: index)
                     completion(.failure(error))
                 }
             }
         } else {
-            print("⚠️ Food with ID \(id) not found in userFoods")
             completion(.failure(NSError(domain: "FoodManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Food not found"])))
         }
     }
@@ -3494,7 +3361,6 @@ func createManualFood(food: Food, showPreview: Bool = true, completion: @escapin
     // Function to delete a user-created food
     func deleteUserFood(id: Int, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let email = userEmail else {
-            print("⚠️ Cannot delete user food: User email not set")
             completion(.failure(NSError(domain: "FoodManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User email not set"])))
             return
         }
@@ -3511,10 +3377,8 @@ func createManualFood(food: Food, showPreview: Bool = true, completion: @escapin
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    print("✅ Successfully deleted user food with ID: \(id)")
                     completion(.success(()))
                 case .failure(let error):
-                    print("❌ Failed to delete user food: \(error)")
                     // Restore to local array if it was removed
                     if let index = index, let food = removedFood {
                         self.userFoods.insert(food, at: index)
@@ -3535,108 +3399,68 @@ func analyzeFoodImage(
   shouldLog: Bool = true,  // Default to true for backward compatibility
   completion: @escaping (Result<CombinedLog, Error>) -> Void
 ) {
-  print("🔍 CRASH_DEBUG: ===== FoodManager.analyzeFoodImage START =====")
-  print("🔍 CRASH_DEBUG: shouldLog = \(shouldLog), userEmail = \(userEmail), mealType = \(mealType)")
-  
   // CRITICAL FIX: Defensive checks at start of function
   guard !userEmail.isEmpty else {
-    print("❌ CRASH_DEBUG: Empty user email, aborting analysis")
     completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "User email is required"])))
     return
   }
-  
+
   guard image.size.width > 0 && image.size.height > 0 else {
-    print("❌ CRASH_DEBUG: Invalid image size: \(image.size), aborting analysis")
     completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid image"])))
     return
   }
-  
+
   // CRITICAL FIX: Reset scanner dismissed flag for new scan
   resetScannerDismissedFlag()
-  
-  // Log image details and optimize if needed
-  let imageSize = image.size
-  let imageSizeBytes = image.jpegData(compressionQuality: 1.0)?.count ?? 0
-  let imageSizeMB = Double(imageSizeBytes) / 1024.0 / 1024.0
-  print("🔍 CRASH_DEBUG: Image analysis - Size: \(imageSize), File size: \(String(format: "%.2f", imageSizeMB))MB")
-  
+
   // CRITICAL FIX: Auto-compress large images to prevent memory crashes
   let optimizedImage = optimizeImageForProcessing(image)
-  let optimizedSizeBytes = optimizedImage.jpegData(compressionQuality: 0.8)?.count ?? 0
-  let optimizedSizeMB = Double(optimizedSizeBytes) / 1024.0 / 1024.0
-  print("🔍 CRASH_DEBUG: Optimized image - File size: \(String(format: "%.2f", optimizedSizeMB))MB")
-  
-  // Log memory before starting and check for high pressure
-  let memoryBefore = getMemoryUsage()
-  print("🔍 CRASH_DEBUG: Memory before analysis - Used: \(String(format: "%.1f", memoryBefore.used))MB, Available: \(String(format: "%.1f", memoryBefore.available))MB")
-  
-  // Check memory pressure and warn if high
+
+  // Check memory pressure
   let isHighMemoryPressure = checkMemoryPressure()
-  if isHighMemoryPressure {
-    print("⚠️ CRASH_DEBUG: High memory pressure detected, proceeding with extra caution")
-  }
-  
-  if shouldLog {
-      print("🔍 DEBUG FoodManager: Will create food AND log to database")
-  } else {
-      print("🔍 DEBUG FoodManager: Will create food WITHOUT logging (preview mode)")
-  }
-  
+  _ = isHighMemoryPressure // Silence unused variable warning
+
   // ─── 1) UI state ─────────────────────────────
-  print("🔍 CRASH_DEBUG: Setting UI state - isAnalyzingImage = true, isLoading = true")
   isAnalyzingImage = true
   isLoading        = true
   imageAnalysisMessage = "Analyzing image…"
   uploadProgress   = 0
 
   // ─── 2) Fake progress ticker ─────────────────
-  print("🔍 CRASH_DEBUG: Creating progress timer")
-
   uploadProgress = 0
-let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] t in
-  guard let self = self else { 
-    print("🔍 CRASH_DEBUG: Progress timer - self is nil, invalidating timer")
-    t.invalidate(); return 
+  let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] t in
+    guard let self = self else {
+      t.invalidate(); return
+    }
+
+    // CRITICAL FIX: Ensure all @Published updates happen on main thread
+    DispatchQueue.main.async {
+      self.uploadProgress = min(0.9, self.uploadProgress + 0.1)
+    }
   }
-  
-  // CRITICAL FIX: Ensure all @Published updates happen on main thread
-  DispatchQueue.main.async {
-    self.uploadProgress = min(0.9, self.uploadProgress + 0.1)
-    print("🔍 CRASH_DEBUG: Progress updated to \(self.uploadProgress) [MAIN THREAD]")
-  }
-}
-// Track timer for cleanup
-trackTimer(progressTimer)
+  // Track timer for cleanup
+  trackTimer(progressTimer)
 
   // ─── 3) Call backend ─────────────────────────
-  print("🔍 CRASH_DEBUG: Calling networkManager.analyzeFoodImage with optimized image")
   let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"; df.timeZone = .current
   let selected = dayLogsViewModel?.selectedDate ?? Date()
   let dateString = df.string(from: selected)
   networkManager.analyzeFoodImage(image: optimizedImage, userEmail: userEmail, mealType: mealType, shouldLog: shouldLog, logDate: dateString) { [weak self] success, payload, errMsg in
-    print("🔍 CRASH_DEBUG: Network callback received - success: \(success)")
-    guard let self = self else { 
-      print("🔍 CRASH_DEBUG: Network callback - self is nil, returning early")
-      return 
+    guard let self = self else {
+      return
     }
     DispatchQueue.main.async {
-      print("🔍 CRASH_DEBUG: Network callback - on main queue, stopping timer")
-      
       // stop ticker + UI
       progressTimer.invalidate()
 
-     withAnimation {
+      withAnimation {
         self.uploadProgress = 1.0
       }
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-        print("🔍 CRASH_DEBUG: Resetting UI state after analysis completion")
-        let memoryAfter = getMemoryUsage()
-        print("🔍 CRASH_DEBUG: Memory after analysis - Used: \(String(format: "%.1f", memoryAfter.used))MB, Available: \(String(format: "%.1f", memoryAfter.available))MB")
-        
         self.isAnalyzingImage = false
         self.isLoading        = false
         self.imageAnalysisMessage = ""
-        
+
         // Reset ALL scanning states together to prevent UI glitches
         self.isScanningFood = false
         self.isGeneratingFood = false
@@ -3645,15 +3469,12 @@ trackTimer(progressTimer)
 
         // reset for next time
         self.uploadProgress = 0
-        print("🔍 CRASH_DEBUG: UI state reset complete")
       }
 
       // failure path
       guard success, let payload = payload else {
         let msg = errMsg ?? "Unknown error"
-        print("🔍 CRASH_DEBUG: Network call failed - error: \(msg)")
-        print("🔴 [analyzeFoodImage] error: \(msg)")
-        
+
         // Show user-friendly error message for photo scan failures
         DispatchQueue.main.async {
           self.showScanFailure(
@@ -3661,8 +3482,7 @@ trackTimer(progressTimer)
             message: "We couldn't recognize the food in this photo. Try taking a clearer picture or enter the food manually."
           )
         }
-        
-        print("🔍 CRASH_DEBUG: Calling completion(.failure) - Network error")
+
         completion(.failure(NSError(
           domain: "FoodScan", code: -1,
           userInfo: [NSLocalizedDescriptionKey: msg])))
@@ -3670,21 +3490,17 @@ trackTimer(progressTimer)
       }
 
       //── 4) Dump raw payload for debugging
-     
       if let rawJSON = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
-         let str     = String(data: rawJSON, encoding: .utf8) {
-     
+         let _ = String(data: rawJSON, encoding: .utf8) {
       }
 
       // CRITICAL FIX: Add defensive checks before processing response
       guard let payload = payload as? [String: Any] else {
-        print("❌ CRASH_DEBUG: Invalid payload type - not a dictionary")
         completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])))
         return
       }
-      
+
       do {
-        print("🔍 CRASH_DEBUG: Starting to decode network response")
         //── 5) Handle different response formats based on shouldLog parameter
         let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
         let decoder  = JSONDecoder()
@@ -3715,8 +3531,6 @@ trackTimer(progressTimer)
           )
         } else {
             // When shouldLog=false, backend returns creation response without foodLogId
-            print("🔍 DEBUG FoodManager: Decoding creation response (shouldLog=false)")
-            
             // Extract the food from the creation response and convert to LoggedFoodItem
             guard let foodDict = payload["food"] as? [String: Any] else {
                 throw NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No food data in creation response"])
@@ -3765,9 +3579,8 @@ trackTimer(progressTimer)
                 do {
                     let healthAnalysisData = try JSONSerialization.data(withJSONObject: healthAnalysisDict)
                     healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthAnalysisData)
-                    print("🩺 [DEBUG] Health analysis extracted from image analysis food object: score=\(healthAnalysis?.score ?? 0)")
                 } catch {
-                    print("⚠️ [DEBUG] Failed to decode health analysis from image analysis food object: \(error)")
+                    // Failed to decode health analysis from image analysis food object
                 }
             }
             // Fallback: try top-level health_analysis (for backward compatibility)
@@ -3775,9 +3588,8 @@ trackTimer(progressTimer)
                 do {
                     let healthAnalysisData = try JSONSerialization.data(withJSONObject: healthAnalysisDict)
                     healthAnalysis = try JSONDecoder().decode(HealthAnalysis.self, from: healthAnalysisData)
-                    print("🩺 [DEBUG] Health analysis extracted from top-level payload: score=\(healthAnalysis?.score ?? 0)")
                 } catch {
-                    print("⚠️ [DEBUG] Failed to decode health analysis from top-level payload: \(error)")
+                    // Failed to decode health analysis from top-level payload
                 }
             }
             
@@ -3829,11 +3641,9 @@ trackTimer(progressTimer)
                 servingsConsumed: nil)
             
         }
-        print("🔍 CRASH_DEBUG: Calling completion(.success(combined)) - Analysis complete")
         completion(.success(combined))
-        
+
         // Set success data and show toast - MUST be on main thread
-        print("🔍 CRASH_DEBUG: Setting success data and showing toast")
         DispatchQueue.main.async {
            self.lastLoggedItem = (
              name:     combined.food?.displayName ?? "Unknown Food",
@@ -3855,12 +3665,7 @@ trackTimer(progressTimer)
         // Mixpanel tracking removed - now handled by backend
         
       } catch {
-        //── 7) On decode error, print the bad JSON + error
-        print("❌ [analyzeFoodImage] decoding LoggedFood failed:", error)
-        if let rawJSON = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
-           let str     = String(data: rawJSON, encoding: .utf8) {
-          print("❌ [analyzeFoodImage] payload was:\n\(str)")
-        }
+        //── 7) On decode error
         completion(.failure(error))
       }
     }
@@ -3876,17 +3681,6 @@ func analyzeNutritionLabel(
   shouldLog: Bool = true,  // Default to true for backward compatibility
   completion: @escaping (Result<CombinedLog, Error>) -> Void
 ) {
-  print("📊 [DEBUG] ====== FoodManager.analyzeNutritionLabel START ======")
-  print("📊 [DEBUG] shouldLog parameter received: \(shouldLog)")
-  print("📊 [DEBUG] userEmail: \(userEmail)")
-  print("📊 [DEBUG] mealType: \(mealType)")
-  if shouldLog {
-      print("📊 [DEBUG] MODE: Will create food AND log to database (should_log=true)")
-  } else {
-      print("📊 [DEBUG] MODE: Will create food WITHOUT logging (should_log=false, preview mode)")
-  }
-  print("📊 [DEBUG] About to call NetworkManager.analyzeNutritionLabel with shouldLog=\(shouldLog)")
-  
   // ─── 1) UI state ─────────────────────────────
   // MODERN: Use modern FoodScanningState system with image thumbnail
   updateFoodScanningState(.preparing(image: image))
@@ -3905,14 +3699,13 @@ func analyzeNutritionLabel(
   uploadProgress = 0
   var progressTimer: Timer?
   progressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-    guard let self = self else { 
+    guard let self = self else {
       progressTimer?.invalidate()
-      return 
+      return
     }
     // CRITICAL FIX: Ensure all @Published updates happen on main thread
     DispatchQueue.main.async {
       self.uploadProgress = min(0.9, self.uploadProgress + 0.1)
-      print("🔍 CRASH_DEBUG: Nutrition label progress updated to \(self.uploadProgress) [MAIN THREAD]")
     }
   }
 
@@ -3979,8 +3772,6 @@ func analyzeNutritionLabel(
     // ─── 4) Check if name input is required ─────────────────
     if let status = payload["status"] as? String, status == "name_required" {
       // Product name not found - we need user input
-      print("🏷️ [analyzeNutritionLabel] Product name not found, user input required")
-      
       // Store nutrition data for later use with user-provided name
       if let nutritionData = payload["nutrition_data"] as? [String: Any] {
         // TODO: Show name input dialog and create food with user-provided name
@@ -4006,20 +3797,14 @@ func analyzeNutritionLabel(
 
     // ─── 5) Use the SAME parsing as analyzeFoodImage ───────────
     do {
-      if let rawJSON = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
-         let str     = String(data: rawJSON, encoding: .utf8) {
-        print("🔍 [analyzeNutritionLabel] raw payload:\n\(str)")
-      }
-
       // Handle different response formats based on shouldLog parameter (same as analyzeFoodImage)
       let jsonData = try JSONSerialization.data(withJSONObject: payload, options: [])
       let decoder  = JSONDecoder()
-      
+
       let combinedLog: CombinedLog
-      
+
       if shouldLog {
         // When shouldLog=true, backend returns LoggedFood with foodLogId
-        print("🔍 DEBUG FoodManager: Decoding LoggedFood (shouldLog=true)")
         let loggedFood = try decoder.decode(LoggedFood.self, from: jsonData)
         
         combinedLog = CombinedLog(
@@ -4040,8 +3825,6 @@ func analyzeNutritionLabel(
         )
       } else {
         // When shouldLog=false, backend returns creation response without foodLogId
-        print("🔍 DEBUG FoodManager: Decoding creation response (shouldLog=false)")
-        
         guard let foodDict = payload["food"] as? [String: Any] else {
           throw NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No food data in creation response"])
         }
@@ -4101,14 +3884,8 @@ func analyzeNutritionLabel(
        // Mixpanel tracking removed - now handled by backend
 
     } catch {
-      //── 7) On decode error, print the bad JSON + error
-      print("❌ [analyzeNutritionLabel] decoding error:", error)
-      if let rawJSON = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]),
-         let str     = String(data: rawJSON, encoding: .utf8) {
-        print("❌ [analyzeNutritionLabel] payload was:\n\(str)")
-      }
-      
-      // MODERN: Update to failed state for decoding errors (triggers auto-reset)  
+      //── 7) On decode error
+      // MODERN: Update to failed state for decoding errors (triggers auto-reset)
       updateFoodScanningState(.failed(error: .networkError("Failed to process nutrition label")))
       isImageScanning = false
       currentScanningImage = nil
@@ -4295,7 +4072,6 @@ func analyzeNutritionLabel(
                         }
                         self.processDirectNutritionixFood(food: food, mealType: mealType, completion: completion)
                     case .failure(let error):
-                        print("❌ Nutritionix direct lookup failed: \(error.localizedDescription)")
                         self.legacyLookupFoodByBarcodeDirect(
                             barcode: barcode,
                             userEmail: currentEmail,
@@ -4319,8 +4095,6 @@ func analyzeNutritionLabel(
     }
 
     private func legacyLookupFoodByBarcodeDirect(barcode: String, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, String?) -> Void) {
-        print("🔍 Starting direct barcode lookup for: \(barcode)")
-        
         // MODERN: Use modern FoodScanningState system with proper state progression
         updateFoodScanningState(.initializing)
         
@@ -4354,7 +4128,6 @@ func analyzeNutritionLabel(
                 
                 // Gradually increase progress
                 self.uploadProgress = min(self.uploadProgress + 0.1, 0.9)
-                print("🔍 CRASH_DEBUG: Barcode progress updated to \(self.uploadProgress) [MAIN THREAD]")
             }
         }
         
@@ -4382,14 +4155,7 @@ func analyzeNutritionLabel(
             switch result {
             case .success(let payload):
                 let food = payload.food
-                
-                print("✅ Direct barcode lookup successful: \(food.displayName)")
-                let calories = food.calories ?? 0
-                let protein = food.protein ?? 0
-                let carbs = food.carbs ?? 0
-                let fat = food.fat ?? 0
-                print("🍽️ Direct barcode macros – calories: \(calories), protein: \(protein)g, carbs: \(carbs)g, fat: \(fat)g")
-                
+
                 // Track barcode scanning in Mixpanel
                 Mixpanel.mainInstance().track(event: "Barcode Scan", properties: [
                     "food_name": food.displayName,
@@ -4451,8 +4217,6 @@ func analyzeNutritionLabel(
                 }
                 
             case .failure(let error):
-                print("❌ Direct barcode lookup failed: \(error)")
-                
                 DispatchQueue.main.async {
                     // MODERN: Update to failed state
                     self.updateFoodScanningState(.failed(error: .networkError("Barcode lookup failed")))
@@ -4500,7 +4264,6 @@ func analyzeNutritionLabel(
                             completion: completion
                         )
                     case .failure(let error):
-                        print("❌ Nutritionix enhanced lookup failed: \(error.localizedDescription)")
                         self.legacyLookupFoodByBarcodeEnhanced(
                             barcode: barcode,
                             userEmail: userEmail,
@@ -4533,12 +4296,7 @@ func analyzeNutritionLabel(
         if enrichedFood.barcode == nil {
             enrichedFood.barcode = barcode
         }
-        print("✅ Enhanced barcode lookup successful: \(enrichedFood.displayName)")
         let calories = enrichedFood.calories ?? 0
-        let protein = enrichedFood.protein ?? 0
-        let carbs = enrichedFood.carbs ?? 0
-        let fat = enrichedFood.fat ?? 0
-        print("🍽️ Enhanced barcode macros – calories: \(calories), protein: \(protein)g, carbs: \(carbs)g, fat: \(fat)g")
 
         Mixpanel.mainInstance().track(event: "Barcode Scan", properties: [
             "food_name": enrichedFood.displayName,
@@ -4602,7 +4360,6 @@ func analyzeNutritionLabel(
     }
 
     private func legacyLookupFoodByBarcodeEnhanced(barcode: String, userEmail: String, mealType: String = "Lunch", completion: @escaping (Bool, String?) -> Void) {
-        print("🔍 Starting enhanced barcode lookup for: \(barcode)")
         let shouldShowLoaderCard = false
         var barcodeTimer: Timer?
         
@@ -4628,11 +4385,10 @@ func analyzeNutritionLabel(
                         "Finalizing food data..."
                     ].randomElement() ?? "Processing barcode..."
                     self.uploadProgress = min(self.uploadProgress + 0.1, 0.9)
-                    print("🔍 CRASH_DEBUG: Barcode progress updated to \(self.uploadProgress) [MAIN THREAD]")
                 }
             }
         }
-        
+
         // Call the enhanced barcode lookup endpoint
         let df3 = DateFormatter(); df3.dateFormat = "yyyy-MM-dd"; df3.timeZone = .current
         let selected3 = dayLogsViewModel?.selectedDate ?? Date()
@@ -4659,14 +4415,7 @@ func analyzeNutritionLabel(
             switch result {
             case .success(let payload):
                 let food = payload.food
-                
-                print("✅ Enhanced barcode lookup successful: \(food.displayName)")
-                let calories = food.calories ?? 0
-                let protein = food.protein ?? 0
-                let carbs = food.carbs ?? 0
-                let fat = food.fat ?? 0
-                print("🍽️ Enhanced barcode macros – calories: \(calories), protein: \(protein)g, carbs: \(carbs)g, fat: \(fat)g")
-                
+
                 // Track barcode scanning in Mixpanel
                 Mixpanel.mainInstance().track(event: "Barcode Scan", properties: [
                     "food_name": food.displayName,
@@ -4721,7 +4470,6 @@ func analyzeNutritionLabel(
                 self.barcodeLoadingMessage = ""
                 // Trigger navigation to confirmation view
                 // This will be handled by the DashboardView or ContentView
-                print("🩺 [DEBUG] Barcode food.healthAnalysis: \(food.healthAnalysis?.score ?? -1)")
                 NotificationCenter.default.post(
                     name: NSNotification.Name("ShowFoodConfirmation"),
                     object: nil,
@@ -4730,13 +4478,10 @@ func analyzeNutritionLabel(
                         "barcode": barcode
                     ]
                 )
-                print("🔍 DEBUG: Posted ShowFoodConfirmation notification for barcode: \(food.description)")
-                print("🔍 DEBUG: Health analysis in barcode notification food: \(food.healthAnalysis?.score ?? -1)")
-                
+
                 completion(true, nil)
-                
+
             case .failure(let error):
-                print("❌ Enhanced barcode lookup failed: \(error)")
                 
                 // CRITICAL FIX: Reset barcode scanning states on main thread
                 DispatchQueue.main.async {
@@ -4911,12 +4656,10 @@ func analyzeNutritionLabel(
             
             switch result {
             case .success(let text):
-                print("✅ Voice transcription successful: \(text)")
                 // Show mid-upload progress to give smooth fill while moving to analysis
                 self.updateFoodScanningState(.uploading(progress: 0.5))
-                
+
                 // Second step: Generate AI macros from the transcribed text (call network directly)
-                print("🍽️ Calling networkManager.generateMacrosWithAI with mealType: \(mealType)")
                 // Move to analyzing state during macro generation
                 self.updateFoodScanningState(.analyzing)
                 self.networkManager.generateMacrosWithAI(foodDescription: text, mealType: mealType) { result in
@@ -4924,8 +4667,6 @@ func analyzeNutritionLabel(
                     
                     switch result {
                     case .success(let loggedFood):
-                        print("✅ Voice log successfully processed: \(loggedFood.food.displayName)")
-                        
                         // CRITICAL: Stop the timer to prevent interference with auto-reset
                         self.stopVoiceTimer()
                         
@@ -4948,7 +4689,6 @@ func analyzeNutritionLabel(
                                 self.macroGenerationStage = 0
                                 self.macroLoadingMessage = ""
                             }
-                            print("⚠️ Voice log returned Unknown food with no nutrition data")
                             return
                         }
                         
@@ -5040,14 +4780,13 @@ func analyzeNutritionLabel(
                         self.macroGenerationStage = 0
                         self.macroLoadingMessage = ""
                         
-                        print("❌ Failed to generate macros from voice input: \(error.localizedDescription)")
                     }
                 }
-                
+
             case .failure(let error):
                 // Stop the timer and reset macro generation state
                 self.stopVoiceTimer()
-                
+
                 // Use proper error handling with auto-reset (like image analysis)
                 let scanError: FoodScanError
                 if let networkError = error as? NetworkError, case .serverError(let message) = networkError {
@@ -5056,32 +4795,27 @@ func analyzeNutritionLabel(
                     scanError = .networkError("Failed to transcribe voice input: \(error.localizedDescription)")
                 }
                 updateFoodScanningState(.failed(error: scanError))
-                
+
                 // UNIFIED: Reset to inactive state (keeping legacy for backward compatibility)
                 foodScanningState = .inactive
                 isGeneratingMacros = false
                 isLoading = false
                 macroGenerationStage = 0
                 macroLoadingMessage = ""
-                
-                print("❌ Voice transcription failed: \(error.localizedDescription)")
             }
         }
     }
     
 
     func finishLogging(food: Food, mealType: String, completion: @escaping () -> Void = {}) {
-        print("🍽️ Finalizing food logging for \(food.displayName) as \(mealType)")
-        
-        guard let email = userEmail else { 
+        guard let email = userEmail else {
             completion()
-            return 
+            return
         }
-        
+
         self.isLoggingFood = true
         self.lastLoggedFoodId = food.fdcId
-        
-        print("📡 Sending log request to server for \(food.displayName)")
+
         // Call the correct NetworkManager logFood method with the required parameters
         networkManager.logFood(
             userEmail: email,
@@ -5102,8 +4836,6 @@ func analyzeNutritionLabel(
                 
                 switch result {
                 case .success(let loggedFood):
-                    print("✅ Successfully logged food with foodLogId: \(loggedFood.foodLogId)")
-
                     // Mixpanel tracking removed - now handled by backend
 
                     // Create a new CombinedLog from the logged food
@@ -5157,8 +4889,6 @@ func analyzeNutritionLabel(
              
                     
                 case .failure(let error):
-                    print("❌ Failed to log food: \(error.localizedDescription)")
-                    
                     // Ensure all @Published property updates happen on main thread
                     DispatchQueue.main.async {
                         // Display error message
@@ -5187,10 +4917,8 @@ func analyzeNutritionLabel(
     }
     
     // MARK: - Saved Meals Functions
-    
-    private func resetAndFetchSavedMeals(force: Bool = false) {
-        print("💾 FoodManager: Reset and fetch saved meals called")
 
+    private func resetAndFetchSavedMeals(force: Bool = false) {
         guard !isFetchingSavedMeals else { return }
 
         currentSavedMealsPage = 1
@@ -5209,7 +4937,6 @@ func analyzeNutritionLabel(
         }
     }
     func refreshSavedMeals() {
-        print("🔄 FoodManager: Refreshing saved meals")
         lastSavedMealsFetchDate = nil
         resetAndFetchSavedMeals(force: true)
     }
@@ -5272,35 +4999,33 @@ func analyzeNutritionLabel(
             DispatchQueue.main.async {
                 switch result {
                 case .success(let response):
-                    print("✅ Successfully saved meal: \(response.message)")
                     // Refresh the saved meals list to include the new item
                     self?.refreshSavedMeals()
-                    
+
                     // Add to saved log IDs
                     self?.savedLogIds.insert(itemId)
-                    
+
                     // Show saved meal toast
                     self?.showSavedMealToast = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                         self?.showSavedMealToast = false
                     }
-                    
+
                     completion(.success(response))
-                    
+
                 case .failure(let error):
-                    print("❌ Failed to save meal: \(error)")
                     completion(.failure(error))
                 }
             }
         }
     }
-    
+
     func unsaveMeal(savedMealId: Int, completion: @escaping (Result<UnsaveMealResponse, Error>) -> Void) {
         guard let email = userEmail else {
             completion(.failure(NetworkManagerTwo.NetworkError.serverError(message: "User email not available")))
             return
         }
-        
+
         NetworkManagerTwo.shared.unsaveMeal(
             userEmail: email,
             savedMealId: savedMealId
@@ -5308,7 +5033,6 @@ func analyzeNutritionLabel(
             DispatchQueue.main.async {
                 switch result {
                 case .success(let response):
-                    print("✅ Successfully unsaved meal: \(response.message)")
                     // Remove the item from the local array and update saved log IDs
                     if let removedMeal = self?.savedMeals.first(where: { $0.id == savedMealId }) {
                         if removedMeal.itemType == .foodLog, let foodLog = removedMeal.foodLog, let foodLogId = foodLog.foodLogId {
@@ -5318,17 +5042,16 @@ func analyzeNutritionLabel(
                         }
                     }
                     self?.savedMeals.removeAll { $0.id == savedMealId }
-                    
+
                     // Show unsaved meal toast
                     self?.showUnsavedMealToast = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                         self?.showUnsavedMealToast = false
                     }
-                    
+
                     completion(.success(response))
-                    
+
                 case .failure(let error):
-                    print("❌ Failed to unsave meal: \(error)")
                     completion(.failure(error))
                 }
             }
@@ -5384,12 +5107,10 @@ func analyzeNutritionLabel(
             DispatchQueue.main.async {
                 switch result {
                 case .success(let response):
-                    print("✅ Successfully saved food: \(response.message)")
                     self?.savedFoodIds.insert(foodId)
                     completion(.success(response))
 
                 case .failure(let error):
-                    print("❌ Failed to save food: \(error)")
                     completion(.failure(error))
                 }
             }
@@ -5409,12 +5130,10 @@ func analyzeNutritionLabel(
             DispatchQueue.main.async {
                 switch result {
                 case .success(let response):
-                    print("✅ Successfully unsaved food: \(response.message)")
                     self?.savedFoodIds.remove(foodId)
                     completion(.success(response))
 
                 case .failure(let error):
-                    print("❌ Failed to unsave food: \(error)")
                     completion(.failure(error))
                 }
             }
@@ -5445,11 +5164,9 @@ func analyzeNutritionLabel(
             DispatchQueue.main.async {
                 switch result {
                 case .success(let response):
-                    print("✅ Successfully saved recipe: \(response.message)")
                     completion(.success(response))
 
                 case .failure(let error):
-                    print("❌ Failed to save recipe: \(error)")
                     completion(.failure(error))
                 }
             }
@@ -5469,11 +5186,9 @@ func analyzeNutritionLabel(
             DispatchQueue.main.async {
                 switch result {
                 case .success(let response):
-                    print("✅ Successfully unsaved recipe: \(response.message)")
                     completion(.success(response))
 
                 case .failure(let error):
-                    print("❌ Failed to unsave recipe: \(error)")
                     completion(.failure(error))
                 }
             }
@@ -5541,7 +5256,6 @@ func analyzeNutritionLabel(
             
             DispatchQueue.main.async {
                 if let error = error {
-                    print("❌ Network error creating nutrition label food: \(error)")
                     completion(.failure(error))
                     return
                 }
@@ -5583,7 +5297,6 @@ func analyzeNutritionLabel(
                         if shouldShowSheet {
                                 // Show confirmation sheet for food label (similar to barcode)
                                 let food = loggedFood.food.asFood
-                            print("📊 Food label preview enabled - showing confirmation sheet")
                             NotificationCenter.default.post(
                                 name: NSNotification.Name("ShowFoodConfirmation"),
                                 object: nil,
@@ -5594,7 +5307,6 @@ func analyzeNutritionLabel(
                             )
                         } else {
                             // Add to logs directly (same as successful scan)
-                            print("📊 Food label preview disabled - logging directly")
                             self.dayLogsViewModel?.addPending(combinedLog)
                             
                             if let idx = self.combinedLogs.firstIndex(where: { $0.foodLogId == combinedLog.foodLogId }) {
@@ -5609,10 +5321,8 @@ func analyzeNutritionLabel(
                         self.pendingMealType = "Lunch"
                         
                         completion(.success(combinedLog))
-                        print("✅ Successfully created nutrition label food with user-provided name")
                     }
                 } catch {
-                    print("❌ Failed to parse response: \(error)")
                     completion(.failure(error))
                 }
             }
@@ -5802,42 +5512,14 @@ func analyzeNutritionLabel(
                         var completeFoodData = foodData
                         if let healthAnalysis = json["health_analysis"] {
                             completeFoodData["health_analysis"] = healthAnalysis
-                            print("🩺 [DEBUG] Health analysis found and merged into food data (createNutritionLabelFoodForCreation)")
-                            
-                            // Debug: Print the actual health analysis data structure
-                            if let healthDict = healthAnalysis as? [String: Any] {
-                                print("🩺 [DEBUG] Health analysis keys: \(Array(healthDict.keys))")
-                                print("🩺 [DEBUG] Health analysis score from payload: \(healthDict["score"] ?? "nil")")
-                                print("🩺 [DEBUG] Health analysis color from payload: \(healthDict["color"] ?? "nil")")
-                            }
-                        } else {
-                            print("⚠️ [DEBUG] No health analysis found in response (createNutritionLabelFoodForCreation)")
                         }
-                        
-                        // Debug: Print the complete food data structure before decoding
-                        print("🩺 [DEBUG] Complete food data keys: \(Array(completeFoodData.keys))")
-                        if let healthInFood = completeFoodData["health_analysis"] as? [String: Any] {
-                            print("🩺 [DEBUG] Health analysis in complete food data - score: \(healthInFood["score"] ?? "nil")")
-                        }
-                        
+
                         let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
                         decoder.keyDecodingStrategy = .convertFromSnakeCase
-                        
-                        // Debug: Print the actual JSON being decoded
-                        if let jsonString = String(data: jsonData, encoding: .utf8) {
-                            print("🩺 [DEBUG] JSON being decoded (createNutritionLabelFoodForCreation): \(jsonString)")
-                        }
-                        
+
                         let food = try decoder.decode(Food.self, from: jsonData)
-                        
-                        print("🩺 [DEBUG] Food decoded. Health analysis present: \(food.healthAnalysis != nil)")
-                        if let healthAnalysis = food.healthAnalysis {
-                            print("🩺 [DEBUG] Health analysis score: \(healthAnalysis.score)")
-                            print("🩺 [DEBUG] Health analysis negatives count: \(healthAnalysis.negatives.count)")
-                            print("🩺 [DEBUG] Health analysis positives count: \(healthAnalysis.positives.count)")
-                        }
-                        
+
                         // Clear the pending state for creation
                         DispatchQueue.main.async {
                             self.showNutritionNameInputForCreation = false
@@ -5846,13 +5528,11 @@ func analyzeNutritionLabel(
                         }
                         
                         completion(.success(food))
-                        print("✅ Successfully created nutrition label food for creation with user-provided name")
                     } else {
                         completion(.failure(NSError(domain: "FoodManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])))
                     }
                 }
             } catch {
-                print("❌ Failed to parse response: \(error)")
                 completion(.failure(error))
             }
         }.resume()
@@ -5918,22 +5598,12 @@ func analyzeNutritionLabel(
                     if let foodData = payload["food"] as? [String: Any] {
                         // Health analysis should already be inside foodData from backend
                         let completeFoodData = foodData
-                        if let healthAnalysis = foodData["health_analysis"] {
-                            print("🩺 [DEBUG] Health analysis found in food data (analyzeFoodImageForCreation)")
-                        } else {
-                            print("⚠️ [DEBUG] No health analysis found in response (analyzeFoodImageForCreation)")
-                        }
-                        
+
                         let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
                         decoder.keyDecodingStrategy = .convertFromSnakeCase
                         let food = try decoder.decode(Food.self, from: jsonData)
-                        
-                        print("🩺 [DEBUG] Food decoded (analyzeFoodImageForCreation). Health analysis present: \(food.healthAnalysis != nil)")
-                        if let healthAnalysis = food.healthAnalysis {
-                            print("🩺 [DEBUG] Health analysis score (analyzeFoodImageForCreation): \(healthAnalysis.score)")
-                        }
-                        
+
                         // UNIFIED: Show completion with proper animation
                         let completionLog = CombinedLog(
                             type: .food,
@@ -5986,8 +5656,6 @@ func analyzeNutritionLabel(
                             userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])))
                     }
                 } catch {
-                    print("❌ [analyzeFoodImageForCreation] decoding error:", error)
-                    
                     // UNIFIED: Show error state for decoding error
                     self.updateFoodScanningState(.failed(error: .networkError(error.localizedDescription)))
                     
@@ -6109,37 +5777,14 @@ func analyzeNutritionLabel(
                             print("🩺 [DEBUG] Health analysis found and merged into food data (analyzeNutritionLabelForCreation)")
                             
                             // Debug: Print the actual health analysis data structure
-                            if let healthDict = healthAnalysis as? [String: Any] {
-                                print("🩺 [DEBUG] Health analysis keys: \(Array(healthDict.keys))")
-                                print("🩺 [DEBUG] Health analysis score from payload: \(healthDict["score"] ?? "nil")")
-                                print("🩺 [DEBUG] Health analysis color from payload: \(healthDict["color"] ?? "nil")")
-                            }
-                        } else {
-                            print("⚠️ [DEBUG] No health analysis found in response (analyzeNutritionLabelForCreation)")
                         }
-                        
-                        // Debug: Print the complete food data structure before decoding
-                        print("🩺 [DEBUG] Complete food data keys: \(Array(completeFoodData.keys))")
-                        if let healthInFood = completeFoodData["health_analysis"] as? [String: Any] {
-                            print("🩺 [DEBUG] Health analysis in complete food data - score: \(healthInFood["score"] ?? "nil")")
-                        }
-                        
+
                         let jsonData = try JSONSerialization.data(withJSONObject: completeFoodData, options: [])
                         let decoder = JSONDecoder()
                         decoder.keyDecodingStrategy = .convertFromSnakeCase
-                        
-                        // Debug: Print the actual JSON being decoded
-                        if let jsonString = String(data: jsonData, encoding: .utf8) {
-                            print("🩺 [DEBUG] JSON being decoded (analyzeNutritionLabelForCreation): \(jsonString)")
-                        }
-                        
+
                         let food = try decoder.decode(Food.self, from: jsonData)
-                        
-                        print("🩺 [DEBUG] Food decoded (analyzeNutritionLabelForCreation). Health analysis present: \(food.healthAnalysis != nil)")
-                        if let healthAnalysis = food.healthAnalysis {
-                            print("🩺 [DEBUG] Health analysis score (analyzeNutritionLabelForCreation): \(healthAnalysis.score)")
-                        }
-                        
+
                         // UNIFIED: Show completion with proper animation
                         let completionLog = CombinedLog(
                             type: .food,
@@ -6192,8 +5837,6 @@ func analyzeNutritionLabel(
                             userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])))
                     }
                 } catch {
-                    print("❌ [analyzeNutritionLabelForCreation] decoding error:", error)
-                    
                     // UNIFIED: Show error state for decoding error
                     self.updateFoodScanningState(.failed(error: .networkError(error.localizedDescription)))
                     
@@ -6216,124 +5859,106 @@ func analyzeNutritionLabel(
     }
     
     // MARK: - Timer Management and Cleanup Functions
-    
+
     /// Only cancel timers without resetting loading states
     func cancelTimersOnly() {
-        print("🔍 CRASH_DEBUG: cancelTimersOnly called - preserving progress timer to show continued loading")
-        
         // DON'T invalidate progress timer - let it continue until network completes
         // progressTimer?.invalidate()  // REMOVED - this was causing progress to freeze at 10%
-        
+
         // Only invalidate non-essential timers (stage animations, etc)
         for timer in activeTimers {
             // Only invalidate if it's not the main progress timer
             if timer != progressTimer {
                 timer.invalidate()
-                print("🔍 CRASH_DEBUG: Invalidated non-progress timer: \(timer)")
             }
         }
         // Remove invalidated timers but keep progress timer
         activeTimers = activeTimers.filter { $0 == progressTimer }
-        
-        print("🔍 CRASH_DEBUG: Non-essential timers cleaned up, progress timer preserved for smooth loading")
     }
-    
+
     /// Cancel all ongoing operations and timers to prevent crashes (OLD - kept for compatibility)
     func cancelOngoingOperations() {
-        print("🔍 CRASH_DEBUG: cancelOngoingOperations called - invalidating all active timers")
-        
         // Mark scanner as dismissed to prevent new UI updates
         scannerDismissed = true
-        
+
         // Invalidate main progress timer
         progressTimer?.invalidate()
         progressTimer = nil
-        
+
         // Invalidate all tracked active timers
         for timer in activeTimers {
             timer.invalidate()
-            print("🔍 CRASH_DEBUG: Invalidated timer: \(timer)")
         }
         activeTimers.removeAll()
-        
+
         // Note: We don't cancel network operations as they should complete
         // We just prevent UI updates after scanner dismissal
-        print("🔍 CRASH_DEBUG: All timers invalidated, operations cancelled")
     }
-    
+
     /// Reset all scanning-related @Published states
     func resetScanningStates() {
-        print("🔍 CRASH_DEBUG: resetScanningStates called - clearing all scanning UI states")
-        
         // Use main thread for all @Published updates
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            
+
             // Reset image analysis states
             self.isAnalyzingImage = false
             self.isLoading = false
             self.isScanningFood = false
             self.imageAnalysisMessage = ""
             self.loadingMessage = ""
-            
+
             // Reset barcode states
             self.isScanningBarcode = false
             self.barcodeLoadingMessage = ""
-            
-            // UNIFIED: Reset to inactive state  
+
+            // UNIFIED: Reset to inactive state
             self.foodScanningState = .inactive
             self.isGeneratingFood = false
             self.isGeneratingMacros = false
             self.isGeneratingMeal = false
             self.macroLoadingMessage = ""
-            
+
             // Reset progress
             self.uploadProgress = 0.0
-            
+
             // Clear scanned image reference
             self.scannedImage = nil
-            
-            print("🔍 CRASH_DEBUG: All scanning states reset on main thread")
         }
     }
-    
+
     /// Helper to track timers for cleanup
     private func trackTimer(_ timer: Timer) {
         activeTimers.insert(timer)
     }
-    
+
     /// Reset scanner dismissed flag when new scan starts
     private func resetScannerDismissedFlag() {
         scannerDismissed = false
-        print("🔍 CRASH_DEBUG: Scanner dismissed flag reset - new scan can proceed")
     }
-    
+
     // MARK: - Memory Management Functions
-    
+
     /// Optimize image size and quality to prevent memory crashes
     private func optimizeImageForProcessing(_ image: UIImage) -> UIImage {
         // CRITICAL FIX: Defensive check for invalid image
         guard image.size.width > 0 && image.size.height > 0 else {
-            print("❌ CRASH_DEBUG: Invalid image dimensions: \(image.size)")
             return image
         }
-        
+
         let originalSize = image.size
         let originalData = image.jpegData(compressionQuality: 1.0)
         let originalSizeMB = Double(originalData?.count ?? 0) / 1024.0 / 1024.0
-        
+
         // If image is under 10MB, no optimization needed
         guard originalSizeMB > 10.0 else {
-            print("🔍 MEMORY_DEBUG: Image size (\(String(format: "%.1f", originalSizeMB))MB) is acceptable, no optimization needed")
             return image
         }
-        
-        print("🔍 MEMORY_DEBUG: Large image detected (\(String(format: "%.1f", originalSizeMB))MB), applying optimization")
-        
+
         // Calculate target size - max 2048x2048 for processing
         let maxDimension: CGFloat = 2048
         var targetSize = originalSize
-        
+
         if originalSize.width > maxDimension || originalSize.height > maxDimension {
             let aspectRatio = originalSize.width / originalSize.height
             if originalSize.width > originalSize.height {
@@ -6341,41 +5966,30 @@ func analyzeNutritionLabel(
             } else {
                 targetSize = CGSize(width: maxDimension * aspectRatio, height: maxDimension)
             }
-            print("🔍 MEMORY_DEBUG: Resizing from \(originalSize) to \(targetSize)")
         }
-        
+
         // Create optimized image with error handling
         UIGraphicsBeginImageContextWithOptions(targetSize, false, 0.0)
         defer { UIGraphicsEndImageContext() }
-        
+
         image.draw(in: CGRect(origin: .zero, size: targetSize))
-        
+
         guard let optimizedImage = UIGraphicsGetImageFromCurrentImageContext() else {
-            print("❌ CRASH_DEBUG: Failed to create optimized image, returning original")
             return image
         }
-        
-        // Verify optimization worked
-        let optimizedData = optimizedImage.jpegData(compressionQuality: 0.8)
-        let optimizedSizeMB = Double(optimizedData?.count ?? 0) / 1024.0 / 1024.0
-        print("🔍 MEMORY_DEBUG: Image optimized from \(String(format: "%.1f", originalSizeMB))MB to \(String(format: "%.1f", optimizedSizeMB))MB")
-        
+
         return optimizedImage
     }
-    
+
     /// Monitor memory usage and handle memory warnings
     private func checkMemoryPressure() -> Bool {
         let memoryUsage = getMemoryUsage()
         let usedMemoryMB = memoryUsage.used
         let availableMemoryMB = memoryUsage.available
-        
+
         // Consider high memory pressure if using more than 300MB or less than 100MB available
         let isHighPressure = usedMemoryMB > 300 || availableMemoryMB < 100
-        
-        if isHighPressure {
-            print("⚠️ MEMORY_DEBUG: High memory pressure detected - Used: \(String(format: "%.1f", usedMemoryMB))MB, Available: \(String(format: "%.1f", availableMemoryMB))MB")
-        }
-        
+
         return isHighPressure
     }
 }

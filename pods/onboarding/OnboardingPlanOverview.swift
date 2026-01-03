@@ -422,15 +422,12 @@ struct OnboardingPlanOverview: View {
             if let data = defaults.data(forKey: "nutritionGoalsData"),
                let decoded = try? decoder.decode(NutritionGoals.self, from: data) {
                 self.nutritionGoals = decoded
-                print("📝 DEBUG: Loaded server-backed nutrition goals: Calories=\(decoded.calories), Protein=\(decoded.protein)g, Carbs=\(decoded.carbs)g, Fat=\(decoded.fat)g")
             } else if let preview = viewModel.nutritionPreviewGoals {
                 self.nutritionGoals = preview
                 persistPreviewGoals(preview, defaults: defaults)
-                print("📝 DEBUG: Using locally computed preview goals: Calories=\(preview.calories), Protein=\(preview.protein)g, Carbs=\(preview.carbs)g, Fat=\(preview.fat)g")
             } else if let previewData = defaults.data(forKey: "nutritionGoalsPreviewData"),
                       let decoded = try? decoder.decode(NutritionGoals.self, from: previewData) {
                 self.nutritionGoals = decoded
-                print("📝 DEBUG: Loaded cached preview nutrition goals: Calories=\(decoded.calories), Protein=\(decoded.protein)g, Carbs=\(decoded.carbs)g, Fat=\(decoded.fat)g")
             } else {
                 let fallback = UserGoalsManager.shared.dailyGoals
                 self.nutritionGoals = NutritionGoals(
@@ -439,7 +436,6 @@ struct OnboardingPlanOverview: View {
                     carbs: Double(fallback.carbs),
                     fat: Double(fallback.fat)
                 )
-                print("⚠️ No nutrition goals found; falling back to UserGoalsManager defaults")
             }
             
             // Calculate weight difference and format
@@ -458,31 +454,25 @@ struct OnboardingPlanOverview: View {
     private func completeOnboarding() {
         // CRITICAL FIX: First check if onboarding is actually complete
         // We want to avoid corrupting the flag
-        print("🚀 About to mark onboarding as complete - validating state")
-        
+
         // Double check if we should actually mark as complete
         let currentStep = UserDefaults.standard.string(forKey: "currentOnboardingStep")
         if currentStep != "OnboardingPlanOverview" {
-            print("⚠️ WARNING: Trying to mark onboarding as complete when currentStep=\(currentStep ?? "nil")!")
-            print("⚠️ Setting currentStep=OnboardingPlanOverview to fix inconsistency")
             UserDefaults.standard.set("OnboardingPlanOverview", forKey: "currentOnboardingStep")
         }
-        
+
         // Make sure user is authenticated in UserDefaults
         UserDefaults.standard.set(true, forKey: "isAuthenticated")
-        
+
         // Get the user's email for updating the server
         if let email = UserDefaults.standard.string(forKey: "userEmail") {
             // Save the email of the user who completed onboarding
             UserDefaults.standard.set(email, forKey: "emailWithCompletedOnboarding")
-            print("✅ Saved email \(email) as the one who completed onboarding")
-            
+
             NetworkManagerTwo.shared.markOnboardingCompleted(email: email) { result in
                 switch result {
                 case .success(let successful):
                     if successful {
-                        print("✅ Server confirmed onboarding completion successfully")
-                        
                         // Make sure to update all relevant state in the main thread
                         DispatchQueue.main.async {
                             // ONLY set serverOnboardingCompleted to true AFTER server confirms success
@@ -491,50 +481,45 @@ struct OnboardingPlanOverview: View {
                             UserDefaults.standard.set(true, forKey: "onboardingCompleted")
                             UserDefaults.standard.set(false, forKey: "onboardingInProgress")
                             UserDefaults.standard.synchronize()
-                            
+
                             // Mark onboarding as complete in the viewModel - this updates the UI
                             self.viewModel.onboardingCompleted = true
-                            
+
                             // Mark completion in the viewModel and let it handle saving to UserDefaults
                             self.viewModel.completeOnboarding()
-                            
+
                             // Post notification that authentication is complete
                             NotificationCenter.default.post(name: Notification.Name("AuthenticationCompleted"), object: nil)
-                            
+
                             // Wait briefly then close the onboarding container (fixes dismissal glitch)
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                 self.viewModel.isShowingOnboarding = false
                             }
                         }
                     } else {
-                        print("⚠️ Server returned failure when marking onboarding as completed")
                         // If the server call failed, we should not mark onboarding as completed
                         DispatchQueue.main.async {
-                            print("⚠️ Resetting onboarding completion status due to server error")
                             UserDefaults.standard.set(false, forKey: "serverOnboardingCompleted")
                             UserDefaults.standard.set(false, forKey: "onboardingCompleted")
                             UserDefaults.standard.synchronize()
-                            
+
                             // Still dismiss the view to avoid getting stuck
                             self.viewModel.isShowingOnboarding = false
                         }
                     }
                 case .failure(let error):
-                    print("⚠️ Failed to update server with onboarding completion: \(error)")
                     // If the server call failed, we should not mark onboarding as completed
                     DispatchQueue.main.async {
-                        print("⚠️ Resetting onboarding completion status due to network error")
                         UserDefaults.standard.set(false, forKey: "serverOnboardingCompleted")
                         UserDefaults.standard.set(false, forKey: "onboardingCompleted")
                         UserDefaults.standard.synchronize()
-                        
+
                         // Still dismiss the view to avoid getting stuck
                         self.viewModel.isShowingOnboarding = false
                     }
                 }
             }
         } else {
-            print("⚠️ Could not find email to update server onboarding status")
             // If no email, still dismiss the view to avoid getting stuck
             viewModel.isShowingOnboarding = false
         }
@@ -612,10 +597,7 @@ struct OnboardingPlanOverview: View {
     
     // Helper function to print debug info about research backing
     private func debugPrintResearchBacking(_ backings: [ResearchBacking]) {
-        print("📚 Research Backing count: \(backings.count)")
-        for (i, backing) in backings.enumerated() {
-            print("📚 [\(i+1)] Citation URL: \(backing.citation ?? "nil")")
-        }
+        // Debug info removed for production
     }
     
     // Helper function to extract all citations from text
@@ -772,36 +754,27 @@ struct OnboardingPlanOverview: View {
     
     private func openCitationURL(citationNumber: Int, researchBacking: [ResearchBacking]?) {
         guard let backings = researchBacking else {
-            print("⚠️ No research backing available")
             return
         }
-        
-        // Debug info
-        print("🔍 Trying to open citation [\(citationNumber)]")
-        print("🔍 Available backings count: \(backings.count)")
-        
+
         // We need a smarter algorithm to match citation numbers with backing data
         // Because there's a mismatch between citation numbers in text and backing array size
-        
+
         // APPROACH 1: Try to keep citation numbers within bounds
         let safeIndex = min(max(0, citationNumber - 1), backings.count - 1)
-        
+
         // APPROACH 2: Modulo mapping for cycling through available sources
         // This ensures we always map to an available citation even if numbers exceed count
         let moduloIndex = (citationNumber - 1) % backings.count
-        
+
         // We'll use the modulo approach for more natural cycling through sources
         let backing = backings[moduloIndex]
-        
+
         if let urlString = backing.citation, let url = URL(string: urlString) {
-            print("🌐 Opening URL for citation [\(citationNumber)] (mapped to source \(moduloIndex + 1)): \(urlString)")
             UIApplication.shared.open(url)
         } else {
-            print("⚠️ No valid URL for citation [\(citationNumber)]")
-            
             // Fallback: Try the first URL
             if let firstURLString = backings.first?.citation, let url = URL(string: firstURLString) {
-                print("🌐 Fallback: Opening first available URL: \(firstURLString)")
                 UIApplication.shared.open(url)
             }
         }

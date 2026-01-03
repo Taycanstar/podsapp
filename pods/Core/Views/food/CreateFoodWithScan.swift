@@ -82,46 +82,39 @@ struct CreateFoodWithScan: View {
             } else {
                 CameraPreviewView(
                     selectedMode: $selectedMode,
-                    flashEnabled: $flashEnabled, 
+                    flashEnabled: $flashEnabled,
                     onCapture: { image in
                         guard let image = image else { return }
                         if selectedMode == .food {
-                            print("Food scanned with captured image for creation")
                             // Start analysis first, then dismiss
                             analyzeImageForCreation(image)
                             dismiss()
                         } else if selectedMode == .nutritionLabel {
-                            print("Nutrition label scanned with captured image for creation")
                             // Start analysis first, then dismiss
                             analyzeNutritionLabelForCreation(image)
                             dismiss()
                         }
                     },
                     onBarcodeDetected: { barcode in
-                        guard selectedMode == .barcode else { 
-                            print("🚫 Barcode detected but ignored - not in barcode mode")
-                            return 
-                        }
-                        
-                        guard !isProcessingBarcode && barcode != lastProcessedBarcode else {
-                            print("⏱️ Ignoring barcode - already being processed or same as last")
+                        guard selectedMode == .barcode else {
                             return
                         }
-                        
-                        print("🔍 BARCODE DETECTED FOR CREATION: \(barcode)")
-                        
+
+                        guard !isProcessingBarcode && barcode != lastProcessedBarcode else {
+                            return
+                        }
+
                         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                         impactFeedback.prepare()
                         impactFeedback.impactOccurred()
-                        
+
                         isProcessingBarcode = true
                         lastProcessedBarcode = barcode
                         self.scannedBarcode = barcode
-                        
+
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            print("📸 Auto-capturing photo for barcode creation: \(barcode)")
                             takePhoto()
-                            
+
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                 // Start processing first, then dismiss
                                 processBarcodeForCreation(barcode)
@@ -317,21 +310,20 @@ struct CreateFoodWithScan: View {
     func analyzeImageForCreation(_ image: UIImage) {
         // Guard against duplicate processing
         guard !isAnalyzingPhoto else {
-            print("⚠️ Already analyzing photo, ignoring duplicate call")
             return
         }
-        
+
         isAnalyzingPhoto = true
-        
+
         // UNIFIED: Start with proper 0% progress, then animate with smooth transitions
         foodManager.updateFoodScanningState(.initializing)  // Start at 0% with animation
         foodManager.scannedImage = image
-        
+
         // Animate to preparing state after brief delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             foodManager.updateFoodScanningState(.preparing(image: image))  // Smooth animate to 10%
         }
-        
+
         // Use FoodManager to analyze the image for creation (without logging)
         foodManager.analyzeFoodImageForCreation(
             image: image,
@@ -340,48 +332,40 @@ struct CreateFoodWithScan: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let food):
-                    print("✅ Successfully analyzed food from image for creation")
-                    
                     // Use the food directly (no need to extract from combinedLog)
                     // Check preference for photo scan
                     if photoScanPreviewEnabled {
                         // Show confirmation sheet by setting lastGeneratedFood
-                        print("📸 Photo scan preview enabled - showing confirmation")
                         self.foodManager.lastGeneratedFood = food
                     } else {
                         // Create food directly without confirmation
-                        print("📸 Photo scan preview disabled - creating food directly")
-                        
-                        // Food already created by analyzeFoodImageForCreation - just handle success
-                        print("✅ Food already created by photo scan analysis: \(food.displayName)")
-                        
+
                         // Add the food to userFoods so it appears in MyFoods tab immediately
                         if !self.foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
                             self.foodManager.userFoods.insert(food, at: 0) // Add to beginning of list
                         }
-                        
+
                         // Clear the userFoods cache to force refresh from server next time
                         self.foodManager.clearUserFoodsCache()
-                        
+
                         // Track as recently added
                         self.foodManager.trackRecentlyAdded(foodId: food.fdcId)
-                        
+
                         // Show success toast
                         self.foodManager.showFoodGenerationSuccess = true
                         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                             self.foodManager.showFoodGenerationSuccess = false
                         }
                     }
-                    
+
                 case .failure(let error):
-                    print("❌ Failed to analyze food from image: \(error)")
                     // Show user-friendly error message
                     self.foodManager.showScanFailure(
                         type: "No Food Detected",
                         message: "Try scanning again."
                     )
                 }
-                
+
                 // UNIFIED: Reset to inactive state
                 self.foodManager.foodScanningState = .inactive
                 self.foodManager.scannedImage = nil
@@ -390,14 +374,13 @@ struct CreateFoodWithScan: View {
             }
         }
     }
-    
+
     func analyzeNutritionLabelForCreation(_ image: UIImage) {
         // Guard against duplicate processing
         guard !isAnalyzingLabel else {
-            print("⚠️ Already analyzing nutrition label, ignoring duplicate call")
             return
         }
-        
+
         isAnalyzingLabel = true
         
         // UNIFIED: Start with proper 0% progress, then animate with smooth transitions
@@ -417,52 +400,44 @@ struct CreateFoodWithScan: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let food):
-                    print("✅ Successfully analyzed nutrition label for creation")
-                    
                     // Use the food directly (no need to extract from combinedLog)
                     // Check preference for food label scan
                     if foodLabelPreviewEnabled {
                         // Show confirmation sheet by setting lastGeneratedFood
-                        print("🏷️ Food label preview enabled - showing confirmation")
                         self.foodManager.lastGeneratedFood = food
                     } else {
                         // Create food directly without confirmation
-                        print("🏷️ Food label preview disabled - creating food directly")
-                        
-                        // Food already created by analyzeFoodImageForCreation - just handle success
-                        print("✅ Food already created by nutrition label analysis: \(food.displayName)")
-                        
+
                         // Add the food to userFoods so it appears in MyFoods tab immediately
                         if !self.foodManager.userFoods.contains(where: { $0.fdcId == food.fdcId }) {
                             self.foodManager.userFoods.insert(food, at: 0) // Add to beginning of list
                         }
-                        
+
                         // Clear the userFoods cache to force refresh from server next time
                         self.foodManager.clearUserFoodsCache()
-                        
+
                         // Track as recently added
                         self.foodManager.trackRecentlyAdded(foodId: food.fdcId)
-                        
+
                         // Show success toast
                         self.foodManager.showFoodGenerationSuccess = true
                         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                             self.foodManager.showFoodGenerationSuccess = false
                         }
                     }
-                    
+
                 case .failure(let error):
                     // Check if this is the special "name required" error
                     if let nsError = error as? NSError, nsError.code == 1001 {
-                        print("🏷️ Product name not found for creation, setting up for name input in LogFood")
                         if let nutritionData = nsError.userInfo["nutrition_data"] as? [String: Any],
                            let mealType = nsError.userInfo["meal_type"] as? String,
                            let isCreationFlow = nsError.userInfo["is_creation_flow"] as? Bool, isCreationFlow {
-                            
+
                             // Store in FoodManager for LogFood alert to use (creation-specific properties)
                             self.foodManager.pendingNutritionDataForCreation = nutritionData
                             self.foodManager.pendingMealTypeForCreation = mealType
                             self.foodManager.showNutritionNameInputForCreation = true
-                            
+
                             // Add a small delay before dismissing to ensure LogFood can react
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                 dismiss()
@@ -470,7 +445,6 @@ struct CreateFoodWithScan: View {
                             return // Don't dismiss immediately
                         }
                     } else {
-                        print("❌ Failed to analyze nutrition label: \(error)")
                         // Show user-friendly error message for other nutrition label failures
                         self.foodManager.showScanFailure(
                             type: "No Nutrition Label Detected",
@@ -480,7 +454,7 @@ struct CreateFoodWithScan: View {
                     // Always dismiss the scanner for other cases
                     dismiss()
                 }
-                
+
                 // UNIFIED: Reset to inactive state
                 self.foodManager.foodScanningState = .inactive
                 self.foodManager.scannedImage = nil

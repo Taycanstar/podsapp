@@ -8,6 +8,17 @@
 
 import SwiftUI
 
+/// Wrapper to make conversation ID identifiable for sheet(item:) presentation
+private struct ConversationSheetItem: Identifiable {
+    let id: String  // The conversation ID, or a UUID for new conversations
+    let conversationId: String?  // nil means new conversation
+
+    init(conversationId: String?) {
+        self.conversationId = conversationId
+        self.id = conversationId ?? UUID().uuidString
+    }
+}
+
 struct DashboardContainer: View {
     // Agent bar bindings
     @Binding var agentText: String
@@ -24,15 +35,15 @@ struct DashboardContainer: View {
     // User Info for ChatsView
     @State private var userDisplayName: String = ""
 
-    // Conversation selection state
-    // Note: Using String? instead of AgentConversation? to avoid SwiftUI type complexity
-    // that causes stack overflow during type metadata resolution
-    @State private var selectedConversationId: String?
-    @State private var showAgentChat = false
+    // Conversation selection state - using item-based sheet for reliable ID passing
+    @State private var conversationSheetItem: ConversationSheetItem?
 
     // New conversation info for immediate UI update (id, title)
     @State private var newConversationId: String?
     @State private var newConversationTitle: String?
+
+    // Trigger refresh of ChatsView when returning from AgentChatView
+    @State private var shouldRefreshChats = false
 
     // Environment objects
     @EnvironmentObject var onboarding: OnboardingViewModel
@@ -48,11 +59,12 @@ struct DashboardContainer: View {
                     showDashboard = true
                 },
                 onSelectConversationId: { conversationId in
-                    selectedConversationId = conversationId
-                    showAgentChat = true
+                    // Use item-based sheet presentation to guarantee ID is available
+                    conversationSheetItem = ConversationSheetItem(conversationId: conversationId)
                 },
                 newConversationId: $newConversationId,
-                newConversationTitle: $newConversationTitle
+                newConversationTitle: $newConversationTitle,
+                shouldRefresh: $shouldRefreshChats
             )
             .background(
                 NavigationLink(
@@ -91,9 +103,11 @@ struct DashboardContainer: View {
         .onChange(of: subscriptionManager.subscriptionInfo?.status) { _, _ in
             setupUserInfo()
         }
-        .sheet(isPresented: $showAgentChat) {
+        .sheet(item: $conversationSheetItem, onDismiss: {
+            shouldRefreshChats = true
+        }) { item in
             AgentChatView(
-                conversationIdToLoad: selectedConversationId,
+                conversationIdToLoad: item.conversationId,
                 onNewConversationCreated: { id, title in
                     newConversationId = id
                     newConversationTitle = title

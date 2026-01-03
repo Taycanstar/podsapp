@@ -96,7 +96,6 @@ final class NutritionGoalsStore: ObservableObject {
         currentGoals = goals
         state = .ready(goals)
         saveToDefaults(goals)
-        print("✅ Cached nutrition goals with \(goals.nutrients?.count ?? 0) nutrient targets")
     }
     
     private func saveToDefaults(_ goals: NutritionGoals) {

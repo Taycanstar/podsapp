@@ -87,7 +87,6 @@ class WorkoutGenerationService {
             sessionPhase: sessionPhase,
             flexibilityPreferences: flexibilityPreferences
         )
-        print("🧾 Context equipment preview → preferences=\(context.preferences.availableEquipment.map { $0.rawValue }) constraints=\(context.constraints.availableEquipment.map { $0.rawValue })")
 
         if FeatureFlags.useLLMForWorkoutGeneration,
            let llmPlan = attemptLLMPlan(
@@ -134,12 +133,7 @@ class WorkoutGenerationService {
         sessionPhase: SessionPhase,
         minimumTarget: Int
     ) throws -> WorkoutPlan {
-        let targetDurationMinutes = targetDuration.minutes
-        
-        print("🏗️ WorkoutGenerationService: Generating \(targetDurationMinutes)min \(fitnessGoal) workout using research-based algorithm")
-        
         let desiredTotal = max(optimalExerciseCount.total, minimumTarget)
-        print("🎯 Optimal exercise count: \(optimalExerciseCount.total) total, \(optimalExerciseCount.perMuscle) per muscle (enforcing minimum \(minimumTarget))")
 
         var mutableBudget = sessionBudget
 
@@ -173,9 +167,7 @@ class WorkoutGenerationService {
             cooldownMinutes: mutableBudget.cooldownMinutes,
             totalMinutes: mutableBudget.totalMinutes
         )
-        
-        print("✅ Generated \(exercises.count) exercises, actual duration: \(breakdown.totalMinutes) minutes (97% efficiency)")
-        
+
         return WorkoutPlan(
             exercises: exercises,
             actualDurationMinutes: breakdown.totalMinutes,
@@ -278,7 +270,6 @@ class WorkoutGenerationService {
     ) -> [NetworkManagerTwo.LLMCandidateExercise] {
         var pool: [NetworkManagerTwo.LLMCandidateExercise] = []
         var seen = Set<Int>()
-        print("📦 Building candidate pool with equipment=\(describeEquipment(customEquipment))")
         for muscle in muscles {
             let recommendations = recommendationService.getRecommendedExercises(
                 for: muscle,
@@ -290,11 +281,6 @@ class WorkoutGenerationService {
             let supported = recommendations.filter {
                 isExerciseSupported($0, customEquipment: customEquipment)
             }
-            let filteredCount = recommendations.count - supported.count
-            if filteredCount > 0 {
-                print("⚠️ \(muscle): filtered \(filteredCount) exercises due to equipment override")
-            }
-            print("⚙️ \(muscle): kept \(supported.count)/\(recommendations.count) candidates")
 
             for exercise in supported where !seen.contains(exercise.id) {
                 seen.insert(exercise.id)
@@ -306,7 +292,6 @@ class WorkoutGenerationService {
             }
         }
 
-        print("📦 Candidate pool size=\(pool.count) (equipment=\(describeEquipment(customEquipment)))")
         return pool
     }
 
@@ -481,8 +466,6 @@ class WorkoutGenerationService {
         let estimator = TimeEstimator.shared
         let hasLoadableEquipment = hasLoadableEquipment(customEquipment)
         
-        print("🏗️ Starting recovery-aware distribution: \(totalExercises) total exercises across \(muscleGroups.count) muscles")
-
         let allocations = calculateExerciseAllocations(
             for: muscleGroups,
             totalExercises: totalExercises
@@ -496,11 +479,8 @@ class WorkoutGenerationService {
             let recoveryPercentage = allocation.recovery
 
             guard plannedCount > 0 else {
-                print("🛌 Skipping \(muscle) due to low recovery (\(Int(recoveryPercentage))%)")
                 continue
             }
-
-            print("🎯 \(muscle): recovery \(Int(recoveryPercentage))% → requesting \(plannedCount) exercises")
 
             var recommended = recommendationService.getDurationOptimizedExercises(
                 for: muscle,
@@ -511,8 +491,6 @@ class WorkoutGenerationService {
                 flexibilityPreferences: flexibilityPreferences
             )
             recommended = prioritizeHypertrophyExercises(recommended, fitnessGoal: fitnessGoal, customEquipment: customEquipment, hasLoadableEquipment: hasLoadableEquipment)
-
-            print("🎯 \(muscle): requested \(plannedCount), got \(recommended.count) exercises")
 
             for exercise in recommended where !usedIds.contains(exercise.id) {
                 let built = makeWorkoutExercise(
@@ -530,7 +508,6 @@ class WorkoutGenerationService {
                     format: sessionBudget.format
                 )
                 guard sessionBudget.tryConsume(estimateSeconds) else {
-                    print("⏳ Session budget exhausted while assigning \(muscle).")
                     WorkoutGenerationTelemetry.record(
                         .planValidationWarning,
                         metadata: ["message": "time_budget_exhausted", "muscle": muscle]
@@ -541,24 +518,15 @@ class WorkoutGenerationService {
                 exercises.append(built)
                 usedIds.insert(exercise.id)
             }
-
-            print("📊 Running total after \(muscle): \(exercises.count) exercises")
         }
 
-        print("✅ Final recovery-aware distribution result: \(exercises.count) exercises (target was \(totalExercises))")
-        print("💪 Generated \(exercises.count) exercises respecting time budget")
-
         if exercises.count < totalExercises, !sessionBudget.isOutOfTime {
-            let shortfall = totalExercises - exercises.count
-            print("⚠️ Shortfall detected: missing \(shortfall) exercises. Attempting recovery-ordered backfill.")
-
             for allocation in allocations.sorted(by: { $0.recovery > $1.recovery }) {
                 var remainingNeeded = totalExercises - exercises.count
                 guard remainingNeeded > 0, !sessionBudget.isOutOfTime else { break }
 
                 // Still skip severely fatigued muscles even during backfill
                 if allocation.recovery < 30 {
-                    print("🛑 Backfill skip: \(allocation.muscle) at \(Int(allocation.recovery))% recovery")
                     continue
                 }
 
@@ -605,18 +573,12 @@ class WorkoutGenerationService {
                 }
 
                 if budgetExhausted {
-                    print("⏳ Session budget saturated during backfill.")
                     break
                 }
             }
-
-            print("✅ After backfill: \(exercises.count) exercises")
         }
 
         if exercises.count < totalExercises, !sessionBudget.isOutOfTime {
-            let remainingNeeded = totalExercises - exercises.count
-            print("⚠️ Still missing \(remainingNeeded) exercises – pulling from high-recovery fallback muscles")
-
             let readyFallback = recoveryService
                 .getMuscleRecoveryData()
                 .filter { $0.recoveryPercentage >= 70 }
@@ -641,8 +603,6 @@ class WorkoutGenerationService {
                 if fallbackExercises.isEmpty {
                     continue
                 }
-
-                print("🪄 Fallback \(muscleName): adding \(fallbackExercises.count) exercises at \(Int(fallback.recoveryPercentage))% recovery")
 
                 for exercise in fallbackExercises where !usedIds.contains(exercise.id) {
                     let built = makeWorkoutExercise(
@@ -674,12 +634,9 @@ class WorkoutGenerationService {
                 }
 
                 if budgetExhausted {
-                    print("⏳ Session budget saturated during fallback fill.")
                     break
                 }
             }
-
-            print("✅ After fallback fill: \(exercises.count) exercises (target \(totalExercises))")
         }
 
         // Final safeguard using global pool
@@ -713,13 +670,10 @@ class WorkoutGenerationService {
                 usedIds.insert(exercise.id)
                 if exercises.count >= totalExercises { break }
             }
-            print("✅ After global fill: \(exercises.count) exercises (target \(totalExercises))")
         }
 
         // Hard floor to guarantee minimum visible volume even if time budgeting was conservative
         if exercises.count < minimumTarget {
-            let needed = minimumTarget - exercises.count
-            print("🧩 Minimum target safeguard: adding \(needed) exercises to reach \(minimumTarget)")
             let global = globalCandidates(
                 excluding: usedIds,
                 fitnessGoal: fitnessGoal,
@@ -740,7 +694,6 @@ class WorkoutGenerationService {
                 exercises.append(built)
                 usedIds.insert(exercise.id)
             }
-            print("✅ After minimum safeguard: \(exercises.count) exercises (minimum \(minimumTarget))")
         }
 
         return exercises
@@ -824,10 +777,6 @@ class WorkoutGenerationService {
         }
 
         let ordered = entries.sorted { $0.index < $1.index }
-        let debugSummary = ordered.map { entry in
-            "\(entry.muscle): \(String(format: "%.0f", entry.recovery))% → \(entry.baseCount)"
-        }.joined(separator: ", ")
-        print("🧬 Recovery allocation plan: [\(debugSummary)] (target \(resolvedTotal))")
 
         return ordered.map { entry in
             MuscleAllocation(muscle: entry.muscle, count: entry.baseCount, recovery: entry.recovery)
@@ -862,7 +811,6 @@ class WorkoutGenerationService {
             }
             let missing = required.subtracting(overrideSet)
             if !missing.isEmpty {
-                print("🚫 Filtered \(exercise.name) requires \(describeEquipmentSet(required)) but available session equipment is \(describeEquipmentSet(overrideSet)). Missing: \(describeEquipmentSet(missing))")
                 return false
             }
             return true
@@ -980,9 +928,7 @@ class WorkoutGenerationService {
         let sessionPhase = SessionPhase.alignedWith(fitnessGoal: fitnessGoal)
         var exercises: [TodayWorkoutExercise] = []
         var usedIds = Set<Int>() // Avoid duplicate exercises across muscle groups
-        
-        print("🏗️ Starting exercise generation: \(muscleGroups.count) muscles × \(exercisesPerMuscle) exercises = \(muscleGroups.count * exercisesPerMuscle) target")
-        
+
         for muscle in muscleGroups {
             // Use enhanced WorkoutRecommendationService for duration-optimized selection
             let recommended = recommendationService.getDurationOptimizedExercises(
@@ -993,8 +939,7 @@ class WorkoutGenerationService {
                 customEquipment: customEquipment,
                 flexibilityPreferences: flexibilityPreferences
             )
-            
-            print("🎯 \(muscle): requested \(exercisesPerMuscle), got \(recommended.count) exercises")
+
             let recovery = recoveryService.getMuscleRecoveryPercentage(for: muscle)
             
             for exercise in recommended {
@@ -1010,12 +955,8 @@ class WorkoutGenerationService {
                 exercises.append(built)
                 usedIds.insert(exercise.id)
             }
-            
-            print("📊 Running total after \(muscle): \(exercises.count) exercises")
         }
-        
-        print("✅ Final generation result: \(exercises.count) exercises (target was \(muscleGroups.count * exercisesPerMuscle))")
-        print("💪 Generated \(exercises.count) exercises using research-based optimization")
+
         return exercises
     }
     
@@ -1115,7 +1056,6 @@ class WorkoutGenerationService {
             )
             let adjustedSets = adjustedSetCount(base: rec.sets, multiplier: volumeFactor)
             guard adjustedSets > 0 else {
-                print("🪫 Volume suppressed: \(exercise.name) skipped due to low recovery")
                 return TodayWorkoutExercise(
                     exercise: exercise,
                     sets: 0,
@@ -1166,7 +1106,6 @@ class WorkoutGenerationService {
                 minimum: Int(max(120.0, durationSeconds * 0.4))
             )
             guard adjustedDuration > 0 else {
-                print("🪫 Volume suppressed: \(exercise.name) skipped due to low recovery")
                 return TodayWorkoutExercise(
                     exercise: exercise,
                     sets: 0,
@@ -1220,7 +1159,6 @@ class WorkoutGenerationService {
             let baseIntervals = 3
             let intervals = adjustedSetCount(base: baseIntervals, multiplier: volumeFactor)
             guard intervals > 0 else {
-                print("🪫 Volume suppressed: \(exercise.name) skipped due to low recovery")
                 return TodayWorkoutExercise(
                     exercise: exercise,
                     sets: 0,
@@ -1256,7 +1194,6 @@ class WorkoutGenerationService {
             let baseSets = 3
             let adjustedSets = adjustedSetCount(base: baseSets, multiplier: volumeFactor)
             guard adjustedSets > 0 else {
-                print("🪫 Volume suppressed: \(exercise.name) skipped due to low recovery")
                 return TodayWorkoutExercise(
                     exercise: exercise,
                     sets: 0,
@@ -1292,7 +1229,6 @@ class WorkoutGenerationService {
             let baseRounds = 3
             let rounds = adjustedSetCount(base: baseRounds, multiplier: volumeFactor)
             guard rounds > 0 else {
-                print("🪫 Volume suppressed: \(exercise.name) skipped due to low recovery")
                 return TodayWorkoutExercise(
                     exercise: exercise,
                     sets: 0,

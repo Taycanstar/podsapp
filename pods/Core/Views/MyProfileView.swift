@@ -147,7 +147,6 @@ struct MyProfileView: View {
         .sheet(isPresented: $showEditWeightSheet) {
             EditWeightView(onWeightSaved: {
                 // Refresh weight data after saving with a small delay
-                print("🏋️ Weight saved callback received")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     fetchWeightData()
                 }
@@ -155,40 +154,15 @@ struct MyProfileView: View {
         }
         // Removed the sheet for profile settings since we're now using navigation
         .onAppear {
-            // Debug: Check what we have
-            print("🔍 MyProfileView onAppear - Debug info:")
-            print("  - onboarding.email: '\(onboarding.email)'")
             let userDefaultsEmail = UserDefaults.standard.string(forKey: "userEmail") ?? ""
-            print("  - UserDefaults userEmail: '\(userDefaultsEmail)'")
-            if let profileData = onboarding.profileData {
-                print("  - onboarding.profileData exists for: '\(profileData.email)'")
-                print("  - Email match (onboarding): \(profileData.email == onboarding.email)")
-                print("  - Email match (UserDefaults): \(profileData.email == userDefaultsEmail)")
-            } else {
-                print("  - onboarding.profileData is nil")
-            }
-            
+
             // Check if we have fresh preloaded profile data from DashboardView
             // Use the same email source as DashboardView (UserDefaults)
             if let profileData = onboarding.profileData, profileData.email == userDefaultsEmail {
-                print("✅ Using fresh preloaded profile data for \(profileData.email) - instant loading!")
                 // Process the existing profile data
                 processProfileData()
                 hasInitiallyLoaded = true
             } else {
-                // More detailed debugging for the failure case
-                if let profileData = onboarding.profileData {
-                    print("⚠️ Preloaded profile data is for wrong user:")
-                    print("  - profileData.email: '\(profileData.email)'")
-                    print("  - userDefaultsEmail: '\(userDefaultsEmail)'")
-                    print("  - Are they equal? \(profileData.email == userDefaultsEmail)")
-                    print("  - profileData.email.count: \(profileData.email.count)")
-                    print("  - userDefaultsEmail.count: \(userDefaultsEmail.count)")
-                    print("  - profileData.email bytes: \(Array(profileData.email.utf8))")
-                    print("  - userDefaultsEmail bytes: \(Array(userDefaultsEmail.utf8))")
-                } else {
-                    print("⏳ No preloaded data - fetching fresh profile data")
-                }
                 // Fetch fresh profile data if not preloaded or wrong user
                Task {
                     await onboarding.fetchProfileData(force: true)
@@ -211,7 +185,6 @@ struct MyProfileView: View {
                 .receive(on: RunLoop.main)
         ) { _ in
             // Refresh weight data when a new weight is logged
-            print("🏋️ Received WeightLoggedNotification - refreshing weight data")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 // Small delay to allow server to update
                 fetchWeightData()
@@ -223,7 +196,6 @@ struct MyProfileView: View {
                 .receive(on: RunLoop.main)
         ) { notification in
             let isLocal = (notification.userInfo?["localOnly"] as? Bool) ?? false
-            print("🔄 MyProfileView received LogsChangedNotification - localOnly=\(isLocal)")
             guard !isLocal else { return }
             Task {
                 await onboarding.fetchProfileData(force: false)
@@ -234,7 +206,6 @@ struct MyProfileView: View {
             ensureCombinedLogsReady(force: true)
             // When profile data updates (detected via email change), process weight logs
             if let profileData = onboarding.profileData, let weightLogs = profileData.weightLogsRecent {
-                print("✅ Profile data updated - loading weight logs (\(weightLogs.count) logs)")
                 self.recentWeightLogs = weightLogs
                 if let mostRecentLog = weightLogs.first {
                     self.weightDate = mostRecentLog.dateLogged
@@ -990,32 +961,25 @@ struct MyProfileView: View {
 
     private func shouldShowDateBadge(for log: CombinedLog) -> Bool {
         guard let date = canonicalDate(for: log) else {
-            print("⏰ shouldShowDateBadge - No canonical date for log \(log.id)")
             return false
         }
         let calendar = Calendar.current
         let isToday = calendar.isDateInToday(date)
-        print("⏰ shouldShowDateBadge - Log \(log.id): date=\(date), isToday=\(isToday), shouldShow=\(!isToday)")
         // Only show badge for non-today logs (Yesterday, weekday, or date)
         return !isToday
     }
 
     private func logLabel(for log: CombinedLog) -> String? {
         guard let date = canonicalDate(for: log) else {
-            print("📅 logLabel - Log \(log.id): No canonical date")
             return nil
         }
-
-        print("📅 logLabel - Log \(log.id): canonical date = \(date)")
 
         let calendar = Calendar.current
         if calendar.isDateInToday(date) {
             let time = Self.timeFormatter.string(from: date)
-            print("📅 logLabel - Returning TODAY time: \(time)")
             return time
         }
         if calendar.isDateInYesterday(date) {
-            print("📅 logLabel - Returning YESTERDAY")
             return "Yesterday"
         }
 
@@ -1024,12 +988,10 @@ struct MyProfileView: View {
         if let days = calendar.dateComponents([.day], from: startOfDate, to: startOfNow).day,
            days < 7 {
             let weekday = Self.weekdayFormatter.string(from: date)
-            print("📅 logLabel - Returning WEEKDAY: \(weekday)")
             return weekday
         }
 
         let shortDate = Self.shortDateFormatter.string(from: date)
-        print("📅 logLabel - Returning SHORT DATE: \(shortDate)")
         return shortDate
     }
 
@@ -1126,43 +1088,30 @@ struct MyProfileView: View {
     }()
 
     private func rawLogDate(for log: CombinedLog) -> Date? {
-        print("🔍 rawLogDate for log \(log.id):")
-        print("   log.logDate = \(log.logDate ?? "nil")")
-        print("   log.scheduledAt = \(log.scheduledAt?.description ?? "nil")")
-        print("   log.activity?.startDate = \(log.activity?.startDate.description ?? "nil")")
-        print("   log.meal?.scheduledAt = \(log.meal?.scheduledAt?.description ?? "nil")")
-
         // PRIORITY 1: Use scheduledAt when available (includes exact time)
         if let scheduled = log.scheduledAt {
-            print("   ✅ Using scheduledAt: \(scheduled)")
             return scheduled
         }
         if let activityDate = log.activity?.startDate {
-            print("   ✅ Using activity.startDate: \(activityDate)")
             return activityDate
         }
         if let mealDate = log.meal?.scheduledAt {
-            print("   ✅ Using meal.scheduledAt: \(mealDate)")
             return mealDate
         }
         if let recipeDate = log.recipe?.scheduledAt {
-            print("   ✅ Using recipe.scheduledAt: \(recipeDate)")
             return recipeDate
         }
 
         // PRIORITY 2: Fallback to logDate (date only)
         if let logDate = log.logDate {
             if let parsed = Self.backendDateFormatter.date(from: logDate) {
-                print("   ✅ Using logDate (backend format): \(parsed)")
                 return parsed
             }
             if let isoParsed = Self.iso8601DateFormatter.date(from: logDate) {
-                print("   ✅ Using logDate (ISO format): \(isoParsed)")
                 return isoParsed
             }
         }
 
-        print("   ❌ No date found")
         return nil
     }
 
@@ -1177,7 +1126,6 @@ struct MyProfileView: View {
             let candidateCount = candidateWorkout?.exercisesCount ?? 0
 
             if existingWorkout == nil, candidateWorkout != nil {
-                print("⚖️ preferredLog choosing candidate \(candidate.id) because it has workout details and existing does not")
                 return candidate
             }
 
@@ -1186,33 +1134,8 @@ struct MyProfileView: View {
             }
 
             if candidateCount > existingCount {
-                print(
-                    "⚖️ preferredLog choosing candidate",
-                    candidate.id,
-                    "because exercisesCount improved",
-                    existingCount,
-                    "→",
-                    candidateCount
-                )
                 return candidate
             }
-
-            print(
-                "⚖️ preferredLog comparing",
-                existing.id,
-                "existingCount:",
-                existing.workout?.exercisesCount as Any,
-                "candidateCount:",
-                candidate.workout?.exercisesCount as Any,
-                "existingOptimistic:",
-                existing.isOptimistic,
-                "candidateOptimistic:",
-                candidate.isOptimistic,
-                "existingDate:",
-                existingDate as Any,
-                "candidateDate:",
-                candidateDate as Any
-            )
         }
 
         // Prefer whichever carries a usable date value
@@ -1594,22 +1517,19 @@ struct MyProfileView: View {
     #endif
     
     // MARK: - Macro Split Data Methods
-    
+
     private func fetchMacroSplitData() {
         // First check if we have preloaded profile data with macro info
         if let profileData = onboarding.profileData, profileData.macroData3Weeks != nil {
-            print("📊 Using preloaded macro data from profile - no API call needed!")
             processProfileMacroData(profileData)
             return
         }
-        
+
         // Fallback: fetch fresh data if no preloaded macro data available
-        guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
-            print("❌ No user email found for macro data fetch")
+        guard UserDefaults.standard.string(forKey: "userEmail") != nil else {
             return
         }
-        
-        print("📊 No preloaded macro data - refreshing profile repository for email: \(email)")
+
         isLoadingMacros = true
 
         Task {
@@ -1618,36 +1538,32 @@ struct MyProfileView: View {
             await MainActor.run {
                 isLoadingMacros = false
                 if let profileData = onboarding.profileData {
-                    print("✅ Successfully refreshed profile data with macro info")
                     processProfileMacroData(profileData)
                 } else {
-                    print("❌ Macro data still unavailable after refresh")
                     macroSplitData = [:]
                 }
             }
         }
     }
-    
+
     private func processProfileMacroData(_ profileData: ProfileDataResponse) {
         guard let macroData = profileData.macroData3Weeks else {
-            print("❌ No macro data in profile response")
             macroSplitData = [:]
             return
         }
-        
+
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        
+
         // Convert API response to our local data structure
         var processedData: [WeekOption: [DailyMacroSplit]] = [:]
-        
+
         // Parse the macro data and group by weeks
         let dailyMacros = macroData.compactMap { dayData -> DailyMacroSplit? in
             guard let date = dateFormatter.date(from: dayData.date) else {
-                print("❌ Failed to parse date: \(dayData.date)")
                 return nil
             }
-            
+
             return DailyMacroSplit(
                 date: date,
                 calories: dayData.calories,  // Use raw calories from backend
@@ -1659,8 +1575,6 @@ struct MyProfileView: View {
                 fatGrams: dayData.fatGrams
             )
         }.sorted { $0.date < $1.date }
-        
-        print("📊 Processing \(dailyMacros.count) days of macro data from profile")
         
         // Group by weeks relative to today
         let today = Date()
@@ -1706,7 +1620,6 @@ struct MyProfileView: View {
         }
         
         macroSplitData = processedData
-        print("✅ Processed macro data into weeks: \(processedData.keys.count) weeks available")
     }
     
     private func calculateWeeklyTotal(for week: WeekOption) -> Double {
@@ -1735,14 +1648,11 @@ struct MyProfileView: View {
 
         // Load weight logs from profile data (seamless, no separate API call)
         if let weightLogs = profileData.weightLogsRecent {
-            print("✅ Loading weight logs from profile data (\(weightLogs.count) logs)")
             self.recentWeightLogs = weightLogs
             if let mostRecentLog = weightLogs.first {
                 self.weightDate = mostRecentLog.dateLogged
             }
         }
-
-        print("✅ Processed preloaded profile data - weight: \(vm.weight)kg, height: \(vm.height)cm, weight logs: \(profileData.weightLogsRecent?.count ?? 0)")
     }
     
     // Helper function to parse dates robustly
@@ -1814,14 +1724,12 @@ struct MyProfileView: View {
             }
         }
         
-        print("❌ Failed to parse date: \(dateString)")
         return "Unknown date"
     }
-    
+
     private func formatParsedDate(_ date: Date) -> String {
         let calendar = Calendar.current
-        let now = Date()
-        
+
         let result: String
         if calendar.isDateInToday(date) {
             // Today: show time like "4:19 AM"
@@ -1837,8 +1745,7 @@ struct MyProfileView: View {
             dateFormatter.dateFormat = "MMM d"
             result = dateFormatter.string(from: date)
         }
-        
-        print("📅 Date formatting: \(date) -> '\(result)'")
+
         return result
     }
     
@@ -1854,24 +1761,17 @@ struct MyProfileView: View {
     }
     
     private func fetchWeightData() {
-        print("🏋️ Fetching weight data")
-        print("🏋️ vm.weight value: \(vm.weight)")
-
         // Store vm.weight as the preferred source of truth (vm.weight is already in kg)
         let vmWeightKg = vm.weight > 0 ? vm.weight : nil
 
         // If vm has weight, use it immediately
         if let vmWeight = vmWeightKg {
             currentWeightKg = vmWeight
-            print("🏋️ Got initial weight from DayLogsViewModel: \(vm.weight)kg")
         }
 
         // First, check if we have weight logs in profile data (from main profile API call)
         if let profileData = onboarding.profileData,
            let weightLogs = profileData.weightLogsRecent {
-            print("🏋️ Using weight logs from profile data (seamless load)")
-            print("  - Total logs in profile: \(weightLogs.count)")
-
             self.recentWeightLogs = weightLogs
 
             if let mostRecentLog = weightLogs.first {
@@ -1880,9 +1780,6 @@ struct MyProfileView: View {
                 // Only update currentWeightKg if vm.weight doesn't exist
                 if vmWeightKg == nil {
                     self.currentWeightKg = mostRecentLog.weightKg
-                    print("🏋️ Got weight from profile data: \(mostRecentLog.weightKg)kg")
-                } else {
-                    print("🏋️ Keeping vm.weight (\(vmWeightKg!)kg) over profile weight (\(mostRecentLog.weightKg)kg)")
                 }
             }
 
@@ -1892,11 +1789,8 @@ struct MyProfileView: View {
         // Fallback: If weight logs not in profile data, fetch separately
         // This maintains backward compatibility with older server versions
         guard let email = UserDefaults.standard.string(forKey: "userEmail") else {
-            print("❌ No user email found for weight fetch")
             return
         }
-
-        print("🏋️ Weight logs not in profile data - fetching separately for email: \(email)")
 
         isLoadingWeight = true
         NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 7, offset: 0) { result in
@@ -1907,34 +1801,20 @@ struct MyProfileView: View {
                 case .success(let response):
                     self.recentWeightLogs = response.logs
 
-                    print("🏋️ Weight API Response (separate call):")
-                    print("  - Total logs received: \(response.logs.count)")
-                    print("  - Show chart condition (count >= 2): \(response.logs.count >= 2)")
-
-                    for (index, log) in response.logs.enumerated() {
-                        print("  - Log \(index + 1): \(log.weightKg)kg (\(log.weightKg * 2.20462)lbs) on \(log.dateLogged)")
-                    }
-
                     if let mostRecentLog = response.logs.first {
                         self.weightDate = mostRecentLog.dateLogged
 
                         // Only update currentWeightKg if vm.weight doesn't exist or API has newer data
                         if vmWeightKg == nil {
                             self.currentWeightKg = mostRecentLog.weightKg
-                            print("🏋️ Got weight from API (no vm.weight): \(mostRecentLog.weightKg)kg")
-                        } else {
-                            // Keep vm.weight as it's likely more recent (just saved)
-                            print("🏋️ Keeping vm.weight (\(vmWeightKg!)kg) over API weight (\(mostRecentLog.weightKg)kg)")
                         }
                     } else {
-                        print("🏋️ No weight logs found")
                         if vmWeightKg == nil {
                             self.currentWeightKg = nil
                         }
                         self.weightDate = nil
                     }
                 case .failure(let error):
-                    print("❌ Error fetching weight logs: \(error)")
                     if vmWeightKg == nil {
                         self.currentWeightKg = nil
                         self.weightDate = nil
@@ -1944,20 +1824,16 @@ struct MyProfileView: View {
             }
         }
     }
-    
-    // MARK: - Pull to Refresh
-    
-    private func refreshProfileData() async {
-        print("🔄 Pull to refresh triggered")
 
+    // MARK: - Pull to Refresh
+
+    private func refreshProfileData() async {
         // Refresh profile data (this will show the native pull-to-refresh indicator)
         // Weight data will be automatically loaded via .onChange(of: onboarding.profileData)
         await onboarding.fetchProfileData(force: true)
 
         // Refresh macro data
         fetchMacroSplitData()
-        
-        print("✅ Pull to refresh completed")
     }
 }
 

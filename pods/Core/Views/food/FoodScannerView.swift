@@ -125,66 +125,39 @@ struct FoodScannerView: View {
                 } else {
                     CameraPreviewView(
                         selectedMode: $selectedMode,
-                        flashEnabled: $flashEnabled, 
+                        flashEnabled: $flashEnabled,
                         onCapture: { image in
-                            print("🔍 CRASH_DEBUG: onCapture called")
-                            guard let image = image else { 
-                                print("❌ CRASH_DEBUG: Image is nil in onCapture")
-                                return 
+                            guard let image = image else {
+                                return
                             }
-                            
-                            // Log detailed image information
-                            let imageSize = image.size
-                            let imageSizeBytes = image.jpegData(compressionQuality: 1.0)?.count ?? 0
-                            let imageSizeMB = Double(imageSizeBytes) / 1024.0 / 1024.0
-                            print("🔍 CRASH_DEBUG: Image captured - Size: \(imageSize), File size: \(String(format: "%.2f", imageSizeMB))MB (\(imageSizeBytes) bytes)")
-                            
-                            // Log memory usage before processing
-                            let memoryUsage = getMemoryUsage()
-                            print("🔍 CRASH_DEBUG: Memory before processing - Used: \(String(format: "%.1f", memoryUsage.used))MB, Available: \(String(format: "%.1f", memoryUsage.available))MB")
-                            
+
                             if selectedMode == .food {
-                                print("🔍 CRASH_DEBUG: Food scan mode selected")
                                 // Check preference to decide between preview and one-tap logging
                                 if photoScanPreviewEnabled {
-                                    print("🔍 CRASH_DEBUG: PREVIEW MODE - calling analyzeImageForPreview")
-                                    print("🔍 PREVIEW MODE: Photo scan preview enabled - will NOT log automatically")
-                                    print("🔍 PREVIEW MODE: Food will be created without logging (shouldLog: false)")
-                                    print("🔍 PREVIEW MODE: User must tap 'Log' in ConfirmLogView to actually log")
                                     analyzeImageForPreview(image)
                                 } else {
-                                    print("🔍 CRASH_DEBUG: DIRECT MODE - calling analyzeImageDirectly")
-                                    print("🔍 DIRECT MODE: Photo scan preview disabled - will log immediately")
-                                    print("🔍 DIRECT MODE: Food will be created and logged in one step (shouldLog: true)")
                                     analyzeImageDirectly(image)
                                 }
                             } else if selectedMode == .nutritionLabel {
-                                print("🔍 CRASH_DEBUG: Nutrition label scan mode selected")
-                                print("Nutrition label scanned with captured image")
                                 analyzeNutritionLabel(image)
                             }
                         },
                         onBarcodeDetected: { barcode in
-                            guard selectedMode == .barcode else { 
-                                print("🚫 Barcode detected but ignored - not in barcode mode")
-                                return 
+                            guard selectedMode == .barcode else {
+                                return
                             }
 
                             let sanitizedBarcode = sanitizeBarcode(barcode)
                             guard !sanitizedBarcode.isEmpty else { return }
 
                             guard isSupportedBarcodeValue(sanitizedBarcode) else {
-                                print("⚠️ Unsupported barcode detected: \(barcode)")
                                 foodManager.handleScanFailure(.unsupportedBarcode)
                                 return
                             }
-                            
+
                             guard !isProcessingBarcode && sanitizedBarcode != lastProcessedBarcode else {
-                                print("⏱️ Ignoring barcode - already being processed or same as last")
                                 return
                             }
-                            
-                            print("🔍 BARCODE DETECTED IN UI: \(sanitizedBarcode) - preparing to process")
                             
                             let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                             impactFeedback.prepare()
@@ -394,27 +367,14 @@ struct FoodScannerView: View {
             }
             .background(Color.black)
         .onAppear {
-            print("🔍 CRASH_DEBUG: FoodScannerView onAppear - START")
-            let memoryUsage = getMemoryUsage()
-            print("🔍 CRASH_DEBUG: Memory on appear - Used: \(String(format: "%.1f", memoryUsage.used))MB, Available: \(String(format: "%.1f", memoryUsage.available))MB")
-            
             // Initialize UserDefaults values safely on main thread
-            print("🔍 CRASH_DEBUG: Loading UserDefaults preferences")
             loadUserDefaultsPreferences()
-            
+
             // Check camera permissions when the view appears
-            print("🔍 CRASH_DEBUG: Checking camera permissions")
             checkCameraPermissions()
-            print("📱 FoodScannerView appeared - Mode: \(selectedMode)")
-            print("🔍 CRASH_DEBUG: FoodScannerView onAppear - END")
         }
         .onDisappear {
-            print("🔍 CRASH_DEBUG: FoodScannerView onDisappear - Scanner being dismissed")
-            let memoryUsage = getMemoryUsage()
-            print("🔍 CRASH_DEBUG: Memory on disappear - Used: \(String(format: "%.1f", memoryUsage.used))MB, Available: \(String(format: "%.1f", memoryUsage.available))MB")
-            
             // CRITICAL FIX: Don't cancel any timers - let them complete naturally
-            print("🔍 CRASH_DEBUG: Scanner dismissed - timers will complete naturally with network operations")
             // No timer cancellation needed - they'll stop when network completes
         }
     }
@@ -433,13 +393,10 @@ struct FoodScannerView: View {
             self.foodLabelPreviewEnabled = UserDefaults.standard.object(forKey: "scanPreview_foodLabel") as? Bool ?? true
             self.barcodePreviewEnabled = UserDefaults.standard.object(forKey: "scanPreview_barcode") as? Bool ?? true
             self.galleryImportPreviewEnabled = UserDefaults.standard.object(forKey: "scanPreview_galleryImport") as? Bool ?? false
-            
-            print("🔍 Loaded UserDefaults preferences: photoScan=\(self.photoScanPreviewEnabled), foodLabel=\(self.foodLabelPreviewEnabled), barcode=\(self.barcodePreviewEnabled), gallery=\(self.galleryImportPreviewEnabled)")
         }
     }
-    
+
     private func takePhoto() {
-        print("📸 Taking photo")
         NotificationCenter.default.post(name: .capturePhoto, object: nil)
     }
     
@@ -531,7 +488,6 @@ private func analyzeImage(_ image: UIImage) {
                     self.onFoodScanned?(food, combinedLog.foodLogId)
                 }
             } catch {
-                print("❌ MODERN: Pure scan failed:", error.localizedDescription)
             }
         }
     },
@@ -600,10 +556,8 @@ private func performAnalyzeNutritionLabel(_ image: UIImage, userEmail: String) {
                 )
             }
 
-            print("🏷️ [OCR] Label scanned successfully: \(ocrData.calories ?? 0) cal, \(ocrData.protein ?? 0)g protein")
         } else {
             // No nutrition label detected - show toast
-            print("🏷️ [OCR] No nutrition label detected in image")
             // Post notification to show toast (DashboardView listens for this)
             NotificationCenter.default.post(
                 name: NSNotification.Name("ShowScanError"),
@@ -618,17 +572,14 @@ private func handleNutritionLabelError(_ error: Error) {
     // Check if this is the special "name required" error
     if let nsError = error as? NSError, nsError.code == 1001 {
         // Product name not found - let FoodManager handle this for DashboardView
-        print("🏷️ Product name not found, storing data for dashboard popup")
         if let nutritionData = nsError.userInfo["nutrition_data"] as? [String: Any],
            let mealType = nsError.userInfo["meal_type"] as? String {
-            
+
             // Store in FoodManager for DashboardView to access
             foodManager.pendingNutritionData = nutritionData
             foodManager.pendingMealType = mealType
             foodManager.showNutritionNameInput = true
         }
-    } else {
-        print("❌ nutrition label scan failed:", error.localizedDescription)
     }
 }
 
@@ -667,8 +618,6 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
                 userEmail: userEmail
             ) {
                 foodManager.updateFoodScanningState(.processing)
-                let timingStr = fastResult.timingMs.map { "\($0)ms" } ?? "?"
-                print("⚡ [FAST_SCAN] Completed in \(timingStr)")
 
                 let embeddedItems = fastResult.foods.first?.mealItems ?? []
                 let resolvedMealItems = !fastResult.mealItems.isEmpty ? fastResult.mealItems : embeddedItems
@@ -746,7 +695,6 @@ private func performAnalyzeImageForPreview(_ image: UIImage, userEmail: String) 
                 )
             }
         } catch {
-            print("❌ MODERN preview scan failed:", error.localizedDescription)
         }
     }
 }
@@ -786,8 +734,6 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
                 userEmail: userEmail
             ) {
                 foodManager.updateFoodScanningState(.processing)
-                let timingStr = fastResult.timingMs.map { "\($0)ms" } ?? "?"
-                print("⚡ [FAST_SCAN] Gallery completed in \(timingStr)")
 
                 let embeddedItems = fastResult.foods.first?.mealItems ?? []
                 let resolvedMealItems = !fastResult.mealItems.isEmpty ? fastResult.mealItems : embeddedItems
@@ -861,7 +807,6 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
             }
             foodManager.combinedLogs.insert(combinedLog, at: 0)
         } catch {
-            print("❌ MODERN direct scan failed:", error.localizedDescription)
         }
     }
 }
@@ -878,7 +823,6 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
         selectedImages.removeAll()
         selectedMode = .gallery
         showPhotosPicker = true
-        print("🖼️ Gallery opened - awaiting image selection")
     }
     
     private func checkCameraPermissions() {
@@ -886,14 +830,12 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
         case .authorized:
             // Camera access is already granted
             cameraPermissionDenied = false
-            print("✅ Camera permission already granted")
         case .notDetermined:
             // Request camera access
             AVCaptureDevice.requestAccess(for: .video) { granted in
                 DispatchQueue.main.async {
                     self.cameraPermissionDenied = !granted
-                    print(granted ? "✅ Camera permission granted" : "❌ Camera permission denied")
-                    
+
                     // If permission was granted, allow a moment before setting up the session
                     if granted {
                         // Trigger camera setup refresh
@@ -904,16 +846,12 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
         case .denied, .restricted:
             // Camera access was previously denied
             cameraPermissionDenied = true
-            print("❌ Camera permission previously denied or restricted")
         @unknown default:
             cameraPermissionDenied = true
-            print("❓ Unknown camera permission status")
         }
     }
 
     private func performProcessBarcode(_ barcode: String, userEmail: String) {
-        print("🧩 Processing barcode directly (without photo): \(barcode)")
-        print("📊 Barcode preview enabled: \(barcodePreviewEnabled)")
 
         foodManager.isAnalyzingFood = true
         foodManager.loadingMessage = "Looking up barcode..."
@@ -954,13 +892,11 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
             self.isProcessingBarcode = false
 
             if success {
-                print("✅ Barcode lookup success for: \(barcode)")
                 // Stop camera session BEFORE dismissing to prevent race condition
                 self.stopCameraSession {
                     self.isPresented = false
                 }
             } else {
-                print("❌ Barcode lookup failed: \(message ?? "Unknown error")")
                 self.lastProcessedBarcode = nil
             }
         }
@@ -1222,44 +1158,30 @@ struct CameraPreviewView: UIViewRepresentable {
         guard let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let videoInput = try? AVCaptureDeviceInput(device: backCamera),
               coordinator.captureSession.canAddInput(videoInput) else {
-            print("Failed to set up back camera")
             coordinator.captureSession.commitConfiguration()
             coordinator.isConfiguring = false
             return
         }
-        
+
         // Save reference to device for flash control
         coordinator.device = backCamera
-        
-        // Print flash capability info
-        print("Device hasFlash: \(backCamera.hasFlash)")
-        print("Device hasTorch: \(backCamera.hasTorch)")
         
         // Configure flash settings
         do {
             try backCamera.lockForConfiguration()
-            
+
             // Turn off torch during preview - we ONLY want flash during capture
             if backCamera.hasTorch {
                 backCamera.torchMode = .off
-                print("Torch mode turned OFF for preview")
             }
-            
-            // Check flash capability
-            if backCamera.hasFlash {
-                // Just confirm flash availability
-                print("Flash is available and will be used during capture")
-            }
-            
+
             // Configure for optimal video performance
             if backCamera.isAutoFocusRangeRestrictionSupported {
                 backCamera.autoFocusRangeRestriction = .near
-                print("🔍 Set autoFocusRangeRestriction to NEAR for better barcode scanning")
             }
-            
+
             backCamera.unlockForConfiguration()
         } catch {
-            print("Error configuring camera: \(error)")
         }
         
         coordinator.captureSession.addInput(videoInput)
@@ -1267,12 +1189,9 @@ struct CameraPreviewView: UIViewRepresentable {
         // Add photo output with high resolution
         if coordinator.captureSession.canAddOutput(coordinator.photoOutput) {
             coordinator.captureSession.addOutput(coordinator.photoOutput)
-            
+
             // Configure for high resolution (using proper API)
             coordinator.photoOutput.isHighResolutionCaptureEnabled = true
-            print("Photo output added to session with high resolution enabled")
-        } else {
-            print("Cannot add photo output to session")
         }
         
         // Add metadata output for barcode scanning
@@ -1284,26 +1203,20 @@ struct CameraPreviewView: UIViewRepresentable {
             // Set the rect of interest to the center of the screen for better barcode detection
             // This ensures we're prioritizing the center area where users typically hold barcodes
             metadataOutput.rectOfInterest = CGRect(x: 0.2, y: 0.2, width: 0.6, height: 0.6)
-            
-            print("Available metadata types: \(metadataOutput.availableMetadataObjectTypes)")
-            
+
             // Check if UPC/EAN barcode formats are supported
             if metadataOutput.availableMetadataObjectTypes.contains(.ean13) {
                 metadataOutput.metadataObjectTypes = [.ean13, .ean8, .upce]
-                print("Barcode scanning ready with UPC/EAN formats")
                 coordinator.metadataOutput = metadataOutput
             }
-            
+
             // Improve real-time performance for barcode processing
             if let connection = metadataOutput.connection(with: .metadata) {
                 connection.isEnabled = true
-                print("✅ Metadata connection enabled for better barcode detection")
             }
-            
+
             // Initially enable or disable barcode scanning based on mode
             coordinator.updateBarcodeScanning(isBarcode: selectedMode == .barcode)
-        } else {
-            print("Cannot add metadata output for barcode scanning")
         }
         
         coordinator.captureSession.commitConfiguration()
@@ -1314,7 +1227,6 @@ struct CameraPreviewView: UIViewRepresentable {
         // Start the camera session
         DispatchQueue.global(qos: .userInitiated).async {
             coordinator.captureSession.startRunning()
-            print("Camera session started successfully")
         }
     }
 
@@ -1365,7 +1277,6 @@ struct CameraPreviewView: UIViewRepresentable {
         func safeStopSession() {
             // Don't try to stop while configuring - it will deadlock waiting for the lock
             guard !isConfiguring else {
-                print("⚠️ Cannot stop session - configuration in progress, will retry")
                 // Retry after a short delay
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                     self?.safeStopSession()
@@ -1382,7 +1293,6 @@ struct CameraPreviewView: UIViewRepresentable {
             // Stop on background thread to avoid blocking UI
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 self?.captureSession.stopRunning()
-                print("🛑 Camera session stopped safely")
 
                 // Notify that stop is complete
                 DispatchQueue.main.async {
@@ -1399,10 +1309,8 @@ struct CameraPreviewView: UIViewRepresentable {
         func updateBarcodeScanning(isBarcode: Bool) {
             if isBarcode {
                 metadataOutput?.metadataObjectTypes = [.ean13, .ean8, .upce]
-                print("Barcode scanning ENABLED for UPC/EAN formats")
             } else {
                 metadataOutput?.metadataObjectTypes = []
-                print("Barcode scanning DISABLED")
             }
         }
         
@@ -1416,8 +1324,6 @@ struct CameraPreviewView: UIViewRepresentable {
             // Find the first barcode
             if let metadataObject = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
                let barcodeValue = metadataObject.stringValue {
-                print("📣 BARCODE DETECTED: \(barcodeValue) (type: \(metadataObject.type.rawValue))")
-                
                 // Process the barcode through our delegate
                 DispatchQueue.main.async {
                     self.parent.onBarcodeDetected(barcodeValue)
@@ -1432,13 +1338,11 @@ struct CameraPreviewView: UIViewRepresentable {
                 // We'll use the processBarcodeDirectly flow instead
                 return
             }
-            
-            print("📸 Capturing photo with flash: \(parent.flashEnabled ? "ENABLED" : "DISABLED")")
-            
+
             // CRITICAL: Create settings with the correct format and enable high resolution
             let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
             settings.isHighResolutionPhotoEnabled = true
-            
+
             // Set flash mode based on the toggle - this is the key part
             if parent.flashEnabled {
                 // For flash during capture, directly configure the device first
@@ -1447,24 +1351,19 @@ struct CameraPreviewView: UIViewRepresentable {
                         try device.lockForConfiguration()
                         // Force flash mode to on for the hardware
                         device.flashMode = .on
-                        print("📸 Flash hardware ENABLED for capture")
                         device.unlockForConfiguration()
                     } catch {
-                        print("Error configuring flash hardware: \(error)")
                     }
                 }
                 // Then set the photo settings flash mode
                 settings.flashMode = .on
             } else {
                 settings.flashMode = .off
-                print("Flash OFF for capture")
             }
-            
+
             do {
-                print("📸 Initiating capture with settings: \(settings.flashMode == .on ? "FLASH ON" : "FLASH OFF")")
                 photoOutput.capturePhoto(with: settings, delegate: self)
             } catch {
-                print("❌ Failed to start capture: \(error)")
                 // Notify failure
                 parent.onCapture(nil)
             }
@@ -1473,11 +1372,8 @@ struct CameraPreviewView: UIViewRepresentable {
         // Handle the captured photo
         func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
             if let error = error {
-                print("Error capturing photo: \(error)")
-                
                 // Special handling for barcode mode - proceed even without photo
                 if parent.selectedMode == .barcode {
-                    print("📷 Photo capture failed in barcode mode - proceeding with barcode only")
                     // No need to call onCapture(nil) here as we'll use processBarcodeDirectly instead
                 } else {
                     parent.onCapture(nil)

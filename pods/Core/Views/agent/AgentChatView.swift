@@ -206,18 +206,13 @@ struct AgentChatView: View {
 
             // Load existing conversation if provided
             if let conversationId = conversationIdToLoad {
-                print("🤖 AgentChatView.onAppear - Loading conversation: \(conversationId)")
                 Task {
                     await loadConversation(conversationId)
                 }
             }
 
-            // Send initial message if provided (from AgentTabBar)
-            print("🤖 AgentChatView.onAppear - initialMessage: \(initialMessage ?? "nil"), initialCoachMessage: \(initialCoachMessage ?? "nil"), startWithVoiceMode: \(startWithVoiceMode), isCheckinFlow: \(isCheckinFlow)")
-
             // For check-in flow, seed the initial coach message with proper response type
             if isCheckinFlow, let coachMessage = initialCoachMessage, !coachMessage.isEmpty {
-                print("🤖 AgentChatView: Seeding check-in initial coach message: \(coachMessage)")
                 viewModel.messages.append(HealthCoachMessage(
                     sender: .coach,
                     text: coachMessage,
@@ -225,12 +220,10 @@ struct AgentChatView: View {
                 ))
                 initialCoachMessage = nil
             } else if conversationIdToLoad == nil, let coachMessage = initialCoachMessage, !coachMessage.isEmpty {
-                print("🤖 AgentChatView: Seeding initial coach message: \(coachMessage)")
                 viewModel.seedCoachMessage(coachMessage)
                 initialCoachMessage = nil
             }
             if let message = initialMessage, !message.isEmpty {
-                print("🤖 AgentChatView: Sending initial message: \(message)")
                 viewModel.send(message: message)
                 // Clear it to avoid re-sending on re-appear
                 initialMessage = nil
@@ -238,7 +231,6 @@ struct AgentChatView: View {
 
             // Auto-start voice mode if requested
             if startWithVoiceMode {
-                print("🎤 AgentChatView: Auto-starting voice mode")
                 // Clear it to avoid re-starting on re-appear
                 startWithVoiceMode = false
                 Task {
@@ -1009,7 +1001,7 @@ struct AgentChatView: View {
 
     private var inputBar: some View {
         let hasUserInput = !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let showShortcuts = viewModel.messages.count <= 2 && realtimeSession.messages.isEmpty && !viewModel.isLoading
+        let showShortcuts = viewModel.messages.count <= 3 && realtimeSession.messages.isEmpty && !viewModel.isLoading
 
         return VStack(spacing: 0) {
             // Shortcut chips - only show when conversation is empty

@@ -234,10 +234,6 @@ private var remainingCal: Double { vm.remainingCalories }
         if !scheduledPreviewsForSelectedDate.isEmpty {
             VStack(spacing: 12) {
                 ForEach(scheduledPreviewsForSelectedDate) { preview in
-                    let _ = print("[Dashboard] scheduled card", preview.id, preview.summary.title, preview.normalizedTargetDate, vm.selectedDate)
-#if DEBUG
-                    let _ = print("[Dashboard] Rendering scheduled preview id:\(preview.id) normalized:\(preview.normalizedTargetDate) selected:\(vm.selectedDate)")
-#endif
                     ScheduledLogPreviewCard(
                         preview: preview,
                         onAccept: { handleScheduled(preview: preview, action: .log) },
@@ -627,12 +623,6 @@ private var remainingCal: Double { vm.remainingCalories }
                     foodMgr.createNutritionLabelFoodWithName(nutritionProductName) { result in
                         DispatchQueue.main.async {
                             nutritionProductName = "" // Reset for next time
-                            switch result {
-                            case .success:
-                                print("✅ Successfully created nutrition label food")
-                            case .failure(let error):
-                                print("❌ Failed to create nutrition label food: \(error)")
-                            }
                         }
                     }
                 }
@@ -686,8 +676,6 @@ private var remainingCal: Double { vm.remainingCalories }
             if !onboarding.email.isEmpty {
                 foodMgr.initialize(userEmail: onboarding.email)
                 foodMgr.dayLogsViewModel = vm
-            } else {
-                print("⚠️ DashboardView onAppear - No email available for FoodManager initialization")
             }
 
             healthViewModel.reloadHealthData(for: vm.selectedDate)
@@ -698,11 +686,8 @@ private var remainingCal: Double { vm.remainingCalories }
             homeInitialLoadDone = true
         }
             .onChange(of: onboarding.email) { newEmail in
-                print("🔄 DashboardView - User email changed to: \(newEmail)")
-                
                 // If email changed, reinitialize everything for the new user
                 if !newEmail.isEmpty && vm.email != newEmail {
-                    print("🔄 DashboardView - Reinitializing for new user")
                     
                     // Update DayLogsViewModel
                     vm.setEmail(newEmail)
@@ -756,22 +741,19 @@ private var remainingCal: Double { vm.remainingCalories }
                 .publisher(for: NSNotification.Name("WaterLoggedNotification"))
                 .receive(on: RunLoop.main)
         ) { _ in
-            print("💧 DashboardView received WaterLoggedNotification - skipping full reload (handled locally)")
         }
             .onReceive(
                 NotificationCenter.default
                     .publisher(for: NSNotification.Name("FoodLogUpdated"))
                     .receive(on: RunLoop.main)
             ) { notification in
-                print("🍎 DashboardView received FoodLogUpdated notification")
                 if let userInfo = notification.userInfo,
                    let updatedLog = userInfo["updatedLog"] as? CombinedLog,
                    let logId = userInfo["logId"] as? Int {
-                    
+
                     // Update the log in our local state immediately
                     if let index = vm.logs.firstIndex(where: { $0.foodLogId == logId }) {
                         vm.logs[index] = updatedLog
-                        print("✅ Updated log in dashboard view")
                     }
                 }
             }
@@ -780,7 +762,6 @@ private var remainingCal: Double { vm.remainingCalories }
                     .publisher(for: NSNotification.Name("HealthDataAvailableNotification"))
                     .receive(on: RunLoop.main)
             ) { _ in
-                print("📊 Health data available - reloading dashboard")
                 // Health data updates do not require a full log fetch; rely on scheduled foreground refresh/pull-to-refresh
             }
             .onChange(of: scenePhase) { phase in
@@ -795,7 +776,6 @@ private var remainingCal: Double { vm.remainingCalories }
             ) { notification in
                 let isLocal = (notification.userInfo?["localOnly"] as? Bool) ?? false
                 let source = notification.userInfo?["source"] as? String
-                print("🔄 DashboardView received LogsChangedNotification - localOnly=\(isLocal), source=\(source ?? "unknown")")
                 if isLocal {
                     // Optimistic updates already handled; defer heavy refresh until date change
                     return
@@ -814,10 +794,8 @@ private var remainingCal: Double { vm.remainingCalories }
                     .publisher(for: .workoutDataChanged)
                     .receive(on: RunLoop.main)
             ) { notification in
-                print("🔄 DashboardView received WorkoutDataChanged - adding workouts to UI")
                 // Extract workout data from notification (matches food logging pattern)
                 if let workouts = notification.userInfo?["workouts"] as? [CombinedLog] {
-                    print("✅ Adding \(workouts.count) workout(s) to dashboard via addPending")
                     for workout in workouts {
                         vm.addPending(workout)
                     }
@@ -838,17 +816,15 @@ private var remainingCal: Double { vm.remainingCalories }
     }
     // Save function for swipe-to-save functionality
     private func saveMealAction(log: CombinedLog) {
-     
-        
+
         switch log.type {
         case .food:
             guard let foodLogId = log.foodLogId else {
-                print("❌ No food log ID available")
                 return
             }
-            
+
             HapticFeedback.generateLigth()
-            
+
             foodMgr.saveMeal(
                 itemType: .foodLog,
                 itemId: foodLogId,
@@ -857,27 +833,25 @@ private var remainingCal: Double { vm.remainingCalories }
             ) { result in
                 DispatchQueue.main.async {
                     switch result {
-                    case .success(let response):
-                        print("✅ Successfully saved food log: \(response.message)")
+                    case .success:
                         // Show success feedback
                         withAnimation {
                             // Could add a success animation here
                         }
-                    case .failure(let error):
-                        print("❌ Failed to save food log: \(error)")
+                    case .failure:
                         // Could show an error alert here
+                        break
                     }
                 }
             }
-            
+
         case .meal:
             guard let mealLogId = log.mealLogId else {
-                print("❌ No meal log ID available")
                 return
             }
-            
+
             HapticFeedback.generateLigth()
-            
+
             foodMgr.saveMeal(
                 itemType: .mealLog,
                 itemId: mealLogId,
@@ -886,89 +860,55 @@ private var remainingCal: Double { vm.remainingCalories }
             ) { result in
                 DispatchQueue.main.async {
                     switch result {
-                    case .success(let response):
-                        print("✅ Successfully saved meal log: \(response.message)")
+                    case .success:
                         // Show success feedback
                         withAnimation {
                             // Could add a success animation here
                         }
-                    case .failure(let error):
-                        print("❌ Failed to save meal log: \(error)")
+                    case .failure:
                         // Could show an error alert here
+                        break
                     }
                 }
             }
-            
-        case .recipe:
-            print("📝 Recipe saving not yet implemented")
-        case .activity:
-            print("🏃 Activity logs cannot be saved (they come from Apple Health)")
-        case .workout:
-            print("🏋️ Workout logs cannot be saved from the dashboard")
+
+        case .recipe, .activity, .workout:
+            break
         }
     }
     
     // Unsave function for swipe-to-unsave functionality
     private func unsaveMealAction(log: CombinedLog) {
-        print("🗑️ Unsaving meal/food log: \(log.id)")
-        
         switch log.type {
         case .food:
             guard let foodLogId = log.foodLogId else {
-                print("❌ No food log ID available")
                 return
             }
-            
+
             HapticFeedback.generateLigth()
-            
-            foodMgr.unsaveByLogId(foodLogId: foodLogId) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let response):
-                        print("✅ Successfully unsaved food log: \(response.message)")
-                    case .failure(let error):
-                        print("❌ Failed to unsave food log: \(error)")
-                    }
-                }
-            }
-            
+
+            foodMgr.unsaveByLogId(foodLogId: foodLogId) { _ in }
+
         case .meal:
             guard let mealLogId = log.mealLogId else {
-                print("❌ No meal log ID available")
                 return
             }
-            
+
             HapticFeedback.generateLigth()
-            
-            foodMgr.unsaveByLogId(mealLogId: mealLogId) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let response):
-                        print("✅ Successfully unsaved meal log: \(response.message)")
-                    case .failure(let error):
-                        print("❌ Failed to unsave meal log: \(error)")
-                    }
-                }
-            }
-            
-        case .recipe:
-            print("📝 Recipe unsaving not yet implemented")
-        case .activity:
-            print("🏃 Activity logs cannot be unsaved (they come from Apple Health)")
-        case .workout:
-            print("🏋️ Workout logs cannot be unsaved from the dashboard")
+
+            foodMgr.unsaveByLogId(mealLogId: mealLogId) { _ in }
+
+        case .recipe, .activity, .workout:
+            break
         }
     }
-    
+
     // Delete function for individual log items
     private func deleteLogItem(log: CombinedLog) {
-        print("🗑️ Deleting individual log item: \(log.id)")
-        
         switch log.type {
         case .activity:
             // Keep HealthKit safeguard
             if let activityId = log.activityId, activityId.count > 10 && activityId.contains("-") {
-                print("🏃 HealthKit activity logs cannot be deleted (they come from Apple Health)")
                 return
             }
             fallthrough
@@ -976,7 +916,7 @@ private var remainingCal: Double { vm.remainingCalories }
             HapticFeedback.generate()
             Task { await vm.removeLog(log) }
         case .workout:
-            print("🏋️ Workout logs cannot be deleted from the dashboard (completed sessions are permanent)")
+            break
         }
     }
 
@@ -1368,7 +1308,6 @@ private extension NewHomeView {
                     activeCoachCard = nil
                 }
             } catch {
-                print("[CHECKIN] Failed to start check-in: \(error)")
                 // Fall back to standard card behavior
                 await MainActor.run {
                     handleStandardCardTap(card: card)
@@ -3175,13 +3114,9 @@ private struct RecoveryRingView: View {
 
         // Prioritize cached logs (freshly fetched from network) over profile logs (may be stale)
         if let cachedLogs = loadCachedWeightLogs(), !cachedLogs.isEmpty {
-            print("📊 refreshWeightTrendEntries: Using \(cachedLogs.count) cached logs")
             resolvedLogs = cachedLogs
         } else if let profileLogs = onboarding.profileData?.weightLogsRecent, !profileLogs.isEmpty {
-            print("📊 refreshWeightTrendEntries: Using \(profileLogs.count) profile logs (fallback)")
             resolvedLogs = profileLogs
-        } else {
-            print("📊 refreshWeightTrendEntries: No logs found")
         }
 
         var entries: [BodyCompositionEntry] = resolvedLogs.compactMap { log in
@@ -3193,15 +3128,11 @@ private struct RecoveryRingView: View {
         if entries.isEmpty {
             let fallbackWeight = vm.weight > 0 ? vm.weight : (onboarding.weightKg > 0 ? onboarding.weightKg : nil)
             if let fallback = fallbackWeight {
-                print("📊 refreshWeightTrendEntries: Using fallback weight: \(fallback) kg")
                 entries = [BodyCompositionEntry(value: convertWeightToDisplayUnit(fallback), date: Date())]
             }
         }
 
         weightTrendEntries = Array(entries.prefix(7)).sorted { $0.date < $1.date }
-        if let latest = weightTrendEntries.last {
-            print("📊 refreshWeightTrendEntries: Latest displayed weight: \(latest.value)")
-        }
     }
 
     private func fetchBodyFatHistoryIfNeeded() {
@@ -3215,9 +3146,6 @@ private struct RecoveryRingView: View {
                     let sorted = samples.sorted { $0.date < $1.date }
                     self.bodyFatTrendEntries = sorted.map { BodyCompositionEntry(value: $0.value, date: $0.date) }
                 } else {
-                    if let error = error {
-                        print("Error fetching body fat samples: \(error)")
-                    }
                     self.bodyFatTrendEntries = []
                 }
             }
@@ -3237,14 +3165,9 @@ private struct RecoveryRingView: View {
         let email = onboarding.email
         guard !email.isEmpty else { return }
 
-        print("🔄 fetchAndRefreshWeightLogs: Fetching weight logs for \(email)")
         NetworkManagerTwo.shared.fetchWeightLogs(userEmail: email, limit: 1000, offset: 0) { result in
             switch result {
             case .success(let response):
-                print("✅ fetchAndRefreshWeightLogs: Got \(response.logs.count) logs")
-                if let firstLog = response.logs.first {
-                    print("   Latest log: \(firstLog.weightKg) kg on \(firstLog.dateLogged)")
-                }
                 if let encodedData = try? JSONEncoder().encode(response) {
                     UserDefaults.standard.set(encodedData, forKey: "preloadedWeightLogs")
                     UserDefaults.standard.set(Date(), forKey: "preloadedWeightLogsTimestamp")
@@ -3252,8 +3175,8 @@ private struct RecoveryRingView: View {
                 DispatchQueue.main.async {
                     self.refreshWeightTrendEntries()
                 }
-            case .failure(let error):
-                print("❌ fetchAndRefreshWeightLogs Error: \(error)")
+            case .failure:
+                break
             }
         }
     }
@@ -6555,7 +6478,6 @@ private extension NewHomeView {
             _ = try await workoutManager.saveTodayWorkoutAsCustom()
             HapticFeedback.generate()
         } catch {
-            print("Error saving workout: \(error.localizedDescription)")
         }
     }
 
@@ -6587,20 +6509,17 @@ private extension NewHomeView {
             
             // Force update the email in DayLogsViewModel if it's different
             if vm.email != currentEmail {
-                print("🔄 DashboardView - Email changed from '\(vm.email)' to '\(currentEmail)' - updating DayLogsViewModel")
                 vm.setEmail(currentEmail)
-                
+
                 // Clear existing logs since they belong to a different user
                 vm.logs = []
-                
+
                 // Force reload logs for the new user
                 vm.loadLogs(for: vm.selectedDate)
             } else if vm.email.isEmpty {
-                print("🔄 DashboardView - Setting initial email '\(currentEmail)' in DayLogsViewModel")
                 vm.setEmail(currentEmail)
             } else {
                 // Email is already set correctly, but ensure nutrition goals are up-to-date
-                print("🔄 DashboardView - Email already set, refreshing nutrition goals")
                 vm.refreshNutritionGoals()
             }
             
@@ -6614,7 +6533,6 @@ private extension NewHomeView {
             UserDefaults.standard.removeObject(forKey: "preloadedWeightLogs")
             UserDefaults.standard.removeObject(forKey: "preloadedHeightLogs")
         } else {
-            print("⚠️ DashboardView - No email available from onboarding")
             return
         }
         
@@ -6646,8 +6564,8 @@ private extension NewHomeView {
                             self.refreshWeightTrendEntries()
                         }
                     }
-                case .failure(let error):
-                    print("Error preloading weight logs: \(error)")
+                case .failure:
+                    break
                 }
             }
         }
@@ -6661,8 +6579,8 @@ private extension NewHomeView {
                         UserDefaults.standard.set(encodedData, forKey: "preloadedHeightLogs")
                         UserDefaults.standard.set(Date(), forKey: heightKey)
                     }
-                case .failure(let error):
-                    print("Error preloading height logs: \(error)")
+                case .failure:
+                    break
                 }
             }
         }
@@ -7654,7 +7572,6 @@ extension NewHomeView {
                     activeCoachCard = card
                 }
             } catch {
-                print("[CoachCard] Failed to fetch active home card: \(error)")
             }
         }
     }

@@ -64,12 +64,7 @@ final class HealthCoachChatViewModel: ObservableObject {
     /// - Parameter message: The user's message
     func send(message: String) {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            print("🤖 HealthCoachChatViewModel.send: Empty message, ignoring")
-            return
-        }
-
-        print("🤖 HealthCoachChatViewModel.send: Sending message: \(trimmed)")
+        guard !trimmed.isEmpty else { return }
 
         // Add user message
         let userMessage = HealthCoachMessage(
@@ -132,28 +127,23 @@ final class HealthCoachChatViewModel: ObservableObject {
                 self.messages.removeAll { $0.id == statusMessageId }
 
                 let completedMessageId = self.streamingMessageId
-                print("🤖 HealthCoachChatViewModel.onComplete - completedMessageId: \(completedMessageId?.uuidString ?? "nil"), messages count: \(self.messages.count)")
                 self.streamingMessageId = nil
                 self.streamingText = ""
 
                 switch result {
                 case .success(let response):
-                    print("🤖 HealthCoachChatViewModel.onComplete - SUCCESS, calling handleResponse")
                     self.handleResponse(response, existingMessageId: completedMessageId)
                 case .failure(let error):
-                    print("🤖 HealthCoachChatViewModel.onComplete - FAILURE: \(error)")
                     // Check if this was a cancellation - if so, silently ignore
                     let nsError = error as NSError
                     if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
                         // User cancelled - no error message needed
-                        print("🤖 HealthCoachChatViewModel.onComplete - Request was cancelled, removing message")
                         if let msgId = completedMessageId {
                             self.messages.removeAll { $0.id == msgId }
                         }
                         return
                     }
 
-                    print("🤖 HealthCoachChatViewModel.onComplete - Non-cancellation error, removing message and showing error")
                     self.pendingClarificationQuestion = nil
                     if let msgId = completedMessageId {
                         self.messages.removeAll { $0.id == msgId }
@@ -173,10 +163,7 @@ final class HealthCoachChatViewModel: ObservableObject {
     ///   - interventionId: Optional intervention ID for thumbs feedback
     func seedCoachMessage(_ message: String, interventionId: String? = nil) {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            print("🤖 HealthCoachChatViewModel.seedCoachMessage: Empty message, ignoring")
-            return
-        }
+        guard !trimmed.isEmpty else { return }
 
         messages.append(HealthCoachMessage(
             sender: .coach,
@@ -197,7 +184,6 @@ final class HealthCoachChatViewModel: ObservableObject {
 
     /// Cancel the current streaming request
     func cancelStream() {
-        print("🤖 HealthCoachChatViewModel.cancelStream: Cancelling stream")
         currentStreamTask?.cancel()
         currentStreamTask = nil
         isLoading = false
@@ -254,11 +240,8 @@ final class HealthCoachChatViewModel: ObservableObject {
 
     private func handleResponse(_ response: HealthCoachResponse, existingMessageId: UUID?) {
         // Update conversation ID from response (server creates/uses conversation)
-        print("🤖 HealthCoachChatViewModel.handleResponse - type: \(response.type), hasFood: \(response.food != nil), hasMealItems: \(response.mealItems?.isEmpty == false), existingMessageId: \(existingMessageId?.uuidString ?? "nil")")
-        print("🤖 HealthCoachChatViewModel.handleResponse - response.conversationId: \(response.conversationId ?? "nil"), currentConversationId: \(currentConversationId ?? "nil")")
         if let newConversationId = response.conversationId {
             if currentConversationId == nil || currentConversationId != newConversationId {
-                print("🤖 HealthCoachChatViewModel.handleResponse - Updating conversationId to: \(newConversationId)")
                 currentConversationId = newConversationId
                 onConversationIdUpdated?(newConversationId)
             }
@@ -273,7 +256,6 @@ final class HealthCoachChatViewModel: ObservableObject {
 
         // Only add message if it wasn't already streamed
         if existingMessageId == nil {
-            print("🤖 HealthCoachChatViewModel.handleResponse - No existingMessageId, appending new message")
             messages.append(HealthCoachMessage(
                 sender: .coach,
                 text: response.message,
@@ -289,7 +271,6 @@ final class HealthCoachChatViewModel: ObservableObject {
         } else if let existingId = existingMessageId,
                   let index = messages.firstIndex(where: { $0.id == existingId }) {
             // Update existing message with response data (including citations and intervention ID)
-            print("🤖 HealthCoachChatViewModel.handleResponse - Found existing message at index \(index), text: '\(messages[index].text.prefix(100))', updating with responseType: \(response.type)")
             messages[index] = HealthCoachMessage(
                 id: existingId,
                 sender: .coach,
@@ -304,8 +285,6 @@ final class HealthCoachChatViewModel: ObservableObject {
                 citations: response.citations,
                 interventionId: response.interventionId
             )
-        } else {
-            print("🤖 HealthCoachChatViewModel.handleResponse - ⚠️ existingMessageId provided but message not found! ID: \(existingMessageId?.uuidString ?? "nil"), messages count: \(messages.count)")
         }
 
         // Always add to conversation history

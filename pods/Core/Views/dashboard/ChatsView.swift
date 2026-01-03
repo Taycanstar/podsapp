@@ -16,6 +16,9 @@ struct ChatsView: View {
     @Binding var newConversationId: String?
     @Binding var newConversationTitle: String?
 
+    // Binding to trigger refresh from parent (e.g., when returning from AgentChatView)
+    @Binding var shouldRefresh: Bool
+
     @Environment(\.dismiss) private var dismiss
     @AppStorage("isAuthenticated") private var isAuthenticated: Bool = false
     @EnvironmentObject private var onboardingViewModel: OnboardingViewModel
@@ -114,6 +117,9 @@ struct ChatsView: View {
             }
         }
         .listStyle(.plain)
+        .refreshable {
+            await refreshConversations()
+        }
         .searchable(text: $searchText, prompt: "Search conversations")
         .navigationTitle(name)
         .navigationBarTitleDisplayMode(.inline)
@@ -163,6 +169,13 @@ struct ChatsView: View {
                 // Clear the binding
                 newConversationId = nil
                 newConversationTitle = nil
+            }
+        }
+        .onChange(of: shouldRefresh) { _, newValue in
+            // Refresh conversations when triggered by parent (e.g., returning from AgentChatView)
+            if newValue {
+                shouldRefresh = false
+                loadConversations(force: true)
             }
         }
         .sheet(isPresented: $showSettingsSheet) {
@@ -273,8 +286,8 @@ struct ChatsView: View {
 
     // MARK: - Data Operations
 
-    private func loadConversations() {
-        guard pinnedIds.isEmpty && recentIds.isEmpty else { return }
+    private func loadConversations(force: Bool = false) {
+        guard force || (pinnedIds.isEmpty && recentIds.isEmpty) else { return }
 
         let email = onboardingViewModel.email.isEmpty
             ? (UserDefaults.standard.string(forKey: "userEmail") ?? "")
@@ -314,6 +327,36 @@ struct ChatsView: View {
                     isLoading = false
                 }
             }
+        }
+    }
+
+    /// Async refresh for pull-to-refresh
+    private func refreshConversations() async {
+        let email = onboardingViewModel.email.isEmpty
+            ? (UserDefaults.standard.string(forKey: "userEmail") ?? "")
+            : onboardingViewModel.email
+
+        guard !email.isEmpty else { return }
+
+        do {
+            let response = try await NetworkManager().getConversations(
+                userEmail: email,
+                limit: pageSize,
+                offset: 0
+            )
+
+            let pinned = response.conversations.filter { $0.isPinned }
+            let recent = response.conversations.filter { !$0.isPinned }
+
+            pinnedIds = pinned.map { $0.id }
+            pinnedTitles = pinned.map { $0.title }
+            recentIds = recent.map { $0.id }
+            recentTitles = recent.map { $0.title }
+
+            hasMore = response.hasMore
+            currentOffset = response.conversations.count
+        } catch {
+            print("Failed to refresh conversations: \(error)")
         }
     }
 

@@ -247,7 +247,6 @@ struct LogWorkoutView: View {
             .onAppear {
                 workoutManager.setModelContext(modelContext)
                 workoutManager.setWorkoutViewActive(true)
-                print("🚀 LogWorkoutView appeared - WorkoutManager is globally managed")
                 // Ensure workout weights match user's units when view appears
                 let savedUnits = UserDefaults.standard.string(forKey: "workoutUnitsSystem")
                 let currentUnits = onboarding.unitsSystem.rawValue
@@ -265,7 +264,6 @@ struct LogWorkoutView: View {
                 workoutManager.setWorkoutViewActive(false)
             }
             .onChange(of: userProfile.bodyweightOnlyWorkouts) { _, newValue in
-                print("🏋️‍♀️ Bodyweight-only preference toggled to \(newValue) – scheduling workout regeneration")
                 shouldRegenerateWorkout = true
             }
             .onChange(of: workoutManager.syncErrorMessage) { _, message in
@@ -418,13 +416,11 @@ struct LogWorkoutView: View {
                     }
                     
                     showingDurationPicker = false
-                    print("✅ Default duration set to \(newDuration.minutes) minutes")
                 },
                 onSetForWorkout: { newDuration in
                     // Update WorkoutManager session duration
                     workoutManager.setSessionDuration(newDuration)
                     showingDurationPicker = false
-                    print("✅ Session duration set to \(newDuration.minutes) minutes")
                 }
             )
     }
@@ -433,7 +429,6 @@ struct LogWorkoutView: View {
     private var targetMusclesPickerSheet: some View {
         TargetMusclesView(
             onSetForWorkout: { newMuscles, split in
-                print("🎯 Session muscles set to \(newMuscles) for \(split.rawValue)")
                 workoutManager.setSessionTargetMuscles(newMuscles, type: split.rawValue)
                 showingTargetMusclesPicker = false
             },
@@ -448,7 +443,6 @@ struct LogWorkoutView: View {
                 // Save custom equipment selection and type
                 workoutManager.setSessionEquipment(newEquipment, type: equipmentType)
 
-                print("⚙️ Selected equipment: \(newEquipment.map { $0.rawValue }), type: \(equipmentType)")
                 showingEquipmentPicker = false
             })
     }
@@ -465,13 +459,10 @@ struct LogWorkoutView: View {
                     }
                     
                     showingFitnessGoalPicker = false
-                    print("✅ Default fitness goal set to \(newGoal.displayName)")
                 },
                 onSetForWorkout: { newGoal in
                     workoutManager.setSessionFitnessGoal(newGoal)
                     showingFitnessGoalPicker = false
-                    
-                    print("✅ Session fitness goal set to \(newGoal.displayName)")
                 }
             )
     }
@@ -488,13 +479,10 @@ struct LogWorkoutView: View {
                     }
                     
                     showingFitnessLevelPicker = false
-                    print("✅ Default fitness level set to \(newLevel.displayName)")
                 },
                 onSetForWorkout: { newLevel in
                     workoutManager.setSessionFitnessLevel(newLevel)
                     showingFitnessLevelPicker = false
-                    
-                    print("✅ Session fitness level set to \(newLevel.displayName)")
                 }
             )
     }
@@ -522,9 +510,8 @@ struct LogWorkoutView: View {
                                     switch result {
                                     case .success:
                                         showingFlexibilityPicker = false
-                                        print("✅ Default flexibility preferences updated")
-                                    case .failure(let error):
-                                        print("❌ Failed to update flexibility preferences: \(error)")
+                                    case .failure:
+                                        break
                                     }
                                 }
                             }
@@ -536,9 +523,8 @@ struct LogWorkoutView: View {
                 onSetForWorkout: { warmUp, coolDown in
                     let newPrefs = FlexibilityPreferences(warmUpEnabled: warmUp, coolDownEnabled: coolDown)
                     workoutManager.setSessionFlexibilityPreferences(newPrefs)
-                    
+
                     showingFlexibilityPicker = false
-                    print("✅ Session flexibility preferences set")
                 }
             )
     }
@@ -556,14 +542,12 @@ struct LogWorkoutView: View {
     }
     
     private func regenerateWorkoutWithNewDuration() {
-        print("🔄 Regenerating workout with WorkoutManager")
         self.requestWorkoutGeneration()
         // Note: shouldRegenerateWorkout is reset by TodayWorkoutView after it triggers generation
     }
     
     private func clearSessionDuration() {
         workoutManager.clearAllSessionOverrides()
-        print("🗑️ Cleared all session overrides via WorkoutManager")
     }
     
     // Static method to clear session duration from anywhere in the app
@@ -581,12 +565,9 @@ struct LogWorkoutView: View {
         UserDefaults.standard.removeObject(forKey: typeKey)
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessGoal")
         UserDefaults.standard.removeObject(forKey: "currentWorkoutSessionFitnessLevel")
-        print("🗑️ Cleared workout session duration, custom muscles, custom equipment, and fitness preferences (static)")
     }
     
     private func updateServerWorkoutDuration(email: String, durationMinutes: Int) {
-        print("🔄 Updating server workout duration: \(durationMinutes) minutes for \(email)")
-        
         // Create update payload
         let updateData: [String: Any] = [
             "preferred_workout_duration": durationMinutes
@@ -600,8 +581,6 @@ struct LogWorkoutView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    print("✅ Successfully updated workout duration on server")
-
                     // Update DataLayer cache
                     // CRITICAL FIX: Use Task { @MainActor in } to ensure DataLayer runs on main thread
                     // This prevents "Publishing changes from background threads" violations
@@ -609,17 +588,16 @@ struct LogWorkoutView: View {
                         let profileUpdate = ["preferred_workout_duration": durationMinutes]
                         await DataLayer.shared.updateProfileData(profileUpdate)
                     }
-                    
-                case .failure(let error):
-                    print("❌ Failed to update workout duration on server: \(error.localizedDescription)")
+
+                case .failure:
                     // Note: We still keep the local change since UserDefaults was already updated
+                    break
                 }
             }
         }
     }
-    
+
     private func updateServerFitnessGoal(email: String, fitnessGoal: FitnessGoal) {
-        print("🔄 Updating server fitness goal: \(fitnessGoal.displayName) for \(email)")
         
         // Create update payload
         let updateData: [String: Any] = [
@@ -634,25 +612,22 @@ struct LogWorkoutView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    print("✅ Successfully updated fitness goal on server")
-
                     // Update DataLayer cache
                     // CRITICAL FIX: Use Task { @MainActor in } to ensure DataLayer runs on main thread
                     Task { @MainActor in
                         let profileUpdate = ["preferred_fitness_goal": fitnessGoal.rawValue]
                         await DataLayer.shared.updateProfileData(profileUpdate)
                     }
-                    
-                case .failure(let error):
-                    print("❌ Failed to update fitness goal on server: \(error.localizedDescription)")
+
+                case .failure:
                     // Note: We still keep the local change since UserDefaults was already updated
+                    break
                 }
             }
         }
     }
-    
+
     private func updateServerFitnessLevel(email: String, fitnessLevel: ExperienceLevel) {
-        print("🔄 Updating server fitness level: \(fitnessLevel.displayName) for \(email)")
         
         // Create update payload
         let updateData: [String: Any] = [
@@ -667,18 +642,16 @@ struct LogWorkoutView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    print("✅ Successfully updated fitness level on server")
-
                     // Update DataLayer cache
                     // CRITICAL FIX: Use Task { @MainActor in } to ensure DataLayer runs on main thread
                     Task { @MainActor in
                         let profileUpdate = ["experience_level": fitnessLevel.rawValue]
                         await DataLayer.shared.updateProfileData(profileUpdate)
                     }
-                    
-                case .failure(let error):
-                    print("❌ Failed to update fitness level on server: \(error.localizedDescription)")
+
+                case .failure:
                     // Note: We still keep the local change since UserDefaults was already updated
+                    break
                 }
             }
         }
@@ -719,7 +692,6 @@ struct LogWorkoutView: View {
                     Button(action: {
                         workoutManager.clearAllSessionOverrides()
                         self.requestWorkoutGeneration()
-                        print("🔄 Reset to default preferences")
                     }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 12, weight: .medium))
@@ -1191,10 +1163,6 @@ struct LogWorkoutView: View {
 
     private func handleStartTodayWorkout(_ workout: TodayWorkout, onSuccess: (() -> Void)? = nil) {
         guardWorkoutQuota {
-            print("🚀 Starting workout with \(workout.exercises.count) exercises")
-            for (index, exercise) in workout.exercises.enumerated() {
-                print("🚀 Exercise \(index): \(exercise.exercise.name)")
-            }
             HapticFeedback.generate()
             workoutManager.startWorkout(workout)
             currentWorkout = workoutManager.currentWorkout ?? workout
@@ -1204,7 +1172,6 @@ struct LogWorkoutView: View {
 
     private func handleStartCustomWorkout(_ workout: Workout, onSuccess: @escaping () -> Void = {}) {
         guardWorkoutQuota {
-            print("🚀 Starting custom workout '\(workout.name)' with \(workout.exercises.count) exercises")
             HapticFeedback.generate()
             let todayWorkout = workoutManager.startCustomWorkout(workout)
             currentWorkout = workoutManager.currentWorkout ?? todayWorkout
@@ -1421,27 +1388,21 @@ private struct TodayWorkoutView: View {
                 }
             }
             .onChange(of: selectedDuration) { _, newDuration in
-                print("🔄 Duration changed to \(newDuration.minutes) minutes - regenerating workout")
                 requestTodayWorkoutGeneration()
             }
             .onChange(of: customTargetMuscles) { _, newMuscles in
-                print("🎯 Custom muscles changed to: \(newMuscles?.description ?? "nil") - regenerating workout")
                 requestTodayWorkoutGeneration()
             }
             .onChange(of: effectiveFlexibilityPreferences) { _, newPreferences in
-                print("🧘 Flexibility preferences changed to: warmUp=\(newPreferences.warmUpEnabled), coolDown=\(newPreferences.coolDownEnabled) - regenerating workout")
                 requestTodayWorkoutGeneration()
             }
             .onChange(of: customEquipment) { _, newEquipment in
-                print("⚙️ Custom equipment changed to: \(newEquipment?.description ?? "nil") - regenerating workout") 
                 requestTodayWorkoutGeneration()
             }
             .onChange(of: effectiveFitnessGoal) { _, newGoal in
-                print("🏋️ Fitness goal changed to: \(newGoal.displayName) - regenerating workout")
                 requestTodayWorkoutGeneration()
             }
             .onChange(of: effectiveFitnessLevel) { _, newLevel in
-                print("📈 Fitness level changed to: \(newLevel.displayName) - regenerating workout")
                 requestTodayWorkoutGeneration()
             }
     }
@@ -1482,7 +1443,6 @@ private struct TodayWorkoutView: View {
     private func loadOrGenerateTodayWorkout() {
         // CRITICAL: Don't regenerate if in error state to prevent infinite loop
         if workoutManager.generationError != nil {
-            print("⚠️ Skipping generation - error state exists: \(workoutManager.generationError?.localizedDescription ?? "unknown")")
             return
         }
 
@@ -1504,7 +1464,6 @@ private struct TodayWorkoutView: View {
 
     private func requestTodayWorkoutGeneration() {
         guard !workoutManager.isGeneratingWorkout else {
-            print("⏳ TodayWorkoutView: generation already in progress")
             return
         }
         Task {
@@ -1527,15 +1486,13 @@ private struct TodayWorkoutView: View {
         if let customMuscles = customTargetMuscles, !customMuscles.isEmpty {
             // Use custom muscle selection
             muscleGroups = customMuscles
-            print("🎯 Using custom muscle selection: \(muscleGroups)")
         } else {
             // Get recovery-optimized muscle groups
             let recoveryOptimizedMuscles = recommendationService.getRecoveryOptimizedWorkout(targetMuscleCount: 4)
-            
+
             if recoveryOptimizedMuscles.count >= 3 {
                 // Use recovery-optimized selection
                 muscleGroups = recoveryOptimizedMuscles
-                print("🧠 Using recovery-optimized muscles: \(muscleGroups)")
             } else {
                 // Fallback to goal-based selection
                 switch fitnessGoal.normalized {
@@ -1548,7 +1505,6 @@ private struct TodayWorkoutView: View {
                 default:
                     muscleGroups = ["Chest", "Back", "Shoulders", "Quadriceps"]
                 }
-                print("⚠️ Using fallback muscle groups: \(muscleGroups)")
             }
         }
         
@@ -1571,27 +1527,21 @@ private struct TodayWorkoutView: View {
             getWorkoutTitle(for: fitnessGoal)
         
         // Generate warm-up exercises if enabled
-        print("🔍 Creating workout with flexibility preferences: warmUp=\(effectiveFlexibilityPreferences.warmUpEnabled), coolDown=\(effectiveFlexibilityPreferences.coolDownEnabled)")
-        
         let warmUpExercises: [TodayWorkoutExercise]?
         if effectiveFlexibilityPreferences.warmUpEnabled {
             let warmUpResult = recommendationService.getWarmUpExercises(targetMuscles: muscleGroups, customEquipment: customEquipment, count: 3)
             warmUpExercises = warmUpResult
-            print("🔥 Warm-up generation: requested=true, received=\(warmUpResult.count) exercises")
         } else {
             warmUpExercises = nil
-            print("🔥 Warm-up generation: requested=false")
         }
-        
+
         // Generate cool-down exercises if enabled
         let coolDownExercises: [TodayWorkoutExercise]?
         if effectiveFlexibilityPreferences.coolDownEnabled {
             let coolDownResult = recommendationService.getCoolDownExercises(targetMuscles: muscleGroups, customEquipment: customEquipment, count: 3)
             coolDownExercises = coolDownResult
-            print("🧊 Cool-down generation: requested=true, received=\(coolDownResult.count) exercises")
         } else {
             coolDownExercises = nil
-            print("🧊 Cool-down generation: requested=false")
         }
             
         // FITBOD-ALIGNED SYSTEM SUMMARY
@@ -1745,9 +1695,6 @@ private struct TodayWorkoutView: View {
         customEquipment: [Equipment]?,
         flexibilityPreferences: FlexibilityPreferences
     ) -> LogWorkoutPlan {
-        
-        print("🏗️ LogWorkoutView: Using WorkoutGenerationService for robust workout generation")
-        
         // Convert parameters to WorkoutGenerationService types
         let targetDuration = WorkoutDuration.fromMinutes(targetDurationMinutes)
         
@@ -1788,8 +1735,6 @@ private struct TodayWorkoutView: View {
                 totalSeconds: generatedPlan.totalTimeBreakdown.totalMinutes * 60
             )
             
-            print("✅ LogWorkoutView: Generated \(generatedPlan.exercises.count) exercises using research-based algorithm")
-            
             return LogWorkoutPlan(
                 exercises: generatedPlan.exercises,
                 actualDurationMinutes: generatedPlan.actualDurationMinutes,
@@ -1797,7 +1742,6 @@ private struct TodayWorkoutView: View {
             )
             
         } catch {
-            print("⚠️ LogWorkoutView: WorkoutGenerationService failed, error: \(error)")
             // Fallback to empty workout rather than minimal exercises
             let breakdown = WorkoutTimeBreakdown(
                 warmupSeconds: 0,
@@ -1841,9 +1785,7 @@ private struct TodayWorkoutView: View {
         
         // Distribute across muscle groups (aim for 6-10 exercises for 60min workout)
         let targetPerMuscle = max(1, Int(ceil(Double(targetTotalExercises) / Double(max(1, muscleGroupCount)))))
-        
-        print("🎯 Target calculation: \(availableExerciseTimeMinutes)min ÷ \(String(format: "%.1f", totalTimePerExercise))min = \(targetTotalExercises) total, \(targetPerMuscle) per muscle")
-        
+
         return min(4, targetPerMuscle) // Cap at 4 per muscle group
     }
     
@@ -1946,8 +1888,6 @@ private struct TodayWorkoutView: View {
             
             let exerciseTime = workingTime + restTime + setupTime + transitionTime
             totalTime += exerciseTime
-            
-            print("   Exercise \(exercise.exercise.name): \(exerciseTime)s (\(workingTime)s work + \(restTime)s rest + \(setupTime)s setup + \(transitionTime)s transition)")
         }
         
         return totalTime
@@ -2035,11 +1975,10 @@ private struct TodayWorkoutView: View {
             // Compound exercises: Use efficient maximum
             finalRestTime = efficientMax
         } else {
-            // Isolation exercises: Use lower quarter of range  
+            // Isolation exercises: Use lower quarter of range
             finalRestTime = max(restRange.lowerBound, isolationMax)
         }
-        
-        print("🔍 Rest time for \(exercise.name): range=\(restRange), compound=\(isCompound), final=\(finalRestTime)s")
+
         return finalRestTime
     }
     
@@ -3626,16 +3565,12 @@ private extension View {
     }
     
     private func updateExercise(at index: Int, with updatedExercise: TodayWorkoutExercise) {
-        print("🔧 DEBUG: updateExercise called for index \(index), exercise: \(updatedExercise.exercise.name)")
-        print("🔧 DEBUG: Updated exercise has \(updatedExercise.flexibleSets?.count ?? 0) flexible sets")
-        guard index < exercises.count else { 
-            print("🔧 DEBUG: ERROR - Index \(index) out of bounds for exercises array (count: \(exercises.count))")
-            return 
+        guard index < exercises.count else {
+            return
         }
-        
+
         // Replace the exercise with the updated one (including warm-up sets and new set count)
         exercises[index] = updatedExercise
-        print("🔧 DEBUG: Successfully updated exercise at index \(index)")
 
         // Persist to WorkoutManager (single source of truth) so other views see changes immediately
         workoutManager.updateExercise(at: index, with: updatedExercise)
@@ -4895,7 +4830,6 @@ private struct DynamicSessionPhaseView: View {
 private extension LogWorkoutView {
     func requestWorkoutGeneration() {
         guard !workoutManager.isGeneratingWorkout else {
-            print("⏳ LogWorkoutView: generation already in progress")
             return
         }
         Task {

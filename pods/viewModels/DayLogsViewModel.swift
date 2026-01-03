@@ -383,10 +383,6 @@ func fetchCalorieGoal() {
       throw NetworkManagerTwo.NetworkError.serverError(message: "Unable to update scheduled log")
     }
 
-    #if DEBUG
-    print("[DayLogsVM] processScheduledLog response – id:\(preview.id) action:\(response.action) scheduleType:\(response.scheduleType) isActive:\(response.isActive) nextDate:\(String(describing: response.nextTargetDate))")
-    #endif
-
     scheduledPreviews.removeAll { $0.id == preview.id }
     localScheduledOverrides.removeValue(forKey: preview.id)
     if action != .skip {
@@ -452,21 +448,17 @@ func fetchCalorieGoal() {
   }
 
   func refreshExpenditureData(force: Bool = false, historyDays: Int = 30) {
-    print("🔄 refreshExpenditureData called: force=\(force), historyDays=\(historyDays), email=\(email)")
     guard !email.isEmpty else {
-      print("❌ refreshExpenditureData: No email, aborting")
       return
     }
     let now = Date()
     if !force, let lastExpenditureRefresh, now.timeIntervalSince(lastExpenditureRefresh) < expenditureRefreshInterval {
-      print("⏸️ refreshExpenditureData: Skipping - last refresh was \(Int(now.timeIntervalSince(lastExpenditureRefresh)))s ago")
       return
     }
     let calendar = Calendar.current
     let today = calendar.startOfDay(for: now)
     let daysInMonth = calendar.range(of: .day, in: .month, for: today)?.count ?? historyDays
     let fetchDays = max(historyDays, daysInMonth)
-    print("✅ refreshExpenditureData: Starting API fetch for \(fetchDays) days")
     lastExpenditureRefresh = now
     isLoadingExpenditure = true
     expenditureErrorMessage = nil
@@ -489,21 +481,6 @@ func fetchCalorieGoal() {
       guard let self else { return }
       switch result {
       case .success(let response):
-        print("🔍 API returned \(response.days.count) days of expenditure history (requested \(fetchDays))")
-
-        // DEBUG: Calculate and print average tdee_display from API response
-        let tdeeValues = response.days.compactMap { $0.tdeeDisplay }.filter { $0 > 0 }
-        let avgTdee = tdeeValues.isEmpty ? 0 : tdeeValues.reduce(0, +) / Double(tdeeValues.count)
-        print("[EXPENDITURE API DEBUG] tdee_display values count: \(tdeeValues.count), avg: \(Int(avgTdee))")
-
-        // Print first 10 days
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        for day in response.days.sorted(by: { ($0.dateValue ?? Date.distantPast) < ($1.dateValue ?? Date.distantPast) }).prefix(10) {
-          let dateStr = day.dateValue.map { formatter.string(from: $0) } ?? "nil"
-          print("[EXPENDITURE API DEBUG] \(dateStr): tdeeDisplay=\(Int(day.tdeeDisplay ?? 0)) tdeeCore=\(Int(day.tdeeCore ?? 0))")
-        }
-
         self.expenditureHistory = response.days.sorted {
           ($0.dateValue ?? Date.distantPast) < ($1.dateValue ?? Date.distantPast)
         }
@@ -587,7 +564,6 @@ func fetchCalorieGoal() {
 
 func addPending(_ log: CombinedLog) {
   let key = Calendar.current.startOfDay(for: log.scheduledAt!)
-    print("[DayLogsVM] addPending( id:\(log.id), dateKey:\(key) )")
 
   // If a server-confirmed workout arrives, remove any optimistic workout placeholders for the same day
   if log.type == .workout && log.isOptimistic == false {
@@ -618,15 +594,13 @@ func addPending(_ log: CombinedLog) {
     // again, guard against duplicates in the live `logs` array
     if !logs.contains(where: { $0.id == log.id }) {
       logs.insert(log, at: 0)
-      
+
       // Re-sort logs to maintain chronological order (most recent first)
       logs.sort { log1, log2 in
         let date1 = log1.scheduledAt ?? Date.distantPast
         let date2 = log2.scheduledAt ?? Date.distantPast
         return date1 > date2  // Most recent first
       }
-      
-      print("[DayLogsVM] logs.inserted \(log.id), logs now = \(logs.map { $0.id })")
     }
   }
   
@@ -697,8 +671,6 @@ private func sortLogs(_ logs: [CombinedLog]) -> [CombinedLog] {
 }
 
 func removeLog(_ log: CombinedLog) async {
-    print("[DayLogsVM] removeLog( id:\(log.id), type:\(log.type) ) – optimistic remove + server sync")
-
     // Keep backups for rollback on failure
     let previousLogs = logs
     let previousPending = pendingByDate
@@ -714,17 +686,14 @@ func removeLog(_ log: CombinedLog) async {
         }
     }
 
-    print("[DayLogsVM] Optimistically removed log \(log.id); remaining = \(logs.map { $0.id })")
     triggerProfileDataRefresh(localOnly: true)
 
     // 2) Attempt server deletion
     do {
         try await deleteOnServer(log)
-        print("[DayLogsVM] ✅ Server deletion succeeded for log \(log.id)")
         triggerProfileDataRefresh(localOnly: true)
     } catch {
         // 3) Rollback on failure and surface error to UI
-        print("[DayLogsVM] ❌ Server deletion failed for log \(log.id): \(error.localizedDescription). Rolling back…")
         logs = previousLogs
         pendingByDate = previousPending
         self.error = error
@@ -788,7 +757,6 @@ private func deleteOnServer(_ log: CombinedLog) async throws {
         let isHealthKit = activityId.count > 10 && activityId.contains("-")
         if isHealthKit {
             // No server-side deletion for HealthKit entries; keep local removal
-            print("[DayLogsVM] Skipping server deletion for HealthKit activity: \(activityId)")
             return
         }
         guard let aiActivityLogId = Int(activityId) else {
@@ -807,7 +775,6 @@ private func deleteOnServer(_ log: CombinedLog) async throws {
 
     case .workout:
         // Workouts are permanent records - do not allow deletion from dashboard
-        print("[DayLogsVM] Workout deletion not implemented - completed workouts are permanent records")
         throw NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Workout logs cannot be deleted"])
     }
 }
@@ -822,7 +789,6 @@ func loadLogs(for date: Date, force: Bool = false) {
 
     if let displayedKey {
       pendingByDate.removeValue(forKey: displayedKey)
-      print("[DayLogsVM] Cleared pending cache for date: \(displayedKey)")
     }
 
     currentSnapshotDate = nil
@@ -846,7 +812,6 @@ func loadLogs(for date: Date, force: Bool = false) {
     let activeDay = calendar.startOfDay(for: self.selectedDate)
     // Ignore responses for stale date selections so fast switching can't overwrite the UI with old data
     guard requestedDay == activeDay else {
-      print("[DayLogsVM] Skipping snapshot apply - selectedDate changed from \(requestedDay) to \(activeDay)")
       self.isLoading = false
       self.pendingNotificationReload = false
       return
@@ -933,14 +898,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   }
 
   scheduledPreviews = combinedScheduled
-  print("[DEBUG] scheduled previews for \(snapshot.date):", scheduledPreviews.map { ($0.id, $0.normalizedTargetDate) })
-
-  #if DEBUG
-  let debugPreviews = scheduledPreviews.map {
-    "[Scheduled] id:\($0.id) targetDate:\($0.targetDate) normalized:\($0.normalizedTargetDate)"
-  }.joined(separator: "\n")
-  print("[DayLogsVM] Applied scheduled previews for \(snapshot.date):\n\(debugPreviews)")
-  #endif
 
   let newIds = Set(scheduledPreviews.map { $0.id })
   activeScheduledIds = newIds
@@ -1153,8 +1110,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                         
                         if dateChanged {
                             // Log was moved to a different date
-                            print("📅 Log moved from \(oldLogDate) to \(date)")
-                            
                             // Remove from current day's logs
                             self.logs.remove(at: index)
                             
@@ -1189,11 +1144,9 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                             
                             // Update individual nutrient values if they were provided
                             if let calories = calories, let protein = protein, let carbs = carbs, let fat = fat, let food = updatedLog.food {
-                                print("🔄 Updating food log (date change) with: calories=\(calories), protein=\(protein), carbs=\(carbs), fat=\(fat), servings=\(updatedFoodLog.servings)")
-                                
                                 // Avoid division by zero
                                 let servingsCount = max(updatedFoodLog.servings, 0.1)
-                                
+
                                updatedLog.food = LoggedFoodItem(
                                    foodLogId: food.foodLogId,
                                    fdcId: food.fdcId,
@@ -1210,8 +1163,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                                     aiInsight: food.aiInsight,
                                     nutritionScore: food.nutritionScore
                                )
-                                
-                                print("✅ Updated food log locally (date change) with per-serving values: cal=\(calories / servingsCount), prot=\(protein / servingsCount), carbs=\(carbs / servingsCount), fat=\(fat / servingsCount)")
                             }
                             
                             // Don't add duplicate to pending
@@ -1219,8 +1170,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                                 newPending.insert(updatedLog, at: 0)
                                 self.pendingByDate[newKey] = newPending
                             }
-                            
-                            print("✅ Log removed from current day and added to target date's cache")
                             // DO NOT navigate automatically - let user stay on current date
                         } else {
                             // Same date – update in place **and** force Combine to emit
@@ -1239,11 +1188,9 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                             
                             // Update individual nutrient values if they were provided
                             if let calories = calories, let protein = protein, let carbs = carbs, let fat = fat, let food = updatedLog.food {
-                                print("🔄 Updating food log (same date) with: calories=\(calories), protein=\(protein), carbs=\(carbs), fat=\(fat), servings=\(updatedFoodLog.servings)")
-                                
                                 // Avoid division by zero
                                 let servingsCount = max(updatedFoodLog.servings, 0.1)
-                                
+
                                updatedLog.food = LoggedFoodItem(
                                    foodLogId: food.foodLogId,
                                    fdcId: food.fdcId,
@@ -1260,16 +1207,12 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                                     aiInsight: food.aiInsight,
                                     nutritionScore: food.nutritionScore
                                )
-                                
-                                print("✅ Updated food log locally (same date) with per-serving values: cal=\(calories / servingsCount), prot=\(protein / servingsCount), carbs=\(carbs / servingsCount), fat=\(fat / servingsCount)")
                             }
 
                             // 2️⃣ Force SwiftUI to detect the change by replacing the entire array
                             var newLogs = self.logs
                             newLogs[index] = updatedLog
                             self.logs = newLogs
-                            
-                            print("📱 Force UI refresh for food log - replaced logs array")
                         }
                         
                         // Recalculate totals for current day
@@ -1296,15 +1239,10 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
     }
 
     func updateMealLog(log: CombinedLog, servings: Double, date: Date, mealType: String, calories: Double? = nil, protein: Double? = nil, carbs: Double? = nil, fat: Double? = nil, completion: @escaping (Result<Void, Error>) -> Void) {
-        print("🍽️ DayLogsViewModel: updateMealLog called")
-        
         guard let mealLogId = log.mealLogId else {
-            print("❌ DayLogsViewModel: No mealLogId found")
             completion(.failure(NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid meal log ID"])))
             return
         }
-
-        print("🔄 DayLogsViewModel: Calling logNetwork.updateMealLog with ID: \(mealLogId)")
         // Call the repository to update the meal log
         logNetwork.updateMealLog(userEmail: email, logId: mealLogId, servings: servings, date: date, mealType: mealType, calories: calories, protein: protein, carbs: carbs, fat: fat) { result in
             DispatchQueue.main.async {
@@ -1318,8 +1256,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                         
                         if dateChanged {
                             // Log was moved to a different date
-                            print("📅 Meal log moved from \(oldLogDate) to \(date)")
-                            
                             // Remove from current day's logs
                             self.logs.remove(at: index)
                             
@@ -1348,11 +1284,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                                 let perServingCarbs = carbs.map { $0 / servingsCount } ?? existingMeal.carbs
                                 let perServingFat = fat.map { $0 / servingsCount } ?? existingMeal.fat
                                 
-                                if let calories = calories, let protein = protein, let carbs = carbs, let fat = fat {
-                                    print("🔄 Updating meal log (date change) with: calories=\(calories), protein=\(protein), carbs=\(carbs), fat=\(fat), servings=\(servingsCount)")
-                                    print("✅ Per-serving values: cal=\(perServingCalories), prot=\(perServingProtein ?? 0), carbs=\(perServingCarbs ?? 0), fat=\(perServingFat ?? 0)")
-                                }
-                                
                                 updatedLog.meal = MealSummary(
                                     mealLogId: existingMeal.mealLogId,
                                     mealId: existingMeal.mealId,
@@ -1384,8 +1315,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                                 newPending.insert(updatedLog, at: 0)
                                 self.pendingByDate[newKey] = newPending
                             }
-                            
-                            print("✅ Meal log removed from current day and added to target date's cache")
                             // DO NOT navigate automatically - let user stay on current date
                         } else {
                             // Same date – update in place **and** force Combine to emit
@@ -1397,11 +1326,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                                 let perServingProtein = protein.map { $0 / servingsCount } ?? existingMeal.protein
                                 let perServingCarbs = carbs.map { $0 / servingsCount } ?? existingMeal.carbs
                                 let perServingFat = fat.map { $0 / servingsCount } ?? existingMeal.fat
-                                
-                                if let calories = calories, let protein = protein, let carbs = carbs, let fat = fat {
-                                    print("🔄 Updating meal log (same date) with: calories=\(calories), protein=\(protein), carbs=\(carbs), fat=\(fat), servings=\(servingsCount)")
-                                    print("✅ Per-serving values: cal=\(perServingCalories), prot=\(perServingProtein ?? 0), carbs=\(perServingCarbs ?? 0), fat=\(perServingFat ?? 0)")
-                                }
                                 
                                 updatedLog.meal = MealSummary(
                                     mealLogId: existingMeal.mealLogId,
@@ -1417,14 +1341,14 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                                     scheduledAt: existingMeal.scheduledAt
                                 )
                             }
-                            
+
                             // IMPORTANT: Use our edited calories value, not the backend's!
                             if let editedCalories = calories {
                                 updatedLog.calories = editedCalories
                             } else {
                                 updatedLog.calories = updatedMealLog.calories
                             }
-                            
+
                             updatedLog.mealType = updatedMealLog.meal_type
                             updatedLog.scheduledAt = ISO8601DateFormatter().date(from: updatedMealLog.date)
                             updatedLog.message = "\(updatedMealLog.meal.title) – \(updatedMealLog.meal_type)"
@@ -1433,8 +1357,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                             var newLogs = self.logs
                             newLogs[index] = updatedLog
                             self.logs = newLogs
-                            
-                            print("📱 Force UI refresh for meal log - replaced logs array")
                         }
                         
                         // Recalculate totals for current day
@@ -1453,33 +1375,25 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
 
     /// Update a recipe log with new servings, date, and meal type
     func updateRecipeLog(log: CombinedLog, servings: Double, date: Date, mealType: String, calories: Double? = nil, protein: Double? = nil, carbs: Double? = nil, fat: Double? = nil, completion: @escaping (Result<Void, Error>) -> Void) {
-        print("🍳 DayLogsViewModel: updateRecipeLog called")
-
         guard let recipeLogId = log.recipeLogId else {
-            print("❌ DayLogsViewModel: No recipeLogId found")
             completion(.failure(NSError(domain: "DayLogsViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid recipe log ID"])))
             return
         }
 
         // For now, recipe log updates are handled by reloading logs
         // TODO: Add dedicated updateRecipeLog endpoint if needed
-        print("🔄 DayLogsViewModel: Reloading logs after recipe update")
         loadLogs(for: selectedDate, force: true)
         completion(.success(()))
     }
 
     /// Explode a recipe log into individual food logs for each ingredient
     func explodeRecipeLog(recipeLogId: Int, completion: @escaping (Result<Void, Error>) -> Void) {
-        print("💥 DayLogsViewModel: explodeRecipeLog called for ID: \(recipeLogId)")
-
         logNetwork.explodeRecipeLog(userEmail: email, recipeLogId: recipeLogId) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self = self else { return }
 
                 switch result {
                 case .success(let response):
-                    print("✅ DayLogsViewModel: Recipe exploded successfully, created \(response.createdLogs.count) food logs")
-
                     // Remove the recipe log from local state
                     self.logs.removeAll { $0.recipeLogId == response.deletedRecipeLogId }
 
@@ -1508,7 +1422,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
                     completion(.success(()))
 
                 case .failure(let error):
-                    print("❌ DayLogsViewModel: Failed to explode recipe: \(error.localizedDescription)")
                     completion(.failure(error))
                 }
             }
@@ -1527,7 +1440,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
       skippedScheduledDates.removeAll()
       localScheduledOverrides.removeAll()
       scheduledPreviews = []
-      print("[DayLogsVM] Cleared pending cache")
   }
 
   /// Clean up stale pending logs older than 5 minutes to prevent accumulation
@@ -1555,13 +1467,11 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
               keysToRemove.append(dateKey)
           } else if freshLogs.count != logs.count {
               pendingByDate[dateKey] = freshLogs
-              print("[DayLogsVM] Cleaned up \(logs.count - freshLogs.count) stale pending logs for \(dateKey)")
           }
       }
 
       for key in keysToRemove {
       pendingByDate.removeValue(forKey: key)
-      print("[DayLogsVM] Removed all stale pending logs for \(key)")
   }
 }
   
@@ -1570,7 +1480,6 @@ private func applySnapshot(_ snapshot: DayLogsSnapshot) {
   private func getActivityLogsFromHealth(for date: Date) -> [CombinedLog] {
       // Get the shared HealthKitViewModel instance
       guard let healthViewModel = getHealthKitViewModel() else {
-          print("[DayLogsVM] No HealthKitViewModel available")
           return []
       }
       

@@ -55,7 +55,6 @@ class WeightSyncService: ObservableObject {
         UserDefaults.standard.removeObject(forKey: syncedWeightIDsKey)
         UserDefaults.standard.removeObject(forKey: lastSyncDateKey)
         lastSyncDate = nil
-        print("🧹 WeightSyncService: Cleared all sync state")
     }
 
     /// Sync Apple Health weight data with the server
@@ -65,14 +64,11 @@ class WeightSyncService: ObservableObject {
             WorkoutManager.shared.currentWorkout != nil
         }
         if hasActiveWorkout {
-            print("⏸️ WeightSyncService: Skipping sync while workout is active")
             return
         }
 
         // CRITICAL FIX: Throttle rapid resume-triggered syncs
         if let last = lastSyncAttemptTime, Date().timeIntervalSince(last) < minimumSyncInterval {
-            let elapsed = Int(Date().timeIntervalSince(last))
-            print("⏸️ WeightSyncService: Skipping sync - last attempt was \(elapsed)s ago (min: \(Int(minimumSyncInterval))s)")
             return
         }
 
@@ -80,27 +76,19 @@ class WeightSyncService: ObservableObject {
 
         // Prevent concurrent sync operations
         guard !syncInProgress else {
-            print("⏸️ WeightSyncService: Sync already in progress, skipping duplicate request")
             return
         }
 
         syncInProgress = true
         defer { syncInProgress = false }
 
-        print("🔍 WeightSyncService: Starting sync debug...")
-        print("  - HealthKit available: \(healthKitManager.isHealthDataAvailable)")
-        
         guard healthKitManager.isHealthDataAvailable else {
-            print("⚠️ WeightSyncService: HealthKit not available on this device")
             return
         }
-        
+
         guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
-            print("⚠️ WeightSyncService: No user email found")
             return
         }
-        
-        print("🔄 WeightSyncService: Starting Apple Health weight sync for \(userEmail)")
 
         await MainActor.run {
             isSyncing = true
@@ -111,19 +99,11 @@ class WeightSyncService: ObservableObject {
             // FIXED: Always check last 7 days to ensure we don't miss any weights
             // The previous logic with lastSyncDate was causing weights to be missed
             let syncStartDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-            
+
             // Fetch Apple Health weight entries
             let appleHealthWeights = try await fetchAppleHealthWeights(since: syncStartDate)
 
-            print("📊 WeightSyncService: Found \(appleHealthWeights.count) Apple Health weights since \(syncStartDate)")
-
-            // Debug: Print each Apple Health weight
-            for (index, weight) in appleHealthWeights.enumerated() {
-                print("  - Apple Health Weight \(index + 1): \(weight.weightKg)kg on \(weight.date) from \(weight.sourceApp)")
-            }
-
             if appleHealthWeights.isEmpty {
-                print("✅ WeightSyncService: No new Apple Health weight entries to sync")
                 await MainActor.run {
                     updateLastSyncDate()
                     isSyncing = false
@@ -132,69 +112,46 @@ class WeightSyncService: ObservableObject {
             }
 
             // Get existing server weight logs to check for duplicates
-            print("🔍 WeightSyncService: Fetching existing server weights for \(userEmail)...")
             let serverWeights: [WeightLogResponse]
             do {
                 serverWeights = try await fetchServerWeights(for: userEmail)
-                print("📊 WeightSyncService: Found \(serverWeights.count) server weights")
             } catch {
-                print("❌ WeightSyncService: Failed to fetch server weights: \(error)")
                 throw error
-            }
-
-            // Debug: Print recent server weights
-            for (index, weight) in serverWeights.prefix(5).enumerated() {
-                print("  - Server Weight \(index + 1): \(weight.weightKg)kg on \(weight.dateLogged)")
             }
 
             // Filter out weights that already exist on server
             let newWeights = filterNewWeights(appleHealthWeights: appleHealthWeights, serverWeights: serverWeights)
 
-            print("🆕 WeightSyncService: \(newWeights.count) new weights to sync after filtering duplicates")
-
-            // Debug: Print weights that will be synced
-            for (index, weight) in newWeights.enumerated() {
-                print("  - Will sync: \(weight.weightKg)kg on \(weight.date) from \(weight.sourceApp)")
-            }
-
             if newWeights.isEmpty {
-                print("✅ WeightSyncService: All Apple Health weights already exist on server")
                 await MainActor.run {
                     updateLastSyncDate()
                     isSyncing = false
                 }
                 return
             }
-            
+
             // Mark weights as being processed to prevent concurrent operations from processing them
             let weightIDsToProcess = Set(newWeights.map { $0.id })
             processingWeightIDs.formUnion(weightIDsToProcess)
             defer { processingWeightIDs.subtract(weightIDsToProcess) }
-            
+
             // Sync new weights to server
-            var syncedCount = 0
             for weightEntry in newWeights {
                 do {
                     try await syncWeightToServer(weightEntry: weightEntry, userEmail: userEmail)
-                    syncedCount += 1
-                    print("✅ WeightSyncService: Synced weight \(syncedCount)/\(newWeights.count): \(weightEntry.weightKg)kg from \(weightEntry.date)")
                 } catch {
-                    print("❌ WeightSyncService: Failed to sync weight from \(weightEntry.date): \(error)")
+                    // Continue with other weights even if one fails
                 }
             }
-
-            print("🎉 WeightSyncService: Sync complete! Synced \(syncedCount)/\(newWeights.count) weights")
 
             // Update last sync date and post notification
             await MainActor.run {
                 updateLastSyncDate()
                 // Post notification to refresh UI
                 NotificationCenter.default.post(name: Notification.Name("AppleHealthWeightSynced"), object: nil)
-                print("📢 WeightSyncService: Posted AppleHealthWeightSynced notification")
             }
-            
+
         } catch {
-            print("❌ WeightSyncService: Sync failed: \(error)")
             await MainActor.run {
                 syncError = error.localizedDescription
             }
@@ -209,83 +166,61 @@ class WeightSyncService: ObservableObject {
     func hasNewWeightsToSync() async -> Bool {
         // Don't check for new weights if a sync is already in progress
         guard !syncInProgress else {
-            print("⏸️ WeightSyncService: Sync in progress, deferring hasNewWeightsToSync check")
             return false
         }
-        
-        print("🔍 WeightSyncService: Checking for new weights...")
-        print("  - HealthKit available: \(healthKitManager.isHealthDataAvailable)")
-        
+
         guard healthKitManager.isHealthDataAvailable else {
-            print("❌ WeightSyncService: HealthKit not available on this device")
             return false
         }
-        
+
         do {
             // FIXED: Check last 7 days to match syncAppleHealthWeights() window
             // This prevents the mismatch where hasNewWeights returns false but sync would find weights
             let syncStartDate = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-            print("📅 WeightSyncService: Checking for weights since: \(syncStartDate)")
-            print("📅 WeightSyncService: Current time: \(Date())")
-            print("📅 WeightSyncService: Last sync date was: \(lastSyncDate?.description ?? "never")")
 
             // Call the new, simple async function
             let weights = try await healthKitManager.fetchWeightEntriesSince(syncStartDate)
 
-            print("⚖️ WeightSyncService: Found \(weights.count) weights in last 7 days")
-            
-            // Debug: Print all weights found
-            for (index, weight) in weights.enumerated() {
-                print("  - Weight \(index + 1): \(weight.quantity.doubleValue(for: HKUnit.gramUnit(with: .kilo)))kg from \(weight.sourceRevision.source.name) at \(weight.startDate)")
-            }
-            
             return !weights.isEmpty
         } catch {
-            print("❌ WeightSyncService: Error checking for new weights: \(error)")
             return false
         }
     }
     
     /// DEBUG: Force sync bypassing authorization checks (since we know data exists)
     func debugForceSyncAppleHealthWeights() async {
-        print("🐛 DEBUG: FORCE SYNC - Bypassing authorization checks")
-        
         // Prevent concurrent sync operations
         guard !syncInProgress else {
-            print("⏸️ DEBUG: Sync already in progress, skipping duplicate request")
             return
         }
-        
+
         syncInProgress = true
         defer { syncInProgress = false }
-        
+
         guard let userEmail = UserDefaults.standard.string(forKey: "userEmail") else {
-            print("❌ No user email found")
             return
         }
-        
+
         await MainActor.run {
             isSyncing = true
             syncError = nil // Clear previous errors
         }
-        
+
         do {
             // Get weights from last 30 days regardless of authorization status
             let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-            print("🐛 DEBUG: Fetching weights since \(thirtyDaysAgo)")
-            
+
             // Use direct HealthKit query since we know it works
             let healthStore = HKHealthStore()
             guard let bodyMassType = HKQuantityType.quantityType(forIdentifier: .bodyMass) else {
-                print("🐛 DEBUG: Cannot create body mass type")
                 return
             }
-            
+
             // Use explicit typing to avoid inference issues
             let weights: [AppleHealthWeight] = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[AppleHealthWeight], Error>) in
                 let predicate = HKQuery.predicateForSamples(withStart: thirtyDaysAgo, end: Date(), options: .strictStartDate)
                 let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
-                
+
                 let query = HKSampleQuery(
                     sampleType: bodyMassType,
                     predicate: predicate,
@@ -296,7 +231,7 @@ class WeightSyncService: ObservableObject {
                         continuation.resume(throwing: error)
                         return
                     }
-                    
+
                     let weightSamples = (samples as? [HKQuantitySample]) ?? []
                     let appleHealthWeights = weightSamples.map { sample in
                         AppleHealthWeight(
@@ -308,88 +243,71 @@ class WeightSyncService: ObservableObject {
                     }
                     continuation.resume(returning: appleHealthWeights)
                 }
-                
+
                 healthStore.execute(query)
             }
-            
-            print("🐛 DEBUG: Found \(weights.count) weights to potentially sync")
-            
-                         // Filter out already synced weights
-             let syncedIDs = Set(UserDefaults.standard.stringArray(forKey: "syncedAppleHealthWeightIDs") ?? [])
-             let newWeights = weights.filter { !syncedIDs.contains($0.id) }
-            
-            print("🐛 DEBUG: \(newWeights.count) weights are new (not previously synced)")
-            
+
+            // Filter out already synced weights
+            let syncedIDs = Set(UserDefaults.standard.stringArray(forKey: "syncedAppleHealthWeightIDs") ?? [])
+            let newWeights = weights.filter { !syncedIDs.contains($0.id) }
+
             // Mark weights as being processed to prevent concurrent operations from processing them
             let weightIDsToProcess = Set(newWeights.map { $0.id })
             processingWeightIDs.formUnion(weightIDsToProcess)
             defer { processingWeightIDs.subtract(weightIDsToProcess) }
-            
-            var successCount = 0
-            let totalWeights = newWeights.count
-            
-            for (index, weight) in newWeights.enumerated() {
+
+            for weight in newWeights {
                 await MainActor.run {
                     // No syncProgress published in this class, so this line is removed
                 }
-                
-                                 do {
-                     try await syncWeightToServer(weightEntry: weight, userEmail: userEmail)
-                     markWeightAsSynced(weight.id)
-                     successCount += 1
-                     print("✅ Synced weight: \(weight.weightKg)kg from \(weight.date)")
-                 } catch {
-                     print("❌ Failed to sync weight from \(weight.date): \(error)")
-                 }
+
+                do {
+                    try await syncWeightToServer(weightEntry: weight, userEmail: userEmail)
+                    markWeightAsSynced(weight.id)
+                } catch {
+                    // Continue with other weights even if one fails
+                }
             }
-            
+
             await MainActor.run {
                 isSyncing = false
                 updateLastSyncDate()
             }
-            
-            print("🎉 DEBUG SYNC COMPLETE: \(successCount)/\(totalWeights) weights synced")
-            
+
             // Post notification
             NotificationCenter.default.post(name: Notification.Name("AppleHealthWeightSynced"), object: nil)
-            
+
         } catch {
             await MainActor.run {
                 isSyncing = false
                 syncError = error.localizedDescription
             }
-            print("❌ DEBUG Force sync failed: \(error)")
         }
     }
     
     /// Check for new weights to sync bypassing authorization checks
     /// This method is used when we know HealthKit data is available but authorization status is unreliable
     func debugHasNewWeightsToSync() async -> Bool {
-        print("🐛 DEBUG: Checking for new weights (bypassing authorization checks)")
-        
         // Check if HealthKit is available on device
         guard HKHealthStore.isHealthDataAvailable() else {
-            print("🐛 DEBUG: HealthKit not available on device")
             return false
         }
-        
+
         do {
             // Get weights from last 30 days regardless of authorization status
             let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-            print("🐛 DEBUG: Checking for weights since \(thirtyDaysAgo)")
-            
+
             // Use direct HealthKit query since we know it works
             let healthStore = HKHealthStore()
             guard let bodyMassType = HKQuantityType.quantityType(forIdentifier: .bodyMass) else {
-                print("🐛 DEBUG: Cannot create body mass type")
                 return false
             }
-            
+
             // Use explicit typing to avoid inference issues
             let weights: [AppleHealthWeight] = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[AppleHealthWeight], Error>) in
                 let predicate = HKQuery.predicateForSamples(withStart: thirtyDaysAgo, end: Date(), options: .strictStartDate)
                 let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
-                
+
                 let query = HKSampleQuery(
                     sampleType: bodyMassType,
                     predicate: predicate,
@@ -400,7 +318,7 @@ class WeightSyncService: ObservableObject {
                         continuation.resume(throwing: error)
                         return
                     }
-                    
+
                     let weightSamples = (samples as? [HKQuantitySample]) ?? []
                     let appleHealthWeights = weightSamples.map { sample in
                         AppleHealthWeight(
@@ -412,21 +330,17 @@ class WeightSyncService: ObservableObject {
                     }
                     continuation.resume(returning: appleHealthWeights)
                 }
-                
+
                 healthStore.execute(query)
             }
-            
-            print("🐛 DEBUG: Found \(weights.count) weights in Apple Health")
-            
+
             // Filter out already synced weights
             let syncedIDs = Set(UserDefaults.standard.stringArray(forKey: "syncedAppleHealthWeightIDs") ?? [])
             let newWeights = weights.filter { !syncedIDs.contains($0.id) }
-            
-            print("🐛 DEBUG: \(newWeights.count) weights are new (not previously synced)")
+
             return !newWeights.isEmpty
-            
+
         } catch {
-            print("🐛 DEBUG: Error checking for new weights: \(error)")
             return false
         }
     }
@@ -436,16 +350,15 @@ class WeightSyncService: ObservableObject {
     private func fetchAppleHealthWeights(since date: Date) async throws -> [AppleHealthWeight] {
         // Call the new, simple async function
         let samples = try await healthKitManager.fetchWeightEntriesSince(date)
-        
+
         let weights = samples.compactMap { sample -> AppleHealthWeight? in
             let weightKg = sample.quantity.doubleValue(for: HKUnit.gramUnit(with: .kilo))
-            
+
             // Skip weights that seem unrealistic (< 20kg or > 300kg)
             guard weightKg >= 20 && weightKg <= 300 else {
-                print("⚠️ Skipping unrealistic weight: \(weightKg)kg")
                 return nil
             }
-            
+
             return AppleHealthWeight(
                 id: sample.uuid.uuidString,
                 weightKg: weightKg,
@@ -497,7 +410,6 @@ class WeightSyncService: ObservableObject {
 
                 // If it's marked as synced but NOT on server, remove it from synced IDs
                 if !serverWeightTimestamps.contains(appleTimestamp) {
-                    print("⚠️ WeightSyncService: Weight \(appleWeight.weightKg)kg from \(appleWeight.date) was marked as synced but doesn't exist on server - will retry sync")
                     cleanedSyncedIDs.remove(appleWeight.id)
                 }
             }
@@ -506,7 +418,6 @@ class WeightSyncService: ObservableObject {
         // Update UserDefaults with cleaned IDs
         if cleanedSyncedIDs.count != syncedIDs.count {
             UserDefaults.standard.set(Array(cleanedSyncedIDs), forKey: syncedWeightIDsKey)
-            print("✅ WeightSyncService: Cleaned up \(syncedIDs.count - cleanedSyncedIDs.count) stuck sync entries")
         }
         syncedIDs = cleanedSyncedIDs
         
@@ -573,7 +484,6 @@ class WeightSyncService: ObservableObject {
                     let errorMessage = error.localizedDescription
                     if errorMessage.contains("duplicate key value") ||
                        errorMessage.contains("apple_health_uuid") {
-                        print("ℹ️ WeightSyncService: Weight already on server, marking as synced")
                         self.markWeightAsSynced(weightEntry.id)
                         continuation.resume() // Success, not error
                     } else {
@@ -603,14 +513,12 @@ class WeightSyncService: ObservableObject {
     }
     
     // MARK: - Debug Methods
-    
+
     /// Reset sync state for debugging (clears last sync date and synced IDs)
     func resetSyncState() {
-        print("🔄 WeightSyncService: Resetting sync state")
         lastSyncDate = nil
         UserDefaults.standard.removeObject(forKey: lastSyncDateKey)
         UserDefaults.standard.removeObject(forKey: syncedWeightIDsKey)
-        print("✅ WeightSyncService: Sync state reset - next sync will check all weights")
     }
 }
 

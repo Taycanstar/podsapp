@@ -1501,16 +1501,14 @@ class OnboardingViewModel: ObservableObject {
                     self.isLoading = false
 
                     if success {
-                        print("✅ OnboardingViewModel: Backend save successful")
+                     
                         self.onboardingCompleted = true
                         self.isShowingOnboarding = false
 
                         UserDefaults.standard.set(true, forKey: "onboardingCompleted")
                         UserDefaults.standard.set(self.email, forKey: "userEmail")
 
-                        print("🎉 OnboardingViewModel: Onboarding completed successfully!")
-                        print("   └── User: \(self.email)")
-                        print("   └── Data saved locally and sent to backend")
+                     
                     } else {
                         print("❌ OnboardingViewModel: Backend save failed - \(errorMessage ?? "Unknown error")")
                         self.onboardingCompleted = true

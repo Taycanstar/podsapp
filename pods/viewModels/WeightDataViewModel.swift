@@ -68,7 +68,7 @@ class WeightDataViewModel: ObservableObject {
                         if let date = self.dateFormatter.date(from: log.dateLogged) {
                             if date >= cutoff {
                                 includedLogs.append(log)
-                                print("✅ Including log ID \(log.id): \(date) >= \(cutoff)")
+                  
                             } else {
                                 filteredOutLogs.append(log)
                                 print("❌ Filtering out log ID \(log.id): \(date) < \(cutoff)")

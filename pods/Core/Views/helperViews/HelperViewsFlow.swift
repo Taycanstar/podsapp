@@ -43,10 +43,9 @@ extension UserDefaults {
         hasSeenMealFlow = false
         hasSeenFoodFlow = false
         hasSeenScanFlow = false
-        
+
         // Force synchronize to ensure changes are saved immediately
         UserDefaults.standard.synchronize()
-        print("🔄 All onboarding flows reset to false")
     }
 }
 
@@ -117,7 +116,6 @@ class LogFlow: ObservableObject {
     }
     
     func completeFlow() {
-        print("🔍 LogFlow - completeFlow() called")
         UserDefaults.standard.hasSeenLogFlow = true
         onFlowCompleted?()
     }
@@ -194,7 +192,6 @@ class AllFlow: ObservableObject {
     }
     
     func completeFlow() {
-        print("🔍 AllFlow - completeFlow() called")
         UserDefaults.standard.hasSeenAllFlow = true
         onFlowCompleted?()
     }
@@ -271,7 +268,6 @@ class MealFlow: ObservableObject {
     }
     
     func completeFlow() {
-        print("🔍 MealFlow - completeFlow() called")
         UserDefaults.standard.hasSeenMealFlow = true
         onFlowCompleted?()
     }
@@ -346,7 +342,6 @@ class FoodFlow: ObservableObject {
     }
     
     func completeFlow() {
-        print("🔍 FoodFlow - completeFlow() called")
         UserDefaults.standard.hasSeenFoodFlow = true
         onFlowCompleted?()
     }
@@ -410,13 +405,11 @@ struct FoodFlowContainerView: View {
         .onAppear {
             // Set up the completion callback
             foodFlow.onFlowCompleted = {
-                print("🔍 FoodFlowContainerView - Flow completed, dismissing sheet")
                 dismiss()
             }
         }
         .onDisappear {
             // Mark food flow as seen (backup in case completeFlow() wasn't called)
-            print("🔍 FoodFlowContainerView onDisappear - marking hasSeenFoodFlow = true")
             UserDefaults.standard.hasSeenFoodFlow = true
         }
     }
@@ -497,13 +490,11 @@ struct LogFlowContainerView: View {
         .onAppear {
             // Set up the completion callback
             logFlow.onFlowCompleted = {
-                print("🔍 LogFlowContainerView - Flow completed, dismissing sheet")
                 dismiss()
             }
         }
         .onDisappear {
             // Mark log flow as seen (backup in case completeFlow() wasn't called)
-            print("🔍 LogFlowContainerView onDisappear - marking hasSeenLogFlow = true")
             UserDefaults.standard.hasSeenLogFlow = true
         }
     }
@@ -610,13 +601,11 @@ struct AllFlowContainerView: View {
         .onAppear {
             // Set up the completion callback
             allFlow.onFlowCompleted = {
-                print("🔍 AllFlowContainerView - Flow completed, dismissing sheet")
                 dismiss()
             }
         }
         .onDisappear {
             // Mark all flow as seen (backup in case completeFlow() wasn't called)
-            print("🔍 AllFlowContainerView onDisappear - marking hasSeenAllFlow = true")
             UserDefaults.standard.hasSeenAllFlow = true
         }
     }
@@ -684,13 +673,11 @@ struct MealFlowContainerView: View {
         .onAppear {
             // Set up the completion callback
             mealFlow.onFlowCompleted = {
-                print("🔍 MealFlowContainerView - Flow completed, dismissing sheet")
                 dismiss()
             }
         }
         .onDisappear {
             // Mark meal flow as seen (backup in case completeFlow() wasn't called)
-            print("🔍 MealFlowContainerView onDisappear - marking hasSeenMealFlow = true")
             UserDefaults.standard.hasSeenMealFlow = true
         }
     }
@@ -767,7 +754,6 @@ class ScanFlow: ObservableObject {
     }
     
     func completeFlow() {
-        print("🔍 ScanFlow - completeFlow() called")
         UserDefaults.standard.hasSeenScanFlow = true
         onFlowCompleted?()
     }
@@ -831,13 +817,11 @@ struct ScanFlowContainerView: View {
         .onAppear {
             // Set up the completion callback
             scanFlow.onFlowCompleted = {
-                print("🔍 ScanFlowContainerView - Flow completed, dismissing sheet")
                 dismiss()
             }
         }
         .onDisappear {
             // Mark scan flow as seen (backup in case completeFlow() wasn't called)
-            print("🔍 ScanFlowContainerView onDisappear - marking hasSeenScanFlow = true")
             UserDefaults.standard.hasSeenScanFlow = true
         }
     }

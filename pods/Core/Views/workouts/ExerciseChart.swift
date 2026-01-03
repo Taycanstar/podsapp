@@ -390,7 +390,7 @@ struct ExerciseChart: View {
             metrics = fetchedMetrics
             chartData = fetchedChart
 
-            print("✅ ExerciseChart: Data refreshed - \(chartData.count) points")
+        
         } catch {
             print("❌ ExerciseChart: Error refreshing - \(error)")
         }

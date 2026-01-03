@@ -39,10 +39,10 @@ class NetworkManagerTwo {
     }()
 
     
-    // let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+    let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
 
     // ### STAGING ###
-    let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+    // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
     // ### LOCAL ###
     //  let baseUrl = "http://192.168.1.92:8000"  
     //  let baseUrl = "http://172.20.10.4:8000"
@@ -668,9 +668,6 @@ class NetworkManagerTwo {
     }
 
     func fetchWorkoutDetail(sessionId: Int, userEmail: String) async throws -> WorkoutResponse.Workout {
-        #if DEBUG
-        print("[Network] GET /get-workout-session/\(sessionId)/?user_email=\(userEmail)")
-        #endif
         var components = URLComponents(string: "\(baseUrl)/get-workout-session/\(sessionId)/")
         components?.queryItems = [
             URLQueryItem(name: "user_email", value: userEmail)
@@ -680,12 +677,6 @@ class NetworkManagerTwo {
 
         let (data, response) = try await URLSession.shared.data(from: url)
         try validate(response: response, data: data)
-
-        #if DEBUG
-        if let http = response as? HTTPURLResponse {
-            print("[Network] ← status=\(http.statusCode) bytes=\(data.count)")
-        }
-        #endif
 
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
@@ -923,7 +914,6 @@ class NetworkManagerTwo {
         completion: @escaping (Result<BarcodeLookupResponse, Error>) -> Void
     ) {
         let endpoint = useNutritionixOnly ? "/lookup_food_by_barcode_nutritionix/" : "/lookup_food_by_barcode/"
-        print("🌐 Barcode lookup endpoint: \(endpoint) (NutritionixOnly=\(useNutritionixOnly))")
         let urlString = "\(baseUrl)\(endpoint)"
         
         guard let url = URL(string: urlString) else {
@@ -958,9 +948,6 @@ class NetworkManagerTwo {
             return
         }
         
-        // Log what we're sending to server
-        print("🔍 Looking up barcode: \(barcode) for user: \(userEmail)")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -977,9 +964,6 @@ class NetworkManagerTwo {
             }
             
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                if let source = json["source"] as? String {
-                    print("🍽️ Server barcode source: \(source)")
-                }
                 if let errorMessage = json["error"] as? String {
                     DispatchQueue.main.async {
                         completion(.failure(NetworkError.serverError(message: errorMessage)))
@@ -989,7 +973,6 @@ class NetworkManagerTwo {
 
                 if let response = Self.makeFallbackBarcodeResponse(from: json) {
                     DispatchQueue.main.async {
-                        print("✅ Parsed barcode response (manual) for: \(response.food.displayName)")
                         completion(.success(response))
                     }
                     return
@@ -1000,11 +983,9 @@ class NetworkManagerTwo {
                 let decoder = JSONDecoder()
                 let response = try decoder.decode(BarcodeLookupResponse.self, from: data)
                 DispatchQueue.main.async {
-                    print("✅ Successfully looked up food by barcode: \(response.food.displayName), foodLogId: \(response.foodLogId)")
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Decoding error in barcode lookup: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -1234,7 +1215,6 @@ class NetworkManagerTwo {
                 let history = try decoder.decode(VitalHistoryResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(history)) }
             } catch {
-                print("[NetworkManagerTwo] Vital history decode error: \(error)")
                 DispatchQueue.main.async { completion(.failure(NetworkError.decodingError)) }
             }
         }.resume()
@@ -1622,25 +1602,16 @@ class NetworkManagerTwo {
         
         request.httpBody = body
 
-        print("🎤 Starting food audio transcription request")
-        
         let session = URLSession.shared
         let task = session.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("🔴 Network error: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
                 return
             }
-            
-            // Log the response for debugging
-            if let httpResponse = response as? HTTPURLResponse {
-                print("📡 HTTP Response: \(httpResponse.statusCode)")
-            }
 
             guard let data = data else {
-                print("🔴 No data received.")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
@@ -1648,25 +1619,17 @@ class NetworkManagerTwo {
             }
 
             do {
-                // Log raw response for debugging
-                if let responseString = String(data: data, encoding: .utf8) {
-                    print("📥 Server response: \(responseString)")
-                }
-                
-                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any], 
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                    let text = json["text"] as? String {
-                    print("🎙️ Received food transcription: \(text)")
                     DispatchQueue.main.async {
                         completion(.success(text))
                     }
                 } else {
-                    print("🔴 Unable to parse response")
                     DispatchQueue.main.async {
                         completion(.failure(NetworkError.decodingError))
                     }
                 }
             } catch {
-                print("🔴 Error parsing JSON: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -1692,13 +1655,10 @@ class NetworkManagerTwo {
             
             switch result {
             case .success(let transcribedText):
-                print("✅ Audio transcription successful: \(transcribedText)")
-                
                 // Step 2: Generate AI macros from the transcribed text
                 self.generateMacrosFromText(transcribedText, completion: completion)
-                
+
             case .failure(let error):
-                print("❌ Audio transcription failed: \(error.localizedDescription)")
                 completion(.failure(error))
             }
         }
@@ -1736,9 +1696,7 @@ class NetworkManagerTwo {
             completion(.failure(error))
             return
         }
-        
-        print("🧠 Generating AI macros for text: \(text)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -1782,23 +1740,17 @@ class NetworkManagerTwo {
                     let food = try decoder.decode(Food.self, from: foodJson)
                     
                     DispatchQueue.main.async {
-                        print("✅ Successfully generated food data: \(food.displayName)")
                         completion(.success(food))
                     }
                 } else {
                     // Try the old way - maybe it's not nested
                     let food = try decoder.decode(Food.self, from: data)
-                    
+
                     DispatchQueue.main.async {
-                        print("✅ Successfully generated food data: \(food.displayName)")
                         completion(.success(food))
                     }
                 }
             } catch {
-                print("❌ Decoding error in AI macros generation: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("Response data: \(json)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -1831,17 +1783,15 @@ class NetworkManagerTwo {
             
             let task = URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("❌ Network error: \(error.localizedDescription)")
                     completion(.failure(error))
                     return
                 }
-                
+
                 guard let data = data else {
-                    print("❌ No data received from server")
                     completion(.failure(NetworkError.invalidResponse))
                     return
                 }
-                
+
                 do {
                     if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                        let success = json["success"] as? Bool {
@@ -1858,7 +1808,7 @@ class NetworkManagerTwo {
             completion(.failure(error))
         }
     }
-    
+
     /// Process user onboarding data and calculate BMR, TDEE, and nutrition goals
     /// - Parameters:
     ///   - userData: The user's onboarding data
@@ -1869,16 +1819,16 @@ class NetworkManagerTwo {
             completion(.failure(NetworkError.invalidURL))
             return
         }
-        
+
         // Create request
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         // Create JSON data
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
-        
+
         // Create dictionary representation
         var parameters: [String: Any] = [
             "user_email": userData.email,
@@ -1891,11 +1841,10 @@ class NetworkManagerTwo {
             "rollover_calories": userData.rolloverCalories,
             "add_calories_burned": userData.addCaloriesBurned
         ]
-        
+
         // Use serverDietGoal which has the correct values for the server
         if let serverDietGoal = UserDefaults.standard.string(forKey: "serverDietGoal") {
             parameters["diet_goal"] = serverDietGoal
-            print("✅ Using server-compatible diet goal: \(serverDietGoal)")
         } else {
             // Fallback to the original dietGoal with mapping
             let mappedDietGoal: String
@@ -1906,7 +1855,6 @@ class NetworkManagerTwo {
             default: mappedDietGoal = "maintain"
             }
             parameters["diet_goal"] = mappedDietGoal
-            print("⚠️ No serverDietGoal found, mapping from dietGoal: \(userData.dietGoal) -> \(mappedDietGoal)")
         }
         
         // Add optional fields if they exist
@@ -1945,37 +1893,27 @@ class NetworkManagerTwo {
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: parameters)
             request.httpBody = jsonData
-            
-            print("⬆️ Sending onboarding data to server with parameters: \(parameters)")
-            
+
             let task = URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("❌ Network error: \(error.localizedDescription)")
                     completion(.failure(error))
                     return
                 }
-                
+
                 guard let data = data else {
-                    print("❌ No data received from server")
                     completion(.failure(NetworkError.invalidResponse))
                     return
                 }
-                
-                // For debugging, get the raw server response
-                if let rawResponse = String(data: data, encoding: .utf8) {
-                    print("🔍 Raw server response: \(rawResponse)")
-                }
-                
+
                 // Attempt to parse the API response
                 do {
                     // First try to check if there's an error message
                     if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                         if let errorMessage = json["error"] as? String {
-                            print("❌ Server error processing onboarding data: \(errorMessage)")
                             completion(.failure(NetworkError.serverError(message: errorMessage)))
                             return
                         }
-                        
+
                         var parsedGoals: NutritionGoals?
                         let decoder = JSONDecoder()
                         decoder.keyDecodingStrategy = .convertFromSnakeCase
@@ -1986,7 +1924,7 @@ class NetworkManagerTwo {
                         }
 
                         if parsedGoals == nil {
-                            print("⚠️ Could not find structured goals payload, falling back to legacy fields.")
+                            // Fall back to legacy fields
                             var calories: Double = 0
                             var protein: Double = 0
                             var carbs: Double = 0
@@ -2020,7 +1958,7 @@ class NetworkManagerTwo {
                             completion(.failure(NetworkError.decodingError))
                             return
                         }
-                        
+
                         // Save goals to UserDefaults for other parts of the app
                         // Avoid overwriting with zeros when API omits fields
                         if goals.calories > 0 || goals.protein > 0 || goals.carbs > 0 || goals.fat > 0 {
@@ -2031,25 +1969,17 @@ class NetworkManagerTwo {
                                 fat: max(Int(goals.fat), 0)
                             )
                         }
-                        
-                        print("📝 DEBUG: Saving to UserGoalsManager: Calories=\(Int(goals.calories)), Protein=\(Int(goals.protein))g, Carbs=\(Int(goals.carbs))g, Fat=\(Int(goals.fat))g")
-                        
-                        print("✅ Successfully parsed nutrition goals: Calories=\(goals.calories), Protein=\(goals.protein)g, Carbs=\(goals.carbs)g, Fat=\(goals.fat)g")
-                        print("📊 BMR=\(goals.bmr ?? 0), TDEE=\(goals.tdee ?? 0)")
-                        
+
                         completion(.success(goals))
                     } else {
-                        print("❌ Failed to parse JSON response")
                         completion(.failure(NetworkError.decodingError))
                     }
                 } catch {
-                    print("❌ JSON parsing error: \(error.localizedDescription)")
                     completion(.failure(error))
                 }
             }
             task.resume()
         } catch {
-            print("❌ JSON encoding error: \(error.localizedDescription)")
             completion(.failure(error))
         }
     }
@@ -2088,53 +2018,44 @@ class NetworkManagerTwo {
             completion(.failure(NetworkError.invalidURL))
             return
         }
-        
-        print("📆 Fetching logs for date: \(dateString), include adjacent: \(includeAdjacent), timezone offset: \(timezoneOffset) minutes")
-        
+
         let task = URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
-                print("❌ Network error: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
                 return
             }
-            
+
             guard let data = data else {
-                print("❌ No data received")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
-                print("❌ Server error: \(errorMessage)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 // Server responds with snake_case keys (food_log_id, scheduled_at, etc.)
                 // without this, IDs/timestamps decode as nil and replace optimistic logs with *_0 placeholders.
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
-                
+
                 // Use a more robust custom date decoding strategy
                 decoder.dateDecodingStrategy = .custom { decoder -> Date in
                     let container = try decoder.singleValueContainer()
                     let dateString = try container.decode(String.self)
-                    
-                    // Debug the date string we're trying to parse
-                    print("🔎 Attempting to decode date string: '\(dateString)'")
-                    
+
                     // Handle empty strings
                     if dateString.isEmpty {
-                        print("⚠️ Empty date string found, using current date")
                         return Date()
                     }
                     
@@ -2171,7 +2092,6 @@ class NetworkManagerTwo {
                     for format in formats {
                         dateFormatter.dateFormat = format
                         if let date = dateFormatter.date(from: dateString) {
-                            print("✅ Successfully decoded with format '\(format)': '\(dateString)'")
                             return date
                         }
                     }
@@ -2182,27 +2102,22 @@ class NetworkManagerTwo {
                 }
                 
                 let response = try decoder.decode(LogsByDateResponse.self, from: data)
-                print("✅ Successfully fetched \(response.logs.count) logs for date: \(dateString)")
-                
+
                 DispatchQueue.main.async {
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Decoding error: \(error)")
-                if let responseString = String(data: data, encoding: .utf8) {
-                    print("Response data: \(responseString)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
             }
         }
-        
+
         task.resume()
     }
 
     // MARK: - Health Measurements
-    
+
     /// Log a height measurement for a user
     /// - Parameters:
     ///   - userEmail: User's email address
@@ -2216,73 +2131,63 @@ class NetworkManagerTwo {
         completion: @escaping (Result<HeightLogResponse, Error>) -> Void
     ) {
         let urlString = "\(baseUrl)/log-height/"
-        
+
         guard let url = URL(string: urlString) else {
             completion(.failure(NetworkError.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         let parameters: [String: Any] = [
             "user_email": userEmail,
             "height_cm": heightCm,
             "notes": notes
         ]
-        
+
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
         } catch {
             completion(.failure(error))
             return
         }
-        
-        print("📏 Logging height: \(heightCm) cm for user: \(userEmail)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("❌ Network error logging height: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
                 return
             }
-            
+
             guard let data = data else {
-                print("❌ No data received when logging height")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
-                print("❌ Server error logging height: \(errorMessage)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 // Don't use convertFromSnakeCase since HeightLogResponse has explicit CodingKeys
-                
+
                 let response = try decoder.decode(HeightLogResponse.self, from: data)
-                
+
                 DispatchQueue.main.async {
-                    print("✅ Successfully logged height: \(response.heightCm) cm")
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Error decoding height log response: \(error)")
-                if let responseString = String(data: data, encoding: .utf8) {
-                    print("Response data: \(responseString)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
@@ -2363,55 +2268,47 @@ class NetworkManagerTwo {
             completion(.failure(error))
             return
         }
-        
-        let dateString = date != nil ? " at \(date!)" : ""
-        print("⚖️ Logging weight: \(weightKg) kg for user: \(userEmail)\(dateString)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("❌ Network error logging weight: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
                 return
             }
-            
+
             guard let data = data else {
-                print("❌ No data received when logging weight")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response from server
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
-                print("❌ Server error logging weight: \(errorMessage)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 let response = try decoder.decode(WeightLogResponse.self, from: data)
-                
+
                 DispatchQueue.main.async {
-                    print("✅ Successfully logged weight: \(response.weightKg) kg")
                     completion(.success(response))
                 }
-                
+
             } catch {
-                print("❌ Decoding error logging weight: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
             }
         }.resume()
     }
-    
+
     /// Log a weight measurement with Apple Health UUID for duplicate prevention
     /// - Parameters:
     ///   - userEmail: User's email address
@@ -2429,16 +2326,16 @@ class NetworkManagerTwo {
         completion: @escaping (Result<WeightLogResponse, Error>) -> Void
     ) {
         let urlString = "\(baseUrl)/log-weight/"
-        
+
         guard let url = URL(string: urlString) else {
             completion(.failure(NetworkError.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         let formatter = ISO8601DateFormatter()
         let parameters: [String: Any] = [
             "user_email": userEmail,
@@ -2447,54 +2344,47 @@ class NetworkManagerTwo {
             "date_logged": formatter.string(from: date),
             "apple_health_uuid": appleHealthUUID
         ]
-        
+
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
         } catch {
             completion(.failure(error))
             return
         }
-        
-        print("🍎 Logging Apple Health weight: \(weightKg) kg with UUID: \(appleHealthUUID)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("❌ Network error logging Apple Health weight: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
                 return
             }
-            
+
             guard let data = data else {
-                print("❌ No data received when logging Apple Health weight")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response from server
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
-                print("❌ Server error logging Apple Health weight: \(errorMessage)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 let response = try decoder.decode(WeightLogResponse.self, from: data)
-                
+
                 DispatchQueue.main.async {
-                    print("✅ Successfully logged Apple Health weight: \(response.weightKg) kg")
                     completion(.success(response))
                 }
-                
+
             } catch {
-                print("❌ Decoding error logging Apple Health weight: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -2543,51 +2433,41 @@ class NetworkManagerTwo {
             completion(.failure(error))
             return
         }
-        
-        print("💧 Logging water: \(waterOz) oz (\(originalAmount) in \(unit)) for user: \(userEmail)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("❌ Network error logging water: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
                 return
             }
-            
+
             guard let data = data else {
-                print("❌ No data received when logging water")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
-                print("❌ Server error logging water: \(errorMessage)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.serverError(message: errorMessage)))
                 }
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 // Don't use convertFromSnakeCase since WaterLogResponse has explicit CodingKeys
-                
+
                 let response = try decoder.decode(WaterLogResponse.self, from: data)
-                
+
                 DispatchQueue.main.async {
-                    print("✅ Successfully logged water: \(response.waterOz) oz")
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Error decoding water log response: \(error)")
-                if let responseString = String(data: data, encoding: .utf8) {
-                    print("Response data: \(responseString)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
@@ -2632,11 +2512,10 @@ class NetworkManagerTwo {
             do {
                 let decoder = JSONDecoder()
                 // Not using .convertFromSnakeCase because we have explicit CodingKeys
-                
+
                 let response = try decoder.decode(HeightLogsResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(response)) }
             } catch {
-                print("Error decoding HeightLogsResponse: \(error)")
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }.resume()
@@ -2681,7 +2560,6 @@ class NetworkManagerTwo {
                 let response = try decoder.decode(WeightLogsResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(response)) }
             } catch {
-                print("Error decoding WeightLogsResponse: \(error)")
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }.resume()
@@ -2709,8 +2587,6 @@ class NetworkManagerTwo {
             return
         }
 
-        print("📊 Fetching profile data for user: \(userEmail)")
-
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async { completion(.failure(error)) }
@@ -2727,26 +2603,11 @@ class NetworkManagerTwo {
             }
             do {
                 let decoder = JSONDecoder()
-                // Use snake_case conversion since we have explicit CodingKeys
-                
-                // Debug: Print raw response to see what we're getting
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-               
-                    if let workoutProfile = json["workout_profile"] as? [String: Any] {
-                 
-                    }
-                }
-                
                 let response = try decoder.decode(ProfileDataResponse.self, from: data)
-                DispatchQueue.main.async { 
-             
-                    completion(.success(response)) 
+                DispatchQueue.main.async {
+                    completion(.success(response))
                 }
             } catch {
-                print("❌ Error decoding ProfileDataResponse: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("🔍 Full Response data: \(json)")
-                }
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }.resume()
@@ -2784,7 +2645,6 @@ class NetworkManagerTwo {
                 let decoded = try JSONDecoder().decode(WorkoutProfilesResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(decoded)) }
             } catch {
-                print("❌ Error decoding WorkoutProfilesResponse: \(error)")
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }.resume()
@@ -2836,7 +2696,6 @@ class NetworkManagerTwo {
                 let decoded = try JSONDecoder().decode(CreateWorkoutProfileResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(decoded)) }
             } catch {
-                print("❌ Error decoding CreateWorkoutProfileResponse: \(error)")
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }.resume()
@@ -2883,7 +2742,6 @@ class NetworkManagerTwo {
                 let decoded = try JSONDecoder().decode(ActivateWorkoutProfileResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(decoded)) }
             } catch {
-                print("❌ Error decoding ActivateWorkoutProfileResponse: \(error)")
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }.resume()
@@ -2930,7 +2788,6 @@ class NetworkManagerTwo {
                 let decoded = try JSONDecoder().decode(WorkoutProfilesResponse.self, from: data)
                 DispatchQueue.main.async { completion(.success(decoded)) }
             } catch {
-                print("❌ Error decoding WorkoutProfilesResponse: \(error)")
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }.resume()
@@ -2984,8 +2841,6 @@ class NetworkManagerTwo {
             return
         }
         
-        print("🧠 Updating nutrition goals for user: \(userEmail)")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -3017,15 +2872,10 @@ class NetworkManagerTwo {
                 let response = try decoder.decode(NutritionGoalsResponse.self, from: data)
                 
                 DispatchQueue.main.async {
-                    print("✅ Successfully updated nutrition goals")
                     completion(.success(response))
                 }
                 
             } catch {
-                print("❌ Decoding error in update nutrition goals: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("Response data: \(json)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -3064,8 +2914,6 @@ class NetworkManagerTwo {
             return
         }
         
-        print("🧠 Generating optimized nutrition goals for user: \(userEmail)")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -3073,14 +2921,14 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
@@ -3089,23 +2937,18 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
-                
+
                 let response = try decoder.decode(NutritionGoalsResponse.self, from: data)
-                
+
                 DispatchQueue.main.async {
-                    print("✅ Successfully generated nutrition goals")
                     completion(.success(response))
                 }
-                
+
             } catch {
-                print("❌ Decoding error in generate nutrition goals: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("Response data: \(json)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -3280,7 +3123,6 @@ class NetworkManagerTwo {
                     let response = try decoder.decode(ExplodeRecipeLogResponse.self, from: data)
                     completion(.success(response))
                 } catch {
-                    print("❌ Failed to decode ExplodeRecipeLogResponse: \(error)")
                     completion(.failure(error))
                 }
             } else {
@@ -3364,8 +3206,6 @@ class NetworkManagerTwo {
             return
         }
         
-        print("📝 Updating food log \(logId) for user \(userEmail) with parameters: \(parameters)")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -3397,15 +3237,10 @@ class NetworkManagerTwo {
                 let response = try decoder.decode(UpdateFoodLogResponse.self, from: data)
                 
                 DispatchQueue.main.async {
-                    print("✅ Successfully updated food log \(logId) for user \(userEmail)")
                     completion(.success(response.food_log))
                 }
-                
+
             } catch {
-                print("❌ Decoding error in update food log: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("Response data: \(json)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -3425,7 +3260,6 @@ class NetworkManagerTwo {
         fat: Double? = nil,
         completion: @escaping (Result<UpdatedMealLog, Error>) -> Void
     ) {
-        print("🌐 NetworkManagerTwo: updateMealLog called with logId: \(logId)")
         let urlString = "\(baseUrl)/update-meal-log/\(logId)/"
         
         guard let url = URL(string: urlString) else {
@@ -3477,8 +3311,6 @@ class NetworkManagerTwo {
             return
         }
         
-        print("🍽️ Updating meal log \(logId) for user \(userEmail) with parameters: \(parameters)")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -3486,14 +3318,14 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
@@ -3502,23 +3334,18 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 // Don't use convertFromSnakeCase for this endpoint since UpdateMealLogResponse expects snake_case keys
-                
+
                 let response = try decoder.decode(UpdateMealLogResponse.self, from: data)
-                
+
                 DispatchQueue.main.async {
-                    print("✅ Successfully updated meal log \(logId) for user \(userEmail)")
                     completion(.success(response.meal_log))
                 }
-                
+
             } catch {
-                print("❌ Decoding error in update meal log: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("Response data: \(json)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -3576,8 +3403,6 @@ class NetworkManagerTwo {
             return
         }
         
-        print("💾 Saving \(itemType) with ID \(itemId) for user \(userEmail)")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -3585,14 +3410,14 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
@@ -3601,24 +3426,19 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
                 decoder.dateDecodingStrategy = .iso8601
-                
+
                 let response = try decoder.decode(SaveMealResponse.self, from: data)
-                
+
                 DispatchQueue.main.async {
-                    print("✅ Successfully saved meal: \(response.message)")
                     completion(.success(response))
                 }
-                
+
             } catch {
-                print("❌ Decoding error in save meal: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("Response data: \(json)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -3647,8 +3467,6 @@ class NetworkManagerTwo {
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        print("🗑️ Unsaving meal with ID \(savedMealId) for user \(userEmail)")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -3656,14 +3474,14 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
@@ -3672,21 +3490,16 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 let response = try decoder.decode(UnsaveMealResponse.self, from: data)
-                
+
                 DispatchQueue.main.async {
-                    print("✅ Successfully unsaved meal: \(response.message)")
                     completion(.success(response))
                 }
-                
+
             } catch {
-                print("❌ Decoding error in unsave meal: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("Response data: \(json)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -3722,8 +3535,6 @@ class NetworkManagerTwo {
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        print("📋 Fetching saved meals for user \(userEmail) (page \(page))")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -3731,20 +3542,14 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
-            // Debug: Print raw data
-            if let rawString = String(data: data, encoding: .utf8) {
-              
-                print(rawString)
-            }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
@@ -3753,72 +3558,52 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
-            // Debug: Parse JSON manually first
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-             
-                if let savedMealsArray = json["saved_meals"] as? [[String: Any]] {
 
-                } else {
- 
-                }
-                if let hasMore = json["has_more"] {
-
-                }
-            }
-            
             do {
                 let decoder = JSONDecoder()
-               
-                
+
                 // Custom date formatter to handle microseconds
                 let formatter = DateFormatter()
                 formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'"
                 formatter.locale = Locale(identifier: "en_US_POSIX")
                 formatter.timeZone = TimeZone(secondsFromGMT: 0)
-                
+
                 let isoFormatter = ISO8601DateFormatter()
                 isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                
+
                 decoder.dateDecodingStrategy = .custom { decoder in
                     let container = try decoder.singleValueContainer()
                     let dateString = try container.decode(String.self)
-                    
+
                     // Try ISO8601 with fractional seconds first
                     if let date = isoFormatter.date(from: dateString) {
                         return date
                     }
-                    
+
                     // Try custom formatter
                     if let date = formatter.date(from: dateString) {
                         return date
                     }
-                    
+
                     // Fallback to standard ISO8601
                     let standardFormatter = ISO8601DateFormatter()
                     if let date = standardFormatter.date(from: dateString) {
                         return date
                     }
-                    
+
                     throw DecodingError.dataCorrupted(DecodingError.Context(
                         codingPath: decoder.codingPath,
                         debugDescription: "Invalid date format: \(dateString)"
                     ))
                 }
-                
-                print("🔍 FRONTEND DEBUG - About to decode SavedMealsResponse")
+
                 let response = try decoder.decode(SavedMealsResponse.self, from: data)
-                
+
                 DispatchQueue.main.async {
-                    print("✅ Successfully fetched \(response.savedMeals.count) saved meals")
                     completion(.success(response))
                 }
-                
+
             } catch {
-                print("❌ Decoding error in get saved meals: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("Response data: \(json)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -3851,8 +3636,6 @@ class NetworkManagerTwo {
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        print("📋 Fetching saved foods for user \(userEmail) (page \(page))")
-
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async { completion(.failure(error)) }
@@ -3876,11 +3659,9 @@ class NetworkManagerTwo {
                 let decoder = JSONDecoder()
                 let response = try decoder.decode(SavedFoodsResponse.self, from: data)
                 DispatchQueue.main.async {
-                    print("✅ Successfully fetched \(response.savedFoods.count) saved foods")
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Decoding error in get saved foods: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -3914,8 +3695,6 @@ class NetworkManagerTwo {
 
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        print("💾 Saving food \(foodId) for user \(userEmail)")
-
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async { completion(.failure(error)) }
@@ -3939,11 +3718,9 @@ class NetworkManagerTwo {
                 let decoder = JSONDecoder()
                 let response = try decoder.decode(SaveFoodResponse.self, from: data)
                 DispatchQueue.main.async {
-                    print("✅ Successfully saved food: \(response.message)")
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Decoding error in save food: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -3976,8 +3753,6 @@ class NetworkManagerTwo {
 
         request.url = finalUrl
 
-        print("🗑️ Unsaving food \(savedFoodId) for user \(userEmail)")
-
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async { completion(.failure(error)) }
@@ -4001,11 +3776,9 @@ class NetworkManagerTwo {
                 let decoder = JSONDecoder()
                 let response = try decoder.decode(UnsaveFoodResponse.self, from: data)
                 DispatchQueue.main.async {
-                    print("✅ Successfully unsaved food: \(response.message)")
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Decoding error in unsave food: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -4031,8 +3804,6 @@ class NetworkManagerTwo {
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        print("🗑️ Unsaving food by foodId \(foodId) for user \(userEmail)")
-
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async { completion(.failure(error)) }
@@ -4056,11 +3827,9 @@ class NetworkManagerTwo {
                 let decoder = JSONDecoder()
                 let response = try decoder.decode(UnsaveFoodResponse.self, from: data)
                 DispatchQueue.main.async {
-                    print("✅ Successfully unsaved food: \(response.message)")
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Decoding error in unsave food: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -4115,7 +3884,6 @@ class NetworkManagerTwo {
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Decoding error in is food saved: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -4148,8 +3916,6 @@ class NetworkManagerTwo {
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        print("📋 Fetching saved recipes for user \(userEmail) (page \(page))")
-
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async { completion(.failure(error)) }
@@ -4181,11 +3947,9 @@ class NetworkManagerTwo {
                 }
                 let response = try decoder.decode(SavedRecipesResponse.self, from: data)
                 DispatchQueue.main.async {
-                    print("✅ Successfully fetched \(response.savedRecipes.count) saved recipes")
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Decoding error in get saved recipes: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -4214,8 +3978,6 @@ class NetworkManagerTwo {
         ]
 
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        print("💾 Saving recipe \(recipeId) for user \(userEmail)")
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
@@ -4248,11 +4010,9 @@ class NetworkManagerTwo {
                 }
                 let response = try decoder.decode(SaveRecipeResponse.self, from: data)
                 DispatchQueue.main.async {
-                    print("✅ Successfully saved recipe: \(response.message)")
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Decoding error in save recipe: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -4278,8 +4038,6 @@ class NetworkManagerTwo {
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        print("🗑️ Unsaving recipe \(recipeId) for user \(userEmail)")
-
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async { completion(.failure(error)) }
@@ -4303,11 +4061,9 @@ class NetworkManagerTwo {
                 let decoder = JSONDecoder()
                 let response = try decoder.decode(UnsaveRecipeResponse.self, from: data)
                 DispatchQueue.main.async {
-                    print("✅ Successfully unsaved recipe: \(response.message)")
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Decoding error in unsave recipe: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -4363,7 +4119,6 @@ class NetworkManagerTwo {
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Decoding error in is recipe saved: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -4423,9 +4178,7 @@ class NetworkManagerTwo {
             completion(.failure(error))
             return
         }
-        
-        print("🔄 Updating weight log \(logId) for user: \(userEmail)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -4433,14 +4186,14 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
@@ -4449,19 +4202,14 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             // Try to decode the updated weight log
             do {
                 let response = try JSONDecoder().decode(WeightLogResponse.self, from: data)
                 DispatchQueue.main.async {
-                    print("✅ Successfully updated weight log")
                     completion(.success(response))
                 }
             } catch {
-                print("❌ Failed to decode updated weight log response: \(error)")
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    print("Response data: \(json)")
-                }
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.decodingError))
                 }
@@ -4493,9 +4241,7 @@ class NetworkManagerTwo {
             completion(.failure(error))
             return
         }
-        
-        print("🔄 Updating weight log for user: \(userEmail) with photo URL: \(photoUrl)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -4503,14 +4249,14 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
@@ -4519,12 +4265,11 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             // Check for success response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let success = json["success"] as? Bool, success {
                 DispatchQueue.main.async {
-                    print("✅ Successfully updated weight log with photo")
                     completion(.success(()))
                 }
             } else {
@@ -4558,12 +4303,9 @@ class NetworkManagerTwo {
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        print("🗑️ Deleting weight log with ID: \(logId)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("❌ Network error deleting weight log: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
@@ -4579,18 +4321,16 @@ class NetworkManagerTwo {
             
             if httpResponse.statusCode == 200 || httpResponse.statusCode == 204 {
                 DispatchQueue.main.async {
-                    print("✅ Successfully deleted weight log")
                     completion(.success(()))
                 }
             } else {
-                print("❌ Failed to delete weight log. Status code: \(httpResponse.statusCode)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
                 }
             }
         }.resume()
     }
-    
+
     /// Delete a height log by ID
     /// - Parameters:
     ///   - logId: ID of the height log to delete
@@ -4612,32 +4352,27 @@ class NetworkManagerTwo {
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        print("🗑️ Deleting height log with ID: \(logId)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("❌ Network error deleting height log: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
                 return
             }
-            
+
             guard let httpResponse = response as? HTTPURLResponse else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             if httpResponse.statusCode == 200 || httpResponse.statusCode == 204 {
                 DispatchQueue.main.async {
-                    print("✅ Successfully deleted height log")
                     completion(.success(()))
                 }
             } else {
-                print("❌ Failed to delete height log. Status code: \(httpResponse.statusCode)")
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
                 }
@@ -4675,9 +4410,7 @@ class NetworkManagerTwo {
             completion(.failure(error))
             return
         }
-        
-        print("🔄 Updating name for user: \(email) to: \(name)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -4685,14 +4418,14 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
@@ -4701,24 +4434,22 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             // Check for success response (backend returns message and name on success)
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let message = json["message"] as? String,
-               let name = json["name"] as? String {
+               let _ = json["message"] as? String,
+               let _ = json["name"] as? String {
                 DispatchQueue.main.async {
-                    print("✅ Successfully updated name to: \(name) - \(message)")
                     completion(.success(()))
                 }
             } else {
                 DispatchQueue.main.async {
-                    print("❌ Invalid response format from server")
                     completion(.failure(NetworkError.invalidResponse))
                 }
             }
         }.resume()
     }
-    
+
     /// Update user's username
     /// - Parameters:
     ///   - email: User's email address
@@ -4748,8 +4479,6 @@ class NetworkManagerTwo {
             return
         }
         
-        print("🔄 Updating username for user: \(email) to: \(username)")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -4776,21 +4505,19 @@ class NetworkManagerTwo {
             
             // Check for success response (backend returns message and username on success)
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let message = json["message"] as? String,
-               let username = json["username"] as? String {
+               let _ = json["message"] as? String,
+               let _ = json["username"] as? String {
                 DispatchQueue.main.async {
-                    print("✅ Successfully updated username to: \(username) - \(message)")
                     completion(.success(()))
                 }
             } else {
                 DispatchQueue.main.async {
-                    print("❌ Invalid response format from server")
                     completion(.failure(NetworkError.invalidResponse))
                 }
             }
         }.resume()
     }
-    
+
     /// Update user's profile photo
     /// - Parameters:
     ///   - email: User's email address
@@ -4819,9 +4546,7 @@ class NetworkManagerTwo {
             completion(.failure(error))
             return
         }
-        
-        print("🔄 Updating photo for user: \(email) to: \(photoUrl)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -4829,14 +4554,14 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             // Check if there's an error response
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let errorMessage = json["error"] as? String {
@@ -4845,24 +4570,22 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             // Check for success response (backend returns message and photo_url on success)
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let message = json["message"] as? String,
-               let photoUrl = json["photo_url"] as? String {
+               let _ = json["message"] as? String,
+               let _ = json["photo_url"] as? String {
                 DispatchQueue.main.async {
-                    print("✅ Successfully updated profile photo to: \(photoUrl) - \(message)")
                     completion(.success(()))
                 }
             } else {
                 DispatchQueue.main.async {
-                    print("❌ Invalid response format from server")
                     completion(.failure(NetworkError.invalidResponse))
                 }
             }
         }.resume()
     }
-    
+
     /// Upload photo to Azure Blob Storage and update user's profile photo
     /// - Parameters:
     ///   - email: User's email address
@@ -4875,9 +4598,7 @@ class NetworkManagerTwo {
         }
         
         let blobName = UUID().uuidString + ".jpg"
-        
-        print("🔄 Uploading profile photo to Azure Blob Storage...")
-        
+
         // Use NetworkManager's uploadFileToAzureBlob method
         NetworkManager().uploadFileToAzureBlob(
             containerName: containerName,
@@ -4886,7 +4607,6 @@ class NetworkManagerTwo {
             contentType: "image/jpeg"
         ) { [weak self] success, url in
             if success, let imageUrl = url {
-                print("✅ Profile photo uploaded successfully: \(imageUrl)")
                 
                 // Now update the user's profile with the photo URL
                 self?.updatePhoto(email: email, photoUrl: imageUrl) { result in
@@ -4922,9 +4642,7 @@ class NetworkManagerTwo {
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        
-        print("🔄 Checking username eligibility for user: \(email)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -4951,12 +4669,10 @@ class NetworkManagerTwo {
                 do {
                     let eligibilityResponse = try JSONDecoder().decode(UsernameEligibilityResponse.self, from: data)
                     DispatchQueue.main.async {
-                        print("✅ Username eligibility check successful. Can change: \(eligibilityResponse.canChangeUsername), Days remaining: \(eligibilityResponse.daysRemaining)")
                         completion(.success(eligibilityResponse))
                     }
                 } catch {
                     DispatchQueue.main.async {
-                        print("❌ Failed to decode username eligibility response: \(error)")
                         completion(.failure(NetworkError.decodingError))
                     }
                 }
@@ -4988,9 +4704,7 @@ class NetworkManagerTwo {
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        
-        print("🔄 Checking name eligibility for user: \(email)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -4998,31 +4712,29 @@ class NetworkManagerTwo {
                 }
                 return
             }
-            
+
             guard let data = data else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             guard let httpResponse = response as? HTTPURLResponse else {
                 DispatchQueue.main.async {
                     completion(.failure(NetworkError.invalidResponse))
                 }
                 return
             }
-            
+
             if httpResponse.statusCode == 200 {
                 do {
                     let eligibilityResponse = try JSONDecoder().decode(NameEligibilityResponse.self, from: data)
                     DispatchQueue.main.async {
-                        print("✅ Name eligibility check successful. Can change: \(eligibilityResponse.canChangeName), Days remaining: \(eligibilityResponse.daysRemaining)")
                         completion(.success(eligibilityResponse))
                     }
                 } catch {
                     DispatchQueue.main.async {
-                        print("❌ Failed to decode name eligibility response: \(error)")
                         completion(.failure(NetworkError.decodingError))
                     }
                 }
@@ -5142,10 +4854,7 @@ class NetworkManagerTwo {
             completion(.failure(error))
             return
         }
-        
-        print("🔄 Updating workout preferences for user: \(email)")
-        print("   └── Data: \(workoutData)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -5162,13 +4871,10 @@ class NetworkManagerTwo {
             }
             
             if httpResponse.statusCode == 200 {
-                print("✅ Successfully updated workout preferences")
                 DispatchQueue.main.async {
                     completion(.success(()))
                 }
             } else {
-                print("❌ Failed to update workout preferences: HTTP \(httpResponse.statusCode)")
-                
                 if let data = data,
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let errorMessage = json["error"] as? String {
@@ -5365,11 +5071,6 @@ class NetworkManagerTwo {
             return
         }
         
-        // DEBUG - Print what we're sending to the server
-        print("⬆️ SENDING TO SERVER - analyzeMealOrActivity:")
-        print("- description: \(description)")
-        print("- meal type: \(mealType)")
-        
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -5419,12 +5120,6 @@ class NetworkManagerTwo {
             do {
                 if let jsonResponse = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
                     
-                    // DEBUG - Print what we received from the server
-                    if let responseData = try? JSONSerialization.data(withJSONObject: jsonResponse, options: .prettyPrinted),
-                       let responseString = String(data: responseData, encoding: .utf8) {
-                        print("⬇️ SERVER RESPONSE - analyzeMealOrActivity: \(responseString)")
-                    }
-                    
                     DispatchQueue.main.async {
                         completion(.success(jsonResponse))
                     }
@@ -5461,9 +5156,7 @@ class NetworkManagerTwo {
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        print("🗑️ Deleting activity log ID: \(activityLogId) for user: \(userEmail)")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -5481,12 +5174,10 @@ class NetworkManagerTwo {
             
             if (200...299).contains(httpResponse.statusCode) {
                 DispatchQueue.main.async {
-                    print("✅ Successfully deleted activity log ID: \(activityLogId)")
                     completion(.success(()))
                 }
             } else {
                 DispatchQueue.main.async {
-                    print("❌ Failed to delete activity log. Status code: \(httpResponse.statusCode)")
                     completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
                 }
             }
@@ -5694,27 +5385,22 @@ class NetworkManagerTwo {
             completion(.failure(error))
             return
         }
-        
-        print("📱 Updating device token for user: \(userEmail)")
-        
+
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("❌ Device token update failed: \(error.localizedDescription)")
                     completion(.failure(error))
                     return
                 }
-                
+
                 guard let httpResponse = response as? HTTPURLResponse else {
                     completion(.failure(NetworkError.invalidResponse))
                     return
                 }
-                
+
                 if httpResponse.statusCode == 200 {
-                    print("✅ Device token updated successfully")
                     completion(.success(()))
                 } else {
-                    print("❌ Device token update failed with status: \(httpResponse.statusCode)")
                     completion(.failure(NetworkError.requestFailed(statusCode: httpResponse.statusCode)))
                 }
             }
@@ -5754,12 +5440,9 @@ class NetworkManagerTwo {
             return
         }
         
-        print("📝 Updating exercise notes for exercise \(exerciseId), user: \(userEmail)")
-        
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("❌ Exercise notes update failed: \(error.localizedDescription)")
                     completion(.failure(error))
                     return
                 }
@@ -5777,7 +5460,6 @@ class NetworkManagerTwo {
                 if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
                     do {
                         if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                            print("✅ Exercise notes updated successfully")
                             completion(.success(json))
                         } else {
                             completion(.failure(NetworkError.decodingError))
@@ -5786,7 +5468,6 @@ class NetworkManagerTwo {
                         completion(.failure(error))
                     }
                 } else {
-                    print("❌ Exercise notes update failed with status: \(httpResponse.statusCode)")
                     // Try to parse error message from response
                     if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                        let errorMessage = errorJson["error"] as? String {
@@ -5823,8 +5504,6 @@ class NetworkManagerTwo {
     
     /// Update user's flexibility preferences on the server
     func updateFlexibilityPreferences(email: String, warmUpEnabled: Bool, coolDownEnabled: Bool, warmUpDuration: Int = 5, coolDownDuration: Int = 5, completion: @escaping (Result<Bool, Error>) -> Void) {
-        print("🌐 NetworkManagerTwo: updateFlexibilityPreferences called with email: '\(email)' (isEmpty: \(email.isEmpty))")
-        
         let urlString = "\(baseUrl)/update-workout-preferences/"
         guard let url = URL(string: urlString) else {
             completion(.failure(NetworkError.invalidURL))
@@ -5842,38 +5521,30 @@ class NetworkManagerTwo {
             "default_warmup_duration": warmUpDuration,
             "default_cooldown_duration": coolDownDuration
         ]
-        
-        print("🔧 NetworkManagerTwo: Sending parameters: \(parameters)")
-        
+
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: parameters)
             request.httpBody = jsonData
             
             let task = URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("❌ Network error in updateFlexibilityPreferences: \(error.localizedDescription)")
                     completion(.failure(error))
                     return
                 }
-                
+
                 guard let data = data else {
-                    print("❌ No data received from server")
                     completion(.failure(NetworkError.invalidResponse))
                     return
                 }
-                
+
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    print("❌ Invalid HTTP response")
                     completion(.failure(NetworkError.invalidResponse))
                     return
                 }
-                
+
                 if httpResponse.statusCode == 200 {
-                    print("✅ Flexibility preferences updated successfully")
                     completion(.success(true))
                 } else {
-                    print("❌ Flexibility preferences update failed with status: \(httpResponse.statusCode)")
-                    
                     // Try to parse error message from response
                     if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                        let errorMessage = errorJson["error"] as? String {
@@ -5885,13 +5556,12 @@ class NetworkManagerTwo {
             }
             
             task.resume()
-            
+
         } catch {
-            print("❌ Failed to encode flexibility preferences request: \(error)")
             completion(.failure(error))
         }
     }
-    
+
     /// Get user's flexibility preferences from the server  
     func getFlexibilityPreferences(email: String, completion: @escaping (Result<FlexibilityPreferences, Error>) -> Void) {
         let urlString = "\(baseUrl)/get-workout-preferences/"
@@ -5912,35 +5582,28 @@ class NetworkManagerTwo {
             
             let task = URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("❌ Network error in getFlexibilityPreferences: \(error.localizedDescription)")
                     completion(.failure(error))
                     return
                 }
-                
+
                 guard let data = data else {
-                    print("❌ No data received from server")
                     completion(.failure(NetworkError.invalidResponse))
                     return
                 }
-                
+
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    print("❌ Invalid HTTP response")
                     completion(.failure(NetworkError.invalidResponse))
                     return
                 }
-                
+
                 if httpResponse.statusCode == 200 {
                     do {
                         let response = try JSONDecoder().decode(FlexibilityPreferencesResponse.self, from: data)
-                        print("✅ Flexibility preferences loaded successfully")
                         completion(.success(response.preferences))
                     } catch {
-                        print("❌ Failed to decode flexibility preferences response: \(error)")
                         completion(.failure(NetworkError.decodingError))
                     }
                 } else {
-                    print("❌ Get flexibility preferences failed with status: \(httpResponse.statusCode)")
-                    
                     // Try to parse error message from response
                     if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                        let errorMessage = errorJson["error"] as? String {
@@ -5952,9 +5615,8 @@ class NetworkManagerTwo {
             }
             
             task.resume()
-            
+
         } catch {
-            print("❌ Failed to encode get flexibility preferences request: \(error)")
             completion(.failure(error))
         }
     }

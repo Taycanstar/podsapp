@@ -264,16 +264,16 @@ extension Date {
 
 class NetworkManager {
 
-    //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
+     let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
     //   let baseUrl = "http://192.168.1.92:8000"
     // let baseUrl = "http://172.20.10.4:8000"
-    let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+    // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
 
     /// Static accessor for base URL, used by EventTracker and other singleton services
     static var baseURL: String {
         // return "http://192.168.1.92:8000"
-        //  return "https://humuli-2b3070583cda.herokuapp.com"
-        return "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+         return "https://humuli-2b3070583cda.herokuapp.com"
+        // return "https://humuli-staging-b3e9cef208dd.herokuapp.com"
     }
     
     private let iso8601FractionalFormatter: ISO8601DateFormatter = {
@@ -316,28 +316,24 @@ class NetworkManager {
                 guard let data = data, error == nil else {
                     DispatchQueue.main.async {
                         RegionManager.shared.region = "centralus" // Default region
-                        print("Error fetching location data: \(error?.localizedDescription ?? "Unknown error")")
                     }
                     return
                 }
-                
+
                 if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
                     if let regionCode = json["region_code"] as? String {
                         let region = self.mapRegionToAzureBlobLocation(region: regionCode)
                         DispatchQueue.main.async {
                             RegionManager.shared.region = region
-                            print("Determined region: \(region)")
                         }
                     } else {
                         DispatchQueue.main.async {
-                            RegionManager.shared.region = "centralus" //
-                            print("Region code not found in JSON response.")
+                            RegionManager.shared.region = "centralus"
                         }
                     }
                 } else {
                     DispatchQueue.main.async {
                         RegionManager.shared.region = "centralus" // Default region
-                        print("Failed to parse JSON response.")
                     }
                 }
             }
@@ -365,11 +361,9 @@ class NetworkManager {
             
             guard let accountName = ConfigurationManager.shared.getValue(forKey: accountNameKey) as? String,
                   let sasToken = ConfigurationManager.shared.getValue(forKey: sasTokenKey) as? String else {
-                print("Missing configuration values for region \(region)")
                 return nil
             }
-            
-            print(accountName, sasToken, "hot shit")
+
             return (accountName, sasToken)
         }
         
@@ -529,36 +523,29 @@ class NetworkManager {
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = jsonData
             
-            print("📤 NetworkManager: Sending onboarding data to \(url.absoluteString)")
-            print("   └── Data keys: \(data.keys.joined(separator: ", "))")
-            
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("❌ NetworkManager: Onboarding save failed - \(error.localizedDescription)")
                     DispatchQueue.main.async {
                         completion(false, error.localizedDescription)
                     }
                     return
                 }
-                
+
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    print("❌ NetworkManager: Invalid response")
                     DispatchQueue.main.async {
                         completion(false, "Invalid response from server")
                     }
                     return
                 }
-                
+
                 guard let data = data else {
-                    print("❌ NetworkManager: No data from server")
                     DispatchQueue.main.async {
                         completion(false, "No data from server")
                     }
                     return
                 }
-                
+
                 if httpResponse.statusCode == 200 {
-                    print("✅ NetworkManager: Onboarding data saved successfully")
                     DispatchQueue.main.async {
                         completion(true, nil)
                     }
@@ -566,12 +553,10 @@ class NetworkManager {
                     // Try to parse error message from response
                     if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                        let errorMessage = json["error"] as? String {
-                        print("❌ NetworkManager: Server error - \(errorMessage)")
                         DispatchQueue.main.async {
                             completion(false, errorMessage)
                         }
                     } else {
-                        print("❌ NetworkManager: HTTP error \(httpResponse.statusCode)")
                         DispatchQueue.main.async {
                             completion(false, "Server error: \(httpResponse.statusCode)")
                         }
@@ -832,38 +817,31 @@ class NetworkManager {
         }
         
         func createPod(podTitle: String, items: [PodItem], email: String, completion: @escaping (Bool, String?) -> Void) {
-            print("Starting createPod...")
             let dispatchGroup = DispatchGroup()
             var updatedItems = [PodItem]()
             var uploadErrors = [String]()
-            
+
             guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String
             else {
-                print("Missing configuration values for container")
                 completion(false, "No container name found.")
                 return
             }
-            
+
             items.forEach { item in
                 dispatchGroup.enter()
                 if let videoURL = item.videoURL {
                     let videoBlobName = UUID().uuidString + ".mp4"
                     do {
                         let videoData = try Data(contentsOf: videoURL)
-                        print("Uploading video for item \(item.id)...")
                         uploadFileToAzureBlob(containerName: containerName, blobName: videoBlobName, fileData: videoData, contentType: "video/mp4") { success, videoUrlString in
                             if success, let videoUrl = videoUrlString {
-                                print("Video uploaded successfully for item \(item.id)")
                                 var updatedItem = PodItem(id: item.id, videoURL: URL(string: videoUrl), metadata: item.metadata, thumbnail: nil, thumbnailURL: nil, itemType: item.itemType, notes: item.notes)
                                 if let thumbnailImage = item.thumbnail, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.8) {
                                     let thumbnailBlobName = UUID().uuidString + ".jpg"
-                                    print("Uploading thumbnail for item \(item.id)...")
                                     self.uploadFileToAzureBlob(containerName: containerName, blobName: thumbnailBlobName, fileData: thumbnailData, contentType: "image/jpeg") { success, thumbnailUrlString in
                                         if success, let thumbnailUrl = thumbnailUrlString {
-                                            print("Thumbnail uploaded successfully for item \(item.id)")
                                             updatedItem.thumbnailURL = URL(string: thumbnailUrl)
                                         } else {
-                                            print("Failed to upload thumbnail for item \(item.id)")
                                             uploadErrors.append("Failed to upload thumbnail for item \(item.id)")
                                         }
                                         updatedItems.append(updatedItem)
@@ -874,47 +852,38 @@ class NetworkManager {
                                     dispatchGroup.leave()
                                 }
                             } else {
-                                print("Failed to upload video for item \(item.id)")
                                 uploadErrors.append("Failed to upload video for item \(item.id)")
                                 dispatchGroup.leave()
                             }
                         }
                     } catch {
-                        print("Failed to load video data for URL: \(videoURL)")
                         uploadErrors.append("Failed to load video data for URL: \(videoURL)")
                         dispatchGroup.leave()
                     }
                 } else if let image = item.image, let imageData = image.jpegData(compressionQuality: 0.8) {
                     let imageBlobName = UUID().uuidString + ".jpg"
-                    print("Uploading image for item \(item.id)...")
                     uploadFileToAzureBlob(containerName: containerName, blobName: imageBlobName, fileData: imageData, contentType: "image/jpeg") { success, imageUrlString in
                         if success, let imageUrl = imageUrlString {
-                            print("Image uploaded successfully for item \(item.id)")
                             let updatedItem = PodItem(id: item.id, videoURL: nil, image: nil, metadata: item.metadata, thumbnail: nil, thumbnailURL: URL(string: imageUrl), imageURL: URL(string: imageUrl), itemType: item.itemType, notes: item.notes)
                             updatedItems.append(updatedItem)
                         } else {
-                            print("Failed to upload image for item \(item.id)")
                             uploadErrors.append("Failed to upload image for item \(item.id)")
                         }
                         dispatchGroup.leave()
                     }
                 } else {
-                    print("No video or image to upload for item \(item.id)")
                     uploadErrors.append("No video or image to upload for item \(item.id)")
                     dispatchGroup.leave()
                 }
             }
-            
+
             dispatchGroup.notify(queue: .main) {
                 if !uploadErrors.isEmpty {
-                    print("Failed to upload one or more items: \(uploadErrors.joined(separator: ", "))")
                     completion(false, "Failed to upload one or more items: \(uploadErrors.joined(separator: ", "))")
                     return
                 }
-                
-                print("Sending pod creation request...")
+
                 self.sendPodCreationRequest(podTitle: podTitle, items: updatedItems, email: email) { success, message in
-                    print("Pod creation request result: \(success), message: \(String(describing: message))")
                     completion(success, message)
                 }
             }
@@ -922,64 +891,51 @@ class NetworkManager {
         
         
         func sendPodCreationRequest(podTitle: String, items: [PodItem], email: String, completion: @escaping (Bool, String?) -> Void) {
-            
+
             guard let url = URL(string: "\(baseUrl)/create-pod/") else {
-                print("Invalid URL for pod creation")
                 completion(false, "Invalid URL")
                 return
             }
-            
+
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            
+
             let itemsForBody = items.map { item -> [String: Any] in
                 var itemDict: [String: Any] = ["label": item.metadata, "itemType": item.itemType, "thumbnail": item.thumbnailURL?.absoluteString ?? "", "notes": item.notes]
-                print(item, "item")
                 if item.itemType == "video", let videoURL = item.videoURL?.absoluteString {
                     itemDict["videoURL"] = videoURL
                 } else if item.itemType == "image", let imageURL = item.imageURL?.absoluteString {
                     itemDict["imageURL"] = imageURL
                 }
-                
-                
-                
+
                 return itemDict
             }
-            
-            
+
             let body: [String: Any] = ["title": podTitle, "items": itemsForBody, "email": email]
             do {
                 request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-                print(body, "body")
-                print("Sending data to server: \(String(data: request.httpBody!, encoding: .utf8)!)")
             } catch {
-                print("Failed to encode request body, error: \(error)")
                 completion(false, "Failed to encode request body")
                 return
             }
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("Network error on pod creation request: \(error.localizedDescription)")
                     completion(false, "Network error: \(error.localizedDescription)")
                     return
                 }
-                
+
                 if let httpResponse = response as? HTTPURLResponse {
-                    print("Pod creation response status code: \(httpResponse.statusCode)")
                     if httpResponse.statusCode == 201 {
-                        print("Pod created successfully.")
                         completion(true, nil)
                     } else {
                         var errorMessage = "Server returned status code: \(httpResponse.statusCode)"
                         if let responseData = data, let responseString = String(data: responseData, encoding: .utf8) {
-                            print("Server response: \(responseString)")
                             errorMessage += ", Response: \(responseString)"
                         }
                         completion(false, errorMessage)
                     }
                 } else {
-                    print("No response received from server.")
                     completion(false, "No response from server")
                 }
             }.resume()
@@ -989,33 +945,27 @@ class NetworkManager {
             let dispatchGroup = DispatchGroup()
             var updatedItems = [PodItem]()
             var uploadErrors = [String]()
-            
+
             guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
-                print("Missing configuration values for container")
                 completion(false, "No container name found.")
                 return
             }
-            
+
             items.forEach { item in
                 dispatchGroup.enter()
                 if let videoURL = item.videoURL {
                     let videoBlobName = UUID().uuidString + ".mp4"
                     do {
                         let videoData = try Data(contentsOf: videoURL)
-                        print("Uploading video for item \(item.id)...")
                         uploadFileToAzureBlob(containerName: containerName, blobName: videoBlobName, fileData: videoData, contentType: "video/mp4") { success, videoUrlString in
                             if success, let videoUrl = videoUrlString {
-                                print("Video uploaded successfully for item \(item.id)")
                                 var updatedItem = PodItem(id: item.id, videoURL: URL(string: videoUrl), metadata: item.metadata, thumbnail: nil, thumbnailURL: nil, itemType: item.itemType, notes: item.notes)
                                 if let thumbnailImage = item.thumbnail, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.8) {
                                     let thumbnailBlobName = UUID().uuidString + ".jpg"
-                                    print("Uploading thumbnail for item \(item.id)...")
                                     self.uploadFileToAzureBlob(containerName: containerName, blobName: thumbnailBlobName, fileData: thumbnailData, contentType: "image/jpeg") { success, thumbnailUrlString in
                                         if success, let thumbnailUrl = thumbnailUrlString {
-                                            print("Thumbnail uploaded successfully for item \(item.id)")
                                             updatedItem.thumbnailURL = URL(string: thumbnailUrl)
                                         } else {
-                                            print("Failed to upload thumbnail for item \(item.id)")
                                             uploadErrors.append("Failed to upload thumbnail for item \(item.id)")
                                         }
                                         updatedItems.append(updatedItem)
@@ -1026,47 +976,38 @@ class NetworkManager {
                                     dispatchGroup.leave()
                                 }
                             } else {
-                                print("Failed to upload video for item \(item.id)")
                                 uploadErrors.append("Failed to upload video for item \(item.id)")
                                 dispatchGroup.leave()
                             }
                         }
                     } catch {
-                        print("Failed to load video data for URL: \(videoURL)")
                         uploadErrors.append("Failed to load video data for URL: \(videoURL)")
                         dispatchGroup.leave()
                     }
                 } else if let image = item.image, let imageData = image.jpegData(compressionQuality: 0.8) {
                     let imageBlobName = UUID().uuidString + ".jpg"
-                    print("Uploading image for item \(item.id)...")
                     uploadFileToAzureBlob(containerName: containerName, blobName: imageBlobName, fileData: imageData, contentType: "image/jpeg") { success, imageUrlString in
                         if success, let imageUrl = imageUrlString {
-                            print("Image uploaded successfully for item \(item.id)")
                             let updatedItem = PodItem(id: item.id, videoURL: nil, image: nil, metadata: item.metadata, thumbnail: nil, thumbnailURL: URL(string: imageUrl), imageURL: URL(string: imageUrl), itemType: item.itemType, notes: item.notes)
                             updatedItems.append(updatedItem)
                         } else {
-                            print("Failed to upload image for item \(item.id)")
                             uploadErrors.append("Failed to upload image for item \(item.id)")
                         }
                         dispatchGroup.leave()
                     }
                 } else {
-                    print("No video or image to upload for item \(item.id)")
                     uploadErrors.append("No video or image to upload for item \(item.id)")
                     dispatchGroup.leave()
                 }
             }
-            
+
             dispatchGroup.notify(queue: .main) {
                 if !uploadErrors.isEmpty {
-                    print("Failed to upload one or more items: \(uploadErrors.joined(separator: ", "))")
                     completion(false, "Failed to upload one or more items: \(uploadErrors.joined(separator: ", "))")
                     return
                 }
-                
-                print("Sending add items to pod request...")
+
                 self.sendAddItemsToPodRequest(podId: podId, items: updatedItems) { success, message in
-                    print("Add items to pod request result: \(success), message: \(String(describing: message))")
                     completion(success, message)
                 }
             }
@@ -1074,15 +1015,14 @@ class NetworkManager {
         
         func sendAddItemsToPodRequest(podId: Int, items: [PodItem], completion: @escaping (Bool, String?) -> Void) {
             guard let url = URL(string: "\(baseUrl)/add-items-to-pod/") else {
-                print("Invalid URL for adding items to pod")
                 completion(false, "Invalid URL")
                 return
             }
-            
+
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            
+
             let itemsForBody = items.map { item -> [String: Any] in
                 var itemDict: [String: Any] = ["label": item.metadata, "itemType": item.itemType, "thumbnail": item.thumbnailURL?.absoluteString ?? "", "notes": item.notes]
                 if item.itemType == "video", let videoURL = item.videoURL?.absoluteString {
@@ -1092,39 +1032,32 @@ class NetworkManager {
                 }
                 return itemDict
             }
-            
+
             let body: [String: Any] = ["pod_id": podId, "items": itemsForBody]
             do {
                 request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-                print("Sending data to server: \(String(data: request.httpBody!, encoding: .utf8)!)")
             } catch {
-                print("Failed to encode request body, error: \(error)")
                 completion(false, "Failed to encode request body")
                 return
             }
-            
+
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("Network error on add items to pod request: \(error.localizedDescription)")
                     completion(false, "Network error: \(error.localizedDescription)")
                     return
                 }
-                
+
                 if let httpResponse = response as? HTTPURLResponse {
-                    print("Add items to pod response status code: \(httpResponse.statusCode)")
                     if httpResponse.statusCode == 201 {
-                        print("Items added to pod successfully.")
                         completion(true, nil)
                     } else {
                         var errorMessage = "Server returned status code: \(httpResponse.statusCode)"
                         if let responseData = data, let responseString = String(data: responseData, encoding: .utf8) {
-                            print("Server response: \(responseString)")
                             errorMessage += ", Response: \(responseString)"
                         }
                         completion(false, errorMessage)
                     }
                 } else {
-                    print("No response received from server.")
                     completion(false, "No response from server")
                 }
             }.resume()
@@ -1132,53 +1065,41 @@ class NetworkManager {
         
         
         func uploadFileToAzureBlob(containerName: String, blobName: String, fileData: Data, contentType: String, completion: @escaping (Bool, String?) -> Void) {
-            
+
             let region = RegionManager.shared.region
-            
-            
+
             guard let credentials = getStorageAccountCredentials(for: region) else {
-                print("Missing required configuration for region \(region)")
                 completion(false, "Missing required configuration")
                 return
             }
-            
+
             let endpoint = "https://\(credentials.accountName).blob.core.windows.net/\(containerName)/\(blobName)?\(credentials.sasToken)"
             guard let url = URL(string: endpoint) else {
-                print("Invalid URL for Azure Blob Storage")
                 completion(false, "Invalid URL")
                 return
             }
-            
-            //   print("Attempting to upload to: \(url)")
+
             var request = URLRequest(url: url)
             request.httpMethod = "PUT"
             request.setValue(contentType, forHTTPHeaderField: "Content-Type")
             request.setValue("\(fileData.count)", forHTTPHeaderField: "Content-Length")
             request.setValue("BlockBlob", forHTTPHeaderField: "x-ms-blob-type")
             request.httpBody = fileData
-            
+
             URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
-                    print("Network error during upload to Azure Blob Storage: \(error.localizedDescription)")
                     completion(false, "Network error: \(error.localizedDescription)")
                     return
                 }
-                
+
                 if let httpResponse = response as? HTTPURLResponse {
-                    print("Response status code: \(httpResponse.statusCode)")
                     if httpResponse.statusCode == 201 {
                         let blobUrl = "https://\(credentials.accountName).blob.core.windows.net/\(containerName)/\(blobName)"
-                        print("Upload successful to Azure Blob Storage: \(blobUrl)")
                         completion(true, blobUrl)
                     } else {
-                        if let responseData = data, let responseString = String(data: responseData, encoding: .utf8) {
-                            print("Response Data: \(responseString)")
-                        }
-                        print("Failed to upload to Azure Blob Storage, status code: \(httpResponse.statusCode)")
                         completion(false, "Upload failed with status code: \(httpResponse.statusCode)")
                     }
                 } else {
-                    print("No HTTP response received.")
                     completion(false, "No response from server")
                 }
             }.resume()
@@ -1194,17 +1115,16 @@ class NetworkManager {
             
             // Use the same container name as other functions
             guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
-                print("Missing configuration values for container")
                 completion(.failure(NetworkError.configError))
                 return
             }
-            
+
             // Convert image to data
             guard let imageData = image.jpegData(compressionQuality: 0.8) else {
                 completion(.failure(NetworkError.encodingError))
                 return
             }
-            
+
             // Use the existing, proven upload function
             uploadFileToAzureBlob(
                 containerName: containerName,
@@ -1213,10 +1133,8 @@ class NetworkManager {
                 contentType: "image/jpeg"
             ) { success, imageUrlString in
                 if success, let imageUrl = imageUrlString {
-                    print("Meal image uploaded successfully: \(imageUrl)")
                     completion(.success(imageUrl))
                 } else {
-                    print("Failed to upload meal image")
                     completion(.failure(NetworkError.uploadFailed))
             }
         }
@@ -1463,35 +1381,28 @@ class NetworkManager {
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("Network error: \(error)")
                 completion(.failure(error))
                 return
             }
-            
+
             guard let data = data else {
-                print("No data received.")
                 completion(.failure(NetworkError.noData))
                 return
             }
-            
-            // Debug: Print the raw JSON response
-            if let rawResponse = String(data: data, encoding: .utf8) {
-                //                print("Raw JSON response:\n\(rawResponse)")I still see a fucking sheet
-            }
-            
+
             do {
                 let decoder = JSONDecoder()
-                
+
                 let createdAtFormatter = DateFormatter()
                 createdAtFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
                 let iso8601Formatter = ISO8601DateFormatter()
                 iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                
+
                 // Create a custom date formatter that can handle Python's isoformat() output
                 let dateFormatter = DateFormatter()
                 dateFormatter.locale = Locale(identifier: "en_US_POSIX")
                 dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-                
+
                 // Try multiple different date format patterns
                 let dateFormats = [
                     "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",  // With 6 fractional digits, no timezone
@@ -1499,88 +1410,61 @@ class NetworkManager {
                     "yyyy-MM-dd'T'HH:mm:ss",         // No fractional digits, no timezone
                     "yyyy-MM-dd"                     // Just date
                 ]
-                
+
                 // Use custom date formatting strategy to handle different Python date formats
                 decoder.dateDecodingStrategy = .custom { decoder -> Date in
                     let container = try decoder.singleValueContainer()
                     let dateString = try container.decode(String.self)
-                    
-                    // Log every date string we're trying to decode
-                    print("🕒 Attempting to decode date string: '\(dateString)'")
-                    
+
                     // If string is empty or null, return current date
                     if dateString.isEmpty {
-                        print("⚠️ Empty date string, using current date")
                         return Date()
                     }
-                    
+
                     // Try ISO8601 first with various options
                     let iso8601 = ISO8601DateFormatter()
                     if let date = iso8601.date(from: dateString) {
-                        print("✅ Successfully parsed date with standard ISO8601")
                         return date
                     }
-                    
+
                     // Try with fractional seconds
                     iso8601.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                     if let date = iso8601.date(from: dateString) {
-                        print("✅ Successfully parsed date with ISO8601 + fractional seconds")
                         return date
                     }
-                    
+
                     // Try each of our custom formats
                     for format in dateFormats {
                         dateFormatter.dateFormat = format
                         if let date = dateFormatter.date(from: dateString) {
-                            print("✅ Successfully parsed date with format: \(format)")
                             return date
                         }
                     }
-                    
+
                     // Last resort - try to fix the date string
                     var fixedDateString = dateString
-                    
+
                     // If it looks like ISO8601 but missing Z, add it
                     if dateString.contains("T") && !dateString.hasSuffix("Z") && !dateString.contains("+") {
                         fixedDateString = dateString + "Z"
-                        print("🔄 Trying to fix date string by adding Z: '\(fixedDateString)'")
-                        
+
                         // Try again with the fixed string
                         if let date = iso8601.date(from: fixedDateString) {
-                            print("✅ Successfully parsed fixed date string")
                             return date
                         }
                     }
-                    
-                    // If we still couldn't parse it, log the context and paths
-                    print("⚠️ Failed to parse date string: '\(dateString)'")
-                    print("⚠️ Attempted ISO8601 formats and these custom formats: \(dateFormats.joined(separator: ", "))")
-                    
-                    // Get coding path
-                    let context = DecodingError.Context(
-                        codingPath: decoder.codingPath,
-                        debugDescription: "Failed to decode date: \(dateString)"
-                    )
-                    
-                    print("⚠️ Coding path: \(context.codingPath.map { $0.stringValue })")
-                    
+
                     // Last resort - return current date rather than crashing
-                    print("⚠️ Using current date as fallback")
                     return Date()
                 }
-                
+
                 // Decode the JSON into your temporary PodJSON model.
                 let podJSON = try decoder.decode(PodJSON.self, from: data)
                 // Convert the PodJSON into your Pod model.
                 let pod = Pod(from: podJSON)
-                
-                
+
                 completion(.success(pod))
             } catch {
-                print("Decoding error: \(error)")
-                if let dataString = String(data: data, encoding: .utf8) {
-                    print("Received data: \(dataString)")
-                }
                 completion(.failure(error))
             }
         }.resume()
@@ -1617,58 +1501,54 @@ class NetworkManager {
                     do {
                         return try PodItemActivityLog(from: jsonLog)
                     } catch {
-                        print("Error converting log: \(error)")
                         return nil
                     }
                 }
-                
+
                 completion(.success(activityLogs))
             } catch {
-                
                 completion(.failure(error))
             }
         }.resume()
     }
-    
+
     func fetchUserActivityLogs2(podId: Int, userEmail: String, completion: @escaping (Result<[PodItemActivityLog], Error>) -> Void) {
         let encodedEmail = userEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let urlString = "\(baseUrl)/get-user-activity-logs/\(podId)/\(encodedEmail)/"
-        
+
         guard let url = URL(string: urlString) else {
             completion(.failure(NetworkError.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
                 return
             }
-            
+
             guard let data = data else {
                 completion(.failure(NetworkError.noData))
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 let response = try decoder.decode(ActivityLogResponse.self, from: data)
-                
+
                 let activityLogs = try response.logs.compactMap { jsonLog -> PodItemActivityLog? in
                     do {
                         return try PodItemActivityLog(from: jsonLog)
                     } catch {
-                        print("Error converting log: \(error)")
                         return nil
                     }
                 }
-                
+
                 completion(.success(activityLogs))
             } catch {
-                print("Decoding error: \(error)")
                 completion(.failure(error))
             }
         }.resume()
@@ -1676,42 +1556,39 @@ class NetworkManager {
     func fetchUserActivityLogs(podId: Int, userEmail: String, page: Int = 1, completion: @escaping (Result<(logs: [PodItemActivityLog], hasMore: Bool), Error>) -> Void) {
         let encodedEmail = userEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let urlString = "\(baseUrl)/get-user-activity-logs/\(podId)/\(encodedEmail)/?page=\(page)"
-        print("Fetching URL: \(urlString)")
         guard let url = URL(string: urlString) else {
             completion(.failure(NetworkError.invalidURL))
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
                 return
             }
-            
+
             guard let data = data else {
                 completion(.failure(NetworkError.noData))
                 return
             }
-            
+
             do {
                 let decoder = JSONDecoder()
                 let response = try decoder.decode(PaginatedActivityLogResponse.self, from: data)
-                
+
                 let activityLogs = try response.logs.compactMap { jsonLog -> PodItemActivityLog? in
                     do {
                         return try PodItemActivityLog(from: jsonLog)
                     } catch {
-                        print("Error converting log: \(error)")
                         return nil
                     }
                 }
-                
+
                 completion(.success((logs: activityLogs, hasMore: response.hasMore)))
             } catch {
-                print("Decoding error: \(error)")
                 completion(.failure(error))
             }
         }.resume()

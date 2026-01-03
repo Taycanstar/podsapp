@@ -93,32 +93,28 @@ class DataLayer: ObservableObject {
         }
 
         isInitializing = false
-        debugLog("✅ DataLayer: Initialization complete")
-        debugLog("   └── User: \(userEmail)")
-        debugLog("   └── Cache entries: \(memoryCache.count)")
-        debugLog("   └── Ready for data operations")
+   
     }
     
     // MARK: - Onboarding Data Methods
     
     /// Save onboarding data using local-first strategy
     func saveOnboardingData(_ data: [String: Any]) async {
-        debugLog("💾 DataLayer: Saving onboarding data (local-first strategy)")
-        debugLog("   └── Data keys: \(data.keys.joined(separator: ", "))")
+
         
         let startTime = Date()
         
         // Layer 1: Update memory cache immediately
-        debugLog("📝 DataLayer: Layer 1 (Memory Cache) - Saving onboarding data")
+    
         memoryCache["onboarding_data"] = data
         cacheTimestamps["onboarding_data"] = Date()
-        debugLog("   └── Memory cache updated (instant)")
+    
         
         // Layer 3: Save to UserDefaults for persistence
-        debugLog("📝 DataLayer: Layer 3 (UserDefaults) - Persisting onboarding data")
+   
         if let encoded = try? JSONSerialization.data(withJSONObject: data) {
             userDefaults.set(encoded, forKey: "onboarding_data_\(userEmail ?? "unknown")")
-            debugLog("   └── UserDefaults saved successfully")
+    
         }
         
         // Layer 5: Queue for sync with server
@@ -131,9 +127,7 @@ class DataLayer: ObservableObject {
         await syncService.queueOperation(syncOperation)
         
         let duration = Date().timeIntervalSince(startTime)
-        debugLog("✅ DataLayer: Onboarding data saved successfully")
-        debugLog("   └── Total time: \(String(format: "%.2f", duration * 1000))ms")
-        debugLog("   └── Strategy: Local-first with background sync")
+     
     }
     
     /// Fetch onboarding data with intelligent layer selection
@@ -142,16 +136,13 @@ class DataLayer: ObservableObject {
         let startTime = Date()
         
         // Layer 1: Check memory cache first
-        debugLog("🔍 DataLayer: Layer 1 (Memory Cache) - Checking for onboarding data")
+  
         if let cachedData = getCachedData(key: "onboarding_data") {
             let duration = Date().timeIntervalSince(startTime)
-            debugLog("✅ DataLayer: Cache HIT - Data found in memory")
-            debugLog("   └── Access time: \(String(format: "%.2f", duration * 1000))ms")
             recordCacheHit()
             return cachedData as? [String: Any]
         }
-        
-        debugLog("❌ DataLayer: Cache MISS - Data not in memory")
+
         recordCacheMiss()
         
         // Layer 3: Check UserDefaults
@@ -159,8 +150,7 @@ class DataLayer: ObservableObject {
         if let data = userDefaults.data(forKey: "onboarding_data_\(userEmail ?? "unknown")"),
            let decoded = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             
-            // Update memory cache
-            debugLog("✅ DataLayer: Found in UserDefaults - Updating memory cache")
+
             memoryCache["onboarding_data"] = decoded
             cacheTimestamps["onboarding_data"] = Date()
             
@@ -169,13 +159,10 @@ class DataLayer: ObservableObject {
             return decoded
         }
         
-        // Layer 4: Fetch from server (would be implemented with actual API calls)
-        debugLog("🔍 DataLayer: Layer 4 (Remote API) - Would fetch from server")
-        debugLog("   └── (Not implemented in demo)")
+
         
         let duration = Date().timeIntervalSince(startTime)
-        debugLog("❌ DataLayer: No onboarding data found in any layer")
-        debugLog("   └── Total search time: \(String(format: "%.2f", duration * 1000))ms")
+
         
         return nil
     }
@@ -186,9 +173,7 @@ class DataLayer: ObservableObject {
     /// CRITICAL: @MainActor ensures this always runs on main thread to prevent UI freezes
     @MainActor
     func updateProfileData(_ data: [String: Any]) async {
-        debugLog("📝 DataLayer: Updating profile data across all layers")
-        debugLog("   └── Data keys: \(data.keys.joined(separator: ", "))")
-        debugLog("   └── Thread: \(Thread.isMainThread ? "MAIN ✅" : "BACKGROUND ⚠️")")
+
 
         // CRITICAL: Assert we're on main thread to catch violations early in debug builds
         // This will crash if DataLayer is called from background thread, preventing UI freezes
@@ -196,19 +181,14 @@ class DataLayer: ObservableObject {
         dispatchPrecondition(condition: .onQueue(.main))
         #endif
 
-        // Layer 1: Update memory cache
-        debugLog("📝 DataLayer: Layer 1 (Memory Cache) - Updating profile data")
+
         memoryCache["profile_data"] = data
         cacheTimestamps["profile_data"] = Date()
-        
-        // Layer 3: Update UserDefaults
-        debugLog("📝 DataLayer: Layer 3 (UserDefaults) - Persisting profile data")
+ 
         if let encoded = try? JSONSerialization.data(withJSONObject: data) {
             userDefaults.set(encoded, forKey: "profile_data_\(userEmail ?? "unknown")")
         }
-        
-        // Layer 5: Queue for sync
-        debugLog("📝 DataLayer: Layer 5 (Sync Service) - Queueing profile update")
+
         let syncOperation = SyncOperation(
             type: .profileUpdate,
             data: data.compactMapValues { "\($0)" },
@@ -216,7 +196,7 @@ class DataLayer: ObservableObject {
         )
         await syncService.queueOperation(syncOperation)
         
-        debugLog("✅ DataLayer: Profile data updated across all layers")
+
     }
     
     // MARK: - Generic Data Methods
@@ -229,13 +209,12 @@ class DataLayer: ObservableObject {
         // Layer 1: Check memory cache
         if let cachedData = getCachedData(key: key) {
             let duration = Date().timeIntervalSince(startTime)
-            debugLog("✅ DataLayer: Cache HIT for key: \(key)")
-            debugLog("   └── Access time: \(String(format: "%.2f", duration * 1000))ms")
+
             recordCacheHit()
             return cachedData
         }
         
-        debugLog("❌ DataLayer: Cache MISS for key: \(key)")
+
         recordCacheMiss()
         
         let currentEmail = resolvedUserEmail()
@@ -248,7 +227,7 @@ class DataLayer: ObservableObject {
 
         // Layer 3: Check UserDefaults (primary key)
         if let data = userDefaults.data(forKey: primaryKey) {
-            debugLog("✅ DataLayer: Found in UserDefaults for key: \(key)")
+   
             
             // Try to decode and cache
             if let decoded = try? JSONSerialization.jsonObject(with: data) {
@@ -256,7 +235,7 @@ class DataLayer: ObservableObject {
                 cacheTimestamps[key] = Date()
                 
                 let duration = Date().timeIntervalSince(startTime)
-                debugLog("   └── Access time: \(String(format: "%.2f", duration * 1000))ms")
+
                 return decoded
             }
         }
@@ -264,7 +243,7 @@ class DataLayer: ObservableObject {
         // Fallback: migrate legacy "unknown" entries if present
         if let data = userDefaults.data(forKey: legacyKey),
            let decoded = try? JSONSerialization.jsonObject(with: data) {
-            debugLog("♻️ DataLayer: Migrating legacy stored data for key: \(key)")
+        
 
             memoryCache[key] = decoded
             cacheTimestamps[key] = Date()
@@ -277,25 +256,24 @@ class DataLayer: ObservableObject {
             }
 
             let duration = Date().timeIntervalSince(startTime)
-            debugLog("   └── Access time: \(String(format: "%.2f", duration * 1000))ms")
+
             return decoded
         }
         
         let duration = Date().timeIntervalSince(startTime)
-        debugLog("❌ DataLayer: No data found for key: \(key)")
-        debugLog("   └── Search time: \(String(format: "%.2f", duration * 1000))ms")
+
         
         return nil
     }
     
     /// Set data with propagation across layers
     func setData(key: String, value: Any) async {
-        debugLog("📝 DataLayer: Setting data for key: \(key)")
+
         
         // Layer 1: Update memory cache
         memoryCache[key] = value
         cacheTimestamps[key] = Date()
-        debugLog("   └── Memory cache updated")
+
         
         let currentEmail = resolvedUserEmail()
         if let email = currentEmail {
@@ -306,7 +284,7 @@ class DataLayer: ObservableObject {
         if let encoded = try? JSONSerialization.data(withJSONObject: value) {
             let storageKey = "\(key)_\(currentEmail ?? "unknown")"
             userDefaults.set(encoded, forKey: storageKey)
-            debugLog("   └── UserDefaults updated")
+       
         }
         
         debugLog("✅ DataLayer: Data set successfully for key: \(key)")

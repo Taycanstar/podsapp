@@ -157,8 +157,7 @@ struct podsApp: App {
         Task {
             await dataLayer.initialize(userEmail: userEmail)
             await dataSyncService.initialize(userEmail: userEmail)
-            
-            print("✅ DataLayer: Successfully initialized data architecture")
+
 
             // Perform initial sync if online
             if dataSyncService.isOnline {
