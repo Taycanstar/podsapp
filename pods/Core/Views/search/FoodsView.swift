@@ -47,6 +47,7 @@ struct FoodsView: View {
                     // Create Food button
                     Button {
                         closeSearchIfNeeded()
+                        AnalyticsManager.shared.trackFoodInputStarted(method: "manual")
                         showNewFoodSheet = true
                     } label: {
                         Text("Create")
@@ -62,6 +63,7 @@ struct FoodsView: View {
                     // Quick Add button
                     Button {
                         closeSearchIfNeeded()
+                        AnalyticsManager.shared.trackFoodInputStarted(method: "quick_add")
                         showQuickAddSheet = true
                     } label: {
                         Text("Quick Add")

@@ -305,6 +305,7 @@ struct MainContentView: View {
                             },
                             onBarcodeTapped: {
                                 HapticFeedback.generate()
+                                AnalyticsManager.shared.trackFoodInputStarted(method: "scan")
                                 gateProAction(for: .foodScans) {
                                     showFoodScanner = true
                                 }

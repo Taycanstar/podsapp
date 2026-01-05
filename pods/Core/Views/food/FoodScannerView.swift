@@ -405,6 +405,19 @@ struct FoodScannerView: View {
         NotificationCenter.default.post(name: .toggleFlash, object: flashEnabled)
     }
 
+    private func trackScanModeSelection(_ mode: ScanMode) {
+        switch mode {
+        case .food:
+            AnalyticsManager.shared.trackFoodInputStarted(method: "food_scan")
+        case .nutritionLabel:
+            AnalyticsManager.shared.trackFoodInputStarted(method: "food_label")
+        case .barcode:
+            AnalyticsManager.shared.trackFoodInputStarted(method: "barcode")
+        case .gallery:
+            AnalyticsManager.shared.trackFoodInputStarted(method: "gallery")
+        }
+    }
+
     // MARK: - Bottom Control Views
 
     @ViewBuilder
@@ -447,8 +460,9 @@ struct FoodScannerView: View {
             .pickerStyle(.segmented)
             .controlSize(.large)
             .glassEffect(.regular.interactive())
-            .onChange(of: selectedMode) { _, _ in
+            .onChange(of: selectedMode) { _, newMode in
                 HapticFeedback.generateLigth()
+                trackScanModeSelection(newMode)
             }
         } else {
             Picker("", selection: $selectedMode) {
@@ -463,8 +477,9 @@ struct FoodScannerView: View {
             .controlSize(.large)
             .background(Color.black.opacity(0.6))
             .clipShape(RoundedRectangle(cornerRadius: 8))
-            .onChange(of: selectedMode) { _, _ in
+            .onChange(of: selectedMode) { _, newMode in
                 HapticFeedback.generateLigth()
+                trackScanModeSelection(newMode)
             }
         }
     }
@@ -822,6 +837,7 @@ private func performAnalyzeImageDirectly(_ image: UIImage, userEmail: String) {
     private func openGallery() {
         selectedImages.removeAll()
         selectedMode = .gallery
+        AnalyticsManager.shared.trackFoodInputStarted(method: "gallery")
         showPhotosPicker = true
     }
     

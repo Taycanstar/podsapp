@@ -1070,6 +1070,7 @@ struct AgentChatView: View {
                             systemName: "barcode.viewfinder",
                             action: {
                                 HapticFeedback.generate()
+                                AnalyticsManager.shared.trackFoodInputStarted(method: "scan")
                                 if let callback = onBarcodeTapped {
                                     callback()
                                 } else {

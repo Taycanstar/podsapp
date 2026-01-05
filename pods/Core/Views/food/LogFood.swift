@@ -626,6 +626,7 @@ private struct FoodListView: View {
                     Button(action: {
                         print("Tapped Manual Create Food")
                         HapticFeedback.generateLigth()
+                        AnalyticsManager.shared.trackFoodInputStarted(method: "manual")
                         path.append(FoodNavigationDestination.createFood)
                     }) {
                         HStack {

@@ -27,6 +27,7 @@ struct SearchView: View {
     @State private var searchTask: Task<Void, Never>?
     @State private var loadingItemId: String?
     @State private var selectedFoodForDetails: Food?
+    @State private var hasTrackedSearchSession = false
 
     /// Debounce time for search (250ms recommended by MacroFactor)
     private let searchDebounceNanoseconds: UInt64 = 250_000_000
@@ -137,6 +138,7 @@ struct SearchView: View {
                 }
 
                 QuickAddRow {
+                    AnalyticsManager.shared.trackFoodInputStarted(method: "quick_add")
                     showQuickAddSheet = true
                 }
             }
@@ -356,7 +358,14 @@ struct SearchView: View {
         guard !trimmed.isEmpty else {
             searchResults = nil
             isSearching = false
+            hasTrackedSearchSession = false // Reset for next search session
             return
+        }
+
+        // Track when user starts a new search session (first character typed)
+        if !hasTrackedSearchSession {
+            AnalyticsManager.shared.trackFoodInputStarted(method: "search")
+            hasTrackedSearchSession = true
         }
 
         // Start new debounced search

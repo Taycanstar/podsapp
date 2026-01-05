@@ -89,6 +89,7 @@ struct NewSheetView: View {
                             }
                           case "Scan Food":
                             HapticFeedback.generate()
+                            AnalyticsManager.shared.trackFoodInputStarted(method: "scan")
                             isPresented = false
                             showFoodScanner = true
                           case "Saved", "Saved Meals":

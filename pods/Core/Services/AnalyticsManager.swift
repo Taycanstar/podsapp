@@ -623,4 +623,16 @@ final class AnalyticsManager {
         ])
         print("[AnalyticsManager] Tracked paywall_dismissed (placement: \(placement))")
     }
+
+    // MARK: - Food Input Method Tracking
+
+    /// Tracks when user initiates a food logging action (before confirmation).
+    /// Used to measure which input methods users prefer.
+    /// - Parameter method: The input method used (barcode, photo_scan, search, chat, voice, quick_add)
+    func trackFoodInputStarted(method: String) {
+        track("food_input_started", properties: [
+            "input_method": method
+        ])
+        print("[AnalyticsManager] Tracked food_input_started (method: \(method))")
+    }
 }

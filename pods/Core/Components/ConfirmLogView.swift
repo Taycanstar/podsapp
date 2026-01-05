@@ -3765,6 +3765,7 @@ struct PlateView: View {
                     }
 
                     Button {
+                        AnalyticsManager.shared.trackFoodInputStarted(method: "quick_add")
                         showQuickAdd = true
                     } label: {
                         Label("Quick Add", systemImage: "plus.circle")
