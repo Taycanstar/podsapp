@@ -94,7 +94,9 @@ struct FoodsView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, 40)
                     .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
+                .listSectionSeparator(.hidden)
             } else {
                 Section {
                     ForEach(filteredFoods) { food in

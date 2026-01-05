@@ -77,6 +77,7 @@ struct ChatsView: View {
                 Section {
                     emptyStateView
                 }
+                .listSectionSeparator(.hidden)
             }
 
             // Loading indicator for initial load
@@ -87,7 +88,10 @@ struct ChatsView: View {
                         ProgressView()
                         Spacer()
                     }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
+                .listSectionSeparator(.hidden)
             }
 
             // Load more trigger at bottom of list
