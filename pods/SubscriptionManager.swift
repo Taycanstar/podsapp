@@ -431,12 +431,49 @@ class SubscriptionManager: ObservableObject {
                                 userEmail: userEmail,
                                 onboardingViewModel: onboardingViewModel
                             )
-                            
-                            Mixpanel.mainInstance().track(event: "Subscription Purchase", properties: [
-                                "Plan": duration == .yearly ? "Annual" : "Monthly",
-                                "Tier": tier.rawValue,
-                                "Has Intro Offer": isEligibleForIntro
-                            ])
+
+                            // Track paid_converted with full properties for funnel analysis
+                            let price = NSDecimalNumber(decimal: product.price).doubleValue
+                            let currency = product.priceFormatStyle.currencyCode ?? "USD"
+                            let billingPeriod = duration == .yearly ? "year" : "month"
+
+                            // Determine if this is a trial (intro offer with free trial)
+                            var isTrial = false
+                            var trialDays = 0
+                            if isEligibleForIntro,
+                               let subscription = product.subscription,
+                               let introOffer = subscription.introductoryOffer,
+                               introOffer.paymentMode == .freeTrial {
+                                isTrial = true
+                                // Calculate trial days from period
+                                switch introOffer.period.unit {
+                                case .day:
+                                    trialDays = introOffer.period.value
+                                case .week:
+                                    trialDays = introOffer.period.value * 7
+                                case .month:
+                                    trialDays = introOffer.period.value * 30
+                                case .year:
+                                    trialDays = introOffer.period.value * 365
+                                @unknown default:
+                                    trialDays = 7
+                                }
+                            }
+
+                            // Revenue is 0 for trials, otherwise the price
+                            let revenueUsd = isTrial ? 0.0 : price
+
+                            AnalyticsManager.shared.trackPaidConverted(
+                                productId: latestTransaction.productID,
+                                price: price,
+                                currency: currency,
+                                billingPeriod: billingPeriod,
+                                isTrial: isTrial,
+                                trialDays: trialDays,
+                                transactionId: String(latestTransaction.id),
+                                revenueUsd: revenueUsd,
+                                paywallVersion: "1.0"
+                            )
 
                         case .unverified:
                             print("Latest transaction unverified")

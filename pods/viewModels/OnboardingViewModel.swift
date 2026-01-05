@@ -285,7 +285,11 @@ class OnboardingViewModel: ObservableObject {
         }
     }
     
-    @Published var currentStep: OnboardingStep = .landing
+    @Published var currentStep: OnboardingStep = .landing {
+        didSet {
+            trackOnboardingStep(currentStep)
+        }
+    }
     @Published var currentFlowStep: OnboardingFlowStep = .gender
     @Published var onboardingCompleted: Bool = false
     private let nutritionSeedDefaultsKey = "hasSeededNutritionGoals"
@@ -1203,7 +1207,57 @@ class OnboardingViewModel: ObservableObject {
         // Mark that onboarding is now in progress
         UserDefaults.standard.set(true, forKey: "onboardingInProgress")
     }
-    
+
+    // MARK: - Analytics Tracking
+
+    /// Tracks onboarding step views for drop-off analysis
+    private func trackOnboardingStep(_ step: OnboardingStep) {
+        // Map OnboardingStep to step name and index for tracking
+        let stepInfo: (name: String, index: Int)?
+        switch step {
+        case .landing:
+            stepInfo = nil // Don't track landing as a step
+        case .enterName:
+            stepInfo = ("enter_name", 1)
+        case .greeting:
+            stepInfo = ("greeting", 2)
+        case .fitnessGoal:
+            stepInfo = ("fitness_goal", 3)
+        case .strengthExperience:
+            stepInfo = ("strength_experience", 4)
+        case .desiredWeight:
+            stepInfo = ("desired_weight", 5)
+        case .gymLocation:
+            stepInfo = ("gym_location", 6)
+        case .reviewEquipment:
+            stepInfo = ("review_equipment", 7)
+        case .workoutSchedule:
+            stepInfo = ("workout_schedule", 8)
+        case .dietPreferences:
+            stepInfo = ("diet_preferences", 9)
+        case .programOverview:
+            stepInfo = ("program_overview", 10)
+        case .demo:
+            stepInfo = ("demo", 11)
+        case .enableNotifications:
+            stepInfo = ("enable_notifications", 12)
+        case .allowHealth:
+            stepInfo = ("allow_health", 13)
+        case .signup:
+            stepInfo = ("signup", 14)
+        case .aboutYou, .emailVerification, .info, .gender, .welcome, .login:
+            stepInfo = nil // Secondary screens, don't track as main funnel steps
+        }
+
+        if let stepInfo = stepInfo {
+            AnalyticsManager.shared.trackOnboardingStepViewed(
+                onboardingVersion: "2.0",
+                stepName: stepInfo.name,
+                stepIndex: stepInfo.index
+            )
+        }
+    }
+
     // MARK: - Validation
     
     func validateOnboardingData() -> Bool {

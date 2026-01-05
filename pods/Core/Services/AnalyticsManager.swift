@@ -441,4 +441,186 @@ final class AnalyticsManager {
 
         print("[AnalyticsManager] Tracked session_message_count: \(messagesCount) messages in session \(sessionId)")
     }
+
+    // MARK: - Paid Conversion Funnel Events
+
+    /// Tracks first app open after install. Should only fire once per device.
+    /// - Parameters:
+    ///   - installSource: Where the install came from (appstore, testflight, etc.)
+    func trackFirstOpen(installSource: String = "appstore") {
+        let hasTrackedFirstOpen = UserDefaults.standard.bool(forKey: "hasTrackedFirstOpen")
+        guard !hasTrackedFirstOpen else { return }
+
+        track("first_open", properties: [
+            "install_source": installSource,
+            "is_first_open": true
+        ])
+
+        UserDefaults.standard.set(true, forKey: "hasTrackedFirstOpen")
+        print("[AnalyticsManager] Tracked first_open")
+    }
+
+    /// Tracks when user enters the onboarding flow.
+    /// - Parameters:
+    ///   - onboardingVersion: Version of the onboarding flow
+    ///   - entryPoint: How the user entered onboarding (cold_start, settings, deep_link)
+    func trackOnboardingStarted(onboardingVersion: String = "2.0", entryPoint: String = "cold_start") {
+        track("onboarding_started", properties: [
+            "onboarding_version": onboardingVersion,
+            "entry_point": entryPoint
+        ])
+        print("[AnalyticsManager] Tracked onboarding_started")
+    }
+
+    /// Tracks each onboarding step view for drop-off analysis.
+    /// - Parameters:
+    ///   - onboardingVersion: Version of the onboarding flow
+    ///   - stepName: Name of the current step (e.g., "fitness_goal", "gym_location")
+    ///   - stepIndex: 1-based index of this step in the flow
+    func trackOnboardingStepViewed(
+        onboardingVersion: String = "2.0",
+        stepName: String,
+        stepIndex: Int
+    ) {
+        track("onboarding_step_viewed", properties: [
+            "onboarding_version": onboardingVersion,
+            "step_name": stepName,
+            "step_index": stepIndex
+        ])
+    }
+
+    /// Tracks when paywall is displayed to the user.
+    /// - Parameters:
+    ///   - paywallVersion: Version identifier of the paywall UI
+    ///   - placement: Where paywall was shown (post_onboarding, settings, feature_gate)
+    ///   - productsShown: Array of product IDs shown on the paywall
+    ///   - defaultProductId: The pre-selected/default product ID
+    func trackPaywallViewed(
+        paywallVersion: String = "1.0",
+        placement: String,
+        productsShown: [String] = [],
+        defaultProductId: String? = nil
+    ) {
+        var props: [String: MixpanelType] = [
+            "paywall_version": paywallVersion,
+            "placement": placement
+        ]
+
+        if !productsShown.isEmpty {
+            props["products_shown"] = productsShown.joined(separator: ",")
+        }
+
+        if let defaultProductId = defaultProductId {
+            props["default_product_id"] = defaultProductId
+        }
+
+        track("paywall_viewed", properties: props)
+        print("[AnalyticsManager] Tracked paywall_viewed (placement: \(placement))")
+    }
+
+    /// Tracks when user taps subscribe/continue and native purchase flow begins.
+    /// - Parameters:
+    ///   - paywallVersion: Version identifier of the paywall UI
+    ///   - productId: The product SKU being purchased
+    ///   - price: Numeric price value
+    ///   - currency: Currency code (USD, EUR, etc.)
+    ///   - billingPeriod: month or year
+    func trackCheckoutStarted(
+        paywallVersion: String = "1.0",
+        productId: String,
+        price: Double,
+        currency: String,
+        billingPeriod: String
+    ) {
+        track("checkout_started", properties: [
+            "paywall_version": paywallVersion,
+            "product_id": productId,
+            "price": price,
+            "currency": currency,
+            "billing_period": billingPeriod
+        ])
+        print("[AnalyticsManager] Tracked checkout_started (product: \(productId))")
+    }
+
+    /// Tracks successful subscription conversion (trial or paid).
+    /// Uses $insert_id for deduplication on retries.
+    /// - Parameters:
+    ///   - productId: The product SKU purchased
+    ///   - price: Numeric price value
+    ///   - currency: Currency code
+    ///   - billingPeriod: month or year
+    ///   - isTrial: Whether this is a trial subscription
+    ///   - trialDays: Number of trial days if applicable
+    ///   - transactionId: Store transaction ID for deduplication
+    ///   - revenueUsd: Revenue in USD (0 for trials)
+    ///   - paywallVersion: Version of paywall that converted
+    func trackPaidConverted(
+        productId: String,
+        price: Double,
+        currency: String,
+        billingPeriod: String,
+        isTrial: Bool,
+        trialDays: Int = 0,
+        transactionId: String,
+        revenueUsd: Double,
+        paywallVersion: String = "1.0"
+    ) {
+        // Use transaction ID as $insert_id for deduplication
+        let insertId = "paid_converted_\(transactionId)"
+
+        track("paid_converted", properties: [
+            "product_id": productId,
+            "price": price,
+            "currency": currency,
+            "billing_period": billingPeriod,
+            "is_trial": isTrial,
+            "trial_days": trialDays,
+            "transaction_id": transactionId,
+            "revenue_usd": revenueUsd,
+            "paywall_version": paywallVersion,
+            "$insert_id": insertId
+        ])
+        print("[AnalyticsManager] Tracked paid_converted (transaction: \(transactionId), trial: \(isTrial))")
+    }
+
+    /// Tracks when a purchase fails or is cancelled.
+    /// - Parameters:
+    ///   - productId: The product SKU attempted
+    ///   - failureType: Type of failure (user_cancelled, billing_error, network_error, unknown)
+    ///   - errorCode: Error code if available
+    ///   - paywallVersion: Version of the paywall
+    func trackPurchaseFailed(
+        productId: String,
+        failureType: String,
+        errorCode: String? = nil,
+        paywallVersion: String = "1.0"
+    ) {
+        var props: [String: MixpanelType] = [
+            "product_id": productId,
+            "failure_type": failureType,
+            "paywall_version": paywallVersion
+        ]
+
+        if let errorCode = errorCode {
+            props["error_code"] = errorCode
+        }
+
+        track("purchase_failed", properties: props)
+        print("[AnalyticsManager] Tracked purchase_failed (type: \(failureType))")
+    }
+
+    /// Tracks when user dismisses paywall without purchasing.
+    /// - Parameters:
+    ///   - paywallVersion: Version of the paywall
+    ///   - placement: Where paywall was shown
+    func trackPaywallDismissed(
+        paywallVersion: String = "1.0",
+        placement: String
+    ) {
+        track("paywall_dismissed", properties: [
+            "paywall_version": paywallVersion,
+            "placement": placement
+        ])
+        print("[AnalyticsManager] Tracked paywall_dismissed (placement: \(placement))")
+    }
 }

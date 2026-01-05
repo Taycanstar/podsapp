@@ -124,6 +124,15 @@ struct ProOnboardingView: View {
                 await subscriptionManager.fetchSubscriptionInfoIfNeeded(for: email)
             }
         }
+        .onAppear {
+            // Track paywall view
+            AnalyticsManager.shared.trackPaywallViewed(
+                paywallVersion: "1.0",
+                placement: "post_onboarding",
+                productsShown: ["humuli_pro_monthly", "humuli_pro_yearly"],
+                defaultProductId: "humuli_pro_yearly"
+            )
+        }
     }
 
     private var header: some View {
@@ -257,6 +266,23 @@ struct ProOnboardingView: View {
             return
         }
 
+        // Get product info for tracking
+        let currentPlan = selectedPlan
+        let productId = currentPlan == .yearly ? "humuli_pro_yearly" : "humuli_pro_monthly"
+        let billingPeriod = currentPlan == .yearly ? "year" : "month"
+        let product = subscriptionManager.storeProduct(for: currentPlan.tier, duration: currentPlan.duration)
+        let price = product.map { NSDecimalNumber(decimal: $0.price).doubleValue } ?? 0.0
+        let currency = product?.priceFormatStyle.currencyCode ?? "USD"
+
+        // Track checkout started
+        AnalyticsManager.shared.trackCheckoutStarted(
+            paywallVersion: "1.0",
+            productId: productId,
+            price: price,
+            currency: currency,
+            billingPeriod: billingPeriod
+        )
+
         isProcessing = true
         defer { isProcessing = false }
 
@@ -272,11 +298,39 @@ struct ProOnboardingView: View {
                 isPresented = false
             }
         } catch let error as SubscriptionError {
+            // Track purchase failed
+            let failureType: String
+            switch error {
+            case .userCancelled:
+                failureType = "user_cancelled"
+            case .purchasePending:
+                failureType = "pending"
+            case .purchaseUnverified:
+                failureType = "verification_failed"
+            case .productNotFound:
+                failureType = "product_not_found"
+            default:
+                failureType = "unknown"
+            }
+            AnalyticsManager.shared.trackPurchaseFailed(
+                productId: productId,
+                failureType: failureType,
+                paywallVersion: "1.0"
+            )
+
             await MainActor.run {
                 showError = true
                 errorMessage = error.localizedDescription
             }
         } catch {
+            // Track purchase failed for unknown errors
+            AnalyticsManager.shared.trackPurchaseFailed(
+                productId: productId,
+                failureType: "unknown",
+                errorCode: String(describing: error),
+                paywallVersion: "1.0"
+            )
+
             await MainActor.run {
                 showError = true
                 errorMessage = error.localizedDescription

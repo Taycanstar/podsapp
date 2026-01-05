@@ -22,6 +22,11 @@ struct StartupView: View {
                     
                     VStack(spacing: 10) {
                         Button {
+                            // Track onboarding started when user taps "Get started"
+                            AnalyticsManager.shared.trackOnboardingStarted(
+                                onboardingVersion: "2.0",
+                                entryPoint: "cold_start"
+                            )
                             viewModel.newOnboardingStepIndex = 1
                             viewModel.currentStep = .enterName
                         } label: {

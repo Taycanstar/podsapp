@@ -461,6 +461,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             Mixpanel.initialize(token: mixpanelToken, trackAutomaticEvents: false)
             print("Mixpanel set!")
 
+            // Track first app open (fires only once per install)
+            AnalyticsManager.shared.trackFirstOpen()
+
             // Initialize session tracker to register for app lifecycle notifications
             MessageSessionTracker.shared.initialize()
 
