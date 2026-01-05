@@ -461,6 +461,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             Mixpanel.initialize(token: mixpanelToken, trackAutomaticEvents: false)
             print("Mixpanel set!")
 
+            // Initialize session tracker to register for app lifecycle notifications
+            MessageSessionTracker.shared.initialize()
+
             #if canImport(MixpanelSessionReplay)
             let enableLogging: Bool
             #if DEBUG

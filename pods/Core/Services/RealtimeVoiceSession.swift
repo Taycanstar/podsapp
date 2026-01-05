@@ -63,6 +63,13 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
     @Published var currentConversationId: String?
     var onConversationIdUpdated: ((String) -> Void)?
 
+    // Analytics tracking state
+    private var userMessageIndex: Int = 0
+    private var coachMessageIndex: Int = 0
+    private var lastUserMessageId: String?
+    private var lastSendTime: Date?
+    var screenName: String = "voice_mode"
+
     private var peerConnection: RTCPeerConnection?
     private var dataChannel: RTCDataChannel?
     private var audioTrack: RTCAudioTrack?
@@ -116,6 +123,12 @@ class RealtimeVoiceSession: NSObject, ObservableObject {
         state = .idle
         processedItemIds.removeAll()
         localAssistantItemIds.removeAll()
+
+        // Reset analytics state
+        userMessageIndex = 0
+        coachMessageIndex = 0
+        lastUserMessageId = nil
+        lastSendTime = nil
     }
 
     func toggleMute() {
@@ -518,6 +531,23 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
                 print("🎤 [USER TRANSCRIPT COMPLETED] '\(finalText)'")
                 Task { @MainActor in
                     if !finalText.isEmpty {
+                        // Track user_message_sent for voice
+                        self.userMessageIndex += 1
+                        let messageId = UUID().uuidString
+                        self.lastUserMessageId = messageId
+                        self.lastSendTime = Date()
+
+                        AnalyticsManager.shared.trackUserMessageSent(
+                            conversationId: self.currentConversationId,
+                            messageId: messageId,
+                            messageIndex: self.userMessageIndex,
+                            inputMethod: "voice",
+                            triggerSource: "user_tap",
+                            textLengthChars: finalText.count,
+                            transcriptionSuccess: true,
+                            screenName: self.screenName
+                        )
+
                         self.messages.append(RealtimeMessage(isUser: true, text: finalText))
                         print("✅ [MESSAGES] Added user message, count now: \(self.messages.count)")
                         self.transcribedText = finalText
@@ -544,6 +574,23 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
             Task { @MainActor in
                 let finalText = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !finalText.isEmpty {
+                    // Track coach_message_shown for voice
+                    self.coachMessageIndex += 1
+                    let coachMessageId = UUID().uuidString
+                    let responseLatencyMs: Int
+                    if let sendTime = self.lastSendTime {
+                        responseLatencyMs = Int(Date().timeIntervalSince(sendTime) * 1000)
+                    } else {
+                        responseLatencyMs = 0
+                    }
+                    AnalyticsManager.shared.trackCoachMessageShown(
+                        conversationId: self.currentConversationId,
+                        coachMessageId: coachMessageId,
+                        coachMessageIndex: self.coachMessageIndex,
+                        inReplyToMessageId: self.lastUserMessageId,
+                        responseLatencyMs: responseLatencyMs
+                    )
+
                     self.messages.append(RealtimeMessage(isUser: false, text: finalText))
                     // Persist assistant message to conversation
                     self.persistVoiceMessage(role: "assistant", content: finalText)
@@ -566,6 +613,23 @@ extension RealtimeVoiceSession: RTCDataChannelDelegate {
             Task { @MainActor in
                 let finalText = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !finalText.isEmpty {
+                    // Track coach_message_shown for voice (fallback handler)
+                    self.coachMessageIndex += 1
+                    let coachMessageId = UUID().uuidString
+                    let responseLatencyMs: Int
+                    if let sendTime = self.lastSendTime {
+                        responseLatencyMs = Int(Date().timeIntervalSince(sendTime) * 1000)
+                    } else {
+                        responseLatencyMs = 0
+                    }
+                    AnalyticsManager.shared.trackCoachMessageShown(
+                        conversationId: self.currentConversationId,
+                        coachMessageId: coachMessageId,
+                        coachMessageIndex: self.coachMessageIndex,
+                        inReplyToMessageId: self.lastUserMessageId,
+                        responseLatencyMs: responseLatencyMs
+                    )
+
                     self.messages.append(RealtimeMessage(isUser: false, text: finalText))
                     // Persist assistant message to conversation
                     self.persistVoiceMessage(role: "assistant", content: finalText)

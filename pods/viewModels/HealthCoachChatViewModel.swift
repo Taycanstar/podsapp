@@ -38,6 +38,12 @@ final class HealthCoachChatViewModel: ObservableObject {
     private let networkManager = NetworkManager()
     private var currentStreamTask: URLSessionDataTask?
 
+    // Analytics tracking state
+    private var userMessageIndex: Int = 0
+    private var coachMessageIndex: Int = 0
+    private var lastUserMessageId: String?
+    private var lastSendTime: Date?
+
     // Context providers (optional - set by view)
     var contextProvider: HealthCoachContextProvider?
 
@@ -62,9 +68,27 @@ final class HealthCoachChatViewModel: ObservableObject {
 
     /// Send a message to the health coach
     /// - Parameter message: The user's message
-    func send(message: String) {
+    /// - Parameter triggerSource: What triggered the message ("user_tap", "quick_reply", etc.)
+    func send(message: String, triggerSource: String = "user_tap") {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+
+        // Generate message ID and increment index for analytics
+        userMessageIndex += 1
+        let messageId = UUID().uuidString
+        lastUserMessageId = messageId
+        lastSendTime = Date()
+
+        // Track user_message_sent
+        AnalyticsManager.shared.trackUserMessageSent(
+            conversationId: currentConversationId,
+            messageId: messageId,
+            messageIndex: userMessageIndex,
+            inputMethod: "text",
+            triggerSource: triggerSource,
+            textLengthChars: trimmed.count,
+            screenName: "coach_chat"
+        )
 
         // Add user message
         let userMessage = HealthCoachMessage(
@@ -203,6 +227,12 @@ final class HealthCoachChatViewModel: ObservableObject {
         pendingClarificationQuestion = nil
         isLoading = false
         currentConversationId = nil
+
+        // Reset analytics state
+        userMessageIndex = 0
+        coachMessageIndex = 0
+        lastUserMessageId = nil
+        lastSendTime = nil
     }
 
     /// Load an existing conversation from the server
@@ -211,6 +241,10 @@ final class HealthCoachChatViewModel: ObservableObject {
     ///   - messagesResponse: The messages from the server
     func loadConversation(id: String, messages messagesResponse: [AgentMessageResponse]) {
         currentConversationId = id
+
+        // Set the message indices to the counts from the loaded conversation
+        userMessageIndex = messagesResponse.filter { $0.role == "user" }.count
+        coachMessageIndex = messagesResponse.filter { $0.role == "assistant" }.count
 
         // Convert AgentMessageResponse to HealthCoachMessage
         messages = messagesResponse.map { msg in
@@ -246,6 +280,23 @@ final class HealthCoachChatViewModel: ObservableObject {
                 onConversationIdUpdated?(newConversationId)
             }
         }
+
+        // Track coach_message_shown event
+        coachMessageIndex += 1
+        let coachMessageId = existingMessageId?.uuidString ?? UUID().uuidString
+        let responseLatencyMs: Int
+        if let sendTime = lastSendTime {
+            responseLatencyMs = Int(Date().timeIntervalSince(sendTime) * 1000)
+        } else {
+            responseLatencyMs = 0
+        }
+        AnalyticsManager.shared.trackCoachMessageShown(
+            conversationId: currentConversationId,
+            coachMessageId: coachMessageId,
+            coachMessageIndex: coachMessageIndex,
+            inReplyToMessageId: lastUserMessageId,
+            responseLatencyMs: responseLatencyMs
+        )
 
         // IMPORTANT: When type is needsClarification, we should NOT include food data
         // even if the backend sends it. The food data is "preliminary" and the user

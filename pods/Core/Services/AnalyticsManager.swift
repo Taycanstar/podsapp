@@ -266,4 +266,179 @@ final class AnalyticsManager {
     func trackCheckoutCancelled(plan: String) {
         track("checkout_cancelled", properties: ["plan": plan])
     }
+
+    // MARK: - Onboarding Events
+
+    /// Tracks when a user completes the onboarding flow.
+    /// - Parameters:
+    ///   - goalType: The user's fitness goal (cut/lean_bulk/recomp)
+    ///   - durationMs: Time spent in onboarding flow in milliseconds
+    ///   - onboardingVersion: Version of the onboarding flow (defaults to "1.0")
+    func trackOnboardingCompleted(goalType: String, durationMs: Int, onboardingVersion: String = "1.0") {
+        track("onboarding_completed", properties: [
+            "goal_type": goalType,
+            "onboarding_duration_ms": durationMs,
+            "onboarding_version": onboardingVersion
+        ])
+    }
+
+    // MARK: - Coach Messaging Events
+
+    /// Tracks when a user sends a message to the coach.
+    /// - Parameters:
+    ///   - conversationId: Unique identifier for the conversation thread
+    ///   - messageId: Unique identifier for this message
+    ///   - messageIndex: 1-based index of this message in the conversation
+    ///   - inputMethod: How the message was entered ("text" or "voice")
+    ///   - triggerSource: What triggered the message ("user_tap", "quick_reply", "notification_deeplink", "unknown")
+    ///   - textLengthChars: Number of characters in the message (no raw content)
+    ///   - voiceDurationMs: Duration of voice recording in ms (nil for text)
+    ///   - transcriptionSuccess: Whether voice transcription succeeded (nil for text)
+    ///   - screenName: Screen where the message was sent from
+    func trackUserMessageSent(
+        conversationId: String?,
+        messageId: String,
+        messageIndex: Int,
+        inputMethod: String,
+        triggerSource: String,
+        textLengthChars: Int,
+        voiceDurationMs: Int? = nil,
+        transcriptionSuccess: Bool? = nil,
+        screenName: String
+    ) {
+        var props: [String: MixpanelType] = [
+            "message_id": messageId,
+            "message_index": messageIndex,
+            "input_method": inputMethod,
+            "trigger_source": triggerSource,
+            "text_length_chars": textLengthChars,
+            "screen_name": screenName
+        ]
+
+        if let conversationId = conversationId {
+            props["conversation_id"] = conversationId
+        }
+
+        if let voiceDurationMs = voiceDurationMs {
+            props["voice_duration_ms"] = voiceDurationMs
+        }
+
+        if let transcriptionSuccess = transcriptionSuccess {
+            props["transcription_success"] = transcriptionSuccess
+        }
+
+        track("user_message_sent", properties: props)
+
+        // Record message for session counting (triggers session_message_count on session end)
+        MessageSessionTracker.shared.recordUserMessage()
+    }
+
+    /// Tracks when a coach response is displayed to the user.
+    /// - Parameters:
+    ///   - conversationId: Unique identifier for the conversation thread
+    ///   - coachMessageId: Unique identifier for the coach message
+    ///   - coachMessageIndex: 1-based index of this coach message in the conversation (1 = first reply)
+    ///   - inReplyToMessageId: The user message this is responding to
+    ///   - responseLatencyMs: Time from user send to coach response shown
+    func trackCoachMessageShown(
+        conversationId: String?,
+        coachMessageId: String,
+        coachMessageIndex: Int,
+        inReplyToMessageId: String?,
+        responseLatencyMs: Int
+    ) {
+        var props: [String: MixpanelType] = [
+            "coach_message_id": coachMessageId,
+            "coach_message_index": coachMessageIndex,
+            "response_latency_ms": responseLatencyMs
+        ]
+
+        if let conversationId = conversationId {
+            props["conversation_id"] = conversationId
+        }
+
+        if let inReplyToMessageId = inReplyToMessageId {
+            props["in_reply_to_message_id"] = inReplyToMessageId
+        }
+
+        track("coach_message_shown", properties: props)
+    }
+
+    // MARK: - Food Logging Success Events
+
+    /// Tracks when a food entry is successfully logged.
+    /// - Parameters:
+    ///   - logMethod: How the food was logged ("chat_text", "chat_voice", "manual_search", "barcode", "unknown")
+    ///   - conversationId: Conversation ID if logged via chat
+    ///   - sourceMessageId: Message ID that triggered the log if via chat
+    ///   - itemsCount: Number of food items in this log entry
+    ///   - caloriesEstimate: Estimated calories (optional)
+    ///   - wasEdit: Whether this was an edit of an existing log
+    func trackFoodLogged(
+        logMethod: String,
+        conversationId: String? = nil,
+        sourceMessageId: String? = nil,
+        itemsCount: Int,
+        caloriesEstimate: Double? = nil,
+        wasEdit: Bool = false
+    ) {
+        var props: [String: MixpanelType] = [
+            "log_method": logMethod,
+            "items_count": itemsCount,
+            "was_edit": wasEdit
+        ]
+
+        if let conversationId = conversationId {
+            props["conversation_id"] = conversationId
+        }
+
+        if let sourceMessageId = sourceMessageId {
+            props["source_message_id"] = sourceMessageId
+        }
+
+        if let caloriesEstimate = caloriesEstimate {
+            props["calories_estimate"] = caloriesEstimate
+        }
+
+        track("food_logged", properties: props)
+    }
+
+    // MARK: - Session Message Count
+
+    /// Tracks the total number of user messages in a completed session.
+    /// This event fires exactly ONCE per session when the session ends.
+    /// Used to compute Median User Messages per Session in Mixpanel.
+    ///
+    /// - Parameters:
+    ///   - sessionId: Unique identifier for this session
+    ///   - messagesCount: Total number of user messages sent during the session
+    ///   - sessionStartTs: When the session started (first message sent)
+    ///   - sessionEndTs: When the session ended (background/timeout)
+    ///   - sessionDurationMs: Duration of the session in milliseconds
+    func trackSessionMessageCount(
+        sessionId: String,
+        messagesCount: Int,
+        sessionStartTs: Date,
+        sessionEndTs: Date,
+        sessionDurationMs: Int
+    ) {
+        // Generate $insert_id for deduplication
+        let insertId = UUID().uuidString
+
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        let props: [String: MixpanelType] = [
+            "session_id": sessionId,
+            "messages_count": messagesCount,
+            "session_start_ts": isoFormatter.string(from: sessionStartTs),
+            "session_end_ts": isoFormatter.string(from: sessionEndTs),
+            "session_duration_ms": sessionDurationMs,
+            "$insert_id": insertId
+        ]
+
+        track("session_message_count", properties: props)
+
+        print("[AnalyticsManager] Tracked session_message_count: \(messagesCount) messages in session \(sessionId)")
+    }
 }
