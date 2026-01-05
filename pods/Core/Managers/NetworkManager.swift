@@ -10286,24 +10286,17 @@ private final class HealthCoachStreamingDelegate: NSObject, URLSessionDataDelega
 
             // Check if this is the final message with "done: true"
             if let done = obj["done"] as? Bool, done {
-                print("[HEALTH_COACH_STREAM] done received with response data: \(trimmed)")
+                print("[HEALTH_COACH_STREAM] done received with response data")
                 hasCompleted = true
                 // Parse the full HealthCoachResponse from this final message
                 if let responseData = trimmed.data(using: .utf8) {
                     do {
                         let decoder = JSONDecoder()
                         let response = try decoder.decode(HealthCoachResponse.self, from: responseData)
-                        print("[HEALTH_COACH_STREAM] ✅ decoded response - type: \(response.type), conversationId: \(response.conversationId ?? "nil"), hasFood: \(response.food != nil)")
                         DispatchQueue.main.async { self.onComplete(.success(response)) }
                     } catch {
-                        print("[HEALTH_COACH_STREAM] ❌ failed to decode HealthCoachResponse: \(error)")
-                        // Log the raw JSON for debugging
-                        if let prettyPrinted = try? JSONSerialization.jsonObject(with: responseData),
-                           let prettyData = try? JSONSerialization.data(withJSONObject: prettyPrinted, options: .prettyPrinted),
-                           let prettyString = String(data: prettyData, encoding: .utf8) {
-                            print("[HEALTH_COACH_STREAM] Raw JSON:\n\(prettyString.prefix(2000))")
-                        }
-                        // Create a minimal response with the accumulated text
+                        print("[HEALTH_COACH_STREAM] failed to decode HealthCoachResponse:", error)
+                        // Fallback to accumulated text
                         let fallbackResponse = HealthCoachResponse(
                             type: .text,
                             message: self.fullText
