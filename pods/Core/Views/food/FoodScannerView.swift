@@ -1126,15 +1126,21 @@ struct CameraPreviewView: UIViewRepresentable {
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: UIScreen.main.bounds)
 
+        // CRITICAL FIX: Disable touch events on camera view so SwiftUI buttons receive taps immediately
+        view.isUserInteractionEnabled = false
+
         // Use coordinator's session (persists across view updates)
         let previewLayer = AVCaptureVideoPreviewLayer(session: context.coordinator.captureSession)
         previewLayer.frame = view.bounds
         previewLayer.videoGravity = .resizeAspectFill
         view.layer.addSublayer(previewLayer)
 
-        // Configure camera
-        checkCameraAuthorization {
-            setupCaptureSession(with: context.coordinator)
+        // IMPORTANT: Delay camera setup to allow UI to fully render first
+        // This prevents blocking touch events during camera initialization
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.checkCameraAuthorization {
+                self.setupCaptureSession(with: context.coordinator)
+            }
         }
 
         return view
@@ -1168,80 +1174,81 @@ struct CameraPreviewView: UIViewRepresentable {
         // Track configuration state to prevent deadlock if stopRunning is called during config
         coordinator.isConfiguring = true
 
-        coordinator.captureSession.beginConfiguration()
+        // Run entire camera configuration on background thread to avoid blocking UI
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
+            coordinator.captureSession.beginConfiguration()
 
-        // For back camera with flash
-        guard let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              let videoInput = try? AVCaptureDeviceInput(device: backCamera),
-              coordinator.captureSession.canAddInput(videoInput) else {
+            // For back camera with flash
+            guard let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+                  let videoInput = try? AVCaptureDeviceInput(device: backCamera),
+                  coordinator.captureSession.canAddInput(videoInput) else {
+                coordinator.captureSession.commitConfiguration()
+                coordinator.isConfiguring = false
+                return
+            }
+
+            // Save reference to device for flash control
+            coordinator.device = backCamera
+
+            // Configure flash settings
+            do {
+                try backCamera.lockForConfiguration()
+
+                // Turn off torch during preview - we ONLY want flash during capture
+                if backCamera.hasTorch {
+                    backCamera.torchMode = .off
+                }
+
+                // Configure for optimal video performance
+                if backCamera.isAutoFocusRangeRestrictionSupported {
+                    backCamera.autoFocusRangeRestriction = .near
+                }
+
+                backCamera.unlockForConfiguration()
+            } catch {
+            }
+
+            coordinator.captureSession.addInput(videoInput)
+
+            // Add photo output with high resolution
+            if coordinator.captureSession.canAddOutput(coordinator.photoOutput) {
+                coordinator.captureSession.addOutput(coordinator.photoOutput)
+
+                // Configure for high resolution (using proper API)
+                coordinator.photoOutput.isHighResolutionCaptureEnabled = true
+            }
+
+            // Add metadata output for barcode scanning
+            let metadataOutput = AVCaptureMetadataOutput()
+            if coordinator.captureSession.canAddOutput(metadataOutput) {
+                coordinator.captureSession.addOutput(metadataOutput)
+                metadataOutput.setMetadataObjectsDelegate(coordinator, queue: DispatchQueue.main)
+
+                // Set the rect of interest to the center of the screen for better barcode detection
+                // This ensures we're prioritizing the center area where users typically hold barcodes
+                metadataOutput.rectOfInterest = CGRect(x: 0.2, y: 0.2, width: 0.6, height: 0.6)
+
+                // Check if UPC/EAN barcode formats are supported
+                if metadataOutput.availableMetadataObjectTypes.contains(.ean13) {
+                    metadataOutput.metadataObjectTypes = [.ean13, .ean8, .upce]
+                    coordinator.metadataOutput = metadataOutput
+                }
+
+                // Improve real-time performance for barcode processing
+                if let connection = metadataOutput.connection(with: .metadata) {
+                    connection.isEnabled = true
+                }
+
+                // Initially enable or disable barcode scanning based on mode
+                coordinator.updateBarcodeScanning(isBarcode: self.selectedMode == .barcode)
+            }
+
             coordinator.captureSession.commitConfiguration()
+
+            // Clear configuration flag before starting
             coordinator.isConfiguring = false
-            return
-        }
 
-        // Save reference to device for flash control
-        coordinator.device = backCamera
-        
-        // Configure flash settings
-        do {
-            try backCamera.lockForConfiguration()
-
-            // Turn off torch during preview - we ONLY want flash during capture
-            if backCamera.hasTorch {
-                backCamera.torchMode = .off
-            }
-
-            // Configure for optimal video performance
-            if backCamera.isAutoFocusRangeRestrictionSupported {
-                backCamera.autoFocusRangeRestriction = .near
-            }
-
-            backCamera.unlockForConfiguration()
-        } catch {
-        }
-        
-        coordinator.captureSession.addInput(videoInput)
-
-        // Add photo output with high resolution
-        if coordinator.captureSession.canAddOutput(coordinator.photoOutput) {
-            coordinator.captureSession.addOutput(coordinator.photoOutput)
-
-            // Configure for high resolution (using proper API)
-            coordinator.photoOutput.isHighResolutionCaptureEnabled = true
-        }
-        
-        // Add metadata output for barcode scanning
-        let metadataOutput = AVCaptureMetadataOutput()
-        if coordinator.captureSession.canAddOutput(metadataOutput) {
-            coordinator.captureSession.addOutput(metadataOutput)
-            metadataOutput.setMetadataObjectsDelegate(coordinator, queue: DispatchQueue.main)
-            
-            // Set the rect of interest to the center of the screen for better barcode detection
-            // This ensures we're prioritizing the center area where users typically hold barcodes
-            metadataOutput.rectOfInterest = CGRect(x: 0.2, y: 0.2, width: 0.6, height: 0.6)
-
-            // Check if UPC/EAN barcode formats are supported
-            if metadataOutput.availableMetadataObjectTypes.contains(.ean13) {
-                metadataOutput.metadataObjectTypes = [.ean13, .ean8, .upce]
-                coordinator.metadataOutput = metadataOutput
-            }
-
-            // Improve real-time performance for barcode processing
-            if let connection = metadataOutput.connection(with: .metadata) {
-                connection.isEnabled = true
-            }
-
-            // Initially enable or disable barcode scanning based on mode
-            coordinator.updateBarcodeScanning(isBarcode: selectedMode == .barcode)
-        }
-        
-        coordinator.captureSession.commitConfiguration()
-
-        // Clear configuration flag before starting
-        coordinator.isConfiguring = false
-
-        // Start the camera session
-        DispatchQueue.global(qos: .userInitiated).async {
+            // Start the camera session (already on background thread)
             coordinator.captureSession.startRunning()
         }
     }
