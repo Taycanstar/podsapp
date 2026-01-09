@@ -2613,7 +2613,7 @@
 				BLOB_NAME_WESTUS = humulistoragewest;
 				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
 				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
@@ -2639,7 +2639,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We store your water intake and other nutrition information in Apple Health to keep all your health data in one place.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to record voice logs.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow access to camera roll in order to post videos";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Humuli requires access to your camera roll to save your videos";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Metryc requires access to your camera roll to save your videos";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Access to your microphone is required for text to speech capabilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -2652,11 +2652,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6.1;
+				MARKETING_VERSION = 1.6.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = devprofile;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = distributionNew;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
@@ -2683,7 +2683,7 @@
 				BLOB_NAME_WESTUS = humulistoragewest;
 				BLOB_URL = "https://humulipremiumstorage.blob.core.windows.net/?sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-03-14T09:21:57Z&st=2024-03-15T01:21:57Z&spr=https,http&sig=hLtGGHRtMebT%2Bqv93ud020s46QcCYOdT9Tw2R%2BIRKP4%3D";
 				CODE_SIGN_ENTITLEMENTS = pods/pods.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
 				CONN_STRING = "BlobEndpoint=https://humulipremiumstorage.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
 				CONN_STRING_CENTRALUS = "BlobEndpoint=https://humulistoragecentral.blob.core.windows.net/;SharedAccessSignature=sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:52:05Z&st=2024-06-18T15:52:05Z&spr=https&sig=J2t%2FfUcXMsZOCKV%2F%2B%2FubZ89XDTAOQPksjNUNce92bvk%3D";
@@ -2709,7 +2709,7 @@
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "We store your water intake and other nutrition information in Apple Health to keep all your health data in one place.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Access to the microphone is required to record voice logs.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Allow access to camera roll in order to post videos";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Humuli requires access to your camera roll to save your videos";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Metryc requires access to your camera roll to save your videos";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Access to your microphone is required for text to speech capabilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -2722,11 +2722,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6.1;
+				MARKETING_VERSION = 1.6.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.humuli.pods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = devprofile;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = distributionNew;
 				QUEUE_SAS_URL = "https://storagehumuli.queue.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2025-03-08T07:13:23Z&st=2024-03-08T23:13:23Z&spr=https,http&sig=T0VZghopHCB%2Fkc9Vpn4czFhFhUs2Dt1%2BCU5MErM5D4w%3D";
 				REGION = centralus;
 				SAS_TOKEN = "sv=2022-11-02&ss=b&srt=sco&sp=rwdlaciytfx&se=2025-07-01T23:59:47Z&st=2024-06-18T15:59:47Z&spr=https&sig=5dGF32WV54TVwSB4nZo%2Fl54xaj%2BCCmewlMyxPXJGoDo%3D";
