@@ -3805,6 +3805,53 @@ struct PlateView: View {
         // Capture foods being logged for the callback
         let foodsToLog = entriesToLog.map { $0.food }
 
+        let mealLabel = selectedMealPeriod.title
+        let logDate = mealTime
+
+        // Add optimistic logs IMMEDIATELY so timeline shows items instantly
+        var optimisticLogIds: [String] = []
+        for entry in entriesToLog {
+            var food = entry.food
+            food.numberOfServings = entry.servings
+            food.householdServingFullText = entry.currentMeasureLabel
+
+            // Create optimistic LoggedFoodItem from Food
+            let loggedFood = LoggedFoodItem(
+                foodLogId: nil,
+                fdcId: food.fdcId,
+                displayName: food.displayName,
+                calories: entry.macroTotals.calories,
+                servingSizeText: food.householdServingFullText ?? "1 serving",
+                numberOfServings: entry.servings,
+                brandText: food.brandText,
+                protein: entry.macroTotals.protein,
+                carbs: entry.macroTotals.carbs,
+                fat: entry.macroTotals.fat,
+                healthAnalysis: food.healthAnalysis,
+                foodNutrients: food.foodNutrients
+            )
+
+            var optimisticLog = CombinedLog(
+                type: .food,
+                status: "pending",
+                calories: entry.macroTotals.calories,
+                message: "\(food.displayName) - \(mealLabel)",
+                foodLogId: nil,
+                food: loggedFood,
+                mealType: mealLabel,
+                mealLogId: nil,
+                meal: nil,
+                mealTime: mealLabel,
+                scheduledAt: logDate,
+                recipeLogId: nil,
+                recipe: nil,
+                servingsConsumed: nil
+            )
+            optimisticLog.isOptimistic = true
+            optimisticLogIds.append(optimisticLog.id)
+            dayLogsVM.addPending(optimisticLog)
+        }
+
         // Navigate to timeline immediately
         NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
 
@@ -3814,8 +3861,6 @@ struct PlateView: View {
         // Notify caller that foods are being logged (for toast/confirmation)
         onPlateLogged?(foodsToLog)
 
-        let mealLabel = selectedMealPeriod.title
-        let logDate = mealTime
         let batchContext = entriesToLog.count > 1 ? buildBatchContext(from: entriesToLog) : nil
         let lastIndex = entriesToLog.count - 1
 
@@ -3872,6 +3917,11 @@ struct PlateView: View {
         }
 
         group.notify(queue: .main) {
+            // Remove optimistic logs - they'll be replaced by server-confirmed ones
+            for optimisticId in optimisticLogIds {
+                dayLogsVM.removeOptimisticLog(identifier: optimisticId)
+            }
+
             let orderedLogs = pendingLogs.sorted { $0.index < $1.index }
             for item in orderedLogs {
                 dayLogsVM.addPending(item.log)
