@@ -64,7 +64,13 @@ struct MainContentView: View {
     @State private var showMultiFoodView = false
     @State private var multiFoods: [Food] = []
     @State private var multiMealItems: [MealItem] = []
-    
+
+    // Plate view state for AddToPlate from MultiFoodLogView
+    @StateObject private var plateViewModel = PlateViewModel()
+    @State private var showPlateView = false
+    @State private var plateMealPeriod: MealPeriod = .lunch
+    @State private var plateMealTime: Date = Date()
+
     @State private var shouldNavigateToNewPod = false
     @State private var newPodId: Int?
 
@@ -82,7 +88,7 @@ struct MainContentView: View {
 
     var body: some View {
         content
-        .environment(\.isTabBarVisible, $isTabBarVisible)
+            .environment(\.isTabBarVisible, $isTabBarVisible)
 
         // REMOVED: Old onboarding system (OnboardingFlowContainer) - now using new onboarding in RegisterView
         // .fullScreenCover(isPresented: $viewModel.isShowingOnboarding) {
@@ -457,6 +463,58 @@ struct MainContentView: View {
                 .environmentObject(viewModel)
                 .environmentObject(dayLogsVM)
         }
+        .sheet(isPresented: $showPlateView) {
+            NavigationStack {
+                PlateView(
+                    viewModel: plateViewModel,
+                    selectedMealPeriod: plateMealPeriod,
+                    mealTime: plateMealTime,
+                    onFinished: {
+                        showPlateView = false
+                        plateViewModel.clear()
+                    }
+                )
+                .environmentObject(foodManager)
+                .environmentObject(dayLogsVM)
+                .environmentObject(viewModel)
+            }
+        }
+        .onReceive(
+            NotificationCenter.default
+                .publisher(for: NSNotification.Name("AddToPlate"))
+                .receive(on: RunLoop.main)
+        ) { notification in
+            // Handle AddToPlate from MultiFoodLogView
+            if let userInfo = notification.userInfo {
+                let foods = userInfo["foods"] as? [Food] ?? []
+                let mealItems = userInfo["mealItems"] as? [MealItem] ?? []
+                let mealPeriod = userInfo["mealPeriod"] as? MealPeriod ?? suggestedMealPeriod(for: Date())
+                let mealTime = userInfo["mealTime"] as? Date ?? Date()
+
+                // Clear existing entries and add new ones
+                plateViewModel.clear()
+                plateMealPeriod = mealPeriod
+                plateMealTime = mealTime
+
+                // Add foods to plate
+                for food in foods {
+                    let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod, mealTime: mealTime)
+                    plateViewModel.add(entry)
+                }
+
+                // If no foods but have mealItems, convert them
+                if foods.isEmpty {
+                    for item in mealItems {
+                        let food = mealItemToFood(item)
+                        let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod, mealTime: mealTime)
+                        plateViewModel.add(entry)
+                    }
+                }
+
+                print("🍽️ AddToPlate received: \(plateViewModel.entries.count) items")
+                showPlateView = true
+            }
+        }
     }
 
     private var onboardingView: some View {
@@ -472,6 +530,90 @@ struct MainContentView: View {
 
     private func gateProAction(for feature: ProFeatureGate.ProFeature = .agentFeatures, action: @escaping () -> Void) {
         proFeatureGate.requirePro(for: feature, userEmail: currentUserEmail, action: action)
+    }
+
+    // MARK: - Plate Helpers
+
+    private func suggestedMealPeriod(for date: Date) -> MealPeriod {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 0..<11: return .breakfast
+        case 11..<15: return .lunch
+        case 15..<18: return .snack
+        default: return .dinner
+        }
+    }
+
+    private func buildPlateEntry(from food: Food, mealPeriod: MealPeriod, mealTime: Date) -> PlateEntry {
+        let baseMacros = MacroTotals(
+            calories: food.calories ?? 0,
+            protein: food.protein ?? 0,
+            carbs: food.carbs ?? 0,
+            fat: food.fat ?? 0
+        )
+
+        var baseNutrients: [String: RawNutrientValue] = [:]
+        for nutrient in food.foodNutrients {
+            let key = nutrient.nutrientName.lowercased()
+            baseNutrients[key] = RawNutrientValue(value: nutrient.value ?? 0, unit: nutrient.unitName)
+        }
+
+        let baselineGramWeight = food.foodMeasures.first?.gramWeight ?? food.servingSize ?? 100
+
+        return PlateEntry(
+            food: food,
+            servings: food.numberOfServings ?? 1,
+            selectedMeasureId: food.foodMeasures.first?.id,
+            availableMeasures: food.foodMeasures,
+            baselineGramWeight: baselineGramWeight,
+            baseNutrientValues: baseNutrients,
+            baseMacroTotals: baseMacros,
+            servingDescription: food.servingSizeText ?? "1 serving",
+            mealItems: food.mealItems ?? [],
+            mealPeriod: mealPeriod,
+            mealTime: mealTime,
+            recipeItems: []
+        )
+    }
+
+    private func mealItemToFood(_ item: MealItem) -> Food {
+        // Build nutrients array from MealItem's macro values
+        var nutrients: [Nutrient] = [
+            Nutrient(nutrientName: "Energy", value: item.calories, unitName: "kcal"),
+            Nutrient(nutrientName: "Protein", value: item.protein, unitName: "g"),
+            Nutrient(nutrientName: "Carbohydrate, by difference", value: item.carbs, unitName: "g"),
+            Nutrient(nutrientName: "Total lipid (fat)", value: item.fat, unitName: "g")
+        ]
+
+        // Add any additional nutrients from the meal item
+        if let additionalNutrients = item.foodNutrients {
+            nutrients.append(contentsOf: additionalNutrients)
+        }
+
+        // Convert MealItemMeasures to FoodMeasures
+        let foodMeasures = item.measures.enumerated().map { index, measure in
+            FoodMeasure(
+                disseminationText: measure.description,
+                gramWeight: measure.gramWeight,
+                id: index,
+                modifier: nil,
+                measureUnitName: measure.unit,
+                rank: index
+            )
+        }
+
+        return Food(
+            fdcId: Int.random(in: 1000000..<9999999),
+            description: item.name,
+            brandOwner: nil,
+            brandName: nil,
+            servingSize: item.serving,
+            numberOfServings: 1.0,
+            servingSizeUnit: item.servingUnit,
+            householdServingFullText: item.originalServing?.resolvedText ?? "\(item.serving) \(item.servingUnit ?? "serving")",
+            foodNutrients: nutrients,
+            foodMeasures: foodMeasures
+        )
     }
 
     private func handleAgentSubmit() {
