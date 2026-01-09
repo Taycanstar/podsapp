@@ -3809,15 +3809,21 @@ struct PlateView: View {
         let logDate = mealTime
 
         // Add optimistic logs IMMEDIATELY so timeline shows items instantly
+        // Use unique negative IDs to ensure each optimistic log has a distinct id
+        // (CombinedLog.id is computed as "food_\(foodLogId ?? 0)", so nil = "food_0" for ALL logs)
         var optimisticLogIds: [String] = []
-        for entry in entriesToLog {
+        for (index, entry) in entriesToLog.enumerated() {
             var food = entry.food
             food.numberOfServings = entry.servings
             food.householdServingFullText = entry.currentMeasureLabel
 
+            // Use a unique negative ID for each optimistic log
+            // Negative IDs don't exist in the backend, making them safe as temporary placeholders
+            let tempFoodLogId = -(index + 1)
+
             // Create optimistic LoggedFoodItem from Food
             let loggedFood = LoggedFoodItem(
-                foodLogId: nil,
+                foodLogId: tempFoodLogId,
                 fdcId: food.fdcId,
                 displayName: food.displayName,
                 calories: entry.macroTotals.calories,
@@ -3836,7 +3842,7 @@ struct PlateView: View {
                 status: "pending",
                 calories: entry.macroTotals.calories,
                 message: "\(food.displayName) - \(mealLabel)",
-                foodLogId: nil,
+                foodLogId: tempFoodLogId,
                 food: loggedFood,
                 mealType: mealLabel,
                 mealLogId: nil,
@@ -3888,31 +3894,34 @@ struct PlateView: View {
                 skipCoach: skipCoach,
                 batchContext: context
             ) { result in
-                switch result {
-                case .success(let logged):
-                    let combined = CombinedLog(
-                        type: .food,
-                        status: logged.status,
-                        calories: Double(logged.food.calories),
-                        message: "\(logged.food.displayName) - \(mealLabel)",
-                        foodLogId: logged.foodLogId,
-                        food: logged.food,
-                        mealType: mealLabel,
-                        mealLogId: nil,
-                        meal: nil,
-                        mealTime: mealLabel,
-                        scheduledAt: logDate,
-                        recipeLogId: nil,
-                        recipe: nil,
-                        servingsConsumed: nil
-                    )
-                    pendingLogs.append((index: index, log: combined))
-                case .failure(let error):
-                    if firstError == nil {
-                        firstError = error
+                // Dispatch to main queue to ensure thread-safe access to pendingLogs
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let logged):
+                        let combined = CombinedLog(
+                            type: .food,
+                            status: logged.status,
+                            calories: Double(logged.food.calories),
+                            message: "\(logged.food.displayName) - \(mealLabel)",
+                            foodLogId: logged.foodLogId,
+                            food: logged.food,
+                            mealType: mealLabel,
+                            mealLogId: nil,
+                            meal: nil,
+                            mealTime: mealLabel,
+                            scheduledAt: logDate,
+                            recipeLogId: nil,
+                            recipe: nil,
+                            servingsConsumed: nil
+                        )
+                        pendingLogs.append((index: index, log: combined))
+                    case .failure(let error):
+                        if firstError == nil {
+                            firstError = error
+                        }
                     }
+                    group.leave()
                 }
-                group.leave()
             }
         }
 
