@@ -9,7 +9,9 @@ import SwiftUI
 
 struct MultiFoodLogView: View {
     let foods: [Food]
-    let mealItems: [MealItem]
+    var mealItems: [MealItem] = []
+    // Pass existing PlateViewModel to preserve plate context when adding more items
+    var plateViewModel: PlateViewModel? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
@@ -1125,7 +1127,8 @@ struct MultiFoodLogView: View {
                 "foods": remainingFoods,
                 "mealItems": editedMealItems,
                 "mealPeriod": selectedMealPeriod,
-                "mealTime": mealTime
+                "mealTime": mealTime,
+                "plateViewModel": plateViewModel as Any
             ]
         )
         dismiss()

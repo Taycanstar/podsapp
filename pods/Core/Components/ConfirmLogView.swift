@@ -3126,7 +3126,8 @@ struct PlateView: View {
                                         showConfirmFood = true
                                     }
                                 }
-                            })
+                            },
+                            plateViewModel: viewModel)  // Pass PlateView's viewModel to preserve plate context
             .edgesIgnoringSafeArea(.all)
         }
         .sheet(isPresented: $showDescribeLog) {
@@ -3862,7 +3863,8 @@ struct PlateView: View {
         NotificationCenter.default.post(name: NSNotification.Name("NavigateToTimeline"), object: nil)
 
         // Dismiss optimistically - don't wait for API calls
-        dismiss()
+        // Use onFinished callback to properly close the sheet (dismiss() doesn't work reliably for sheets in NavigationStack)
+        onFinished?()
 
         // Notify caller that foods are being logged (for toast/confirmation)
         onPlateLogged?(foodsToLog)
@@ -3943,11 +3945,9 @@ struct PlateView: View {
                 return
             }
 
+            // View is already dismissed optimistically, just reset the flag
+            // viewModel.clear() is called by onFinished callback in MainContentView
             isLoggingPlate = false
-            viewModel.clear()
-            // NOTE: No loadLogs call needed - logs were just added with server-confirmed data.
-            // Refetching would be redundant and can cause race conditions.
-            onFinished?()
         }
     }
 

@@ -64,6 +64,8 @@ struct MainContentView: View {
     @State private var showMultiFoodView = false
     @State private var multiFoods: [Food] = []
     @State private var multiMealItems: [MealItem] = []
+    // Existing PlateViewModel passed from scanner (preserves plate context when adding more)
+    @State private var existingPlateViewModel: PlateViewModel? = nil
 
     // Plate view state for AddToPlate from MultiFoodLogView
     @StateObject private var plateViewModel = PlateViewModel()
@@ -187,7 +189,7 @@ struct MainContentView: View {
                 print("📱 Received ShowFoodConfirmation notification for: \(food.displayName)")
                 print("🩺 [DEBUG] MainContentView received food.healthAnalysis: \(food.healthAnalysis?.score ?? -1)")
                 print("🔍 DEBUG NotificationCenter: Setting scannedFood and showing sheet")
-                
+
                 // Set the scanned food data
                 scannedFood = food
                 // Try to get foodLogId if it exists (for photo scanning), otherwise nil (for barcode scanning)
@@ -196,7 +198,9 @@ struct MainContentView: View {
                 } else {
                     scannedFoodLogId = nil  // No log ID yet since not confirmed
                 }
-                
+                // Extract existing PlateViewModel if scanning from PlateView
+                existingPlateViewModel = userInfo["plateViewModel"] as? PlateViewModel
+
                 // Show the confirmation view
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     print("🔍 DEBUG NotificationCenter: About to set showConfirmFoodView = true")
@@ -222,6 +226,8 @@ struct MainContentView: View {
                 } else {
                     multiMealItems = []
                 }
+                // Extract existing PlateViewModel if scanning from PlateView
+                existingPlateViewModel = userInfo["plateViewModel"] as? PlateViewModel
                 showMultiFoodView = true
             }
         }
@@ -446,19 +452,23 @@ struct MainContentView: View {
         .sheet(isPresented: $showConfirmFoodView, onDismiss: {
             scannedFood = nil
             scannedFoodLogId = nil
+            existingPlateViewModel = nil
         }) {
             if let food = scannedFood {
                 NavigationView {
                     ConfirmLogView(
                         path: .constant(NavigationPath()),
                         food: food,
-                        foodLogId: scannedFoodLogId
+                        foodLogId: scannedFoodLogId,
+                        plateViewModel: existingPlateViewModel
                     )
                 }
             }
         }
-        .sheet(isPresented: $showMultiFoodView) {
-            MultiFoodLogView(foods: multiFoods, mealItems: multiMealItems)
+        .sheet(isPresented: $showMultiFoodView, onDismiss: {
+            existingPlateViewModel = nil
+        }) {
+            MultiFoodLogView(foods: multiFoods, mealItems: multiMealItems, plateViewModel: existingPlateViewModel)
                 .environmentObject(foodManager)
                 .environmentObject(viewModel)
                 .environmentObject(dayLogsVM)
@@ -491,28 +501,46 @@ struct MainContentView: View {
                 let mealPeriod = userInfo["mealPeriod"] as? MealPeriod ?? suggestedMealPeriod(for: Date())
                 let mealTime = userInfo["mealTime"] as? Date ?? Date()
 
-                // Clear existing entries and add new ones
-                plateViewModel.clear()
-                plateMealPeriod = mealPeriod
-                plateMealTime = mealTime
+                // Check if we have an existing plate to add to (from PlateView -> Scanner flow)
+                if let existingVM = userInfo["plateViewModel"] as? PlateViewModel {
+                    // Add new items to existing plate
+                    for food in foods {
+                        let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod, mealTime: mealTime)
+                        existingVM.add(entry)
+                    }
+                    if foods.isEmpty {
+                        for item in mealItems {
+                            let food = mealItemToFood(item)
+                            let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod, mealTime: mealTime)
+                            existingVM.add(entry)
+                        }
+                    }
+                    print("🍽️ AddToPlate (existing plate): \(existingVM.entries.count) items")
+                    // Don't show a new plate view - the existing PlateView will update via @Published
+                } else {
+                    // Create new plate (original behavior)
+                    plateViewModel.clear()
+                    plateMealPeriod = mealPeriod
+                    plateMealTime = mealTime
 
-                // Add foods to plate
-                for food in foods {
-                    let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod, mealTime: mealTime)
-                    plateViewModel.add(entry)
-                }
-
-                // If no foods but have mealItems, convert them
-                if foods.isEmpty {
-                    for item in mealItems {
-                        let food = mealItemToFood(item)
+                    // Add foods to plate
+                    for food in foods {
                         let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod, mealTime: mealTime)
                         plateViewModel.add(entry)
                     }
-                }
 
-                print("🍽️ AddToPlate received: \(plateViewModel.entries.count) items")
-                showPlateView = true
+                    // If no foods but have mealItems, convert them
+                    if foods.isEmpty {
+                        for item in mealItems {
+                            let food = mealItemToFood(item)
+                            let entry = buildPlateEntry(from: food, mealPeriod: mealPeriod, mealTime: mealTime)
+                            plateViewModel.add(entry)
+                        }
+                    }
+
+                    print("🍽️ AddToPlate (new plate): \(plateViewModel.entries.count) items")
+                    showPlateView = true
+                }
             }
         }
     }

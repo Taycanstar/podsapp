@@ -30,80 +30,50 @@ struct NotificationCopy {
     ]
     
     // ───────── Breakfast (22 variations) ─────────
- static let breakfast: [(title: String, body: String)] = [
-    ("Breakfast check-in",        "No pressure—just add what you had."),
-    ("Morning note",              "If you ate, you can log it here."),
-    ("Gentle reminder",           "Breakfast doesn’t have to be perfect."),
-    ("Quick check",               "A simple note is enough."),
-    ("Start where you are",       "Log breakfast without overthinking."),
-    ("Morning support",           "Just capturing it helps."),
-    ("No judgment",               "Add breakfast as it was."),
-    ("Easy start",                "One quick log, no details needed."),
-    ("If you want",               "You can log breakfast now."),
-    ("Morning clarity",           "Write it down and move on."),
-    ("Nothing fancy",             "Breakfast can be messy—log it anyway."),
-    ("Soft start",                "However it looked, it counts."),
-    ("You’re okay",               "Add breakfast when you’re ready."),
-    ("Low effort",                "A rough log is totally fine."),
-    ("Morning reset",             "Logging isn’t a commitment—just info."),
-    ("No fixing required",        "Breakfast as-is is enough."),
-    ("Just noting",               "Capture breakfast, no math needed."),
-    ("Safe check-in",             "This is a judgment-free log."),
-    ("When it’s fresh",           "If it helps, log breakfast now."),
-    ("Here when you need it",     "Breakfast can go here, anytime.")
+static let breakfast: [(title: String, body: String)] = [
+    ("Pssst…",                 "How was breakfast?"),
+    ("Morning check-in",       "Log your breakfast to get the day started."),
+    ("Start today on track",   "Add breakfast to your log."),
+    ("Quick to-do",            "Log breakfast while it’s fresh."),
+    ("First things first",     "What did you have for breakfast?"),
+    ("Breakfast time",         "A quick log now saves time later."),
+    ("Daily kickoff",          "Log breakfast to see how your day begins."),
+    ("Just checking",          "Did you have breakfast?"),
+    ("Morning note",           "Add breakfast to today’s log."),
+    ("Early bird",             "Log breakfast and keep moving.")
 ]
+
 
 
 
     
     // ───────── Lunch (20 variations) ─────────
- static let lunch: [(title: String, body: String)] = [
-    ("Lunch check-in",            "No need to get it right—just log."),
-    ("Midday note",               "Whatever it was, it’s okay to add."),
-    ("Gentle reminder",           "Lunch doesn’t define your day."),
-    ("Quick capture",             "A rough entry is enough."),
-    ("No pressure",               "Log lunch without fixing anything."),
-    ("Still okay",                "You can add lunch as-is."),
-    ("Midday support",            "Just writing it down can help."),
-    ("If you ate",                "Lunch can go here."),
-    ("No judgment",               "Log lunch exactly how it was."),
-    ("Soft nudge",                "This isn’t about being good."),
-    ("Simple note",               "Lunch doesn’t need details."),
-    ("You’re allowed",            "Even imperfect lunches count."),
-    ("Midday clarity",            "Add lunch and keep going."),
-    ("Low effort log",            "Messy is fine."),
-    ("No catching up",            "Just lunch—nothing else."),
-    ("Still on your side",        "Lunch won’t break anything."),
-    ("Gentle reset",              "Log lunch if it helps."),
-    ("No math required",          "Just a note is enough."),
-    ("Here for you",              "Lunch can be logged anytime."),
-    ("No story attached",         "It’s just food—log it.")
+static let lunch: [(title: String, body: String)] = [
+    ("Midday nudge",           "Log lunch to keep your diary up to date."),
+    ("Quick check",            "What did you have for lunch?"),
+    ("Lunch time",             "Add lunch to today’s log."),
+    ("Food check-in",          "Log your lunch when you get a minute."),
+    ("Halfway point",          "Lunch is a good time to check in."),
+    ("Quick to-do",            "Log lunch and move on."),
+    ("Midday update",          "Add lunch to see where you stand."),
+    ("Lunch recap",            "What was for lunch today?"),
+    ("Just lunch",             "Log lunch—nothing fancy."),
+    ("On the go?",             "Log lunch whenever you’re ready.")
 ]
 
 
 // ───────── Dinner (21 variations) ─────────
 static let dinner: [(title: String, body: String)] = [
-    ("Dinner check-in",           "No judgment—just add what happened."),
-    ("Evening note",              "However tonight went, it’s okay."),
-    ("Gentle reminder",           "Dinner doesn’t erase your day."),
-    ("Safe to log",               "You can write this down without fixing it."),
-    ("Still okay",                "Even tough dinners belong here."),
-    ("No pressure",               "Log dinner as-is."),
-    ("You’re not behind",         "Just capturing helps."),
-    ("Evening support",           "This is a judgment-free space."),
-    ("No perfect ending",         "Dinner doesn’t need to look good."),
-    ("Soft landing",              "Write it down and breathe."),
-    ("It’s allowed",              "You can log this, even now."),
-    ("Nothing to undo",           "Dinner doesn’t require punishment."),
-    ("Still safe",                "This log won’t judge you."),
-    ("End the day gently",        "A simple note is enough."),
-    ("No rules here",             "Just dinner, as it was."),
-    ("You’re okay",               "Log dinner when you’re ready."),
-    ("No fixing tonight",         "Just record and rest."),
-    ("Compassion first",          "This is data, not a verdict."),
-    ("Even now",                  "You can still log dinner."),
-    ("Tomorrow isn’t ruined",     "Dinner doesn’t decide that."),
-    ("Close the day softly",      "Write it down if it helps.")
+    ("After-dinner nudge",     "Log dinner while it’s still fresh."),
+    ("Evening check-in",       "What was for dinner?"),
+    ("Dinner time",            "Add dinner to today’s log."),
+    ("Wrap it up",             "Log dinner to close out the day."),
+    ("End-of-day note",        "Dinner can be logged now."),
+    ("Daily recap",            "Finish the day by logging dinner."),
+    ("Last one",               "Just dinner left to log."),
+    ("Evening update",         "Add dinner to see your full day."),
+    ("Before you forget",      "Log dinner when you get a chance."),
+    ("Day complete",           "Dinner is the last step.")
 ]
 
 }
