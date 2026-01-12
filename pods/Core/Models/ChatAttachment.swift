@@ -24,6 +24,8 @@ struct ChatAttachment: Identifiable, Equatable {
     let filename: String
     let thumbnail: UIImage?
     let mediaType: String
+    /// Remote URL for attachments loaded from server (nil for local/new attachments)
+    var remoteURL: String?
 
     enum AttachmentType: String, Equatable {
         case image
@@ -36,7 +38,8 @@ struct ChatAttachment: Identifiable, Equatable {
         data: Data,
         filename: String,
         thumbnail: UIImage? = nil,
-        mediaType: String? = nil
+        mediaType: String? = nil,
+        remoteURL: String? = nil
     ) {
         self.id = id
         self.type = type
@@ -44,6 +47,7 @@ struct ChatAttachment: Identifiable, Equatable {
         self.filename = filename
         self.thumbnail = thumbnail
         self.mediaType = mediaType ?? ChatAttachment.inferMediaType(from: filename, type: type)
+        self.remoteURL = remoteURL
     }
 
     /// Create attachment from UIImage

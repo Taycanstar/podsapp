@@ -661,15 +661,48 @@ struct AgentChatView: View {
     @ViewBuilder
     private func singleAttachmentView(_ attachment: ChatAttachment) -> some View {
         if attachment.type == .image {
-            if let image = UIImage(data: attachment.data) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: 220, maxHeight: 220)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
+            imageView(for: attachment)
+                .frame(maxWidth: 220, maxHeight: 220)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
         } else {
             documentAttachmentView(attachment)
+        }
+    }
+
+    @ViewBuilder
+    private func imageView(for attachment: ChatAttachment) -> some View {
+        // Remote URL (loaded from server)
+        if let urlString = attachment.remoteURL, let url = URL(string: urlString) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .empty:
+                    ProgressView()
+                        .frame(width: 100, height: 100)
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                case .failure:
+                    Image(systemName: "photo")
+                        .font(.largeTitle)
+                        .foregroundColor(.secondary)
+                        .frame(width: 100, height: 100)
+                @unknown default:
+                    EmptyView()
+                }
+            }
+        }
+        // Local data (newly attached)
+        else if let image = UIImage(data: attachment.data) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+        }
+        // Fallback
+        else {
+            Image(systemName: "photo")
+                .font(.largeTitle)
+                .foregroundColor(.secondary)
         }
     }
 
@@ -689,13 +722,9 @@ struct AgentChatView: View {
                     spacing: 4
                 ) {
                     ForEach(imageAttachments) { attachment in
-                        if let image = UIImage(data: attachment.data) {
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 100, height: 100)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
+                        imageView(for: attachment)
+                            .frame(width: 100, height: 100)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
                 .frame(maxWidth: 210)

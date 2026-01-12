@@ -103,12 +103,14 @@ struct AgentMessageResponse: Codable, Identifiable {
     let content: String
     let responseType: String?
     let responseData: AgentMessageData?
+    let attachments: [SavedAttachment]?
     let createdAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id, role, content
         case responseType = "response_type"
         case responseData = "response_data"
+        case attachments
         case createdAt = "created_at"
     }
 
@@ -119,6 +121,7 @@ struct AgentMessageResponse: Codable, Identifiable {
         content = try container.decode(String.self, forKey: .content)
         responseType = try container.decodeIfPresent(String.self, forKey: .responseType)
         responseData = try container.decodeIfPresent(AgentMessageData.self, forKey: .responseData)
+        attachments = try container.decodeIfPresent([SavedAttachment].self, forKey: .attachments)
 
         let createdAtString = try container.decode(String.self, forKey: .createdAt)
         let formatter = ISO8601DateFormatter()
@@ -130,6 +133,31 @@ struct AgentMessageResponse: Codable, Identifiable {
             formatter.formatOptions = [.withInternetDateTime]
             createdAt = formatter.date(from: createdAtString) ?? Date()
         }
+    }
+}
+
+/// Attachment saved on server with Azure Blob URL
+struct SavedAttachment: Codable {
+    let type: String
+    let url: String
+    let filename: String
+    let mediaType: String
+
+    enum CodingKeys: String, CodingKey {
+        case type, url, filename
+        case mediaType = "media_type"
+    }
+
+    /// Convert to ChatAttachment for display
+    func toChatAttachment() -> ChatAttachment {
+        ChatAttachment(
+            type: type == "image" ? .image : .document,
+            data: Data(),
+            filename: filename,
+            thumbnail: nil,
+            mediaType: mediaType,
+            remoteURL: url
+        )
     }
 }
 

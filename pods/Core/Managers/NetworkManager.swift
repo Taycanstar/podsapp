@@ -8198,17 +8198,75 @@ class NetworkManager {
             parameters["conversation_id"] = conversationId
         }
 
-        // Add attachments if provided
+        // Add attachments if provided - upload to Azure first, then send URLs
         if !attachments.isEmpty {
-            let attachmentData: [[String: Any]] = attachments.map { attachment in
-                [
-                    "type": attachment.type.rawValue,
-                    "filename": attachment.filename,
-                    "data": attachment.data.base64EncodedString(),
-                    "media_type": attachment.mediaType
-                ]
+            let group = DispatchGroup()
+            var uploadedAttachments: [[String: Any]] = []
+            let lock = NSLock()
+
+            for attachment in attachments {
+                group.enter()
+
+                // If attachment already has a remote URL (loaded from server), just use it
+                if let existingURL = attachment.remoteURL {
+                    lock.lock()
+                    uploadedAttachments.append([
+                        "type": attachment.type.rawValue,
+                        "url": existingURL,
+                        "filename": attachment.filename,
+                        "media_type": attachment.mediaType
+                    ])
+                    lock.unlock()
+                    group.leave()
+                    continue
+                }
+
+                // Upload new attachment to Azure Blob (use same container as rest of app)
+                guard let containerName = ConfigurationManager.shared.getValue(forKey: "BLOB_CONTAINER") as? String else {
+                    print("⚠️ BLOB_CONTAINER not configured")
+                    group.leave()
+                    continue
+                }
+                let blobName = "agent-attachments/\(UUID().uuidString)_\(attachment.filename)"
+
+                uploadFileToAzureBlob(
+                    containerName: containerName,
+                    blobName: blobName,
+                    fileData: attachment.data,
+                    contentType: attachment.mediaType
+                ) { success, urlOrError in
+                    if success, let url = urlOrError {
+                        lock.lock()
+                        uploadedAttachments.append([
+                            "type": attachment.type.rawValue,
+                            "url": url,
+                            "filename": attachment.filename,
+                            "media_type": attachment.mediaType
+                        ])
+                        lock.unlock()
+                    } else {
+                        print("⚠️ Failed to upload attachment: \(urlOrError ?? "Unknown error")")
+                        // Still include attachment with base64 as fallback for GPT vision
+                        lock.lock()
+                        uploadedAttachments.append([
+                            "type": attachment.type.rawValue,
+                            "filename": attachment.filename,
+                            "data": attachment.data.base64EncodedString(),
+                            "media_type": attachment.mediaType
+                        ])
+                        lock.unlock()
+                    }
+                    group.leave()
+                }
             }
-            parameters["attachments"] = attachmentData
+
+            // Wait for all uploads to complete (with timeout)
+            let result = group.wait(timeout: .now() + 30)
+            if result == .timedOut {
+                print("⚠️ Attachment upload timed out")
+            }
+
+            parameters["attachments"] = uploadedAttachments
         }
 
         // Add context if provided

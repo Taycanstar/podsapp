@@ -256,6 +256,9 @@ final class HealthCoachChatViewModel: ObservableObject {
             let sender: HealthCoachMessage.Sender = msg.role == "user" ? .user : .coach
             let responseType = msg.responseType.flatMap { HealthCoachResponseType(rawValue: $0) }
 
+            // Convert saved attachments to ChatAttachment
+            let loadedAttachments: [ChatAttachment]? = msg.attachments?.map { $0.toChatAttachment() }
+
             return HealthCoachMessage(
                 id: UUID(uuidString: msg.id) ?? UUID(),
                 sender: sender,
@@ -265,7 +268,8 @@ final class HealthCoachChatViewModel: ObservableObject {
                 food: msg.responseData?.food,
                 mealItems: msg.responseData?.mealItems,
                 activity: msg.responseData?.activity,
-                citations: msg.responseData?.citations
+                citations: msg.responseData?.citations,
+                attachments: loadedAttachments
             )
         }
 
