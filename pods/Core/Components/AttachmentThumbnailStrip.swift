@@ -22,7 +22,7 @@ struct AttachmentThumbnailStrip: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 ForEach(attachments) { attachment in
                     AttachmentThumbnailItem(
                         attachment: attachment,
@@ -36,7 +36,7 @@ struct AttachmentThumbnailStrip: View {
             }
             .padding(.horizontal, 4)
         }
-        .frame(height: 72)
+        .frame(height: 80)
     }
 
     var canAddMore: Bool {
@@ -57,20 +57,25 @@ private struct AttachmentThumbnailItem: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             thumbnailContent
-                .frame(width: 60, height: 60)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .frame(width: 72, height: 72)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
                 )
 
-            // Remove button
+            // Remove button - inside the thumbnail
             Button(action: onRemove) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(.white, Color.secondary)
+                ZStack {
+                    Circle()
+                        .fill(Color.black.opacity(0.7))
+                        .frame(width: 22, height: 22)
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                }
             }
-            .offset(x: 6, y: -6)
+            .offset(x: -4, y: 4)
         }
     }
 
@@ -91,13 +96,13 @@ private struct AttachmentThumbnailItem: View {
     }
 
     private var documentThumbnail: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             Image(systemName: attachment.documentIcon)
-                .font(.system(size: 20))
+                .font(.system(size: 24))
                 .foregroundColor(.accentColor)
 
             Text(fileExtension)
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(size: 10, weight: .medium))
                 .foregroundColor(.secondary)
                 .lineLimit(1)
         }

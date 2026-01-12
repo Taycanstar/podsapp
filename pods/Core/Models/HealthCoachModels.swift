@@ -560,6 +560,9 @@ struct HealthCoachMessage: Identifiable, Equatable {
     let options: [ClarificationOption]?
     let citations: [HealthCoachCitation]?
 
+    // Attachments (images/files) for user messages
+    let attachments: [ChatAttachment]?
+
     // Coach intervention tracking for thumbs feedback
     var interventionId: String?
     var userRating: Int?  // +1 for thumbs up, -1 for thumbs down, nil for no rating
@@ -576,6 +579,7 @@ struct HealthCoachMessage: Identifiable, Equatable {
         data: HealthCoachDataPayload? = nil,
         options: [ClarificationOption]? = nil,
         citations: [HealthCoachCitation]? = nil,
+        attachments: [ChatAttachment]? = nil,
         interventionId: String? = nil,
         userRating: Int? = nil
     ) {
@@ -590,6 +594,7 @@ struct HealthCoachMessage: Identifiable, Equatable {
         self.data = data
         self.options = options
         self.citations = citations
+        self.attachments = attachments
         self.interventionId = interventionId
         self.userRating = userRating
     }

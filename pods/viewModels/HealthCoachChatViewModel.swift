@@ -93,10 +93,11 @@ final class HealthCoachChatViewModel: ObservableObject {
             screenName: "coach_chat"
         )
 
-        // Add user message
+        // Add user message with attachments
         let userMessage = HealthCoachMessage(
             sender: .user,
-            text: trimmed
+            text: trimmed,
+            attachments: attachments.isEmpty ? nil : attachments
         )
         messages.append(userMessage)
         conversationHistory.append(["role": "user", "content": trimmed])

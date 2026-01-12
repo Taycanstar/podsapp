@@ -553,29 +553,39 @@ struct AgentChatView: View {
 
         switch message.sender {
         case .user:
-            HStack {
-                Spacer()
-                Text(message.text)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemGray5))
-                    .foregroundColor(.primary)
-                    .cornerRadius(16)
-                    .contextMenu {
-                        Button {
-                            copyMessageToClipboard(message.text)
-                        } label: {
-                            Label("Copy", systemImage: "doc.on.doc")
-                        }
-                        Button {
-                            presentUserMessageSheet(text: message.text, startEditing: true)
-                        } label: {
-                            Label("Edit", systemImage: "pencil")
-                        }
+            VStack(alignment: .trailing, spacing: 8) {
+                // Display attachments above the text
+                if let attachments = message.attachments, !attachments.isEmpty {
+                    userMessageAttachments(attachments)
+                }
+
+                // Text bubble
+                if !message.text.isEmpty {
+                    HStack {
+                        Spacer()
+                        Text(message.text)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color(.systemGray5))
+                            .foregroundColor(.primary)
+                            .cornerRadius(16)
+                            .contextMenu {
+                                Button {
+                                    copyMessageToClipboard(message.text)
+                                } label: {
+                                    Label("Copy", systemImage: "doc.on.doc")
+                                }
+                                Button {
+                                    presentUserMessageSheet(text: message.text, startEditing: true)
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                            }
+                            .onTapGesture {
+                                presentUserMessageSheet(text: message.text, startEditing: false)
+                            }
                     }
-                    .onTapGesture {
-                        presentUserMessageSheet(text: message.text, startEditing: false)
-                    }
+                }
             }
 
         case .coach:
@@ -630,6 +640,89 @@ struct AgentChatView: View {
         case .status:
             EmptyView()
         }
+    }
+
+    // MARK: - User Message Attachments Display
+
+    @ViewBuilder
+    private func userMessageAttachments(_ attachments: [ChatAttachment]) -> some View {
+        HStack {
+            Spacer()
+            if attachments.count == 1 {
+                // Single attachment - show larger
+                singleAttachmentView(attachments[0])
+            } else {
+                // Multiple attachments - show in a grid
+                multipleAttachmentsView(attachments)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func singleAttachmentView(_ attachment: ChatAttachment) -> some View {
+        if attachment.type == .image {
+            if let image = UIImage(data: attachment.data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: 220, maxHeight: 220)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        } else {
+            documentAttachmentView(attachment)
+        }
+    }
+
+    @ViewBuilder
+    private func multipleAttachmentsView(_ attachments: [ChatAttachment]) -> some View {
+        let imageAttachments = attachments.filter { $0.type == .image }
+        let docAttachments = attachments.filter { $0.type == .document }
+
+        VStack(alignment: .trailing, spacing: 8) {
+            // Images in a flexible grid
+            if !imageAttachments.isEmpty {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 4),
+                        GridItem(.flexible(), spacing: 4)
+                    ],
+                    spacing: 4
+                ) {
+                    ForEach(imageAttachments) { attachment in
+                        if let image = UIImage(data: attachment.data) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 100, height: 100)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                    }
+                }
+                .frame(maxWidth: 210)
+            }
+
+            // Documents
+            ForEach(docAttachments) { attachment in
+                documentAttachmentView(attachment)
+            }
+        }
+    }
+
+    private func documentAttachmentView(_ attachment: ChatAttachment) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: attachment.documentIcon)
+                .font(.system(size: 18))
+                .foregroundColor(.accentColor)
+
+            Text(attachment.filename)
+                .font(.system(size: 13))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(.systemGray5))
+        .cornerRadius(12)
     }
 
     /// Check if this message is the last coach message in the text messages array
