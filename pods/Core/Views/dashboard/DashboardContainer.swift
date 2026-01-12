@@ -22,6 +22,7 @@ private struct ConversationSheetItem: Identifiable {
 struct DashboardContainer: View {
     // Agent bar bindings
     @Binding var agentText: String
+    @Binding var agentAttachments: [ChatAttachment]
     var onPlusTapped: () -> Void
     var onBarcodeTapped: () -> Void
     var onMicrophoneTapped: () -> Void
@@ -70,6 +71,7 @@ struct DashboardContainer: View {
                 NavigationLink(
                     destination: NewHomeView(
                         agentText: $agentText,
+                        agentAttachments: $agentAttachments,
                         onPlusTapped: onPlusTapped,
                         onBarcodeTapped: onBarcodeTapped,
                         onMicrophoneTapped: onMicrophoneTapped,

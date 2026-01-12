@@ -6,6 +6,7 @@ import UIKit
 
 struct NewHomeView: View {
     @Binding var agentText: String
+    @Binding var agentAttachments: [ChatAttachment]
     var onPlusTapped: () -> Void
     var onBarcodeTapped: () -> Void
     var onMicrophoneTapped: () -> Void
@@ -83,8 +84,11 @@ struct NewHomeView: View {
     @State private var showHealthSyncFlash = false
     @State private var healthSyncFlashProgress: Double = 0
 
-    // ─── Agent attachments (local state for AgentTabBar) ─────────────────────
-    @State private var agentAttachments: [ChatAttachment] = []
+    // ─── Agent attachments picker states ─────────────────────────────────────
+    @State private var showAgentDocumentPicker = false
+    @State private var showAgentCamera = false
+    @State private var showAgentPhotosPicker = false
+    @State private var selectedAgentPhotos: [UIImage] = []
     @State private var healthSyncFlashHideWorkItem: DispatchWorkItem?
     private let fallbackIntakeCardHeight: CGFloat = 290
     @State private var intakeCardHeight: CGFloat = 0
@@ -614,6 +618,24 @@ private var remainingCal: Double { vm.remainingCalories }
                     logQuickActivity(input, completion: completion)
                 }
             )
+        }
+        // Agent attachment pickers
+        .sheet(isPresented: $showAgentDocumentPicker) {
+            DocumentPickerView(onDocumentsSelected: handleAgentDocumentsSelected)
+        }
+        .fullScreenCover(isPresented: $showAgentCamera) {
+            SimpleCameraView(onPhotoCaptured: handleAgentCameraCaptured)
+        }
+        .sheet(isPresented: $showAgentPhotosPicker) {
+            PhotosPickerView(
+                selectedImages: $selectedAgentPhotos,
+                selectionLimit: max(0, 10 - agentAttachments.count)
+            )
+            .ignoresSafeArea()
+        }
+        .onChange(of: selectedAgentPhotos) { _, newPhotos in
+            handleAgentPhotosSelected(newPhotos)
+            selectedAgentPhotos = []
         }
         .alert("Product Name Required", isPresented: $foodMgr.showNutritionNameInput) {
             TextField("Enter product name", text: $nutritionProductName)
@@ -1240,6 +1262,9 @@ private extension NewHomeView {
                     onMicrophoneTapped: onMicrophoneTapped,
                     onWaveformTapped: onWaveformTapped,
                     onSubmit: onSubmit,
+                    onFilesTapped: { showAgentDocumentPicker = true },
+                    onCameraTapped: { showAgentCamera = true },
+                    onPhotosTapped: { showAgentPhotosPicker = true },
                     attachments: $agentAttachments,
                     onRealtimeStart: onRealtimeStart
                 )
@@ -1319,6 +1344,40 @@ private extension NewHomeView {
             }
         }
     }
+
+    // MARK: - Agent Attachment Handlers
+
+    private func handleAgentDocumentsSelected(_ urls: [URL]) {
+        let remaining = 10 - agentAttachments.count
+        for url in urls.prefix(remaining) {
+            if let attachment = ChatAttachment.fromURL(url) {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    agentAttachments.append(attachment)
+                }
+            }
+        }
+    }
+
+    private func handleAgentCameraCaptured(_ image: UIImage) {
+        guard agentAttachments.count < 10 else { return }
+        if let attachment = ChatAttachment.fromImage(image) {
+            withAnimation(.easeOut(duration: 0.2)) {
+                agentAttachments.append(attachment)
+            }
+        }
+    }
+
+    private func handleAgentPhotosSelected(_ images: [UIImage]) {
+        let remaining = 10 - agentAttachments.count
+        for image in images.prefix(remaining) {
+            if let attachment = ChatAttachment.fromImage(image) {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    agentAttachments.append(attachment)
+                }
+            }
+        }
+    }
+
     // MARK: - Type-erased containers to cap view type depth
     // These wrappers keep the NavigationLink/NewHomeView type metadata shallow enough to avoid
     // stack overflows during SwiftUI's type resolution.

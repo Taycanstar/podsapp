@@ -1,6 +1,14 @@
 import Foundation
 import SwiftUI
 
+enum APIBaseURL {
+    static let production = "https://humuli-2b3070583cda.herokuapp.com"
+    static let staging = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+    static let localWifi = "http://192.168.1.92:8000"
+    static let localHotspot = "http://172.20.10.4:8000"
+    static let current = localHotspot
+}
+
 enum NetworkError: Error {
     case invalidURL
     case invalidResponse
@@ -263,18 +271,11 @@ extension Date {
 }
 
 class NetworkManager {
-
-    //  let baseUrl = "https://humuli-2b3070583cda.herokuapp.com"
-      let baseUrl = "http://192.168.1.92:8000"
-    // let baseUrl = "http://172.20.10.4:8000"
-    // let baseUrl = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+    let baseUrl = APIBaseURL.current
 
     /// Static accessor for base URL, used by EventTracker and other singleton services
     static var baseURL: String {
-        // return "http://172.20.10.4:8000"
-        return "http://192.168.1.92:8000"
-        //  return "https://humuli-2b3070583cda.herokuapp.com"
-        // return "https://humuli-staging-b3e9cef208dd.herokuapp.com"
+        return APIBaseURL.current
     }
     
     private let iso8601FractionalFormatter: ISO8601DateFormatter = {

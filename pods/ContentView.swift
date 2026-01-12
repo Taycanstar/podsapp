@@ -45,6 +45,7 @@ struct ContentView: View {
     @State private var showLogWorkoutView = false
     @State private var showBiWeeklyNotificationAlert = false
     @State private var agentInputText: String = ""
+    @State private var agentAttachments: [ChatAttachment] = []
     
     // State for selected meal - initialized with time-based default
     @State private var selectedMeal: String = {
@@ -96,6 +97,7 @@ struct ContentView: View {
 //                                HomeView(shouldNavigateToNewPod: $shouldNavigateToNewPod, newPodId: $newPodId)
                                 DashboardContainer(
                                     agentText: $agentInputText,
+                                    agentAttachments: $agentAttachments,
                                     onPlusTapped: {
                                         HapticFeedback.generate()
                                         gateProAction(for: .agentFeatures) {

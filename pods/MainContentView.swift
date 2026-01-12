@@ -42,6 +42,7 @@ struct MainContentView: View {
     @State private var agentPendingRetryMealType: String?
     @State private var showAgentChat = false
     @State private var pendingAgentMessage: String?
+    @State private var pendingAgentAttachments: [ChatAttachment] = []
     @State private var startAgentWithVoiceMode = false
     
     // State for selected meal - initialized with time-based default
@@ -309,6 +310,7 @@ struct MainContentView: View {
                     case 0:
                         DashboardContainer(
                             agentText: $agentInputText,
+                            agentAttachments: $pendingAgentAttachments,
                             onPlusTapped: {
                                 HapticFeedback.generate()
                                 gateProAction(for: .agentFeatures) {
@@ -416,10 +418,12 @@ struct MainContentView: View {
         }
         .fullScreenCover(isPresented: $showAgentChat, onDismiss: {
             pendingAgentMessage = nil  // Clear pending message after dismiss
+            pendingAgentAttachments = []  // Clear pending attachments after dismiss
             startAgentWithVoiceMode = false  // Reset voice mode flag
         }) {
             AgentChatView(
                 initialMessage: $pendingAgentMessage,
+                initialAttachments: $pendingAgentAttachments,
                 startWithVoiceMode: $startAgentWithVoiceMode
             )
         }
@@ -646,14 +650,15 @@ struct MainContentView: View {
 
     private func handleAgentSubmit() {
         let trimmedText = agentInputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty else { return }
+        // Allow submit if there's text OR attachments
+        guard !trimmedText.isEmpty || !pendingAgentAttachments.isEmpty else { return }
         agentPendingRetryDescription = nil
         agentPendingRetryMealType = nil
         agentInputText = ""
 
         // Store the message to pass to AgentChatView
-        pendingAgentMessage = trimmedText
-        print("🤖 MainContentView.handleAgentSubmit: Set pendingAgentMessage = '\(trimmedText)'")
+        pendingAgentMessage = trimmedText.isEmpty ? nil : trimmedText
+        print("🤖 MainContentView.handleAgentSubmit: Set pendingAgentMessage = '\(trimmedText)', attachments = \(pendingAgentAttachments.count)")
 
         // Present the chat view - it will send the message via its internal HealthCoachChatViewModel
         if !showAgentChat {

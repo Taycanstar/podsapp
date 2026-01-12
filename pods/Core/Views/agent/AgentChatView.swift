@@ -73,6 +73,9 @@ struct AgentChatView: View {
     @State private var showAttachmentPhotosPicker = false
     @State private var selectedAttachmentPhotos: [UIImage] = []
 
+    // Full-screen image preview
+    @State private var selectedImageForPreview: ChatAttachment?
+
     // Callbacks for actions (can be customized by parent, but have internal defaults)
     var onPlusTapped: (() -> Void)?
     var onBarcodeTapped: (() -> Void)?
@@ -83,6 +86,9 @@ struct AgentChatView: View {
     // Initial message binding to send on appear (for AgentTabBar integration)
     // Using Binding so SwiftUI reads current value when view appears, not when closure is captured
     @Binding private var initialMessage: String?
+
+    // Initial attachments binding (for AgentTabBar integration)
+    @Binding private var initialAttachments: [ChatAttachment]
 
     // Initial coach message to seed as an assistant reply (for Timeline/NewHome)
     @Binding private var initialCoachMessage: String?
@@ -100,6 +106,7 @@ struct AgentChatView: View {
     init(
         conversationIdToLoad: String? = nil,
         initialMessage: Binding<String?> = .constant(nil),
+        initialAttachments: Binding<[ChatAttachment]> = .constant([]),
         initialCoachMessage: Binding<String?> = .constant(nil),
         startWithVoiceMode: Binding<Bool> = .constant(false),
         isCheckinFlow: Bool = false,
@@ -109,6 +116,7 @@ struct AgentChatView: View {
     ) {
         self.conversationIdToLoad = conversationIdToLoad
         self._initialMessage = initialMessage
+        self._initialAttachments = initialAttachments
         self._initialCoachMessage = initialCoachMessage
         self._startWithVoiceMode = startWithVoiceMode
         self.isCheckinFlow = isCheckinFlow
@@ -230,10 +238,17 @@ struct AgentChatView: View {
                 viewModel.seedCoachMessage(coachMessage)
                 initialCoachMessage = nil
             }
-            if let message = initialMessage, !message.isEmpty {
-                viewModel.send(message: message)
-                // Clear it to avoid re-sending on re-appear
+            // Send initial message and/or attachments if provided
+            let hasMessage = initialMessage != nil && !initialMessage!.isEmpty
+            let hasAttachments = !initialAttachments.isEmpty
+
+            if hasMessage || hasAttachments {
+                let messageText = initialMessage ?? ""
+                let messageAttachments = initialAttachments
+                viewModel.send(message: messageText, attachments: messageAttachments)
+                // Clear to avoid re-sending on re-appear
                 initialMessage = nil
+                initialAttachments = []
             }
 
             // Auto-start voice mode if requested
@@ -379,6 +394,11 @@ struct AgentChatView: View {
         .onChange(of: selectedAttachmentPhotos) { _, newPhotos in
             handlePhotosSelected(newPhotos)
             selectedAttachmentPhotos = []
+        }
+        .fullScreenCover(item: $selectedImageForPreview) { attachment in
+            FullScreenImagePreview(attachment: attachment) {
+                selectedImageForPreview = nil
+            }
         }
     }
 
@@ -664,6 +684,10 @@ struct AgentChatView: View {
             imageView(for: attachment)
                 .frame(maxWidth: 220, maxHeight: 220)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedImageForPreview = attachment
+                }
         } else {
             documentAttachmentView(attachment)
         }
@@ -725,6 +749,10 @@ struct AgentChatView: View {
                         imageView(for: attachment)
                             .frame(width: 100, height: 100)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                selectedImageForPreview = attachment
+                            }
                     }
                 }
                 .frame(maxWidth: 210)
@@ -1252,7 +1280,7 @@ struct AgentChatView: View {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .stroke(inputBarBorderColor, lineWidth: 1)
             )
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 8)
             .padding(.top, -12)
             .padding(.bottom, 0)
         }
