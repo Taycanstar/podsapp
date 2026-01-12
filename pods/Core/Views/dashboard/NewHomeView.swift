@@ -82,6 +82,9 @@ struct NewHomeView: View {
     @State private var strengthBalanceSnapshot: MuscleRecoveryService.StrengthBalanceMetrics?
     @State private var showHealthSyncFlash = false
     @State private var healthSyncFlashProgress: Double = 0
+
+    // ─── Agent attachments (local state for AgentTabBar) ─────────────────────
+    @State private var agentAttachments: [ChatAttachment] = []
     @State private var healthSyncFlashHideWorkItem: DispatchWorkItem?
     private let fallbackIntakeCardHeight: CGFloat = 290
     @State private var intakeCardHeight: CGFloat = 0
@@ -1237,6 +1240,7 @@ private extension NewHomeView {
                     onMicrophoneTapped: onMicrophoneTapped,
                     onWaveformTapped: onWaveformTapped,
                     onSubmit: onSubmit,
+                    attachments: $agentAttachments,
                     onRealtimeStart: onRealtimeStart
                 )
                 .ignoresSafeArea(edges: [.horizontal])

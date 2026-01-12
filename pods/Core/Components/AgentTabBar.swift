@@ -17,6 +17,14 @@ struct AgentTabBar: View {
     var onWaveformTapped: () -> Void = {}
     var onSubmit: () -> Void = {}
 
+    // Attachment menu callbacks
+    var onFilesTapped: (() -> Void)?
+    var onCameraTapped: (() -> Void)?
+    var onPhotosTapped: (() -> Void)?
+
+    // Attachments binding for thumbnail strip
+    @Binding var attachments: [ChatAttachment]
+
     // Realtime voice session properties
     var realtimeState: RealtimeSessionState = .idle
     var onRealtimeStart: (() -> Void)?
@@ -50,6 +58,12 @@ struct AgentTabBar: View {
         let hasUserInput = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
         return VStack(alignment: .leading, spacing: 12) {
+            // Attachment thumbnail strip (shown when attachments exist)
+            if !attachments.isEmpty {
+                AttachmentThumbnailStrip(attachments: $attachments)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+
             ZStack(alignment: .topLeading) {
                 // Placeholder text
                 if text.isEmpty {
@@ -78,7 +92,7 @@ struct AgentTabBar: View {
                 isPromptFocused.wrappedValue = true
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            
+
             HStack {
                 HStack(spacing: 10) {
                     ActionCircleButton(
@@ -92,6 +106,9 @@ struct AgentTabBar: View {
                         systemName: "barcode.viewfinder",
                         action: onBarcodeTapped
                     )
+
+                    // Paperclip attachment menu
+                    attachmentMenuButton
                 }
 
                 Spacer()
@@ -138,6 +155,42 @@ struct AgentTabBar: View {
 
     private func toggleSpeechRecognition() {
         isListening.toggle()
+    }
+
+    // MARK: - Attachment Menu
+
+    private var attachmentMenuButton: some View {
+        Menu {
+            Button {
+                HapticFeedback.generate()
+                onFilesTapped?()
+            } label: {
+                Label("Files", systemImage: "doc")
+            }
+
+            Button {
+                HapticFeedback.generate()
+                onCameraTapped?()
+            } label: {
+                Label("Camera", systemImage: "camera")
+            }
+
+            Button {
+                HapticFeedback.generate()
+                onPhotosTapped?()
+            } label: {
+                Label("Photos", systemImage: "photo")
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(Color("chaticon"))
+                Image(systemName: "paperclip")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+            .frame(width: 30, height: 30)
+        }
     }
 
     private func submitAgentPrompt() {
@@ -336,10 +389,11 @@ private struct TransparentBlurView: UIViewRepresentable {
 
 private struct AgentTabBarPreview: View {
     @State private var prompt: String = ""
+    @State private var attachments: [ChatAttachment] = []
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        AgentTabBar(text: $prompt, isPromptFocused: $isFocused)
+        AgentTabBar(text: $prompt, isPromptFocused: $isFocused, attachments: $attachments)
     }
 }
 

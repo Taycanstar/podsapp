@@ -8172,6 +8172,7 @@ class NetworkManager {
     @discardableResult
     func healthCoachStream(
         message: String,
+        attachments: [ChatAttachment] = [],
         history: [[String: String]] = [],
         context: HealthCoachContextPayload? = nil,
         targetDate: Date = Date(),
@@ -8195,6 +8196,19 @@ class NetworkManager {
         // Add conversation_id if provided (for message persistence)
         if let conversationId = conversationId {
             parameters["conversation_id"] = conversationId
+        }
+
+        // Add attachments if provided
+        if !attachments.isEmpty {
+            let attachmentData: [[String: Any]] = attachments.map { attachment in
+                [
+                    "type": attachment.type.rawValue,
+                    "filename": attachment.filename,
+                    "data": attachment.data.base64EncodedString(),
+                    "media_type": attachment.mediaType
+                ]
+            }
+            parameters["attachments"] = attachmentData
         }
 
         // Add context if provided

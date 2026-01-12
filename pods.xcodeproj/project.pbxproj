@@ -446,6 +446,10 @@
 		36F9E5C42FAFD2DE00E11122 /* TimeEstimatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F9E5C32FAFD2DE00E11122 /* TimeEstimatorTests.swift */; };
 		36FA4D612FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FA4D602FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift */; };
 		36FBD5562F0C26D1005F62B9 /* MessageSessionTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD5552F0C26D1005F62B9 /* MessageSessionTracker.swift */; };
+		36FBD5582F146FE7005F62B9 /* ChatAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD5572F146FE7005F62B9 /* ChatAttachment.swift */; };
+		36FBD55A2F147007005F62B9 /* AttachmentThumbnailStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD5592F147007005F62B9 /* AttachmentThumbnailStrip.swift */; };
+		36FBD55C2F14701E005F62B9 /* DocumentPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD55B2F14701E005F62B9 /* DocumentPickerView.swift */; };
+		36FBD55E2F147033005F62B9 /* SimpleCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD55D2F147033005F62B9 /* SimpleCameraView.swift */; };
 		36FE12352FFFABCD00A1BCDE /* exercisesdb.csv in Resources */ = {isa = PBXBuildFile; fileRef = 36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */; };
 		36FFF1012FBEBE6000A1C0DE /* AgentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */; };
 		36FFF1112FBEBE6000A1C0DE /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1102FBEBE6000A1C0DE /* AgentService.swift */; };
@@ -921,6 +925,10 @@
 		36F9E5C32FAFD2DE00E11122 /* TimeEstimatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeEstimatorTests.swift; sourceTree = "<group>"; };
 		36FA4D602FB03A5E0087E4C2 /* ExerciseEquipmentResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseEquipmentResolverTests.swift; sourceTree = "<group>"; };
 		36FBD5552F0C26D1005F62B9 /* MessageSessionTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSessionTracker.swift; sourceTree = "<group>"; };
+		36FBD5572F146FE7005F62B9 /* ChatAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAttachment.swift; sourceTree = "<group>"; };
+		36FBD5592F147007005F62B9 /* AttachmentThumbnailStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentThumbnailStrip.swift; sourceTree = "<group>"; };
+		36FBD55B2F14701E005F62B9 /* DocumentPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentPickerView.swift; sourceTree = "<group>"; };
+		36FBD55D2F147033005F62B9 /* SimpleCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleCameraView.swift; sourceTree = "<group>"; };
 		36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = exercisesdb.csv; sourceTree = "<group>"; };
 		36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentModels.swift; path = Pods/Core/Models/AgentModels.swift; sourceTree = SOURCE_ROOT; };
 		36FFF1102FBEBE6000A1C0DE /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentService.swift; path = Pods/Core/Services/AgentService.swift; sourceTree = SOURCE_ROOT; };
@@ -1052,6 +1060,7 @@
 		361FF31B2E20617800B7F68E /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				36FBD5572F146FE7005F62B9 /* ChatAttachment.swift */,
 				36667E0D2EFC55EE0017E9D7 /* ConversationModels.swift */,
 				36667DF52EF904740017E9D7 /* NutrientDescriptors.swift */,
 				36667DC02EF1E1FF0017E9D7 /* HealthCoachModels.swift */,
@@ -1308,6 +1317,9 @@
 		3682C86A2BBAED5B00B350E2 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				36FBD55D2F147033005F62B9 /* SimpleCameraView.swift */,
+				36FBD55B2F14701E005F62B9 /* DocumentPickerView.swift */,
+				36FBD5592F147007005F62B9 /* AttachmentThumbnailStrip.swift */,
 				36667E252F0194720017E9D7 /* ThumbsFeedbackView.swift */,
 				36667E232F0194540017E9D7 /* CoachCardView.swift */,
 				36667DCD2EF35C7C0017E9D7 /* MarkdownParser.swift */,
@@ -2112,6 +2124,7 @@
 				36667E282F01948D0017E9D7 /* EventTracker.swift in Sources */,
 				36D3A5222E942B7300AD6B94 /* RegisterView.swift in Sources */,
 				36667DC82EF35B490017E9D7 /* SafeLinkHandler.swift in Sources */,
+				36FBD55C2F14701E005F62B9 /* DocumentPickerView.swift in Sources */,
 				3650A17C2EEF840E0068ACE6 /* MultiFoodLogView.swift in Sources */,
 				36A85CF12DB43FEE00DD4266 /* ConnectToAppleHealth.swift in Sources */,
 				3694744E2CB9B31500CD197F /* FullAnalyticsView.swift in Sources */,
@@ -2321,6 +2334,7 @@
 				36667E262F0194720017E9D7 /* ThumbsFeedbackView.swift in Sources */,
 				363201372C97812B00BC1815 /* MyTeamMembersView.swift in Sources */,
 				3696B95B2B9836F000D211D7 /* EmailVerificationView.swift in Sources */,
+				36FBD5582F146FE7005F62B9 /* ChatAttachment.swift in Sources */,
 				363068CB2E0B571000F2D4EC /* CameraProgressView.swift in Sources */,
 				36DB82E22EBE7364004BA082 /* SetScheme.swift in Sources */,
 				36667E1A2F00CA700017E9D7 /* DemoChatView.swift in Sources */,
@@ -2349,6 +2363,7 @@
 				362516672C6E8EB2009CA5B0 /* ItemOptionsView.swift in Sources */,
 				36CB03352D5BA5AC006A74E9 /* UserGoals.swift in Sources */,
 				363AFA112D3C258200C91A14 /* EditActivityItemView.swift in Sources */,
+				36FBD55E2F147033005F62B9 /* SimpleCameraView.swift in Sources */,
 				369474632CD0031000CD197F /* DropdownButton.swift in Sources */,
 				361FF34D2E2C244F00B7F68E /* EquipmentView.swift in Sources */,
 				36A85CD72DB182BA00DD4266 /* GenderView.swift in Sources */,
@@ -2370,6 +2385,7 @@
 				36F5A00B2F9C1AAB00A1B234 /* FoodFeedRepository.swift in Sources */,
 				36667E1E2F00CAF30017E9D7 /* DemoFoodManager.swift in Sources */,
 				36F5A0092F9C1AAB00A1B234 /* DayLogsRepository.swift in Sources */,
+				36FBD55A2F147007005F62B9 /* AttachmentThumbnailStrip.swift in Sources */,
 				36F5A0132F9C1AAB00A1B234 /* CombinedLogsRepository.swift in Sources */,
 				36F5A0152F9C1AAB00A1B234 /* MealsRepository.swift in Sources */,
 				361919202EA7DE81007CAA0D /* AnalyticsProUpgradeSheet.swift in Sources */,

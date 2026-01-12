@@ -29,6 +29,7 @@ final class HealthCoachService {
     /// Send a message to the health coach and receive streaming response
     /// - Parameters:
     ///   - message: The user's message
+    ///   - attachments: Optional attachments (images, documents) to include
     ///   - history: Conversation history for context
     ///   - context: Optional client-side context (macros, workout, health metrics)
     ///   - targetDate: The date context for logging (defaults to today)
@@ -39,6 +40,7 @@ final class HealthCoachService {
     @discardableResult
     func chatStream(
         message: String,
+        attachments: [ChatAttachment] = [],
         history: [[String: String]] = [],
         context: HealthCoachContextPayload? = nil,
         targetDate: Date = Date(),
@@ -48,6 +50,7 @@ final class HealthCoachService {
     ) -> URLSessionDataTask? {
         return networkManager.healthCoachStream(
             message: message,
+            attachments: attachments,
             history: history,
             context: context,
             targetDate: targetDate,

@@ -67,11 +67,14 @@ final class HealthCoachChatViewModel: ObservableObject {
     // MARK: - Public Methods
 
     /// Send a message to the health coach
-    /// - Parameter message: The user's message
-    /// - Parameter triggerSource: What triggered the message ("user_tap", "quick_reply", etc.)
-    func send(message: String, triggerSource: String = "user_tap") {
+    /// - Parameters:
+    ///   - message: The user's message
+    ///   - attachments: Optional attachments (images, files) to include
+    ///   - triggerSource: What triggered the message ("user_tap", "quick_reply", etc.)
+    func send(message: String, attachments: [ChatAttachment] = [], triggerSource: String = "user_tap") {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        // Allow sending if there's text OR attachments
+        guard !trimmed.isEmpty || !attachments.isEmpty else { return }
 
         // Generate message ID and increment index for analytics
         userMessageIndex += 1
@@ -120,6 +123,7 @@ final class HealthCoachChatViewModel: ObservableObject {
         // Call the health coach service with conversation ID for persistence
         currentStreamTask = healthCoachService.chatStream(
             message: trimmed,
+            attachments: attachments,
             history: conversationHistory,
             context: context,
             targetDate: Date(),

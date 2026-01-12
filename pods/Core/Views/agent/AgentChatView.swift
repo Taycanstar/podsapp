@@ -66,6 +66,13 @@ struct AgentChatView: View {
     @State private var scannedFoodLogId: Int?
     @State private var showConfirmScannedFood = false
 
+    // Attachment states
+    @State private var attachments: [ChatAttachment] = []
+    @State private var showDocumentPicker = false
+    @State private var showSimpleCamera = false
+    @State private var showAttachmentPhotosPicker = false
+    @State private var selectedAttachmentPhotos: [UIImage] = []
+
     // Callbacks for actions (can be customized by parent, but have internal defaults)
     var onPlusTapped: (() -> Void)?
     var onBarcodeTapped: (() -> Void)?
@@ -354,6 +361,24 @@ struct AgentChatView: View {
                     .environmentObject(onboardingViewModel)
                     .environmentObject(dayLogsVM)
             }
+        }
+        // Attachment picker sheets
+        .sheet(isPresented: $showDocumentPicker) {
+            DocumentPickerView(onDocumentsSelected: handleDocumentsSelected)
+        }
+        .fullScreenCover(isPresented: $showSimpleCamera) {
+            SimpleCameraView(onPhotoCaptured: handleCameraCaptured)
+        }
+        .sheet(isPresented: $showAttachmentPhotosPicker) {
+            PhotosPickerView(
+                selectedImages: $selectedAttachmentPhotos,
+                selectionLimit: max(0, 10 - attachments.count)
+            )
+            .ignoresSafeArea()
+        }
+        .onChange(of: selectedAttachmentPhotos) { _, newPhotos in
+            handlePhotosSelected(newPhotos)
+            selectedAttachmentPhotos = []
         }
     }
 
@@ -1020,6 +1045,12 @@ struct AgentChatView: View {
 
             // Content card
             VStack(alignment: .leading, spacing: 12) {
+                // Attachment thumbnail strip (shown when attachments exist)
+                if !attachments.isEmpty {
+                    AttachmentThumbnailStrip(attachments: $attachments)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+
                 ZStack(alignment: .topLeading) {
                     // Placeholder text
                     if inputText.isEmpty {
@@ -1078,6 +1109,9 @@ struct AgentChatView: View {
                                 }
                             }
                         )
+
+                        // Paperclip attachment menu
+                        attachmentMenuButton
                     }
 
                     Spacer()
@@ -1247,20 +1281,96 @@ struct AgentChatView: View {
         isListening.toggle()
     }
 
+    // MARK: - Attachment Menu
+
+    private var attachmentMenuButton: some View {
+        Menu {
+            Button {
+                HapticFeedback.generate()
+                showDocumentPicker = true
+            } label: {
+                Label("Files", systemImage: "doc")
+            }
+
+            Button {
+                HapticFeedback.generate()
+                showSimpleCamera = true
+            } label: {
+                Label("Camera", systemImage: "camera")
+            }
+
+            Button {
+                HapticFeedback.generate()
+                showAttachmentPhotosPicker = true
+            } label: {
+                Label("Photos", systemImage: "photo")
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(Color("chaticon"))
+                Image(systemName: "paperclip")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+            .frame(width: 30, height: 30)
+        }
+        .disabled(attachments.count >= 10)
+    }
+
+    // MARK: - Attachment Handlers
+
+    private func handleDocumentsSelected(_ urls: [URL]) {
+        let remaining = 10 - attachments.count
+        for url in urls.prefix(remaining) {
+            if let attachment = ChatAttachment.fromURL(url) {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    attachments.append(attachment)
+                }
+            }
+        }
+    }
+
+    private func handleCameraCaptured(_ image: UIImage) {
+        guard attachments.count < 10 else { return }
+        if let attachment = ChatAttachment.fromImage(image) {
+            withAnimation(.easeOut(duration: 0.2)) {
+                attachments.append(attachment)
+            }
+        }
+    }
+
+    private func handlePhotosSelected(_ images: [UIImage]) {
+        let remaining = 10 - attachments.count
+        for image in images.prefix(remaining) {
+            if let attachment = ChatAttachment.fromImage(image) {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    attachments.append(attachment)
+                }
+            }
+        }
+    }
+
     private func submitAgentPrompt() {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        // Allow sending if there's text OR attachments
+        guard !trimmed.isEmpty || !attachments.isEmpty else { return }
         HapticFeedback.generate()
+
+        // Capture attachments before clearing
+        let currentAttachments = attachments
 
         // Route to check-in endpoint if in check-in flow
         if isCheckinFlow, let conversationId = viewModel.currentConversationId {
             inputText = ""
             isInputFocused = false
+            attachments = []
             sendCheckinMessage(text: trimmed, conversationId: conversationId)
         } else {
-            viewModel.send(message: trimmed)
+            viewModel.send(message: trimmed, attachments: currentAttachments)
             inputText = ""
             isInputFocused = false
+            attachments = []
         }
     }
 
