@@ -199,18 +199,13 @@ struct LogWorkoutView: View {
         let isError: Bool
     }
 
-    enum WorkoutTab: Hashable {
-        case today, workouts
-        
-        var title: String {
-            switch self {
-            case .today: return "For You"
-            case .workouts: return "My Workouts"
-            }
-        }
+    enum WorkoutTab: String, CaseIterable, Hashable {
+        case today = "Today"
+        case plan = "Plan"
+        case saved = "Saved"
+
+        var title: String { rawValue }
     }
-    
-    let workoutTabs: [WorkoutTab] = [.today, .workouts]
     
     var body: some View {
         configuredBaseView
@@ -220,12 +215,12 @@ struct LogWorkoutView: View {
         mainBody
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
-            .navigationTitle("")
+            .navigationTitle("Workout")
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar { toolbarContent }
-            .applyConditionalSearch(isEnabled: selectedWorkoutTab == .workouts, text: $workoutSearchText)
+            .applyConditionalSearch(isEnabled: selectedWorkoutTab == .saved, text: $workoutSearchText)
             .onChange(of: selectedWorkoutTab) { _, newValue in
-                if newValue != .workouts {
+                if newValue != .saved {
                     workoutSearchText = ""
                 }
             }
@@ -379,15 +374,13 @@ struct LogWorkoutView: View {
     @ViewBuilder
     private var headerSection: some View {
         VStack(spacing: 0) {
+            navTabSwitcher
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
             if selectedWorkoutTab == .today {
                 workoutControlsInHeader
-                    // .padding(.top, 12)
                     .padding(.bottom, 12)
-            } else {
-                Color("primarybg")
-                    .frame(height: 12)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityHidden(true)
             }
 
             Divider()
@@ -660,29 +653,12 @@ struct LogWorkoutView: View {
     // MARK: - Subviews
     
     private var navTabSwitcher: some View {
-        HStack(spacing: 16) {
-            ForEach(workoutTabs, id: \.self) { tab in
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedWorkoutTab = tab
-                    }
-                }) {
-                    VStack(spacing: 6) {
-                        Text(tab.title)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(tab == selectedWorkoutTab ? .primary : .secondary)
-
-                        Capsule()
-                            .fill(tab == selectedWorkoutTab ? Color.primary : Color.clear)
-                            .frame(width: 24, height: 3)
-                    }
-                    // .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                }
-                .buttonStyle(.plain)
+        Picker("Workout Tab", selection: $selectedWorkoutTab) {
+            ForEach(WorkoutTab.allCases, id: \.self) { tab in
+                Text(tab.title).tag(tab)
             }
         }
-        .frame(maxWidth: .infinity)
+        .pickerStyle(.segmented)
     }
     
     private var workoutControlsInHeader: some View {
@@ -1000,8 +976,25 @@ struct LogWorkoutView: View {
         switch selectedWorkoutTab {
         case .today:
             todayTabContent
-        case .workouts:
+        case .plan:
+            planTabContent
+        case .saved:
             workoutsTabContent
+        }
+    }
+
+    @ViewBuilder
+    private var planTabContent: some View {
+        // Placeholder for workout plan content
+        VStack {
+            Spacer()
+            Text("Workout Plans")
+                .font(.title2)
+                .foregroundColor(.secondary)
+            Text("Coming soon")
+                .font(.subheadline)
+                .foregroundColor(.secondary.opacity(0.7))
+            Spacer()
         }
     }
 
@@ -1191,11 +1184,9 @@ struct LogWorkoutView: View {
                         .foregroundColor(.primary)
                 }
             }
-            ToolbarItem(placement: .principal) {
-                navTabSwitcher
-            }
             ToolbarItem(placement: .navigationBarTrailing) {
-                if selectedWorkoutTab == .today {
+                switch selectedWorkoutTab {
+                case .today:
                     NavigationLink(destination: WorkoutProfileSettingsView()) {
                         Image(systemName: "line.3.horizontal")
                             .font(.system(size: 15, weight: .semibold))
@@ -1203,15 +1194,19 @@ struct LogWorkoutView: View {
                             .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
                             .contentShape(Circle())
                     }
-                } else if #available(iOS 26, *) {
-                    Button("New") {
-                        HapticFeedback.generate()
-                        navigationPath.append(WorkoutNavigationDestination.createWorkout)
-                    }
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.primary)
-                } else {
+                case .plan:
                     EmptyView()
+                case .saved:
+                    if #available(iOS 26, *) {
+                        Button("New") {
+                            HapticFeedback.generate()
+                            navigationPath.append(WorkoutNavigationDestination.createWorkout)
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.primary)
+                    } else {
+                        EmptyView()
+                    }
                 }
             }
         }
