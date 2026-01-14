@@ -55,7 +55,7 @@ struct PlanView: View {
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
-            Text("Loading program...")
+            Text("Loading plan...")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -73,10 +73,10 @@ struct PlanView: View {
                 .foregroundColor(.secondary)
 
             VStack(spacing: 8) {
-                Text("No Active Program")
+                Text("No Active Plan")
                     .font(.title2.bold())
 
-                Text("Create a structured training program to track your workouts week by week.")
+                Text("Create a structured training plan to track your workouts week by week.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -93,11 +93,8 @@ struct PlanView: View {
     private func programContentView(program: TrainingProgram) -> some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Program Header
-                programHeader(program: program)
-
-                // Week Selector
-                weekSelector(program: program)
+                // Header with title and week selector
+                planHeader(program: program)
 
                 // All days for selected week (including rest days)
                 if let weeks = program.weeks,
@@ -132,109 +129,49 @@ struct PlanView: View {
         }
     }
 
-    // MARK: - Program Header
+    // MARK: - Plan Header
 
-    private func programHeader(program: TrainingProgram) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(program.name)
-                        .font(.headline)
+    private func planHeader(program: TrainingProgram) -> some View {
+        HStack {
+            Text("Active Plan")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.primary)
 
-                    HStack(spacing: 12) {
-                        Label("\(program.daysPerWeek) days/week", systemImage: "calendar")
-                        Label("\(program.sessionDurationMinutes) min", systemImage: "clock")
-                    }
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                }
+            Spacer()
 
-                Spacer()
-
-                // Progress indicator
-                if let currentWeek = program.currentWeekNumber {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("Week \(currentWeek)")
-                            .font(.caption.bold())
-                        Text("of \(program.totalWeeks)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-
-            // Goal badge
-            HStack(spacing: 8) {
-                if let goal = program.fitnessGoalEnum {
-                    Text(goal.displayName)
-                        .font(.caption.bold())
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(goalColor(goal).opacity(0.2))
-                        .foregroundColor(goalColor(goal))
-                        .cornerRadius(6)
-                }
-
-                if let type = program.programTypeEnum {
-                    Text(type.displayName)
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.secondary.opacity(0.1))
-                        .foregroundColor(.secondary)
-                        .cornerRadius(6)
-                }
-            }
-        }
-        .padding(16)
-        .background(Color("containerbg"))
-        .cornerRadius(12)
-        .padding(.horizontal, 16)
-    }
-
-    private func goalColor(_ goal: ProgramFitnessGoal) -> Color {
-        switch goal {
-        case .strength: return .orange
-        case .hypertrophy: return .purple
-        case .balanced: return .blue
-        }
-    }
-
-    // MARK: - Week Selector
-
-    private func weekSelector(program: TrainingProgram) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            // Week selector dropdown menu
+            Menu {
                 ForEach(1...program.totalWeeks, id: \.self) { weekNum in
-                    let isSelected = weekNum == selectedWeekNumber
-                    let isCurrent = weekNum == program.currentWeekNumber
                     let isDeload = program.weeks?.first(where: { $0.weekNumber == weekNum })?.isDeload ?? false
 
                     Button(action: { selectedWeekNumber = weekNum }) {
-                        VStack(spacing: 4) {
+                        HStack {
                             Text("Week \(weekNum)")
-                                .font(.caption.bold())
-
                             if isDeload {
-                                Text("Deload")
-                                    .font(.caption2)
-                                    .foregroundColor(.green)
+                                Text("(Deload)")
+                                    .foregroundColor(.secondary)
+                            }
+                            if weekNum == selectedWeekNumber {
+                                Image(systemName: "checkmark")
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(isSelected ? Color.blue : Color("containerbg"))
-                        .foregroundColor(isSelected ? .white : .primary)
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(isCurrent && !isSelected ? Color.blue : Color.clear, lineWidth: 2)
-                        )
                     }
                 }
+            } label: {
+                HStack(spacing: 4) {
+                    Text("Week \(selectedWeekNumber)")
+                        .font(.system(size: 15, weight: .medium))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundColor(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color("containerbg"))
+                .cornerRadius(8)
             }
-            .padding(.horizontal, 16)
         }
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Actions
@@ -328,13 +265,6 @@ struct ProgramWorkoutCard: View {
                         }
                     }
                 }
-
-                // Exercise count
-                if let workout = day.workout, let exercises = workout.exercises {
-                    Text("\(exercises.count) exercises")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
             }
             .padding(16)
             .background(Color("containerbg"))
@@ -397,6 +327,19 @@ struct ProgramWorkoutDetailView: View {
     let onDismiss: () -> Void
     let onStart: (ProgramDay) -> Void
 
+    @ObservedObject private var profileService = UserProfileService.shared
+    @ObservedObject private var programService = ProgramService.shared
+    @State private var showEditNameSheet = false
+    @State private var editedName: String = ""
+    @State private var showGymProfileSheet = false
+    @State private var showSkipConfirmation = false
+    @State private var isSkipping = false
+    @State private var isSavingName = false
+
+    private var userEmail: String {
+        UserDefaults.standard.string(forKey: "userEmail") ?? ""
+    }
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -424,11 +367,11 @@ struct ProgramWorkoutDetailView: View {
                             // Exercise list
                             VStack(spacing: 0) {
                                 ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
-                                    ProgramExerciseRow(exercise: exercise, index: index + 1)
+                                    ProgramExerciseRow(exercise: exercise)
 
                                     if index < exercises.count - 1 {
                                         Divider()
-                                            .padding(.leading, 56)
+                                            .padding(.leading, 88)
                                     }
                                 }
                             }
@@ -464,6 +407,52 @@ struct ProgramWorkoutDetailView: View {
                     Text(day.workoutLabel)
                         .font(.system(size: 17, weight: .semibold))
                 }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button {
+                            editedName = day.workoutLabel
+                            showEditNameSheet = true
+                        } label: {
+                            Label("Edit Name", systemImage: "pencil")
+                        }
+
+                        Button(role: .destructive) {
+                            showSkipConfirmation = true
+                        } label: {
+                            Label("Skip Workout", systemImage: "forward.fill")
+                        }
+
+                        Menu {
+                            // List all gym profiles
+                            ForEach(profileService.workoutProfiles) { profile in
+                                Button {
+                                    switchToProfile(profile)
+                                } label: {
+                                    HStack {
+                                        Text(profile.displayName)
+                                        if profile.id == profileService.activeWorkoutProfile?.id {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+
+                            Divider()
+
+                            Button {
+                                showGymProfileSheet = true
+                            } label: {
+                                Label("Manage Profiles", systemImage: "gearshape")
+                            }
+                        } label: {
+                            Label("Swap Gym Profile", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                }
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -476,6 +465,134 @@ struct ProgramWorkoutDetailView: View {
                 .padding(.bottom, 20)
             }
         }
+        .sheet(isPresented: $showEditNameSheet) {
+            EditWorkoutNameSheet(
+                workoutName: $editedName,
+                isSaving: isSavingName,
+                onSave: { newName in
+                    saveWorkoutName(newName)
+                },
+                onCancel: {
+                    showEditNameSheet = false
+                }
+            )
+        }
+        .sheet(isPresented: $showGymProfileSheet) {
+            NavigationStack {
+                WorkoutProfileSettingsView()
+                    .navigationTitle("Gym Profiles")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                showGymProfileSheet = false
+                            }
+                        }
+                    }
+            }
+        }
+        .confirmationDialog(
+            "Skip Workout",
+            isPresented: $showSkipConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Skip", role: .destructive) {
+                skipWorkout()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to skip this workout? It will be marked as complete.")
+        }
+        .overlay {
+            if isSkipping {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                ProgressView()
+                    .tint(.white)
+            }
+        }
+    }
+
+    private func switchToProfile(_ workoutProfile: WorkoutProfile) {
+        guard let profileId = workoutProfile.id else { return }
+
+        Task {
+            do {
+                try await profileService.activateWorkoutProfile(profileId: profileId)
+            } catch {
+                print("Failed to switch profile: \(error)")
+            }
+        }
+    }
+
+    private func skipWorkout() {
+        guard !userEmail.isEmpty else { return }
+        isSkipping = true
+
+        Task {
+            do {
+                _ = try await programService.skipWorkout(dayId: day.id, userEmail: userEmail)
+                onDismiss()
+            } catch {
+                print("Failed to skip workout: \(error)")
+            }
+            isSkipping = false
+        }
+    }
+
+    private func saveWorkoutName(_ newName: String) {
+        guard !userEmail.isEmpty else { return }
+        isSavingName = true
+
+        Task {
+            do {
+                _ = try await programService.updateWorkoutName(dayId: day.id, name: newName, userEmail: userEmail)
+                showEditNameSheet = false
+            } catch {
+                print("Failed to save workout name: \(error)")
+            }
+            isSavingName = false
+        }
+    }
+}
+
+// MARK: - Edit Workout Name Sheet
+
+struct EditWorkoutNameSheet: View {
+    @Binding var workoutName: String
+    let isSaving: Bool
+    let onSave: (String) -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Workout Name", text: $workoutName)
+                        .disabled(isSaving)
+                }
+            }
+            .navigationTitle("Edit Name")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", action: onCancel)
+                        .disabled(isSaving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Save") {
+                            onSave(workoutName)
+                        }
+                        .disabled(workoutName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .interactiveDismissDisabled(isSaving)
     }
 }
 
@@ -483,17 +600,31 @@ struct ProgramWorkoutDetailView: View {
 
 struct ProgramExerciseRow: View {
     let exercise: ProgramExercise
-    let index: Int
+
+    private var thumbnailImageName: String {
+        String(format: "%04d", exercise.exerciseId)
+    }
 
     var body: some View {
         HStack(spacing: 12) {
-            // Index number
-            Text("\(index)")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.secondary)
-                .frame(width: 24, height: 24)
-                .background(Color("primarybg"))
-                .cornerRadius(12)
+            // Exercise thumbnail
+            Group {
+                if let image = UIImage(named: thumbnailImageName) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.3))
+                        .overlay(
+                            Image(systemName: "dumbbell")
+                                .foregroundColor(.gray)
+                                .font(.system(size: 16))
+                        )
+                }
+            }
+            .frame(width: 60, height: 60)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
 
             // Exercise info
             VStack(alignment: .leading, spacing: 4) {
@@ -529,8 +660,9 @@ struct CreateProgramView: View {
 
     let userEmail: String
 
-    @State private var selectedType: ProgramType = .upperLower
+    @State private var programName: String = ""
     @State private var selectedGoal: ProgramFitnessGoal = .hypertrophy
+    @State private var selectedType: ProgramType = .upperLower
     @State private var selectedExperience: ProgramExperienceLevel = .intermediate
     @State private var sessionDuration: Int = 60
     @State private var totalWeeks: Int = 6
@@ -538,43 +670,97 @@ struct CreateProgramView: View {
     @State private var isGenerating = false
     @State private var error: String?
 
+    private var canCreate: Bool {
+        !programName.trimmingCharacters(in: .whitespaces).isEmpty && !isGenerating
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                Section("Program Type") {
-                    Picker("Split", selection: $selectedType) {
-                        ForEach(ProgramType.allCases, id: \.self) { type in
-                            Text(type.displayName).tag(type)
-                        }
-                    }
+                // Program Name
+                Section {
+                    TextField("Program Name", text: $programName)
                 }
 
-                Section("Training Goal") {
-                    Picker("Goal", selection: $selectedGoal) {
+                // Training Goal
+                Section {
+                    Picker("Training Goal", selection: $selectedGoal) {
                         ForEach(ProgramFitnessGoal.allCases, id: \.self) { goal in
                             VStack(alignment: .leading) {
                                 Text(goal.displayName)
-                            }.tag(goal)
+                            }
+                            .tag(goal)
                         }
                     }
                     .pickerStyle(.inline)
+                    .labelsHidden()
+                } header: {
+                    Text("Training Goal")
+                } footer: {
+                    Text(selectedGoal.description)
                 }
 
-                Section("Experience Level") {
-                    Picker("Level", selection: $selectedExperience) {
+                // Training Split
+                Section {
+                    HStack {
+                        Text("Split")
+                        Spacer()
+                        Menu {
+                            ForEach(ProgramType.allCases, id: \.self) { type in
+                                Button {
+                                    selectedType = type
+                                } label: {
+                                    if selectedType == type {
+                                        Label(type.displayName, systemImage: "checkmark")
+                                    } else {
+                                        Text(type.displayName)
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Text(selectedType.displayName)
+                                    .foregroundColor(.primary)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Training Split")
+                }
+
+                // Duration
+                Section {
+                    Stepper("\(sessionDuration) min per session", value: $sessionDuration, in: 30...120, step: 15)
+                    Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 4...12)
+                    Toggle(isOn: $includeDeload) {
+                        VStack(alignment: .leading) {
+                            Text("Include Deload Week")
+                            Text("Recovery week at the end")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Duration")
+                }
+
+                // Experience Level
+                Section {
+                    Picker("Experience Level", selection: $selectedExperience) {
                         ForEach(ProgramExperienceLevel.allCases, id: \.self) { level in
                             Text(level.displayName).tag(level)
                         }
                     }
                     .pickerStyle(.segmented)
+                    .controlSize(.large)
+                } header: {
+                    Text("Experience Level")
                 }
 
-                Section("Duration") {
-                    Stepper("\(sessionDuration) minutes per session", value: $sessionDuration, in: 30...120, step: 15)
-                    Stepper("\(totalWeeks) weeks", value: $totalWeeks, in: 4...12)
-                    Toggle("Include deload week", isOn: $includeDeload)
-                }
-
+                // Error Message
                 if let error = error {
                     Section {
                         Text(error)
@@ -582,31 +768,28 @@ struct CreateProgramView: View {
                     }
                 }
             }
-            .navigationTitle("New Program")
+            .navigationTitle("New Plan")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") {
-                        Task { await generateProgram() }
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
                     }
                     .disabled(isGenerating)
                 }
-            }
-            .overlay {
-                if isGenerating {
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                    VStack(spacing: 16) {
+                ToolbarItem(placement: .confirmationAction) {
+                    if isGenerating {
                         ProgressView()
-                        Text("Generating program...")
-                            .font(.headline)
+                    } else {
+                        Button {
+                            Task { await generateProgram() }
+                        } label: {
+                            Image(systemName: "checkmark")
+                        }
+                        .disabled(!canCreate)
                     }
-                    .padding(24)
-                    .background(Color("containerbg"))
-                    .cornerRadius(16)
                 }
             }
         }

@@ -22,29 +22,39 @@ import Foundation
 // MARK: - Program Type
 
 enum ProgramType: String, Codable, CaseIterable {
+    case fullBody = "full_body"
     case ppl = "ppl"
     case upperLower = "upper_lower"
-    case fullBody = "full_body"
-    case upperLower5 = "upper_lower_5"
-    case custom = "custom"
 
     var displayName: String {
         switch self {
+        case .fullBody: return "Full Body"
         case .ppl: return "Push/Pull/Legs"
         case .upperLower: return "Upper/Lower"
-        case .fullBody: return "Full Body"
-        case .upperLower5: return "Upper/Lower (5 day)"
-        case .custom: return "Custom"
+        }
+    }
+
+    var shortName: String {
+        switch self {
+        case .fullBody: return "FB"
+        case .ppl: return "PPL"
+        case .upperLower: return "UL"
         }
     }
 
     var daysPerWeek: Int {
         switch self {
+        case .fullBody: return 3
         case .ppl: return 6
         case .upperLower: return 4
-        case .fullBody: return 3
-        case .upperLower5: return 5
-        case .custom: return 4
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .fullBody: return "3 days/week • Great for beginners"
+        case .ppl: return "6 days/week • High frequency training"
+        case .upperLower: return "4 days/week • Balanced approach"
         }
     }
 }
@@ -52,23 +62,31 @@ enum ProgramType: String, Codable, CaseIterable {
 // MARK: - Fitness Goal
 
 enum ProgramFitnessGoal: String, Codable, CaseIterable {
-    case strength = "strength"
     case hypertrophy = "hypertrophy"
+    case strength = "strength"
     case balanced = "balanced"
 
     var displayName: String {
         switch self {
-        case .strength: return "Strength"
         case .hypertrophy: return "Hypertrophy"
+        case .strength: return "Strength"
+        case .balanced: return "Both"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .hypertrophy: return "Hypertrophy"
+        case .strength: return "Strength"
         case .balanced: return "Balanced"
         }
     }
 
     var description: String {
         switch self {
-        case .strength: return "Build maximal strength with heavy weights and low reps"
-        case .hypertrophy: return "Maximize muscle growth with moderate weights and volume"
-        case .balanced: return "Balance strength and size gains"
+        case .hypertrophy: return "Maximize muscle growth with moderate weights and higher volume"
+        case .strength: return "Build maximal strength with heavier weights and lower reps"
+        case .balanced: return "Equal focus on strength and muscle size"
         }
     }
 }

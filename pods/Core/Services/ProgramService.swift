@@ -129,6 +129,28 @@ class ProgramService: ObservableObject {
         return day
     }
 
+    // MARK: - Skip Workout
+
+    func skipWorkout(dayId: Int, userEmail: String) async throws -> ProgramDay {
+        let day = try await networkManager.skipProgramDayWorkout(dayId: dayId, userEmail: userEmail)
+
+        // Refresh active program to update completion status
+        _ = try? await fetchActiveProgram(userEmail: userEmail)
+
+        return day
+    }
+
+    // MARK: - Update Workout Name
+
+    func updateWorkoutName(dayId: Int, name: String, userEmail: String) async throws -> ProgramDay {
+        let day = try await networkManager.updateProgramDayLabel(dayId: dayId, workoutLabel: name, userEmail: userEmail)
+
+        // Refresh active program to update the name
+        _ = try? await fetchActiveProgram(userEmail: userEmail)
+
+        return day
+    }
+
     // MARK: - Delete Program
 
     func deleteProgram(id: Int, userEmail: String) async throws {
