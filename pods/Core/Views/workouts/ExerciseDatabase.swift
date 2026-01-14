@@ -80,6 +80,12 @@ struct ExerciseDatabase {
 
         return cached
     }
+
+    /// Find an exercise by ID
+    static func findExercise(byId id: Int) -> ExerciseData? {
+        let exercises = getAllExercises()
+        return exercises.first { $0.id == id }
+    }
     
     private static func loadExercisesFromCSV() -> [ExerciseData] {
         guard let url = csvResourceURL() else {

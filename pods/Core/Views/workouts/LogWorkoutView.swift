@@ -61,6 +61,7 @@ struct LogWorkoutView: View {
     @State private var showingWorkoutFeedback = false
     @State private var showingAddExerciseSheet = false
     @State private var showingSupersetCircuitSheet = false
+    @State private var showingCreateProgramSheet = false
 
     // Keep only essential UI-only state (not data state)
     @State private var currentWorkout: TodayWorkout? = nil
@@ -306,6 +307,9 @@ struct LogWorkoutView: View {
             }
             .sheet(isPresented: $showingAddExerciseSheet) {
                 addExerciseSheet
+            }
+            .sheet(isPresented: $showingCreateProgramSheet) {
+                CreateProgramView(userEmail: userEmail)
             }
             .sheet(item: workoutSummaryBinding) { summary in
                 WorkoutSummarySheet(summary: summary)
@@ -1185,7 +1189,16 @@ struct LogWorkoutView: View {
                             .contentShape(Circle())
                     }
                 case .plan:
-                    EmptyView()
+                    Button(action: {
+                        HapticFeedback.generate()
+                        showingCreateProgramSheet = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .frame(width: toolbarButtonDiameter, height: toolbarButtonDiameter)
+                            .contentShape(Circle())
+                    }
                 case .saved:
                     if #available(iOS 26, *) {
                         Button("New") {

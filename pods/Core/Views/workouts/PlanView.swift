@@ -5,13 +5,13 @@
 //  Created by Dimi Nunez on 1/13/26.
 //
 
-
 //
 //  PlanView.swift
 //  pods
 //
 //  MacroFactor-style workout program plan view.
-//  Shows the active program's calendar with week selector and daily workouts.
+//  Shows workout cards (Workout A, Workout B, etc.) with muscle chips.
+//  Tapping a card navigates to workout detail.
 //
 
 import SwiftUI
@@ -19,8 +19,7 @@ import SwiftUI
 struct PlanView: View {
     @ObservedObject private var programService = ProgramService.shared
     @State private var selectedWeekNumber: Int = 1
-    @State private var showingCreateProgram = false
-    @State private var isRefreshing = false
+    @State private var selectedWorkoutDay: ProgramDay?
 
     private var userEmail: String {
         UserDefaults.standard.string(forKey: "userEmail") ?? ""
@@ -39,8 +38,15 @@ struct PlanView: View {
         .task {
             await loadData()
         }
-        .sheet(isPresented: $showingCreateProgram) {
-            CreateProgramView(userEmail: userEmail)
+        .fullScreenCover(item: $selectedWorkoutDay) { day in
+            ProgramWorkoutDetailView(
+                day: day,
+                onDismiss: { selectedWorkoutDay = nil },
+                onStart: { _ in
+                    // TODO: Start workout from program
+                    selectedWorkoutDay = nil
+                }
+            )
         }
     }
 
@@ -77,19 +83,6 @@ struct PlanView: View {
                     .padding(.horizontal, 32)
             }
 
-            Button(action: { showingCreateProgram = true }) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                    Text("Create Program")
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
-                .background(Color.blue)
-                .cornerRadius(12)
-            }
-
             Spacer()
         }
     }
@@ -106,13 +99,20 @@ struct PlanView: View {
                 // Week Selector
                 weekSelector(program: program)
 
-                // Days for selected week
+                // All days for selected week (including rest days)
                 if let weeks = program.weeks,
                    let selectedWeek = weeks.first(where: { $0.weekNumber == selectedWeekNumber }),
                    let days = selectedWeek.days {
-                    VStack(spacing: 8) {
-                        ForEach(days) { day in
-                            ProgramDayRow(day: day, isToday: day.isToday)
+                    VStack(spacing: 12) {
+                        ForEach(days.sorted(by: { $0.dayNumber < $1.dayNumber })) { day in
+                            if day.dayType == .workout {
+                                ProgramWorkoutCard(day: day) {
+                                    selectedWorkoutDay = day
+                                }
+                            } else {
+                                // Rest day card
+                                RestDayCard()
+                            }
                         }
                     }
                     .padding(.horizontal, 16)
@@ -120,6 +120,7 @@ struct PlanView: View {
             }
             .padding(.vertical, 16)
         }
+        .background(Color("primarybg"))
         .refreshable {
             await loadData()
         }
@@ -222,7 +223,7 @@ struct PlanView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .background(isSelected ? Color.blue : Color("primarybg"))
+                        .background(isSelected ? Color.blue : Color("containerbg"))
                         .foregroundColor(isSelected ? .white : .primary)
                         .cornerRadius(8)
                         .overlay(
@@ -247,73 +248,280 @@ struct PlanView: View {
     }
 }
 
-// MARK: - Program Day Row
+// MARK: - Rest Day Card
 
-struct ProgramDayRow: View {
+struct RestDayCard: View {
+    var body: some View {
+        HStack {
+            Image(systemName: "bed.double.fill")
+                .font(.system(size: 18))
+                .foregroundColor(.secondary)
+
+            Text("Rest Day")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundColor(.secondary)
+
+            Spacer()
+        }
+        .padding(16)
+        .background(Color("containerbg"))
+        .cornerRadius(28)
+    }
+}
+
+// MARK: - Program Workout Card
+
+struct ProgramWorkoutCard: View {
     let day: ProgramDay
-    let isToday: Bool
+    let onTap: () -> Void
+
+    // Show up to 4 muscle chips, rest are hidden
+    private let maxVisibleChips = 4
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Day indicator
-            VStack(spacing: 2) {
-                Text(day.weekdayShort)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                Text(day.dayOfMonth)
-                    .font(.title3.bold())
-                    .foregroundColor(isToday ? .blue : .primary)
-            }
-            .frame(width: 44)
-
-            // Content
-            if day.dayType == .workout {
-                VStack(alignment: .leading, spacing: 4) {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Title row
+                HStack {
                     Text(day.workoutLabel)
-                        .font(.headline)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.primary)
 
-                    if !day.targetMuscles.isEmpty {
-                        Text(day.targetMuscles.joined(separator: ", "))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
+                    Spacer()
 
-                    if let workout = day.workout, let exercises = workout.exercises {
-                        Text("\(exercises.count) exercises")
-                            .font(.caption2)
+                    // Completion indicator
+                    if day.isCompleted {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.green)
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.secondary)
                     }
                 }
 
-                Spacer()
+                // Muscle chips - horizontal scroll, first few visible
+                if !day.targetMuscles.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(Array(day.targetMuscles.prefix(maxVisibleChips)), id: \.self) { muscle in
+                                Text(muscle)
+                                    .font(.caption)
+                                    .foregroundColor(.primary)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color("primarybg"))
+                                    .cornerRadius(12)
+                            }
 
-                // Completion indicator
-                Image(systemName: day.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundColor(day.isCompleted ? .green : .secondary.opacity(0.3))
-            } else {
-                Text("Rest Day")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                            // Show +N more if there are hidden chips
+                            if day.targetMuscles.count > maxVisibleChips {
+                                Text("+\(day.targetMuscles.count - maxVisibleChips)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color("primarybg"))
+                                    .cornerRadius(12)
+                            }
+                        }
+                    }
+                }
 
-                Spacer()
-
-                Image(systemName: "moon.zzz.fill")
-                    .foregroundColor(.secondary.opacity(0.3))
+                // Exercise count
+                if let workout = day.workout, let exercises = workout.exercises {
+                    Text("\(exercises.count) exercises")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
+            .padding(16)
+            .background(Color("containerbg"))
+            .cornerRadius(28)
         }
-        .padding(12)
-        .background(isToday ? Color.blue.opacity(0.08) : Color("containerbg"))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isToday ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
-        )
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
-// MARK: - Create Program View (Placeholder)
+// MARK: - Flow Layout for Muscle Chips
+
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = layout(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = layout(proposal: proposal, subviews: subviews)
+        for (index, subview) in subviews.enumerated() {
+            subview.place(at: CGPoint(x: bounds.minX + result.positions[index].x,
+                                     y: bounds.minY + result.positions[index].y),
+                         proposal: .unspecified)
+        }
+    }
+
+    private func layout(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
+        let maxWidth = proposal.width ?? .infinity
+        var positions: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+        var totalHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+
+            if currentX + size.width > maxWidth && currentX > 0 {
+                currentX = 0
+                currentY += lineHeight + spacing
+                lineHeight = 0
+            }
+
+            positions.append(CGPoint(x: currentX, y: currentY))
+            currentX += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
+            totalHeight = currentY + lineHeight
+        }
+
+        return (CGSize(width: maxWidth, height: totalHeight), positions)
+    }
+}
+
+// MARK: - Program Workout Detail View
+
+struct ProgramWorkoutDetailView: View {
+    let day: ProgramDay
+    let onDismiss: () -> Void
+    let onStart: (ProgramDay) -> Void
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color("primarybg")
+                    .ignoresSafeArea()
+
+                if let workout = day.workout, let exercises = workout.exercises, !exercises.isEmpty {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 20) {
+                            // Muscle targets header
+                            if !day.targetMuscles.isEmpty {
+                                FlowLayout(spacing: 6) {
+                                    ForEach(day.targetMuscles, id: \.self) { muscle in
+                                        Text(muscle)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 5)
+                                            .background(Color("containerbg"))
+                                            .cornerRadius(12)
+                                    }
+                                }
+                            }
+
+                            // Exercise list
+                            VStack(spacing: 0) {
+                                ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
+                                    ProgramExerciseRow(exercise: exercise, index: index + 1)
+
+                                    if index < exercises.count - 1 {
+                                        Divider()
+                                            .padding(.leading, 56)
+                                    }
+                                }
+                            }
+                            .background(Color("containerbg"))
+                            .cornerRadius(12)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        .padding(.bottom, 120)
+                    }
+                } else {
+                    VStack(spacing: 16) {
+                        Image(systemName: "dumbbell")
+                            .font(.system(size: 52, weight: .regular))
+                            .foregroundColor(.secondary)
+
+                        Text("No exercises in this workout")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                }
+
+                ToolbarItem(placement: .principal) {
+                    Text(day.workoutLabel)
+                        .font(.system(size: 17, weight: .semibold))
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if !day.isCompleted {
+                Button(action: { onStart(day) }) {
+                    Text("Start Workout")
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+        }
+    }
+}
+
+// MARK: - Program Exercise Row
+
+struct ProgramExerciseRow: View {
+    let exercise: ProgramExercise
+    let index: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Index number
+            Text("\(index)")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary)
+                .frame(width: 24, height: 24)
+                .background(Color("primarybg"))
+                .cornerRadius(12)
+
+            // Exercise info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(exercise.exerciseName)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+
+                if let sets = exercise.targetSets, let reps = exercise.targetReps {
+                    Text("\(sets) sets × \(reps) reps")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+
+            // Completion indicator
+            Image(systemName: exercise.isCompleted ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 20))
+                .foregroundColor(exercise.isCompleted ? .green : .secondary.opacity(0.3))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+}
+
+// MARK: - Create Program View
 
 struct CreateProgramView: View {
     @Environment(\.dismiss) private var dismiss

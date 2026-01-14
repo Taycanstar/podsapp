@@ -494,11 +494,25 @@ class WorkoutManager: ObservableObject {
     }
 
     /// Generate today's workout with dynamic programming (1 second simple loading)
+    /// First checks for an active program's today workout, falls back to dynamic generation
     func generateTodayWorkout() async {
         assertMainActor("generateTodayWorkout")
         let startTime = Date()
+        await setGenerating(true, message: "Loading workout")
+
+        // Check for active program workout first
+        if let programWorkout = await loadTodayWorkoutFromProgram() {
+            self.todayWorkout = programWorkout
+            saveTodayWorkout()
+            generationError = nil
+            print("📋 Loaded today's workout from active program: \(programWorkout.title)")
+            await setGenerating(false)
+            return
+        }
+
+        // No active program workout, generate dynamically
         await setGenerating(true, message: "Generating workout")
-        
+
         do {
             // Calculate dynamic parameters using synced phase
             let dynamicParams = await DynamicParameterService.shared.calculateDynamicParameters(
@@ -559,7 +573,90 @@ class WorkoutManager: ObservableObject {
         
         await setGenerating(false)
     }
-    
+
+    /// Check for today's workout from active program and convert to TodayWorkout
+    private func loadTodayWorkoutFromProgram() async -> TodayWorkout? {
+        let userEmail = UserDefaults.standard.string(forKey: "userEmail") ?? ""
+        guard !userEmail.isEmpty else { return nil }
+
+        do {
+            // Fetch today's workout from active program
+            let response = try await NetworkManagerTwo().fetchTodayWorkout(userEmail: userEmail)
+
+            // Check if there's an active program with today's workout
+            guard response.hasProgram,
+                  let programDay = response.today,
+                  programDay.dayType == .workout,
+                  let workoutSession = programDay.workout,
+                  let exercises = workoutSession.exercises else {
+                return nil
+            }
+
+            // Convert ProgramExercise to TodayWorkoutExercise
+            let todayExercises: [TodayWorkoutExercise] = exercises.compactMap { programExercise in
+                // Try to find the exercise in the database
+                if let exerciseData = ExerciseDatabase.findExercise(byId: programExercise.exerciseId) {
+                    let trackingType = ExerciseClassificationService.determineTrackingType(for: exerciseData)
+                    return TodayWorkoutExercise(
+                        exercise: exerciseData,
+                        sets: programExercise.targetSets ?? 3,
+                        reps: programExercise.targetReps ?? 10,
+                        weight: nil,
+                        restTime: 90,
+                        notes: nil,
+                        warmupSets: nil,
+                        flexibleSets: nil,
+                        trackingType: trackingType
+                    )
+                } else {
+                    // Create a basic ExerciseData from the program exercise
+                    let basicExercise = ExerciseData(
+                        id: programExercise.exerciseId,
+                        name: programExercise.exerciseName,
+                        exerciseType: "Strength",
+                        bodyPart: "",
+                        equipment: "Unknown",
+                        gender: "unisex",
+                        target: "",
+                        synergist: ""
+                    )
+                    return TodayWorkoutExercise(
+                        exercise: basicExercise,
+                        sets: programExercise.targetSets ?? 3,
+                        reps: programExercise.targetReps ?? 10,
+                        weight: nil,
+                        restTime: 90,
+                        notes: nil,
+                        warmupSets: nil,
+                        flexibleSets: nil,
+                        trackingType: .repsWeight
+                    )
+                }
+            }
+
+            guard !todayExercises.isEmpty else { return nil }
+
+            // Create TodayWorkout from program day
+            let todayWorkout = TodayWorkout(
+                id: UUID(),
+                date: Date(),
+                title: programDay.workoutLabel,
+                exercises: todayExercises,
+                blocks: nil,
+                estimatedDuration: workoutSession.estimatedDurationMinutes,
+                fitnessGoal: effectiveFitnessGoal,
+                difficulty: 5,
+                warmUpExercises: nil,
+                coolDownExercises: nil
+            )
+
+            return todayWorkout
+        } catch {
+            print("⚠️ Failed to load today's workout from program: \(error)")
+            return nil
+        }
+    }
+
     /// Generate static workout with current preferences (1 second simple loading)
     func generateStaticWorkout() async {
         let startTime = Date()
