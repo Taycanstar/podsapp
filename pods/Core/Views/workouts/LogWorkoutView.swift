@@ -985,17 +985,7 @@ struct LogWorkoutView: View {
 
     @ViewBuilder
     private var planTabContent: some View {
-        // Placeholder for workout plan content
-        VStack {
-            Spacer()
-            Text("Workout Plans")
-                .font(.title2)
-                .foregroundColor(.secondary)
-            Text("Coming soon")
-                .font(.subheadline)
-                .foregroundColor(.secondary.opacity(0.7))
-            Spacer()
-        }
+        PlanView()
     }
 
     @ViewBuilder

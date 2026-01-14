@@ -6,7 +6,7 @@ enum APIBaseURL {
     static let staging = "https://humuli-staging-b3e9cef208dd.herokuapp.com"
     static let localWifi = "http://192.168.1.92:8000"
     static let localHotspot = "http://172.20.10.4:8000"
-    static let current = localHotspot
+    static let current = localWifi
 }
 
 enum NetworkError: Error {

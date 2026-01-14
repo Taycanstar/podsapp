@@ -5710,4 +5710,214 @@ class NetworkManagerTwo {
         }.resume()
     }
 
+    // MARK: - Training Program Methods
+
+    func fetchActiveProgram(userEmail: String) async throws -> TrainingProgram? {
+        var components = URLComponents(string: "\(baseUrl)/api/programs/active/")
+        components?.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail)
+        ]
+
+        guard let url = components?.url else { throw NetworkError.invalidURL }
+
+        print("[FETCH ACTIVE PROGRAM] Fetching from: \(url)")
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        if let httpResponse = response as? HTTPURLResponse {
+            print("[FETCH ACTIVE PROGRAM] Response status: \(httpResponse.statusCode)")
+        }
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("[FETCH ACTIVE PROGRAM] Raw response (first 500 chars): \(String(responseString.prefix(500)))")
+        }
+
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        do {
+            let responsePayload = try decoder.decode(ProgramResponse.self, from: data)
+            if let program = responsePayload.program {
+                print("[FETCH ACTIVE PROGRAM] Successfully decoded program: \(program.name)")
+            } else {
+                print("[FETCH ACTIVE PROGRAM] No active program found")
+            }
+            return responsePayload.program
+        } catch {
+            print("[FETCH ACTIVE PROGRAM ERROR] Decoding failed: \(error)")
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("[FETCH ACTIVE PROGRAM ERROR] Key not found: \(key.stringValue), path: \(context.codingPath.map { $0.stringValue })")
+                case .typeMismatch(let type, let context):
+                    print("[FETCH ACTIVE PROGRAM ERROR] Type mismatch: expected \(type), path: \(context.codingPath.map { $0.stringValue })")
+                case .valueNotFound(let type, let context):
+                    print("[FETCH ACTIVE PROGRAM ERROR] Value not found: \(type), path: \(context.codingPath.map { $0.stringValue })")
+                case .dataCorrupted(let context):
+                    print("[FETCH ACTIVE PROGRAM ERROR] Data corrupted: \(context.debugDescription)")
+                @unknown default:
+                    print("[FETCH ACTIVE PROGRAM ERROR] Unknown decoding error")
+                }
+            }
+            throw error
+        }
+    }
+
+    func fetchTodayWorkout(userEmail: String) async throws -> TodayWorkoutResponse {
+        var components = URLComponents(string: "\(baseUrl)/api/programs/today/")
+        components?.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail)
+        ]
+
+        guard let url = components?.url else { throw NetworkError.invalidURL }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(TodayWorkoutResponse.self, from: data)
+    }
+
+    func generateProgram(userEmail: String, request: GenerateProgramRequest) async throws -> TrainingProgram {
+        guard let url = URL(string: "\(baseUrl)/api/programs/generate/") else { throw NetworkError.invalidURL }
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.timeoutInterval = 120  // Program generation can take time
+
+        // Create body with user_email
+        var body: [String: Any] = [
+            "user_email": userEmail,
+            "program_type": request.programType,
+            "fitness_goal": request.fitnessGoal,
+            "experience_level": request.experienceLevel,
+            "days_per_week": request.daysPerWeek,
+            "session_duration_minutes": request.sessionDurationMinutes,
+            "total_weeks": request.totalWeeks,
+            "include_deload": request.includeDeload
+        ]
+
+        if let startDate = request.startDate {
+            body["start_date"] = startDate
+        }
+        if let equipment = request.availableEquipment {
+            body["available_equipment"] = equipment
+        }
+        if let excluded = request.excludedExercises {
+            body["excluded_exercises"] = excluded
+        }
+
+        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        print("[PROGRAM GENERATE] Sending request to: \(url)")
+        print("[PROGRAM GENERATE] Request body: \(body)")
+
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+
+        // Log raw response for debugging
+        if let httpResponse = response as? HTTPURLResponse {
+            print("[PROGRAM GENERATE] Response status: \(httpResponse.statusCode)")
+        }
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("[PROGRAM GENERATE] Raw response (first 500 chars): \(String(responseString.prefix(500)))")
+        }
+
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        do {
+            let responsePayload = try decoder.decode(ProgramResponse.self, from: data)
+            guard let program = responsePayload.program else {
+                print("[PROGRAM GENERATE ERROR] Program is nil in response")
+                throw NetworkError.serverError(message: "Failed to generate program")
+            }
+            print("[PROGRAM GENERATE] Successfully decoded program: \(program.name)")
+            return program
+        } catch {
+            print("[PROGRAM GENERATE ERROR] Decoding failed: \(error)")
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    print("[PROGRAM GENERATE ERROR] Key not found: \(key.stringValue), path: \(context.codingPath.map { $0.stringValue })")
+                case .typeMismatch(let type, let context):
+                    print("[PROGRAM GENERATE ERROR] Type mismatch: expected \(type), path: \(context.codingPath.map { $0.stringValue })")
+                case .valueNotFound(let type, let context):
+                    print("[PROGRAM GENERATE ERROR] Value not found: \(type), path: \(context.codingPath.map { $0.stringValue })")
+                case .dataCorrupted(let context):
+                    print("[PROGRAM GENERATE ERROR] Data corrupted: \(context.debugDescription), path: \(context.codingPath.map { $0.stringValue })")
+                @unknown default:
+                    print("[PROGRAM GENERATE ERROR] Unknown decoding error")
+                }
+            }
+            throw error
+        }
+    }
+
+    func fetchProgramTypes() async throws -> [ProgramTypeInfo] {
+        guard let url = URL(string: "\(baseUrl)/api/programs/types/") else { throw NetworkError.invalidURL }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let responsePayload = try decoder.decode(ProgramTypesResponse.self, from: data)
+        return responsePayload.programTypes
+    }
+
+    func markProgramDayComplete(dayId: Int, userEmail: String) async throws -> ProgramDay {
+        guard let url = URL(string: "\(baseUrl)/api/programs/day/\(dayId)/complete/") else { throw NetworkError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = ["user_email": userEmail]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let responsePayload = try decoder.decode(MarkDayCompleteResponse.self, from: data)
+        return responsePayload.day
+    }
+
+    func deleteProgram(programId: Int, userEmail: String) async throws {
+        guard let url = URL(string: "\(baseUrl)/api/programs/\(programId)/delete/") else { throw NetworkError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = ["user_email": userEmail]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: nil)
+    }
+
+    func listPrograms(userEmail: String) async throws -> [TrainingProgram] {
+        var components = URLComponents(string: "\(baseUrl)/api/programs/")
+        components?.queryItems = [
+            URLQueryItem(name: "user_email", value: userEmail)
+        ]
+
+        guard let url = components?.url else { throw NetworkError.invalidURL }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+        try validate(response: response, data: data)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let responsePayload = try decoder.decode(ProgramsListResponse.self, from: data)
+        return responsePayload.programs
+    }
+
 }

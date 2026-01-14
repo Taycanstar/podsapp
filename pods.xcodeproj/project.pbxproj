@@ -451,6 +451,9 @@
 		36FBD55C2F14701E005F62B9 /* DocumentPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD55B2F14701E005F62B9 /* DocumentPickerView.swift */; };
 		36FBD55E2F147033005F62B9 /* SimpleCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD55D2F147033005F62B9 /* SimpleCameraView.swift */; };
 		36FBD5602F14C1E0005F62B9 /* FullScreenImagePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD55F2F14C1E0005F62B9 /* FullScreenImagePreview.swift */; };
+		36FBD5622F1738FD005F62B9 /* PlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD5612F1738FD005F62B9 /* PlanView.swift */; };
+		36FBD5642F173A4B005F62B9 /* ProgramService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD5632F173A4B005F62B9 /* ProgramService.swift */; };
+		36FBD5662F173B74005F62B9 /* ProgramType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FBD5652F173B74005F62B9 /* ProgramType.swift */; };
 		36FE12352FFFABCD00A1BCDE /* exercisesdb.csv in Resources */ = {isa = PBXBuildFile; fileRef = 36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */; };
 		36FFF1012FBEBE6000A1C0DE /* AgentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */; };
 		36FFF1112FBEBE6000A1C0DE /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FFF1102FBEBE6000A1C0DE /* AgentService.swift */; };
@@ -931,6 +934,9 @@
 		36FBD55B2F14701E005F62B9 /* DocumentPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentPickerView.swift; sourceTree = "<group>"; };
 		36FBD55D2F147033005F62B9 /* SimpleCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleCameraView.swift; sourceTree = "<group>"; };
 		36FBD55F2F14C1E0005F62B9 /* FullScreenImagePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullScreenImagePreview.swift; sourceTree = "<group>"; };
+		36FBD5612F1738FD005F62B9 /* PlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanView.swift; sourceTree = "<group>"; };
+		36FBD5632F173A4B005F62B9 /* ProgramService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramService.swift; sourceTree = "<group>"; };
+		36FBD5652F173B74005F62B9 /* ProgramType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramType.swift; sourceTree = "<group>"; };
 		36FE12342FFFABCD00A1BCDE /* exercisesdb.csv */ = {isa = PBXFileReference; lastKnownFileType = text; path = exercisesdb.csv; sourceTree = "<group>"; };
 		36FFF1002FBEBE6000A1C0DE /* AgentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentModels.swift; path = Pods/Core/Models/AgentModels.swift; sourceTree = SOURCE_ROOT; };
 		36FFF1102FBEBE6000A1C0DE /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentService.swift; path = Pods/Core/Services/AgentService.swift; sourceTree = SOURCE_ROOT; };
@@ -1019,6 +1025,7 @@
 		361FF3162E20612400B7F68E /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				36FBD5632F173A4B005F62B9 /* ProgramService.swift */,
 				36FBD5552F0C26D1005F62B9 /* MessageSessionTracker.swift */,
 				36667E2B2F05B2850017E9D7 /* TTSService.swift */,
 				36667E272F01948D0017E9D7 /* EventTracker.swift */,
@@ -1062,6 +1069,7 @@
 		361FF31B2E20617800B7F68E /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				36FBD5652F173B74005F62B9 /* ProgramType.swift */,
 				36FBD5572F146FE7005F62B9 /* ChatAttachment.swift */,
 				36667E0D2EFC55EE0017E9D7 /* ConversationModels.swift */,
 				36667DF52EF904740017E9D7 /* NutrientDescriptors.swift */,
@@ -1191,6 +1199,7 @@
 		3662A54D2DFDE02100847487 /* workouts */ = {
 			isa = PBXGroup;
 			children = (
+				36FBD5612F1738FD005F62B9 /* PlanView.swift */,
 				36DB82CD2EB924B7004BA082 /* ExercisesDb.swift */,
 				361919142EA17769007CAA0D /* WorkoutLogDetailView.swift */,
 				36D3A52B2EA008C900AD6B94 /* WorkoutUpgradeSheet.swift */,
@@ -2084,6 +2093,7 @@
 				36667DE62EF5CFD30017E9D7 /* RecentFoodLogsRepository.swift in Sources */,
 				36A91DB92E39B37500414543 /* MealLogDetails.swift in Sources */,
 				36D3A5182E90E5C000AD6B94 /* EnterNameView.swift in Sources */,
+				36FBD5662F173B74005F62B9 /* ProgramType.swift in Sources */,
 				36667DF02EF777700017E9D7 /* AddIngredientsDescribe.swift in Sources */,
 				363068C92E089EF800F2D4EC /* ByEquipmentView.swift in Sources */,
 				36C458E42B7457580060355F /* HomeView.swift in Sources */,
@@ -2376,6 +2386,7 @@
 				3688DBF82BDEAE6E001E244C /* PlayerPageView.swift in Sources */,
 				36C458E62B7458720060355F /* CameraView.swift in Sources */,
 				363AF9FD2D2095D600C91A14 /* GroupedColumnActivityView.swift in Sources */,
+				36FBD5642F173A4B005F62B9 /* ProgramService.swift in Sources */,
 				36B3CF892C86894600265F91 /* SubscriptionManager.swift in Sources */,
 				3682C8692BBAE68C00B350E2 /* PodItemCell.swift in Sources */,
 				361FF30D2E1D96E900B7F68E /* BodyweightExercisesView.swift in Sources */,
@@ -2435,6 +2446,7 @@
 				36F2C8AC2F9D1C7B00B4A123 /* SupersetCircuitSelectionSheet.swift in Sources */,
 				36CB03442D72C1B9006A74E9 /* BottomPopup.swift in Sources */,
 				36CB033D2D64E0CC006A74E9 /* CardDetailView.swift in Sources */,
+				36FBD5622F1738FD005F62B9 /* PlanView.swift in Sources */,
 				36ED359D2DD0DE1600D174FB /* LogRepository.swift in Sources */,
 				36667DFA2EFB04740017E9D7 /* SavedView.swift in Sources */,
 				36667E2C2F05B2850017E9D7 /* TTSService.swift in Sources */,
