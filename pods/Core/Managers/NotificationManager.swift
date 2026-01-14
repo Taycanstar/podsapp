@@ -190,56 +190,72 @@ class NotificationManager: NSObject, ObservableObject {
     
     /// Get next breakfast notification copy with rotation
     func getNextBreakfastCopy() -> (title: String, body: String) {
-        let index = UserDefaults.standard.integer(forKey: breakfastIndexKey)
+        guard !NotificationCopy.breakfast.isEmpty else {
+            return ("Breakfast time", "Log your breakfast")
+        }
+        let storedIndex = UserDefaults.standard.integer(forKey: breakfastIndexKey)
+        let index = storedIndex % NotificationCopy.breakfast.count
         let copy = NotificationCopy.breakfast[index]
-        
+
         // Advance to next index
         let nextIndex = (index + 1) % NotificationCopy.breakfast.count
         UserDefaults.standard.set(nextIndex, forKey: breakfastIndexKey)
-        
+
         return copy
     }
     
     /// Get next lunch notification copy with rotation
     func getNextLunchCopy() -> (title: String, body: String) {
-        let index = UserDefaults.standard.integer(forKey: lunchIndexKey)
+        guard !NotificationCopy.lunch.isEmpty else {
+            return ("Lunch time", "Log your lunch")
+        }
+        let storedIndex = UserDefaults.standard.integer(forKey: lunchIndexKey)
+        let index = storedIndex % NotificationCopy.lunch.count
         let copy = NotificationCopy.lunch[index]
-        
+
         // Advance to next index
         let nextIndex = (index + 1) % NotificationCopy.lunch.count
         UserDefaults.standard.set(nextIndex, forKey: lunchIndexKey)
-        
+
         return copy
     }
     
     /// Get next dinner notification copy with rotation
     func getNextDinnerCopy() -> (title: String, body: String) {
-        let index = UserDefaults.standard.integer(forKey: dinnerIndexKey)
+        guard !NotificationCopy.dinner.isEmpty else {
+            return ("Dinner time", "Log your dinner")
+        }
+        let storedIndex = UserDefaults.standard.integer(forKey: dinnerIndexKey)
+        let index = storedIndex % NotificationCopy.dinner.count
         let copy = NotificationCopy.dinner[index]
-        
+
         // Advance to next index
         let nextIndex = (index + 1) % NotificationCopy.dinner.count
         UserDefaults.standard.set(nextIndex, forKey: dinnerIndexKey)
-        
+
         return copy
     }
     
     /// Get next activity notification template with rotation and interpolation
     func getNextActivityCopy(burned: Int, activity: String, duration: String, left: Int) -> (title: String, body: String) {
-        let index = UserDefaults.standard.integer(forKey: activityIndexKey)
+        guard !NotificationCopy.activityTemplates.isEmpty else {
+            return ("Activity logged", "You burned \(burned) cal from \(activity)")
+        }
+        let storedIndex = UserDefaults.standard.integer(forKey: activityIndexKey)
+        let index = storedIndex % NotificationCopy.activityTemplates.count
         let template = NotificationCopy.activityTemplates[index]
-        
+
         // Advance to next index
         let nextIndex = (index + 1) % NotificationCopy.activityTemplates.count
         UserDefaults.standard.set(nextIndex, forKey: activityIndexKey)
-        
+
         // Interpolate values
         let interpolatedBody = template.body
             .replacingOccurrences(of: "{burned}", with: "\(burned)")
             .replacingOccurrences(of: "{activity}", with: activity)
             .replacingOccurrences(of: "{duration}", with: duration)
             .replacingOccurrences(of: "{left}", with: "\(left)")
-        
+
         return (template.title, interpolatedBody)
     }
     
