@@ -822,7 +822,6 @@ struct CreateProgramView: View {
 
     let userEmail: String
 
-    @State private var programName: String = "My Plan"
     @State private var selectedGoal: ProgramFitnessGoal = .hypertrophy
     @State private var selectedType: ProgramType = .upperLower
     @State private var selectedExperience: ProgramExperienceLevel = .intermediate
@@ -832,19 +831,10 @@ struct CreateProgramView: View {
     @State private var isGenerating = false
     @State private var error: String?
 
-    private var canCreate: Bool {
-        !programName.trimmingCharacters(in: .whitespaces).isEmpty && !isGenerating
-    }
-
     var body: some View {
         NavigationStack {
             ZStack {
                 Form {
-                    // Plan Name
-                    Section {
-                        TextField("Name", text: $programName)
-                    }
-
                     // Training Goal
                     Section {
                         Picker("Training Goal", selection: $selectedGoal) {
@@ -935,9 +925,8 @@ struct CreateProgramView: View {
 
                 if isGenerating {
                     ProgramGenerationView(
-                        programName: programName,
+                        experienceLevel: selectedExperience.displayName,
                         splitName: selectedType.displayName,
-                        goalName: selectedGoal.displayName,
                         weeks: totalWeeks
                     )
                     .transition(.opacity)
@@ -962,7 +951,6 @@ struct CreateProgramView: View {
                         } label: {
                             Image(systemName: "checkmark")
                         }
-                        .disabled(!canCreate)
                     }
                 }
             }
@@ -1001,9 +989,8 @@ struct CreateProgramView: View {
 // MARK: - Program Generation View
 
 private struct ProgramGenerationView: View {
-    let programName: String
+    let experienceLevel: String
     let splitName: String
-    let goalName: String
     let weeks: Int
 
     @State private var currentStep = 0
@@ -1036,7 +1023,7 @@ private struct ProgramGenerationView: View {
                 Text("Building Your Plan")
                     .font(.system(size: 28, weight: .bold))
 
-                Text("\(weeks)-Week \(goalName) • \(splitName)")
+                Text("\(experienceLevel) \(splitName) • \(weeks) weeks")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -1077,16 +1064,15 @@ private struct ProgramGenerationView: View {
     }
 
     private func startAnimation() {
-        // Animate through steps with more natural timing
-        // Each step takes about 1-1.5 seconds to complete, making the total ~8-10 seconds
-        // which better matches typical program generation time
+        // Animate through steps with timing that matches typical program generation
+        // Total animation: ~10.5s before finalizing step starts
         let stepDurations: [(start: Double, complete: Double)] = [
-            (0.3, 1.2),    // Step 1: Analyzing Profile
-            (1.5, 2.8),    // Step 2: Selecting Exercises
-            (3.1, 4.6),    // Step 3: Building Structure
-            (4.9, 6.2),    // Step 4: Smart Progression
-            (6.5, 7.8),    // Step 5: Scheduling Workouts
-            (8.1, -1)      // Step 6: Finalizing (stays in progress until API returns)
+            (0.3, 2.8),    // Step 1: Analyzing Profile (2.5s duration)
+            (3.0, 5.2),    // Step 2: Selecting Exercises (2.2s duration)
+            (5.4, 7.4),    // Step 3: Building Structure (2s duration)
+            (7.6, 9.6),    // Step 4: Smart Progression (2s duration)
+            (9.8, 11.6),   // Step 5: Scheduling Workouts (1.8s duration)
+            (11.8, -1)     // Step 6: Finalizing (stays in progress until API returns)
         ]
 
         for (index, timing) in stepDurations.enumerated() {
@@ -1261,9 +1247,7 @@ struct AllPlansView: View {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 16, weight: .semibold))
                         }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.circle)
-                        .tint(.blue)
+                        .modifier(GlassProminentButtonModifier())
                     } else {
                         Menu {
                             Button {
@@ -1428,6 +1412,21 @@ private struct PlanListRow: View {
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(isEditMode)
+        }
+    }
+}
+
+// MARK: - Glass Prominent Button Modifier
+
+private struct GlassProminentButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.circle)
+                .tint(.blue)
         }
     }
 }
